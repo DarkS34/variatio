@@ -1,0 +1,21 @@
+{
+  "optimal_model": 5,
+  "models": [
+    "llama3.1:8b-instruct-q8_0",
+    "llama3.2:3b-instruct-q8_0",
+    "llama3.3:70b-instruct-q4_K_M",
+    "phi4:14b-q8_0",
+    "gemma3:4b-it-q8_0",
+    "gemma3:12b-it-q8_0",
+    "gemma3:27b-it-q8_0",
+    "mixtral:8x7b-instruct-v0.1-q4_0",
+    "mistral:7b-instruct-v0.3-q8_0",
+    "medllama2:7b-q8_0",
+    "Elixpo/LlamaMedicine:latest"
+  ],
+  "prompts": {
+    "gen_summary_prompt": "Actúa como asistente médico. Resume este fragmento de texto clínico reduciendo su extensión en un 70%:\n\n1. Conserva información diagnóstica clave (signos, síntomas, valores de laboratorio)\n2. Mantén la cronología de eventos médicos\n3. Señala referencias a información en otras partes del documento\n4. Incluye medicamentos con dosis exactas\n5. No hagas suposiciones sobre datos ausentes\n6. Usa terminología médica precisa\n7. Marca datos incompletos con \"[información parcial]\"\n\nFragmento clínico:\n{chunk}\n\nResumen:",
+    "gen_diagnostic_prompt": "Eres un médico especialista en enfermedades reumatológicas con años de experiencia.\n\nTAREA ÚNICA:\nExtrae SOLAMENTE el nombre de la enfermedad reumatológica principal del historial clínico proporcionado.\n\nREGLAS ESTRICTAS (cumple todas sin excepción):\n1. Devuelve ÚNICAMENTE el nombre exacto de la enfermedad principal. Sin excepciones.\n2. NO añadas NINGÚN texto adicional (ni explicaciones, ni notas, ni puntuación).\n3. NO incluyas información sobre tratamientos, síntomas o justificaciones.\n4. NO utilices formato especial (como listas, JSON, comillas o encabezados).\n5. Responde con UNA SOLA LÍNEA de texto que contenga solo el diagnóstico.\n\nIMPORTANTE: Si sientes la necesidad de añadir cualquier explicación o contexto, DETENTE y solo proporciona el nombre de la enfermedad.\n\nEjemplos de respuestas CORRECTAS:\nSíndrome de Sjögren\nEnfermedad de Behçet\nArteritis de células gigantes\nGota\n\nEjemplos de respuestas INCORRECTAS:\n- \"Síndrome de Sjögren\"\n- Diagnóstico: Enfermedad de Behçet\n- Arteritis de células gigantes debido a...\n- Gota (confirmado por cristales de urato monosódico)\n\nHISTORIAL CLÍNICO:\n\"\"\"\n{evolution_text}\n\"\"\"\n\nRESPUESTA (solo nombre de enfermedad):\n",
+    "gen_icd_code_prompt": "Eres un codificador médico certificado especializado en CIE-10 con experiencia extensa en codificación reumatológica.\n\nTAREA ÚNICA Y ESPECÍFICA:\nProporciona SÓLO el código CIE-10 para el siguiente diagnóstico reumatológico.\n\nDIAGNÓSTICO:\n{principal_diagnostic}\n\nINSTRUCCIONES ESTRICTAS (cumple todas sin excepción):\n1. Devuelve ÚNICAMENTE el código CIE-10 exacto en formato letra-número-punto-número (ej: M32.1)\n2. NO incluyas NINGÚN texto adicional, ni explicaciones, ni notas, ni paréntesis\n3. NO incluyas el nombre del diagnóstico\n4. NO utilices formato especial (como listas, JSON o encabezados)\n5. Responde con UNA SOLA LÍNEA que contenga solo el código\n6. Utiliza el código más específico disponible para la condición\n7. Si existe ambigüedad, prioriza códigos del capítulo M (sistema musculoesquelético)\n8. No utilices códigos de manifestaciones secundarias\n\nIMPORTANTE: Si sientes la necesidad de añadir cualquier explicación o contexto adicional, DETENTE y proporciona solo el código.\n\nEjemplos de respuestas CORRECTAS:\nM32.1\nM30.1\nM06.9\nM10.0\n\nEjemplos de respuestas INCORRECTAS:\n- \"M32.1\"\n- Código CIE-10: M30.1\n- M06.9 - Artritis reumatoide\n- El código adecuado sería M10.0\n\nRESPUESTA (solo código CIE-10):\n"
+  }
+}
