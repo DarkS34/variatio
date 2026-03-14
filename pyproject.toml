@@ -3,13 +3,19 @@ name = "evolution-text-analysis"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = "~=3.10"
+requires-python = ">=3.10"
 dependencies = [
     "langchain-ollama>=0.2.3",
     "langchain>=0.3.18",
     "ollama>=0.4.7",
     "pandas>=2.2.3",
     "torch>=2.6.0",
-    "rapidfuzz>=3.13.0",
     "git-filter-repo>=2.47.0",
+    "markitdown[all,pdf]>=0.1.5",
+    "ipykernel>=7.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
 ]

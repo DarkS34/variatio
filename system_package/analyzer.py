@@ -33,8 +33,7 @@ class Analyzer():
         self.diagnosis_prompt = PromptTemplate.from_template(
             prompts["gen_diagnostic_prompt"])
 
-        self.parser = CustomOutputParser(
-            self.model, normalization_mode, prompts["gen_icd_code_prompt"])
+        self.parser = CustomOutputParser(self.model, normalization_mode, prompts["gen_icd_code_prompt"])
 
         # Diagnosis chain
         self.diagnosis_chain = self.diagnosis_prompt | self.model | self.parser

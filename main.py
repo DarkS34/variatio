@@ -9,6 +9,7 @@ from system_package.utils import (
     model_installed,
     write_results,
 )
+
 from system_package.tester import AnalyzerTester
 
 
