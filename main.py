@@ -10,7 +10,7 @@ from system_package.utils import (
     write_results,
 )
 
-from system_package.tester import AnalyzerTester
+from tests.tester import AnalyzerTester
 
 
 def run_test_analysis_mode(models_names: list[str], evolution_texts, prompts: dict, args) -> None:

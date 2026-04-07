@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ._validator import Validator
 from .analyzer import Analyzer
-from .data_models import (
+from ..system_package.data_models import (
     DiagnosticResult,
     EvaluationOutput,
     EvaluationResult,
@@ -11,7 +11,7 @@ from .data_models import (
     PerformanceMetrics,
 )
 from .results_manager import ResultsManager
-from .utils import (
+from ..system_package.utils import (
     choose_model,
     get_listed_models_info,
     model_installed,

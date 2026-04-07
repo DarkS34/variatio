@@ -1,0 +1,2141 @@
+{
+  "E001": {
+    "id": "E001",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Tipo de dato básico",
+    "concepts": [
+      "Tipo de dato",
+      "Tipo de dato básico",
+      "Variable"
+    ],
+    "statement": "Encuentra tres valores que tengan los tipos int, str y float. Comprueba con Python que sus valores son de los tipos pedidos.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E002": {
+    "id": "E002",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Entrada / Salida",
+    "concepts": [
+      "Variable",
+      "Entrada / Salida",
+      "Tipo de dato básico"
+    ],
+    "statement": "Escribe un código que imprima tu nombre y edad, así: ¨Nombre: Pedro Martín, edad: 25.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E003": {
+    "id": "E003",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Variable",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador"
+    ],
+    "statement": "Calcula y muestra por pantalla el área de un cuadrado:\n    - Utilizando dos variables, una para almacenar la longitud del lado y otra para almacenar el área.\n    - Utilizando una única variable para almacenar la longitud del lado.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E004": {
+    "id": "E004",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Escribe un programa en Python que calcule el impuesto que debe pagar un contribuyente a partir de sus ingresos anuales y el número de hijos. El impuesto a pagar es un tercio del ingreso imponible, siendo este último igual a los ingresos totales menos una deducción personal de 600€ y otra deducción de 60€ por hijo.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E005": {
+    "id": "E005",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Escribe un programa que dada una hora (expresada en hora, minutos y segundos) muestre por pantalla el total de segundos transcurridos desde la última medianoche y los que quedan para la siguiente medianoche.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E006": {
+    "id": "E006",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Una industria mantiene una flota de camiones para repartir productos. En cada viaje, el conductor anota la distancia recorrida en kilómetros, los litros de gasoil utilizados, el coste del litro de gasoil y los demás costes de mantenimiento del camión (agrupados). Como parte del proceso de contabilidad, el controlador necesita calcular, para cada camión y para cada viaje, los kilómetros recorridos por litro, el coste total del viaje y el coste total por kilómetro (incluidos los gastos de mantenimiento). Diseña un programa sencillo que lleve a cabo estos cálculos para un camión en un viaje.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E007": {
+    "id": "E007",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Conversión de tipos",
+    "concepts": [
+      "Conversión de tipos",
+      "Tipo de dato básico",
+      "Tipo de dato"
+    ],
+    "statement": "Python permite convertir elementos de un tipo en otro. Lleva a cabo las siguientes conversiones y comenta los resultados:",
+    "starter_code": "texto_numerico = \"45\"\nint(texto_numerico)\nint(\"Hola\")\nint(3.99999)\nint(-3.99999)\nfloat(34)\nint(\"diez\")",
+    "solution": null
+  },
+  "E008": {
+    "id": "E008",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Escribe un programa que, a partir de los lados de un rectángulo, calcule su área y perímetro y los muestre por pantalla.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E009": {
+    "id": "E009",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Por consideraciones históricas, un programador suele interpretar que los identificadores i, j, k, l, m, n corresponden a datos enteros, mientras que a, b, c, x, y, z son identificadores que suelen asociarse con valores reales. Escribe un programa que, a partir de 3 números reales que inicializarás, calcule su media, suma total y producto total y muestre todos estos datos por pantalla.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E010": {
+    "id": "E010",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Expresión",
+      "Operador",
+      "Variable",
+      "Asignación"
+    ],
+    "statement": "La temperatura expresada en grados centígrados TC, se puede convertir a grados Fahrenheit (TF) mediante la siguiente fórmula:\n\nEscribe un programa que utilizando un cierto valor de temperatura en grados Fahrenheit, muestre en pantalla la temperatura equivalente en grados Centígrados.",
+    "starter_code": "TF = 9.0*TC/5.0 + 32.0",
+    "solution": null
+  },
+  "E011": {
+    "id": "E011",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Operador",
+    "concepts": [
+      "Operador",
+      "Expresión",
+      "Tipo de dato básico"
+    ],
+    "statement": "Transcribe el siguiente programa, ejecútalo y comenta los resultados:",
+    "starter_code": "a = 3/2\nb = 3.0 / 2\nc = 3 // 2\nprint('a= ', a, 'b= ', b, 'c= ', c)",
+    "solution": null
+  },
+  "E012": {
+    "id": "E012",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "El salario base de un vendedor es de 2.000 euros mensuales. A este salario se le suma un 3% de comisión sobre el total de las ventas que ha realizado, pero al total obtenido hay que descontarle un 32% del IRPF. Escribe un programa que, a partir del importe de las ventas que ha realizado el vendedor durante el último mes y escriba el salario neto que cobrará ese mes.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E013": {
+    "id": "E013",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Expresión",
+    "concepts": [
+      "Variable",
+      "Asignación",
+      "Expresión",
+      "Operador",
+      "Entrada / Salida"
+    ],
+    "statement": "Se desea conocer el importe en Libras Esterlinas (GBP) al cambio de una cantidad en Euros (EUR). Escribe un programa que, a partir de una cierta cantidad en euros y del tipo de cambio del día, muestre el equivalente en libras teniendo en cuenta que la casa de cambio retiene una comisión del 2% sobre el total de la operación.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E014": {
+    "id": "E014",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Cadena",
+      "Operador",
+      "Tipo de dato básico"
+    ],
+    "statement": "En Python es posible hacer operaciones con variables de tipo str. Vamos a probarlo tecleando:",
+    "starter_code": "fruta = \" ciruela \"\ntipo = \" claudia \"\nprint(fruta + tipo)",
+    "solution": null
+  },
+  "E015": {
+    "id": "E015",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Cadena",
+      "Operador",
+      "Tipo de dato básico"
+    ],
+    "statement": "¿Qué se obtiene? ¿Qué es lo que hace la operación + con las cadenas de texto?\nTeclea ahora:",
+    "starter_code": "print fruta * 3",
+    "solution": null
+  },
+  "E016": {
+    "id": "E016",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Entrada / Salida",
+    "concepts": [
+      "Entrada / Salida",
+      "Cadena",
+      "Variable"
+    ],
+    "statement": "¿Qué se obtiene? ¿Qué hace la operación * con los valores tipo texto?",
+    "starter_code": null,
+    "solution": null
+  },
+  "E017": {
+    "id": "E017",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Cadena",
+      "Expresión booleana",
+      "Expresión de comparación",
+      "Sentencia condicional"
+    ],
+    "statement": "Haz un programa que pida al usuario el nombre de las 2 frutas que tengo en mi frutero y cree una variable para el frutero y que imprima esta última.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E018": {
+    "id": "E018",
+    "difficulty": "fácil",
+    "domain": "Estructuras de control",
+    "primary_concept": "Expresión booleana",
+    "concepts": [
+      "Expresión booleana",
+      "Operador",
+      "Tipo de dato básico"
+    ],
+    "statement": "Haz un programa que pida al usuario dos textos (cadenas de caracteres) y los muestre en pantalla en orden alfabético. Pruébalo también introduciendo cadenas de caracteres que sean numéricas, por ejemplo 99 y 102 y razona sobre la salida producida.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E019": {
+    "id": "E019",
+    "difficulty": "fácil",
+    "domain": "Estructuras de control",
+    "primary_concept": "Expresión booleana",
+    "concepts": [
+      "Expresión booleana",
+      "Operador"
+    ],
+    "statement": "Explica lo más brevemente posible qué hace la expresión: a=a==False, sabiendo que la variable a está inicializada a un valor bool (sea cual sea). Explica también qué pasaría si a no hubiera sido previamente inicializado.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E020": {
+    "id": "E020",
+    "difficulty": "fácil",
+    "domain": "Introducción",
+    "primary_concept": "Variable",
+    "concepts": [
+      "Variable",
+      "Tipo de dato",
+      "Expresión",
+      "Operador"
+    ],
+    "statement": "Haz la tabla de verdad de p and not q or r teniendo en cuenta el orden de prelación de los operadores en Python.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E021": {
+    "id": "E021",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Caso de prueba",
+      "Documentación"
+    ],
+    "statement": "Implementa una función \"fuerza\" que retorne el valor de la magnitud física fuerza a partir de dos valores recibidos como parámetros: masa y aceleración. Construye después un programa que permita probar tu función, mostrando por pantalla el valor de la fuerza a partir de una masa y aceleración dadas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E022": {
+    "id": "E022",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Expresión booleana",
+      "Documentación"
+    ],
+    "statement": "El Barn es una [unidad de superficie](https://es.wikipedia.org/wiki/Unidad_de_superficie) muy utilizada en la [física de partículas](https://es.wikipedia.org/wiki/F%C3%ADsica_de_part%C3%ADculas), que equivale a 10-28 [m²](https://es.wikipedia.org/wiki/Metro_cuadrado). Para ilustrar su tamaño, ten en cuenta que un Barn es, aproximadamente, el área de la sección transversal del núcleo de un átomo de [uranio](https://es.wikipedia.org/wiki/Uranio). Programa dos funciones, una que permita convertir unidades en [m²](https://es.wikipedia.org/wiki/Metro_cuadrado) a Barns, y su inversa.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E023": {
+    "id": "E023",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Variable local",
+      "Documentación"
+    ],
+    "statement": "En el mundo financiero, existe para ciertos productos de inversión un concepto denominado *Tasa de Interés Efectivo Anual* (TIEA). Esta tasa es función de la tasa nominal anual (TNA) y del número (entero) de períodos de capitalización (del número de veces en el año que los intereses pasan a formar parte del capital) según la expresión: TIEA=(1 + TNA/m)m-1, siendo m el número de periodos total de un año (es decir, 12 si hablamos de períodos mensuales, 4 si es trimestral, 2 si es semestral, etc.). Escribe una función que calcule el TIEA a partir del TNA y el número de períodos.",
+    "starter_code": "def tiea(tna, m):\n    \"\"\" float, int -> float\n    OBJ: Calcula la Tasa de Interés Efectiva Anual (TIEA)\n    PRE: m in 1,2,3,4,6,12\n    \"\"\"\n    tiea = (1 + tna / m) ** m - 1\n    return tiea",
+    "solution": null
+  },
+  "E024": {
+    "id": "E024",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Importación de funciones",
+      "Biblioteca",
+      "Documentación"
+    ],
+    "statement": "Escribe un programa modularizado que, a partir de una hora (3 datos enteros uno para la hora, otro para los minutos y otro para los segundos y, utilizando una función que calcule el número total de segundos transcurridos desde la última medianoche, muestre dicho total posteriormente por pantalla.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E025": {
+    "id": "E025",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación",
+      "Caso de prueba"
+    ],
+    "statement": "Escribe una función que determine si un punto de coordenadas en 2D está o no sobre la circunferencia x2+y2=1000. *Error frecuente*: considerar que necesitas una instrucción if. No es necesario utilizar if y te pedimos de hecho que no lo utilices.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E026": {
+    "id": "E026",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "El antiguo sistema anglosajón de unidades sigue en vigor en muchos lugares y su uso es frecuente en algunos contextos. Programa una función que determine el número de pintas que contiene una cierta cantidad de líquido expresada en mililitros, sabiendo que 1 pinta (pt) = 568,261ml.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E027": {
+    "id": "E027",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Importación de funciones",
+      "Documentación"
+    ],
+    "statement": "La temperatura expresada en grados centígrados TC, se puede convertir a grados Fahrenheit (TF) mediante la siguiente fórmula: TF = 9*TC/5 + 32. Igualmente, es sabido que −273,15 °C corresponden con el 0 Kelvin. Escribe una función devuelva la temperatura en grados Farenheit y otra en Kelvin a partir de la temperatura en grados centígrados. Escribe un programa para probar ambas funciones que, a partir de una temperatura en centígrados calcule e imprima por pantalla la temperatura en Kelvin y Farenheit.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E028": {
+    "id": "E028",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "Escribe una función que a partir de las coordenadas 3D de dos puntos en el espacio en formato (x, y, z) calcule la distancia que hay entre dichos puntos. Prueba tu función.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E029": {
+    "id": "E029",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "Un número complejo es un número de la forma a+bi, donde a y b son números reales y el valor de i es $\\sqrt{-1}$. Las cuatro operaciones aritméticas básicas sobre números complejos se definen como:\n   * Suma: (a+bi)+(c+di)=(a+c)+(b+d)i\n   * Resta: (a+bi)-(c+di)=(a-c)+(b-d)i\n   * Producto: (a+bi)*(c+di)=(ac-bd)+(ad+bc)i\n   * División: (a+bi)/(c+di) = ((ac+bd)/(c2+d2)) + ((bc-ad)/(c2+d2))i, suponiendo c2+d2<>0\n\n   Programa funciones para cada una de las operaciones descritas con sus respectivos. Construye los probadores que muestren por pantalla el resultado de las operaciones reseñadas. No utilices datos de tipo complex de Python: deberás simularlos programando los complejos utilizando como coeficientes (a,b,c y d) cuyos valores son de tipo real.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E030": {
+    "id": "E030",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Sentencia condicional",
+      "Documentación"
+    ],
+    "statement": "Una aplicación leerá de teclado los valores necesarios para mostrar en pantalla el área de un círculo, un cuadrado y un triángulo. No queremos implementar la aplicación completa aún, sólo preparar los subprogramas de que necesitaremos disponer para en un futuro construir la aplicación (funciones que leen de teclado números y los validan, por una parte, y funciones que hacen los cálculos de las distintas áreas, por otra). Nota: si lo necesitas, utiliza como aproximación de ­П (pi) el valor de que proporciona la biblioteca \"math\" de Python.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E031": {
+    "id": "E031",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Biblioteca",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación",
+      "Importación de funciones",
+      "Biblioteca"
+    ],
+    "statement": "El calendario gregoriano estableció (en 1582) que un año es bisiesto si es divisible entre 4, a menos que sea divisible entre 100. Sin embargo, si un año es divisible entre 100 y además es divisible entre 400, también resulta bisiesto. Implementa una función que determine si un año es bisiesto o no y escribe un probador para todos los posibles casos. Este probador debe mostrar en pantalla, por ejemplo, si has puesto una variable anno= 2015, una salida como la siguiente: \"el año 2015 ¿es bisiesto?: False\".\n\n    Resuelve los problemas poco a poco, prueba primero si es divisible por 4. Cuando lo tengas, ve añadiendo el resto de las condiciones.\n\n    *Error frecuente: considerar que necesitas una instrucción if. Los booleanos se pueden operar como el resto de los tipos.*",
+    "starter_code": null,
+    "solution": null
+  },
+  "E032": {
+    "id": "E032",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Sentencia condicional",
+      "Documentación"
+    ],
+    "statement": "Elabora un subprograma que resuelva una ecuación de primer grado (𝑎·𝑥 + 𝑏 = 0). Lo más importante es determinar claramente qué tipo de subprograma es (función/procedimiento), cuáles son sus entradas, cuáles son sus salidas y cómo no, ponerle un nombre significativo. Para todo lo anterior, lo más sencillo es comenzar por escribir su documentación (*docstring*). Una vez lo tengas terminado, para probarlo, crea un programa que solicite los valores de los parámetros 𝑎 y 𝑏 el cual debe mostrar el valor resultante de la variable 𝑥.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E033": {
+    "id": "E033",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "Haz un subprograma que determine los días, horas, minutos y segundos que hay en una cantidad de segundos introducida por el usuario (desprecia las fracciones de segundo). Escribe un probador para el mismo.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E034": {
+    "id": "E034",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Importación de funciones",
+      "Documentación"
+    ],
+    "statement": "La ley de los gases ideales indica que el volumen V (en litros) ocupado por n moles de un gas a presión P (en atmósferas) y temperatura T (en grados Kelvin), responde a la siguiente fórmula:\n\n$$V=nRT/P$$\n\nsiendo R la constante universal de los gases cuyo valor es 0,082 atmósferas litro/Kmol. Hagamos un subprograma que calcule el volumen de un gas a partir de su presión y temperatura y probémoslo.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E035": {
+    "id": "E035",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Sentencia condicional",
+      "Documentación"
+    ],
+    "statement": "Se dice que un gas está en condiciones ideales cuando está a 1 atmósfera de presión y 0°C, es decir, 273.15ºK. Escribe una función que determine si un cierto gas se encuentra en condiciones ideales.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E036": {
+    "id": "E036",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "Siguiendo con lo anterior, implementa ahora un subprograma que calcule el volumen de un gas en condiciones ideales. ¡No olvides reutilizar tu esfuerzo no reescribiendo código que ya tienes de ejercicios anteriores, sino invocándolo! Por cierto, que tu nuevo subprograma debería tener tan solo una línea de código, tenlo en cuenta. Y no olvides probarlo.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E037": {
+    "id": "E037",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación"
+    ],
+    "statement": "Cuando construyamos programas para su comercialización mimaremos el aspecto de la entrada y la salida (lo que en conjunto se llama interfaz de usuario). Posiblemente pondremos al principio un rótulo, indicando al usuario qué aplicación está usando, rótulo que irá centrado en la pantalla y subrayado, dejando una línea en blanco por encima y otra por debajo. Así:\n\n    \n\n    Escribe el siguiente subprograma:\n\n\n\n    Ejecútalo en Pythontutor (http://www.pythontutor.com/visualize.html)\n\n    *Nota*: Este ejercicio pretende que visualices:\n\n    * Que la declaración de un subprograma no es ejecutable\n    * Que los argumentos reales no tienen por qué llamarse igual, ni diferente que los argumentos formales.\n    * De hecho, los argumentos reales de entrada pueden ser una constante\n    * Aprecia que cada pieza de código tiene su propia tabla de símbolos (*frames* en Python tutor). En un momento de la ejecución hay dos variables con el mismo nombre y distinto contenido.",
+    "starter_code": "def centrarRotulo(rotulo):\n    \"\"\"string--> None\n    OBJ: centra rótulo, subrayado con signos =, +línea encima y debajo\n    \"\"\"\n    tam = len(rotulo)\n    lado = ((72-tam)//2)-1 # 72 columnas suele ser ancho de la pantalla\n    print()\n    print(' '*lado, rotulo)\n    print(' '*lado, '='*tam, end='\\n')\n\n#Probador\nfrase = 'Don Quijote de la Mancha'\ncentrarRotulo(frase) # distinto nombre\ncentrarRotulo('Cervantes') # constante\nrotulo = 'El famoso hidalgo don Quijote de la Mancha' # mismo nombre\ncentrarRotulo(rotulo)",
+    "solution": null
+  },
+  "E038": {
+    "id": "E038",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Ámbito",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Argumento",
+      "Documentación",
+      "Variable local"
+    ],
+    "statement": "Flexibiliza el subprograma **centrarRotulo** de modo que el signo con el que se subraye y el tamaño de la ventana puedan ser distintos en diferentes ejecuciones. *Nota: Este ejercicio pretende enseñarte que la forma de flexibilizar un subprograma es pasarle parámetros.*",
+    "starter_code": null,
+    "solution": null
+  },
+  "E039": {
+    "id": "E039",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Argumento",
+      "Documentación"
+    ],
+    "statement": "Python permite dar valores por defecto en la definición de un subprograma. Documéntate y estudia cómo se hace esto. Para ello, ten en cuenta que la presión es mucho más estable que la temperatura. *Nota: Este ejercicio pretende mostrarte que con la implementación de valores por defecto ya no te harían falta los dos ejercicios anteriores.*",
+    "starter_code": null,
+    "solution": null
+  },
+  "E040": {
+    "id": "E040",
+    "difficulty": "media",
+    "domain": "Subprogramación",
+    "primary_concept": "Biblioteca",
+    "concepts": [
+      "Función",
+      "Biblioteca",
+      "Importación de funciones",
+      "Documentación"
+    ],
+    "statement": "Una biblioteca es un archivo que agrupa funciones y otros elementos de código con una lógica o temática común. Así, existen bibliotecas gráficas, matemáticas, etc. Son importantes pues, al agrupar los subprogramas en bibliotecas, se facilita y fomenta su reutilización. Algunas vienen con una distribución del lenguaje puesto que son de uso común para muchas aplicaciones (piensa en la biblioteca **math** que ya habrás seguramente utilizado) pero también es posible construirnos nuestras propias bibliotecas. En este ejercicio queremos mostrar lo sencillo que resulta reutilizar código, creando las siguientes bibliotecas para tu uso personal:\n   1. Una biblioteca **bib_interfaz** de funciones de interfaz con la función **centrarRotulo** del ejercicio 17, así como los subprogramas que leen datos numéricos de teclado y que permiten construir aplicaciones como la del ejercicio 10. Organiza todo de modo que resulte fácil reutilizarlo en el futuro, pues esta biblioteca la iremos ampliando en adelante.\n   2. Otra biblioteca **bib_conversiones** con funciones de conversión de unidades que contenga todas las funciones implementadas en los ejercicios 2, 6 y 7.\n   3. Una tercera **bib_geometria** que agrupe funciones relacionadas con la geometría, por ejemplo, las de los ejercicios 5, 8 y 10 (al menos).\n   4. Finalmente, una **bib_complejos** con las operaciones con números complejos del ejercicio 9.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E041": {
+    "id": "E041",
+    "difficulty": "fácil",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Documentación",
+      "Caso de prueba"
+    ],
+    "statement": "Programa una función que, recibiendo los 3 coeficientes a, b y c de una ecuación de segundo grado, calcule el valor del discriminante (valor del radicando) de la misma según la fórmula:\n\n$$x=\\frac{-b\\pm \\sqrt{b^{2}-4ac}}{2a}$$\n\nDonde: $discriminante=b^{2}-4ac$\n\nPrueba la función con un programa que la invoque con 3 valores para sus coeficientes.",
+    "starter_code": null,
+    "solution": "def discriminante(a, b, c):\n    \"\"\" float,float,float --> float\n    OBJ: calcula el discriminante de la ecuación de segundo grado \"\"\"\n    return b**2-4*a*c\n\n#Probador 4,5,1\nprint(discriminante(4,5,1))"
+  },
+  "E042": {
+    "id": "E042",
+    "difficulty": "fácil",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Expresión booleana",
+      "Documentación"
+    ],
+    "statement": "Programa una función que determine si un número entero es impar y pruébala.",
+    "starter_code": null,
+    "solution": "def es_impar(n):\n    \"\"\" int --> bool\n    OBJ: Determina si un entero es impar o no\n    \"\"\"\n    return (n % 2 != 0) # alternativa n % 2 == 1\n\n#Probador\nprint(es_impar(25), 'si ') # Observa que necesitaremos 2 probadores\nprint(es_impar(24), 'no ')"
+  },
+  "E043": {
+    "id": "E043",
+    "difficulty": "fácil",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Variable local",
+      "Documentación"
+    ],
+    "statement": "Escribe y prueba una función que calcule el impuesto que debe pagar un contribuyente a partir de sus ingresos anuales y el número de hijos. El impuesto a pagar es un tercio del ingreso imponible, siendo este último igual a los ingresos totales menos una deducción personal de 600€, a lo que se ha de añadir otra deducción de 60€ por hijo.",
+    "starter_code": null,
+    "solution": "def impuesto(ingresos, num_hijos):\n    \"\"\" float, int --> float\n    OBJ: impuesto que debe pagar un contribuyente a\n    partir de sus ingresos anuales y el número de hijos. Existe una\n    deducción personal de 600 euros y una por hijo de 60eur/hijo\n    PRE: num_hijos >= 0 \"\"\"\n    DEDUCCION_PERSONAL = 600\n    DEDUCCION_POR_HIJO = 60\n    ingreso_imponible = ingresos - DEDUCCION_PERSONAL\n    return (ingreso_imponible - DEDUCCION_POR_HIJO * num_hijos)/3\n\n#Probador\nprint(impuesto(25000,2))"
+  },
+  "E044": {
+    "id": "E044",
+    "difficulty": "fácil",
+    "domain": "Subprogramación",
+    "primary_concept": "Función",
+    "concepts": [
+      "Función",
+      "Parámetro",
+      "Valor de retorno",
+      "Importación de funciones",
+      "Biblioteca",
+      "Documentación"
+    ],
+    "statement": "Escribe un programa modularizado que, utilizando funciones, calcule el perímetro y el área de un círculo. Construye los respectivos probadores.",
+    "starter_code": null,
+    "solution": "def area_circulo(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el area de un circulo\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio**2\n\n# Programa probador\nradio = 3.0\nprint('área = ', area_circulo(radio), 'debe dar 28.274.. ')\n\ndef perimetro_circunferencia(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el perímetro de una circunferencia\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio * 2.0\n\n#Programa probador\nradio = 3.0\nprint('perímetro = ', perimetro_circunferencia(radio), 'dará 18.84... ')"
+  },
+  "E045": {
+    "id": "E045",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Expresión booleana",
+      "Expresión de comparación",
+      "Función",
+      "Valor de retorno"
+    ],
+    "statement": "Programa una función que, recibiendo los 3 coeficientes a, b y c de una ecuación de segundo grado, calcule el valor del discriminante (valor del radicando) de la misma según la fórmula:\n\n$$x=\\frac{-b\\pm \\sqrt{b^{2}-4ac}}{2a}$$\n\nDonde: $discriminante=b^{2}-4ac$\n\nPrueba la función con un programa que la invoque con 3 valores para sus coeficientes.",
+    "starter_code": null,
+    "solution": "def discriminante(a, b, c):\n    \"\"\" float,float,float --> float\n    OBJ: calcula el discriminante de la ecuación de segundo grado \"\"\"\n    return b**2-4*a*c\n\n#Probador 4,5,1\nprint(discriminante(4,5,1))"
+  },
+  "E046": {
+    "id": "E046",
+    "difficulty": "media",
+    "domain": "Introducción",
+    "primary_concept": "Excepción",
+    "concepts": [
+      "Sentencia condicional",
+      "Excepción",
+      "Depurar",
+      "Expresión booleana"
+    ],
+    "statement": "Programa una función que determine si un número entero es impar y pruébala.",
+    "starter_code": null,
+    "solution": "def es_impar(n):\n    \"\"\" int --> bool\n    OBJ: Determina si un entero es impar o no\n    \"\"\"\n    return (n % 2 != 0) # alternativa n % 2 == 1\n\n#Probador\nprint(es_impar(25), 'si ') # Observa que necesitaremos 2 probadores\nprint(es_impar(24), 'no ')"
+  },
+  "E047": {
+    "id": "E047",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Excepción",
+      "Expresión booleana",
+      "Entrada / Salida"
+    ],
+    "statement": "Escribe y prueba una función que calcule el impuesto que debe pagar un contribuyente a partir de sus ingresos anuales y el número de hijos. El impuesto a pagar es un tercio del ingreso imponible, siendo este último igual a los ingresos totales menos una deducción personal de 600€, a lo que se ha de añadir otra deducción de 60€ por hijo.",
+    "starter_code": null,
+    "solution": "def impuesto(ingresos, num_hijos):\n    \"\"\" float, int --> float\n    OBJ: impuesto que debe pagar un contribuyente a\n    partir de sus ingresos anuales y el número de hijos. Existe una\n    deducción personal de 600 euros y una por hijo de 60eur/hijo\n    PRE: num_hijos >= 0 \"\"\"\n    DEDUCCION_PERSONAL = 600\n    DEDUCCION_POR_HIJO = 60\n    ingreso_imponible = ingresos - DEDUCCION_PERSONAL\n    return (ingreso_imponible - DEDUCCION_POR_HIJO * num_hijos)/3\n\n#Probador\nprint(impuesto(25000,2))"
+  },
+  "E048": {
+    "id": "E048",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Expresión booleana",
+      "Función"
+    ],
+    "statement": "Escribe un programa modularizado que, utilizando funciones, calcule el perímetro y el área de un círculo. Construye los respectivos probadores.",
+    "starter_code": null,
+    "solution": "def area_circulo(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el area de un circulo\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio**2\n\n# Programa probador\nradio = 3.0\nprint('área = ', area_circulo(radio), 'debe dar 28.274.. ')\n\ndef perimetro_circunferencia(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el perímetro de una circunferencia\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio * 2.0\n\n#Programa probador\nradio = 3.0\nprint('perímetro = ', perimetro_circunferencia(radio), 'dará 18.84... ')"
+  },
+  "E049": {
+    "id": "E049",
+    "difficulty": "media",
+    "domain": "Introducción",
+    "primary_concept": "Excepción",
+    "concepts": [
+      "Sentencia condicional",
+      "Excepción",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Escribe un código que pide al vendedor el importe de una compra: Si la compra es superior a 100EUR se aplica un descuento del 5% si se paga al contado, pero si el pago es con tarjeta sólo se aplica el 2%. Asegúrate de que el importe de la compra es un número válido antes de proceder a los cálculos (pista: usa try para comprobar que es posible convertir la entrada a un float).",
+    "starter_code": null,
+    "solution": null
+  },
+  "E050": {
+    "id": "E050",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Expresión booleana",
+      "Función"
+    ],
+    "statement": "Escribe un subprograma que recibe una hora en formato de 24 horas y la muestre por pantalla en notación de 12 horas (ejemplo: si recibe las 18:30 mostrará por pantalla 6:30 PM). Pruébalo utilizando diferentes valores. No es necesario validar que la entrada es correcta, pero esto debe indicarse en el docstring.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E051": {
+    "id": "E051",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Expresión booleana",
+      "Función"
+    ],
+    "statement": "Como habrás observado, muy a menudo necesitamos validar la información introducida por el usuario. Programa una función \"validar_entero\" que se asegure de que una entrada del usuario es un entero. Ten en cuenta que dicha entrada puede ser cualquier cosa, por ejemplo, un valor real, un booleano o incluso un texto como \"Hola\". Nuestra función recibirá un texto y retornará verdadero si es un entero (dando por válida la entrada) o falso (rechazando la entrada). Consejo: puedes tomar ideas del ejercicio resuelto 2.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E052": {
+    "id": "E052",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Valor de retorno",
+      "Expresión booleana"
+    ],
+    "statement": "Escribe un algoritmo que tras leer tres enteros los escriba en pantalla en orden creciente. Como siempre, valida las entradas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E053": {
+    "id": "E053",
+    "difficulty": "media",
+    "domain": "Introducción",
+    "primary_concept": "Prueba del software",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana",
+      "Caso de prueba",
+      "Prueba del software"
+    ],
+    "statement": "Programa una función que permita determinar si un determinado carácter es una vocal o no, utilizando la construcción if-elif. Repite el ejercicio utilizando esta vez el operador booleano or y observa las diferencias.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E054": {
+    "id": "E054",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Cadena",
+      "Expresión booleana"
+    ],
+    "statement": "Codifica un subprograma que reciba un número entero, y si está entre 1 y 12 escriba un mensaje por pantalla indicando el mes a que dicho número corresponde. En caso contrario deberá mostrar un mensaje de error. Valida las entradas utilizando la función del ejercicio 3.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E055": {
+    "id": "E055",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Una universidad acaba de modificar su sistema de representación de la calificación de los alumnos. A partir de ahora, se calificarán como \"A\" las notas mayores o iguales a 8,5, \"B\" las mayores o iguales a 6,5, \"C\" las calificaciones mayores o iguales a 5, \"D\" las calificaciones mayores o iguales a 3,5, y \"F\" todas las demás. Programa una función que reciba una calificación numérica y retorne la letra con la nueva calificación, luego pruébala con valores introducidos por el usuario. Tal vez sea buena idea basarte en el ejercicio resuelto número 1 pero, a diferencia de lo que se hace allí (se controla la validez con una precondición), asegúrate de que la calificación introducida es válida.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E056": {
+    "id": "E056",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle while",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Bucle while",
+      "Entrada / Salida"
+    ],
+    "statement": "Obtén las raíces de una ecuación de segundo grado a partir de sus coeficientes a, b y c. Recuerda que si el discriminante es cero la raíz es única (-b/2xa) y que si el discriminante es negativo las raíces son imaginarias, en cuyo caso deberá indicarse con un mensaje \"raíces imaginarias\". Modulariza tu solución.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E057": {
+    "id": "E057",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana",
+      "Operador"
+    ],
+    "statement": "Haz un programa que pida al usuario un año, si lo introducido por el usuario es posterior a 1.582 imprimirá si es bisiesto, y si no, explicará el motivo. Recuerda reutilizar tu función es_bisiesto de cuadernos anteriores ¿Cuántas veces debes probar este ejercicio?",
+    "starter_code": null,
+    "solution": null
+  },
+  "E058": {
+    "id": "E058",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Escribe un programa que lea dos caracteres y averigüe si se introdujeron en el orden de su código ASCII o no. Se deberá además comprobar si el primero de ellos es una cifra, y en caso afirmativo indicar si es impar y si es o no primo. Modulariza la solución. En tu código no deben aparecer los valores de la tabla ASCII, porque produciría un código muy difícil de mantener, puedes usar ord() y chr() o simplemente saber que en la tabla ASCII todos los dígitos son consecutivos).",
+    "starter_code": null,
+    "solution": null
+  },
+  "E059": {
+    "id": "E059",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Escribe un programa que muestre un menú en pantalla que permita calcular el seno, el coseno y la tangente de un ángulo. El menú se mostrará hasta que el usuario decida salir. El menú quedará:\n\n    1. Seno\n    2. Coseno\n    3. ...\n    4. Salir\n\n    Elija una opción:",
+    "starter_code": null,
+    "solution": null
+  },
+  "E060": {
+    "id": "E060",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Sentencia condicional",
+    "concepts": [
+      "Sentencia condicional",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Una compañía de alquiler de automóviles desea adquirir un programa para emitir sus facturas, con las siguientes consideraciones:\n    1. Se factura una cantidad fija de 100EUR si no se rebasan los 300 Km.\n    2. Si la distancia recorrida es mayor que 300 Km, entonces:\n       1. Si la distancia es menor o igual que 1.000 Km, se cobrarán 100EUR más el kilometraje que exceda de 300 Km, a razón de 30 céntimos/Km.\n       2. Si la distancia es mayor que 1.000 Km, se cobrarán los 100EUR más el kilometraje, a razón de 30 céntimos/Km para los kilómetros entre el 300 y el 1.000, y 20 céntimos/Km para el resto.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E061": {
+    "id": "E061",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "En el baremo para la adjudicación de plazas en las Escuelas Infantiles Públicas se otorgan puntos en función de los ingresos de la unidad familiar, según se recoge en la siguiente tabla:\n\n|  |  |  |\n| --- | --- | --- |\n| Puntos | Ingresos/mes € desde (incluido) | Hasta € (excluido) |\n| 1 | 5000 | --- |\n| 2 | 3500 | 5000 |\n| 3 | 1800 | 3500 |\n| 4 | 0 | 1800 |\n\nConstruye un subprograma que devuelva los puntos de un niño según los ingresos de su unidad familiar.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E062": {
+    "id": "E062",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle while",
+    "concepts": [
+      "Lista",
+      "Bucle while",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "Un monomio está caracterizado por un coeficiente (real) y una x elevada a un exponente (entero y positivo), si bien puede no llevar x. Como es sabido, un polinomio es una suma de monomios (Ejemplo: +2.0x**3 + x + 4.0)\n\nPara escribir en pantalla un monomio, hay que tener en cuenta que:\n\n   1. Si el coeficiente es 0 no deberá imprimirse el monomio.\n   2. Si el coeficiente es 1 no imprimiremos el coeficiente.\n   3. Si el exponente es 1 no escribiremos el exponente\n   4. Si el exponente es 0 no escribiremos ni el polinomio ni la x.\n\n   Haz un subprograma que imprima un monomio. Advierte que Python no escribe el \"+\" en los números positivos y ahora hará falta hacerlo expresamente.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E063": {
+    "id": "E063",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Bucle while",
+      "Función"
+    ],
+    "statement": "Cuando se incorporan las calificaciones de los alumnos a las actas universitarias es necesario expresar la calificación numérica y también la textual. Teniendo en cuenta que las calificaciones se relacionan según el siguiente criterio:\n\n|  |  |\n| --- | --- |\n| Rango de valores | Calificación textual |\n| 0<=nota<5 | Suspenso |\n| 5<=nota<=6.5 | Aprobado |\n| 6.5<nota<=8.5 | Notable |\n| 8.5<nota<=10 | Sobresaliente |\n\nhaz un subprograma que reciba una calificación numérica comprendida entre 0 y 10 y devuelva la calificación textual.",
+    "starter_code": null,
+    "solution": "def nota_textual(nota):\n    \"\"\"\n       float -> str\n       OBJ: retorna el equivalente textual a una calificación numérica\n       PRE: 0 <= nota <=10\n    \"\"\"\n    if 0 <= nota < 5:\n        nota_texto = \"Suspenso\"\n    elif 5 <= nota <= 6.5:\n        nota_texto = \"Aprobado\"\n    elif 6.5 < nota <= 8.5:\n        nota_texto = \"Notable\"\n    else:\n        nota_texto = \"Sobresaliente\"\n    return nota_texto"
+  },
+  "E064": {
+    "id": "E064",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Escribe un programa capaz de identificar si un número leído por teclado es múltiplo de 3. Si la entrada del usuario es inadecuada, el programa explicará la situación y acabará la ejecución.",
+    "starter_code": null,
+    "solution": "try:\n    n = int(input('Introduce un entero: '))\nexcept:\n    print('Error: Se requiere un entero')\nelse:\n    if (n % 3 == 0):\n        print(\"El numero introducido es múltiplo de 3\")\n    else:\n        print(\"El numero introducido NO es múltiplo de 3\")"
+  },
+  "E065": {
+    "id": "E065",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Cadena",
+      "Bucle for",
+      "Lista",
+      "Indexación"
+    ],
+    "statement": "Programa una función que limpie una lista de tuplas eliminando las que no estén enlazadas con la secuencia inicial de manera similar a cómo se unen las fichas de dominó: el segundo elemento de la tupla i es el mismo que el primero de la tupla i+1. Por ejemplo lista = [(4, 5), (5, 6), (6, 5), (1, 3), (0, 0)] eliminaría las dos últimas tuplas ya que las 3 primeras sí están enlazadas entre ellas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E066": {
+    "id": "E066",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional"
+    ],
+    "statement": "Implementa una aplicación que solicite 10 valores y los almacene en una lista ordenadamente (no en orden de entrada, sino en orden creciente de valor). A continuación, recorre la lista restándole a cada valor el valor que se encuentre en la siguiente posición (ej.: [1, 3, 5], resultado [(1-3), (3-5), (5-1)] = [-2, -2, 4]. Modulariza tu solución.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E067": {
+    "id": "E067",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Elimina elementos duplicados en una lista de listas, considerando duplicados aquellos elementos que aparecen más de una vez en la misma sublista, pero no en la misma lista. Ejemplo: `[[1,2,2,3,2,4], [3,5,2,1,4,5,9], [1,10,2,4,5]]`, en la primera sublista el 2 está duplicado pero que haya otro 2 en las otras sublistas no es problemático, por lo que la salida sería: `[[1,2,3,4], [3,5,2,1,4,9], [1,10,2,4,5]]`",
+    "starter_code": null,
+    "solution": null
+  },
+  "E068": {
+    "id": "E068",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Distribuir 20 datos enteros en dos listas de tal manera que se vayan generando dos secuencias ordenadas, una creciente y otra decreciente. El resultado final serán dos listas, cada una de las cuales contendrá los 20 elementos originales ordenados pero la ordenación será distinta (en una creciente y en otra decreciente). IMPORTANTE: Las listas no pueden almacenarse y luego ordenarse de un golpe utilizando la función sort() de Python, sino que se van ordenando a medida que se insertan los elementos que las componen.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E069": {
+    "id": "E069",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle while",
+    "concepts": [
+      "Lista",
+      "Bucle while",
+      "Función",
+      "Sentencia condicional"
+    ],
+    "statement": "Escribe un subprograma que invierta los valores de las filas de orden k en una matriz (representada mediante una lista de listas). Por ejemplo `[[6,3,2], [8,6,3], [4,15,2], [3,6], [3,7,0], [2,9]]`, K = 2 invierte la 2ª, 4ª y 6ª filas, produciendo la matriz: `[[6,3,2], [3,6,8], [4,15,2], [6,3], [3,7,0], [9,2]]`",
+    "starter_code": null,
+    "solution": null
+  },
+  "E070": {
+    "id": "E070",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Sentencia condicional"
+    ],
+    "statement": "Dada una matriz, generar otra con las filas duplicadas en la primera. Ejemplo:",
+    "starter_code": "# Entrada:\n[[1, 1, 0, 1, 0, 1],\n [0, 0, 1, 0, 0, 1],\n [1, 0, 1, 1, 0, 0],\n [1, 1, 0, 1, 0, 1],\n [0, 0, 1, 0, 0, 1],\n [0, 0, 1, 0, 0, 1]]\n\n# Salida (filas duplicadas):\n[1, 1, 0, 1, 0, 1]\n[0, 0, 1, 0, 0, 1]",
+    "solution": null
+  },
+  "E071": {
+    "id": "E071",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Conjunto",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional",
+      "Conjunto"
+    ],
+    "statement": "Programa una función que reciba el texto de un tweet y retorne una lista con todos los hashtags (#tag) que contenga y otra con las menciones (@usuario). La función debe eliminar de las palabras los signos de puntuación tales como '.,;' para lo cual utilizará strip().",
+    "starter_code": null,
+    "solution": null
+  },
+  "E072": {
+    "id": "E072",
+    "difficulty": "difícil",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Bucle anidado"
+    ],
+    "statement": "Programa una función que reciba una lista con palabras (obligatoriamente incluye las palabras inicio y fin en algún lugar) y retorne un texto que contenga en orden los elementos entre la palabra \"inicio\" y la palabra \"fin\". Ejemplo: La lista `[\"Desde\", \"el\", \"inicio\", \"de\", \"nuestra\", \"relación\", \"me\", \"temía\", \"que\", \"el\", \"fin\", \"llegaría\", \"pronto\"]` tras pasarse a la función retornaría el texto \"de nuestra relación me temía que el\".",
+    "starter_code": null,
+    "solution": null
+  },
+  "E073": {
+    "id": "E073",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Cadena"
+    ],
+    "statement": "Un texto contiene comandos en forma de frases separadas por puntos. En cada frase, la primera palabra contiene el código de la operación y la última el resultado. Crea una lista de parejas [código-resultado] utilizando como entrada un texto con el formato indicado. Ejemplo: SUM-3-30-33. POW-4-2-16. NOT-True-False. Resultado: [(SUM,30), (POW,16), (NOT,False)]",
+    "starter_code": null,
+    "solution": null
+  },
+  "E074": {
+    "id": "E074",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Cadena"
+    ],
+    "statement": "Dada una lista y un conjunto de elementos, eliminar todas las ocurrencias de dichos elementos en la lista. Ejemplo: [1,2,3,4,5,6,7,8] sería la lista original, queremos eliminar [2,4], lista resultante: [1,3,5,6,7,8]",
+    "starter_code": null,
+    "solution": null
+  },
+  "E075": {
+    "id": "E075",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Ya vimos que la validación de entradas es algo tan presente que no podemos escapar de ello, así que si te parece vamos a escribir una función que solicite al usuario introducir un entero y que no pare de pedírselo hasta que la información introducida sea válida. La idea es usar la construcción while combinada con la función de validación programada en cuadernos anteriores, consiguiendo una función cuya cabecera sería la siguiente:",
+    "starter_code": "def leer_entero_validado():\n    \"\"\" None --> int\n    OBJ: Solicita un entero al usuario, lo valida y lo retorna sólo\n    cuando se ha asegurado de que es realmente un entero\n    \"\"\"",
+    "solution": null
+  },
+  "E076": {
+    "id": "E076",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Sentencia condicional"
+    ],
+    "statement": "Una mejora útil al anterior ejercicio, es programar una función entero_pedido(min, max, msj) que pedirá un entero pero limitará su rango, es decir, el entero deberá estar comprendido entre un máximo y un mínimo. Además, la función recibirá un mensaje que será el que empleará para interactuar con el usuario. Como ayuda, te ponemos aquí cómo sería el probador:",
+    "starter_code": "#Probador\nmin = 1\nmax = 12\nprint(entero_pedido(min, max, f'mes entre {min} y {max}: '))",
+    "solution": null
+  },
+  "E077": {
+    "id": "E077",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Escribe un programa que, después de preguntar ¿Cuántos números reales se van a introducir?, pida esos números y calcule su media aritmética, el mayor y el menor. El programa debe controlar que la cantidad de números es mayor de 2 y en caso contrario ha de mostrar un mensaje de error. Como siempre, valida las entradas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E078": {
+    "id": "E078",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Tupla",
+    "concepts": [
+      "Lista",
+      "Tupla",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Escribe un programa que lea una serie de números enteros hasta que se introduzca el número -9999, y cuente el total de números introducidos, el total de valores positivos y el total de valores negativos (no consideres el cero ni positivo ni negativo). Reutiliza la función diseñada en el Ejercicio 1 para validar tus entradas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E079": {
+    "id": "E079",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle anidado",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Implementa una variante del *Ejercicio Resuelto 4* que dibuje en pantalla un rectángulo de dimensiones dadas pero con dos símbolos, las filas pares con '@' y las impares con '#'. Esta será la versión \"5a\". Después de hacerlo, crea una segunda versión \"5b\" para que esta vez los símbolos se alternen en las columnas, es decir, las columnas pares se dibujarán con '@' y las impares con '#'.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E080": {
+    "id": "E080",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Escribe un programa que pida un número límite y calcule cuántos términos de la serie armónica son necesarios para que su suma supere dicho límite. Es decir, dado un límite se trata de determinar el menor número *n* tal que:\n\n    (imagen de fórmula eliminada)\n\n    Prueba tu código, y ten en cuenta que para valores altos del límite el tiempo de cálculo se dispara. Así, para un límite = 5, n sería 83; para 10 ya asciende a 12.367 y para 15, ¡¡el número de términos es 1.835.421!! El programa ha de ser robusto y controlar que el número introducido es un entero positivo.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E081": {
+    "id": "E081",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Slicing",
+    "concepts": [
+      "Lista",
+      "Slicing",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Escribe un programa que lea un entero positivo *n* y genere una tabla con las *n* primeras potencias de 2, 3 y 5. Así:",
+    "starter_code": null,
+    "solution": null
+  },
+  "E082": {
+    "id": "E082",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "Repasa los formatos de salida de Python, y codifica un programa que genere la salida indicada en el enunciado original.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E083": {
+    "id": "E083",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Cadena",
+      "Función"
+    ],
+    "statement": "Escribe un programa que acepte un año escrito en cifras arábigas y lo visualice escrito en números romanos, dentro del rango 1 a 2000. (I=1, V=5, X=10, L=50, C=100, D=500, M=1000).",
+    "starter_code": null,
+    "solution": null
+  },
+  "E084": {
+    "id": "E084",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Diccionario",
+      "Función"
+    ],
+    "statement": "Cada país acuña billetes y monedas de unos determinados valores. Por ejemplo, en los países de la Unión Europea los valores son: 500.0, 200.0, 100.0, 50.0, 20.0, 10.0, 5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01 euros. Diseña un subprograma para una caja de un supermercado, el cual reciba un importe en euros y la cantidad pagada por el cliente en una compra y muestre al cajero cuántas piezas (billetes y monedas) y de qué tipo debe dar como cambio. Dicha salida no deberá en ningún caso especificar piezas para las que haya que dar cero unidades.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E085": {
+    "id": "E085",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Escribe un programa, ahora con estructuras repetitivas, que muestre un menú en pantalla que permita calcular el seno, el coseno y la tangente de un ángulo. El menú se mostrará hasta que el usuario decida salir, y mientras permitirá hacer todas las operaciones que desee el usuario. El menú quedará así:\n\n    1. Seno\n    2. Coseno\n    3. ...\n    4. Salir\n\n    Elija una opción:\n\n    Sugerencia: El menú podría estar centrado, utiliza las bibliotecas ya realizadas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E086": {
+    "id": "E086",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Sentencia condicional"
+    ],
+    "statement": "La varianza poblacional de una población *p*, que dispone de *n* elementos se define como:\n\n$$\\sum_{i=0}^{n}\\frac{\\left(p_{i}-p_{media}\\right)_{}^{2}}{n-1}$$\n\nConstruye un subprograma que devuelva la varianza de una población que recibe como parámetro en una lista.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E087": {
+    "id": "E087",
+    "difficulty": "media",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle while",
+    "concepts": [
+      "Lista",
+      "Bucle while",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Mejorar el *Ejercicio Resuelto 3*, modularizándolo y poniendo un límite al número de veces que el usuario puede intentar acertar el símbolo oculto.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E088": {
+    "id": "E088",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Bucle while",
+      "Función"
+    ],
+    "statement": "Estudia la convergencia de la siguiente serie introduciendo un número creciente de términos y observando su tendencia. Implementa una función para la serie y un código que vaya analizando su convergencia. Comenta tus resultados.\n\n    (imagen de fórmula eliminada)",
+    "starter_code": null,
+    "solution": null
+  },
+  "E089": {
+    "id": "E089",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Escriba un programa modularizado en Python que genere 5 frases a partir de palabras en la siguiente lista:\n\n\n\n    Las frases, que deben tener entre 3 y 10 palabras, deben generarse eligiendo un número aleatorio de palabras cada vez, de modo que la primera frase puede tener 3 palabras, mientras que la segunda podría tener 6 palabras. Una vez generada una frase, el programa la mostrará por pantalla. Y así hasta 5 frases en total.",
+    "starter_code": "['perro','niño','nube','padre','es','esta','come','mira','ama','el','la','al','en']",
+    "solution": null
+  },
+  "E090": {
+    "id": "E090",
+    "difficulty": "media",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Cadena",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Cadena",
+      "Función"
+    ],
+    "statement": "Mejore el programa anterior para que genere, no 5 frases, sino tantas como sea necesario hasta que alguna de ellas tenga sentido. Para ello, después de generar una frase e imprimirla por pantalla se preguntará al usuario si considera que la frase generada tiene sentido y, si su respuesta es afirmativa, mostrará un mensaje indicando el número de frases generadas hasta que se obtuvo una con sentido.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E091": {
+    "id": "E091",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "Escribe un programa en Python que compruebe si una lista de enteros está ordenada ascendentemente.",
+    "starter_code": null,
+    "solution": "def en_orden_ascendente(lista):\n    \"\"\"lista-->boolean\n    OBJ: Devuelve True si la lista está ordenada ascendentemente\"\"\"\n    ordenado = True\n    i = 1\n    ant = lista[0]\n    while i < len(lista) and ordenado:\n        if lista[i] < ant:\n            ordenado = False\n        else:\n            ant = lista[i]\n        i += 1\n    return ordenado\n\nmi_lista = [3, 5, 1, 10]\nprint('Ordenada: ', en_orden_ascendente(mi_lista))"
+  },
+  "E092": {
+    "id": "E092",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Función",
+      "Bucle for"
+    ],
+    "statement": "Dada una lista de valores enteros, indicar cuántos están por debajo de un valor dado por el usuario.",
+    "starter_code": null,
+    "solution": "def cuantos_por_debajo(lista, umbral):\n    \"\"\" lista, int --> int\n    OBJ: Devuelve cuántos valores en la lista están por debajo del umbral\"\"\"\n    i = 0\n    cont = 0\n    for valor in lista:\n        if valor < umbral: cont += 1\n    return cont\n\nmi_lista = [3, 5, 1, 10, 41, 23, 19, 33]\numbral = int(input('Introduzca un valor umbral: '))\nprint('Hay ', cuantos_por_debajo(mi_lista, umbral), ' valores por debajo del umbral')"
+  },
+  "E093": {
+    "id": "E093",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Función",
+      "Bucle for"
+    ],
+    "statement": "Suponer que se dispone de una serie de *n* candidatos (*n* es introducido por el usuario) para una votación. Escribir un algoritmo que realice:\n   - Lectura de votos para los candidatos (finalizar introduciendo -)\n   - Buscar el candidato ganador.",
+    "starter_code": null,
+    "solution": "def inicializar(lista, n):\n    \"\"\"lista, int-->lista\n    OBJ: La lista se inicializa con todos sus valores a 0\"\"\"\n    for i in range(n):\n        lista.append(0)\n    return\n\ndef votacion(n):\n    \"\"\"int-->lista\n    OBJ: Devuelve los resultados de la votación para cada candidato \"\"\"\n    lista_resultados = []\n    inicializar(lista_resultados, n)\n    voto = int(input('Nº del candidato al que vota (-1 para terminar): '))\n    while voto != -1:\n        lista_resultados[voto] += 1\n        voto = int(input('Nº del candidato al que vota (-1 para terminar): '))\n    return lista_resultados\n\ndef ganador(lista_votos):\n    \"\"\"lista-->int\n    OBJ: Devuelve la posición del candidato con más votos \"\"\"\n    max = 0\n    for i in lista_votos:\n        if i > max:\n            max = i\n            candidato = lista_votos.index(i)\n    return candidato\n\n#Prueba\nnum_candidatos = int(input('Número de candidatos: '))\nvotos = votacion(num_candidatos)\nprint('El ganador es el candidato en la posicion: ', ganador(votos))"
+  },
+  "E094": {
+    "id": "E094",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Programa una función que limpie una lista de tuplas eliminando las que no estén enlazadas con la secuencia inicial de manera similar a cómo se unen las fichas de dominó: el segundo elemento de la tupla i es el mismo que el primero de la tupla i+1. Por ejemplo lista = [(4, 5), (5, 6), (6, 5), (1, 3), (0, 0)] eliminaría las dos últimas tuplas ya que las 3 primeras sí están enlazadas entre ellas.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E095": {
+    "id": "E095",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Lista",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "Implementa una aplicación que solicite 10 valores y los almacene en una lista ordenadamente (no en orden de entrada, sino en orden creciente de valor). A continuación, recorre la lista restándole a cada valor el valor que se encuentre en la siguiente posición (ej.: [1, 3, 5], resultado [(1-3), (3-5), (5-1)] = [-2, -2, 4]. Modulariza tu solución.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E096": {
+    "id": "E096",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de control",
+    "primary_concept": "Bucle anidado",
+    "concepts": [
+      "Lista",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Elimina elementos duplicados en una lista de listas, considerando duplicados aquellos elementos que aparecen más de una vez en la misma sublista, pero no en la misma lista. Ejemplo: `[[1,2,2,3,2,4], [3,5,2,1,4,5,9], [1,10,2,4,5]]`, en la primera sublista el 2 está duplicado pero que haya otro 2 en las otras sublistas no es problemático, por lo que la salida sería: `[[1,2,3,4], [3,5,2,1,4,9], [1,10,2,4,5]]`",
+    "starter_code": null,
+    "solution": null
+  },
+  "E097": {
+    "id": "E097",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Slicing",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Cadena",
+      "Función",
+      "Slicing"
+    ],
+    "statement": "Distribuir 20 datos enteros en dos listas de tal manera que se vayan generando dos secuencias ordenadas, una creciente y otra decreciente. IMPORTANTE: Las listas no pueden almacenarse y luego ordenarse de un golpe utilizando la función sort() de Python, sino que se van ordenando a medida que se insertan los elementos que las componen.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E098": {
+    "id": "E098",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Lista",
+      "Bucle for",
+      "Función",
+      "Diccionario"
+    ],
+    "statement": "Escribe un subprograma que invierta los valores de las filas de orden k en una matriz (representada mediante una lista de listas). Por ejemplo `[[6,3,2], [8,6,3], [4,15,2], [3,6], [3,7,0], [2,9]]`, K = 2 invierte la 2ª, 4ª y 6ª filas, produciendo la matriz: `[[6,3,2], [3,6,8], [4,15,2], [6,3], [3,7,0], [9,2]]`",
+    "starter_code": null,
+    "solution": null
+  },
+  "E099": {
+    "id": "E099",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Registro",
+      "Sentencia condicional",
+      "Función"
+    ],
+    "statement": "Dada una matriz, generar otra con las filas duplicadas en la primera. Ejemplo:",
+    "starter_code": "# Entrada:\n[[1, 1, 0, 1, 0, 1],\n [0, 0, 1, 0, 0, 1],\n [1, 0, 1, 1, 0, 0],\n [1, 1, 0, 1, 0, 1],\n [0, 0, 1, 0, 0, 1],\n [0, 0, 1, 0, 0, 1]]\n\n# Salida (filas duplicadas):\n[1, 1, 0, 1, 0, 1]\n[0, 0, 1, 0, 0, 1]",
+    "solution": null
+  },
+  "E100": {
+    "id": "E100",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Registro",
+      "Función",
+      "Expresión booleana"
+    ],
+    "statement": "Programa una función que reciba el texto de un tweet y retorne una lista con todos los hashtags (#tag) que contenga y otra con las menciones (@usuario). La función debe eliminar de las palabras los signos de puntuación tales como '.,;' para lo cual utilizará strip().",
+    "starter_code": null,
+    "solution": null
+  },
+  "E101": {
+    "id": "E101",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Función",
+      "Bucle for",
+      "Entrada / Salida"
+    ],
+    "statement": "Programa una función que reciba una lista con palabras (obligatoriamente incluye las palabras inicio y fin en algún lugar) y retorne un texto que contenga en orden los elementos entre la palabra \"inicio\" y la palabra \"fin\". Ejemplo: La lista `[\"Desde\", \"el\", \"inicio\", \"de\", \"nuestra\", \"relación\", \"me\", \"temía\", \"que\", \"el\", \"fin\", \"llegaría\", \"pronto\"]` tras pasarse a la función retornaría el texto \"de nuestra relación me temía que el\".",
+    "starter_code": null,
+    "solution": null
+  },
+  "E102": {
+    "id": "E102",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Registro",
+    "concepts": [
+      "Registro",
+      "Diccionario",
+      "Función"
+    ],
+    "statement": "Un texto contiene comandos en forma de frases separadas por puntos. En cada frase, la primera palabra contiene el código de la operación y la última el resultado. Crea una lista de parejas [código-resultado] utilizando como entrada un texto con el formato indicado. Ejemplo: SUM-3-30-33. POW-4-2-16. NOT-True-False. Resultado: [(SUM,30), (POW,16), (NOT,False)]",
+    "starter_code": null,
+    "solution": null
+  },
+  "E103": {
+    "id": "E103",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Lista",
+      "Función",
+      "Bucle for"
+    ],
+    "statement": "Dada una lista y un conjunto de elementos, eliminar todas las ocurrencias de dichos elementos en la lista. Ejemplo: [1,2,3,4,5,6,7,8] sería la lista original, queremos eliminar [2,4], lista resultante: [1,3,5,6,7,8]",
+    "starter_code": null,
+    "solution": null
+  },
+  "E104": {
+    "id": "E104",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Registro",
+    "concepts": [
+      "Registro",
+      "Diccionario",
+      "Función"
+    ],
+    "statement": "Dada una lista de valores, indicar cuántos están por debajo de un umbral.",
+    "starter_code": null,
+    "solution": "def cuantos_por_debajo(lista, umbral):\n    \"\"\" lista, float -> float\n    OBJ: Devuelve cuántos valores en la lista están por debajo del umbral\"\"\"\n    i = cont = 0\n    for valor in lista:\n        if valor < umbral: cont += 1\n    return cont\n\n#probador\nmi_lista = [3, 5, 1, 10, 41, 23, 19, 33]\numbral = int(input('Introduzca un valor umbral: '))\nprint('Hay ', cuantos_por_debajo(mi_lista, umbral), ' bajo el umbral')"
+  },
+  "E105": {
+    "id": "E105",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Lista",
+      "Diccionario",
+      "Registro",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Escribe un programa en Python que compruebe si una lista de enteros está ordenada ascendentemente. NO puede utilizarse la función sort()",
+    "starter_code": null,
+    "solution": "def en_orden_ascendente(lista):\n    \"\"\" lista->boolean\n    OBJ: Devuelve True si la lista está ordenada ascendentemente \"\"\"\n    ordenado = True\n    i = 1\n    ant = lista[0]\n    while i < len(lista) and ordenado:\n        if lista[i] < ant: ordenado = False\n        else:\n            ant = lista[i]\n        i += 1\n    return ordenado\n\n# probador\nmi_lista = [3, 5, 1, 10]\nprint('Ordenada: ', en_orden_ascendente(mi_lista))"
+  },
+  "E106": {
+    "id": "E106",
+    "difficulty": "fácil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Bucle for",
+      "Función"
+    ],
+    "statement": "Suponer que se dispone de una serie de *n* candidatos (*n* es introducido por el usuario) para una votación. Escribir un algoritmo que realice:\n   - Lectura de votos para los candidatos (finalizar introduciendo -1)\n   - Buscar el candidato ganador.",
+    "starter_code": null,
+    "solution": "def inicializar(lista, tam):\n    \"\"\" lista, int -> lista\n    OBJ: La lista se inicializa con todos sus valores a 0\n    PRE: tam > 0\n    \"\"\"\n    for i in range(tam):\n        lista.append(0)\n\ndef computar_votacion(num_candidatos):\n    \"\"\" int-->lista\n    OBJ: Devuelve los resultados de la votación para cada candidato\n    PRE: num_candidatos > 0\n    \"\"\"\n    lista_resultados = []\n    inicializar(lista_resultados, num_candidatos)\n    voto = int(input(f'Candidato (0-{num_candidatos}) al que vota, -1 terminar):'))\n    while voto != -1:\n        lista_resultados[voto] += 1\n        voto = int(input(f'Candidato (0-{num_candidatos}) al que vota, -1 terminar):'))\n    return lista_resultados\n\ndef obtener_ganador(lista_votos):\n    \"\"\" lista -> int\n    OBJ: Devuelve la posición en la lista del candidato con más votos\n    \"\"\"\n    max = 0\n    for i in lista_votos:\n        if i > max: max = i\n    return lista_votos.index(max)\n\n# prueba\nnum_candidatos = int(input('Número de candidatos: '))\nvotos = computar_votacion(num_candidatos)\nprint('El ganador es el candidato en la posicion: ', obtener_ganador(votos))"
+  },
+  "E107": {
+    "id": "E107",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Lista",
+      "Función",
+      "Bucle for"
+    ],
+    "statement": "Supón que tenemos 2 diccionarios, uno con la plantilla del FC Barcelona (22 jugadores, parejas \"dorsal\" y \"nombre que aparece en la camiseta\") y otro con las alineaciones de las distintas jornadas de la Liga 2023-2024 (número de jornada y lista de jugadores que jugaron esa jornada). Programa funciones para:\n   * Introducir los datos de una jornada a partir de su número y una lista de jugadores y dorsales. Obviamente no pueden repetirse ningún jugador en la alineación ni participar jugadores que no pertenecen a la plantilla del Barcelona FC.\n   * Determinar si un jugador participó o no en una cierta jornada a partir de su dorsal o de su nombre (como se prefiera).\n   * Listar todas las jornadas en que jugó un determinado jugador cuyo dorsal se indica.\n   * Mostrar el nombre del jugador que más partidos jugó en una temporada, indicando el número de partidos en que intervino.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E108": {
+    "id": "E108",
+    "difficulty": "muy difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Función",
+      "Lista"
+    ],
+    "statement": "Realiza una aplicación que permita comprobar si un tablero de Conecta4 (<https://es.wikipedia.org/wiki/Conecta_4>) ha completado las 4 en raya. La aplicación deberá:\n   1. Solicitar datos para un tablero de 7x6\n   2. Solicitar introducir valores para representar las fichas del tablero en un momento concreto del juego\n   3. Mostrar por pantalla el tablero con los valores introducidos\n   4. Indicar si alguna fila, columna o diagonal incluye 4 en raya (4 casillas consecutivas con una ficha de igual color).\n\n   *Nota*: Para modelar las casillas del tablero utiliza una estructura de datos con dos campos, uno que guardará si hay ficha o no (valor booleano) y otro de qué color es la ficha (amarilla o roja). Si en una casilla no hay ficha, el valor del color no tendrá validez y por tanto se ignorará.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E109": {
+    "id": "E109",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Lista",
+      "Diccionario",
+      "Función",
+      "Bucle anidado"
+    ],
+    "statement": "Realizar un programa que lea palabras hasta que se introduzca \"*fin*\", mostrando una estadística de las longitudes de las palabras, es decir, el número total de palabras de longitud 1 que se hayan introducido, el total de longitud 2, etc. No hay máxima longitud de las palabras. Una posible salida de este programa sería:",
+    "starter_code": null,
+    "solution": null
+  },
+  "E110": {
+    "id": "E110",
+    "difficulty": "difícil",
+    "domain": "Estructuras de datos",
+    "primary_concept": "Diccionario",
+    "concepts": [
+      "Diccionario",
+      "Lista",
+      "Función",
+      "Bucle for"
+    ],
+    "statement": "Programa una función que reciba un diccionario y una lista y que como salida genere dos listas:\n   * una con todos los valores de aquellos elementos de la lista original que están en el diccionario,\n   * otra lista con los valores de los elementos que NO están en el diccionario.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E111": {
+    "id": "E111",
+    "difficulty": "difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Si tenemos un diccionario que contiene como claves el nombre de una persona y como valor una lista con sus preferencias personales (*deportes*, *amigos*, *música*, etc.), es posible programar una función `agregaPreferencia(diccionario, persona, preferencia)` tal que:\n   * Si la persona no existe la agrega al diccionario con una lista que contiene un solo elemento.\n   * Si la persona existe y la preferencia actual existe en su lista, no tiene ningún efecto, pero si dicha preferencia no existe en su lista, la agrega a la lista.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E112": {
+    "id": "E112",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Utilizando diccionarios implementa una estructura que de soporte a los puntos en 2D, es decir, con dos coordenadas x e y. Programa funciones para su suma y resta.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E113": {
+    "id": "E113",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Implementa una aplicación para ayudar en la gestión de cobros de una gasolinera. Mediante una lista de diccionarios deberás calcular el gasto de un total de 10 clientes. Los diccionarios serán utilizados para almacenar el gasto de cada cliente en gasolina, el gasto en productos de la tienda y el descuento en tanto por ciento. La aplicación:\n   1. Solicitará por teclado los gastos de gasolina, de la tienda y el descuento para cada uno de los 10 clientes.\n   2. Mostrará por pantalla la suma de los gastos para cada cliente y el total.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E114": {
+    "id": "E114",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Programa una función distancia_2D que calcule la distancia entre dos puntos. La función retornará un número real según la fórmula de la distancia euclidiana (imagen eliminada).",
+    "starter_code": null,
+    "solution": null
+  },
+  "E115": {
+    "id": "E115",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Realiza una aplicación que permita sumar dos matrices de tamaño 3x4. Las matrices contienen datos sobre Puntos2D (diccionarios tipo `{x:20, y:-3}`). Debes escribir funciones que permitan hacer las siguientes tareas:\n   1. Leer datos para una matriz A.\n   2. Rellenar los datos de las matrices A y B.\n   3. Calcular el resultado de matriz A + matriz B\n   4. Mostrar por pantalla la matriz resultado",
+    "starter_code": null,
+    "solution": null
+  },
+  "E116": {
+    "id": "E116",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Utilizando diccionarios, programa una estructura de datos que permita almacenar fechas como la agrupación de tres valores enteros positivos: dia, mes y año. Utilizando lo anterior, crea una función que calcule si una fecha es anterior a otra.",
+    "starter_code": null,
+    "solution": "ayer = {'dia': 10, 'mes': 11, 'anno': 2023}\nhoy  = {'dia': 11, 'mes': 11, 'anno': 2023}\n\ndef es_anterior(fecha1, fecha2):\n    \"\"\" Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es anterior a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    if (fecha2['anno'] > fecha1['anno']):     respuesta = True\n    elif (fecha1['anno'] > fecha2['anno']):   respuesta = False\n    else: # si los dos años son iguales\n        if (fecha2['mes'] > fecha1['mes']): respuesta = True\n        elif (fecha1['mes'] > fecha2['mes']): respuesta = False\n        else: # el mes y el año son iguales\n            respuesta = (fecha2['dia'] > fecha1['dia'])\n    return respuesta\n\n#probador\nprint(es_anterior(hoy, ayer))"
+  },
+  "E117": {
+    "id": "E117",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Se pide ahora programar una función que evalúe si dos fechas son iguales y otra que indique si una fecha es posterior a otra. Trate de reutilizar la función del problema 1.",
+    "starter_code": null,
+    "solution": "def iguales(fecha1, fecha2):\n    \"\"\"Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es igual a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    return fecha1['dia'] == fecha2['dia'] and \\\n        fecha1['mes'] == fecha2['mes'] and \\\n        fecha1['anno'] == fecha2['anno']\n\ndef es_posterior(fecha1, fecha2):\n    \"\"\" Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es posterior a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    return not es_anterior(fecha1, fecha2) and not iguales(fecha1, fecha2)\n\n#probador\nprint(es_anterior(hoy, ayer))\nprint(es_posterior(hoy, ayer))\nprint(iguales(hoy, hoy))"
+  },
+  "E118": {
+    "id": "E118",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función",
+      "Registro"
+    ],
+    "statement": "Haz un programa que cree un diccionario con personas (nombre-edad) y permita buscar si una persona está en el mismo. Al final se mostrará un informe con el contenido del diccionario.",
+    "starter_code": null,
+    "solution": "edades = {  'Susana': 23,\n            'Pedro': 19,\n            'Andres': 78,\n            'Angela': 45 }\n\nnombre_buscado = input('Dime un nombre para buscarlo: ')\n\nif nombre_buscado in edades:\n    print(nombre_buscado, \" está en el diccionario. Su edad es: \",\n          edades[nombre_buscado], \" años\")\nelse:\n    print(nombre_buscado, \" no está en el diccionario\")\n\n#probador\nprint(\"\\nLas siguientes personas están en el diccionario:\")\nfor persona in edades: print(persona, end='\\t')\nprint(\"\\nSus edades son...\")\nfor edad in edades.values(): print(edad, end='\\t')\nprint(\"\\nEl diccionario tiene \", len(edades), \" entradas\")"
+  },
+  "E119": {
+    "id": "E119",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Investiga qué es la técnica conocida como \"*memoizing*\" y aplícala en la función recursiva que calcula los términos de la serie de Fibonacci.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E120": {
+    "id": "E120",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Escribe y prueba una función recursiva que determine si un texto contiene todas las vocales o no.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E121": {
+    "id": "E121",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Programa una función recursiva que reemplace las 'O' por 'X' en una matriz NxN.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E122": {
+    "id": "E122",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Escribe una función en Python que sume todos los elementos de una matriz siguiendo un recorrido en \"serpiente\".",
+    "starter_code": null,
+    "solution": null
+  },
+  "E123": {
+    "id": "E123",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Eliminar, mediante un subprograma recursivo, todas las apariciones de un carácter en una cadena compactando la misma.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E124": {
+    "id": "E124",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Programa en Python una función recursiva que reciba un entero n y retorne la fila del [triángulo de Pascal](https://es.wikipedia.org/wiki/Tri%C3%A1ngulo_de_Pascal) correspondiente a la misma.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E125": {
+    "id": "E125",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Bucle anidado",
+      "Función"
+    ],
+    "statement": "Escribe un procedimiento recursivo que calcule el prefijo común a todas las palabras de una lista. Ejemplo: el prefijo común a las palabras ['ancient', 'anne', 'ant'] es 'an'",
+    "starter_code": null,
+    "solution": null
+  },
+  "E126": {
+    "id": "E126",
+    "difficulty": "muy difícil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función",
+      "Cadena"
+    ],
+    "statement": "Implementa una función recursiva que cuente cuántos grupos consecutivos de valores iguales hay en un array. Por ejemplo [2,2,2,3,3,1] tiene 3 grupos.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E127": {
+    "id": "E127",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Programa una función que retorne la posición en una lista del primer número impar (es decir, el más cercano al elemento de la posición \"0\").",
+    "starter_code": null,
+    "solution": null
+  },
+  "E128": {
+    "id": "E128",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Cadena",
+      "Función"
+    ],
+    "statement": "Programa una función que cuente el número de 'aes' en un texto. Por ejemplo, la frase \"dábale arroz a la zorra el abad\" contiene 8 aes.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E129": {
+    "id": "E129",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Con el siguiente procedimiento ya programado y probado, esboza un pseudocódigo de un subprograma recursivo que haga sonar todas las cuerdas de una guitarra.",
+    "starter_code": "def sonar(g, m):\n    \"\"\" guitarra, int --> None\n    OBJ hace sonar la cuerda m de la guitarra g\n    \"\"\"",
+    "solution": null
+  },
+  "E130": {
+    "id": "E130",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Implementa una función recursiva que sume los elementos en posiciones pares de una lista.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E131": {
+    "id": "E131",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Recursividad",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Función"
+    ],
+    "statement": "Implementa una función recursiva en Python que retorne el último índice de aparición de un valor en una lista.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E132": {
+    "id": "E132",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Pila de llamadas",
+    "concepts": [
+      "Recursividad",
+      "Caso base",
+      "Caso recursivo",
+      "Lista",
+      "Función",
+      "Pila de llamadas"
+    ],
+    "statement": "Realiza una función que calcule el factorial de un entero empleando recursividad.",
+    "starter_code": null,
+    "solution": "def factorial(n):\n    \"\"\" int -> long\n    OBJ: funcion factorial n!\n    PRE: n >= 0\n    \"\"\"\n    if n in (0, 1): result = 1\n    else: result = n * factorial(n-1)\n    return result\n\n# Prueba\nprint(factorial(6))"
+  },
+  "E133": {
+    "id": "E133",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Ordenación burbuja",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación burbuja",
+      "Lista",
+      "Función",
+      "Bucle anidado"
+    ],
+    "statement": "Implemente una función recursiva que dada una lista averigüe si todos los elementos de la misma son iguales a uno dado.\n\nSOLUCION PROPUESTA (sin slicing):\n\n\n\nSOLUCION PROPUESTA (utilizando *slicing*):",
+    "starter_code": "def todos_iguales(A, ele, actual):\n    \"\"\" lista, objeto, int -> bool\n    OBJ: comprueba si todos los elementos de una lista son iguales a uno dado\n    PRE: La lista debe contener al menos un elemento\n    \"\"\"\n    if (actual == len(A)-1): son_iguales = (A[actual] == ele)\n    else: son_iguales = (A[actual] == ele) and (todos_iguales(A, ele, actual+1))\n    return son_iguales\n\n# Prueba\nL = [1, 1, 1, 1, 1]\nprint(todos_iguales(L, 1, 0)) # Debe mostrar True\n\nL2 = [1, 2, 3, 1, 1]\nprint(todos_iguales(L2, 1, 0)) # Debe mostrar False",
+    "solution": null
+  },
+  "E134": {
+    "id": "E134",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Ordenación burbuja",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación burbuja",
+      "Lista",
+      "Función",
+      "Bucle anidado"
+    ],
+    "statement": "Implementa un programa que, dado un número finito de fechas almacenadas en una lista, nos permita buscar una fecha por año, mes o día, así como la ordenación de las mismas por año. Nota: emplea el método de búsqueda binaria.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E135": {
+    "id": "E135",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Búsqueda binaria",
+    "concepts": [
+      "Búsqueda binaria",
+      "Lista",
+      "Diccionario",
+      "Función",
+      "Registro"
+    ],
+    "statement": "Realiza un programa que almacene 10 frases diferentes en una lista y nos permita ordenar la misma de forma descendentemente utilizando como criterio la longitud de la frase. Utiliza el método de inserción directa.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E136": {
+    "id": "E136",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Ordenación por inserción",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación por inserción",
+      "Lista",
+      "Cadena",
+      "Función"
+    ],
+    "statement": "Modifica el programa anterior para que ordene en función del número de palabras que hay en la frase. Usa ahora el método de selección. Pista: será útil utilizar la función split()",
+    "starter_code": null,
+    "solution": null
+  },
+  "E137": {
+    "id": "E137",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Ordenación por selección",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación por selección",
+      "Lista",
+      "Función",
+      "Cadena"
+    ],
+    "statement": "Analiza la siguiente variante del método de la burbuja, compárala con las implementaciones de la parte \"ejercicios resueltos\" y comenta tus observaciones.",
+    "starter_code": "def burbuja3(lista):\n    \"\"\" lista -> None\n    OBJ: Ordena ascendentemente por bubble sort\n    \"\"\"\n    n = len(lista)\n    for i in range(n):\n        intercambio = False\n        for j in range(0, n-i-1):\n            if lista[j] > lista[j+1]:\n                lista[j], lista[j+1] = lista[j+1], lista[j]\n                intercambio = True\n        if not intercambio: break",
+    "solution": null
+  },
+  "E138": {
+    "id": "E138",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Complejidad algorítmica",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación burbuja",
+      "Complejidad algorítmica",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Realiza un programa para gestionar los datos de stock de un comercio. La información a recoger será: nombre de producto, precio y cantidad en stock. El comercio vende 180 productos distintos. El programa debe ser capaz de:\n   1. Dar de alta un producto nuevo\n   2. Buscar un producto por su nombre, empleando búsqueda secuencial.\n   3. Ordenar los productos según su precio.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E139": {
+    "id": "E139",
+    "difficulty": "media",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Búsqueda lineal",
+    "concepts": [
+      "Búsqueda lineal",
+      "Lista",
+      "Diccionario",
+      "Función"
+    ],
+    "statement": "Haz un programa para gestionar las notas de una clase de 50 alumnos de los cuales sabemos su nombre y la nota obtenida. El programa debe permitir:\n   1. Introducir los datos de los alumnos por teclado.\n   2. Dado un nombre de un alumno, buscarlo y modificar su nota, mostrando el resultado por pantalla (empleando búsqueda secuencial).\n   3. Dado un nombre de un alumno, buscarlo y mostrar la información por pantalla empleando búsqueda binaria.\n   4. Realizar la media de las notas superiores o iguales a 5.\n   5. Realizar la ordenación (método de selección) de los alumnos por notas en orden descendente y mostrar la nota del alumno con mejor nota.\n   6. Utilizando el método de inserción, realizar la ordenación de los alumnos por notas en orden ascendente.",
+    "starter_code": null,
+    "solution": null
+  },
+  "E140": {
+    "id": "E140",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Búsqueda binaria",
+    "concepts": [
+      "Búsqueda binaria",
+      "Búsqueda lineal",
+      "Lista",
+      "Función"
+    ],
+    "statement": "Realiza un procedimiento que reciba una lista de números reales y ordene todos sus elementos de forma ascendente empleando el método de la burbuja.",
+    "starter_code": null,
+    "solution": "def burbuja(lista):\n    \"\"\" lista -> None\n    OBJ: Ordena la lista ascendentemente, método burbuja\n    \"\"\"\n    for pasada in range(len(lista)-1, 0, -1):\n        for i in range(pasada):\n            if lista[i] > lista[i+1]:\n                lista[i], lista[i+1] = lista[i+1], lista[i]"
+  },
+  "E141": {
+    "id": "E141",
+    "difficulty": "fácil",
+    "domain": "Recursividad y algoritmos",
+    "primary_concept": "Método de ordenación",
+    "concepts": [
+      "Método de ordenación",
+      "Ordenación burbuja",
+      "Lista",
+      "Función",
+      "Diccionario",
+      "Sentencia condicional"
+    ],
+    "statement": "Implementa el método de la burbuja para el mismo caso anterior (lista de reales) pero esta vez con ordenación descendente y permitiendo ordenación parcial entre dos posiciones inicial y final de la lista (esto es, no necesariamente hay que ordenar la lista completa sino solo los valores entre dos posiciones dadas).",
+    "starter_code": null,
+    "solution": "def burbuja2(v, inicio, fin):\n    \"\"\" lista -> None\n    OBJ: Ordena la lista ascendentemente, método burbuja\n    \"\"\"\n    for pasada in range(fin):\n        for i in range(fin, pasada, -1):\n            if (v[i] < v[i-1]):\n                v[i], v[i-1] = v[i-1], v[i]"
+  }
+}

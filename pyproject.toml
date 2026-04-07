@@ -13,6 +13,7 @@ dependencies = [
     "git-filter-repo>=2.47.0",
     "markitdown[all,pdf]>=0.1.5",
     "ipykernel>=7.2.0",
+    "pyvis>=0.3.2",
 ]
 
 [dependency-groups]

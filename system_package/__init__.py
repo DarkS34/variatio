@@ -6,7 +6,7 @@ from .utils import (
     get_evolution_texts,
     write_results
 )
-from .tester import AnalyzerTester
+from ..tests.tester import AnalyzerTester
 from .analyzer import Analyzer
 import os
 
