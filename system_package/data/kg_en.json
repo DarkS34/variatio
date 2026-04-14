@@ -1,0 +1,710 @@
+{
+    "relation_types": {
+        "prerequisite": "REQUIRES_PREVIOUS",
+        "combines_with": "COMBINES_WITH",
+        "special_case": "IS_SPECIAL_CASE_OF"
+    },
+    "concepts": {
+        "Introduction": [
+            "Program",
+            "Algorithm",
+            "Interpreter",
+            "Compiler",
+            "Script",
+            "Variable",
+            "Literal",
+            "Data Type",
+            "Basic Data Type",
+            "Identifier",
+            "Operator",
+            "Expression",
+            "Assignment",
+            "Input / Output",
+            "Syntax Error",
+            "Logic Error",
+            "Comment",
+            "Software Testing",
+            "Test Case",
+            "Bug",
+            "Exception",
+            "Debugging",
+            "Execution Flow",
+            "Indentation"
+        ],
+        "Subprogramming": [
+            "Function",
+            "Function Header",
+            "Function Body",
+            "Function Call",
+            "Parameter",
+            "Argument",
+            "Return Value",
+            "Scope",
+            "Local Variable",
+            "Global Variable",
+            "Documentation",
+            "Function Import",
+            "Library"
+        ],
+        "Control Structures": [
+            "Conditional Statement",
+            "For Loop",
+            "While Loop",
+            "break",
+            "continue",
+            "pass",
+            "Iterable",
+            "Iterator",
+            "Nested Loop",
+            "Comparison Expression",
+            "Boolean Expression"
+        ],
+        "Data Structures": [
+            "List",
+            "Tuple",
+            "String",
+            "Set",
+            "Array",
+            "Record",
+            "Dictionary",
+            "Indexing",
+            "Slicing",
+            "Mutability",
+            "Iterability",
+            "Type Conversion",
+            "Shallow Copy",
+            "Deep Copy"
+        ],
+        "Recursion and Algorithms": [
+            "Recursion",
+            "Base Case",
+            "Recursive Case",
+            "Call Stack",
+            "Stack Overflow",
+            "Algorithmic Complexity",
+            "Linear Search",
+            "Binary Search",
+            "Sorting Method",
+            "Bubble Sort",
+            "Insertion Sort",
+            "Selection Sort"
+        ]
+    },
+    "relations": [
+        [
+            "Program",
+            "Algorithm",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Interpreter",
+            "Program",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Compiler",
+            "Program",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Script",
+            "Program",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Execution Flow",
+            "Program",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Indentation",
+            "Execution Flow",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Indentation",
+            "Execution Flow",
+            "COMBINES_WITH"
+        ],
+        [
+            "Basic Data Type",
+            "Data Type",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Variable",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Variable",
+            "Identifier",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Literal",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Expression",
+            "Operator",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Expression",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Expression",
+            "Literal",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Assignment",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Assignment",
+            "Expression",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Input / Output",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Bug",
+            "Logic Error",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Bug",
+            "Syntax Error",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Exception",
+            "Syntax Error",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Exception",
+            "Logic Error",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Debugging",
+            "Bug",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Debugging",
+            "Exception",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Exception",
+            "Debugging",
+            "COMBINES_WITH"
+        ],
+        [
+            "Logic Error",
+            "Debugging",
+            "COMBINES_WITH"
+        ],
+        [
+            "Test Case",
+            "Algorithm",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Software Testing",
+            "Test Case",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Software Testing",
+            "Bug",
+            "COMBINES_WITH"
+        ],
+        [
+            "Function",
+            "Algorithm",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Function",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Function",
+            "Indentation",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Function Header",
+            "Function",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Function Body",
+            "Function",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Function Call",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Parameter",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Parameter",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Argument",
+            "Function Call",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Argument",
+            "Parameter",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Return Value",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Scope",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Scope",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Local Variable",
+            "Scope",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Local Variable",
+            "Variable",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Global Variable",
+            "Scope",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Global Variable",
+            "Variable",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Local Variable",
+            "Global Variable",
+            "COMBINES_WITH"
+        ],
+        [
+            "Documentation",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Library",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Function Import",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Function Import",
+            "Library",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Comparison Expression",
+            "Expression",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Comparison Expression",
+            "Operator",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Boolean Expression",
+            "Comparison Expression",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Boolean Expression",
+            "Basic Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Conditional Statement",
+            "Boolean Expression",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Conditional Statement",
+            "Indentation",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "For Loop",
+            "Iterable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "For Loop",
+            "Indentation",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "While Loop",
+            "Boolean Expression",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "While Loop",
+            "Indentation",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "break",
+            "For Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "break",
+            "While Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "continue",
+            "For Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "continue",
+            "While Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "pass",
+            "Conditional Statement",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "pass",
+            "For Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "pass",
+            "While Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Iterable",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Iterator",
+            "Iterable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Nested Loop",
+            "For Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Nested Loop",
+            "While Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Conditional Statement",
+            "For Loop",
+            "COMBINES_WITH"
+        ],
+        [
+            "Conditional Statement",
+            "While Loop",
+            "COMBINES_WITH"
+        ],
+        [
+            "For Loop",
+            "While Loop",
+            "COMBINES_WITH"
+        ],
+        [
+            "List",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "List",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Tuple",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Tuple",
+            "Mutability",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "String",
+            "Basic Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "String",
+            "Indexing",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Set",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Array",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Record",
+            "Variable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Record",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Dictionary",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Dictionary",
+            "Indexing",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Indexing",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Indexing",
+            "String",
+            "COMBINES_WITH"
+        ],
+        [
+            "Slicing",
+            "Indexing",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Mutability",
+            "Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Iterability",
+            "Iterable",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Iterability",
+            "List",
+            "COMBINES_WITH"
+        ],
+        [
+            "Type Conversion",
+            "Basic Data Type",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Shallow Copy",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Shallow Copy",
+            "Mutability",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Deep Copy",
+            "Shallow Copy",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "List",
+            "Dictionary",
+            "COMBINES_WITH"
+        ],
+        [
+            "List",
+            "Set",
+            "COMBINES_WITH"
+        ],
+        [
+            "Tuple",
+            "List",
+            "COMBINES_WITH"
+        ],
+        [
+            "Call Stack",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Call Stack",
+            "Function Call",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Recursion",
+            "Function",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Recursion",
+            "Call Stack",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Base Case",
+            "Recursion",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Recursive Case",
+            "Recursion",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Base Case",
+            "Recursive Case",
+            "COMBINES_WITH"
+        ],
+        [
+            "Stack Overflow",
+            "Recursion",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Stack Overflow",
+            "Call Stack",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Algorithmic Complexity",
+            "Algorithm",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Algorithmic Complexity",
+            "Sorting Method",
+            "COMBINES_WITH"
+        ],
+        [
+            "Linear Search",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Linear Search",
+            "For Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Binary Search",
+            "Linear Search",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Binary Search",
+            "Sorting Method",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Binary Search",
+            "Recursion",
+            "COMBINES_WITH"
+        ],
+        [
+            "Sorting Method",
+            "List",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Sorting Method",
+            "Algorithm",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Bubble Sort",
+            "Sorting Method",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Bubble Sort",
+            "Nested Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Insertion Sort",
+            "Sorting Method",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Insertion Sort",
+            "Nested Loop",
+            "REQUIRES_PREVIOUS"
+        ],
+        [
+            "Selection Sort",
+            "Sorting Method",
+            "IS_SPECIAL_CASE_OF"
+        ],
+        [
+            "Selection Sort",
+            "Nested Loop",
+            "REQUIRES_PREVIOUS"
+        ]
+    ]
+}
