@@ -3,6 +3,9 @@
 import ollama
 import httpx
 import os
+import json
+from pathlib import Path
+
 
 # def get_args():
 #     parser = ArgumentParser(
@@ -34,9 +37,6 @@ def is_ollama_connected() -> None:
         return False
 
 
-
-
-
 def get_installed_models(with_info: bool = False):
     try:
         if with_info:
@@ -52,7 +52,8 @@ def get_installed_models(with_info: bool = False):
         return installed_models
     except Exception as e:
         print(e)
-        exit()   # ERROR NUMBER -------------------------------------------------------------
+        exit()
+
 
 def download_model(model_name: str) -> bool:
     try:
@@ -80,3 +81,8 @@ def is_model_installed(model_name: str) -> bool:
         return True
     else:
         return download_model(model_name)
+
+def load_exercises_dataset(path: str = Path(__file__).parent / "data" / "exercises_dataset_es.json") -> dict:
+    with open(path, 'r', encoding='utf-8') as f:
+        exercises = json.load(f)
+    return exercises

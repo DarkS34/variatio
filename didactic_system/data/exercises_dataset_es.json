@@ -1,6 +1,5 @@
 {
   "E001": {
-    "id": "E001",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Tipo de dato básico",
@@ -14,7 +13,6 @@
     "solution": null
   },
   "E002": {
-    "id": "E002",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Entrada / Salida",
@@ -28,7 +26,6 @@
     "solution": null
   },
   "E003": {
-    "id": "E003",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Variable",
@@ -43,7 +40,6 @@
     "solution": null
   },
   "E004": {
-    "id": "E004",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -59,7 +55,6 @@
     "solution": null
   },
   "E005": {
-    "id": "E005",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -75,7 +70,6 @@
     "solution": null
   },
   "E006": {
-    "id": "E006",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -91,7 +85,6 @@
     "solution": null
   },
   "E007": {
-    "id": "E007",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Conversión de tipos",
@@ -105,7 +98,6 @@
     "solution": null
   },
   "E008": {
-    "id": "E008",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -121,7 +113,6 @@
     "solution": null
   },
   "E009": {
-    "id": "E009",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -137,7 +128,6 @@
     "solution": null
   },
   "E010": {
-    "id": "E010",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -152,7 +142,6 @@
     "solution": null
   },
   "E011": {
-    "id": "E011",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Operador",
@@ -166,7 +155,6 @@
     "solution": null
   },
   "E012": {
-    "id": "E012",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -182,7 +170,6 @@
     "solution": null
   },
   "E013": {
-    "id": "E013",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Expresión",
@@ -198,7 +185,6 @@
     "solution": null
   },
   "E014": {
-    "id": "E014",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -212,7 +198,6 @@
     "solution": null
   },
   "E015": {
-    "id": "E015",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -226,7 +211,6 @@
     "solution": null
   },
   "E016": {
-    "id": "E016",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Entrada / Salida",
@@ -240,7 +224,6 @@
     "solution": null
   },
   "E017": {
-    "id": "E017",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -255,7 +238,6 @@
     "solution": null
   },
   "E018": {
-    "id": "E018",
     "difficulty": "fácil",
     "domain": "Estructuras de control",
     "primary_concept": "Expresión booleana",
@@ -269,7 +251,6 @@
     "solution": null
   },
   "E019": {
-    "id": "E019",
     "difficulty": "fácil",
     "domain": "Estructuras de control",
     "primary_concept": "Expresión booleana",
@@ -282,7 +263,6 @@
     "solution": null
   },
   "E020": {
-    "id": "E020",
     "difficulty": "fácil",
     "domain": "Introducción",
     "primary_concept": "Variable",
@@ -297,7 +277,6 @@
     "solution": null
   },
   "E021": {
-    "id": "E021",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -313,7 +292,6 @@
     "solution": null
   },
   "E022": {
-    "id": "E022",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -329,7 +307,6 @@
     "solution": null
   },
   "E023": {
-    "id": "E023",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -345,7 +322,6 @@
     "solution": null
   },
   "E024": {
-    "id": "E024",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -362,7 +338,6 @@
     "solution": null
   },
   "E025": {
-    "id": "E025",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -378,7 +353,6 @@
     "solution": null
   },
   "E026": {
-    "id": "E026",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -393,7 +367,6 @@
     "solution": null
   },
   "E027": {
-    "id": "E027",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -409,7 +382,6 @@
     "solution": null
   },
   "E028": {
-    "id": "E028",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -424,7 +396,6 @@
     "solution": null
   },
   "E029": {
-    "id": "E029",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -439,7 +410,6 @@
     "solution": null
   },
   "E030": {
-    "id": "E030",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -455,7 +425,6 @@
     "solution": null
   },
   "E031": {
-    "id": "E031",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Biblioteca",
@@ -472,7 +441,6 @@
     "solution": null
   },
   "E032": {
-    "id": "E032",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -488,7 +456,6 @@
     "solution": null
   },
   "E033": {
-    "id": "E033",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -503,7 +470,6 @@
     "solution": null
   },
   "E034": {
-    "id": "E034",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -519,7 +485,6 @@
     "solution": null
   },
   "E035": {
-    "id": "E035",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -535,7 +500,6 @@
     "solution": null
   },
   "E036": {
-    "id": "E036",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -550,7 +514,6 @@
     "solution": null
   },
   "E037": {
-    "id": "E037",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -565,7 +528,6 @@
     "solution": null
   },
   "E038": {
-    "id": "E038",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Ámbito",
@@ -581,7 +543,6 @@
     "solution": null
   },
   "E039": {
-    "id": "E039",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -596,7 +557,6 @@
     "solution": null
   },
   "E040": {
-    "id": "E040",
     "difficulty": "media",
     "domain": "Subprogramación",
     "primary_concept": "Biblioteca",
@@ -611,7 +571,6 @@
     "solution": null
   },
   "E041": {
-    "id": "E041",
     "difficulty": "fácil",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -627,7 +586,6 @@
     "solution": "def discriminante(a, b, c):\n    \"\"\" float,float,float --> float\n    OBJ: calcula el discriminante de la ecuación de segundo grado \"\"\"\n    return b**2-4*a*c\n\n#Probador 4,5,1\nprint(discriminante(4,5,1))"
   },
   "E042": {
-    "id": "E042",
     "difficulty": "fácil",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -643,7 +601,6 @@
     "solution": "def es_impar(n):\n    \"\"\" int --> bool\n    OBJ: Determina si un entero es impar o no\n    \"\"\"\n    return (n % 2 != 0) # alternativa n % 2 == 1\n\n#Probador\nprint(es_impar(25), 'si ') # Observa que necesitaremos 2 probadores\nprint(es_impar(24), 'no ')"
   },
   "E043": {
-    "id": "E043",
     "difficulty": "fácil",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -659,7 +616,6 @@
     "solution": "def impuesto(ingresos, num_hijos):\n    \"\"\" float, int --> float\n    OBJ: impuesto que debe pagar un contribuyente a\n    partir de sus ingresos anuales y el número de hijos. Existe una\n    deducción personal de 600 euros y una por hijo de 60eur/hijo\n    PRE: num_hijos >= 0 \"\"\"\n    DEDUCCION_PERSONAL = 600\n    DEDUCCION_POR_HIJO = 60\n    ingreso_imponible = ingresos - DEDUCCION_PERSONAL\n    return (ingreso_imponible - DEDUCCION_POR_HIJO * num_hijos)/3\n\n#Probador\nprint(impuesto(25000,2))"
   },
   "E044": {
-    "id": "E044",
     "difficulty": "fácil",
     "domain": "Subprogramación",
     "primary_concept": "Función",
@@ -676,7 +632,6 @@
     "solution": "def area_circulo(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el area de un circulo\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio**2\n\n# Programa probador\nradio = 3.0\nprint('área = ', area_circulo(radio), 'debe dar 28.274.. ')\n\ndef perimetro_circunferencia(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el perímetro de una circunferencia\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio * 2.0\n\n#Programa probador\nradio = 3.0\nprint('perímetro = ', perimetro_circunferencia(radio), 'dará 18.84... ')"
   },
   "E045": {
-    "id": "E045",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -692,7 +647,6 @@
     "solution": "def discriminante(a, b, c):\n    \"\"\" float,float,float --> float\n    OBJ: calcula el discriminante de la ecuación de segundo grado \"\"\"\n    return b**2-4*a*c\n\n#Probador 4,5,1\nprint(discriminante(4,5,1))"
   },
   "E046": {
-    "id": "E046",
     "difficulty": "media",
     "domain": "Introducción",
     "primary_concept": "Excepción",
@@ -707,7 +661,6 @@
     "solution": "def es_impar(n):\n    \"\"\" int --> bool\n    OBJ: Determina si un entero es impar o no\n    \"\"\"\n    return (n % 2 != 0) # alternativa n % 2 == 1\n\n#Probador\nprint(es_impar(25), 'si ') # Observa que necesitaremos 2 probadores\nprint(es_impar(24), 'no ')"
   },
   "E047": {
-    "id": "E047",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -722,7 +675,6 @@
     "solution": "def impuesto(ingresos, num_hijos):\n    \"\"\" float, int --> float\n    OBJ: impuesto que debe pagar un contribuyente a\n    partir de sus ingresos anuales y el número de hijos. Existe una\n    deducción personal de 600 euros y una por hijo de 60eur/hijo\n    PRE: num_hijos >= 0 \"\"\"\n    DEDUCCION_PERSONAL = 600\n    DEDUCCION_POR_HIJO = 60\n    ingreso_imponible = ingresos - DEDUCCION_PERSONAL\n    return (ingreso_imponible - DEDUCCION_POR_HIJO * num_hijos)/3\n\n#Probador\nprint(impuesto(25000,2))"
   },
   "E048": {
-    "id": "E048",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -736,7 +688,6 @@
     "solution": "def area_circulo(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el area de un circulo\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio**2\n\n# Programa probador\nradio = 3.0\nprint('área = ', area_circulo(radio), 'debe dar 28.274.. ')\n\ndef perimetro_circunferencia(radio):\n    \"\"\" float --> float\n    OBJ: Calcula el perímetro de una circunferencia\n    PRE: radio >= 0 \"\"\"\n    import math\n    return math.pi * radio * 2.0\n\n#Programa probador\nradio = 3.0\nprint('perímetro = ', perimetro_circunferencia(radio), 'dará 18.84... ')"
   },
   "E049": {
-    "id": "E049",
     "difficulty": "media",
     "domain": "Introducción",
     "primary_concept": "Excepción",
@@ -751,7 +702,6 @@
     "solution": null
   },
   "E050": {
-    "id": "E050",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -765,7 +715,6 @@
     "solution": null
   },
   "E051": {
-    "id": "E051",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -779,7 +728,6 @@
     "solution": null
   },
   "E052": {
-    "id": "E052",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -794,7 +742,6 @@
     "solution": null
   },
   "E053": {
-    "id": "E053",
     "difficulty": "media",
     "domain": "Introducción",
     "primary_concept": "Prueba del software",
@@ -810,7 +757,6 @@
     "solution": null
   },
   "E054": {
-    "id": "E054",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -825,7 +771,6 @@
     "solution": null
   },
   "E055": {
-    "id": "E055",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -839,7 +784,6 @@
     "solution": null
   },
   "E056": {
-    "id": "E056",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle while",
@@ -854,7 +798,6 @@
     "solution": null
   },
   "E057": {
-    "id": "E057",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -869,7 +812,6 @@
     "solution": null
   },
   "E058": {
-    "id": "E058",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -883,7 +825,6 @@
     "solution": null
   },
   "E059": {
-    "id": "E059",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -897,7 +838,6 @@
     "solution": null
   },
   "E060": {
-    "id": "E060",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Sentencia condicional",
@@ -911,7 +851,6 @@
     "solution": null
   },
   "E061": {
-    "id": "E061",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -926,7 +865,6 @@
     "solution": null
   },
   "E062": {
-    "id": "E062",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle while",
@@ -941,7 +879,6 @@
     "solution": null
   },
   "E063": {
-    "id": "E063",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -956,7 +893,6 @@
     "solution": "def nota_textual(nota):\n    \"\"\"\n       float -> str\n       OBJ: retorna el equivalente textual a una calificación numérica\n       PRE: 0 <= nota <=10\n    \"\"\"\n    if 0 <= nota < 5:\n        nota_texto = \"Suspenso\"\n    elif 5 <= nota <= 6.5:\n        nota_texto = \"Aprobado\"\n    elif 6.5 < nota <= 8.5:\n        nota_texto = \"Notable\"\n    else:\n        nota_texto = \"Sobresaliente\"\n    return nota_texto"
   },
   "E064": {
-    "id": "E064",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -971,7 +907,6 @@
     "solution": "try:\n    n = int(input('Introduce un entero: '))\nexcept:\n    print('Error: Se requiere un entero')\nelse:\n    if (n % 3 == 0):\n        print(\"El numero introducido es múltiplo de 3\")\n    else:\n        print(\"El numero introducido NO es múltiplo de 3\")"
   },
   "E065": {
-    "id": "E065",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -986,7 +921,6 @@
     "solution": null
   },
   "E066": {
-    "id": "E066",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1000,7 +934,6 @@
     "solution": null
   },
   "E067": {
-    "id": "E067",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1014,7 +947,6 @@
     "solution": null
   },
   "E068": {
-    "id": "E068",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1028,7 +960,6 @@
     "solution": null
   },
   "E069": {
-    "id": "E069",
     "difficulty": "muy difícil",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle while",
@@ -1043,7 +974,6 @@
     "solution": null
   },
   "E070": {
-    "id": "E070",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1058,7 +988,6 @@
     "solution": null
   },
   "E071": {
-    "id": "E071",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Conjunto",
@@ -1073,7 +1002,6 @@
     "solution": null
   },
   "E072": {
-    "id": "E072",
     "difficulty": "difícil",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1087,7 +1015,6 @@
     "solution": null
   },
   "E073": {
-    "id": "E073",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1102,7 +1029,6 @@
     "solution": null
   },
   "E074": {
-    "id": "E074",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -1117,7 +1043,6 @@
     "solution": null
   },
   "E075": {
-    "id": "E075",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1131,7 +1056,6 @@
     "solution": null
   },
   "E076": {
-    "id": "E076",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1146,7 +1070,6 @@
     "solution": null
   },
   "E077": {
-    "id": "E077",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1161,7 +1084,6 @@
     "solution": null
   },
   "E078": {
-    "id": "E078",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Tupla",
@@ -1176,7 +1098,6 @@
     "solution": null
   },
   "E079": {
-    "id": "E079",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1191,7 +1112,6 @@
     "solution": null
   },
   "E080": {
-    "id": "E080",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1205,7 +1125,6 @@
     "solution": null
   },
   "E081": {
-    "id": "E081",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Slicing",
@@ -1220,7 +1139,6 @@
     "solution": null
   },
   "E082": {
-    "id": "E082",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1235,7 +1153,6 @@
     "solution": null
   },
   "E083": {
-    "id": "E083",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -1250,7 +1167,6 @@
     "solution": null
   },
   "E084": {
-    "id": "E084",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1265,7 +1181,6 @@
     "solution": null
   },
   "E085": {
-    "id": "E085",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1280,7 +1195,6 @@
     "solution": null
   },
   "E086": {
-    "id": "E086",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1295,7 +1209,6 @@
     "solution": null
   },
   "E087": {
-    "id": "E087",
     "difficulty": "media",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle while",
@@ -1310,7 +1223,6 @@
     "solution": null
   },
   "E088": {
-    "id": "E088",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1325,7 +1237,6 @@
     "solution": null
   },
   "E089": {
-    "id": "E089",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1339,7 +1250,6 @@
     "solution": null
   },
   "E090": {
-    "id": "E090",
     "difficulty": "media",
     "domain": "Estructuras de datos",
     "primary_concept": "Cadena",
@@ -1354,7 +1264,6 @@
     "solution": null
   },
   "E091": {
-    "id": "E091",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1369,7 +1278,6 @@
     "solution": "def en_orden_ascendente(lista):\n    \"\"\"lista-->boolean\n    OBJ: Devuelve True si la lista está ordenada ascendentemente\"\"\"\n    ordenado = True\n    i = 1\n    ant = lista[0]\n    while i < len(lista) and ordenado:\n        if lista[i] < ant:\n            ordenado = False\n        else:\n            ant = lista[i]\n        i += 1\n    return ordenado\n\nmi_lista = [3, 5, 1, 10]\nprint('Ordenada: ', en_orden_ascendente(mi_lista))"
   },
   "E092": {
-    "id": "E092",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1383,7 +1291,6 @@
     "solution": "def cuantos_por_debajo(lista, umbral):\n    \"\"\" lista, int --> int\n    OBJ: Devuelve cuántos valores en la lista están por debajo del umbral\"\"\"\n    i = 0\n    cont = 0\n    for valor in lista:\n        if valor < umbral: cont += 1\n    return cont\n\nmi_lista = [3, 5, 1, 10, 41, 23, 19, 33]\numbral = int(input('Introduzca un valor umbral: '))\nprint('Hay ', cuantos_por_debajo(mi_lista, umbral), ' valores por debajo del umbral')"
   },
   "E093": {
-    "id": "E093",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1397,7 +1304,6 @@
     "solution": "def inicializar(lista, n):\n    \"\"\"lista, int-->lista\n    OBJ: La lista se inicializa con todos sus valores a 0\"\"\"\n    for i in range(n):\n        lista.append(0)\n    return\n\ndef votacion(n):\n    \"\"\"int-->lista\n    OBJ: Devuelve los resultados de la votación para cada candidato \"\"\"\n    lista_resultados = []\n    inicializar(lista_resultados, n)\n    voto = int(input('Nº del candidato al que vota (-1 para terminar): '))\n    while voto != -1:\n        lista_resultados[voto] += 1\n        voto = int(input('Nº del candidato al que vota (-1 para terminar): '))\n    return lista_resultados\n\ndef ganador(lista_votos):\n    \"\"\"lista-->int\n    OBJ: Devuelve la posición del candidato con más votos \"\"\"\n    max = 0\n    for i in lista_votos:\n        if i > max:\n            max = i\n            candidato = lista_votos.index(i)\n    return candidato\n\n#Prueba\nnum_candidatos = int(input('Número de candidatos: '))\nvotos = votacion(num_candidatos)\nprint('El ganador es el candidato en la posicion: ', ganador(votos))"
   },
   "E094": {
-    "id": "E094",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1411,7 +1317,6 @@
     "solution": null
   },
   "E095": {
-    "id": "E095",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Lista",
@@ -1426,7 +1331,6 @@
     "solution": null
   },
   "E096": {
-    "id": "E096",
     "difficulty": "muy difícil",
     "domain": "Estructuras de control",
     "primary_concept": "Bucle anidado",
@@ -1440,7 +1344,6 @@
     "solution": null
   },
   "E097": {
-    "id": "E097",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Slicing",
@@ -1456,7 +1359,6 @@
     "solution": null
   },
   "E098": {
-    "id": "E098",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1471,7 +1373,6 @@
     "solution": null
   },
   "E099": {
-    "id": "E099",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1486,7 +1387,6 @@
     "solution": null
   },
   "E100": {
-    "id": "E100",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1501,7 +1401,6 @@
     "solution": null
   },
   "E101": {
-    "id": "E101",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1516,7 +1415,6 @@
     "solution": null
   },
   "E102": {
-    "id": "E102",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Registro",
@@ -1530,7 +1428,6 @@
     "solution": null
   },
   "E103": {
-    "id": "E103",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1545,7 +1442,6 @@
     "solution": null
   },
   "E104": {
-    "id": "E104",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Registro",
@@ -1559,7 +1455,6 @@
     "solution": "def cuantos_por_debajo(lista, umbral):\n    \"\"\" lista, float -> float\n    OBJ: Devuelve cuántos valores en la lista están por debajo del umbral\"\"\"\n    i = cont = 0\n    for valor in lista:\n        if valor < umbral: cont += 1\n    return cont\n\n#probador\nmi_lista = [3, 5, 1, 10, 41, 23, 19, 33]\numbral = int(input('Introduzca un valor umbral: '))\nprint('Hay ', cuantos_por_debajo(mi_lista, umbral), ' bajo el umbral')"
   },
   "E105": {
-    "id": "E105",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1575,7 +1470,6 @@
     "solution": "def en_orden_ascendente(lista):\n    \"\"\" lista->boolean\n    OBJ: Devuelve True si la lista está ordenada ascendentemente \"\"\"\n    ordenado = True\n    i = 1\n    ant = lista[0]\n    while i < len(lista) and ordenado:\n        if lista[i] < ant: ordenado = False\n        else:\n            ant = lista[i]\n        i += 1\n    return ordenado\n\n# probador\nmi_lista = [3, 5, 1, 10]\nprint('Ordenada: ', en_orden_ascendente(mi_lista))"
   },
   "E106": {
-    "id": "E106",
     "difficulty": "fácil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1589,7 +1483,6 @@
     "solution": "def inicializar(lista, tam):\n    \"\"\" lista, int -> lista\n    OBJ: La lista se inicializa con todos sus valores a 0\n    PRE: tam > 0\n    \"\"\"\n    for i in range(tam):\n        lista.append(0)\n\ndef computar_votacion(num_candidatos):\n    \"\"\" int-->lista\n    OBJ: Devuelve los resultados de la votación para cada candidato\n    PRE: num_candidatos > 0\n    \"\"\"\n    lista_resultados = []\n    inicializar(lista_resultados, num_candidatos)\n    voto = int(input(f'Candidato (0-{num_candidatos}) al que vota, -1 terminar):'))\n    while voto != -1:\n        lista_resultados[voto] += 1\n        voto = int(input(f'Candidato (0-{num_candidatos}) al que vota, -1 terminar):'))\n    return lista_resultados\n\ndef obtener_ganador(lista_votos):\n    \"\"\" lista -> int\n    OBJ: Devuelve la posición en la lista del candidato con más votos\n    \"\"\"\n    max = 0\n    for i in lista_votos:\n        if i > max: max = i\n    return lista_votos.index(max)\n\n# prueba\nnum_candidatos = int(input('Número de candidatos: '))\nvotos = computar_votacion(num_candidatos)\nprint('El ganador es el candidato en la posicion: ', obtener_ganador(votos))"
   },
   "E107": {
-    "id": "E107",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1604,7 +1497,6 @@
     "solution": null
   },
   "E108": {
-    "id": "E108",
     "difficulty": "muy difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1618,7 +1510,6 @@
     "solution": null
   },
   "E109": {
-    "id": "E109",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1633,7 +1524,6 @@
     "solution": null
   },
   "E110": {
-    "id": "E110",
     "difficulty": "difícil",
     "domain": "Estructuras de datos",
     "primary_concept": "Diccionario",
@@ -1648,7 +1538,6 @@
     "solution": null
   },
   "E111": {
-    "id": "E111",
     "difficulty": "difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1663,7 +1552,6 @@
     "solution": null
   },
   "E112": {
-    "id": "E112",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1679,7 +1567,6 @@
     "solution": null
   },
   "E113": {
-    "id": "E113",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1695,7 +1582,6 @@
     "solution": null
   },
   "E114": {
-    "id": "E114",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1710,7 +1596,6 @@
     "solution": null
   },
   "E115": {
-    "id": "E115",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1725,7 +1610,6 @@
     "solution": null
   },
   "E116": {
-    "id": "E116",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1740,7 +1624,6 @@
     "solution": "ayer = {'dia': 10, 'mes': 11, 'anno': 2023}\nhoy  = {'dia': 11, 'mes': 11, 'anno': 2023}\n\ndef es_anterior(fecha1, fecha2):\n    \"\"\" Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es anterior a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    if (fecha2['anno'] > fecha1['anno']):     respuesta = True\n    elif (fecha1['anno'] > fecha2['anno']):   respuesta = False\n    else: # si los dos años son iguales\n        if (fecha2['mes'] > fecha1['mes']): respuesta = True\n        elif (fecha1['mes'] > fecha2['mes']): respuesta = False\n        else: # el mes y el año son iguales\n            respuesta = (fecha2['dia'] > fecha1['dia'])\n    return respuesta\n\n#probador\nprint(es_anterior(hoy, ayer))"
   },
   "E117": {
-    "id": "E117",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1756,7 +1639,6 @@
     "solution": "def iguales(fecha1, fecha2):\n    \"\"\"Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es igual a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    return fecha1['dia'] == fecha2['dia'] and \\\n        fecha1['mes'] == fecha2['mes'] and \\\n        fecha1['anno'] == fecha2['anno']\n\ndef es_posterior(fecha1, fecha2):\n    \"\"\" Fecha, Fecha -> bool\n    OBJ: Calcula si una fecha es posterior a otra\n    PRE: fecha1 y fecha2 son fechas válidas \"\"\"\n    return not es_anterior(fecha1, fecha2) and not iguales(fecha1, fecha2)\n\n#probador\nprint(es_anterior(hoy, ayer))\nprint(es_posterior(hoy, ayer))\nprint(iguales(hoy, hoy))"
   },
   "E118": {
-    "id": "E118",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1773,7 +1655,6 @@
     "solution": "edades = {  'Susana': 23,\n            'Pedro': 19,\n            'Andres': 78,\n            'Angela': 45 }\n\nnombre_buscado = input('Dime un nombre para buscarlo: ')\n\nif nombre_buscado in edades:\n    print(nombre_buscado, \" está en el diccionario. Su edad es: \",\n          edades[nombre_buscado], \" años\")\nelse:\n    print(nombre_buscado, \" no está en el diccionario\")\n\n#probador\nprint(\"\\nLas siguientes personas están en el diccionario:\")\nfor persona in edades: print(persona, end='\\t')\nprint(\"\\nSus edades son...\")\nfor edad in edades.values(): print(edad, end='\\t')\nprint(\"\\nEl diccionario tiene \", len(edades), \" entradas\")"
   },
   "E119": {
-    "id": "E119",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1789,7 +1670,6 @@
     "solution": null
   },
   "E120": {
-    "id": "E120",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1804,7 +1684,6 @@
     "solution": null
   },
   "E121": {
-    "id": "E121",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1820,7 +1699,6 @@
     "solution": null
   },
   "E122": {
-    "id": "E122",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1836,7 +1714,6 @@
     "solution": null
   },
   "E123": {
-    "id": "E123",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1852,7 +1729,6 @@
     "solution": null
   },
   "E124": {
-    "id": "E124",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1867,7 +1743,6 @@
     "solution": null
   },
   "E125": {
-    "id": "E125",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1884,7 +1759,6 @@
     "solution": null
   },
   "E126": {
-    "id": "E126",
     "difficulty": "muy difícil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1901,7 +1775,6 @@
     "solution": null
   },
   "E127": {
-    "id": "E127",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1917,7 +1790,6 @@
     "solution": null
   },
   "E128": {
-    "id": "E128",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1933,7 +1805,6 @@
     "solution": null
   },
   "E129": {
-    "id": "E129",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1948,7 +1819,6 @@
     "solution": null
   },
   "E130": {
-    "id": "E130",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1964,7 +1834,6 @@
     "solution": null
   },
   "E131": {
-    "id": "E131",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Recursividad",
@@ -1979,7 +1848,6 @@
     "solution": null
   },
   "E132": {
-    "id": "E132",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Pila de llamadas",
@@ -1996,7 +1864,6 @@
     "solution": "def factorial(n):\n    \"\"\" int -> long\n    OBJ: funcion factorial n!\n    PRE: n >= 0\n    \"\"\"\n    if n in (0, 1): result = 1\n    else: result = n * factorial(n-1)\n    return result\n\n# Prueba\nprint(factorial(6))"
   },
   "E133": {
-    "id": "E133",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Ordenación burbuja",
@@ -2012,7 +1879,6 @@
     "solution": null
   },
   "E134": {
-    "id": "E134",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Ordenación burbuja",
@@ -2028,7 +1894,6 @@
     "solution": null
   },
   "E135": {
-    "id": "E135",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Búsqueda binaria",
@@ -2044,7 +1909,6 @@
     "solution": null
   },
   "E136": {
-    "id": "E136",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Ordenación por inserción",
@@ -2060,7 +1924,6 @@
     "solution": null
   },
   "E137": {
-    "id": "E137",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Ordenación por selección",
@@ -2076,7 +1939,6 @@
     "solution": null
   },
   "E138": {
-    "id": "E138",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Complejidad algorítmica",
@@ -2092,7 +1954,6 @@
     "solution": null
   },
   "E139": {
-    "id": "E139",
     "difficulty": "media",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Búsqueda lineal",
@@ -2107,7 +1968,6 @@
     "solution": null
   },
   "E140": {
-    "id": "E140",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Búsqueda binaria",
@@ -2122,7 +1982,6 @@
     "solution": "def burbuja(lista):\n    \"\"\" lista -> None\n    OBJ: Ordena la lista ascendentemente, método burbuja\n    \"\"\"\n    for pasada in range(len(lista)-1, 0, -1):\n        for i in range(pasada):\n            if lista[i] > lista[i+1]:\n                lista[i], lista[i+1] = lista[i+1], lista[i]"
   },
   "E141": {
-    "id": "E141",
     "difficulty": "fácil",
     "domain": "Recursividad y algoritmos",
     "primary_concept": "Método de ordenación",
