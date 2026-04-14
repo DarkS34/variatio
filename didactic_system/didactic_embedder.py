@@ -7,8 +7,8 @@ import ollama
 
 from .knowledge_graph import KnowledgeGraph
 
-_kg = KnowledgeGraph()
-ALL_CONCEPTS: list[str] = _kg.all_concepts
+KG = KnowledgeGraph()
+ALL_CONCEPTS: list[str] = KG.all_concepts
 
 MIN_EXAMPLES_FOR_CENTROID = 2
 

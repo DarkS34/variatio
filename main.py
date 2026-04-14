@@ -1,8 +1,4 @@
-from system_package.classficator import DidacticAgent
-from system_package.utils import get_args
-
+from didactic_system.didactic_agent import DidacticAgent
 
 if __name__ == "__main__":
-    args = get_args()
-    evolution_texts = DidacticAgent()
-
+    agent = DidacticAgent()
