@@ -1,32 +1,72 @@
-# from argparse import ArgumentParser
+from argparse import ArgumentParser
+
+from loguru import logger
+from markitdown import MarkItDown
+from pathlib import Path
 
 import ollama
 import httpx
 import os
 import json
-from pathlib import Path
 
 
-# def get_args():
-#     parser = ArgumentParser(
-#         allow_abbrev=False
-#     )
-#     parser.add_argument(
-#         "-f", "--filename",
-#         type=str,
-#         default="input.txt",
-#         help="Filename for the evolution texts file"
-#     )
-#     parser.add_argument(
-#         "-v", "--verbose",
-#         action="store_true",
-#         dest="verbose_mode",
-#         help="Print detailed output during processing"
-#     )
+class ExerciseFormatter:
+    def __init__(self):
+        self.markitdown = MarkItDown()
+
+
+    def convert_file(self, input_file_path: str, output_file_path: str):
+        input_file_path = Path(input_file_path)
+        output_file_path = Path(output_file_path)
+
+        output_md_path = output_file_path.with_suffix(".md")
+        result = self.markitdown.convert(str(input_file_path))
+        output_md_path.write_text(result.text_content, encoding="utf-8")
+
+        logger.info(f"Converted: {input_file_path.name} --> {output_md_path}")
+
+
+    def convert_dir(self, input_dir, output_dir):
+        input_dir_path = Path(input_dir)
+        output_dir_path = Path(output_dir)
+
+        output_dir_path.mkdir(exist_ok=True)
+
+        files = sorted(input_dir_path.glob("*.(pdf|docx)"))
+
+        if not files:
+            logger.error("No PDF or WORD files found in the input directory")
+        else:
+            for file_path in files:
+                output_path = output_dir_path / file_path.with_suffix(".md").name
+                result = self.markitdown.convert(str(file_path))
+                output_path.write_text(result.text_content, encoding="utf-8")
+                logger.info(f"Converted: {file_path.name} --> {output_path}")
+
+
+
+
+def get_args():
+    parser = ArgumentParser(
+        allow_abbrev=False
+    )
     
-#     args = parser.parse_args()
+    parser.add_argument(
+        "-f", "--filename",
+        type=str,
+        default="input.txt",
+        help="Filename for the evolution texts file"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        dest="verbose_mode",
+        help="Print detailed output during processing"
+    )
+    
+    args = parser.parse_args()
 
-#     return args
+    return args
 
 def is_ollama_connected() -> None:
     host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
@@ -82,7 +122,8 @@ def is_model_installed(model_name: str) -> bool:
     else:
         return download_model(model_name)
 
-def load_exercises_dataset(path: str = Path(__file__).parent / "data" / "exercises_dataset_es.json") -> dict:
-    with open(path, 'r', encoding='utf-8') as f:
+def load_exercises_dataset(path: str) -> dict:
+    exercises_path = Path(__file__).parent / path
+    with open(exercises_path, 'r', encoding='utf-8') as f:
         exercises = json.load(f)
     return exercises
