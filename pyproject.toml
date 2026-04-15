@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "loguru>=0.7.3",
+    "markitdown[docx,pdf]>=0.1.5",
     "matplotlib>=3.10.8",
     "networkx>=3.4.2",
     "numpy>=2.2.6",
