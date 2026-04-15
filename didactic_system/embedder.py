@@ -20,7 +20,7 @@ class Embedder:
         embedding_model: str = "embeddinggemma",
         generation_model: str = "",
         cache_path: Path = Path(__file__).parent / "data" / "concept_embeddings.cache.npz",
-        similarity_threshold: float = 0.5,
+        similarity_threshold: float = 0.6,
     ):
         self.all_concepts = all_concepts
         self.exercise_bank = exercise_bank
