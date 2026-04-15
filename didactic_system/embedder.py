@@ -12,7 +12,7 @@ from .knowledge_graph import KnowledgeGraph
 MIN_EXAMPLES_FOR_CENTROID = 2
 
 
-class DidacticEmbedder:
+class Embedder:
     def __init__(
         self,
         all_concepts: KnowledgeGraph,
@@ -79,13 +79,16 @@ class DidacticEmbedder:
             
             name_vec = self._embed(concept)
             if len(examples) >= MIN_EXAMPLES_FOR_CENTROID:
+                # logger.info(f"Concept: [{concept}] - Found {len(examples)} examples")
                 example_vecs = [self._embed(s) for s in examples]
                 all_vecs = [name_vec] + example_vecs
             elif len(examples) == 1:
+                # logger.info(f"Concept: [{concept}] - Found 1 example")
                 real_vec = self._embed(examples[0])
                 # synth_vec = self._embed(self._generate_synthetic(concept))
                 all_vecs = [name_vec, real_vec]
             else:
+                # logger.info(f"Concept: [{concept}] - Found NONE examples")
                 all_vecs = [name_vec]
 
             self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
