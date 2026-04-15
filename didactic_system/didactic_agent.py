@@ -8,12 +8,12 @@ from didactic_system.workflow_prompts import get_input_validation_prompt
 
 
 class DidacticAgent:
-    def __init__(self, gen_LLM: str):
+    def __init__(self, student_info, gen_LLM: str):
         self.gen_LLM = gen_LLM
         self.exercises_dataset = load_exercises_dataset()
         self.knowledge_graph = KnowledgeGraph()
         self.embedder = Embedder(self.knowledge_graph.all_concepts, self.exercises_dataset)
-        self.student_mastered = set()
+        self.student_mastered = set(student_info["mastered"])
         self.student_history = []
 
 
