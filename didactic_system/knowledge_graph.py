@@ -9,7 +9,7 @@ import networkx as nx
 
 
 class KnowledgeGraph:
-    def __init__(self, raw_kg_path: Path = Path(__file__).parent / "data" / "kg_en.json"):
+    def __init__(self, raw_kg_path: Path = Path(__file__).parent / "data" / "kg_es.json"):
         with open(raw_kg_path, encoding="utf-8") as f:
             data = json.load(f)
 
