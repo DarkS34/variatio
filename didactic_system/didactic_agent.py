@@ -1,7 +1,7 @@
 import ollama
 import json
 from loguru import logger
-from didactic_system.exercise_formatter import ExerciseFormatter
+from didactic_system.utils import ExerciseFormatter
 from didactic_system.embedder import Embedder
 from didactic_system.knowledge_graph import KnowledgeGraph
 from didactic_system.utils import load_exercises_dataset
