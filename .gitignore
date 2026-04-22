@@ -8,3 +8,5 @@ icd_vector_db
 .vscode/
 .pytest_cache
 workbooks
+ggleg/*.md
+.claude

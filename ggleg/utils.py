@@ -6,17 +6,12 @@ from pathlib import Path
 import httpx
 import ollama
 
+PROMPTS_DIR = Path(__file__).parent / "prompts" 
+
 
 def get_args():
     parser = ArgumentParser(
         allow_abbrev=False
-    )
-
-    parser.add_argument(
-        "-f", "--filename",
-        type=str,
-        default="input.txt",
-        help="Filename for the evolution texts file"
     )
     parser.add_argument(
         "-v", "--verbose",
