@@ -1,27 +1,3 @@
-def get_input_validation_prompt(user_input: str):
-    return f"""Eres un validador de entrada para un sistema de tutoría pedagógica.
-
-Tu tarea es validar si la entrada del usuario es apropiada para una sesión de aprendizaje.
-
-CRITERIOS DE VALIDACIÓN:
-1. La entrada NO debe estar vacía o ser solo espacios.
-2. La entrada debe tener intención pedagógica (pregunta, explicación, código, ejercicio, etc.).
-3. La entrada debe estar en español o ser código universalmente entendible.
-4. La entrada NO debe ser abusive, grosera o inapropiada.
-
-ENTRADA DEL USUARIO:
-```
-"{user_input}"
-```
-
-Proporciona tu respuesta ÚNICAMENTE en formato JSON sin markdown, sin explicaciones adicionales:
-{{
-    "valid": true|false,
-    "reason": "breve explicación si no es válida",
-    "cleaned_input": "la entrada limpiada si es válida, sino null"
-}}"""
-
-
 DIFFICULTY_RUBRIC = """\
 ESCALA DE DIFICULTAD (1-4) para programación de primer año universitario.
 JUZGA POR EL ENUNCIADO (qué se pide), no por la solución propuesta.
@@ -79,60 +55,6 @@ NIVEL 4 — AVANZADO (reto algorítmico o de diseño)
 # =============================================================================
 # PROMPT 1: LIMPIEZA DE CONTENIDO
 # =============================================================================
-
-def get_content_cleaner_prompt(raw_content: str) -> str:
-    return f"""\
-Eres un preprocesador de documentos educativos de programación. Tu única \
-tarea es devolver el texto limpio, SIN resolver, SIN reformatear, SIN traducir.
-
-====================================================================
-QUÉ DEBES CONSERVAR (intacto, palabra por palabra)
-====================================================================
-1. Cabeceras que indican secciones de ejercicios. Ejemplos:
-     "# Ejercicios resueltos", "# Ejercicios nivel básico",
-     "# Ejercicios nivel avanzado", "# Ejercicio de investigación",
-     "## Exercises", "## Problem Set 3", etc.
-2. Enunciados de ejercicios (en cualquier idioma: es, en, fr).
-3. Bloques de código, fragmentos inline de código, y docstrings.
-4. Soluciones propuestas, con sus comentarios y casos de prueba.
-5. Etiquetas como "SOLUCION PROPUESTA", "Solución:", "Answer:", etc.
-   (te indican dónde empieza una solución; no las borres).
-
-====================================================================
-QUÉ DEBES ELIMINAR
-====================================================================
-- Números de página sueltos (líneas con solo un número: "3", "- 12 -").
-- Pies de página, copyright, marcas de agua, URLs de la universidad.
-- Tablas de contenido e índices.
-- Metadatos de autor/fecha/versión que aparezcan fuera de los ejercicios.
-- Líneas vacías consecutivas de más de 2 (colapsa a máximo 2).
-
-====================================================================
-QUÉ DEBES CORREGIR (artefactos de conversión docx/pdf a markdown)
-====================================================================
-- Underscores escapados: "cuenta\\_aes" -> "cuenta_aes"
-- Docstrings envueltos en cursiva: *\"\"\" ... \"\"\"*  ->  \"\"\" ... \"\"\"
-- Asteriscos de cursiva pegados al código: "*return*" -> "return"
-- Operadores escapados: "n \\* 2" -> "n * 2", "a \\| b" -> "a | b"
-
-====================================================================
-REGLAS ABSOLUTAS
-====================================================================
-- NO resuelvas ningún ejercicio que no tenga ya solución.
-- NO reescribas los enunciados con tus palabras.
-- NO añadas explicaciones, introducciones ni cierres.
-- NO cambies el idioma del texto.
-- Si el contenido ya está limpio, devuélvelo tal cual.
-
-====================================================================
-TEXTO A LIMPIAR (entre delimitadores <<<CONTENT>>>)
-====================================================================
-<<<CONTENT>>>
-{raw_content}
-<<<END>>>
-
-Responde SOLO con el texto limpio, sin envolverlo en backticks ni añadir \
-ningún comentario."""
 
 
 # =============================================================================
@@ -268,17 +190,4 @@ JSON:"""
 
 def get_json_repair_prompt(broken_output: str, error_msg: str) -> str:
     return f"""\
-Tu respuesta anterior no era un JSON válido.
-
-Error del parser: {error_msg}
-
-Respuesta anterior:
-<
-{broken_output}
->>>
-
-Devuelve EXACTAMENTE el mismo contenido pero como JSON array válido. \
-No añadas texto antes ni después. No uses backticks. Escapa comillas \
-internas con \\" y saltos de línea con \\n.
-
-JSON:"""
+"""

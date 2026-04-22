@@ -1,4 +1,4 @@
-from src.didactic_agent import DidacticAgent
+from src.pipeline import src
 from src.exercise_formatter import ExerciseFormatter
 
 student = {

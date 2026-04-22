@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from loguru import logger
 
 import networkx as nx
@@ -7,7 +6,7 @@ import networkx as nx
 
 class KnowledgeGraph:
     def __init__(self, raw_kg_path: str):
-        raw_kg_path = Path(__file__).parent / raw_kg_path
+        
         with open(raw_kg_path, encoding="utf-8") as f:
             data = json.load(f)
 
