@@ -1,56 +1,17 @@
+import json
+import os
 from argparse import ArgumentParser
-
-from loguru import logger
-from markitdown import MarkItDown
 from pathlib import Path
 
-import ollama
 import httpx
-import os
-import json
-
-
-class ExerciseFormatter:
-    def __init__(self):
-        self.markitdown = MarkItDown()
-
-
-    def convert_file(self, input_file_path: str, output_file_path: str):
-        input_file_path = Path(input_file_path)
-        output_file_path = Path(output_file_path)
-
-        output_md_path = output_file_path.with_suffix(".md")
-        result = self.markitdown.convert(str(input_file_path))
-        output_md_path.write_text(result.text_content, encoding="utf-8")
-
-        logger.info(f"Converted: {input_file_path.name} --> {output_md_path}")
-
-
-    def convert_dir(self, input_dir, output_dir):
-        input_dir_path = Path(input_dir)
-        output_dir_path = Path(output_dir)
-
-        output_dir_path.mkdir(exist_ok=True)
-
-        files = sorted(input_dir_path.glob("*.(pdf|docx)"))
-
-        if not files:
-            logger.error("No PDF or WORD files found in the input directory")
-        else:
-            for file_path in files:
-                output_path = output_dir_path / file_path.with_suffix(".md").name
-                result = self.markitdown.convert(str(file_path))
-                output_path.write_text(result.text_content, encoding="utf-8")
-                logger.info(f"Converted: {file_path.name} --> {output_path}")
-
-
+import ollama
 
 
 def get_args():
     parser = ArgumentParser(
         allow_abbrev=False
     )
-    
+
     parser.add_argument(
         "-f", "--filename",
         type=str,
@@ -63,7 +24,7 @@ def get_args():
         dest="verbose_mode",
         help="Print detailed output during processing"
     )
-    
+
     args = parser.parse_args()
 
     return args

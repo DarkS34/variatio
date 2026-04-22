@@ -1,10 +1,12 @@
 [project]
-name = "evolution-text-analysis"
+name = "graph-guided-llm-exercise-generator"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "langchain-ollama>=1.1.0",
+    "langchain>=1.2.15",
     "loguru>=0.7.3",
     "markitdown[docx,pdf]>=0.1.5",
     "matplotlib>=3.10.8",
