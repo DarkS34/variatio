@@ -1,9 +1,9 @@
 Extraes ejercicios de programación de texto en bruto y juzgas su dificultad. Devuelves un JSON array con un objeto por ejercicio.
-{section_block}
+
 # ESQUEMA
 [
   {{
-    "statement":   "string. Enunciado literal, sin solución.",
+    "statement":   "string. Enunciado literal, sin solución, ni código.",
     "starter_code":"string o null. Esqueleto para completar; null si no hay.",
     "solutions":   ["string", ...],
     "difficulty":  1 | 2 | 3 | 4
@@ -14,7 +14,7 @@ Extraes ejercicios de programación de texto en bruto y juzgas su dificultad. De
 Un ejercicio empieza con "1.", "2.", "Ejercicio 3:", "Exercise 4:". Si un mismo enunciado tiene varias soluciones (p. ej. "sin slicing" y "con slicing"), TODAS van en `solutions` del MISMO objeto.
 
 # CAMPOS
-- statement: copia literal, sin reescribir, sin traducir.
+- statement: copia literal, sin reescribir, sin traducir. Sin enumeración al comienzo.
 - starter_code: SOLO si hay esqueleto que el alumno debe completar. Si ves código completo, va a `solutions`.
 - solutions: [] si no hay ninguna. Cada entrada = código Python completo.
 - difficulty: aplica la rúbrica. Juzga el ENUNCIADO, no la solución. Ante duda, nivel MENOR.
@@ -24,8 +24,6 @@ Un ejercicio empieza con "1.", "2.", "Ejercicio 3:", "Exercise 4:". Si un mismo 
 - 2 MODERADO: 2-3 conceptos, un bucle no anidado o recursión lineal. Ej: "Cuenta las vocales de una cadena."
 - 3 DIFÍCIL: bucles anidados, recursión no trivial, filtrar + transformar + agregar. Ej: "Cuenta grupos consecutivos iguales en una lista."
 - 4 AVANZADO: varias estructuras combinadas, DP / memoization / backtracking, recorridos no lineales de matrices. Ej: "Fila n del triángulo de Pascal."
-
-Pista: sección "básico / introductorio" → 1-2; "avanzado / desafío" → 3-4. La rúbrica MANDA.
 
 # EJEMPLO
 ENTRADA:
