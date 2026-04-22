@@ -1,0 +1,166 @@
+{
+  "Cuaderno de trabajo 1-81600a1f": {
+    "statement": "Encuentra tres valores que tengan los tipos int, str y float. Comprueba con Python que sus valores son de los tipos pedidos.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-02e90fc7": {
+    "statement": "Escribe un código que imprima tu nombre y edad, así: ¨Nombre: Pedro Martín, edad: 25.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-65e3e436": {
+    "statement": "Calcula y muestra por pantalla el área de un cuadrado:",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-ae612972": {
+    "statement": "Utilizando dos variables, una para almacenar la longitud del lado y otra para almacenar el área.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-db4f3575": {
+    "statement": "Utilizando una única variable para almacenar la longitud del lado.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-9ff0c4ae": {
+    "statement": "Escribe un programa en Python que calcule el impuesto que debe pagar un contribuyente a partir de sus ingresos anuales y el número de hijos. El impuesto a pagar es un tercio del ingreso imponible, siendo este último igual a los ingresos totales menos una deducción personal de 600€ y otra deducción de 60€ por hijo.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-163237dc": {
+    "statement": "Escribe un programa que dada una hora (expresada en hora, minutos y segundos) muestre por pantalla el total de segundos transcurridos desde la última medianoche y los que quedan para la siguiente medianoche.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-fe2ea82f": {
+    "statement": "Una industria mantiene una flota de camiones para repartir productos. En cada viaje, el conductor anota la distancia recorrida en kilómetros, los litros de gasoil utilizados, el coste del litro de gasoil y los demás costes de mantenimiento del camión (agrupados). Como parte del proceso de contabilidad, el controlador necesita calcular, para cada camión y para cada viaje, los kilómetros recorridos por litro, el coste total del viaje y el coste total por kilómetro (incluidos los gastos de mantenimiento). Diseña un programa sencillo que lleve a cabo estos cálculos para un camión en un viaje.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-d636c461": {
+    "statement": "Escribe un programa que, a partir de los lados de un rectángulo, calcule su área y perímetro y los muestre por pantalla.",
+    "starter_code": null,
+    "solutions": [
+      "l = float(\"5\")\nw = float(\"3\")\n\narea = l * w\nperimetro = 2 * (l + w)\nprint(f\"Área: {area}\")\nprint(f\"Perímetro: {perimetro}\")"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-3ecfbd48": {
+    "statement": "Escribe un programa que, a partir de 3 números reales que inicializarás, calcule su media, suma total y producto total y muestre todos estos datos por pantalla.",
+    "starter_code": null,
+    "solutions": [
+      "a = 1.5\nb = 2.5\nc = 3.0\n\nsuma_total = a + b + c\nmedia = suma_total / 3.0\nproducto_total = a * b * c\n\nprint(f\"Suma total: {suma_total}\")\nprint(f\"Media: {media}\")\nprint(f\"Producto total: {producto_total}\")"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-d2941099": {
+    "statement": "Escribe un programa que utilizando un cierto valor de temperatura en grados Fahrenheit, muestre en pantalla la temperatura equivalente en grados Centígrados.",
+    "starter_code": null,
+    "solutions": [
+      "# Fórmula: C = (F - 32) * 5/9\nF_input = 77.0 # Valor de ejemplo en Fahrenheit\nC_output = (F_input - 32.0) * 5.0 / 9.0\n\nprint(f\"La temperatura equivalente en grados Centígrados es: {C_output:.2f}\")"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-3a6146fd": {
+    "statement": "Transcribe el siguiente programa, ejecútalo y comenta los resultados: a = 3/2; b = 3.0 / 2; c = 3 // 2; print ('a= ', a, 'b= ', b, 'c= ', c)",
+    "starter_code": null,
+    "solutions": [
+      "a = 3/2\nb = 3.0 / 2\nc = 3 // 2\nprint('a=', a, 'b=', b, 'c=', c)"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-6d365184": {
+    "statement": "El salario base de un vendedor es de 2.000 euros mensuales. A este salario se le suma un 3% de comisión sobre el total de las ventas que ha realizado, pero al total obtenido hay que descontarle un 32% del IRPF. Escribe un programa que, a partir del importe de las ventas que ha realizado el vendedor durante el último mes y escriba el salario neto que cobrará ese mes.",
+    "starter_code": null,
+    "solutions": [
+      "SALARIO_BASE = 2000.0\nCOMISION_RATE = 0.03\nIRPF_RATE = 0.32\nventas = 6000.0 # Importe de ventas ejemplo\n\ncomision = ventas * COMISION_RATE\ntotal_bruto = SALARIO_BASE + comision\nsalario_neto = total_bruto * (1 - IRPF_RATE)\n\nprint(f\"El salario neto a cobrará ese mes es: {salario_neto:.2f} euros\")"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-05e60cc2": {
+    "statement": "Se desea conocer el importe en Libras Esterlinas (GBP) al cambio de una cantidad en Euros (EUR). Escribe un programa que, a partir de una cierta cantidad en euros y del tipo de cambio del día, muestre el equivalente en libras teniendo en cuenta que la casa de cambio retiene una comisión del 2% sobre el total de la operación.",
+    "starter_code": null,
+    "solutions": [
+      "monto_eur = 200.0 # Ejemplo de cantidad\ntipo_cambio = 0.85 # Tasa EUR a GBP\nCOMISION = 0.02\n\n# 1. Calcular el monto bruto en GBP\nmonto_bruto_gbp = monto_eur * tipo_cambio\n\n# 2. Aplicar la comisión (recibe el 98% del valor bruto)\nporcentaje_recibido = 1 - COMISION\nmonto_final_gbp = monto_bruto_gbp * porcentaje_recibido\n\nprint(f\"El equivalente en libras es: {monto_final_gbp:.2f}\")"
+    ],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-585b3c06": {
+    "statement": "¿Qué se obtiene? ¿Qué es lo que hace la operación + con las cadenas de texto? Teclea ahora: print fruta * 3",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-03da4cd8": {
+    "statement": "Haz un programa que pida al usuario el nombre de las 2 frutas que tengo en mi frutero y cree una variable para el frutero y que imprima esta última.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 1,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-af595afe": {
+    "statement": "Haz un programa que pida al usuario dos textos (cadenas de caracteres) y los muestre en pantalla en orden alfabético. Pruébalo también introduciendo cadenas de caracteres que sean numéricas, por ejemplo 99 y 102 y razona sobre la salida producida.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-0a52c6c8": {
+    "statement": "Explica lo más brevemente posible qué hace la expresión: a=a==False, sabiendo que la variable a está inicializada a un valor bool (sea cual sea). Explica también qué pasaría si a no hubiera sido previamente inicializado.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  },
+  "Cuaderno de trabajo 1-e1a52413": {
+    "statement": "Haz la tabla de verdad de p and not q or r teniendo en cuenta el orden de prelación de los operadores en Python.",
+    "starter_code": null,
+    "solutions": [],
+    "difficulty": 2,
+    "notebook": "Cuaderno de trabajo 1",
+    "section": "Ejercicios propuestos"
+  }
+}

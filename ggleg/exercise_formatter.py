@@ -186,21 +186,11 @@ class ExerciseFormatter:
         pieces = [self._restore_fences(p, fences).strip() for p in pieces_masked]
         return [p for p in pieces if p]
 
-    @staticmethod
-    def _restore_fences(text: str, fences: list[str]) -> str:
-        return re.sub(
-            r"§§FENCE(\d+)§§",
-            lambda m: fences[int(m.group(1))],
-            text,
-        )
-
     def _clean_content(self, content: str) -> str:
         if len(content.strip()) < 300:
             return content
         try:
-            prompt = load_prompt(
-                "exercise_formatting/content_cleaner", raw_content=content
-            )
+            prompt = load_prompt("data_prep/content_cleaner", raw_content=content)
             response = self.llm.invoke(prompt).strip()
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
@@ -210,17 +200,10 @@ class ExerciseFormatter:
     def _extract_batch(
         self,
         batch: str,
-        section_hint: str | None,
         notebook: str,
     ) -> list[dict]:
-        section_block = (
-            f'\nCONTEXTO DE SECCIÓN (pista, no obliga): "{section_hint}"\n'
-            if section_hint
-            else ""
-        )
         prompt = load_prompt(
-            "exercise_formatting/exercise_formatter",
-            section_block=section_block,
+            "data_prep/exercise_formatter",
             exercises_content=batch,
         )
         response = self.llm.invoke(prompt)
@@ -231,7 +214,7 @@ class ExerciseFormatter:
                 break
             logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
             repair_prompt = load_prompt(
-                "exercise_formatting/json_repair",
+                "data_prep/json_repair",
                 broken_output=response,
                 error_msg="invalid JSON or schema",
             )
@@ -245,7 +228,6 @@ class ExerciseFormatter:
             {
                 **ex.model_dump(),
                 "notebook": notebook,
-                "section": section_hint,
                 "id": self._deterministic_id(notebook, ex.statement),
             }
             for ex in exercises
@@ -263,6 +245,14 @@ class ExerciseFormatter:
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             logger.debug(f"Parse/validation error: {e}")
             return None
+
+    @staticmethod
+    def _restore_fences(text: str, fences: list[str]) -> str:
+        return re.sub(
+            r"§§FENCE(\d+)§§",
+            lambda m: fences[int(m.group(1))],
+            text,
+        )
 
     @staticmethod
     def _deterministic_id(notebook: str, statement: str) -> str:
