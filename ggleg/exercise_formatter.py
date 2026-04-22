@@ -90,25 +90,23 @@ class ExerciseFormatter:
             return False
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
-        sections = self._split_into_sections(content)
-        logger.info(f"Document split into {len(sections)} section(s)")
-
         if len(content) <= self.FULL_CLEAN_MAX_CHARS:
             logger.info("Cleaning full document in one LLM call")
-            cleaned_full = self._clean_content(content)
-            sections = self._split_into_sections(cleaned_full)
+            sections = self._split_into_sections(self._clean_content(content))
         else:
             logger.info("Document too large; cleaning per-section")
-            sections = [(name, self._clean_content(body)) for name, body in sections]
+            sections = [self._clean_content(body) for body in self._split_into_sections(content)]
+
+        logger.info(f"Document split into {len(sections)} section(s)")
 
         all_exercises: dict[str, dict] = {}
-        for section_name, section_body in sections:
+        for section_idx, section_body in enumerate(sections, 1):
             batches = self._build_batches(section_body)
-            logger.info(f"Section {section_name!r}: {len(batches)} batch(es)")
+            logger.info(f"Section {section_idx}/{len(sections)}: {len(batches)} batch(es)")
             for batch_idx, batch in enumerate(batches, 1):
                 logger.debug(f"  Batch {batch_idx}/{len(batches)}")
                 try:
-                    extracted = self._extract_batch(batch, section_name, notebook)
+                    extracted = self._extract_batch(batch, notebook)
                 except Exception as e:
                     logger.error(f"  Batch {batch_idx} failed after retries: {e}")
                     continue
@@ -119,24 +117,24 @@ class ExerciseFormatter:
         logger.success(f"Extracted {len(all_exercises)} exercise(s) from {notebook}")
         return all_exercises
 
-    def _split_into_sections(self, content: str) -> list[tuple[str, str]]:
+    def _split_into_sections(self, content: str) -> list[str]:
         matches = list(self.SECTION_HEADER_RE.finditer(content))
         if not matches:
-            return [(None, content.strip())]
+            stripped = content.strip()
+            return [stripped] if stripped else []
 
         sections = []
         if matches[0].start() > 0:
             prefix = content[: matches[0].start()].strip()
             if prefix:
-                sections.append((None, prefix))
+                sections.append(prefix)
 
         for i, m in enumerate(matches):
-            name = m.group(1).strip()
             start = m.end()
             end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
             body = content[start:end].strip()
             if body:
-                sections.append((name, body))
+                sections.append(body)
 
         return sections
 
