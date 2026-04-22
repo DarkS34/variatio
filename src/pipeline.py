@@ -82,6 +82,4 @@ class DidacticAgent:
                     logger.error("Se alcanzó el límite de intentos. Sesión finalizada.")
                     exit()
 
-        # self.student_history.append({"input": validated_input, "timestamp": None})
-
         return validated_input

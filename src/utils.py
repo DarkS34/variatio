@@ -88,3 +88,7 @@ def load_exercises_dataset(path: str) -> dict:
     with open(exercises_path, 'r', encoding='utf-8') as f:
         exercises = json.load(f)
     return exercises
+
+def load_prompt(name: str, **kwargs) -> str:
+    template = (PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8")
+    return template.format(**kwargs) if kwargs else template
