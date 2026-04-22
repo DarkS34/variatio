@@ -1,19 +1,14 @@
 import ollama
 import json
 from loguru import logger
-from didactic_system.utils import ExerciseFormatter
-from didactic_system.embedder import Embedder
-from didactic_system.knowledge_graph import KnowledgeGraph
-from didactic_system.utils import load_exercises_dataset
-from didactic_system.workflow_prompts import get_input_validation_prompt
+from src.embedder import Embedder
+from src.knowledge_graph import KnowledgeGraph
+from src.utils import load_exercises_dataset
+from src.workflow_prompts import get_input_validation_prompt
 
 
 class DidacticAgent:
-    def __init__(self, 
-                 student_info: dict, 
-                 raw_kg_path: str = "data/concepts_relations_es.json", 
-                 formatted_exercises_path: str = "data/formatted_exercises_es.json"):
-        
+    def __init__(self, student_info: dict, raw_kg_path: str = "data/knowledge_graph_raw.json", formatted_exercises_path: str = "data/formatted_exercises_es.json"):
         self.gen_LLM = "gemma4:e4b-it-q4_K_M"
         self.exercises_dataset = load_exercises_dataset(formatted_exercises_path)
         self.knowledge_graph = KnowledgeGraph(raw_kg_path)
@@ -21,10 +16,6 @@ class DidacticAgent:
         
         self.student_mastered = set(student_info["mastered"])
         self.student_history = []
-
-    def format_excercises(self, input_path: str, output_path:str):
-        self.ef = ExerciseFormatter()
-        self.ef.convert_file(input_path, output_path)
 
 
     def free_interaction(self, max_retries:int = 5):

@@ -7,3 +7,4 @@ icd_vector_db
 *.egg-info/
 .vscode/
 .pytest_cache
+workbooks
