@@ -1,5 +1,4 @@
-from src.pipeline import src
-from src.exercise_formatter import ExerciseFormatter
+from ggleg.exercise_formatter import ExerciseFormatter
 
 student = {
     "mastered": [
