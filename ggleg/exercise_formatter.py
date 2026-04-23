@@ -1,6 +1,8 @@
 import hashlib
 import json
+import logging
 import re
+import warnings
 from pathlib import Path
 from typing import ClassVar, Literal
 
@@ -11,6 +13,11 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from ggleg.utils import load_prompt
+
+for _name in ("docling", "docling_core", "docling_ibm_models", "PIL"):
+    logging.getLogger(_name).setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", module=r"docling.*")
+warnings.filterwarnings("ignore", module=r"PIL.*")
 
 
 class ExtractedExercise(BaseModel):
