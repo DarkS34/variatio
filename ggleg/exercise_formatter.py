@@ -15,7 +15,6 @@ from ggleg.utils import load_prompt
 
 class ExtractedExercise(BaseModel):
     statement: str = Field(min_length=10)
-    starter_code: str | None = None
     solutions: list[str] = Field(default_factory=list)
     difficulty: Literal[1, 2, 3, 4]
 
@@ -49,7 +48,9 @@ class ExerciseFormatter:
             input_path = Path(input_file_path)
             logger.info(f"Processing file: {input_path.name}")
             notebook = input_path.stem
+            logger.debug(f"Converting {input_path.name} to markdown via MarkItDown")
             content = self.markitdown.convert(str(input_path)).markdown
+            logger.info(f"Converted {input_path.name}: {len(content):,} chars")
             exercises = self._extract_from_content(content, notebook=notebook)
             return self._save_dict(exercises, output_file_path)
         except Exception as e:
@@ -59,6 +60,7 @@ class ExerciseFormatter:
     def format_dir(self, input_dir: str, output_file_path: str) -> bool:
         try:
             input_path = Path(input_dir)
+            logger.info(f"Scanning directory: {input_path}")
             files = sorted(
                 p
                 for ext in ("*.pdf", "*.docx", "*.txt", "*.md")
@@ -68,49 +70,78 @@ class ExerciseFormatter:
                 logger.error(f"No supported files found in: {input_dir}")
                 return False
 
+            logger.info(f"Found {len(files)} file(s) to process")
             all_exercises: dict[str, dict] = {}
-            for file_path in files:
-                logger.info(f"Processing file: {file_path.name}")
+            for file_idx, file_path in enumerate(files, 1):
+                logger.info(f"[{file_idx}/{len(files)}] Processing file: {file_path.name}")
                 try:
+                    logger.debug(f"Converting {file_path.name} to markdown via MarkItDown")
                     content = self.markitdown.convert(str(file_path)).markdown
+                    logger.info(f"Converted {file_path.name}: {len(content):,} chars")
                     exercises = self._extract_from_content(
                         content,
                         notebook=file_path.stem,
                     )
+                    before = len(all_exercises)
                     for ex_id, ex in exercises.items():
                         all_exercises.setdefault(ex_id, ex)
+                    added = len(all_exercises) - before
+                    logger.info(
+                        f"[{file_idx}/{len(files)}] {file_path.name}: "
+                        f"added {added} new, skipped {len(exercises) - added} duplicate(s)"
+                    )
                 except Exception as e:
                     logger.exception(f"Skipping {file_path.name}: {e}")
 
+            logger.success(f"Directory scan complete: {len(all_exercises)} unique exercise(s) collected")
             return self._save_dict(all_exercises, output_file_path)
         except Exception as e:
             logger.exception(f"Error processing directory: {e}")
             return False
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
+        logger.info(f"Extracting exercises from '{notebook}' ({len(content):,} chars)")
         cleaned = self._clean_content(content)
+        logger.info(f"Cleaned content: {len(cleaned):,} chars (was {len(content):,})")
         batches = self._build_batches(cleaned)
         logger.info(f"Document split into {len(batches)} batch(es)")
+        
+        if not batches:
+            logger.warning(f"No exercise batches produced for '{notebook}'")
+            return {}
 
         all_exercises: dict[str, dict] = {}
         for batch_idx, batch in enumerate(batches, 1):
-            logger.debug(f"Batch {batch_idx}/{len(batches)}")
+            logger.info(f"Batch {batch_idx}/{len(batches)} ({len(batch):,} chars) — invoking LLM")
             try:
                 extracted = self._extract_batch(batch, notebook)
             except Exception as e:
                 logger.error(f"Batch {batch_idx} failed after retries: {e}")
                 continue
 
+            new_count = 0
             for ex in extracted:
-                all_exercises.setdefault(ex.pop("id"), ex)
+                ex_id = ex.pop("id")
+                if ex_id not in all_exercises:
+                    new_count += 1
+                all_exercises.setdefault(ex_id, ex)
+            logger.info(
+                f"Batch {batch_idx}/{len(batches)}: extracted {len(extracted)} "
+                f"({new_count} new, {len(extracted) - new_count} duplicate)"
+            )
 
         logger.success(f"Extracted {len(all_exercises)} exercise(s) from {notebook}")
         return all_exercises
 
     def _build_batches(self, content: str) -> list[str]:
         exercises = self._split_exercises_protecting_code(content)
+        logger.debug(f"Detected {len(exercises)} exercise block(s) before batching")
         if not exercises:
             return []
+
+        oversized = sum(1 for ex in exercises if len(ex) > self.chunk_size)
+        if oversized:
+            logger.warning(f"{oversized} exercise(s) exceed chunk_size={self.chunk_size}; sent as solo batches")
 
         batches, current, size = [], [], 0
         for ex in exercises:
@@ -155,10 +186,13 @@ class ExerciseFormatter:
 
     def _clean_content(self, content: str) -> str:
         if len(content.strip()) < 300:
+            logger.debug("Content under 300 chars; skipping LLM cleaning")
             return content
         try:
+            logger.info(f"Cleaning content via LLM ({len(content):,} chars)")
             prompt = load_prompt("data_prep/content_cleaner", raw_content=content)
             response = self.llm.invoke(prompt).strip()
+            logger.debug(f"LLM cleaner returned {len(response):,} chars")
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
             logger.warning(f"Cleaning failed, returning raw content: {e}")
@@ -173,7 +207,9 @@ class ExerciseFormatter:
             "data_prep/exercise_formatter",
             exercises_content=batch,
         )
+        logger.debug(f"Invoking formatter LLM ({len(prompt):,} char prompt)")
         response = self.llm.invoke(prompt)
+        logger.debug(f"Formatter LLM returned {len(response):,} chars")
         exercises = self._parse_and_validate(response)
 
         for attempt in range(self.max_repair_attempts):
@@ -187,10 +223,13 @@ class ExerciseFormatter:
             )
             response = self.llm.invoke(repair_prompt)
             exercises = self._parse_and_validate(response)
+            if exercises is not None:
+                logger.info(f"Repair attempt {attempt + 1} succeeded")
 
         if exercises is None:
             raise ValueError("Failed to extract valid JSON after repairs")
 
+        logger.debug(f"Validated {len(exercises)} exercise(s) from batch")
         return [
             {
                 **ex.model_dump(),

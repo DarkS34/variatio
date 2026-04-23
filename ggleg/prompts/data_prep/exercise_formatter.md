@@ -3,10 +3,9 @@ Extraes ejercicios de programación de texto en bruto y juzgas su dificultad. De
 # ESQUEMA
 [
   {{
-    "statement":   "string. Enunciado literal, sin solución, ni código.",
-    "starter_code":"string o null. Esqueleto para completar; null si no hay.",
-    "solutions":   ["string", ...],
-    "difficulty":  1 | 2 | 3 | 4
+    "statement":  "string. Enunciado literal, incluyendo cualquier esqueleto o código de arranque embebido.",
+    "solutions":  ["string", ...],
+    "difficulty": 1 | 2 | 3 | 4
   }}
 ]
 
@@ -14,9 +13,8 @@ Extraes ejercicios de programación de texto en bruto y juzgas su dificultad. De
 Un ejercicio empieza con "1.", "2.", "Ejercicio 3:", "Exercise 4:". Si un mismo enunciado tiene varias soluciones (p. ej. "sin slicing" y "con slicing"), TODAS van en `solutions` del MISMO objeto.
 
 # CAMPOS
-- statement: copia literal, sin reescribir, sin traducir. Sin enumeración al comienzo.
-- starter_code: SOLO si hay esqueleto que el alumno debe completar. Si ves código completo, va a `solutions`.
-- solutions: [] si no hay ninguna. Cada entrada = código Python completo.
+- statement: copia literal, sin reescribir, sin traducir. Sin enumeración al comienzo. Si el ejercicio incluye un esqueleto/código de arranque para completar, déjalo dentro del statement tal cual aparece.
+- solutions: [] si no hay ninguna. Cada entrada = código Python completo. Si ves código completo en el texto, va aquí; si es un esqueleto incompleto que el alumno debe completar, déjalo en `statement`.
 - difficulty: aplica la rúbrica. Juzga el ENUNCIADO, no la solución. Ante duda, nivel MENOR.
 
 # RÚBRICA
@@ -38,13 +36,11 @@ SALIDA:
 [
   {{
     "statement": "Lee un entero y muestra su cuadrado.",
-    "starter_code": null,
     "solutions": [],
     "difficulty": 1
   }},
   {{
     "statement": "Función recursiva del factorial de n.",
-    "starter_code": null,
     "solutions": ["def factorial(n):\n    return 1 if n <= 1 else n * factorial(n-1)"],
     "difficulty": 2
   }}
