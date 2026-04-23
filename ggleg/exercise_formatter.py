@@ -2,7 +2,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Literal
+from typing import ClassVar, Literal
 
 from docling.document_converter import DocumentConverter, InputFormat
 from langchain_core.output_parsers import JsonOutputParser
@@ -18,7 +18,7 @@ class ExtractedExercise(BaseModel):
     solutions: list[str] = Field(default_factory=list)
     difficulty: Literal[1, 2, 3, 4]
 
-    _LEADING_ENUM_RE = re.compile(
+    LEADING_ENUM_RE: ClassVar[re.Pattern[str]] = re.compile(
         r"^\s*(?:\d+\s*[.)\-:]\s*|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+\s*[.)\-:]?\s*)",
         re.IGNORECASE,
     )
@@ -26,8 +26,7 @@ class ExtractedExercise(BaseModel):
     @field_validator("statement")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        v = cls._LEADING_ENUM_RE.sub("", v.strip()).strip()
-        return v
+        return cls.LEADING_ENUM_RE.sub("", v.strip()).strip()
 
 
 class ExerciseFormatter:
