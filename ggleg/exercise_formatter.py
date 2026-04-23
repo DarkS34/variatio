@@ -18,10 +18,16 @@ class ExtractedExercise(BaseModel):
     solutions: list[str] = Field(default_factory=list)
     difficulty: Literal[1, 2, 3, 4]
 
+    _LEADING_ENUM_RE = re.compile(
+        r"^\s*(?:\d+\s*[.)\-:]\s*|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+\s*[.)\-:]?\s*)",
+        re.IGNORECASE,
+    )
+
     @field_validator("statement")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        return v.strip()
+        v = cls._LEADING_ENUM_RE.sub("", v.strip()).strip()
+        return v
 
 
 class ExerciseFormatter:
