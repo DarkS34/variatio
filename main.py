@@ -12,7 +12,4 @@ student = {
 
 if __name__ == "__main__":
     formatter = ExerciseFormatter()
-    formatter.format_file("./workbooks/Cuaderno de trabajo 4.docx", "o.json")
-
-
-    
+    formatter.format_dir("./workbooks", "formatted_exercises_es.json")

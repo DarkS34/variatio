@@ -4,7 +4,7 @@ import logging
 import re
 import warnings
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from docling.document_converter import DocumentConverter, InputFormat
 from langchain_core.output_parsers import JsonOutputParser
@@ -22,8 +22,7 @@ warnings.filterwarnings("ignore", module=r"PIL.*")
 
 class ExtractedExercise(BaseModel):
     statement: str = Field(min_length=10)
-    solutions: list[str] = Field(default_factory=list)
-    difficulty: Literal[1, 2, 3, 4]
+    solution: str | None = None
 
     LEADING_ENUM_RE: ClassVar[re.Pattern[str]] = re.compile(
         r"^\s*(?:\d+\s*[.)\-:]\s*|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+\s*[.)\-:]?\s*)",
@@ -44,17 +43,14 @@ class ExerciseFormatter:
     CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
     SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 
-    def __init__(
-        self,
-        model: str = "gemma4:e4b-it-q4_K_M",
-        chunk_size: int = 2_000,
-        max_repair_attempts: int = 1,
-    ):
+    def __init__(self, model: str = "gemma4:e4b-it-q4_K_M", chunk_size: int = 2_000, max_repair_attempts: int = 1, verbose: bool = True):    
         self.llm = OllamaLLM(model=model)
         self.parser = JsonOutputParser()
         self.chunk_size = chunk_size
         self.max_repair_attempts = max_repair_attempts
         self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
+        
+        logger.enable(__name__) if verbose else logger.disable(__name__)
 
     def _to_markdown(self, input_path: Path) -> str:
         suffix = input_path.suffix.lower()
@@ -104,10 +100,7 @@ class ExerciseFormatter:
                 try:
                     content = self._to_markdown(file_path)
                     logger.info(f"Converted {file_path.name}: {len(content):,} chars")
-                    exercises = self._extract_from_content(
-                        content,
-                        notebook=file_path.stem,
-                    )
+                    exercises = self._extract_from_content(content, notebook=file_path.stem)
                     before = len(all_exercises)
                     for ex_id, ex in exercises.items():
                         all_exercises.setdefault(ex_id, ex)
@@ -128,9 +121,9 @@ class ExerciseFormatter:
             return False
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
-        cleaned = self._clean_content(content)
-        logger.info(f"Cleaned content: {len(cleaned):,} chars (was {len(content):,})")
-        batches = self._build_batches(cleaned)
+        # cleaned = self._clean_content(content)
+        # logger.info(f"Cleaned content: {len(cleaned):,} chars (was {len(content):,})")
+        batches = self._build_batches(content)
         logger.info(f"Document split into {len(batches)} batch(es)")
 
         if not batches:
@@ -164,7 +157,6 @@ class ExerciseFormatter:
 
     def _build_batches(self, content: str) -> list[str]:
         exercises = self._split_exercises_protecting_code(content)
-        logger.debug(f"Detected {len(exercises)} exercise block(s) before batching")
         if not exercises:
             return []
 
@@ -217,30 +209,22 @@ class ExerciseFormatter:
 
     def _clean_content(self, content: str) -> str:
         if len(content.strip()) < 300:
-            logger.debug("Content under 300 chars; skipping LLM cleaning")
             return content
         try:
             logger.info(f"Cleaning content via LLM ({len(content):,} chars)")
             prompt = load_prompt("data_prep/content_cleaner", raw_content=content)
             response = self.llm.invoke(prompt).strip()
-            logger.debug(f"LLM cleaner returned {len(response):,} chars")
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
             logger.warning(f"Cleaning failed, returning raw content: {e}")
             return content
 
-    def _extract_batch(
-        self,
-        batch: str,
-        notebook: str,
-    ) -> list[dict]:
+    def _extract_batch(self, batch: str, notebook: str) -> list[dict]:
         prompt = load_prompt(
             "data_prep/exercise_formatter",
             exercises_content=batch,
         )
-        logger.debug(f"Invoking formatter LLM ({len(prompt):,} char prompt)")
         response = self.llm.invoke(prompt)
-        logger.debug(f"Formatter LLM returned {len(response):,} chars")
         exercises = self._parse_and_validate(response)
 
         for attempt in range(self.max_repair_attempts):
@@ -260,12 +244,11 @@ class ExerciseFormatter:
         if exercises is None:
             raise ValueError("Failed to extract valid JSON after repairs")
 
-        logger.debug(f"Validated {len(exercises)} exercise(s) from batch")
         return [
             {
                 **ex.model_dump(),
                 "notebook": notebook,
-                "id": self._deterministic_id(notebook, ex.statement),
+                "id": self._deterministic_id(ex.statement),
             }
             for ex in exercises
         ]
@@ -280,31 +263,28 @@ class ExerciseFormatter:
                 return None
             return [ExtractedExercise(**item) for item in raw]
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            logger.debug(f"Parse/validation error: {e}")
+            logger.error(f"Parse/validation error: {e[:20]}")
             return None
 
     @staticmethod
     def _restore_fences(text: str, fences: list[str]) -> str:
-        return re.sub(
-            r"§§FENCE(\d+)§§",
-            lambda m: fences[int(m.group(1))],
-            text,
-        )
+        return re.sub(r"§§FENCE(\d+)§§",lambda m: fences[int(m.group(1))],text)
 
     @staticmethod
-    def _deterministic_id(notebook: str, statement: str) -> str:
+    def _deterministic_id(statement: str) -> str:
         norm = re.sub(r"\s+", " ", statement.strip().lower())
-        digest = hashlib.sha1(f"{notebook}::{norm}".encode()).hexdigest()[:8]
-        return f"{notebook}-{digest}"
+        return hashlib.sha1(norm.encode()).hexdigest()[:8]
 
     @staticmethod
     def _save_dict(result: dict, output_file_path: str) -> bool:
         try:
             output_path = Path(output_file_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
+            
             with output_path.open("w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
             logger.success(f"Saved {len(result)} exercise(s) to {output_path}")
+            
             return True
         except Exception as e:
             logger.exception(f"Error saving: {e}")
