@@ -26,8 +26,6 @@ class ExtractedExercise(BaseModel):
 
 
 class ExerciseFormatter:
-    FULL_CLEAN_MAX_CHARS = 12_000
-    SECTION_HEADER_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
     EXERCISE_START_RE = re.compile(
         r"^(?:\d+[.)]\s+|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+[:.)\s])",
         re.MULTILINE | re.IGNORECASE,
@@ -90,56 +88,27 @@ class ExerciseFormatter:
             return False
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
-        if len(content) <= self.FULL_CLEAN_MAX_CHARS:
-            logger.info("Cleaning full document in one LLM call")
-            sections = self._split_into_sections(self._clean_content(content))
-        else:
-            logger.info("Document too large; cleaning per-section")
-            sections = [self._clean_content(body) for body in self._split_into_sections(content)]
-
-        logger.info(f"Document split into {len(sections)} section(s)")
+        cleaned = self._clean_content(content)
+        batches = self._build_batches(cleaned)
+        logger.info(f"Document split into {len(batches)} batch(es)")
 
         all_exercises: dict[str, dict] = {}
-        for section_idx, section_body in enumerate(sections, 1):
-            batches = self._build_batches(section_body)
-            logger.info(f"Section {section_idx}/{len(sections)}: {len(batches)} batch(es)")
-            for batch_idx, batch in enumerate(batches, 1):
-                logger.debug(f"  Batch {batch_idx}/{len(batches)}")
-                try:
-                    extracted = self._extract_batch(batch, notebook)
-                except Exception as e:
-                    logger.error(f"  Batch {batch_idx} failed after retries: {e}")
-                    continue
+        for batch_idx, batch in enumerate(batches, 1):
+            logger.debug(f"Batch {batch_idx}/{len(batches)}")
+            try:
+                extracted = self._extract_batch(batch, notebook)
+            except Exception as e:
+                logger.error(f"Batch {batch_idx} failed after retries: {e}")
+                continue
 
-                for ex in extracted:
-                    all_exercises.setdefault(ex.pop("id"), ex)
+            for ex in extracted:
+                all_exercises.setdefault(ex.pop("id"), ex)
 
         logger.success(f"Extracted {len(all_exercises)} exercise(s) from {notebook}")
         return all_exercises
 
-    def _split_into_sections(self, content: str) -> list[str]:
-        matches = list(self.SECTION_HEADER_RE.finditer(content))
-        if not matches:
-            stripped = content.strip()
-            return [stripped] if stripped else []
-
-        sections = []
-        if matches[0].start() > 0:
-            prefix = content[: matches[0].start()].strip()
-            if prefix:
-                sections.append(prefix)
-
-        for i, m in enumerate(matches):
-            start = m.end()
-            end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
-            body = content[start:end].strip()
-            if body:
-                sections.append(body)
-
-        return sections
-
-    def _build_batches(self, section_body: str) -> list[str]:
-        exercises = self._split_exercises_protecting_code(section_body)
+    def _build_batches(self, content: str) -> list[str]:
+        exercises = self._split_exercises_protecting_code(content)
         if not exercises:
             return []
 
