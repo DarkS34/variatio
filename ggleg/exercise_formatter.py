@@ -4,10 +4,10 @@ import re
 from pathlib import Path
 from typing import Literal
 
+from docling.document_converter import DocumentConverter, InputFormat
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama import OllamaLLM
 from loguru import logger
-from markitdown import MarkItDown
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from ggleg.utils import load_prompt
@@ -30,6 +30,7 @@ class ExerciseFormatter:
         re.MULTILINE | re.IGNORECASE,
     )
     CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+    SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 
     def __init__(
         self,
@@ -37,34 +38,46 @@ class ExerciseFormatter:
         chunk_size: int = 2_000,
         max_repair_attempts: int = 1,
     ):
-        self.markitdown = MarkItDown()
         self.llm = OllamaLLM(model=model)
         self.parser = JsonOutputParser()
         self.chunk_size = chunk_size
         self.max_repair_attempts = max_repair_attempts
+        self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
+
+    def _to_markdown(self, input_path: Path) -> str:
+        suffix = input_path.suffix.lower()
+
+        try:
+            if suffix in (".md", ".txt"):
+                return input_path.read_text(encoding="utf-8")
+            
+            result = self._docling.convert(str(input_path))
+            return result.document.export_to_markdown()
+        except Exception as _:
+            raise ValueError(f"Unsupported file extension: {suffix}")
 
     def format_file(self, input_file_path: str, output_file_path: str) -> bool:
         try:
             input_path = Path(input_file_path)
             logger.info(f"Processing file: {input_path.name}")
             notebook = input_path.stem
-            logger.debug(f"Converting {input_path.name} to markdown via MarkItDown")
-            content = self.markitdown.convert(str(input_path)).markdown
-            logger.info(f"Converted {input_path.name}: {len(content):,} chars")
+            content = self._to_markdown(input_path)
             exercises = self._extract_from_content(content, notebook=notebook)
+
             return self._save_dict(exercises, output_file_path)
+
         except Exception as e:
             logger.exception(f"Error processing file {input_file_path}: {e}")
+
             return False
 
     def format_dir(self, input_dir: str, output_file_path: str) -> bool:
         try:
             input_path = Path(input_dir)
-            logger.info(f"Scanning directory: {input_path}")
             files = sorted(
                 p
-                for ext in ("*.pdf", "*.docx", "*.txt", "*.md")
-                for p in input_path.glob(ext)
+                for p in input_path.iterdir()
+                if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTS
             )
             if not files:
                 logger.error(f"No supported files found in: {input_dir}")
@@ -73,10 +86,11 @@ class ExerciseFormatter:
             logger.info(f"Found {len(files)} file(s) to process")
             all_exercises: dict[str, dict] = {}
             for file_idx, file_path in enumerate(files, 1):
-                logger.info(f"[{file_idx}/{len(files)}] Processing file: {file_path.name}")
+                logger.info(
+                    f"[{file_idx}/{len(files)}] Processing file: {file_path.name}"
+                )
                 try:
-                    logger.debug(f"Converting {file_path.name} to markdown via MarkItDown")
-                    content = self.markitdown.convert(str(file_path)).markdown
+                    content = self._to_markdown(file_path)
                     logger.info(f"Converted {file_path.name}: {len(content):,} chars")
                     exercises = self._extract_from_content(
                         content,
@@ -93,26 +107,29 @@ class ExerciseFormatter:
                 except Exception as e:
                     logger.exception(f"Skipping {file_path.name}: {e}")
 
-            logger.success(f"Directory scan complete: {len(all_exercises)} unique exercise(s) collected")
+            logger.success(
+                f"Directory scan complete: {len(all_exercises)} unique exercise(s) collected"
+            )
             return self._save_dict(all_exercises, output_file_path)
         except Exception as e:
             logger.exception(f"Error processing directory: {e}")
             return False
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
-        logger.info(f"Extracting exercises from '{notebook}' ({len(content):,} chars)")
         cleaned = self._clean_content(content)
         logger.info(f"Cleaned content: {len(cleaned):,} chars (was {len(content):,})")
         batches = self._build_batches(cleaned)
         logger.info(f"Document split into {len(batches)} batch(es)")
-        
+
         if not batches:
             logger.warning(f"No exercise batches produced for '{notebook}'")
             return {}
 
         all_exercises: dict[str, dict] = {}
         for batch_idx, batch in enumerate(batches, 1):
-            logger.info(f"Batch {batch_idx}/{len(batches)} ({len(batch):,} chars) — invoking LLM")
+            logger.info(
+                f"Batch {batch_idx}/{len(batches)} ({len(batch):,} chars) — invoking LLM"
+            )
             try:
                 extracted = self._extract_batch(batch, notebook)
             except Exception as e:
@@ -141,7 +158,9 @@ class ExerciseFormatter:
 
         oversized = sum(1 for ex in exercises if len(ex) > self.chunk_size)
         if oversized:
-            logger.warning(f"{oversized} exercise(s) exceed chunk_size={self.chunk_size}; sent as solo batches")
+            logger.warning(
+                f"{oversized} exercise(s) exceed chunk_size={self.chunk_size}; sent as solo batches"
+            )
 
         batches, current, size = [], [], 0
         for ex in exercises:
