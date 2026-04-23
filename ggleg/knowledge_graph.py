@@ -3,6 +3,13 @@ from loguru import logger
 
 import networkx as nx
 
+DEPTH_LEVELS: dict[int, str] = {
+    1: "Fácil",      # profundidad 0-1: conceptos sin prerequisitos o con uno
+    2: "Moderado",   # profundidad 2-3: requiere conocimientos previos básicos
+    3: "Difícil",    # profundidad 4-5: combina varios conceptos encadenados
+    4: "Avanzado",   # profundidad 6+: recursividad, algoritmos, casos especiales complejos
+}
+
 
 class KnowledgeGraph:
     def __init__(self, raw_kg_path: str):
@@ -51,3 +58,26 @@ class KnowledgeGraph:
     def special_cases(self, concept: str) -> list[str]:
         G = self._subgraph([self._rel["special_case"]])
         return [n for n, _ in G.in_edges(concept)]
+
+    def concept_depth(self, concept: str) -> int:
+        G_req = self._subgraph([self._rel["prerequisite"]])
+        if concept not in G_req:
+            return 1
+
+        memo: dict[str, int] = {}
+
+        def _depth(node: str) -> int:
+            if node in memo:
+                return memo[node]
+            succs = list(G_req.successors(node))
+            memo[node] = 0 if not succs else 1 + max(_depth(s) for s in succs)
+            return memo[node]
+
+        d = _depth(concept)
+        if d <= 1:
+            return 1
+        if d <= 3:
+            return 2
+        if d <= 5:
+            return 3
+        return 4
