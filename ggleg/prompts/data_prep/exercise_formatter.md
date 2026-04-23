@@ -10,7 +10,21 @@ Extraes ejercicios de programación de texto en bruto y juzgas su dificultad. De
 ]
 
 # CÓMO SEPARAR
-Un ejercicio empieza con "1.", "2.", "Ejercicio 3:", "Exercise 4:". Si un mismo enunciado tiene varias soluciones (p. ej. "sin slicing" y "con slicing"), TODAS van en `solutions` del MISMO objeto.
+Un ejercicio NUEVO **solo** empieza cuando ves un marcador explícito de enumeración a inicio de línea: "1.", "2)", "Ejercicio 3:", "Exercise 4.", "Problema 5 -", "Apartado 6:". Sin ese marcador, NO hay ejercicio nuevo.
+
+**TODO lo que haya entre dos marcadores pertenece al MISMO ejercicio**, incluyendo:
+- Sub-preguntas ("¿Qué se obtiene?", "¿Por qué?", "¿Qué hace X?").
+- Instrucciones encadenadas ("Teclea ahora:", "Ahora prueba con:", "Modifica el código para...", "A continuación...", "Repite con...").
+- Apartados a), b), c) / i), ii), iii) / primera parte, segunda parte.
+- Bloques de código embebidos, salidas esperadas, pistas, tablas de ejemplos.
+- Texto narrativo, párrafos explicativos, definiciones intercaladas.
+
+Fusiona TODO ese bloque en un único `statement` preservando el orden y los saltos de línea (`\n`). Si un mismo enunciado tiene varias soluciones (p. ej. "sin slicing" y "con slicing"), TODAS van en `solutions` del MISMO objeto.
+
+NO crees ejercicios nuevos a partir de:
+- Preguntas sueltas que siguen a un código ("¿Qué imprime?", "¿Qué sucede si...?").
+- Imperativos de continuación ("Teclea", "Escribe", "Prueba", "Ejecuta", "Observa") sin número delante.
+- Líneas en blanco o cambios de párrafo.
 
 # CAMPOS
 - statement: copia literal, sin reescribir, sin traducir. **OBLIGATORIO: elimina la enumeración inicial** ("1.", "2)", "Ejercicio 3:", "Exercise 4.", "Problema 5 -", etc.) junto con sus espacios. El statement debe empezar directamente con la primera letra del enunciado real. Si el ejercicio incluye un esqueleto/código de arranque para completar, déjalo dentro del statement tal cual aparece.
@@ -25,7 +39,7 @@ Un ejercicio empieza con "1.", "2.", "Ejercicio 3:", "Exercise 4:". Si un mismo 
 - 3 DIFÍCIL: bucles anidados, recursión no trivial, filtrar + transformar + agregar. Ej: "Cuenta grupos consecutivos iguales en una lista."
 - 4 AVANZADO: varias estructuras combinadas, DP / memoization / backtracking, recorridos no lineales de matrices. Ej: "Fila n del triángulo de Pascal."
 
-# EJEMPLO
+# EJEMPLO 1 (ejercicios independientes con solución)
 ENTRADA:
 1. Lee un entero y muestra su cuadrado.
 
@@ -45,6 +59,31 @@ SALIDA:
     "statement": "Función recursiva del factorial de n.",
     "solutions": ["def factorial(n):\n    return 1 if n <= 1 else n * factorial(n-1)"],
     "difficulty": 2
+  }}
+]
+
+# EJEMPLO 2 (un solo ejercicio con sub-preguntas y continuaciones — NO separar)
+ENTRADA:
+3. En Python es posible hacer operaciones con variables de tipo str. Vamos a probarlo tecleando:
+
+fruta = "ciruela"
+tipo = "claudia"
+print(fruta + tipo)
+
+¿Qué se obtiene? ¿Qué es lo que hace la operación + con las cadenas de texto?
+
+Teclea ahora:
+
+print fruta * 3
+
+¿Qué se obtiene? ¿Qué hace la operación * con los valores tipo texto?
+
+SALIDA:
+[
+  {{
+    "statement": "En Python es posible hacer operaciones con variables de tipo str. Vamos a probarlo tecleando:\n\nfruta = \"ciruela\"\ntipo = \"claudia\"\nprint(fruta + tipo)\n\n¿Qué se obtiene? ¿Qué es lo que hace la operación + con las cadenas de texto?\n\nTeclea ahora:\n\nprint fruta * 3\n\n¿Qué se obtiene? ¿Qué hace la operación * con los valores tipo texto?",
+    "solutions": [],
+    "difficulty": 1
   }}
 ]
 
