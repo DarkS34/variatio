@@ -5,8 +5,48 @@ from pathlib import Path
 
 import httpx
 import ollama
+from langchain_ollama import OllamaLLM
+from loguru import logger
+from tqdm import tqdm
 
-PROMPTS_DIR = Path(__file__).parent / "prompts" 
+PROMPTS_DIR = Path(__file__).parent / "config" / "prompts" 
+MODELS_CONFIG = Path(__file__).parent / "config" / "models.json" 
+
+class ModelRegistry:
+    def __init__(self, ):
+        with open(MODELS_CONFIG, encoding="utf-8") as f:
+            self._config: dict[str, str] = json.load(f)
+
+        self._llms: dict[str, OllamaLLM] = {}
+        self._embeddings: dict[str, str] = {}
+
+        self._initialize()
+
+    def _initialize(self) -> None:
+        for role, model_name in self._config.items():
+            if not is_model_installed(model_name):
+                raise RuntimeError(f"Failed to install model '{model_name}' for role '{role}'")
+
+            if "embed" in role.lower():
+                ollama.embed(model=model_name, input="")
+                self._embeddings[role] = model_name
+            else:
+                llm = OllamaLLM(model=model_name)
+                llm.invoke("hi")
+                self._llms[role] = llm
+        logger.success("All models initialized correctly")
+
+    def llm(self, role: str) -> OllamaLLM:
+        if role not in self._llms:
+            logger.critical(f"No LLM registered for role '{role}'")
+            exit()
+        return self._llms[role]
+
+    def embedding(self, role: str) -> str:
+        if role not in self._embeddings:
+            logger.critical(f"No embedding model registered for role '{role}'")
+            exit()
+        return self._embeddings[role]
 
 
 def get_args():
@@ -25,62 +65,44 @@ def get_args():
     return args
 
 def is_ollama_connected() -> None:
-    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    host = os.environ.get("OLLAMA_HOST", "http://localhost:13434")
     try:
-        response = httpx.get(host, timeout=3.0)
+        response = httpx.get(f"http://{host}", timeout=3.0)
         return response.status_code == 200
     except httpx.ConnectError:
         return False
 
-
-def get_installed_models(with_info: bool = False):
-    try:
-        if with_info:
-            installed_models = [
-                installed_model_info for installed_model_info in ollama.list()["models"]
-            ]
-        else:
-            installed_models = [
-                installed_model_info["model"]
-                for installed_model_info in ollama.list()["models"]
-            ]
-
-        return installed_models
-    except Exception as e:
-        print(e)
-        exit()
-
-
 def download_model(model_name: str) -> bool:
     try:
+        logger.info(f"Downloading model '{model_name}'...")
         download_progress = ollama.pull(model_name, stream=True)
-        total = 0
-        completed = 0
+
+        pbar = None
         for partial_progress in download_progress:
-            if 'total' in partial_progress:
-                total = partial_progress.get('total', 0)
-            if 'completed' in partial_progress:
-                completed = partial_progress.get('completed', 0)
+            total = partial_progress.get('total') or 0
+            completed = partial_progress.get('completed') or 0
 
-            if total > 0 and completed <= total:
-                progress = (completed / total) * 100
+            if total > 0:
+                if pbar is None:
+                    pbar = tqdm(total=total, unit='B', unit_scale=True, desc=model_name)
+                pbar.update(completed - pbar.n)
 
-                print(f"\r {model_name} {progress:.1f}%",flush=True,end="")
+        pbar.close()
 
+        logger.success(f"Successfully downloaded model '{model_name}'")
         return True
     except (ollama.ResponseError, httpx.RequestError) as e:
-        print(f"\n Download failed: {e}")
+        logger.error(f"Download failed: {e}")
         return False
 
 def is_model_installed(model_name: str) -> bool:
-    if model_name in get_installed_models():
-        return True
-    else:
-        return download_model(model_name)
+    installed_models = [installed_model_info["model"] for installed_model_info in ollama.list()["models"]]
+    
+    return True if model_name in installed_models else download_model(model_name)
+
 
 def load_exercises_dataset(path: str) -> dict:
-    exercises_path = Path(__file__).parent / path
-    with open(exercises_path, 'r', encoding='utf-8') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         exercises = json.load(f)
     return exercises
 

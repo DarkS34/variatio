@@ -1,10 +1,5 @@
 {
-    "relation_types": {
-        "prerequisite": "REQUIERE_PREVIO",
-        "combines_with": "SE_COMBINA_CON",
-        "special_case": "ES_CASO_ESPECIAL_DE"
-    },
-    "concepts": {
+    "concepts_by_domains": {
         "Introducción": [
             "Programa",
             "Algoritmo",
@@ -90,621 +85,257 @@
             "Ordenación por selección"
         ]
     },
-    "relations": [
-        [
-            "Programa",
-            "Algoritmo",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Intérprete",
-            "Programa",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Compilador",
-            "Programa",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Script",
-            "Programa",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Flujo de ejecución",
-            "Programa",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Indentación",
-            "Flujo de ejecución",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Indentación",
-            "Flujo de ejecución",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Tipo de dato básico",
-            "Tipo de dato",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Variable",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Variable",
-            "Identificador",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Literal",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión",
-            "Operador",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión",
-            "Literal",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Asignación",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Asignación",
-            "Expresión",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Entrada / Salida",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bug",
-            "Error lógico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bug",
-            "Error sintáctico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Excepción",
-            "Error sintáctico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Excepción",
-            "Error lógico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Depurar",
-            "Bug",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Depurar",
-            "Excepción",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Excepción",
-            "Depurar",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Error lógico",
-            "Depurar",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Caso de prueba",
-            "Algoritmo",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Prueba del software",
-            "Caso de prueba",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Prueba del software",
-            "Bug",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Función",
-            "Algoritmo",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Función",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Función",
-            "Indentación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Cabecera de función",
-            "Función",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Cuerpo de función",
-            "Función",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Llamada a función",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Parámetro",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Parámetro",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Argumento",
-            "Llamada a función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Argumento",
-            "Parámetro",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Valor de retorno",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Ámbito",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Ámbito",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Variable local",
-            "Ámbito",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Variable local",
-            "Variable",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Variable global",
-            "Ámbito",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Variable global",
-            "Variable",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Variable local",
-            "Variable global",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Documentación",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Biblioteca",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Importación de funciones",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Importación de funciones",
-            "Biblioteca",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión de comparación",
-            "Expresión",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión de comparación",
-            "Operador",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión booleana",
-            "Expresión de comparación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Expresión booleana",
-            "Tipo de dato básico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Sentencia condicional",
-            "Expresión booleana",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Sentencia condicional",
-            "Indentación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle for",
-            "Iterable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle for",
-            "Indentación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle while",
-            "Expresión booleana",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle while",
-            "Indentación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "break",
-            "Bucle for",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "break",
-            "Bucle while",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "continue",
-            "Bucle for",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "continue",
-            "Bucle while",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "pass",
-            "Sentencia condicional",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "pass",
-            "Bucle for",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "pass",
-            "Bucle while",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Iterable",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Iterador",
-            "Iterable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle anidado",
-            "Bucle for",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Bucle anidado",
-            "Bucle while",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Sentencia condicional",
-            "Bucle for",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Sentencia condicional",
-            "Bucle while",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Bucle for",
-            "Bucle while",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Lista",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Lista",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Tupla",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Tupla",
-            "Mutabilidad",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Cadena",
-            "Tipo de dato básico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Cadena",
-            "Indexación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Conjunto",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Array",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Registro",
-            "Variable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Registro",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Diccionario",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Diccionario",
-            "Indexación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Indexación",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Indexación",
-            "Cadena",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Slicing",
-            "Indexación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Mutabilidad",
-            "Tipo de dato",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Iterabilidad",
-            "Iterable",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Iterabilidad",
-            "Lista",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Conversión de tipos",
-            "Tipo de dato básico",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Copia superficial",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Copia superficial",
-            "Mutabilidad",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Copia profunda",
-            "Copia superficial",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Lista",
-            "Diccionario",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Lista",
-            "Conjunto",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Tupla",
-            "Lista",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Pila de llamadas",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Pila de llamadas",
-            "Llamada a función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Recursividad",
-            "Función",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Recursividad",
-            "Pila de llamadas",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Caso base",
-            "Recursividad",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Caso recursivo",
-            "Recursividad",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Caso base",
-            "Caso recursivo",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Desbordamiento de recursión",
-            "Recursividad",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Desbordamiento de recursión",
-            "Pila de llamadas",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Complejidad algorítmica",
-            "Algoritmo",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Complejidad algorítmica",
-            "Método de ordenación",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Búsqueda lineal",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Búsqueda lineal",
-            "Bucle for",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Búsqueda binaria",
-            "Búsqueda lineal",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Búsqueda binaria",
-            "Método de ordenación",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Búsqueda binaria",
-            "Recursividad",
-            "SE_COMBINA_CON"
-        ],
-        [
-            "Método de ordenación",
-            "Lista",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Método de ordenación",
-            "Algoritmo",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Ordenación burbuja",
-            "Método de ordenación",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Ordenación burbuja",
-            "Bucle anidado",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Ordenación por inserción",
-            "Método de ordenación",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Ordenación por inserción",
-            "Bucle anidado",
-            "REQUIERE_PREVIO"
-        ],
-        [
-            "Ordenación por selección",
-            "Método de ordenación",
-            "ES_CASO_ESPECIAL_DE"
-        ],
-        [
-            "Ordenación por selección",
-            "Bucle anidado",
-            "REQUIERE_PREVIO"
-        ]
-    ]
+    "relation_types": {
+        "prerequisite": {
+            "directed": true,
+            "acyclic": true
+        },
+        "combines_with": {
+            "directed": false,
+            "acyclic": false
+        },
+        "special_case": {
+            "directed": true,
+            "acyclic": true
+        }
+    },
+    "relations": {
+        "prerequisite": {
+            "Algoritmo": [
+                "Programa",
+                "Caso de prueba",
+                "Función",
+                "Complejidad algorítmica",
+                "Método de ordenación"
+            ],
+            "Programa": [
+                "Intérprete",
+                "Compilador",
+                "Script",
+                "Flujo de ejecución"
+            ],
+            "Flujo de ejecución": [
+                "Indentación"
+            ],
+            "Tipo de dato": [
+                "Variable",
+                "Literal",
+                "Iterable",
+                "Lista",
+                "Registro",
+                "Mutabilidad"
+            ],
+            "Identificador": [
+                "Variable"
+            ],
+            "Operador": [
+                "Expresión",
+                "Expresión de comparación"
+            ],
+            "Variable": [
+                "Expresión",
+                "Asignación",
+                "Entrada / Salida",
+                "Función",
+                "Parámetro",
+                "Ámbito",
+                "Lista",
+                "Registro"
+            ],
+            "Literal": [
+                "Expresión"
+            ],
+            "Expresión": [
+                "Asignación",
+                "Expresión de comparación"
+            ],
+            "Error lógico": [
+                "Bug",
+                "Excepción"
+            ],
+            "Error sintáctico": [
+                "Bug",
+                "Excepción"
+            ],
+            "Bug": [
+                "Depurar"
+            ],
+            "Excepción": [
+                "Depurar"
+            ],
+            "Caso de prueba": [
+                "Prueba del software"
+            ],
+            "Indentación": [
+                "Función",
+                "Sentencia condicional",
+                "Bucle for",
+                "Bucle while"
+            ],
+            "Función": [
+                "Llamada a función",
+                "Parámetro",
+                "Valor de retorno",
+                "Ámbito",
+                "Documentación",
+                "Biblioteca",
+                "Importación de funciones",
+                "Pila de llamadas",
+                "Recursividad"
+            ],
+            "Llamada a función": [
+                "Argumento",
+                "Pila de llamadas"
+            ],
+            "Parámetro": [
+                "Argumento"
+            ],
+            "Ámbito": [
+                "Variable local",
+                "Variable global"
+            ],
+            "Biblioteca": [
+                "Importación de funciones"
+            ],
+            "Expresión de comparación": [
+                "Expresión booleana"
+            ],
+            "Tipo de dato básico": [
+                "Expresión booleana",
+                "Cadena",
+                "Conversión de tipos"
+            ],
+            "Expresión booleana": [
+                "Sentencia condicional",
+                "Bucle while"
+            ],
+            "Iterable": [
+                "Bucle for",
+                "Iterador",
+                "Iterabilidad"
+            ],
+            "Bucle for": [
+                "break",
+                "continue",
+                "pass",
+                "Bucle anidado",
+                "Búsqueda lineal"
+            ],
+            "Bucle while": [
+                "break",
+                "continue",
+                "pass",
+                "Bucle anidado"
+            ],
+            "Sentencia condicional": [
+                "pass"
+            ],
+            "Lista": [
+                "Tupla",
+                "Conjunto",
+                "Array",
+                "Diccionario",
+                "Indexación",
+                "Copia superficial",
+                "Búsqueda lineal",
+                "Método de ordenación"
+            ],
+            "Mutabilidad": [
+                "Tupla",
+                "Copia superficial"
+            ],
+            "Indexación": [
+                "Cadena",
+                "Diccionario",
+                "Slicing"
+            ],
+            "Copia superficial": [
+                "Copia profunda"
+            ],
+            "Pila de llamadas": [
+                "Recursividad",
+                "Desbordamiento de recursión"
+            ],
+            "Recursividad": [
+                "Caso base",
+                "Caso recursivo",
+                "Desbordamiento de recursión"
+            ],
+            "Búsqueda lineal": [
+                "Búsqueda binaria"
+            ],
+            "Método de ordenación": [
+                "Búsqueda binaria"
+            ],
+            "Bucle anidado": [
+                "Ordenación burbuja",
+                "Ordenación por inserción",
+                "Ordenación por selección"
+            ]
+        },
+        "combines_with": {
+            "Indentación": [
+                "Flujo de ejecución"
+            ],
+            "Excepción": [
+                "Depurar"
+            ],
+            "Error lógico": [
+                "Depurar"
+            ],
+            "Prueba del software": [
+                "Bug"
+            ],
+            "Variable local": [
+                "Variable global"
+            ],
+            "Sentencia condicional": [
+                "Bucle for",
+                "Bucle while"
+            ],
+            "Bucle for": [
+                "Bucle while"
+            ],
+            "Indexación": [
+                "Cadena"
+            ],
+            "Iterabilidad": [
+                "Lista"
+            ],
+            "Lista": [
+                "Diccionario",
+                "Conjunto"
+            ],
+            "Tupla": [
+                "Lista"
+            ],
+            "Caso base": [
+                "Caso recursivo"
+            ],
+            "Complejidad algorítmica": [
+                "Método de ordenación"
+            ],
+            "Búsqueda binaria": [
+                "Recursividad"
+            ]
+        },
+        "special_case": {
+            "Tipo de dato": [
+                "Tipo de dato básico"
+            ],
+            "Función": [
+                "Cabecera de función",
+                "Cuerpo de función"
+            ],
+            "Variable": [
+                "Variable local",
+                "Variable global"
+            ],
+            "Método de ordenación": [
+                "Ordenación burbuja",
+                "Ordenación por inserción",
+                "Ordenación por selección"
+            ]
+        }
+    }
 }

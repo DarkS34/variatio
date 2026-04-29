@@ -2,10 +2,11 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
+import ollama
 from langchain_ollama import OllamaLLM
 from loguru import logger
 
-from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
 from .utils import load_prompt
 
@@ -14,23 +15,23 @@ class ConceptTagger:
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
-        embedder: Embedder,
-        model: str = "gemma4:e4b-it-q4_K_M",
+        llm: OllamaLLM,
+        embedding_model: str = "embeddinggemma",
         max_repair_attempts: int = 1,
-        top_k_candidates: int = 10,
+        top_k_candidates: int = 15,
     ):
-        self.llm = OllamaLLM(model=model)
+        self.llm = llm
         self.knowledge_graph = knowledge_graph
-        self.embedder = embedder
+        self.embedding_model = embedding_model
         self.max_repair_attempts = max_repair_attempts
         self.top_k_candidates = top_k_candidates
 
+        logger.info(f"Building concept-name embeddings for tagging ({len(knowledge_graph.all_concepts)} concepts)...")
+        self._concept_vectors: dict[str, np.ndarray] = {c: self._embed(c) for c in knowledge_graph.all_concepts}
+
     def tag(self, statement: str) -> dict:
-        candidates = self.embedder.top_k_concepts(statement, self.top_k_candidates)
-        candidates_str = "\n".join(
-            f"{i + 1}. {concept} (score: {score:.3f})"
-            for i, (concept, score) in enumerate(candidates)
-        )
+        candidates = self._top_k_concepts(statement, self.top_k_candidates)
+        candidates_str = "\n".join(f"{i + 1}. {concept} (score: {score:.3f})" for i, (concept, score) in enumerate(candidates))
         candidate_names = [c for c, _ in candidates]
 
         prompt = load_prompt(
@@ -38,6 +39,7 @@ class ConceptTagger:
             statement=statement,
             candidates=candidates_str,
         )
+        
         response = self.llm.invoke(prompt)
         result = self._parse_and_validate(response, candidate_names)
 
@@ -45,11 +47,13 @@ class ConceptTagger:
             if result is not None:
                 break
             logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
+            
             repair_prompt = load_prompt(
                 "data_prep/json_repair",
                 broken_output=response,
                 error_msg="invalid JSON or schema",
             )
+            
             response = self.llm.invoke(repair_prompt)
             result = self._parse_and_validate(response, candidate_names)
             if result is not None:
@@ -57,11 +61,17 @@ class ConceptTagger:
 
         if result is None:
             logger.error("Failed to tag statement after repairs, returning empty annotation")
-            return {"concepts": [], "primary_concept": None, "domain": None, "difficulty": None}
+            return {
+                "concepts": [],
+                "primary_concept": None,
+                "domain": None,
+                "difficulty": None,
+            }
 
         primary = result["primary_concept"]
         result["domain"] = self.knowledge_graph.concept_domain.get(primary)
-        result["difficulty"] = self.knowledge_graph.concept_depth(primary) if primary else None
+        result["difficulty"] = (self.knowledge_graph.concept_depth(primary) if primary else None)
+        
         return result
 
     def tag_all(self, exercise_bank: dict, output_path: str) -> dict:
@@ -81,7 +91,24 @@ class ConceptTagger:
 
         return annotated
 
-    def _parse_and_validate(self, response: str, candidate_names: list[str]) -> dict | None:
+    def _embed(self, text: str) -> np.ndarray:
+        resp = ollama.embed(model=self.embedding_model, input=text)
+        vec = np.array(resp.embeddings[0])
+        norm = np.linalg.norm(vec)
+        return vec / norm if norm > 0 else vec
+
+    def _top_k_concepts(self, statement: str, k: int) -> list[tuple[str, float]]:
+        vec = self._embed(statement)
+        scores = sorted(
+            ((c, float(np.dot(vec, v))) for c, v in self._concept_vectors.items()),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        return scores[:k]
+
+    def _parse_and_validate(
+        self, response: str, candidate_names: list[str]
+    ) -> dict | None:
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
             data = json.loads(cleaned)
@@ -93,7 +120,6 @@ class ConceptTagger:
             if not isinstance(data["concepts"], list) or not data["concepts"]:
                 return None
 
-            # Coerce concepts to only those in the candidate list
             valid_concepts = [c for c in data["concepts"] if c in candidate_names]
             primary = data["primary_concept"]
             if primary not in candidate_names:
