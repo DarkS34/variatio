@@ -11,6 +11,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama import OllamaLLM
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
+from ggleg.utils import load_exercises_dataset
 
 from ggleg.utils import load_prompt
 
@@ -43,13 +44,13 @@ class ExerciseFormatter:
     CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
     SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 
-    def __init__(self, model: str = "gemma4:e4b-it-q4_K_M", chunk_size: int = 2_000, max_repair_attempts: int = 1, verbose: bool = True):    
-        self.llm = OllamaLLM(model=model)
+    def __init__(self, llm: OllamaLLM, chunk_size: int = 2_000, max_repair_attempts: int = 1, verbose: bool = True):
+        self.llm = llm
         self.parser = JsonOutputParser()
         self.chunk_size = chunk_size
         self.max_repair_attempts = max_repair_attempts
         self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
-        
+
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
     def _to_markdown(self, input_path: Path) -> str:
@@ -64,7 +65,7 @@ class ExerciseFormatter:
         except Exception as _:
             raise ValueError(f"Unsupported file extension: {suffix}")
 
-    def format_file(self, input_file_path: str, output_file_path: str) -> bool:
+    def format_file(self, input_file_path: str, output_file_path: str) -> dict[str, dict]:
         try:
             input_path = Path(input_file_path)
             logger.info(f"Processing file: {input_path.name}")
@@ -72,14 +73,14 @@ class ExerciseFormatter:
             content = self._to_markdown(input_path)
             exercises = self._extract_from_content(content, notebook=notebook)
 
-            return self._save_dict(exercises, output_file_path)
+            self._save_dict(exercises, output_file_path)
+            return exercises
 
         except Exception as e:
             logger.exception(f"Error processing file {input_file_path}: {e}")
+            return {}
 
-            return False
-
-    def format_dir(self, input_dir: str, output_file_path: str) -> bool:
+    def format_dir(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
         try:
             input_path = Path(input_dir)
             files = sorted(
@@ -87,9 +88,10 @@ class ExerciseFormatter:
                 for p in input_path.iterdir()
                 if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTS
             )
+
             if not files:
                 logger.error(f"No supported files found in: {input_dir}")
-                return False
+                return {}
 
             logger.info(f"Found {len(files)} file(s) to process")
             all_exercises: dict[str, dict] = {}
@@ -97,6 +99,7 @@ class ExerciseFormatter:
                 logger.info(
                     f"[{file_idx}/{len(files)}] Processing file: {file_path.name}"
                 )
+                
                 try:
                     content = self._to_markdown(file_path)
                     logger.info(f"Converted {file_path.name}: {len(content):,} chars")
@@ -115,10 +118,11 @@ class ExerciseFormatter:
             logger.success(
                 f"Directory scan complete: {len(all_exercises)} unique exercise(s) collected"
             )
-            return self._save_dict(all_exercises, output_file_path)
+            self._save_dict(all_exercises, output_file_path)
+            return all_exercises
         except Exception as e:
             logger.exception(f"Error processing directory: {e}")
-            return False
+            return {}
 
     def _extract_from_content(self, content: str, notebook: str) -> dict[str, dict]:
         # cleaned = self._clean_content(content)
