@@ -1,14 +1,12 @@
 from ggleg.concept_tagger import ConceptTagger
 from ggleg.embedder import Embedder
-from ggleg.exercise_formatter import ExerciseFormatter
 from ggleg.knowledge_graph import KnowledgeGraph
-from ggleg.utils import ModelRegistry
+from ggleg.utils import ModelRegistry, load_exercises_dataset
 
 
-KG_PATH = "config/data/knowledge_graph_raw.json"
-
-RAW_BANK_PATH = "data/formatted_exercises.json"
-ANNOTATED_BANK_PATH = "data/formatted_exercises_annotated.json"
+KG_PATH = "data/knowledge_graph_raw.json"
+RAW_BANK_PATH = "data/formatted_exercises_test.json"
+ANNOTATED_BANK_PATH = "data/formatted_exercises-concept_tagged.json"
 
 
 
@@ -17,10 +15,14 @@ if __name__ == "__main__":
 
     KG = KnowledgeGraph(KG_PATH)
 
-    # raw_bank = ExerciseFormatter(llm=models.llm("0_format_exercises")).format_dir("./workbooks", RAW_BANK_PATH)
+    # Fase 1: Embedder con nombre-embeddings de concepto (cacheados)
+    embedder = Embedder(KG.all_concepts, embedding_model=models.embedding("embed"))
 
-    tagger = ConceptTagger(KG, llm=models.llm("1_tag_concepts"), embedding_model=models.embedding("2_embed"))
-    
-    # annotated_bank = tagger.tag_all(raw_bank, output_path=ANNOTATED_BANK_PATH)
+    # ConceptTagger consume el Embedder ya construido — usa su top_k_concepts
+    tagger = ConceptTagger(KG, embedder=embedder, llm=models.llm("tag_concepts"))
 
-    # embedder = Embedder(KG.all_concepts,annotated_bank,embedding_model=models.embedding("2_embed"))
+    raw_bank = load_exercises_dataset(RAW_BANK_PATH)
+    annotated_bank = tagger.tag_all(raw_bank, output_path=ANNOTATED_BANK_PATH)
+
+    # Fase 2: enriquece centroides con ejercicios anotados (sin re-embedrar conceptos)
+    embedder.enrich_with_exercises(annotated_bank)
