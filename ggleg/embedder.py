@@ -1,141 +1,166 @@
 import hashlib
 import json
 import os
+from pathlib import Path
 
 from loguru import logger
 import numpy as np
 import ollama
-from pathlib import Path
-
-from .knowledge_graph import KnowledgeGraph
-
-MIN_EXAMPLES_FOR_CENTROID = 2
 
 
 class Embedder:
     def __init__(
         self,
-        all_concepts: KnowledgeGraph,
-        exercise_bank: dict,
-        embedding_model: str = "embeddinggemma",
-        generation_model: str = "",
-        cache_path: Path = Path(__file__).parent / "data" / "concept_embeddings.cache.npz",
+        all_concepts: list[str],
+        embedding_model: str,
+        concept_cache_path: Path = Path(__file__).parent / "data" / "concept_embeddings.cache.npz",
         exercise_cache_path: Path = Path(__file__).parent / "data" / "exercise_embeddings.cache.npz",
         similarity_threshold: float = 0.6,
     ):
         self.all_concepts = all_concepts
-        self.exercise_bank = exercise_bank
         self.embedding_model = embedding_model
-        self.generation_model = generation_model
-        self.cache_path = cache_path
-        self.exercise_cache_path = exercise_cache_path
+        self._concept_cache_path = concept_cache_path
+        self._exercise_cache_path = exercise_cache_path
         self.similarity_threshold = similarity_threshold
-        self.index: dict[str, np.ndarray] = {}
-        self.exercise_index: dict[str, np.ndarray] = {}
 
-        if self._is_cache_valid():
-            self._load_cache()
-            logger.info(f"Concept cache loaded from '{self.cache_path}'")
+        # Embeddings de nombres de concepto (fase 1) — cacheado
+        self.concept_name_index: dict[str, np.ndarray] = {}
+        # Embeddings de enunciados de ejercicio (fase 2) — cacheado
+        self.exercise_index: dict[str, np.ndarray] = {}
+        # Índice activo para similitud: nombres-only inicialmente, centroides tras enriquecimiento
+        self.index: dict[str, np.ndarray] = {}
+
+        self.exercise_bank: dict | None = None  # se asigna en enrich_with_exercises
+
+        # === Fase 1: nombre-embeddings de conceptos ===
+        if self._is_concept_cache_valid():
+            self._load_concept_cache()
+            logger.info(f"Concept name cache loaded from '{self._concept_cache_path}'")
         else:
-            logger.info("Building concept embedding index ...")
-            self._build_index()
-            self._save_cache()
-            logger.info(f"Concept index built and saved at '{self.cache_path}'.")
+            logger.info(f"Building concept name embeddings ({len(all_concepts)} concepts)...")
+            self._build_concept_name_index()
+            self._save_concept_cache()
+            logger.info(f"Concept name index saved to '{self._concept_cache_path}'.")
+
+        # Hasta que se enriquezca, el índice activo es solo nombre-embeddings
+        self.index = dict(self.concept_name_index)
+
+
+    def enrich_with_exercises(self, exercise_bank: dict) -> None:
+        """Fase 2: embebe enunciados de ejercicio y reconstruye centroides de concepto.
+        Reutiliza los nombre-embeddings ya almacenados — no recalcula nada que ya esté cacheado.
+        """
+        self.exercise_bank = exercise_bank
 
         if self._is_exercise_cache_valid():
             self._load_exercise_cache()
-            logger.info(f"Exercise cache loaded from '{self.exercise_cache_path}'")
+            logger.info(f"Exercise cache loaded from '{self._exercise_cache_path}'")
         else:
-            logger.info("Building exercise embedding index ...")
+            logger.info(f"Building exercise embeddings ({len(exercise_bank)} exercises)...")
             self._build_exercise_index()
             self._save_exercise_cache()
-            logger.info(f"Exercise index built and saved at '{self.exercise_cache_path}'.")
+            logger.info(f"Exercise index saved to '{self._exercise_cache_path}'.")
+
+        self._build_centroid_index()
+        logger.success("Concept centroids enriched with tagged exercises.")
 
 
-    def _compute_cache_fingerprint(self) -> str:
-        bank_serialized = json.dumps(self.exercise_bank, sort_keys=True, ensure_ascii=False)
-        bank_hash = hashlib.md5(bank_serialized.encode()).hexdigest()
-        return hashlib.md5(f"{self.embedding_model}::{bank_hash}".encode()).hexdigest()
+    # === Fingerprints ===
+
+    def _concept_fingerprint(self) -> str:
+        # Solo depende del modelo + lista de conceptos (orden-independiente)
+        concepts_serialized = json.dumps(sorted(self.all_concepts), ensure_ascii=False)
+        return hashlib.md5(f"{self.embedding_model}::{concepts_serialized}".encode()).hexdigest()
+
+    def _exercise_fingerprint(self) -> str:
+        # Solo depende del modelo + statements (cambios en otros campos del banco no invalidan)
+        statements = sorted(
+            (ex_id, ex["statement"]) for ex_id, ex in self.exercise_bank.items()
+        )
+        statements_serialized = json.dumps(statements, ensure_ascii=False)
+        return hashlib.md5(f"{self.embedding_model}::{statements_serialized}".encode()).hexdigest()
 
 
-    def _is_cache_valid(self) -> bool:
-        if not os.path.exists(self.cache_path):
+    # === Concept cache (fase 1) ===
+
+    def _is_concept_cache_valid(self) -> bool:
+        if not os.path.exists(self._concept_cache_path):
             return False
         try:
-            data = np.load(self.cache_path, allow_pickle=True)
-            return str(data["fingerprint"]) == self._compute_cache_fingerprint()
+            data = np.load(self._concept_cache_path, allow_pickle=True)
+            return str(data["fingerprint"]) == self._concept_fingerprint()
         except Exception:
             return False
 
+    def _load_concept_cache(self) -> None:
+        data = np.load(self._concept_cache_path, allow_pickle=True)
+        self.concept_name_index = dict(zip(data["keys"], data["vectors"]))
 
-    def _load_cache(self) -> None:
-        data = np.load(self.cache_path, allow_pickle=True)
-        self.index = dict(zip(data["keys"], data["vectors"]))
+    def _save_concept_cache(self) -> None:
+        self._concept_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(
+            self._concept_cache_path,
+            keys=list(self.concept_name_index.keys()),
+            vectors=np.array(list(self.concept_name_index.values())),
+            fingerprint=self._concept_fingerprint(),
+        )
 
 
-    def _save_cache(self) -> None:
-        np.savez(self.cache_path,
-                 keys=list(self.index.keys()),
-                 vectors=np.array(list(self.index.values())),
-                 fingerprint=self._compute_cache_fingerprint()
-                 )
-
+    # === Exercise cache (fase 2) ===
 
     def _is_exercise_cache_valid(self) -> bool:
-        if not os.path.exists(self.exercise_cache_path):
+        if not os.path.exists(self._exercise_cache_path):
             return False
         try:
-            data = np.load(self.exercise_cache_path, allow_pickle=True)
-            return str(data["fingerprint"]) == self._compute_cache_fingerprint()
+            data = np.load(self._exercise_cache_path, allow_pickle=True)
+            return str(data["fingerprint"]) == self._exercise_fingerprint()
         except Exception:
             return False
 
-
     def _load_exercise_cache(self) -> None:
-        data = np.load(self.exercise_cache_path, allow_pickle=True)
+        data = np.load(self._exercise_cache_path, allow_pickle=True)
         self.exercise_index = dict(zip(data["keys"], data["vectors"]))
 
-
     def _save_exercise_cache(self) -> None:
-        np.savez(self.exercise_cache_path,
-                 keys=list(self.exercise_index.keys()),
-                 vectors=np.array(list(self.exercise_index.values())),
-                 fingerprint=self._compute_cache_fingerprint()
-                 )
+        self._exercise_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(
+            self._exercise_cache_path,
+            keys=list(self.exercise_index.keys()),
+            vectors=np.array(list(self.exercise_index.values())),
+            fingerprint=self._exercise_fingerprint(),
+        )
 
 
-    def _build_index(self) -> None:
+    # === Construcción de índices ===
+
+    def _build_concept_name_index(self) -> None:
         for concept in self.all_concepts:
-            examples = [
-                ex["statement"]
-                for ex in self.exercise_bank.values()
-                if concept in ex.get("concepts", [])
-            ]
-
-            name_vec = self._embed(concept)
-            if len(examples) >= MIN_EXAMPLES_FOR_CENTROID:
-                example_vecs = [self._embed(s) for s in examples]
-                all_vecs = [name_vec] + example_vecs
-            elif len(examples) == 1:
-                real_vec = self._embed(examples[0])
-                all_vecs = [name_vec, real_vec]
-            else:
-                all_vecs = [name_vec]
-
-            self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
-
+            self.concept_name_index[concept] = self._embed(concept)
 
     def _build_exercise_index(self) -> None:
         for exercise_id, exercise in self.exercise_bank.items():
             self.exercise_index[exercise_id] = self._embed(exercise["statement"])
 
+    def _build_centroid_index(self) -> None:
+        """Combina los nombre-embeddings (cacheados) con los embeddings de ejercicios
+        anotados con cada concepto. No re-embebe — todo viene de los caches."""
+        for concept in self.all_concepts:
+            name_vec = self.concept_name_index[concept]
+            example_vecs = [
+                self.exercise_index[ex_id]
+                for ex_id, ex in self.exercise_bank.items()
+                if concept in ex.get("concepts", []) and ex_id in self.exercise_index
+            ]
+
+            all_vecs = [name_vec] + example_vecs
+            self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
+
+
+    # === Utilidades de embedding ===
 
     def _embed(self, text: str) -> np.ndarray:
         resp = ollama.embed(model=self.embedding_model, input=text)
         return self._l2_normalize(np.array(resp.embeddings[0]))
-
-    def _generate_synthetic(self, concept: str):
-        pass
 
     def _l2_normalize(self, vec: np.ndarray) -> np.ndarray:
         norm = np.linalg.norm(vec)
@@ -144,6 +169,8 @@ class Embedder:
     def cosine_similarity(self, vec_a: np.ndarray, vec_b: np.ndarray) -> float:
         return float(np.dot(vec_a, vec_b))
 
+
+    # === API pública de similitud ===
 
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
         vec = self._embed(text)
@@ -155,24 +182,16 @@ class Embedder:
         return scores[:k]
 
     def label_concepts_with_scores(self, text: str) -> list[tuple[str, float]]:
-        vec = self._embed(text)
-        scores = sorted(((c, self.cosine_similarity(vec, v))
-                         for c, v in self.index.items()),
-                        key=lambda x: x[1],
-                        reverse=True
-                        )
-        return [(c, s) for c, s in scores if s >= self.similarity_threshold]
-
+        return [
+            (c, s) for c, s in self.top_k_concepts(text, len(self.index))
+            if s >= self.similarity_threshold
+        ]
 
     def label_concepts(self, text: str) -> list[str]:
         return [c for c, _ in self.label_concepts_with_scores(text)]
 
-
     def most_similar_concept(self, text: str) -> tuple[str, float]:
-        vec = self._embed(text)
-        best_concept = max(self.index, key=lambda c: self.cosine_similarity(vec, self.index[c]))
-        return best_concept, self.cosine_similarity(vec, self.index[best_concept])
-
+        return self.top_k_concepts(text, 1)[0]
 
     def find_similar_exercises(self, text: str, n: int = 3) -> list[tuple[str, float]]:
         vec = self._embed(text)
