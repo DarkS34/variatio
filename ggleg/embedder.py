@@ -23,14 +23,14 @@ class Embedder:
         self._exercise_cache_path = exercise_cache_path
         self.similarity_threshold = similarity_threshold
 
-        # Embeddings de nombres de concepto (fase 1) — cacheado
+
         self.concept_name_index: dict[str, np.ndarray] = {}
-        # Embeddings de enunciados de ejercicio (fase 2) — cacheado
+
         self.exercise_index: dict[str, np.ndarray] = {}
-        # Índice activo para similitud: nombres-only inicialmente, centroides tras enriquecimiento
+
         self.index: dict[str, np.ndarray] = {}
 
-        self.exercise_bank: dict | None = None  # se asigna en enrich_with_exercises
+        self.exercise_bank: dict | None = None  
 
         # === Fase 1: nombre-embeddings de conceptos ===
         if self._is_concept_cache_valid():
@@ -42,7 +42,6 @@ class Embedder:
             self._save_concept_cache()
             logger.info(f"Concept name index saved to '{self._concept_cache_path}'.")
 
-        # Hasta que se enriquezca, el índice activo es solo nombre-embeddings
         self.index = dict(self.concept_name_index)
 
 
@@ -64,9 +63,6 @@ class Embedder:
         self._build_centroid_index()
         logger.success("Concept centroids enriched with tagged exercises.")
 
-
-    # === Fingerprints ===
-
     def _concept_fingerprint(self) -> str:
         # Solo depende del modelo + lista de conceptos (orden-independiente)
         concepts_serialized = json.dumps(sorted(self.all_concepts), ensure_ascii=False)
@@ -79,9 +75,6 @@ class Embedder:
         )
         statements_serialized = json.dumps(statements, ensure_ascii=False)
         return hashlib.md5(f"{self.embedding_model}::{statements_serialized}".encode()).hexdigest()
-
-
-    # === Concept cache (fase 1) ===
 
     def _is_concept_cache_valid(self) -> bool:
         if not os.path.exists(self._concept_cache_path):
@@ -105,9 +98,6 @@ class Embedder:
             fingerprint=self._concept_fingerprint(),
         )
 
-
-    # === Exercise cache (fase 2) ===
-
     def _is_exercise_cache_valid(self) -> bool:
         if not os.path.exists(self._exercise_cache_path):
             return False
@@ -130,9 +120,6 @@ class Embedder:
             fingerprint=self._exercise_fingerprint(),
         )
 
-
-    # === Construcción de índices ===
-
     def _build_concept_name_index(self) -> None:
         for concept in self.all_concepts:
             self.concept_name_index[concept] = self._embed(concept)
@@ -142,8 +129,6 @@ class Embedder:
             self.exercise_index[exercise_id] = self._embed(exercise["statement"])
 
     def _build_centroid_index(self) -> None:
-        """Combina los nombre-embeddings (cacheados) con los embeddings de ejercicios
-        anotados con cada concepto. No re-embebe — todo viene de los caches."""
         for concept in self.all_concepts:
             name_vec = self.concept_name_index[concept]
             example_vecs = [
@@ -155,9 +140,6 @@ class Embedder:
             all_vecs = [name_vec] + example_vecs
             self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
 
-
-    # === Utilidades de embedding ===
-
     def _embed(self, text: str) -> np.ndarray:
         resp = ollama.embed(model=self.embedding_model, input=text)
         return self._l2_normalize(np.array(resp.embeddings[0]))
@@ -168,9 +150,6 @@ class Embedder:
 
     def cosine_similarity(self, vec_a: np.ndarray, vec_b: np.ndarray) -> float:
         return float(np.dot(vec_a, vec_b))
-
-
-    # === API pública de similitud ===
 
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
         vec = self._embed(text)
