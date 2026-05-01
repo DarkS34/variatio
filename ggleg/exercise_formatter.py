@@ -11,7 +11,6 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama import OllamaLLM
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
-from ggleg.utils import load_exercises_dataset
 
 from ggleg.utils import load_prompt
 
