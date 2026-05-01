@@ -1,0 +1,7 @@
+{
+  "embedding": "embeddinggemma:latest",
+  "format_exercises": "gemma4:e4b-it-q4_K_M",
+  "tag_concepts": "gemma4:31b-it-q4_K_M",
+  "generate_exercise": "gemma4:31b-it-q4_K_M",
+  "validate_input": "gemma4:e4b-it-q4_K_M"
+}

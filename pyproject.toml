@@ -1,5 +1,5 @@
 [project]
-name = "graph-guided-llm-exercise-generator"
+name = "graph-guided-llm-content-generator"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -15,6 +15,7 @@ dependencies = [
     "ollama>=0.4.7",
     "scipy>=1.15.3",
     "tqdm>=4.67.3",
+    "streamlit>=1.57.0",
 ]
 
 [dependency-groups]

@@ -4,15 +4,14 @@ import logging
 import re
 import warnings
 from pathlib import Path
-from typing import ClassVar
 
 from docling.document_converter import DocumentConverter, InputFormat
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama import OllamaLLM
 from loguru import logger
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError
 
-from ggleg.utils import load_prompt
+from system.utils import load_prompt
 
 for _name in ("docling", "docling_core", "docling_ibm_models", "PIL"):
     logging.getLogger(_name).setLevel(logging.ERROR)
@@ -24,18 +23,8 @@ class ExtractedExercise(BaseModel):
     statement: str = Field(min_length=10)
     solution: str | None = None
 
-    LEADING_ENUM_RE: ClassVar[re.Pattern[str]] = re.compile(
-        r"^\s*(?:\d+\s*[.)\-:]\s*|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+\s*[.)\-:]?\s*)",
-        re.IGNORECASE,
-    )
 
-    @field_validator("statement")
-    @classmethod
-    def strip_whitespace(cls, v: str) -> str:
-        return cls.LEADING_ENUM_RE.sub("", v.strip()).strip()
-
-
-class ExerciseFormatter:
+class ContentBankHandler:
     EXERCISE_START_RE = re.compile(
         r"^(?:\d+[.)]\s+|(?:Ejercicio|Exercise|Problem|Problema)\s*\d+[:.)\s])",
         re.MULTILINE | re.IGNORECASE,
