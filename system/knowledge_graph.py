@@ -19,12 +19,15 @@ class KnowledgeGraph:
 
         node_attrs = [(c, {"domain": self.concept_domain[c]}) for c in self.all_concepts]
         self.graphs: dict[str, nx.Graph] = {}
+        self.relation_details: dict[str, dict] = {}
 
         relations_list = data.get("relations", [])
         for rel_obj in relations_list:
             details = rel_obj.get("details", {})
             rel_name = details.get("verbose", "unknown")
             rel_data = rel_obj.get("relations_data", {})
+
+            self.relation_details[rel_name] = details
 
             g = nx.DiGraph() if details.get("directed", True) else nx.Graph()
             g.add_nodes_from(node_attrs)
@@ -44,6 +47,9 @@ class KnowledgeGraph:
 
     def __getitem__(self, relation: str) -> nx.Graph:
         return self.graphs[relation]
+
+    def details(self, relation: str) -> dict:
+        return self.relation_details[relation]
 
     def neighbors(self, concept: str, relation: str, direction: str = "both") -> list[str]:
         g = self.graphs[relation]

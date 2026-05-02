@@ -9,8 +9,8 @@ from loguru import logger
 
 from system.knowledge_graph import KnowledgeGraph
 
-PARTIAL_CONCEPT_CACHE =  Path(__file__).parent / "cache" / "partial_concept_embeddings.cache.npz"
-TOTAL_CONTENT_BANK_CACHE = Path(__file__).parent / "cache" / "total_content_bank_embeddings.cache.npz"
+PARTIAL_CONCEPT_CACHE =  Path("cache/partial_concept_embeddings.cache.npz")
+TOTAL_CONTENT_BANK_CACHE = Path("cache/total_content_bank_embeddings.cache.npz")
 
 class Embedder:
     def __init__(
@@ -29,7 +29,7 @@ class Embedder:
 
         self.index: dict[str, np.ndarray] = {}
 
-        self.exercise_bank: dict | None = None  
+        self.content_bank: dict | None = None  
 
         
         if self._is_concept_cache_valid():
@@ -51,7 +51,7 @@ class Embedder:
 
     def _content_bank_fingerprint(self) -> str:
         statements = sorted(
-            (ex_id, ex["statement"]) for ex_id, ex in self.exercise_bank.items()
+            (ex_id, ex["statement"]) for ex_id, ex in self.content_bank.items()
         )
         statements_serialized = json.dumps(statements, ensure_ascii=False)
         return hashlib.md5(f"{self.embedding_model}::{statements_serialized}".encode()).hexdigest()
@@ -118,18 +118,19 @@ class Embedder:
             ]
 
             for verb, graph in kg.graphs.items():
-                if graph.is_directed():
-                    forward = sorted(graph.predecessors(concept))
-                    backward = sorted(graph.successors(concept))
-                    
-                    if forward:
-                        lines.append(f'Este concepto {verb}: {", ".join(forward)}.')
-                    for s in backward:
-                        lines.append(f'{s} {verb} este concepto.')
-                else:
-                    nbrs = sorted(graph.neighbors(concept))
-                    if nbrs:
-                        lines.append(f'Este concepto {verb}: {", ".join(nbrs)}.')
+                if kg.details(verb).get("use_in_embedding", True):
+                    if graph.is_directed():
+                        forward = sorted(graph.predecessors(concept))
+                        backward = sorted(graph.successors(concept))
+                        
+                        if forward:
+                            lines.append(f'Este concepto {verb}: {", ".join(forward)}.')
+                        for s in backward:
+                            lines.append(f'{s} {verb} este concepto.')
+                    else:
+                        nbrs = sorted(graph.neighbors(concept))
+                        if nbrs:
+                            lines.append(f'Este concepto {verb}: {", ".join(nbrs)}.')
 
             return "\n".join(lines)
 
@@ -137,8 +138,8 @@ class Embedder:
             self.concept_name_index[concept] = self._embed(_describe(concept))
 
     def _build_content_bank_index(self) -> None:
-        for exercise_id, exercise in self.exercise_bank.items():
-            self.content_bank_index[exercise_id] = self._embed(exercise["statement"])
+        for content_id, content in self.content_bank.items():
+            self.content_bank_index[content_id] = self._embed(content["statement"])
 
     def _build_centroid_index(self) -> None:
         for concept in self.all_concepts:
@@ -146,7 +147,7 @@ class Embedder:
            
             example_vecs = [
                 self.content_bank_index[ex_id]
-                for ex_id, ex in self.exercise_bank.items()
+                for ex_id, ex in self.content_bank.items()
                 if concept in ex.get("concepts", []) and ex_id in self.content_bank_index
             ]
 

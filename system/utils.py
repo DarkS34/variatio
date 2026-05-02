@@ -10,8 +10,9 @@ import requests
 from tqdm import tqdm
 
 OLLAMA_HOST = f"http://{os.environ.get('OLLAMA_HOST', 'localhost:13434')}"
-PROMPTS_DIR = Path(__file__).parent / "config" / "prompts" 
-MODELS_CONFIG = Path(__file__).parent / "config" / "models.json"
+
+PROMPTS_DIR = Path(__file__).parent / "internal_config" / "prompts" 
+MODELS_CONFIG = Path(__file__).parent / "internal_config" / "models.json"
 
 def load_models():
     with open(MODELS_CONFIG, encoding="utf-8") as f:
@@ -26,14 +27,14 @@ def load_models():
     logger.info("Initializing models")
     
     generative_LLMs = {}
-    for role, model_name in models_config.items():
-        if not is_model_installed(model_name):
-            logger.critical(f"Failed to install model '{model_name}' for role '{role}'")
+    for role, model_info in models_config.items():
+        if not is_model_installed(model_info["model_name"]):
+            logger.critical(f"Failed to install model '{str(model_info)}' for role '{role}'")
             exit()
-        llm = OllamaLLM(model=model_name, keep_alive=-1)
+        llm = OllamaLLM(model=model_info["model_name"], format=model_info["format"], reasoning=False, keep_alive=-1)
         requests.post(
             f"{OLLAMA_HOST}/api/generate",
-            json={"model": model_name, "keep_alive": -1},
+            json={"model": model_info["model_name"], "keep_alive": -1},
             timeout=300,
         )
         generative_LLMs[role] = llm
