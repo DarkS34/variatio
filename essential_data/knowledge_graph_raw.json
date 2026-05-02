@@ -1,5 +1,8 @@
 {
-    "main_theme": "Fundamentos de la programación",
+    "context": {
+        "main_theme": "Programación 1",
+        "programming_language": "python"
+    },
     "concepts_by_domains": {
         "Introducción": [
             "Programa",
@@ -93,7 +96,8 @@
             "details": {
                 "verbose": "tiene como prerrequisito",
                 "directed": true,
-                "acyclic": true
+                "acyclic": true,
+                "use_in_embedding": false
             },
             "relations_data": {
                 "Algoritmo": [
@@ -283,7 +287,8 @@
             "details": {
                 "verbose": "se combina con",
                 "directed": false,
-                "acyclic": false
+                "acyclic": false,
+                "use_in_embedding": true
             },
             "relations_data": {
                 "Comentario": [
@@ -370,7 +375,8 @@
             "details": {
                 "verbose": "es caso especial de",
                 "directed": true,
-                "acyclic": true
+                "acyclic": true,
+                "use_in_embedding": true
             },
             "relations_data": {
                 "Tipo de dato": [

@@ -1,0 +1,23 @@
+{
+  "embedding": "embeddinggemma:latest",
+  "content_cleaning":{
+    "model_name": "gemma4:e4b-it-q4_K_M",
+    "format": ""
+  },
+  "content_formatting":{
+    "model_name": "gemma4:31b-it-q4_K_M",
+    "format": ""
+  },
+  "tag_concepts":{
+    "model_name": "gemma4:31b-it-q4_K_M",
+    "format": "json"
+  } ,
+  "generate_exercise":{
+    "model_name": "gemma4:31b-it-q4_K_M",
+    "format": ""
+  } ,
+  "validate_input":{
+    "model_name": "gemma4:e4b-it-q4_K_M",
+    "format": "json"
+  }
+}
