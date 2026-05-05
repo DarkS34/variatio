@@ -2,12 +2,12 @@ import json
 import re
 from pathlib import Path
 
-from langchain_ollama import OllamaLLM
+import ollama
 from loguru import logger
 
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
-from .utils import load_prompt
+from .prompts import tag_concepts as _tag_concepts_prompt, json_repair as _json_repair_prompt
 
 
 class ConceptTagger:
@@ -15,11 +15,11 @@ class ConceptTagger:
         self,
         knowledge_graph: KnowledgeGraph,
         embedder: Embedder,
-        llm: OllamaLLM,
+        concept_tagger_model: str,
         max_repair_attempts: int = 1,
-        top_k_candidates: int = 15,
+        top_k_candidates: int = 10,
     ):
-        self.llm = llm
+        self.concept_tagger_model = concept_tagger_model
         self.knowledge_graph = knowledge_graph
         self.embedder = embedder
         self.max_repair_attempts = max_repair_attempts
@@ -33,13 +33,9 @@ class ConceptTagger:
         )
         candidate_names = [c for c, _ in candidates]
 
-        prompt = load_prompt(
-            "data_prep/concept_tagger",
-            statement=statement,
-            candidates=candidates_str,
-        )
+        prompt = _tag_concepts_prompt(statement=statement, candidates=candidates_str)
 
-        response = self.llm.invoke(prompt)
+        response = ollama.generate(model=self.concept_tagger_model, prompt=prompt).response
         result = self._parse_and_validate(response, candidate_names)
 
         for attempt in range(self.max_repair_attempts):
@@ -47,13 +43,9 @@ class ConceptTagger:
                 break
             logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
 
-            repair_prompt = load_prompt(
-                "data_prep/json_repair",
-                broken_output=response,
-                error_msg="invalid JSON or schema",
-            )
+            repair_prompt = _json_repair_prompt(broken_output=response, error_msg="invalid JSON or schema")
 
-            response = self.llm.invoke(repair_prompt)
+            response = ollama.generate(model=self.concept_tagger_model, prompt=repair_prompt).response
             result = self._parse_and_validate(response, candidate_names)
             if result is not None:
                 logger.info(f"Repair attempt {attempt + 1} succeeded")
@@ -71,19 +63,20 @@ class ConceptTagger:
 
         return result
 
-    def tag_all(self, exercise_bank: dict, output_path: str) -> dict:
+    def tag_all(self, content_bank: dict, output_path: str) -> dict:
         annotated: dict[str, dict] = {}
-        total = len(exercise_bank)
+        total = len(content_bank)
 
-        for idx, (ex_id, exercise) in enumerate(exercise_bank.items(), 1):
-            logger.info(f"[{idx}/{total}] Tagging exercise {ex_id}")
-            annotation = self.tag(exercise["statement"])
-            annotated[ex_id] = {**exercise, **annotation}
+        for idx, (c_id, content) in enumerate(content_bank.items(), 1):
+            logger.info(f"[{idx}/{total}] Tagging content {c_id}")
+            annotation = self.tag(content["statement"])
+            annotated[c_id] = {**content, **annotation}
 
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("w", encoding="utf-8") as f:
             json.dump(annotated, f, ensure_ascii=False, indent=2)
+        
         logger.success(f"Saved {len(annotated)} annotated exercise(s) to {output}")
 
         return annotated

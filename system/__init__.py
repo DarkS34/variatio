@@ -1,6 +1,18 @@
+import logging
 import sys
+import warnings
+
 from loguru import logger
-from .utils import is_ollama_connected
+
+from config import _NOISY_LOGGERS, _NOISY_WARNING_MODULES
+from .utils import cold_start_models, is_ollama_connected
+
+
+def silence_third_party():
+    for name in _NOISY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.ERROR)
+    for pattern in _NOISY_WARNING_MODULES:
+        warnings.filterwarnings("ignore", module=pattern)
 
 logger.remove()
 
@@ -17,6 +29,8 @@ logger.add(
     colorize=True,
 )
 
-if not is_ollama_connected():
+if is_ollama_connected():
+    cold_start_models()
+else:
     logger.error("Cannot connect to Ollama. Make sure Ollama is running before initializing the agent.")
     exit()

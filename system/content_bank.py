@@ -1,67 +1,44 @@
 import hashlib
 import json
-import logging
 import re
-import warnings
 from pathlib import Path
 
 from docling.document_converter import DocumentConverter, InputFormat
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_ollama import OllamaLLM
+import ollama
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from system.utils import load_prompt
+from system import config
+from system.prompts import (
+    clean_content as _clean_content_prompt,
+    format_content as _format_content_prompt,
+    json_repair as _json_repair_prompt,
+)
 
-for _name in ("docling", "docling_core", "docling_ibm_models", "PIL"):
-    logging.getLogger(_name).setLevel(logging.ERROR)
-warnings.filterwarnings("ignore", module=r"docling.*")
-warnings.filterwarnings("ignore", module=r"PIL.*")
 
-CONTENT_FORMAT_PROMPT_PATH = "content_prep/content_formatter"
 
-CONTENT_CLEAN_PROMPT_PATH =  "content_prep/content_cleaner"
-
-JSON_REPAIR_PROMPT_PATH =  "json_repair"
-
-class ContentBankHandler:
+class ContentBank:
     CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
     SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 
     def __init__(
         self,
-        formating_llm: OllamaLLM,
-        cleaning_llm: OllamaLLM,
-        item_model: type[BaseModel],
-        item_pattern: str | re.Pattern,
-        id_from: str,
-        *,
-        source_field: str = "source",
-        chunk_size: int = 2_000,
-        max_repair_attempts: int = 2,
+        item_model,
+        content_cleaning_model: str,
+        content_formatting_model: str,
+        context_name: str = "",
         verbose: bool = True,
+        max_repair_attempts: int = 3,
     ):
-        self.formatting_llm = formating_llm
-        self.cleaning_llm = cleaning_llm
+        self.content_cleaning_model = content_cleaning_model
+        self.content_formatting_model = content_formatting_model
+        self.context_name = context_name
         self.item_model = item_model
-        self.item_start_re = (
-            item_pattern
-            if isinstance(item_pattern, re.Pattern)
-            else re.compile(item_pattern, re.MULTILINE | re.IGNORECASE)
-        )
-        self.id_from = id_from
-        self.source_field = source_field
-        self.chunk_size = chunk_size
         self.max_repair_attempts = max_repair_attempts
-        
+        self.chunk_size = config.MAX_CHUNK_SIZE
         self.content_kwarg = "content"
         self.schema_kwarg = "schema"
-        
-        self.extraction_prompt = CONTENT_FORMAT_PROMPT_PATH
-        self.cleaning_prompt = CONTENT_CLEAN_PROMPT_PATH
-        self.repair_prompt = JSON_REPAIR_PROMPT_PATH
-        
-        self.parser = JsonOutputParser()
+
         self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
         self._schema_str = json.dumps(item_model.model_json_schema(), indent=2, ensure_ascii=False)
 
@@ -117,9 +94,7 @@ class ContentBankHandler:
                 except Exception as e:
                     logger.exception(f"Skipping {file_path.name}: {e}")
 
-            logger.success(
-                f"Directory scan complete: {len(all_items)} unique item(s) collected"
-            )
+            logger.success(f"Directory scan complete: {len(all_items)} unique item(s) collected")
             self._save_dict(all_items, output_file_path)
             return all_items
         except Exception as e:
@@ -151,9 +126,7 @@ class ContentBankHandler:
 
         all_items: dict[str, dict] = {}
         for batch_idx, batch in enumerate(batches, 1):
-            logger.info(
-                f"Batch {batch_idx}/{len(batches)} ({len(batch):,} chars) — invoking LLM"
-            )
+            logger.info(f"Batch {batch_idx}/{len(batches)} ({len(batch):,} chars) — invoking LLM")
             try:
                 extracted = self._extract_batch(batch, source)
             except Exception as e:
@@ -231,32 +204,32 @@ class ContentBankHandler:
             return content
         try:
             logger.info(f"Cleaning content via LLM ({len(content):,} chars)")
-            prompt = load_prompt(self.cleaning_prompt, **{self.content_kwarg: content})
-            response = self.cleaning_llm.invoke(prompt).strip()
+            prompt = _clean_content_prompt(content=content, context=self.context_name)
+            response = ollama.generate(
+                model=self.content_cleaning_model, prompt=prompt
+            ).response.strip()
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
             logger.warning(f"Cleaning failed, returning raw content: {e}")
             return content
 
     def _extract_batch(self, batch: str, source: str) -> list[dict]:
-        prompt = load_prompt(
-            self.extraction_prompt,
-            **{self.content_kwarg: batch, self.schema_kwarg: self._schema_str},
+        prompt = _format_content_prompt(
+             content=batch, schema=self._schema_str, context=self.context_name
         )
-        response = self.formatting_llm.invoke(prompt)
+        response = ollama.generate(model=self.content_formatting_model, prompt=prompt).response
         items, err = self._parse_and_validate(response)
 
         for attempt in range(self.max_repair_attempts):
             if items is not None:
                 break
             logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
-            repair_prompt = load_prompt(
-                self.repair_prompt,
-                broken_output=response,
-                error_msg=err or "invalid JSON",
-                **{self.schema_kwarg: self._schema_str},
+            repair_prompt = _json_repair_prompt(
+                broken_output=response, error_msg=err or "invalid JSON"
             )
-            response = self.formatting_llm.invoke(repair_prompt)
+            response = ollama.generate(
+                model=self.content_formatting_model, prompt=repair_prompt
+            ).response
             items, err = self._parse_and_validate(response)
             if items is not None:
                 logger.info(f"Repair attempt {attempt + 1} succeeded")
@@ -267,7 +240,7 @@ class ContentBankHandler:
         return [
             {
                 **item.model_dump(),
-                self.source_field: source,
+                "source": source,
                 "id": self._make_id(item),
             }
             for item in items
@@ -276,7 +249,7 @@ class ContentBankHandler:
     def _parse_and_validate(self, response: str) -> tuple[list[BaseModel] | None, str | None]:
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
-            raw = self.parser.parse(cleaned)
+            raw = json.loads(cleaned)
             if isinstance(raw, dict):
                 raw = [raw]
             if not isinstance(raw, list):
@@ -322,3 +295,10 @@ class ContentBankHandler:
         except Exception as e:
             logger.exception(f"Error saving: {e}")
             return False
+
+    @staticmethod
+    def load_content_bank(path: str):
+        with open(path, encoding="utf-8") as f:
+            content_bank = json.load(f)
+        logger.info("Content bank loaded correctly")
+        return content_bank
