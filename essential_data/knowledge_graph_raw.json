@@ -1,8 +1,4 @@
 {
-    "context": {
-        "main_theme": "Programación 1",
-        "programming_language": "python"
-    },
     "concepts_by_domains": {
         "Introducción": [
             "Programa",

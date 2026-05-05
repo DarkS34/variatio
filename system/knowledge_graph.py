@@ -9,7 +9,6 @@ class KnowledgeGraph:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
-        self.main_theme = data.get("main_theme", None)
 
         self.concepts_by_domains: dict[str, list[str]] = data["concepts_by_domains"]
         self.concept_domain: dict[str, str] = {
