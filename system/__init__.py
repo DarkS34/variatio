@@ -4,15 +4,14 @@ import warnings
 
 from loguru import logger
 
-from config import _NOISY_LOGGERS, _NOISY_WARNING_MODULES
+from .config import NOISY_LOGGERS, NOISY_WARNING_MODULES
 from .utils import cold_start_models, is_ollama_connected
 
+for name in NOISY_LOGGERS:
+    logging.getLogger(name).setLevel(logging.ERROR)
+for pattern in NOISY_WARNING_MODULES:
+    warnings.filterwarnings("ignore", module=pattern)
 
-def silence_third_party():
-    for name in _NOISY_LOGGERS:
-        logging.getLogger(name).setLevel(logging.ERROR)
-    for pattern in _NOISY_WARNING_MODULES:
-        warnings.filterwarnings("ignore", module=pattern)
 
 logger.remove()
 

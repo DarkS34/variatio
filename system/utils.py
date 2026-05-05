@@ -1,58 +1,37 @@
+import importlib.util
 import json
 
-from . import config
 import httpx
 import ollama
 from loguru import logger
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 from tqdm import tqdm
 
-_TYPE_MAP: dict[str, type] = {
-    "str": str,
-    "int": int,
-    "float": float,
-    "bool": bool,
-    "list[str]": list[str],
-    "list[int]": list[int],
-}
+from . import config
 
 
-class Context(BaseModel):
-    mode: str = "default"
-    context: str = ""
+class Manifest(BaseModel):
+    context: dict = {}
     item_model: type[BaseModel]
-    generation_fields: set[str] = {"statement"}
-    generation_context: str = ""
-    allowed_domains: list[str] = []
+    generation_rules: list[str] = []
 
-def load_context(path: str) -> Context:
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
 
-    fields: dict = {}
-    for field in data["extraction"]["schema"]:
-        py_type = _TYPE_MAP[field["type"]]
-        fields[field["name"]] = (py_type, ...) if field.get("required", True) else (py_type | None, None)
+def load_manifest(path: str) -> Manifest:
+    spec = importlib.util.spec_from_file_location("manifest", path)
 
-    gen = data.get("generation", {})
-    
-    ctx_data = {
-        "item_model": create_model("ContentItem", **fields),
-        **{k: v for k, v in data.items() if k in {"mode", "context"}}
-    }
-    
-    if gen:
-        if "fields" in gen:
-            ctx_data["generation_fields"] = set(gen["fields"])
-        if "context" in gen:
-            ctx_data["generation_context"] = gen["context"]
-        if "allowed_domains" in gen:
-            ctx_data["allowed_domains"] = gen["allowed_domains"]
+    if spec is None or spec.loader is None:
+        raise FileNotFoundError(f"Cannot load manifest at {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
 
-    return Context(**ctx_data)
+    manifest = Manifest(
+        context=getattr(module, "CONTEXT", {}),
+        item_model=module.ContentItem,
+        generation_rules=list(getattr(module, "GENERATION_RULES", [])),
+    )
 
-# No change to imports needed as config is already imported at line 5
-
+    logger.success("Manifest loaded")
+    return manifest
 
 
 def cold_start_models() -> None:
@@ -61,13 +40,17 @@ def cold_start_models() -> None:
         config.CONTENT_FORMATTING_LLM,
         config.EMBEDDING_LLM,
         config.CONCEPT_TAGGER_LLM,
-        config.REPAIR_LLM
+        config.REPAIR_LLM,
     ]
-    
+
     logger.info("Initializing models...")
     failed = [m for m in _all_models if not is_model_installed(m)]
     if failed:
         raise RuntimeError(f"Failed to install model(s): {', '.join(failed)}")
+
+    for m in set(_all_models):
+        ollama.generate(m) if m != config.EMBEDDING_LLM else ollama.embed(m)
+
     logger.success("All models ready")
 
 
@@ -110,9 +93,14 @@ def is_model_installed(model_name: str) -> bool:
     return True if model_name in installed_models else _download_model(model_name)
 
 
-def json_repair(broken_json: str, repair_model: str, error: str = "", max_attempts: int = 5):
+def json_repair(
+    broken_json: str, repair_model: str = config.REPAIR_LLM, error: str = "", max_attempts: int = 5
+):
     from .prompts import json_repair as _repair_prompt
-    response = ollama.generate(model=repair_model, prompt=_repair_prompt(broken_json, error or "invalid JSON")).response
+
+    response = ollama.generate(
+        model=repair_model, prompt=_repair_prompt(broken_json, error or "invalid JSON")
+    ).response
 
     for attempt in range(1, max_attempts + 1):
         try:

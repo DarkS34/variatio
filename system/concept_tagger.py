@@ -7,7 +7,7 @@ from loguru import logger
 
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
-from .prompts import tag_concepts as _tag_concepts_prompt, json_repair as _json_repair_prompt
+from .prompts import tag_concepts_prompt, json_repair_prompt
 
 
 class ConceptTagger:
@@ -33,7 +33,7 @@ class ConceptTagger:
         )
         candidate_names = [c for c, _ in candidates]
 
-        prompt = _tag_concepts_prompt(statement=statement, candidates=candidates_str)
+        prompt = tag_concepts_prompt(statement=statement, candidates=candidates_str)
 
         response = ollama.generate(model=self.concept_tagger_model, prompt=prompt).response
         result = self._parse_and_validate(response, candidate_names)
@@ -43,9 +43,13 @@ class ConceptTagger:
                 break
             logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
 
-            repair_prompt = _json_repair_prompt(broken_output=response, error_msg="invalid JSON or schema")
+            repair_prompt = json_repair_prompt(
+                broken_output=response, error_msg="invalid JSON or schema"
+            )
 
-            response = ollama.generate(model=self.concept_tagger_model, prompt=repair_prompt).response
+            response = ollama.generate(
+                model=self.concept_tagger_model, prompt=repair_prompt
+            ).response
             result = self._parse_and_validate(response, candidate_names)
             if result is not None:
                 logger.info(f"Repair attempt {attempt + 1} succeeded")
@@ -76,7 +80,7 @@ class ConceptTagger:
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("w", encoding="utf-8") as f:
             json.dump(annotated, f, ensure_ascii=False, indent=2)
-        
+
         logger.success(f"Saved {len(annotated)} annotated exercise(s) to {output}")
 
         return annotated

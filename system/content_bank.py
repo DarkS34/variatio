@@ -1,18 +1,16 @@
 import json
+
 import re
 from pathlib import Path
 
+from json_repair import repair_json
 from docling.document_converter import DocumentConverter, InputFormat
 import ollama
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
 from system import config
-from system.prompts import (
-    clean_content as _clean_content_prompt,
-    format_content as _format_content_prompt,
-    json_repair as _json_repair_prompt,
-)
+from system.prompts import clean_content_prompt, format_content_prompt, json_repair_prompt
 
 
 class ContentBank:
@@ -59,7 +57,8 @@ class ContentBank:
     def format_dir(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
         input_path = Path(input_dir)
         files = sorted(
-            p for p in input_path.iterdir()
+            p
+            for p in input_path.iterdir()
             if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTS
         )
         if not files:
@@ -129,27 +128,30 @@ class ContentBank:
             return content
         try:
             logger.info(f"{tag} cleaning content via LLM")
-            prompt = _clean_content_prompt(content=content, context=self.context_name)
+            prompt = clean_content_prompt(content=content, context=self.context_name)
             response = ollama.generate(
                 model=config.CONTENT_CLEANING_LLM, prompt=prompt
             ).response.strip()
+            
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
             logger.warning(f"{tag} cleaning failed, using raw content: {e}")
             return content
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
-        prompt = _format_content_prompt(
+        prompt = format_content_prompt(
             content=batch, schema=self._schema_str, context=self.context_name
         )
-        response = ollama.generate(model=config.CONTENT_FORMATTING_LLM, prompt=prompt).response
+        response = ollama.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
         items, err = self._parse_and_validate(response)
 
         for attempt in range(1, self.max_repair_attempts + 1):
             if items is not None:
                 break
             logger.warning(f"{tag} repair {attempt}/{self.max_repair_attempts}: {err}")
-            repair_prompt = _json_repair_prompt(broken_output=response, error_msg=err or "invalid JSON")
+            repair_prompt = json_repair_prompt(
+                broken_output=response, error_msg=err or "invalid JSON"
+            )
             response = ollama.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
             items, err = self._parse_and_validate(response)
 
@@ -160,7 +162,7 @@ class ContentBank:
     def _parse_and_validate(self, response: str) -> tuple[list[BaseModel] | None, str | None]:
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
-            raw = json.loads(cleaned)
+            raw = repair_json(cleaned, return_objects=True)
             if isinstance(raw, dict):
                 raw = [raw]
             if not isinstance(raw, list):
