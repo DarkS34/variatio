@@ -1,7 +1,7 @@
 # ── REPARACIÓN DE JSON ────────────────────────────────────────────────────────
 
 
-def json_repair(broken_output: str, error_msg: str) -> str:
+def json_repair_prompt(broken_output: str, error_msg: str) -> str:
     return f"""\
 La salida anterior no pudo parsearse como JSON válido o no cumple el schema requerido.
 
@@ -25,7 +25,7 @@ JSON:"""
 # ── PREPARACIÓN DE CONTENIDO ──────────────────────────────────────────────────
 
 
-def clean_content(content: str, context: str = "") -> str:
+def clean_content_prompt(content: str, context: str = "") -> str:
     context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context}\n" if context else ""
     return f"""\
 Limpia un documento markdown convertido desde un origen binario (.pdf / .docx). Devuelve el markdown limpio tal cual. No resumas, no traduzcas, no parafrasees, no generes contenido nuevo.
@@ -62,8 +62,8 @@ Limpia un documento markdown convertido desde un origen binario (.pdf / .docx). 
 Markdown limpio:"""
 
 
-def format_content(content: str, schema: str, context: str = "") -> str:
-    context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context}\n" if context else ""
+def format_content_prompt(content: str, schema: str, context: str = "") -> str:
+    context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context}"
     return f"""\
 Extrae elementos estructurados de un fragmento markdown pre-segmentado.
 
@@ -88,7 +88,9 @@ Cada objeto del array debe cumplir este JSON Schema. El campo `description` de c
 - Sin ```json, sin backticks, sin comentarios.
 - Si no hay elementos extraíbles del input, devuelve `[]`.
 
-{context_block}<<<CONTENT>>>
+{context_block}
+
+<<<CONTENT>>>
 {content}
 <<<END>>>
 
@@ -98,7 +100,7 @@ JSON:"""
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────
 
 
-def tag_concepts(statement: str, candidates: str) -> str:
+def tag_concepts_prompt(statement: str, candidates: str) -> str:
     return f"""\
 Clasifica el siguiente ejercicio de programación Python asignándole los conceptos del currículo que trabaja.
 
@@ -124,40 +126,3 @@ Los conceptos están ordenados de mayor a menor relevancia semántica respecto a
 
 JSON:"""
 
-
-# ── GENERACIÓN DE EJERCICIOS ──────────────────────────────────────────────────
-
-
-def generate_exercise(
-    concept: str,
-    domain: str,
-    few_shots: str,
-    fields: str,
-    allowed_concepts: str = "",
-    excluded_concepts: str = "",
-    context: str = "",
-) -> str:
-    context_block = f"\n# CONTEXTO\n{context}\n" if context else ""
-    allowed_block = f"\n# CONCEPTOS PERMITIDOS EN LA SOLUCIÓN\nSolo puedes usar estos conceptos en el código de la solución:\n{allowed_concepts}\n" if allowed_concepts else ""
-    excluded_block = f"\n# CONCEPTOS NO DISPONIBLES\nEl alumno aún no los conoce — no deben aparecer en la solución aunque sean más simples:\n{excluded_concepts}\n" if excluded_concepts else ""
-    return f"""\
-Genera un ejercicio de programación Python original sobre el concepto "{concept}" (dominio: {domain}).
-{context_block}
-# EJEMPLOS DE REFERENCIA
-Los siguientes ejercicios del banco ilustran el estilo, nivel y formato esperados:
-
-{few_shots}
-{allowed_block}{excluded_block}
-# CAMPOS A GENERAR
-Produce un objeto JSON con exactamente estos campos: {fields}
-
-# REGLAS
-- El ejercicio debe centrarse en "{concept}" de forma directa y reconocible.
-- No copies los ejemplos: úsalos solo como referencia de estilo y dificultad.
-- `statement`: enunciado completo y autónomo. Con libertad creativa — no está restringido por los conceptos permitidos.
-- `solution`: código Python correcto y mínimo que resuelve el enunciado. Solo si se pide. Debe respetar estrictamente los conceptos permitidos.
-- `hints`: lista de pistas ordenadas de menor a mayor ayuda. Solo si se pide.
-- `concepts`: lista de conceptos adicionales que el ejercicio trabaja. Solo si se pide.
-- Responde SOLO con el JSON. Sin texto antes ni después, sin backticks, sin comentarios.
-
-JSON:"""
