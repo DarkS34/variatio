@@ -13,11 +13,11 @@ CONTEXT = {
 class ContentItem(BaseModel):
     statement: str = Field(
         min_length=20,
-        description="Enunciado completo del ejercicio, autocontenido y en prosa",
-    )
-    solution: str | None = Field(
-        default=None,
-        description="Solución en Python, si aparece en el documento. Mantén el código tal cual aparece en la fuente.",
+        description=(
+            "Enunciado del ejercicio en español, redactado en prosa breve y autocontenida. "
+            "Debe indicar con claridad qué tiene que hacer el programa y, cuando aplique, qué datos recibe y qué se muestra por pantalla. "
+            "No incluyas pistas de implementación ni la solución."
+        ),
     )
     difficulty: Literal[1, 2, 3, 4] = Field(
         description=(
@@ -26,6 +26,14 @@ class ContentItem(BaseModel):
             "2 (Medio): 3-5 conceptos; varias expresiones o un condicional; mínima modularidad. "
             "3 (Difícil): 5-8 conceptos; usa bucles o colecciones; exige planificar el algoritmo y admite múltiples rutas. "
             "4 (Avanzado): 8+ conceptos; recursividad, algoritmos clásicos o varias colecciones combinadas; alta carga cognitiva."
+        )
+    )
+    solution: str | None = Field(
+        default=None,
+        description=(
+            "Solución del ejercicio como código Python ejecutable que resuelve lo pedido en el enunciado. "
+            "Si el documento original incluye la solución, cópiala literalmente sin reformatear ni optimizar; si no existe, deja el campo en null. "
+            "Texto plano, sin fences de Markdown."
         ),
     )
 
