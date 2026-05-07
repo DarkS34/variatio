@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -11,12 +11,15 @@ CONTEXT = {
 
 
 class ContentItem(BaseModel):
+    PRIMARY_FIELD: ClassVar[str] = "statement"
+
     statement: str = Field(
         min_length=20,
         description=(
-            "Enunciado del ejercicio en español, redactado en prosa breve y autocontenida. "
-            "Debe indicar con claridad qué tiene que hacer el programa y, cuando aplique, qué datos recibe y qué se muestra por pantalla. "
-            "No incluyas pistas de implementación ni la solución."
+            "Enunciado del ejercicio copiado literalmente del documento original, tal cual aparece, sin resumir, parafrasear ni acortar, por muy largo que sea. "
+            "Conserva el texto íntegro y, si lo hubiera, el código de apoyo que forma parte del enunciado (snippets a analizar, completar, comentar, ejemplos de uso o plantillas a rellenar). "
+            "No incluyas la solución del ejercicio aquí: si el documento la presenta en una sección separada (p. ej. bajo un epígrafe 'Solución' o como respuesta aparte), debe ir en el campo 'solution', no en el enunciado. "
+            "No añadas pistas de implementación, comentarios propios ni reformatees el contenido. Texto plano, sin fences de Markdown."
         ),
     )
     difficulty: Literal[1, 2, 3, 4] = Field(
@@ -31,8 +34,10 @@ class ContentItem(BaseModel):
     solution: str | None = Field(
         default=None,
         description=(
-            "Solución del ejercicio como código Python ejecutable que resuelve lo pedido en el enunciado. "
-            "Si el documento original incluye la solución, cópiala literalmente sin reformatear ni optimizar; si no existe, deja el campo en null. "
+            "Solución del ejercicio como código Python que la resuelve, copiada literalmente del documento original sin reformatear ni optimizar. "
+            "Solo se rellena cuando el documento incluye una solución claramente diferenciada del enunciado (por ejemplo, en una sección posterior, bajo un epígrafe tipo 'Solución', o como respuesta separada). "
+            "Si el código que aparece forma parte del propio enunciado (snippets a analizar, completar o comentar, ejemplos de uso, plantillas a rellenar) y no hay una respuesta aparte, deja el campo en null: nunca dupliques el código del enunciado aquí. "
+            "Si no hay solución en el documento, también null. No inventes ni generes una solución propia. "
             "Texto plano, sin fences de Markdown."
         ),
     )

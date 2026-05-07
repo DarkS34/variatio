@@ -1,41 +1,15 @@
-import importlib.util
 import json
 
 import httpx
 import ollama
 from loguru import logger
-from pydantic import BaseModel
 from tqdm import tqdm
 
 from . import config
 
 
-class Manifest(BaseModel):
-    context: dict = {}
-    item_model: type[BaseModel]
-    generation_rules: list[str] = []
-
-
-def load_manifest(path: str) -> Manifest:
-    spec = importlib.util.spec_from_file_location("manifest", path)
-
-    if spec is None or spec.loader is None:
-        raise FileNotFoundError(f"Cannot load manifest at {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    manifest = Manifest(
-        context=getattr(module, "CONTEXT", {}),
-        item_model=module.ContentItem,
-        generation_rules=list(getattr(module, "GENERATION_RULES", [])),
-    )
-
-    logger.success("Manifest loaded")
-    return manifest
-
-
-def cold_start_models() -> None:
-    _all_models = [
+def prepare_models() -> None:
+    all_models = [
         config.CONTENT_CLEANING_LLM,
         config.CONTENT_FORMATTING_LLM,
         config.EMBEDDING_LLM,
@@ -43,15 +17,18 @@ def cold_start_models() -> None:
         config.REPAIR_LLM,
     ]
 
-    logger.info("Initializing models...")
-    failed = [m for m in _all_models if not is_model_installed(m)]
+    logger.info("Initializing models")
+    failed = [m for m in all_models if not is_model_installed(m)]
     if failed:
         raise RuntimeError(f"Failed to install model(s): {', '.join(failed)}")
 
-    for m in set(_all_models):
-        ollama.generate(m) if m != config.EMBEDDING_LLM else ollama.embed(m)
+    for m in set(all_models):
+        if m == config.EMBEDDING_LLM:
+            ollama.embed(model=m, input="", keep_alive=0)
+        else:
+            ollama.generate(model=m, prompt="", keep_alive=0)
 
-    logger.success("All models ready")
+    logger.success("All models loaded")
 
 
 def is_ollama_connected() -> bool:

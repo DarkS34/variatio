@@ -119,6 +119,7 @@ Los conceptos están ordenados de mayor a menor relevancia semántica respecto a
 - `concepts`: lista de todos los conceptos que el ejercicio trabaja de forma explícita o necesaria.
 - `primary_concept`: el concepto central que el ejercicio pretende practicar. Debe aparecer también en `concepts`.
 - Si el ejercicio trabaja claramente un solo concepto, `concepts` tendrá un único elemento.
+- Si tras analizar los candidatos consideras que NINGUNO representa lo que el ejercicio practica de forma central, devuelve {{"concepts": [], "primary_concept": null}}. Usa esta opción con criterio: solo cuando ningún candidato describa el contenido real del ejercicio, no ante mera incertidumbre.
 - Responde SOLO con el JSON. Sin texto antes ni después, sin backticks, sin comentarios.
 
 # EJERCICIO

@@ -22,20 +22,26 @@ class ContentBank:
     def __init__(
         self,
         item_model,
-        context_name: str = "",
+        context: str = "",
         verbose: bool = True,
-        max_repair_attempts: int = 3,
     ):
         self.item_model = item_model
-        self.context_name = context_name
-        self.max_repair_attempts = max_repair_attempts
+        self.context = context
+
+        self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.MAX_CHUNK_SIZE
+
+        logger.enable(__name__) if verbose else logger.disable(__name__)
 
         self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
         self._schema_str = json.dumps(item_model.model_json_schema(), indent=2, ensure_ascii=False)
         self._id_counter = 0
 
-        logger.enable(__name__) if verbose else logger.disable(__name__)
+        self.bank = (
+            self.load_content_bank(config.CONTENT_BANK_PATH)
+            if config.CONTENT_BANK_PATH.is_file()
+            else None
+        )
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
@@ -67,10 +73,7 @@ class ContentBank:
 
         bank = self._load_existing(output_file_path)
         self._id_counter = self._max_id(bank)
-        logger.info(
-            f"Found {len(files)} file(s); resuming from C{self._id_counter + 1:03d} "
-            f"({len(bank)} item(s) already in {output_file_path})"
-        )
+        logger.info(f"Found {len(files)} file(s) - Starting from C{self._id_counter + 1:03d}")
 
         for idx, file_path in enumerate(files, 1):
             tag = f"[{idx}/{len(files)} {file_path.name}]"
@@ -89,13 +92,14 @@ class ContentBank:
             logger.success(f"{tag} +{len(new_items)} → checkpoint saved ({len(bank)} total)")
 
         logger.success(f"Directory done — {len(bank)} item(s) in {output_file_path}")
-        return bank
+        
+        self.bank = bank
 
     @staticmethod
     def load_content_bank(path: str) -> dict:
         with open(path, encoding="utf-8") as f:
             bank = json.load(f)
-        logger.info(f"Content bank loaded from {path} ({len(bank)} item(s))")
+        logger.info(f"Content bank loaded ({len(bank)} item(s))")
         return bank
 
     # PIPELINE ------------------------------------------------------------------------------------
@@ -104,7 +108,7 @@ class ContentBank:
         content = self._to_markdown(file_path)
         logger.info(f"{tag} markdown ready ({len(content):,} chars)")
 
-        content = self._clean_content(content, tag)
+        # content = self._clean_content(content, tag)
         batches = self._build_batches(content)
         if not batches:
             return {}
@@ -128,27 +132,29 @@ class ContentBank:
             return content
         try:
             logger.info(f"{tag} cleaning content via LLM")
-            prompt = clean_content_prompt(content=content, context=self.context_name)
+            prompt = clean_content_prompt(content=content, context=self.context)
             response = ollama.generate(
                 model=config.CONTENT_CLEANING_LLM, prompt=prompt
             ).response.strip()
-            
+
             return re.sub(r"\n{3,}", "\n\n", response)
         except Exception as e:
             logger.warning(f"{tag} cleaning failed, using raw content: {e}")
             return content
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
-        prompt = format_content_prompt(
-            content=batch, schema=self._schema_str, context=self.context_name
-        )
-        response = ollama.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
+        prompt = format_content_prompt(content=batch, schema=self._schema_str, context=self.context)
+        response = ollama.generate(
+            model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt
+        ).response
         items, err = self._parse_and_validate(response)
 
         for attempt in range(1, self.max_repair_attempts + 1):
             if items is not None:
                 break
-            logger.warning(f"{tag} repair {attempt}/{self.max_repair_attempts}: {err}")
+            err_inline = " | ".join(err.splitlines()) if err else err
+            logger.warning(f"{tag} repair {attempt}/{self.max_repair_attempts}: {err_inline}")
+
             repair_prompt = json_repair_prompt(
                 broken_output=response, error_msg=err or "invalid JSON"
             )

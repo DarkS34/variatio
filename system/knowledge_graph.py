@@ -42,7 +42,7 @@ class KnowledgeGraph:
                     cycle = nx.find_cycle(g)
                     logger.error(f"Cycle detected in '{rel_name}': {cycle}")
 
-        logger.success("Knowledge graph loaded correctly")
+        logger.success(f"Knowledge graph loaded ({len(self.all_concepts)} concept(s))")
 
     def __getitem__(self, relation: str) -> nx.Graph:
         return self.graphs[relation]
