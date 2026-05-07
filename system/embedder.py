@@ -1,6 +1,5 @@
 import hashlib
 import json
-import os
 
 from . import config
 import numpy as np
@@ -11,14 +10,38 @@ from system.knowledge_graph import KnowledgeGraph
 
 
 class Embedder:
-    def __init__(self, knowledge_graph: KnowledgeGraph, embedding_model: str):
+    def __init__(
+        self,
+        knowledge_graph: KnowledgeGraph,
+        embedding_model: str,
+        primary_field: str,
+    ):
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
-        self.similarity_threshold = 0.6
-        self.concept_name_index: dict[str, np.ndarray] = {}
+        self.primary_field = primary_field
+
+        self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD
+
+        self.concepts_index: dict[str, np.ndarray] = {}
         self.content_bank_index: dict[str, np.ndarray] = {}
 
-        self.index: dict[str, np.ndarray] = {}
+        if self._is_concept_cache_valid():
+            self._load_concept_cache()
+            logger.info(f"Loaded concepts index from cache ({len(self.concepts_index)} concepts)")
+        else:
+            logger.info("Building concepts index...")
+            self.init_index_with_concepts()
+            self._save_concept_cache()
+            logger.info(f"Saved concepts index cache ({len(self.concepts_index)} concepts)")
+
+        self.index: dict[str, np.ndarray] = dict(self.concepts_index)
+
+        if config.CONTENT_BANK_EMBEDDINGS_PATH.exists():
+            self._load_content_bank_cache()
+            self._merge_into_index()
+            logger.info(f"Loaded content bank cache and merged index ({len(self.content_bank_index)} items)")
+        else:
+            logger.warning("Content bank embeddings cache not found - call enrich_index_with_content to generate it.")
 
     # FIGERPRINTS ---------------------------------------------------------------------------------
 
@@ -29,55 +52,65 @@ class Embedder:
         return hashlib.md5(f"{self.embedding_model}::{concepts_serialized}".encode()).hexdigest()
 
     def _content_bank_fingerprint(self) -> str:
-        statements = sorted((ex_id, ex["statement"]) for ex_id, ex in self.content_bank.items())
-        statements_serialized = json.dumps(statements, ensure_ascii=False)
-        return hashlib.md5(f"{self.embedding_model}::{statements_serialized}".encode()).hexdigest()
+        entries = sorted(
+            (ex_id, ex[self.primary_field], sorted(ex.get("concepts", [])))
+            for ex_id, ex in self.content_bank.items()
+        )
+        entries_serialized = json.dumps(entries, ensure_ascii=False)
+        return hashlib.md5(f"{self.embedding_model}::{entries_serialized}".encode()).hexdigest()
 
     # CONCEPT CACHE VALIDATION --------------------------------------------------------------------
 
     def _is_concept_cache_valid(self) -> bool:
-        if not os.path.exists(config.PARTIAL_EMBEDDINGS_FILE):
+        if not config.CONCEPTS_EMBEDDINGS_PATH.exists():
             return False
         try:
-            data = np.load(config.PARTIAL_EMBEDDINGS_FILE, allow_pickle=True)
+            data = np.load(config.CONCEPTS_EMBEDDINGS_PATH, allow_pickle=True)
             return str(data["fingerprint"]) == self._concept_fingerprint()
         except Exception:
             return False
 
     def _load_concept_cache(self) -> None:
-        data = np.load(config.PARTIAL_EMBEDDINGS_FILE, allow_pickle=True)
-        self.concept_name_index = dict(zip(data["keys"], data["vectors"]))
+        data = np.load(config.CONCEPTS_EMBEDDINGS_PATH, allow_pickle=True)
+        self.concepts_index = dict(zip(data["keys"], data["vectors"]))
 
     def _save_concept_cache(self) -> None:
-        config.PARTIAL_EMBEDDINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config.CONCEPTS_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
         np.savez(
-            config.PARTIAL_EMBEDDINGS_FILE,
-            keys=list(self.concept_name_index.keys()),
-            vectors=np.array(list(self.concept_name_index.values())),
+            config.CONCEPTS_EMBEDDINGS_PATH,
+            keys=list(self.concepts_index.keys()),
+            vectors=np.array(list(self.concepts_index.values())),
             fingerprint=self._concept_fingerprint(),
         )
 
-    # CONTENT BANK CACHE VALIDATION --------------------------------------------------------------------
+    # CONTENT BANK CACHE VALIDATION ---------------------------------------------------------------
 
     def _is_content_bank_cache_valid(self) -> bool:
-        if not os.path.exists(config.FINAL_EMBEDDINGS_FILE):
+        if not config.CONTENT_BANK_EMBEDDINGS_PATH.exists():
             return False
         try:
-            data = np.load(config.FINAL_EMBEDDINGS_FILE, allow_pickle=True)
+            data = np.load(config.CONTENT_BANK_EMBEDDINGS_PATH, allow_pickle=True)
             return str(data["fingerprint"]) == self._content_bank_fingerprint()
         except Exception:
             return False
 
     def _load_content_bank_cache(self) -> None:
-        data = np.load(config.FINAL_EMBEDDINGS_FILE, allow_pickle=True)
+        data = np.load(config.CONTENT_BANK_EMBEDDINGS_PATH, allow_pickle=True)
         self.content_bank_index = dict(zip(data["keys"], data["vectors"]))
+        self.content_bank = json.loads(str(data["assignments"]))
+        self._cached_content_bank_fingerprint = str(data["fingerprint"])
 
     def _save_content_bank_cache(self) -> None:
-        config.FINAL_EMBEDDINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config.CONTENT_BANK_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        assignments = {
+            ex_id: {"concepts": sorted(ex.get("concepts", []))}
+            for ex_id, ex in self.content_bank.items()
+        }
         np.savez(
-            config.FINAL_EMBEDDINGS_FILE,
+            config.CONTENT_BANK_EMBEDDINGS_PATH,
             keys=list(self.content_bank_index.keys()),
             vectors=np.array(list(self.content_bank_index.values())),
+            assignments=json.dumps(assignments, ensure_ascii=False),
             fingerprint=self._content_bank_fingerprint(),
         )
 
@@ -108,18 +141,35 @@ class Embedder:
             return "\n".join(lines)
 
         for concept in self.knowledge_graph.all_concepts:
-            self.concept_name_index[concept] = self._embed(_describe(concept))
+            self.concepts_index[concept] = self._embed(_describe(concept))
 
     def enrich_index_with_content(self, annotated_bank: dict) -> None:
         self.content_bank = annotated_bank
+        new_fingerprint = self._content_bank_fingerprint()
+
+        if (
+            getattr(self, "_cached_content_bank_fingerprint", None) == new_fingerprint
+            and self.content_bank_index
+        ):
+            logger.info("Content bank index already up to date; skipping re-embedding.")
+            return
+
         self.content_bank_index = {}
         logger.info(f"Embedding {len(annotated_bank)} content bank examples...")
 
         for content_id, content in annotated_bank.items():
-            self.content_bank_index[content_id] = self._embed(content["statement"])
+            self.content_bank_index[content_id] = self._embed(content[self.primary_field])
 
+        self._save_content_bank_cache()
+        self._cached_content_bank_fingerprint = new_fingerprint
+        self._merge_into_index()
+        logger.info(
+            f"Saved content bank cache and merged index ({len(self.content_bank_index)} items)"
+        )
+
+    def _merge_into_index(self) -> None:
         for concept in self.knowledge_graph.all_concepts:
-            name_vec = self.concept_name_index[concept]
+            name_vec = self.concepts_index[concept]
 
             example_vecs = [
                 self.content_bank_index[ex_id]
@@ -129,8 +179,6 @@ class Embedder:
 
             all_vecs = [name_vec] + example_vecs
             self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
-
-        logger.info(f"Enriched concept embeddings with {len(annotated_bank)} exercises")
 
     # TECHNICAL STUFF -----------------------------------------------------------------------------
 
@@ -145,6 +193,8 @@ class Embedder:
     def cosine_similarity(self, vec_a: np.ndarray, vec_b: np.ndarray) -> float:
         return float(np.dot(vec_a, vec_b))
 
+    # RETRIEVE  -----------------------------------------------------------------------------
+
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
         vec = self._embed(text)
         scores = sorted(
@@ -152,4 +202,17 @@ class Embedder:
             key=lambda x: x[1],
             reverse=True,
         )
-        return scores[:k]
+        if not scores:
+            return []
+
+        candidates = [(c, s) for c, s in scores[:k] if s >= self.similarity_threshold]
+        if not candidates:
+            return []
+
+        gap_threshold = max(0.03, candidates[0][1] * 0.05)
+        result = [candidates[0]]
+        for prev, curr in zip(candidates, candidates[1:]):
+            if prev[1] - curr[1] > gap_threshold:
+                break
+            result.append(curr)
+        return result
