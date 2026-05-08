@@ -97,6 +97,59 @@ Cada objeto del array debe cumplir este JSON Schema. El campo `description` de c
 JSON:"""
 
 
+# ── DESCRIPCIÓN DE CONCEPTOS ─────────────────────────────────────────────────
+
+
+def concept_descrition_prompt(
+    concept: str,
+    domain: str,
+    relations: dict[str, list[str]],
+    siblings: list[str],
+    context: dict,
+) -> str:
+    context_block = ""
+    if context:
+        context_lines = "\n".join(f"- {key}: {value}" for key, value in context.items())
+        context_block = f"\n# CONTEXTO\n{context_lines}\n"
+
+    relations_block = ""
+    relations_with_neighbors = {v: ns for v, ns in relations.items() if ns}
+    if relations_with_neighbors:
+        relations_lines = "\n".join(
+            f"- {verbose}: {', '.join(neighbors)}."
+            for verbose, neighbors in relations_with_neighbors.items()
+        )
+        relations_block = f"\n# RELACIONES ENTRE CONCEPTOS\n{relations_lines}\n"
+
+    siblings_block = ""
+    if siblings:
+        siblings_block = (
+            f"\n# OTROS CONCEPTOS DEL MISMO DOMINIO\n{', '.join(siblings)}\n"
+        )
+
+    return f"""\
+Estás generando una descripción para el concepto «{concept}» del dominio «{domain}».
+{context_block}{relations_block}{siblings_block}
+# OBJETIVO
+Esta descripción se usará para recuperar semánticamente este concepto a partir del texto principal de los items de contenido del dominio (lo que cada item plantea, describe, pregunta o ejemplifica). Debe LEER COMO uno de esos textos, o como la introducción a uno, no como definición académica de manual.
+
+# DISTINTIVIDAD (CRÍTICO)
+- La descripción debe encajar SOLO con items que enseñen este concepto en concreto, no con cualquier item del dominio.
+- Evita vocabulario universal del dominio — palabras y giros que aparecerían naturalmente en items de muchos conceptos distintos. Identifica qué léxico es transversal en este dominio (lo que usarías para describir el dominio en general, o para describir cualquiera de los "otros conceptos del mismo dominio") y NO lo uses.
+- No uses ejemplos concretos genéricos: placeholders típicos, datos de relleno o escenarios neutros que aparezcan en items de varios conceptos diferentes. Si das un ejemplo, que sea uno cuyo enunciado SOLO tendría sentido si el concepto central fuera este.
+- Para conceptos paraguas o troncales con pocos detalles propios, prefiere una descripción MUY CORTA y sobria que mencione únicamente lo que los distingue de los hermanos del dominio. Mejor 1 frase específica que 4 frases genéricas.
+- Si lo que has escrito también describiría a un hermano del dominio, REESCRÍBELO o RECÓRTALO hasta que no.
+
+# REGLAS DE FORMA
+- 1-4 frases, según haga falta para ser específico sin caer en lo genérico.
+- Estilo "tipo de item que ejemplifica, aplica o practica este concepto", no definición formal.
+- Apóyate en contexto y relaciones para inferir el registro y vocabulario de superficie del dominio — términos, símbolos, sintaxis, fórmulas, identificadores o construcciones propias que aparecerían naturalmente en items reales de esa temática y nivel. Lo que no aplique al dominio, no lo uses.
+- Idioma: el natural del dominio descrito en el contexto. Si no se desprende con claridad, usa el mismo idioma de los nombres de los conceptos.
+- Texto plano sin ningún tipo de marcado: ni markdown, ni etiquetas estructuradas, ni cercos (backticks, fences, comillas envolventes).
+
+Descripción:"""
+
+
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────
 
 

@@ -87,6 +87,10 @@
             "Ordenación por selección"
         ]
     },
+    "generic_non_taggable_concepts": [
+        "Programa",
+        "Script"
+    ],
     "relations": [
         {
             "details": {

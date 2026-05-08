@@ -7,6 +7,7 @@ import ollama
 from loguru import logger
 
 from system.knowledge_graph import KnowledgeGraph
+from .prompts import concept_descrition_prompt
 
 
 class Embedder:
@@ -15,15 +16,20 @@ class Embedder:
         knowledge_graph: KnowledgeGraph,
         embedding_model: str,
         primary_field: str,
+        context: dict,
     ):
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
         self.primary_field = primary_field
+        self.context = context
 
         self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD
 
         self.concepts_index: dict[str, np.ndarray] = {}
         self.content_bank_index: dict[str, np.ndarray] = {}
+        self.concept_descriptions: dict[str, str] = {}
+
+        self._load_or_generate_descriptions()
 
         if self._is_concept_cache_valid():
             self._load_concept_cache()
@@ -46,10 +52,15 @@ class Embedder:
     # FIGERPRINTS ---------------------------------------------------------------------------------
 
     def _concept_fingerprint(self) -> str:
-        concepts_serialized = json.dumps(
-            sorted(self.knowledge_graph.all_concepts), ensure_ascii=False
+        taggable = self.knowledge_graph.taggable_concepts
+        payload = json.dumps(
+            {
+                "concepts": sorted(taggable),
+                "descriptions": {c: self.concept_descriptions[c] for c in sorted(taggable) if c in self.concept_descriptions},
+            },
+            ensure_ascii=False,
         )
-        return hashlib.md5(f"{self.embedding_model}::{concepts_serialized}".encode()).hexdigest()
+        return hashlib.md5(f"{self.embedding_model}::{payload}".encode()).hexdigest()
 
     def _content_bank_fingerprint(self) -> str:
         entries = sorted(
@@ -114,34 +125,101 @@ class Embedder:
             fingerprint=self._content_bank_fingerprint(),
         )
 
+    # CONCEPT DESCRIPTIONS ------------------------------------------------------------------------
+
+    def _load_or_generate_descriptions(self) -> None:
+        if config.CONCEPT_DESCRIPTIONS_PATH.exists():
+            with config.CONCEPT_DESCRIPTIONS_PATH.open(encoding="utf-8") as f:
+                self.concept_descriptions = json.load(f)
+
+        missing = [
+            c for c in self.knowledge_graph.taggable_concepts
+            if c not in self.concept_descriptions
+        ]
+        if not missing:
+            logger.info(
+                f"Loaded {len(self.knowledge_graph.taggable_concepts)} taggable concept descriptions from cache"
+            )
+            return
+
+        logger.info(f"Generating {len(missing)} concept description(s)...")
+        for i, concept in enumerate(missing, 1):
+            logger.info(f"[{i}/{len(missing)}] Generating description: {concept}")
+            try:
+                self.concept_descriptions[concept] = self._generate_description(concept)
+            except Exception as e:
+                logger.warning(f"Falling back to legacy describe for '{concept}': {e}")
+                self.concept_descriptions[concept] = self._simple_describe(concept)
+
+        config.CONCEPT_DESCRIPTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with config.CONCEPT_DESCRIPTIONS_PATH.open("w", encoding="utf-8") as f:
+            json.dump(self.concept_descriptions, f, ensure_ascii=False, indent=2)
+        logger.success(f"Saved {len(self.concept_descriptions)} concept descriptions to cache")
+
+    def _generate_description(self, concept: str) -> str:
+        domain = self.knowledge_graph.concept_domain[concept]
+        relations = self._collect_relations(concept)
+        siblings = [
+            c
+            for c in self.knowledge_graph.concepts_by_domains[domain]
+            if c != concept and c not in self.knowledge_graph.generic_non_taggable_concepts
+        ]
+
+        prompt = concept_descrition_prompt(
+            concept=concept,
+            domain=domain,
+            relations=relations,
+            siblings=siblings,
+            context=self.context,
+        )
+        response = ollama.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
+        return response.strip()
+
+    def _collect_relations(self, concept: str) -> dict[str, list[str]]:
+        relations: dict[str, list[str]] = {}
+        for verb, graph in self.knowledge_graph.graphs.items():
+            if concept not in graph:
+                continue
+            if graph.is_directed():
+                successors = sorted(graph.successors(concept))
+                predecessors = sorted(graph.predecessors(concept))
+                if successors:
+                    relations[f"este concepto {verb}"] = successors
+                if predecessors:
+                    relations[f"{verb} este concepto"] = predecessors
+            else:
+                nbrs = sorted(graph.neighbors(concept))
+                if nbrs:
+                    relations[verb] = nbrs
+        return relations
+
+    def _simple_describe(self, concept: str) -> str:
+        kg = self.knowledge_graph
+        domain = kg.concept_domain[concept]
+        lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
+
+        for verb, graph in kg.graphs.items():
+            if not kg.details(verb).get("use_in_embedding", True):
+                continue
+            if graph.is_directed():
+                forward = sorted(graph.predecessors(concept))
+                backward = sorted(graph.successors(concept))
+                if forward:
+                    lines.append(f'Este concepto {verb}: {", ".join(forward)}.')
+                for s in backward:
+                    lines.append(f"{s} {verb} este concepto.")
+            else:
+                nbrs = sorted(graph.neighbors(concept))
+                if nbrs:
+                    lines.append(f'Este concepto {verb}: {", ".join(nbrs)}.')
+
+        return "\n".join(lines)
+
     # BUILD INDICES -------------------------------------------------------------------------------
 
     def init_index_with_concepts(self) -> None:
-        def _describe(concept: str) -> str:
-            kg = self.knowledge_graph
-            domain = kg.concept_domain[concept]
-
-            lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
-
-            for verb, graph in kg.graphs.items():
-                if kg.details(verb).get("use_in_embedding", True):
-                    if graph.is_directed():
-                        forward = sorted(graph.predecessors(concept))
-                        backward = sorted(graph.successors(concept))
-
-                        if forward:
-                            lines.append(f'Este concepto {verb}: {", ".join(forward)}.')
-                        for s in backward:
-                            lines.append(f"{s} {verb} este concepto.")
-                    else:
-                        nbrs = sorted(graph.neighbors(concept))
-                        if nbrs:
-                            lines.append(f'Este concepto {verb}: {", ".join(nbrs)}.')
-
-            return "\n".join(lines)
-
-        for concept in self.knowledge_graph.all_concepts:
-            self.concepts_index[concept] = self._embed(_describe(concept))
+        for concept in self.knowledge_graph.taggable_concepts:
+            self.concepts_index[concept] = self._embed(self.concept_descriptions[concept])
 
     def enrich_index_with_content(self, annotated_bank: dict) -> None:
         self.content_bank = annotated_bank
@@ -168,7 +246,7 @@ class Embedder:
         )
 
     def _merge_into_index(self) -> None:
-        for concept in self.knowledge_graph.all_concepts:
+        for concept in self.knowledge_graph.taggable_concepts:
             name_vec = self.concepts_index[concept]
 
             example_vecs = [
@@ -202,17 +280,4 @@ class Embedder:
             key=lambda x: x[1],
             reverse=True,
         )
-        if not scores:
-            return []
-
-        candidates = [(c, s) for c, s in scores[:k] if s >= self.similarity_threshold]
-        if not candidates:
-            return []
-
-        gap_threshold = max(0.03, candidates[0][1] * 0.05)
-        result = [candidates[0]]
-        for prev, curr in zip(candidates, candidates[1:]):
-            if prev[1] - curr[1] > gap_threshold:
-                break
-            result.append(curr)
-        return result
+        return [(c, s) for c, s in scores[:k] if s >= self.similarity_threshold]
