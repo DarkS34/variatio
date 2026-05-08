@@ -15,6 +15,7 @@ def prepare_models() -> None:
         config.EMBEDDING_LLM,
         config.CONCEPT_TAGGER_LLM,
         config.REPAIR_LLM,
+        config.CONTENT_GENERATION_LLM,
     ]
 
     logger.info("Initializing models")

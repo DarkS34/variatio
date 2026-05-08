@@ -150,6 +150,83 @@ Esta descripción se usará para recuperar semánticamente este concepto a parti
 Descripción:"""
 
 
+# ── GENERACIÓN DE CONTENIDO ──────────────────────────────────────────────────
+
+
+def generate_content_prompt(
+    context: dict,
+    target_concepts_block: str,
+    difficulty: int,
+    difficulty_rubric: str,
+    rules_block: str,
+    few_shot: list[dict],
+    already_generated: list[str],
+    schema: str,
+) -> str:
+    context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
+
+    if few_shot:
+        parts = []
+        for ex in few_shot:
+            stmt = (ex.get("statement") or "").strip()
+            sol = (ex.get("solution") or "").strip()
+            sol_part = f"\nSOLUCIÓN:\n{sol}" if sol else ""
+            parts.append(
+                f"---\nENUNCIADO (dificultad {ex.get('difficulty')}):\n{stmt}{sol_part}"
+            )
+        few_shot_section = "\n".join(parts)
+    else:
+        few_shot_section = "(Ningún ejemplo disponible — genera el ejercicio de cero respetando las reglas anteriores.)"
+
+    already_block = ""
+    if already_generated:
+        existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
+        already_block = (
+            "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
+            f"{existing_lines}\n"
+        )
+
+    return f"""\
+Genera UN nuevo ejercicio de programación Python para un curso introductorio.
+
+# CONTEXTO
+{context_lines}
+
+# CONCEPTOS OBJETIVO
+El ejercicio debe practicar estos conceptos del currículo y no introducir otros más avanzados:
+{target_concepts_block}
+
+# DIFICULTAD OBJETIVO
+Nivel exacto: {difficulty}.
+Rúbrica de dificultad:
+{difficulty_rubric}
+
+# REGLAS DE GENERACIÓN
+{rules_block}
+
+# CREATIVIDAD DE TEMÁTICA
+La temática (cover story / contexto narrativo del enunciado) debe ser ORIGINAL y CREATIVA. Inventa un dominio narrativo concreto: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... cualquier ámbito reconocible. NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los items previos del lote. La sustancia programática (qué conceptos se trabajan) viene fijada por la sección «Conceptos objetivo»; lo que cambia entre items es el envoltorio narrativo.
+
+# EJEMPLOS DE REFERENCIA
+Los siguientes ejercicios trabajan conceptos relacionados. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN del enunciado. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
+{few_shot_section}
+{already_block}
+# SCHEMA DE SALIDA
+Cada propiedad del esquema lleva una `description`; léela y úsala. Para esta generación además:
+- `statement`: invéntalo original; no reproduzcas literal ningún ejemplo. Texto plano, sin Markdown ni fences.
+- `solution`: aporta SIEMPRE código Python que resuelva el enunciado, nunca null. Solo built-ins de Python. Texto plano, sin fences.
+- `difficulty`: exactamente {difficulty}.
+
+{schema}
+
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+
+JSON:"""
+
+
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────
 
 
