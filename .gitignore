@@ -9,7 +9,8 @@ icd_vector_db
 .pytest_cache
 *.docx
 *.pdf
-cache
 content_bank
 AGENTS.md
 content_bank.json
+*test.py
+CLAUDE.md

@@ -16,6 +16,13 @@ class KnowledgeGraph:
         }
         self.all_concepts: list[str] = [c for cs in self.concepts_by_domains.values() for c in cs]
 
+        self.generic_non_taggable_concepts: set[str] = set(
+            data.get("generic_non_taggable_concepts", [])
+        )
+        self.taggable_concepts: list[str] = [
+            c for c in self.all_concepts if c not in self.generic_non_taggable_concepts
+        ]
+
         node_attrs = [(c, {"domain": self.concept_domain[c]}) for c in self.all_concepts]
         self.graphs: dict[str, nx.Graph] = {}
         self.relation_details: dict[str, dict] = {}

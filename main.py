@@ -9,7 +9,12 @@ if __name__ == "__main__":
     graph = KnowledgeGraph(config.KG_PATH)
     content_bank = ContentBank(ContentItem, CONTEXT)
 
-    embedder = Embedder(graph, config.EMBEDDING_LLM, primary_field=ContentItem.PRIMARY_FIELD)
+    embedder = Embedder(
+        graph,
+        config.EMBEDDING_LLM,
+        primary_field=ContentItem.PRIMARY_FIELD,
+        context=CONTEXT,
+    )
     tagger = ConceptTagger(
         embedder, config.CONCEPT_TAGGER_LLM, primary_field=ContentItem.PRIMARY_FIELD
     )
