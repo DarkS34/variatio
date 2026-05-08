@@ -20,6 +20,7 @@ CONTENT_FORMATTING_LLM = "gemma4:31b-it-q4_K_M"
 EMBEDDING_LLM = "embeddinggemma:latest"
 CONCEPT_TAGGER_LLM = "gemma4:31b-it-q4_K_M"
 REPAIR_LLM = "gemma4:e4b-it-q4_K_M"
+CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
 
 # File Paths & Cache
 RAW_CONTENT_BANK_DIR = PROJECT_ROOT / "raw_content_bank"
@@ -37,3 +38,4 @@ CONCEPT_DESCRIPTIONS_PATH = CACHE_DIR / "concept_descriptions.json"
 MAX_CHUNK_SIZE = 3500
 MAX_JSON_REPAIR_TRIES = 3
 EMBEDDER_SIMILARITY_THRESHOLD = 0.3
+MAX_FEW_SHOT_EXAMPLES = 4
