@@ -67,14 +67,18 @@ class ConceptTagger:
             return empty
 
         if result["primary_concept"] is None:
-            logger.warning(f"LLM found no matching concept for statement: {statement[:80]}...")
+            candidates_log = ", ".join(f"{c} ({s:.3f})" for c, s in candidates)
+            logger.warning(
+                f"LLM rejected all candidates for statement: {statement[:40]}...\n"
+                f"  Candidates were: {candidates_log}"
+            )
             return empty
 
         return result
 
     def _parse_and_validate(self, response: str, candidate_names: list[str]) -> dict | None:
         try:
-            data = repair_json(response)
+            data = repair_json(response, return_objects=True)
 
             if not isinstance(data, dict):
                 return None
