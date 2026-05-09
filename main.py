@@ -1,25 +1,26 @@
-from loguru import logger
+# from loguru import logger
 
-from essential_data.manifest_student import CONTEXT, GENERATION_RULES, ContentItem
 from system import config
 from system.concept_tagger import ConceptTagger
 from system.content_bank import ContentBank
 from system.content_generator import ContentGenerator
 from system.embedder import Embedder
 from system.knowledge_graph import KnowledgeGraph
+from system.manifest import Manifest
 
 if __name__ == "__main__":
+    manifest = Manifest(config.MANIFEST_PATH)
     graph = KnowledgeGraph(config.KG_PATH)
-    content_bank = ContentBank(ContentItem, CONTEXT)
+    content_bank = ContentBank(manifest)
 
     embedder = Embedder(
         graph,
         config.EMBEDDING_LLM,
-        primary_field=ContentItem.PRIMARY_FIELD,
-        context=CONTEXT,
+        primary_field=manifest.primary_field,
+        context=manifest.content_context,
     )
     tagger = ConceptTagger(
-        embedder, config.CONCEPT_TAGGER_LLM, primary_field=ContentItem.PRIMARY_FIELD
+        embedder, config.CONCEPT_TAGGER_LLM, primary_field=manifest.primary_field
     )
 
     if not content_bank.bank:
@@ -32,15 +33,16 @@ if __name__ == "__main__":
         knowledge_graph=graph,
         content_bank=content_bank.bank,
         embedder=embedder,
-        item_model=ContentItem,
-        context=CONTEXT,
-        generation_rules=GENERATION_RULES,
+        manifest=manifest,
         generator_model=config.CONTENT_GENERATION_LLM,
     )
 
-    results = generator.generate(concepts=["Bucle", "Lista"], difficulty=2, n=2)
-    for i, r in enumerate(results, 1):
-        logger.info(f"\n--- Generated item {i} ---")
-        if r.thinking:
-            logger.info(f"THINKING:\n{r.thinking}")
-        logger.info(f"ITEM:\n{r.item.model_dump_json(indent=2)}")
+    results = generator.generate(concepts=["Bucle", "Lista"], difficulty=4)
+
+    # TODO validator
+
+    # for i, r in enumerate(results, 1):
+    #     logger.info(f"\n--- Generated item {i} ---")
+    #     if r.thinking:
+    #         logger.info(f"THINKING:\n{r.thinking}")
+    #     logger.info(f"ITEM:\n{r.item.model_dump_json(indent=2)}")
