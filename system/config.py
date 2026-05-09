@@ -25,8 +25,9 @@ CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
 # File Paths & Cache
 RAW_CONTENT_BANK_DIR = PROJECT_ROOT / "raw_content_bank"
 
-KG_PATH = ESSENTIALS_DIR / "knowledge_graph_raw.json"
+KG_PATH = ESSENTIALS_DIR / "knowledge_graph.json"
 CONTENT_BANK_PATH = ESSENTIALS_DIR / "content_bank.json"
+MANIFEST_PATH = ESSENTIALS_DIR / "manifest_student.json"
 CONCEPT_DESCRIPTIONS_PATH = CACHE_DIR / "concept_descriptions.json"
 CONCEPTS_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "concepts_embeddings.npz"
 CONTENT_BANK_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "content_bank_embeddings.npz"
