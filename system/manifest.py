@@ -9,7 +9,13 @@ from pydantic import BaseModel, Field, create_model
 
 
 class Manifest:
-    REQUIRED_KEYS = ("content_context", "generation_rules", "primary_field", "fields")
+    REQUIRED_KEYS = (
+        "content_context",
+        "enforce_curriculum",
+        "generation_rules",
+        "primary_field",
+        "fields",
+    )
     SCALAR_TYPES = {
         "string": str,
         "integer": int,
@@ -24,6 +30,7 @@ class Manifest:
         self._raw = self._load(self.path)
         self._validate(self._raw)
         self.content_context: dict = self._raw["content_context"]
+        self.enforce_curriculum: bool = self._raw["enforce_curriculum"]
         self.generation_rules: list[str] = list(self._raw["generation_rules"])
         self.primary_field: str = self._raw["primary_field"]
         self.field_specs: dict[str, dict] = self._raw["fields"]
@@ -43,6 +50,8 @@ class Manifest:
             raise ValueError(f"Manifest missing required keys: {missing}")
         if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
             raise ValueError("'content_context' must be a non-empty object")
+        if not isinstance(raw["enforce_curriculum"], bool):
+            raise ValueError("'enforce_curriculum' must be a boolean")
         if not isinstance(raw["generation_rules"], list):
             raise ValueError("'generation_rules' must be a list")
         if not isinstance(raw["fields"], dict) or not raw["fields"]:
