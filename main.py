@@ -11,6 +11,34 @@ from system.manifest import Manifest
 if __name__ == "__main__":
     manifest = Manifest(config.MANIFEST_PATH)
     graph = KnowledgeGraph(config.KG_PATH)
+    
+    curriculum = [
+        "Variable",
+        "Literal",
+        "Tipo de dato básico",
+        "Operador",
+        "Expresión",
+        "Asignación",
+        "Entrada / Salida",
+        "Comentario",
+        "Indentación",
+        "Expresión booleana",
+        "Expresión de comparación",
+        "Sentencia condicional",
+        "Bucle",
+        "Bucle for",
+        "Bucle while",
+        "Iterable",
+        "Lista",
+        "Cadena",
+        "Indexación",
+        "Función",
+        "Llamada a función",
+        "Parámetro",
+        "Argumento",
+        "Valor de retorno",
+    ] if manifest.enforce_curriculum else None
+    
     content_bank = ContentBank(manifest)
 
     embedder = Embedder(
@@ -19,6 +47,7 @@ if __name__ == "__main__":
         primary_field=manifest.primary_field,
         context=manifest.content_context,
     )
+    
     tagger = ConceptTagger(
         embedder, config.CONCEPT_TAGGER_LLM, primary_field=manifest.primary_field
     )
@@ -37,12 +66,10 @@ if __name__ == "__main__":
         generator_model=config.CONTENT_GENERATION_LLM,
     )
 
-    results = generator.generate(concepts=["Bucle", "Lista"], difficulty=4)
+    results = generator.generate(
+        concepts=["Bucle", "Lista"],
+        fixed={"difficulty": 4},
+        curriculum=curriculum,
+    )
 
     # TODO validator
-
-    # for i, r in enumerate(results, 1):
-    #     logger.info(f"\n--- Generated item {i} ---")
-    #     if r.thinking:
-    #         logger.info(f"THINKING:\n{r.thinking}")
-    #     logger.info(f"ITEM:\n{r.item.model_dump_json(indent=2)}")
