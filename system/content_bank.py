@@ -10,6 +10,7 @@ from loguru import logger
 from pydantic import BaseModel, ValidationError
 
 from system import config
+from system.manifest import Manifest
 from system.prompts import clean_content_prompt, format_content_prompt, json_repair_prompt
 
 
@@ -21,12 +22,12 @@ class ContentBank:
 
     def __init__(
         self,
-        item_model,
-        context: str = "",
+        manifest: Manifest,
         verbose: bool = True,
     ):
-        self.item_model = item_model
-        self.context = context
+        self.manifest = manifest
+        self.item_model = manifest.content_item
+        self.context = manifest.content_context
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.MAX_CHUNK_SIZE
@@ -34,7 +35,10 @@ class ContentBank:
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
         self._docling = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
-        self._schema_str = json.dumps(item_model.model_json_schema(), indent=2, ensure_ascii=False)
+        self._schema_str = json.dumps(manifest.stripped_schema(), indent=2, ensure_ascii=False)
+        self._extraction_guidance_block = "\n".join(
+            f"- `{name}`: {text}" for name, text in manifest.field_guidance("extraction").items()
+        )
         self._id_counter = 0
 
         self.bank = (
@@ -143,7 +147,12 @@ class ContentBank:
             return content
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
-        prompt = format_content_prompt(content=batch, schema=self._schema_str, context=self.context)
+        prompt = format_content_prompt(
+            content=batch,
+            schema=self._schema_str,
+            context=self.context,
+            field_guidance_block=self._extraction_guidance_block,
+        )
         response = ollama.generate(
             model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt
         ).response

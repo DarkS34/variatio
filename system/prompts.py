@@ -1,6 +1,5 @@
 # ── REPARACIÓN DE JSON ────────────────────────────────────────────────────────
 
-
 def json_repair_prompt(broken_output: str, error_msg: str) -> str:
     return f"""\
 La salida anterior no pudo parsearse como JSON válido o no cumple el schema requerido.
@@ -25,8 +24,11 @@ JSON:"""
 # ── PREPARACIÓN DE CONTENIDO ──────────────────────────────────────────────────
 
 
-def clean_content_prompt(content: str, context: str = "") -> str:
-    context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context}\n" if context else ""
+def clean_content_prompt(content: str, context: dict | None = None) -> str:
+    context_block = ""
+    if context:
+        context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
+        context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context_lines}\n"
     return f"""\
 Limpia un documento markdown convertido desde un origen binario (.pdf / .docx). Devuelve el markdown limpio tal cual. No resumas, no traduzcas, no parafrasees, no generes contenido nuevo.
 
@@ -62,8 +64,25 @@ Limpia un documento markdown convertido desde un origen binario (.pdf / .docx). 
 Markdown limpio:"""
 
 
-def format_content_prompt(content: str, schema: str, context: str = "") -> str:
-    context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context}"
+def format_content_prompt(
+    content: str,
+    schema: str,
+    context: dict | None = None,
+    field_guidance_block: str = "",
+) -> str:
+    context_block = ""
+    if context:
+        context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
+        context_block = f"\n# CONTEXTO DEL DOCUMENTO\n{context_lines}\n"
+
+    field_guidance_section = ""
+    if field_guidance_block.strip():
+        field_guidance_section = (
+            "\n# GUÍA DE EXTRACCIÓN POR CAMPO\n"
+            "Instrucciones específicas sobre QUÉ extraer y CÓMO formatearlo en cada campo. Síguelas literalmente:\n"
+            f"{field_guidance_block}\n"
+        )
+
     return f"""\
 Extrae elementos estructurados de un fragmento markdown pre-segmentado.
 
@@ -72,10 +91,10 @@ El input contiene uno o varios elementos. Si hay varios, vienen separados por l�
 Produce un JSON array con un objeto por elemento, conforme al schema de abajo.
 
 # SCHEMA DE SALIDA
-Cada objeto del array debe cumplir este JSON Schema. El campo `description` de cada propiedad es una instrucción concreta sobre QUÉ extraer y CÓMO formatearlo — léelo y síguelo literalmente para cada elemento.
+Cada objeto del array debe cumplir este JSON Schema. El campo `description` de cada propiedad describe la NATURALEZA del campo (qué representa). Para esta tarea de extracción, sigue además las instrucciones específicas que aparecen en «GUÍA DE EXTRACCIÓN POR CAMPO» más abajo.
 
 {schema}
-
+{field_guidance_section}
 # REGLAS DE EXTRACCIÓN
 - Copia los valores literalmente del texto fuente. No reescribas, no traduzcas, no resumas, no inventes contenido.
 - Si un campo admite null y el contenido no aparece en la fuente, ponlo a null. Nunca fabriques contenido para rellenar.
@@ -87,9 +106,7 @@ Cada objeto del array debe cumplir este JSON Schema. El campo `description` de c
 - Un único JSON array. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios.
 - Si no hay elementos extraíbles del input, devuelve `[]`.
-
 {context_block}
-
 <<<CONTENT>>>
 {content}
 <<<END>>>
@@ -150,83 +167,6 @@ Esta descripción se usará para recuperar semánticamente este concepto a parti
 Descripción:"""
 
 
-# ── GENERACIÓN DE CONTENIDO ──────────────────────────────────────────────────
-
-
-def generate_content_prompt(
-    context: dict,
-    target_concepts_block: str,
-    difficulty: int,
-    difficulty_rubric: str,
-    rules_block: str,
-    few_shot: list[dict],
-    already_generated: list[str],
-    schema: str,
-) -> str:
-    context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
-
-    if few_shot:
-        parts = []
-        for ex in few_shot:
-            stmt = (ex.get("statement") or "").strip()
-            sol = (ex.get("solution") or "").strip()
-            sol_part = f"\nSOLUCIÓN:\n{sol}" if sol else ""
-            parts.append(
-                f"---\nENUNCIADO (dificultad {ex.get('difficulty')}):\n{stmt}{sol_part}"
-            )
-        few_shot_section = "\n".join(parts)
-    else:
-        few_shot_section = "(Ningún ejemplo disponible — genera el ejercicio de cero respetando las reglas anteriores.)"
-
-    already_block = ""
-    if already_generated:
-        existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
-        already_block = (
-            "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
-            f"{existing_lines}\n"
-        )
-
-    return f"""\
-Genera UN nuevo ejercicio de programación Python para un curso introductorio.
-
-# CONTEXTO
-{context_lines}
-
-# CONCEPTOS OBJETIVO
-El ejercicio debe practicar estos conceptos del currículo y no introducir otros más avanzados:
-{target_concepts_block}
-
-# DIFICULTAD OBJETIVO
-Nivel exacto: {difficulty}.
-Rúbrica de dificultad:
-{difficulty_rubric}
-
-# REGLAS DE GENERACIÓN
-{rules_block}
-
-# CREATIVIDAD DE TEMÁTICA
-La temática (cover story / contexto narrativo del enunciado) debe ser ORIGINAL y CREATIVA. Inventa un dominio narrativo concreto: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... cualquier ámbito reconocible. NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los items previos del lote. La sustancia programática (qué conceptos se trabajan) viene fijada por la sección «Conceptos objetivo»; lo que cambia entre items es el envoltorio narrativo.
-
-# EJEMPLOS DE REFERENCIA
-Los siguientes ejercicios trabajan conceptos relacionados. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN del enunciado. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
-{few_shot_section}
-{already_block}
-# SCHEMA DE SALIDA
-Cada propiedad del esquema lleva una `description`; léela y úsala. Para esta generación además:
-- `statement`: invéntalo original; no reproduzcas literal ningún ejemplo. Texto plano, sin Markdown ni fences.
-- `solution`: aporta SIEMPRE código Python que resuelva el enunciado, nunca null. Solo built-ins de Python. Texto plano, sin fences.
-- `difficulty`: exactamente {difficulty}.
-
-{schema}
-
-# REGLAS DE SALIDA
-- Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
-- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
-
-JSON:"""
-
-
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────
 
 
@@ -257,3 +197,77 @@ Los conceptos están ordenados de mayor a menor relevancia semántica respecto a
 
 JSON:"""
 
+
+# ── GENERACIÓN DE CONTENIDO ──────────────────────────────────────────────────
+
+
+def generate_content_prompt(
+    context: dict,
+    target_concepts_block: str,
+    rules_block: str,
+    few_shot_block: str,
+    already_generated: list[str],
+    instance_template: str,
+    field_guidance_block: str,
+    fixed_values_block: str,
+    schema: str,
+) -> str:
+    context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
+
+    few_shot_section = (
+        few_shot_block.strip()
+        or "(Ningún ejemplo disponible — genera el item de cero respetando las reglas anteriores.)"
+    )
+
+    already_block = ""
+    if already_generated:
+        existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
+        already_block = (
+            "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
+            f"{existing_lines}\n"
+        )
+
+    return f"""\
+Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
+
+# CONTEXTO
+{context_lines}
+
+# CONCEPTOS OBJETIVO
+El item debe practicar estos conceptos del currículo y no introducir otros más avanzados:
+{target_concepts_block}
+
+# VALORES FIJOS PARA ESTA GENERACIÓN
+Algunos campos del schema ya tienen su valor decidido por el orquestador. Respétalos exactamente:
+{fixed_values_block}
+
+# REGLAS DE GENERACIÓN
+{rules_block}
+
+# CREATIVIDAD DE TEMÁTICA
+La temática (cover story / contexto narrativo) debe ser ORIGINAL y CREATIVA. Inventa un dominio narrativo concreto: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... cualquier ámbito reconocible. NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los items previos del lote. La sustancia (qué se trabaja) viene fijada por las secciones anteriores; lo que cambia entre items es el envoltorio narrativo.
+
+# EJEMPLOS DE REFERENCIA
+Los siguientes items trabajan conceptos relacionados. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
+{few_shot_section}
+{already_block}
+# FORMA DE LA SALIDA
+Debes devolver una INSTANCIA conforme al schema, NO el schema en sí. La salida es un único objeto JSON cuyas claves de nivel superior son exactamente las propiedades definidas por el schema, con valores concretos. NO incluyas `properties`, `type`, `required`, `$defs`, `title` ni ningún otro metadato del schema.
+
+Esqueleto exacto de la forma esperada (rellena los valores; las claves vienen del schema y son las únicas válidas):
+{instance_template}
+
+# GUÍA POR CAMPO
+Instrucciones específicas para la generación de cada campo. Complementan la `description` del schema (que describe la naturaleza intrínseca del campo):
+{field_guidance_block}
+
+# SCHEMA DE REFERENCIA (consulta para constraints como minLength/Literal/pattern; NO lo copies)
+{schema}
+
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON que sea una instancia conforme al schema. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Las claves de nivel superior son exactamente las del schema — ni más, ni menos, ni con otros nombres.
+- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+
+JSON:"""
