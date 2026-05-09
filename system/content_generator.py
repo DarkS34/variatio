@@ -25,8 +25,6 @@ class GeneratedContent(BaseModel):
 
 
 class ContentGenerator:
-    VALID_DIFFICULTIES = (1, 2, 3, 4)
-
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
@@ -49,21 +47,28 @@ class ContentGenerator:
         self.max_few_shot = config.MAX_FEW_SHOT_EXAMPLES
         self.schema_dict = manifest.stripped_schema()
         self.schema_str = json.dumps(self.schema_dict, indent=2, ensure_ascii=False)
+        self.schema_fields = set(self.schema_dict.get("properties", {}))
         self.taggable_concepts = set(knowledge_graph.taggable_concepts)
         self.primary_field = manifest.primary_field
 
-    def generate(self, concepts: list[str], difficulty: int, n: int = 1) -> list[GeneratedContent]:
-        self._validate_input(concepts, difficulty, n)
+    def generate(
+        self,
+        concepts: list[str],
+        n: int = 1,
+        fixed: dict[str, object] | None = None,
+        curriculum: list[str] | None = None,
+    ) -> list[GeneratedContent]:
+        fixed = dict(fixed or {})
+        self._validate_input(concepts, fixed, n, curriculum)
 
-        few_shot = self._select_few_shot(concepts, difficulty)
+        few_shot = self._select_few_shot(concepts, fixed)
         if not few_shot:
             logger.warning(
-                f"No few-shot examples found for concepts={concepts}, difficulty={difficulty} — falling back to zero-shot"
+                f"No few-shot examples found for concepts={concepts}, fixed={fixed} — falling back to zero-shot"
             )
 
-        fixed: dict[str, object] = {"difficulty": difficulty}
-
         target_block = self._format_target_concepts(concepts)
+        curriculum_block = self._format_curriculum(curriculum)
         rules_block = "\n".join(f"- {r}" for r in self.generation_rules)
         few_shot_block = self._build_few_shot_block(few_shot)
         instance_template = self._build_instance_template(fixed)
@@ -76,6 +81,7 @@ class ContentGenerator:
             prompt = generate_content_prompt(
                 context=self.context,
                 target_concepts_block=target_block,
+                curriculum_block=curriculum_block,
                 rules_block=rules_block,
                 few_shot_block=few_shot_block,
                 already_generated=already,
@@ -100,18 +106,38 @@ class ContentGenerator:
 
         return accepted
 
-    def _validate_input(self, concepts: list[str], difficulty: int, n: int) -> None:
+    def _validate_input(
+        self,
+        concepts: list[str],
+        fixed: dict[str, object],
+        n: int,
+        curriculum: list[str] | None,
+    ) -> None:
         if n < 1:
             raise ValueError(f"n must be >= 1, got {n}")
-        if difficulty not in self.VALID_DIFFICULTIES:
-            raise ValueError(f"difficulty must be in {self.VALID_DIFFICULTIES}, got {difficulty}")
         if not concepts:
             raise ValueError("concepts must be a non-empty list")
-        unknown = [c for c in concepts if c not in self.taggable_concepts]
-        if unknown:
-            raise ValueError(f"Unknown concepts (not in KG taggable set): {unknown}")
+        unknown_concepts = [c for c in concepts if c not in self.taggable_concepts]
+        if unknown_concepts:
+            raise ValueError(f"Unknown concepts (not in KG taggable set): {unknown_concepts}")
+        unknown_fields = [k for k in fixed if k not in self.schema_fields]
+        if unknown_fields:
+            raise ValueError(
+                f"Unknown fixed fields (not in manifest schema): {unknown_fields}"
+            )
+        if curriculum is not None:
+            unknown_curriculum = [c for c in curriculum if c not in self.taggable_concepts]
+            if unknown_curriculum:
+                raise ValueError(
+                    f"Unknown curriculum concepts (not in KG taggable set): {unknown_curriculum}"
+                )
+            outside = [c for c in concepts if c not in set(curriculum)]
+            if outside:
+                raise ValueError(
+                    f"Target concepts not contained in curriculum: {outside}"
+                )
 
-    def _select_few_shot(self, concepts: list[str], difficulty: int) -> list[dict]:
+    def _select_few_shot(self, concepts: list[str], fixed: dict[str, object]) -> list[dict]:
         target = set(concepts)
         candidates = [
             item
@@ -121,19 +147,16 @@ class ContentGenerator:
         if not candidates:
             return []
 
-        same_diff = [c for c in candidates if c.get("difficulty") == difficulty]
-        if len(same_diff) >= self.max_few_shot:
-            pool = same_diff
-        else:
-            pool = [
-                c
-                for c in candidates
-                if isinstance(c.get("difficulty"), int) and abs(c["difficulty"] - difficulty) <= 1
+        if fixed:
+            matching = [
+                c for c in candidates if all(c.get(k) == v for k, v in fixed.items())
             ]
+            if len(matching) >= self.max_few_shot:
+                candidates = matching
 
-        if len(pool) > self.max_few_shot:
-            pool = random.sample(pool, self.max_few_shot)
-        return pool
+        if len(candidates) > self.max_few_shot:
+            candidates = random.sample(candidates, self.max_few_shot)
+        return candidates
 
     def _format_target_concepts(self, concepts: list[str]) -> str:
         descriptions = self.embedder.concept_descriptions
@@ -145,6 +168,11 @@ class ContentGenerator:
             else:
                 lines.append(f"- **{c}**")
         return "\n".join(lines)
+
+    def _format_curriculum(self, curriculum: list[str] | None) -> str:
+        if not curriculum:
+            return ""
+        return "\n".join(f"- {c}" for c in curriculum)
 
     def _build_few_shot_block(self, few_shot: list[dict]) -> str:
         if not few_shot:

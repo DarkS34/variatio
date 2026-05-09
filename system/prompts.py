@@ -204,6 +204,7 @@ JSON:"""
 def generate_content_prompt(
     context: dict,
     target_concepts_block: str,
+    curriculum_block: str,
     rules_block: str,
     few_shot_block: str,
     already_generated: list[str],
@@ -227,6 +228,14 @@ def generate_content_prompt(
             f"{existing_lines}\n"
         )
 
+    curriculum_section = ""
+    if curriculum_block.strip():
+        curriculum_section = (
+            "\n# CURRÍCULO DEL ALUMNO (RESTRICCIÓN DURA)\n"
+            "El item NO puede introducir conceptos fuera de esta lista. Los conceptos objetivo son un subconjunto de este currículo:\n"
+            f"{curriculum_block}\n"
+        )
+
     return f"""\
 Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
 
@@ -236,7 +245,7 @@ Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
 # CONCEPTOS OBJETIVO
 El item debe practicar estos conceptos del currículo y no introducir otros más avanzados:
 {target_concepts_block}
-
+{curriculum_section}
 # VALORES FIJOS PARA ESTA GENERACIÓN
 Algunos campos del schema ya tienen su valor decidido por el orquestador. Respétalos exactamente:
 {fixed_values_block}
