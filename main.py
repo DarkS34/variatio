@@ -1,17 +1,18 @@
 # from loguru import logger
 
+from builders.content_bank_builder import ContentBankBuilder
 from system import config
 from system.concept_tagger import ConceptTagger
 from system.content_bank import ContentBank
 from system.content_generator import ContentGenerator
+from system.content_profile import ContentProfile
 from system.embedder import Embedder
 from system.knowledge_graph import KnowledgeGraph
-from system.manifest import Manifest
 
 if __name__ == "__main__":
-    manifest = Manifest(config.MANIFEST_PATH)
+    content_profile = ContentProfile(config.CONTENT_PROFILE_PATH)
     graph = KnowledgeGraph(config.KG_PATH)
-    
+
     curriculum = [
         "Variable",
         "Literal",
@@ -37,32 +38,34 @@ if __name__ == "__main__":
         "Parámetro",
         "Argumento",
         "Valor de retorno",
-    ] if manifest.enforce_curriculum else None
-    
-    content_bank = ContentBank(manifest)
+    ] if content_profile.enforce_curriculum else None
+
+    content_bank = ContentBank(config.CONTENT_BANK_PATH)
+    bank = content_bank.bank
+    if bank is None:
+        bank = ContentBankBuilder(content_profile).build(
+            config.RAW_CONTENT_BANK_DIR, config.CONTENT_BANK_PATH
+        )
 
     embedder = Embedder(
         graph,
         config.EMBEDDING_LLM,
-        primary_field=manifest.primary_field,
-        context=manifest.content_context,
+        primary_field=content_profile.primary_field,
+        context=content_profile.content_context,
     )
-    
+
     tagger = ConceptTagger(
-        embedder, config.CONCEPT_TAGGER_LLM, primary_field=manifest.primary_field
+        embedder, config.CONCEPT_TAGGER_LLM, primary_field=content_profile.primary_field
     )
 
-    if not content_bank.bank:
-        content_bank.format_dir(config.RAW_CONTENT_BANK_DIR, config.CONTENT_BANK_PATH)
-
-    # annotated_bank = tagger.tag_all(content_bank.bank, config.CONTENT_BANK_PATH)
+    # annotated_bank = tagger.tag_all(bank, config.CONTENT_BANK_PATH)
     # embedder.enrich_index_with_content(annotated_bank)
 
     generator = ContentGenerator(
         knowledge_graph=graph,
-        content_bank=content_bank.bank,
+        content_bank=bank,
         embedder=embedder,
-        manifest=manifest,
+        content_profile=content_profile,
         generator_model=config.CONTENT_GENERATION_LLM,
     )
 
@@ -72,4 +75,4 @@ if __name__ == "__main__":
         curriculum=curriculum,
     )
 
-    # TODO validator
+    print(results)
