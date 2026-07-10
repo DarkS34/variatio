@@ -15,6 +15,7 @@ dependencies = [
     "streamlit>=1.57.0",
     "json-repair>=0.59.5",
     "openai>=2.36.0",
+    "kg-gen>=0.4.0",
 ]
 
 [dependency-groups]

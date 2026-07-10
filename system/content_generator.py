@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from system import config
 from system.embedder import Embedder
 from system.knowledge_graph import KnowledgeGraph
-from system.manifest import Manifest
+from system.content_profile import ContentProfile
 from system.prompts import generate_content_prompt, json_repair_prompt
 
 
@@ -30,26 +30,26 @@ class ContentGenerator:
         knowledge_graph: KnowledgeGraph,
         content_bank: dict,
         embedder: Embedder,
-        manifest: Manifest,
+        content_profile: ContentProfile,
         generator_model: str,
     ):
         self.knowledge_graph = knowledge_graph
         self.content_bank = content_bank
         self.embedder = embedder
-        self.manifest = manifest
-        self.item_model = manifest.content_item
-        self.context = manifest.content_context
+        self.content_profile = content_profile
+        self.item_model = content_profile.content_item
+        self.context = content_profile.content_context
         self.generator_model = generator_model
-        self.generation_rules: list[str] = manifest.generation_rules
-        self.generation_field_guidance: dict[str, str] = manifest.field_guidance("generation")
+        self.generation_rules: list[str] = content_profile.generation_rules
+        self.generation_field_guidance: dict[str, str] = content_profile.field_guidance("generation")
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.max_few_shot = config.MAX_FEW_SHOT_EXAMPLES
-        self.schema_dict = manifest.stripped_schema()
+        self.schema_dict = content_profile.stripped_schema()
         self.schema_str = json.dumps(self.schema_dict, indent=2, ensure_ascii=False)
         self.schema_fields = set(self.schema_dict.get("properties", {}))
         self.taggable_concepts = set(knowledge_graph.taggable_concepts)
-        self.primary_field = manifest.primary_field
+        self.primary_field = content_profile.primary_field
 
     def generate(
         self,
@@ -123,7 +123,7 @@ class ContentGenerator:
         unknown_fields = [k for k in fixed if k not in self.schema_fields]
         if unknown_fields:
             raise ValueError(
-                f"Unknown fixed fields (not in manifest schema): {unknown_fields}"
+                f"Unknown fixed fields (not in content_profile schema): {unknown_fields}"
             )
         if curriculum is not None:
             unknown_curriculum = [c for c in curriculum if c not in self.taggable_concepts]

@@ -16,6 +16,7 @@ def prepare_models() -> None:
         config.CONCEPT_TAGGER_LLM,
         config.REPAIR_LLM,
         config.CONTENT_GENERATION_LLM,
+        config.KG_BUILDER_LLM,
     ]
 
     logger.info("Initializing models")
