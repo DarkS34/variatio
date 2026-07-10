@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, create_model
 
 
-class Manifest:
+class ContentProfile:
     REQUIRED_KEYS = (
         "content_context",
         "enforce_curriculum",
@@ -44,10 +44,10 @@ class Manifest:
     @classmethod
     def _validate(cls, raw: dict) -> None:
         if not isinstance(raw, dict):
-            raise ValueError("Manifest root must be an object")
+            raise ValueError("ContentProfile root must be an object")
         missing = [k for k in cls.REQUIRED_KEYS if k not in raw]
         if missing:
-            raise ValueError(f"Manifest missing required keys: {missing}")
+            raise ValueError(f"ContentProfile missing required keys: {missing}")
         if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
             raise ValueError("'content_context' must be a non-empty object")
         if not isinstance(raw["enforce_curriculum"], bool):
