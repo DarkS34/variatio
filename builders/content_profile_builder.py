@@ -9,7 +9,7 @@ from loguru import logger
 
 from system import config
 from system.content_profile import ContentProfile
-from system.prompts import infer_content_profile_prompt, repair_content_profile_prompt
+from system.prompts import infer_content_profile_prompt, json_repair_prompt
 
 
 class ContentProfileBuilder:
@@ -127,8 +127,8 @@ class ContentProfileBuilder:
             if err is None:
                 break
             logger.warning(f"repair {attempt}/{self.max_repair_attempts}: {err}")
-            repair_prompt = repair_content_profile_prompt(
-                broken_output=response, error_msg=err
+            repair_prompt = json_repair_prompt(
+                broken_output=response, error_msg=err, shape="objeto"
             )
             response = ollama.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
             candidate = self._parse(response)

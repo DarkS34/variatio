@@ -1,10 +1,10 @@
 # ── REPARACIÓN DE JSON ────────────────────────────────────────────────────────
 
-def json_repair_prompt(broken_output: str, error_msg: str) -> str:
+def json_repair_prompt(broken_output: str, error_msg: str, shape: str = "array") -> str:
     return f"""\
 La salida anterior no pudo parsearse como JSON válido o no cumple el schema requerido.
 
-Tu tarea: produce un JSON array corregido que (1) parsee como JSON válido, y (2) preserve la información original lo más fielmente posible.
+Tu tarea: produce un {shape} JSON corregido que (1) parsee como JSON válido, y (2) preserve la información original lo más fielmente posible.
 
 # ERROR DEL INTENTO ANTERIOR
 {error_msg}
@@ -13,7 +13,7 @@ Tu tarea: produce un JSON array corregido que (1) parsee como JSON válido, y (2
 {broken_output}
 
 # REGLAS
-- Devuelve un único JSON array. Nada antes, nada después.
+- Devuelve un único {shape} JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
 - Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
 - Si la salida rota es irrecuperable, devuelve `{{}}`.
@@ -346,7 +346,7 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
   "general_generation_rules": ["<regla>", "..."],
   "primary_field": "<nombre de uno de los campos>",
   "fields": {{
-    "<nombre_campo>": {{
+    "<field_name>": {{
       "schema": {{ "type": "string" }},
       "description": "...",
       "guidance": {{ "extraction": "...", "generation": "..." }}
@@ -358,15 +358,27 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
 Metadatos del dominio inferidos de la muestra (p. ej. materia/asignatura, nivel educativo, idioma, lenguaje de programación si aplica). Objeto de pares clave→valor de texto. Incluye solo lo que deduzcas con seguridad.
 
 # fields
-Un campo por cada pieza de información distinta que compone un elemento. Para cada campo:
+Un campo por cada pieza de información ESENCIAL que compone un elemento.
+
+- CLAVES EN INGLÉS: los nombres de campo (las claves del objeto `fields`) van SIEMPRE en inglés y en snake_case (p. ej. `statement`, `solution`, `difficulty_level`, `is_solved`), aunque el material esté en otro idioma. Es la ÚNICA parte que no va en el idioma del dominio; el resto de textos (`description`, `guidance`…) sí.
+- MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un elemento. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica en la muestra. Al mismo tiempo, NO omitas nada esencial para representar o generar el elemento (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera.
+
+Para cada campo:
 - `schema`: la forma del valor. Usa ÚNICAMENTE este vocabulario:
   · `"type"`: uno de "string", "integer", "number", "boolean", "null"; o "array" (con `"items"`); o una LISTA de tipos para valores opcionales (p. ej. `["string", "null"]`).
   · o bien `"enum"`: lista no vacía de valores permitidos (para campos categóricos, p. ej. una dificultad `[1, 2, 3, 4]`).
   · restricciones opcionales: `"minLength"`/`"maxLength"` (strings), `"minimum"`/`"maximum"` (números), `"default"` (valor por defecto si el campo es opcional).
   No uses ningún otro tipo ni palabra clave.
 - `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma del dominio.
-- `guidance.extraction`: cómo EXTRAER este campo de un documento fuente (qué copiar, qué dejar fuera, cuándo va a null).
-- `guidance.generation`: cómo GENERAR este campo al crear un elemento nuevo desde cero.
+- `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y cuándo el campo va a null o está ausente. Aplica a todo campo que pueda localizarse en el material.
+- `guidance.generation`: cómo GENERAR este campo al crear un elemento nuevo desde cero. **Inclúyela SOLO si el campo se genera de verdad** (ver criterio abajo); si no, omítela y deja en `guidance` únicamente `extraction`.
+
+# QUÉ CAMPOS LLEVAN guidance.generation (SENTIDO COMÚN)
+No todos los campos se generan; muchos son de ENTRADA, no de salida. Clasifica cada campo:
+- CONTENIDO GENERADO — su valor es la salida creativa que un generador REDACTA al crear un elemento nuevo desde cero (p. ej. el enunciado, el código de la solución). → `guidance` con `extraction` Y `generation`.
+- ENTRADA / CONTROL / METADATO — su valor NO se redacta: lo DECIDE de antemano el orquestador como parámetro (un nivel de dificultad objetivo, una categoría, un tipo), es un flag/etiqueta/clasificación, o solo tiene sentido al leer un documento ya existente (banderas tipo "resuelto/propuesto", identificadores, procedencia). → `guidance` con SOLO `extraction`; OMITE `generation`.
+
+Prueba rápida: al generar un elemento nuevo, ¿un orquestador FIJARÍA este valor como parámetro de entrada, o es un flag/etiqueta/clasificación? → NO lleva `guidance.generation`. ¿El generador lo REDACTARÍA como parte del contenido creado? → SÍ la lleva. El `primary_field` es siempre contenido generado: lleva `guidance.generation`.
 
 # primary_field
 El nombre del campo que porta la CARGA SEMÁNTICA principal del elemento: el texto que plantea el problema o la tarea. Se usará aguas abajo para embeddings y etiquetado de conceptos. Debe ser uno de los campos declarados en `fields`.
@@ -377,31 +389,12 @@ Reglas generales, transversales a todos los campos, que debería respetar la gen
 # REGLAS DE SALIDA
 - Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Todo el texto de cara al humano (`description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material de la muestra.
+- Los nombres de campo (claves de `fields`) SIEMPRE en inglés y snake_case. El resto de texto de cara al humano (`description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material de la muestra.
+- Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible.
 - Escapa saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
 
 <<<MUESTRA>>>
 {sample}
 <<<FIN>>>
-
-JSON:"""
-
-
-def repair_content_profile_prompt(broken_output: str, error_msg: str) -> str:
-    return f"""\
-La salida anterior debía ser el objeto JSON de un PERFIL DE CONTENIDO, pero no parseó como JSON válido o no cumple la estructura requerida.
-
-Tu tarea: produce un único objeto JSON corregido que (1) parsee como JSON válido y (2) tenga EXACTAMENTE las claves de nivel superior `content_context`, `general_generation_rules`, `primary_field` y `fields`; donde `primary_field` es uno de los campos de `fields`, y cada campo tiene `schema` (con `type` o `enum`), `description` y `guidance` con `extraction`/`generation`. Preserva la información original lo más fielmente posible.
-
-# ERROR DEL INTENTO ANTERIOR
-{error_msg}
-
-# SALIDA ROTA A REPARAR
-{broken_output}
-
-# REGLAS
-- Devuelve un único objeto JSON. Nada antes, nada después.
-- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
 
 JSON:"""
