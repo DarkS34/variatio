@@ -26,9 +26,9 @@ def prepare_models() -> None:
 
     for m in set(all_models):
         if m == config.EMBEDDING_LLM:
-            ollama.embed(model=m, input="", keep_alive=0)
+            ollama.embed(model=m, input="")
         else:
-            ollama.generate(model=m, prompt="", keep_alive=0)
+            ollama.generate(model=m, prompt="")
 
     logger.success("All models loaded")
 
