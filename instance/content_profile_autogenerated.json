@@ -1,0 +1,67 @@
+{
+  "content_context": {
+    "materia": "Programación I / Fundamentos de Programación",
+    "lenguaje": "Python",
+    "nivel_educativo": "Universitario",
+    "idioma": "Español"
+  },
+  "general_generation_rules": [
+    "Se debe fomentar el uso de nombres significativos para variables y subprogramas.",
+    "En el caso de funciones, es obligatorio incluir un docstring que especifique tipos de entrada, salida, objetivo y precondiciones.",
+    "Los ejercicios deben incluir frecuentemente la validación de datos de entrada (ej. uso de try-except o funciones de validación).",
+    "Se debe evitar el uso de funciones de biblioteca avanzadas (como sort(), max(), min(), sum()) cuando el objetivo sea practicar algoritmos manuales."
+  ],
+  "primary_field": "statement",
+  "fields": {
+    "statement": {
+      "schema": {
+        "type": "string"
+      },
+      "description": "El enunciado del ejercicio, problema o actividad planteada al alumno.",
+      "guidance": {
+        "extraction": "Extraer el texto que describe la tarea a realizar, incluyendo fórmulas matemáticas o tablas de criterios si existen. Ignorar numeraciones de lista.",
+        "generation": "Redactar una instrucción clara y concisa que defina la tarea de programación, especificando los datos de entrada y el resultado esperado."
+      }
+    },
+    "solution": {
+      "schema": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": "El código fuente en Python que resuelve el problema planteado.",
+      "guidance": {
+        "extraction": "Copiar el bloque de código que sigue a 'SOLUCION PROPUESTA'. Si el ejercicio es 'propuesto' y no tiene solución, asignar null.",
+        "generation": "Escribir un código limpio, modularizado mediante funciones y documentado con docstrings según el estándar de la asignatura."
+      }
+    },
+    "difficulty": {
+      "schema": {
+        "enum": [
+          "básico",
+          "intermedio",
+          "avanzado"
+        ]
+      },
+      "description": "El nivel de complejidad del ejercicio.",
+      "guidance": {
+        "extraction": "Deducir del encabezado de la sección (ej. 'Ejercicios nivel básico' $\\rightarrow$ básico, 'Ejercicio avanzado' $\\rightarrow$ avanzado). Si no se especifica, inferir por la complejidad del problema.",
+        "generation": "Asignar según la profundidad de los conceptos requeridos (básico para sintaxis, intermedio para algoritmos/listas, avanzado para problemas complejos o externos)."
+      }
+    },
+    "type": {
+      "schema": {
+        "enum": [
+          "resuelto",
+          "propuesto"
+        ]
+      },
+      "description": "Indica si el elemento es un ejemplo resuelto o un ejercicio para el alumno.",
+      "guidance": {
+        "extraction": "Determinar basándose en si el ejercicio se encuentra bajo el título 'Ejercicios resueltos' o 'Ejercicios propuestos'.",
+        "generation": "Definir si el elemento se creará como material de estudio (resuelto) o de evaluación (propuesto)."
+      }
+    }
+  }
+}

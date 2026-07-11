@@ -152,6 +152,7 @@ class Embedder:
                 self.concept_descriptions[concept] = self._simple_describe(concept)
 
         config.CONCEPT_DESCRIPTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        
         with config.CONCEPT_DESCRIPTIONS_PATH.open("w", encoding="utf-8") as f:
             json.dump(self.concept_descriptions, f, ensure_ascii=False, indent=2)
         logger.success(f"Saved {len(self.concept_descriptions)} concept descriptions to cache")
