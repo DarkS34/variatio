@@ -103,11 +103,11 @@ class ConceptTagger:
             logger.error(f"Parse error: {e}")
             return None
 
-    def tag_all(self, content_bank: dict, output_path: str) -> dict:
+    def tag_all(self, exemplars_bank: dict, output_path: str) -> dict:
         annotated: dict[str, dict] = {}
-        total = len(content_bank)
+        total = len(exemplars_bank)
 
-        for idx, (c_id, content) in enumerate(content_bank.items(), 1):
+        for idx, (c_id, content) in enumerate(exemplars_bank.items(), 1):
             logger.info(f"[{idx}/{total}] Tagging content {c_id}")
             annotation = self.tag(content[self.primary_field])
             annotated[c_id] = {**content, **annotation}

@@ -28,13 +28,13 @@ class ContentGenerator:
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
-        content_bank: dict,
+        exemplars_bank: dict,
         embedder: Embedder,
         content_profile: ContentProfile,
         generator_model: str,
     ):
         self.knowledge_graph = knowledge_graph
-        self.content_bank = content_bank
+        self.exemplars_bank = exemplars_bank
         self.embedder = embedder
         self.content_profile = content_profile
         self.item_model = content_profile.content_item
@@ -141,7 +141,7 @@ class ContentGenerator:
         target = set(concepts)
         candidates = [
             item
-            for item in self.content_bank.values()
+            for item in self.exemplars_bank.values()
             if target.intersection(item.get("concepts") or [])
         ]
         if not candidates:
