@@ -14,7 +14,7 @@ from system.content_profile import ContentProfile
 from system.prompts import clean_content_prompt, format_content_prompt, json_repair_prompt
 
 
-class ContentBankBuilder:
+class ExemplarsBankBuilder:
     SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
     CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
     SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
@@ -44,7 +44,7 @@ class ContentBankBuilder:
     # PUBLIC API ----------------------------------------------------------------------------------
 
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
-    # llamador pueda usarlo sin releerlo (el loader ContentBank sigue siendo la vía de carga).
+    # llamador pueda usarlo sin releerlo (el loader ExemplarsBank sigue siendo la vía de carga).
     def build(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
         input_path = Path(input_dir)
         files = sorted(

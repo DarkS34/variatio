@@ -26,7 +26,7 @@ class Embedder:
         self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD
 
         self.concepts_index: dict[str, np.ndarray] = {}
-        self.content_bank_index: dict[str, np.ndarray] = {}
+        self.exemplars_bank_index: dict[str, np.ndarray] = {}
         self.concept_descriptions: dict[str, str] = {}
 
         self._load_or_generate_descriptions()
@@ -42,12 +42,12 @@ class Embedder:
 
         self.index: dict[str, np.ndarray] = dict(self.concepts_index)
 
-        if config.CONTENT_BANK_EMBEDDINGS_PATH.exists():
-            self._load_content_bank_cache()
+        if config.EXEMPLARS_BANK_EMBEDDINGS_PATH.exists():
+            self._load_exemplars_bank_cache()
             self._merge_into_index()
-            logger.info(f"Loaded content bank cache and merged index ({len(self.content_bank_index)} items)")
+            logger.info(f"Loaded exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)")
         else:
-            logger.warning("Content bank embeddings cache not found - call enrich_index_with_content to generate it.")
+            logger.warning("Exemplars bank embeddings cache not found - call enrich_index_with_content to generate it.")
 
     # FIGERPRINTS ---------------------------------------------------------------------------------
 
@@ -62,10 +62,10 @@ class Embedder:
         )
         return hashlib.md5(f"{self.embedding_model}::{payload}".encode()).hexdigest()
 
-    def _content_bank_fingerprint(self) -> str:
+    def _exemplars_bank_fingerprint(self) -> str:
         entries = sorted(
             (ex_id, ex[self.primary_field], sorted(ex.get("concepts", [])))
-            for ex_id, ex in self.content_bank.items()
+            for ex_id, ex in self.exemplars_bank.items()
         )
         entries_serialized = json.dumps(entries, ensure_ascii=False)
         return hashlib.md5(f"{self.embedding_model}::{entries_serialized}".encode()).hexdigest()
@@ -94,35 +94,35 @@ class Embedder:
             fingerprint=self._concept_fingerprint(),
         )
 
-    # CONTENT BANK CACHE VALIDATION ---------------------------------------------------------------
+    # EXEMPLARS BANK CACHE VALIDATION -------------------------------------------------------------
 
-    def _is_content_bank_cache_valid(self) -> bool:
-        if not config.CONTENT_BANK_EMBEDDINGS_PATH.exists():
+    def _is_exemplars_bank_cache_valid(self) -> bool:
+        if not config.EXEMPLARS_BANK_EMBEDDINGS_PATH.exists():
             return False
         try:
-            data = np.load(config.CONTENT_BANK_EMBEDDINGS_PATH, allow_pickle=True)
-            return str(data["fingerprint"]) == self._content_bank_fingerprint()
+            data = np.load(config.EXEMPLARS_BANK_EMBEDDINGS_PATH, allow_pickle=True)
+            return str(data["fingerprint"]) == self._exemplars_bank_fingerprint()
         except Exception:
             return False
 
-    def _load_content_bank_cache(self) -> None:
-        data = np.load(config.CONTENT_BANK_EMBEDDINGS_PATH, allow_pickle=True)
-        self.content_bank_index = dict(zip(data["keys"], data["vectors"]))
-        self.content_bank = json.loads(str(data["assignments"]))
-        self._cached_content_bank_fingerprint = str(data["fingerprint"])
+    def _load_exemplars_bank_cache(self) -> None:
+        data = np.load(config.EXEMPLARS_BANK_EMBEDDINGS_PATH, allow_pickle=True)
+        self.exemplars_bank_index = dict(zip(data["keys"], data["vectors"]))
+        self.exemplars_bank = json.loads(str(data["assignments"]))
+        self._cached_exemplars_bank_fingerprint = str(data["fingerprint"])
 
-    def _save_content_bank_cache(self) -> None:
-        config.CONTENT_BANK_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    def _save_exemplars_bank_cache(self) -> None:
+        config.EXEMPLARS_BANK_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
         assignments = {
             ex_id: {"concepts": sorted(ex.get("concepts", []))}
-            for ex_id, ex in self.content_bank.items()
+            for ex_id, ex in self.exemplars_bank.items()
         }
         np.savez(
-            config.CONTENT_BANK_EMBEDDINGS_PATH,
-            keys=list(self.content_bank_index.keys()),
-            vectors=np.array(list(self.content_bank_index.values())),
+            config.EXEMPLARS_BANK_EMBEDDINGS_PATH,
+            keys=list(self.exemplars_bank_index.keys()),
+            vectors=np.array(list(self.exemplars_bank_index.values())),
             assignments=json.dumps(assignments, ensure_ascii=False),
-            fingerprint=self._content_bank_fingerprint(),
+            fingerprint=self._exemplars_bank_fingerprint(),
         )
 
     # CONCEPT DESCRIPTIONS ------------------------------------------------------------------------
@@ -222,27 +222,27 @@ class Embedder:
             self.concepts_index[concept] = self._embed(self.concept_descriptions[concept])
 
     def enrich_index_with_content(self, annotated_bank: dict) -> None:
-        self.content_bank = annotated_bank
-        new_fingerprint = self._content_bank_fingerprint()
+        self.exemplars_bank = annotated_bank
+        new_fingerprint = self._exemplars_bank_fingerprint()
 
         if (
-            getattr(self, "_cached_content_bank_fingerprint", None) == new_fingerprint
-            and self.content_bank_index
+            getattr(self, "_cached_exemplars_bank_fingerprint", None) == new_fingerprint
+            and self.exemplars_bank_index
         ):
-            logger.info("Content bank index already up to date; skipping re-embedding.")
+            logger.info("Exemplars bank index already up to date; skipping re-embedding.")
             return
 
-        self.content_bank_index = {}
-        logger.info(f"Embedding {len(annotated_bank)} content bank examples...")
+        self.exemplars_bank_index = {}
+        logger.info(f"Embedding {len(annotated_bank)} exemplars bank examples...")
 
         for content_id, content in annotated_bank.items():
-            self.content_bank_index[content_id] = self._embed(content[self.primary_field])
+            self.exemplars_bank_index[content_id] = self._embed(content[self.primary_field])
 
-        self._save_content_bank_cache()
-        self._cached_content_bank_fingerprint = new_fingerprint
+        self._save_exemplars_bank_cache()
+        self._cached_exemplars_bank_fingerprint = new_fingerprint
         self._merge_into_index()
         logger.info(
-            f"Saved content bank cache and merged index ({len(self.content_bank_index)} items)"
+            f"Saved exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)"
         )
 
     def _merge_into_index(self) -> None:
@@ -250,9 +250,9 @@ class Embedder:
             name_vec = self.concepts_index[concept]
 
             example_vecs = [
-                self.content_bank_index[ex_id]
-                for ex_id, ex in self.content_bank.items()
-                if concept in ex.get("concepts", []) and ex_id in self.content_bank_index
+                self.exemplars_bank_index[ex_id]
+                for ex_id, ex in self.exemplars_bank.items()
+                if concept in ex.get("concepts", []) and ex_id in self.exemplars_bank_index
             ]
 
             all_vecs = [name_vec] + example_vecs

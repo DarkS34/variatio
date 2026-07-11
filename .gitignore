@@ -11,7 +11,7 @@ icd_vector_db
 *.pdf
 *.md
 plans
-content_bank
-content_bank.json
+exemplars_bank
+exemplars_bank.json
 *test.py
 knowledge_graph_staging.json

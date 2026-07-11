@@ -113,4 +113,4 @@ class KnowledgeGraphBuilder:
 
 
 if __name__ == "__main__":
-    KnowledgeGraphBuilder().build(config.RAW_KNOWLEDGE_GRAPH_DIR, config.KG_STAGING_PATH)
+    KnowledgeGraphBuilder().build(config.RAW_CORPUS_DIR, config.KG_STAGING_PATH)
