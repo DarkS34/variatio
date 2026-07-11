@@ -4,8 +4,7 @@
     "level": "Primer curso universitario, sin experiencia previa en programación",
     "language": "Python"
   },
-  "enforce_curriculum": true,
-  "generation_rules": [
+  "general_generation_rules": [
     "El enunciado debe tener libertad creativa y ser original; no copies los ejemplos.",
     "La solución solo puede usar conceptos ya vistos por el alumno — evita construcciones más elegantes pero desconocidas.",
     "Solo built-ins de Python: nada de librerías externas.",

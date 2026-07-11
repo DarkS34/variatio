@@ -40,7 +40,7 @@ class ContentGenerator:
         self.item_model = content_profile.content_item
         self.context = content_profile.content_context
         self.generator_model = generator_model
-        self.generation_rules: list[str] = content_profile.generation_rules
+        self.general_generation_rules: list[str] = content_profile.general_generation_rules
         self.generation_field_guidance: dict[str, str] = content_profile.field_guidance("generation")
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
@@ -69,7 +69,7 @@ class ContentGenerator:
 
         target_block = self._format_target_concepts(concepts)
         curriculum_block = self._format_curriculum(curriculum)
-        rules_block = "\n".join(f"- {r}" for r in self.generation_rules)
+        rules_block = "\n".join(f"- {r}" for r in self.general_generation_rules)
         few_shot_block = self._build_few_shot_block(few_shot)
         instance_template = self._build_instance_template(fixed)
         field_guidance_block = self._build_field_guidance_block(fixed)

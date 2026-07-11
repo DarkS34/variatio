@@ -327,3 +327,81 @@ Un único objeto JSON con esta forma exacta:
 {nodes_block}
 
 JSON:"""
+
+
+# ── PERFIL DE CONTENIDO ───────────────────────────────────────────────────────
+
+
+def infer_content_profile_prompt(sample: str) -> str:
+    return f"""\
+Analiza una muestra representativa de materiales educativos en bruto (ejercicios, problemas, actividades) y deduce el PERFIL DE CONTENIDO que describe su estructura. El perfil define, de forma abstracta, la forma de cada elemento de contenido del dominio: qué campos lo componen, de qué tipo son, cómo se extraen de un documento y cómo se generaría uno nuevo.
+
+La muestra puede provenir de varios documentos distintos, separados por líneas `===== DOCUMENTO: ... =====`. Deduce la estructura COMÚN a todos, no la de uno solo.
+
+# QUÉ DEBES PRODUCIR
+Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
+
+{{
+  "content_context": {{ "<clave>": "<valor>" }},
+  "general_generation_rules": ["<regla>", "..."],
+  "primary_field": "<nombre de uno de los campos>",
+  "fields": {{
+    "<nombre_campo>": {{
+      "schema": {{ "type": "string" }},
+      "description": "...",
+      "guidance": {{ "extraction": "...", "generation": "..." }}
+    }}
+  }}
+}}
+
+# content_context
+Metadatos del dominio inferidos de la muestra (p. ej. materia/asignatura, nivel educativo, idioma, lenguaje de programación si aplica). Objeto de pares clave→valor de texto. Incluye solo lo que deduzcas con seguridad.
+
+# fields
+Un campo por cada pieza de información distinta que compone un elemento. Para cada campo:
+- `schema`: la forma del valor. Usa ÚNICAMENTE este vocabulario:
+  · `"type"`: uno de "string", "integer", "number", "boolean", "null"; o "array" (con `"items"`); o una LISTA de tipos para valores opcionales (p. ej. `["string", "null"]`).
+  · o bien `"enum"`: lista no vacía de valores permitidos (para campos categóricos, p. ej. una dificultad `[1, 2, 3, 4]`).
+  · restricciones opcionales: `"minLength"`/`"maxLength"` (strings), `"minimum"`/`"maximum"` (números), `"default"` (valor por defecto si el campo es opcional).
+  No uses ningún otro tipo ni palabra clave.
+- `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma del dominio.
+- `guidance.extraction`: cómo EXTRAER este campo de un documento fuente (qué copiar, qué dejar fuera, cuándo va a null).
+- `guidance.generation`: cómo GENERAR este campo al crear un elemento nuevo desde cero.
+
+# primary_field
+El nombre del campo que porta la CARGA SEMÁNTICA principal del elemento: el texto que plantea el problema o la tarea. Se usará aguas abajo para embeddings y etiquetado de conceptos. Debe ser uno de los campos declarados en `fields`.
+
+# general_generation_rules
+Reglas generales, transversales a todos los campos, que debería respetar la generación de nuevos elementos (restricciones de contenido, estilo o alcance que observes en la muestra). Propón las que se deduzcan razonablemente del material; es un borrador que un humano revisará.
+
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Todo el texto de cara al humano (`description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material de la muestra.
+- Escapa saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+
+<<<MUESTRA>>>
+{sample}
+<<<FIN>>>
+
+JSON:"""
+
+
+def repair_content_profile_prompt(broken_output: str, error_msg: str) -> str:
+    return f"""\
+La salida anterior debía ser el objeto JSON de un PERFIL DE CONTENIDO, pero no parseó como JSON válido o no cumple la estructura requerida.
+
+Tu tarea: produce un único objeto JSON corregido que (1) parsee como JSON válido y (2) tenga EXACTAMENTE las claves de nivel superior `content_context`, `general_generation_rules`, `primary_field` y `fields`; donde `primary_field` es uno de los campos de `fields`, y cada campo tiene `schema` (con `type` o `enum`), `description` y `guidance` con `extraction`/`generation`. Preserva la información original lo más fielmente posible.
+
+# ERROR DEL INTENTO ANTERIOR
+{error_msg}
+
+# SALIDA ROTA A REPARAR
+{broken_output}
+
+# REGLAS
+- Devuelve un único objeto JSON. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+
+JSON:"""
