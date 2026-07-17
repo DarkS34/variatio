@@ -2,12 +2,11 @@ import json
 import random
 import re
 
-import ollama
 from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from system import config
+from system import config, inference
 from system.embedder import Embedder
 from system.knowledge_graph import KnowledgeGraph
 from system.content_profile import ContentProfile
@@ -254,7 +253,7 @@ class ContentGenerator:
     def _generate_one(
         self, prompt: str, fixed: dict[str, object]
     ) -> GeneratedContent | None:
-        resp = ollama.generate(model=self.generator_model, prompt=prompt, think=True)
+        resp = inference.generate(model=self.generator_model, prompt=prompt, think=True)
         body, thinking = self._split_thinking(resp.response, getattr(resp, "thinking", None))
 
         item, err = self._parse_and_validate(body, fixed)
@@ -265,7 +264,7 @@ class ContentGenerator:
             repair_prompt = json_repair_prompt(
                 broken_output=body, error_msg=err or "invalid JSON"
             )
-            resp = ollama.generate(model=config.REPAIR_LLM, prompt=repair_prompt)
+            resp = inference.generate(model=config.REPAIR_LLM, prompt=repair_prompt)
             body, _ = self._split_thinking(resp.response, getattr(resp, "thinking", None))
             item, err = self._parse_and_validate(body, fixed)
 

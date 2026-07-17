@@ -5,11 +5,10 @@ from pathlib import Path
 
 from json_repair import repair_json
 from docling.document_converter import DocumentConverter, InputFormat
-import ollama
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from system import config
+from system import config, inference
 from system.content_profile import ContentProfile
 from system.prompts import clean_content_prompt, format_content_prompt, json_repair_prompt
 
@@ -110,7 +109,7 @@ class ExemplarsBankBuilder:
         try:
             logger.info(f"{tag} cleaning content via LLM")
             prompt = clean_content_prompt(content=content, context=self.context)
-            response = ollama.generate(
+            response = inference.generate(
                 model=config.CONTENT_CLEANING_LLM, prompt=prompt
             ).response.strip()
 
@@ -126,7 +125,7 @@ class ExemplarsBankBuilder:
             context=self.context,
             field_guidance_block=self._extraction_guidance_block,
         )
-        response = ollama.generate(
+        response = inference.generate(
             model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt
         ).response
         items, err = self._parse_and_validate(response)
@@ -140,7 +139,7 @@ class ExemplarsBankBuilder:
             repair_prompt = json_repair_prompt(
                 broken_output=response, error_msg=err or "invalid JSON"
             )
-            response = ollama.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
+            response = inference.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
             items, err = self._parse_and_validate(response)
 
         if items is None:
