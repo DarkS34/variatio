@@ -14,6 +14,8 @@ NOISY_WARNING_MODULES = (r"docling.*", r"PIL.*")
 
 
 # Network & Infrastructure
+INFERENCE_ENGINE = "ollama"
+
 _OLLAMA_HOST = os.environ.setdefault("OLLAMA_HOST", "localhost:13434")
 OLLAMA_HOST = _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 

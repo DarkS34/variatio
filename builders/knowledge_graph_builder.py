@@ -5,7 +5,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import dspy
-import ollama
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, InputFormat, PdfFormatOption
@@ -15,7 +14,7 @@ from kg_gen import KGGen
 from kg_gen.utils.chunk_text import chunk_text
 from loguru import logger
 
-from system import config
+from system import config, inference
 from system.prompts import clean_graph_nodes_prompt
 
 
@@ -254,7 +253,7 @@ class KnowledgeGraphBuilder:
 
     def _propose_mapping(self, nodes: list[str], relations: list[list], det_map: dict) -> tuple[dict, set]:
         prompt = clean_graph_nodes_prompt(self._nodes_block(nodes, relations, det_map))
-        response = ollama.generate(model=config.KG_CLEANUP_LLM, think=False, prompt=prompt).response
+        response = inference.generate(model=config.KG_CLEANUP_LLM, think=False, prompt=prompt).response
         raw = repair_json(response, return_objects=True)
         if not isinstance(raw, dict):
             raise ValueError("model did not return a JSON object")

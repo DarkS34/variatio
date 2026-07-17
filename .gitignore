@@ -11,6 +11,5 @@ icd_vector_db
 *.pdf
 *.md
 plans
-exemplars_bank
-exemplars_bank.json
+exemplars_bank*.json
 *test.py

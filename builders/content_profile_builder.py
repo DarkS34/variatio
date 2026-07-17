@@ -2,12 +2,11 @@ import json
 import re
 from pathlib import Path
 
-import ollama
 from docling.document_converter import DocumentConverter, InputFormat
 from json_repair import repair_json
 from loguru import logger
 
-from system import config
+from system import config, inference
 from system.content_profile import ContentProfile
 from system.prompts import infer_content_profile_prompt, json_repair_prompt
 
@@ -119,7 +118,7 @@ class ContentProfileBuilder:
 
     def _infer(self, sample: str) -> dict:
         prompt = infer_content_profile_prompt(sample)
-        response = ollama.generate(model=self.model, think=False, prompt=prompt).response
+        response = inference.generate(model=self.model, think=False, prompt=prompt).response
         profile = self._parse(response)
         err = self._validate(profile)
 
@@ -130,7 +129,7 @@ class ContentProfileBuilder:
             repair_prompt = json_repair_prompt(
                 broken_output=response, error_msg=err, shape="objeto"
             )
-            response = ollama.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
+            response = inference.generate(model=config.REPAIR_LLM, prompt=repair_prompt).response
             candidate = self._parse(response)
             if candidate is not None:
                 profile = candidate

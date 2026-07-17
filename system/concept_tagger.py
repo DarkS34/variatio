@@ -2,10 +2,9 @@ import json
 from json_repair import repair_json
 from pathlib import Path
 
-import ollama
 from loguru import logger
 
-from system import config
+from system import config, inference
 
 from .embedder import Embedder
 from .prompts import tag_concepts_prompt, json_repair_prompt
@@ -41,7 +40,7 @@ class ConceptTagger:
 
         prompt = tag_concepts_prompt(statement=statement, candidates=candidates_str)
 
-        response = ollama.generate(
+        response = inference.generate(
             model=self.concept_tagger_model, prompt=prompt, think=False
         ).response
         result = self._parse_and_validate(response, candidate_names)
@@ -55,7 +54,7 @@ class ConceptTagger:
                 broken_output=response, error_msg="invalid JSON or schema"
             )
 
-            response = ollama.generate(
+            response = inference.generate(
                 model=self.concept_tagger_model, prompt=repair_prompt
             ).response
             result = self._parse_and_validate(response, candidate_names)

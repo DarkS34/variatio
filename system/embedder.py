@@ -1,9 +1,8 @@
 import hashlib
 import json
 
-from . import config
+from . import config, inference
 import numpy as np
-import ollama
 from loguru import logger
 
 from system.knowledge_graph import KnowledgeGraph
@@ -173,7 +172,7 @@ class Embedder:
             siblings=siblings,
             context=self.context,
         )
-        response = ollama.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
+        response = inference.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
         return response.strip()
 
     def _collect_relations(self, concept: str) -> dict[str, list[str]]:
@@ -262,7 +261,7 @@ class Embedder:
     # TECHNICAL STUFF -----------------------------------------------------------------------------
 
     def _embed(self, text: str) -> np.ndarray:
-        resp = ollama.embeddings(model=self.embedding_model, prompt=text)["embedding"]
+        resp = inference.embed(model=self.embedding_model, text=text)
         return self._l2_normalize(np.array(resp))
 
     def _l2_normalize(self, vec: np.ndarray) -> np.ndarray:
