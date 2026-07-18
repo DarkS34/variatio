@@ -1,16 +1,16 @@
 {
   "content_context": {
     "materia": "Programación I / Fundamentos de Programación",
-    "lenguaje": "Python",
-    "nivel": "Universitario",
+    "lenguaje_programacion": "Python",
+    "nivel_educativo": "Universitario",
     "idioma": "Español"
   },
   "general_generation_rules": [
-    "Los ejercicios deben centrarse en la lógica de programación básica: tipos de datos, estructuras de control, funciones, recursividad y estructuras de datos (listas, diccionarios).",
-    "Cuando se soliciten funciones, se debe incluir un docstring con el formato: tipos de parámetros -> tipo de retorno, objetivo (OBJ) y precondiciones (PRE).",
-    "Se debe fomentar la modularización mediante la creación de subprogramas/funciones.",
-    "En ejercicios de nivel básico/intermedio, se debe hacer énfasis en la validación de entradas del usuario (uso de try-except o funciones de validación).",
-    "El estilo de código debe ser limpio, utilizando nombres de variables significativos."
+    "Los ejercicios deben centrarse en la lógica de programación fundamental: tipos de datos, funciones, estructuras de control (if, while, for), listas, diccionarios y recursividad.",
+    "Se debe fomentar el uso de docstrings en las funciones, detallando parámetros, objetivo y precondiciones.",
+    "En los ejercicios de nivel básico o intermedio, se debe priorizar la validación de entradas del usuario (uso de try-except o funciones de validación).",
+    "Cuando se soliciten funciones, se debe especificar claramente el tipo de dato de entrada y el de salida.",
+    "El estilo de los enunciados debe ser directo, planteando un problema del mundo real o un reto técnico concreto."
   ],
   "primary_field": "statement",
   "fields": {
@@ -18,10 +18,10 @@
       "schema": {
         "type": "string"
       },
-      "description": "El enunciado del ejercicio o problema, incluyendo cualquier restricción técnica o fórmulas matemáticas necesarias.",
+      "description": "El enunciado del ejercicio, problema o actividad.",
       "guidance": {
-        "extraction": "Extraer el texto literal del ejercicio. Incluye la numeración si es parte del enunciado, pero excluye encabezados de sección como 'Ejercicios propuestos'. Si el ejercicio incluye fragmentos de código, fórmulas en LaTeX o tablas de criterios, deben incluirse íntegramente dentro del enunciado.",
-        "generation": "Redactar una tarea de programación clara y concisa. Definir exactamente qué debe hacer el programa, qué entradas recibe y qué salida se espera. Incluir restricciones específicas (ej. 'sin usar la función sort()') si es necesario para el objetivo pedagógico."
+        "extraction": "Extraer el texto que describe la tarea a realizar. Incluye instrucciones adicionales, fórmulas matemáticas o restricciones mencionadas en el enunciado. Excluir el número del ejercicio (ej. '1.', '2.') y encabezados de sección como 'Ejercicios propuestos'. Si el enunciado incluye un ejemplo de entrada/salida o una tabla de datos, este debe incluirse como parte del texto.",
+        "generation": "Redactar un problema de programación claro y conciso. Debe especificar la entrada esperada, la transformación o cálculo necesario y el resultado final deseado."
       }
     },
     "solution": {
@@ -31,10 +31,10 @@
           "null"
         ]
       },
-      "description": "La implementación del código en Python que resuelve el problema planteado.",
+      "description": "El código fuente de la solución propuesta.",
       "guidance": {
-        "extraction": "Extraer el bloque de código que sigue a marcadores como 'SOLUCION PROPUESTA:' o que aparece inmediatamente después de un ejercicio resuelto. Debe incluir la definición de funciones, el cuerpo del programa y los 'Probadores' o secciones de prueba si están presentes. Se debe mantener el formato de indentación original.",
-        "generation": "Escribir un código en Python funcional, eficiente y siguiendo las reglas generales de generación. Incluir obligatoriamente el docstring detallado en las funciones y un bloque de prueba (probador) que demuestre que la solución es correcta con casos de ejemplo."
+        "extraction": "Extraer el bloque de código que sigue inmediatamente a marcadores como 'SOLUCION PROPUESTA:' o que aparece justo después del enunciado en los ejercicios resueltos. Incluir la definición de funciones, docstrings y el código de prueba ('probador') si está presente. El campo debe ser null si el ejercicio es 'propuesto' y no tiene solución adjunta.",
+        "generation": "Escribir el código en Python siguiendo las buenas prácticas: nombres de variables significativos, modularización mediante funciones y documentación interna (docstrings) con parámetros, objetivo y precondiciones."
       }
     },
     "difficulty_level": {
@@ -43,21 +43,21 @@
           "básico",
           "intermedio",
           "avanzado",
-          "null"
+          null
         ]
       },
-      "description": "El nivel de complejidad del ejercicio.",
+      "description": "El nivel de dificultad del ejercicio.",
       "guidance": {
-        "extraction": "Identificar el nivel basándose en el encabezado de la sección donde se encuentra el ejercicio (ej. 'Ejercicios nivel básico', 'Ejercicios nivel intermedio'). Si el ejercicio está en una sección general sin etiqueta de nivel, asignar null."
+        "extraction": "Identificar el nivel basándose en los encabezados de sección del documento (ej. 'Ejercicios nivel básico', 'Ejercicios nivel intermedio', 'Ejercicio avanzado'). Si el ejercicio está en una sección general sin nivel especificado, asignar null."
       }
     },
     "is_solved": {
       "schema": {
         "type": "boolean"
       },
-      "description": "Indica si el ejercicio incluye una solución propuesta en el documento.",
+      "description": "Indica si el elemento es un ejercicio ya resuelto o un ejercicio propuesto.",
       "guidance": {
-        "extraction": "Marcar como true si el ejercicio se encuentra bajo la sección 'Ejercicios resueltos' o si posee un bloque de código identificado como 'SOLUCION PROPUESTA'. Marcar como false si se encuentra en 'Ejercicios propuestos' y no hay código asociado."
+        "extraction": "Asignar true si el elemento se encuentra bajo la sección 'Ejercicios resueltos' o tiene una 'SOLUCION PROPUESTA' asociada. Asignar false si se encuentra bajo 'Ejercicios propuestos' o secciones similares de tareas pendientes."
       }
     }
   }

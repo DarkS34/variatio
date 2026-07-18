@@ -1,0 +1,2142 @@
+{
+  "entities": [
+    "Acceso por clave",
+    "Acceso por posición",
+    "Acoplamiento",
+    "Algoritmia",
+    "Algoritmos",
+    "Algoritmos de búsqueda",
+    "Archivos",
+    "ArrayList en Java",
+    "Arrays",
+    "Auto-similitud",
+    "Bibliotecas",
+    "Bidimensional",
+    "Bloque de instrucciones",
+    "Bucle infinito",
+    "Bucles anidados",
+    "Búsqueda Binaria",
+    "Búsqueda Secuencial",
+    "Búsqueda en grafos",
+    "C",
+    "C++",
+    "Cadena",
+    "Calidad del software",
+    "Caso base",
+    "Cohesión",
+    "Cohesión y Acoplamiento",
+    "Colas",
+    "Colecciones de Datos",
+    "Colecciones de Tamaño Fijo",
+    "Colecciones de Tamaño Variable",
+    "Colecciones en Python",
+    "Comentarios",
+    "Complejidad O(n)",
+    "Complejidad O(n²)",
+    "Comportamiento asintótico",
+    "Conjuntos",
+    "Crecimiento lineal",
+    "Código",
+    "Depuración",
+    "Desbordamiento de pila",
+    "Diccionarios",
+    "División entera",
+    "Docstrings",
+    "Documentación de subprogramas",
+    "Documentación en Python: Docstrings y PEP 8",
+    "Eficiencia",
+    "El bucle for en Python",
+    "El bucle while",
+    "El método de la Burbuja",
+    "Elementos de un programa",
+    "Entrada y salida",
+    "Errores de compilación",
+    "Espacios",
+    "Estructuras anidadas",
+    "Estructuras de control",
+    "Estructuras de control iterativas",
+    "Estructuras de datos",
+    "Estructuras selectivas múltiples con elif",
+    "Estructuras selectivas: definición y funcionamiento",
+    "Excepciones",
+    "Expresiones",
+    "Expresión booleana",
+    "Expresión de algoritmos",
+    "FIFO (First In, First Out)",
+    "Factorial",
+    "Flujo de control selectivo",
+    "Flujo de control selectivo con if y else",
+    "Flujo normal de instrucciones",
+    "Formateo con f-strings",
+    "Fractales",
+    "Funciones",
+    "Funciones y Procedimientos",
+    "HashMap",
+    "Haskell",
+    "Homogeneidad",
+    "IndentationError",
+    "Inserción Directa",
+    "Instrucciones",
+    "Interfaz",
+    "Introducción a la Programación",
+    "Iterables y secuencias",
+    "Java",
+    "LIFO (Last In, First Out)",
+    "Lenguajes",
+    "Lenguajes de programación",
+    "Libro",
+    "Listas",
+    "Mantenimiento",
+    "Memoria",
+    "Modularidad",
+    "Modularización",
+    "Modularización de condiciones",
+    "Mutabilidad",
+    "Métodos de Ordenación",
+    "Módulos",
+    "Notación Big-O",
+    "O(1)",
+    "O(log n)",
+    "Orden",
+    "Ordenación simples",
+    "Otros tipos",
+    "PEP 257",
+    "PEP 8",
+    "PROGRAMACIÓN I",
+    "Palíndromo",
+    "Parámetros",
+    "Paso de Parámetros",
+    "Paso por referencia",
+    "Paso por valor",
+    "Pensamiento computacional y errores",
+    "Pilas",
+    "Pilas y Colas",
+    "Problemas y algoritmos",
+    "Procedimientos",
+    "Programación",
+    "Programación orientada a contratos",
+    "Python",
+    "Ramificación de árboles",
+    "Recorrido de árboles",
+    "Recursividad",
+    "Registros",
+    "Resolución de problemas con ordenador",
+    "Reutilización",
+    "Sangrado",
+    "Selección",
+    "Serie de Fibonacci",
+    "Subproblemas",
+    "Subprogramas",
+    "SyntaxError",
+    "Tabuladores",
+    "Tamaño de los datos",
+    "Tamaño fijo",
+    "Tamaño variable",
+    "Tiempo",
+    "Tiempo constante",
+    "Tiempo de desarrollo",
+    "TreeSet",
+    "Triángulo de Sierpinski",
+    "Tuplas",
+    "TypeError",
+    "Unidimensional",
+    "Uso de Bibliotecas en Python",
+    "Valor",
+    "ValueError",
+    "Variables globales",
+    "ZeroDivisionError",
+    "algoritmo de Euclides",
+    "algoritmos de retroceso",
+    "análisis",
+    "aplicaciones móviles",
+    "archivo .py",
+    "archivos binarios",
+    "archivos de texto",
+    "archivos indizados",
+    "aritmética",
+    "arrays de registros",
+    "arrays dinámicos",
+    "biblioteca estándar de Python",
+    "booleano",
+    "break",
+    "bucle",
+    "búsqueda",
+    "campos de distintos tipos",
+    "centinela",
+    "circuito electrónico",
+    "clave",
+    "codificación",
+    "colas concurrentes",
+    "colas de mensajes",
+    "colas de prioridad",
+    "colas dobles (deque)",
+    "colecciones heterogéneas",
+    "colecciones mutables",
+    "colecciones ordenadas e inmutables",
+    "colección de elementos",
+    "colección no ordenada de elementos únicos",
+    "compilador",
+    "comprobación de pertenencia",
+    "concatenación",
+    "condición lógica",
+    "consola",
+    "constantes",
+    "continue",
+    "conversiones de tipo",
+    "código binario",
+    "datos asociativos",
+    "datos de entrada",
+    "datos de forma persistente",
+    "datos que no deben cambiar",
+    "datos y condiciones",
+    "descomponer problemas",
+    "desempaquetado",
+    "determinista",
+    "diagramas de flujo",
+    "dinámicos",
+    "diseño",
+    "duplicados",
+    "editores con resaltado de sintaxis",
+    "ejecución",
+    "elementos",
+    "eliminación",
+    "else",
+    "end",
+    "entero",
+    "error",
+    "errores",
+    "errores de ejecución",
+    "estrategia",
+    "estructuras persistentes",
+    "estructuras repetitivas",
+    "estructuras selectivas",
+    "except",
+    "fin",
+    "finally",
+    "find()",
+    "finito",
+    "float",
+    "flujo de control",
+    "funcionalidades relacionadas",
+    "gestión de llamadas en la pila de ejecución",
+    "gestión directa de memoria",
+    "heterogeneidad",
+    "identificar patrones",
+    "if",
+    "import",
+    "indexación",
+    "informática",
+    "inicio",
+    "inmutabilidad",
+    "input()",
+    "inserción",
+    "interacción con el usuario",
+    "interna",
+    "intérprete",
+    "items()",
+    "keys()",
+    "lenguaje ensamblador",
+    "lenguaje máquina",
+    "lenguaje natural",
+    "lenguajes de alto nivel",
+    "lenguajes formales",
+    "linters",
+    "lista ordenada",
+    "listas inmutables",
+    "listas ordenadas",
+    "lower()",
+    "mapas (Data.Map)",
+    "matriz",
+    "mecanismo para capturar y manejar excepciones",
+    "modificaciones",
+    "máximo común divisor (MCD)",
+    "numpy",
+    "núcleo",
+    "objeto inmutable",
+    "objeto iterable",
+    "objeto mutable",
+    "operaciones aritméticas",
+    "operaciones de control",
+    "operaciones lógicas",
+    "operadores",
+    "operadores condicionales",
+    "operadores lógicos",
+    "operandos",
+    "orden específico",
+    "ordenadores",
+    "palabras reservadas",
+    "pares clave-valor",
+    "paso",
+    "pensamiento computacional",
+    "pilas de registros",
+    "planificación de procesos",
+    "print()",
+    "problemas",
+    "procesador",
+    "programa",
+    "programador",
+    "programar",
+    "pruebas",
+    "pseudocódigo",
+    "random",
+    "range()",
+    "real",
+    "reglas semánticas",
+    "reglas sintácticas",
+    "replace()",
+    "salto",
+    "secuencias de caracteres",
+    "sep",
+    "sistemas de impresión",
+    "sistemas operativos",
+    "slicing",
+    "solución",
+    "split()",
+    "str",
+    "subcadenas",
+    "símbolos y mnemónicos",
+    "tablas de multiplicar",
+    "tablas hash",
+    "texto",
+    "tiempos de acceso eficientes",
+    "tipos de datos",
+    "tipos de datos básicos",
+    "tolerantes a errores",
+    "traducción automática",
+    "try",
+    "upper()",
+    "values()",
+    "variables",
+    "versiones anteriores",
+    "árboles balanceados",
+    "índice"
+  ],
+  "edges": [
+    "admiten",
+    "agrupan",
+    "almacenan",
+    "almacenan datos en su representación",
+    "aplica a tipos",
+    "ayuda a evitar",
+    "calcula",
+    "combinan",
+    "común en",
+    "consiste en",
+    "consiste en dividir",
+    "consume",
+    "contiene",
+    "contiene colección",
+    "covers",
+    "deben ser",
+    "deben ser procesados por",
+    "define",
+    "define reacción ante",
+    "dependen de",
+    "describe",
+    "detecta",
+    "devuelve",
+    "devuelve tipo",
+    "distinguen",
+    "ejecuta",
+    "ejemplo",
+    "encapsulan",
+    "es",
+    "es común en",
+    "es considerado de nivel",
+    "es ejemplo de",
+    "es el núcleo de",
+    "es estilo recomendado de",
+    "es fundamental en",
+    "es interpretado por",
+    "es nivel de complejidad",
+    "es parte fundamental de",
+    "es parámetro de",
+    "es tipo de",
+    "es un",
+    "es un tipo de",
+    "es una estructura de datos que representa",
+    "es una técnica para extraer partes de",
+    "es utilizada en",
+    "establece buenas prácticas de estilo de código para",
+    "estudia",
+    "está compuesto por",
+    "está presente en",
+    "están diseñados con",
+    "están relacionados con",
+    "evalúa",
+    "evita",
+    "evita el uso de",
+    "facilitan",
+    "fomenta",
+    "forman parte de",
+    "implica",
+    "implica desarrollar",
+    "includes",
+    "incluye",
+    "incluye la función",
+    "incluyen",
+    "incluyen ejemplos como",
+    "incorporan",
+    "intenta ejecutar instrucciones dentro de",
+    "interactúan mediante",
+    "interrumpe",
+    "is a method of",
+    "lee datos desde",
+    "mantienen",
+    "mantienen orden de los elementos con",
+    "mejora",
+    "mejoran",
+    "mide la dependencia entre",
+    "modifican",
+    "muestra información en",
+    "muestra usando",
+    "no afectan",
+    "no devuelve",
+    "no permiten",
+    "ocultan detalles técnicos como",
+    "ofrece",
+    "ofrece operaciones eficientes como",
+    "ofrecen acceso por",
+    "operan sin depender de",
+    "permite",
+    "permite acceso",
+    "permite dividir",
+    "permite ejecutar",
+    "permite entender",
+    "permite modularizar",
+    "permite realizar",
+    "permite recorrer",
+    "permiten",
+    "permiten acceder a sus elementos por",
+    "permiten acceso",
+    "permiten acceso rápido a",
+    "permiten almacenar",
+    "permiten incrustar expresiones en",
+    "permiten operación",
+    "puede capturar tipo de error",
+    "puede modificar",
+    "puede ser",
+    "puede ser utilizado en",
+    "puede suceder",
+    "puede tener dimensión",
+    "pueden causar",
+    "pueden contener",
+    "pueden contener elementos de distintos tipos como",
+    "pueden expresarse en",
+    "pueden usarse como claves en",
+    "reciben datos mediante",
+    "recorre",
+    "reduce",
+    "refleja",
+    "representan",
+    "requiere",
+    "requiere comprender",
+    "requieren",
+    "salta a",
+    "se apoya en",
+    "se basa en",
+    "se define por",
+    "se denomina",
+    "se divide en",
+    "se dividen en",
+    "se ejecuta si no ocurre excepción en",
+    "se ejecuta siempre",
+    "se evalúa como",
+    "se implementa con",
+    "se importan en",
+    "se manifiesta en",
+    "se materializa en",
+    "se previenen con",
+    "se refiere a",
+    "se traduce en algoritmos como",
+    "se usa en",
+    "se usa para",
+    "se usan en",
+    "se utiliza en",
+    "se utilizan como",
+    "sigue principio",
+    "son",
+    "son considerados",
+    "son denominados",
+    "son la base de",
+    "son la base de la iteración con",
+    "son parte de",
+    "son útiles como base para",
+    "soportan",
+    "termina",
+    "tiene complejidad",
+    "tienen característica",
+    "usa biblioteca",
+    "utiliza",
+    "variante",
+    "útil para",
+    "útiles para"
+  ],
+  "relations": [
+    [
+      "Acoplamiento",
+      "mide la dependencia entre",
+      "Subprogramas"
+    ],
+    [
+      "Algoritmia",
+      "estudia",
+      "Algoritmos"
+    ],
+    [
+      "Algoritmos",
+      "deben ser",
+      "determinista"
+    ],
+    [
+      "Algoritmos",
+      "deben ser",
+      "finito"
+    ],
+    [
+      "Algoritmos",
+      "pueden causar",
+      "errores"
+    ],
+    [
+      "Algoritmos",
+      "pueden expresarse en",
+      "Lenguajes de programación"
+    ],
+    [
+      "Algoritmos",
+      "pueden expresarse en",
+      "diagramas de flujo"
+    ],
+    [
+      "Algoritmos",
+      "pueden expresarse en",
+      "lenguaje natural"
+    ],
+    [
+      "Algoritmos",
+      "pueden expresarse en",
+      "pseudocódigo"
+    ],
+    [
+      "Algoritmos",
+      "son la base de",
+      "aplicaciones móviles"
+    ],
+    [
+      "Algoritmos",
+      "son la base de",
+      "sistemas operativos"
+    ],
+    [
+      "Algoritmos de búsqueda",
+      "includes",
+      "Búsqueda Binaria"
+    ],
+    [
+      "Algoritmos de búsqueda",
+      "includes",
+      "Búsqueda Secuencial"
+    ],
+    [
+      "Archivos",
+      "permiten almacenar",
+      "datos de forma persistente"
+    ],
+    [
+      "Arrays",
+      "es",
+      "colección de elementos"
+    ],
+    [
+      "Arrays",
+      "permite acceso",
+      "Acceso por posición"
+    ],
+    [
+      "Arrays",
+      "puede tener dimensión",
+      "Bidimensional"
+    ],
+    [
+      "Arrays",
+      "puede tener dimensión",
+      "Unidimensional"
+    ],
+    [
+      "Bibliotecas",
+      "encapsulan",
+      "funcionalidades relacionadas"
+    ],
+    [
+      "Bibliotecas",
+      "se importan en",
+      "Python"
+    ],
+    [
+      "Bidimensional",
+      "ejemplo",
+      "matriz"
+    ],
+    [
+      "Bucles anidados",
+      "útil para",
+      "matriz"
+    ],
+    [
+      "Búsqueda Binaria",
+      "requiere",
+      "lista ordenada"
+    ],
+    [
+      "Búsqueda Binaria",
+      "tiene complejidad",
+      "O(log n)"
+    ],
+    [
+      "Búsqueda Secuencial",
+      "tiene complejidad",
+      "Complejidad O(n)"
+    ],
+    [
+      "C",
+      "contiene",
+      "Arrays"
+    ],
+    [
+      "C",
+      "es considerado de nivel",
+      "lenguajes de alto nivel"
+    ],
+    [
+      "Cadena",
+      "es tipo de",
+      "Iterables y secuencias"
+    ],
+    [
+      "Cadena",
+      "permiten operación",
+      "búsqueda"
+    ],
+    [
+      "Cadena",
+      "permiten operación",
+      "concatenación"
+    ],
+    [
+      "Cadena",
+      "permiten operación",
+      "subcadenas"
+    ],
+    [
+      "Cadena",
+      "representan",
+      "texto"
+    ],
+    [
+      "Cadena",
+      "son",
+      "secuencias de caracteres"
+    ],
+    [
+      "Cadena",
+      "soportan",
+      "indexación"
+    ],
+    [
+      "Cadena",
+      "soportan",
+      "slicing"
+    ],
+    [
+      "Colas",
+      "común en",
+      "colas de mensajes"
+    ],
+    [
+      "Colas",
+      "común en",
+      "planificación de procesos"
+    ],
+    [
+      "Colas",
+      "común en",
+      "sistemas de impresión"
+    ],
+    [
+      "Colas",
+      "sigue principio",
+      "FIFO (First In, First Out)"
+    ],
+    [
+      "Colas",
+      "son",
+      "Estructuras de datos"
+    ],
+    [
+      "Colas",
+      "variante",
+      "colas concurrentes"
+    ],
+    [
+      "Colas",
+      "variante",
+      "colas de prioridad"
+    ],
+    [
+      "Colas",
+      "variante",
+      "colas dobles (deque)"
+    ],
+    [
+      "Colecciones de Datos",
+      "agrupan",
+      "elementos"
+    ],
+    [
+      "Colecciones de Datos",
+      "son",
+      "tipos de datos"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Acceso por clave"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Acceso por posición"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Homogeneidad"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Mutabilidad"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Orden"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Tamaño fijo"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "Tamaño variable"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "heterogeneidad"
+    ],
+    [
+      "Colecciones de Datos",
+      "tienen característica",
+      "inmutabilidad"
+    ],
+    [
+      "Colecciones de Tamaño Fijo",
+      "ejemplo",
+      "Arrays"
+    ],
+    [
+      "Colecciones de Tamaño Fijo",
+      "includes",
+      "Arrays"
+    ],
+    [
+      "Colecciones de Tamaño Fijo",
+      "includes",
+      "Cadena"
+    ],
+    [
+      "Colecciones de Tamaño Fijo",
+      "includes",
+      "Registros"
+    ],
+    [
+      "Colecciones de Tamaño Fijo",
+      "son",
+      "Estructuras de datos"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "ejemplo",
+      "ArrayList en Java"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "ejemplo",
+      "Listas"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "includes",
+      "Conjuntos"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "includes",
+      "Diccionarios"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "includes",
+      "Listas"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "includes",
+      "Pilas y Colas"
+    ],
+    [
+      "Colecciones de Tamaño Variable",
+      "son",
+      "Estructuras de datos"
+    ],
+    [
+      "Colecciones en Python",
+      "includes",
+      "Cadena"
+    ],
+    [
+      "Colecciones en Python",
+      "includes",
+      "Diccionarios"
+    ],
+    [
+      "Colecciones en Python",
+      "includes",
+      "Listas"
+    ],
+    [
+      "Colecciones en Python",
+      "includes",
+      "Tuplas"
+    ],
+    [
+      "Colecciones en Python",
+      "incluyen",
+      "Diccionarios"
+    ],
+    [
+      "Colecciones en Python",
+      "incluyen",
+      "Listas"
+    ],
+    [
+      "Colecciones en Python",
+      "incluyen",
+      "Tuplas"
+    ],
+    [
+      "Comentarios",
+      "no afectan",
+      "Sangrado"
+    ],
+    [
+      "Complejidad O(n)",
+      "implica",
+      "Crecimiento lineal"
+    ],
+    [
+      "Complejidad O(n²)",
+      "es común en",
+      "Ordenación simples"
+    ],
+    [
+      "Conjuntos",
+      "es una estructura de datos que representa",
+      "colección no ordenada de elementos únicos"
+    ],
+    [
+      "Conjuntos",
+      "ofrece operaciones eficientes como",
+      "comprobación de pertenencia"
+    ],
+    [
+      "Diccionarios",
+      "almacenan",
+      "pares clave-valor"
+    ],
+    [
+      "Diccionarios",
+      "útiles para",
+      "datos asociativos"
+    ],
+    [
+      "Docstrings",
+      "se usa en",
+      "Python"
+    ],
+    [
+      "Documentación de subprogramas",
+      "permite entender",
+      "Subprogramas"
+    ],
+    [
+      "Eficiencia",
+      "se refiere a",
+      "Memoria"
+    ],
+    [
+      "Eficiencia",
+      "se refiere a",
+      "Tiempo"
+    ],
+    [
+      "El bucle for en Python",
+      "permite recorrer",
+      "objeto iterable"
+    ],
+    [
+      "El bucle for en Python",
+      "recorre",
+      "objeto iterable"
+    ],
+    [
+      "El bucle while",
+      "ejecuta",
+      "Bloque de instrucciones"
+    ],
+    [
+      "El método de la Burbuja",
+      "is a method of",
+      "Métodos de Ordenación"
+    ],
+    [
+      "El método de la Burbuja",
+      "tiene complejidad",
+      "Complejidad O(n²)"
+    ],
+    [
+      "Errores de compilación",
+      "se previenen con",
+      "editores con resaltado de sintaxis"
+    ],
+    [
+      "Errores de compilación",
+      "se previenen con",
+      "linters"
+    ],
+    [
+      "Errores de compilación",
+      "son denominados",
+      "Errores de compilación"
+    ],
+    [
+      "Estructuras de control",
+      "covers",
+      "Estructuras selectivas: definición y funcionamiento"
+    ],
+    [
+      "Estructuras de control",
+      "covers",
+      "Sangrado"
+    ],
+    [
+      "Estructuras de control",
+      "pueden contener",
+      "Estructuras anidadas"
+    ],
+    [
+      "Estructuras de control",
+      "se dividen en",
+      "estructuras repetitivas"
+    ],
+    [
+      "Estructuras de control",
+      "se dividen en",
+      "estructuras selectivas"
+    ],
+    [
+      "Estructuras de control iterativas",
+      "incluye",
+      "El bucle for en Python"
+    ],
+    [
+      "Estructuras de control iterativas",
+      "son",
+      "El bucle for en Python"
+    ],
+    [
+      "Estructuras de control iterativas",
+      "son",
+      "El bucle while"
+    ],
+    [
+      "Estructuras selectivas múltiples con elif",
+      "se implementa con",
+      "Estructuras selectivas múltiples con elif"
+    ],
+    [
+      "Excepciones",
+      "interrumpe",
+      "Flujo normal de instrucciones"
+    ],
+    [
+      "Excepciones",
+      "permiten",
+      "tolerantes a errores"
+    ],
+    [
+      "Expresiones",
+      "combinan",
+      "operadores"
+    ],
+    [
+      "Expresiones",
+      "combinan",
+      "operandos"
+    ],
+    [
+      "Factorial",
+      "se define por",
+      "Caso base"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "es fundamental en",
+      "Programación"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "Estructuras anidadas"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "Estructuras de control iterativas"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "Estructuras selectivas múltiples con elif"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "Excepciones"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "Modularización de condiciones"
+    ],
+    [
+      "Flujo de control selectivo con if y else",
+      "incluye",
+      "if"
+    ],
+    [
+      "Formateo con f-strings",
+      "permiten incrustar expresiones en",
+      "Cadena"
+    ],
+    [
+      "Funciones",
+      "devuelve",
+      "Valor"
+    ],
+    [
+      "Funciones",
+      "forman parte de",
+      "Expresiones"
+    ],
+    [
+      "Funciones",
+      "permite modularizar",
+      "Modularización"
+    ],
+    [
+      "Haskell",
+      "ofrece",
+      "listas inmutables"
+    ],
+    [
+      "Haskell",
+      "ofrece",
+      "mapas (Data.Map)"
+    ],
+    [
+      "Inserción Directa",
+      "is a method of",
+      "Métodos de Ordenación"
+    ],
+    [
+      "Inserción Directa",
+      "tiene complejidad",
+      "Complejidad O(n²)"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Elementos de un programa"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Entrada y salida"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Errores de compilación"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Expresión de algoritmos"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Formateo con f-strings"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Lenguajes de programación"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Pensamiento computacional y errores"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Problemas y algoritmos"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "Resolución de problemas con ordenador"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "input()"
+    ],
+    [
+      "Introducción a la Programación",
+      "covers",
+      "print()"
+    ],
+    [
+      "Iterables y secuencias",
+      "es tipo de",
+      "Iterables y secuencias"
+    ],
+    [
+      "Iterables y secuencias",
+      "incluye la función",
+      "range()"
+    ],
+    [
+      "Iterables y secuencias",
+      "permite",
+      "indexación"
+    ],
+    [
+      "Iterables y secuencias",
+      "son la base de la iteración con",
+      "El bucle for en Python"
+    ],
+    [
+      "Java",
+      "contiene colección",
+      "HashMap"
+    ],
+    [
+      "Java",
+      "contiene colección",
+      "TreeSet"
+    ],
+    [
+      "Lenguajes",
+      "distinguen",
+      "Funciones"
+    ],
+    [
+      "Lenguajes",
+      "distinguen",
+      "Procedimientos"
+    ],
+    [
+      "Lenguajes de programación",
+      "deben ser procesados por",
+      "compilador"
+    ],
+    [
+      "Lenguajes de programación",
+      "deben ser procesados por",
+      "intérprete"
+    ],
+    [
+      "Lenguajes de programación",
+      "están diseñados con",
+      "reglas semánticas"
+    ],
+    [
+      "Lenguajes de programación",
+      "están diseñados con",
+      "reglas sintácticas"
+    ],
+    [
+      "Lenguajes de programación",
+      "permiten",
+      "traducción automática"
+    ],
+    [
+      "Lenguajes de programación",
+      "son considerados",
+      "lenguajes formales"
+    ],
+    [
+      "Listas",
+      "es tipo de",
+      "Iterables y secuencias"
+    ],
+    [
+      "Listas",
+      "permiten acceder a sus elementos por",
+      "índice"
+    ],
+    [
+      "Listas",
+      "permiten acceso",
+      "índice"
+    ],
+    [
+      "Listas",
+      "puede ser",
+      "Homogeneidad"
+    ],
+    [
+      "Listas",
+      "puede ser",
+      "colecciones heterogéneas"
+    ],
+    [
+      "Listas",
+      "son",
+      "Estructuras de datos"
+    ],
+    [
+      "Listas",
+      "son",
+      "colecciones mutables"
+    ],
+    [
+      "Modularidad",
+      "consiste en dividir",
+      "programa"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Bibliotecas"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Cohesión y Acoplamiento"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Documentación de subprogramas"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Documentación en Python: Docstrings y PEP 8"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Funciones y Procedimientos"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Paso de Parámetros"
+    ],
+    [
+      "Modularidad",
+      "covers",
+      "Uso de Bibliotecas en Python"
+    ],
+    [
+      "Modularidad",
+      "fomenta",
+      "Reutilización"
+    ],
+    [
+      "Modularización",
+      "mejora",
+      "Programación"
+    ],
+    [
+      "Módulos",
+      "es un tipo de",
+      "Subprogramas"
+    ],
+    [
+      "Módulos",
+      "permiten",
+      "Reutilización"
+    ],
+    [
+      "Módulos",
+      "son parte de",
+      "biblioteca estándar de Python"
+    ],
+    [
+      "Notación Big-O",
+      "describe",
+      "Comportamiento asintótico"
+    ],
+    [
+      "Notación Big-O",
+      "se basa en",
+      "Tamaño de los datos"
+    ],
+    [
+      "PEP 257",
+      "es estilo recomendado de",
+      "Docstrings"
+    ],
+    [
+      "PEP 8",
+      "establece buenas prácticas de estilo de código para",
+      "Docstrings"
+    ],
+    [
+      "PROGRAMACIÓN I",
+      "includes",
+      "Estructuras de control"
+    ],
+    [
+      "PROGRAMACIÓN I",
+      "includes",
+      "Introducción a la Programación"
+    ],
+    [
+      "PROGRAMACIÓN I",
+      "includes",
+      "Modularidad"
+    ],
+    [
+      "Paso de Parámetros",
+      "ayuda a evitar",
+      "Variables globales"
+    ],
+    [
+      "Paso por referencia",
+      "aplica a tipos",
+      "Diccionarios"
+    ],
+    [
+      "Paso por referencia",
+      "aplica a tipos",
+      "Listas"
+    ],
+    [
+      "Paso por referencia",
+      "se utiliza en",
+      "C++"
+    ],
+    [
+      "Paso por referencia",
+      "se utiliza en",
+      "Java"
+    ],
+    [
+      "Paso por referencia",
+      "se utiliza en",
+      "Python"
+    ],
+    [
+      "Paso por valor",
+      "aplica a tipos",
+      "entero"
+    ],
+    [
+      "Paso por valor",
+      "aplica a tipos",
+      "float"
+    ],
+    [
+      "Paso por valor",
+      "aplica a tipos",
+      "str"
+    ],
+    [
+      "Paso por valor",
+      "es común en",
+      "C"
+    ],
+    [
+      "Paso por valor",
+      "es común en",
+      "Java"
+    ],
+    [
+      "Paso por valor",
+      "es común en",
+      "Python"
+    ],
+    [
+      "Pilas",
+      "sigue principio",
+      "LIFO (Last In, First Out)"
+    ],
+    [
+      "Pilas",
+      "son",
+      "Estructuras de datos"
+    ],
+    [
+      "Pilas",
+      "variante",
+      "colas concurrentes"
+    ],
+    [
+      "Pilas",
+      "variante",
+      "colas de prioridad"
+    ],
+    [
+      "Pilas",
+      "variante",
+      "colas dobles (deque)"
+    ],
+    [
+      "Pilas",
+      "útil para",
+      "algoritmos de retroceso"
+    ],
+    [
+      "Pilas",
+      "útil para",
+      "gestión de llamadas en la pila de ejecución"
+    ],
+    [
+      "Procedimientos",
+      "no devuelve",
+      "Valor"
+    ],
+    [
+      "Procedimientos",
+      "puede modificar",
+      "Estructuras de datos"
+    ],
+    [
+      "Procedimientos",
+      "se utilizan como",
+      "Instrucciones"
+    ],
+    [
+      "Programación",
+      "es el núcleo de",
+      "informática"
+    ],
+    [
+      "Python",
+      "es considerado de nivel",
+      "lenguajes de alto nivel"
+    ],
+    [
+      "Python",
+      "incluye",
+      "tipos de datos básicos"
+    ],
+    [
+      "Python",
+      "intenta ejecutar instrucciones dentro de",
+      "try"
+    ],
+    [
+      "Python",
+      "ofrece",
+      "mecanismo para capturar y manejar excepciones"
+    ],
+    [
+      "Python",
+      "usa biblioteca",
+      "numpy"
+    ],
+    [
+      "Recursividad",
+      "consume",
+      "Memoria"
+    ],
+    [
+      "Recursividad",
+      "consume",
+      "Tiempo"
+    ],
+    [
+      "Recursividad",
+      "define",
+      "Funciones"
+    ],
+    [
+      "Recursividad",
+      "está presente en",
+      "Ramificación de árboles"
+    ],
+    [
+      "Recursividad",
+      "evita",
+      "Bucle infinito"
+    ],
+    [
+      "Recursividad",
+      "refleja",
+      "Auto-similitud"
+    ],
+    [
+      "Recursividad",
+      "se manifiesta en",
+      "Fractales"
+    ],
+    [
+      "Recursividad",
+      "se traduce en algoritmos como",
+      "Búsqueda en grafos"
+    ],
+    [
+      "Recursividad",
+      "se traduce en algoritmos como",
+      "Recorrido de árboles"
+    ],
+    [
+      "Registros",
+      "agrupan",
+      "campos de distintos tipos"
+    ],
+    [
+      "Registros",
+      "son útiles como base para",
+      "arrays de registros"
+    ],
+    [
+      "Registros",
+      "son útiles como base para",
+      "pilas de registros"
+    ],
+    [
+      "Reutilización",
+      "mejora",
+      "Calidad del software"
+    ],
+    [
+      "Reutilización",
+      "reduce",
+      "Tiempo de desarrollo"
+    ],
+    [
+      "Sangrado",
+      "define",
+      "Bloque de instrucciones"
+    ],
+    [
+      "Selección",
+      "is a method of",
+      "Métodos de Ordenación"
+    ],
+    [
+      "Selección",
+      "tiene complejidad",
+      "Complejidad O(n²)"
+    ],
+    [
+      "Subprogramas",
+      "evita el uso de",
+      "Variables globales"
+    ],
+    [
+      "Subprogramas",
+      "facilitan",
+      "Depuración"
+    ],
+    [
+      "Subprogramas",
+      "facilitan",
+      "Mantenimiento"
+    ],
+    [
+      "Subprogramas",
+      "interactúan mediante",
+      "Parámetros"
+    ],
+    [
+      "Subprogramas",
+      "mejoran",
+      "Código"
+    ],
+    [
+      "Subprogramas",
+      "operan sin depender de",
+      "Variables globales"
+    ],
+    [
+      "Subprogramas",
+      "puede ser utilizado en",
+      "programa"
+    ],
+    [
+      "Subprogramas",
+      "reciben datos mediante",
+      "Parámetros"
+    ],
+    [
+      "Tiempo constante",
+      "es nivel de complejidad",
+      "O(1)"
+    ],
+    [
+      "Triángulo de Sierpinski",
+      "es ejemplo de",
+      "Auto-similitud"
+    ],
+    [
+      "Tuplas",
+      "admiten",
+      "desempaquetado"
+    ],
+    [
+      "Tuplas",
+      "es tipo de",
+      "Iterables y secuencias"
+    ],
+    [
+      "Tuplas",
+      "pueden usarse como claves en",
+      "Diccionarios"
+    ],
+    [
+      "Tuplas",
+      "son",
+      "colecciones ordenadas e inmutables"
+    ],
+    [
+      "Tuplas",
+      "son",
+      "listas inmutables"
+    ],
+    [
+      "Tuplas",
+      "soportan",
+      "indexación"
+    ],
+    [
+      "Tuplas",
+      "soportan",
+      "slicing"
+    ],
+    [
+      "Unidimensional",
+      "ejemplo",
+      "Unidimensional"
+    ],
+    [
+      "algoritmo de Euclides",
+      "calcula",
+      "máximo común divisor (MCD)"
+    ],
+    [
+      "archivos binarios",
+      "almacenan datos en su representación",
+      "interna"
+    ],
+    [
+      "archivos indizados",
+      "incorporan",
+      "índice"
+    ],
+    [
+      "arrays dinámicos",
+      "ofrecen acceso por",
+      "índice"
+    ],
+    [
+      "break",
+      "termina",
+      "bucle"
+    ],
+    [
+      "circuito electrónico",
+      "permite realizar",
+      "operaciones aritméticas"
+    ],
+    [
+      "circuito electrónico",
+      "permite realizar",
+      "operaciones de control"
+    ],
+    [
+      "circuito electrónico",
+      "permite realizar",
+      "operaciones lógicas"
+    ],
+    [
+      "colecciones heterogéneas",
+      "pueden contener elementos de distintos tipos como",
+      "Cadena"
+    ],
+    [
+      "colecciones heterogéneas",
+      "pueden contener elementos de distintos tipos como",
+      "booleano"
+    ],
+    [
+      "colecciones heterogéneas",
+      "pueden contener elementos de distintos tipos como",
+      "entero"
+    ],
+    [
+      "colecciones heterogéneas",
+      "pueden contener elementos de distintos tipos como",
+      "real"
+    ],
+    [
+      "compilador",
+      "detecta",
+      "Errores de compilación"
+    ],
+    [
+      "condición lógica",
+      "permite ejecutar",
+      "Bloque de instrucciones"
+    ],
+    [
+      "condición lógica",
+      "se evalúa como",
+      "Expresión booleana"
+    ],
+    [
+      "continue",
+      "salta a",
+      "El bucle for en Python"
+    ],
+    [
+      "código binario",
+      "es interpretado por",
+      "procesador"
+    ],
+    [
+      "diagramas de flujo",
+      "representan",
+      "Algoritmos"
+    ],
+    [
+      "else",
+      "permite ejecutar",
+      "Bloque de instrucciones"
+    ],
+    [
+      "else",
+      "se ejecuta si no ocurre excepción en",
+      "try"
+    ],
+    [
+      "errores",
+      "se dividen en",
+      "Errores de compilación"
+    ],
+    [
+      "errores",
+      "se dividen en",
+      "errores de ejecución"
+    ],
+    [
+      "errores de ejecución",
+      "dependen de",
+      "datos de entrada"
+    ],
+    [
+      "errores de ejecución",
+      "están relacionados con",
+      "datos y condiciones"
+    ],
+    [
+      "errores de ejecución",
+      "se previenen con",
+      "Estructuras de control"
+    ],
+    [
+      "errores de ejecución",
+      "son",
+      "dinámicos"
+    ],
+    [
+      "estrategia",
+      "se materializa en",
+      "Algoritmos"
+    ],
+    [
+      "estructuras persistentes",
+      "mantienen",
+      "versiones anteriores"
+    ],
+    [
+      "estructuras selectivas",
+      "modifican",
+      "flujo de control"
+    ],
+    [
+      "except",
+      "define reacción ante",
+      "Excepciones"
+    ],
+    [
+      "except",
+      "puede capturar tipo de error",
+      "ValueError"
+    ],
+    [
+      "except",
+      "puede capturar tipo de error",
+      "ZeroDivisionError"
+    ],
+    [
+      "fin",
+      "es parámetro de",
+      "range()"
+    ],
+    [
+      "finally",
+      "se ejecuta siempre",
+      "Excepciones"
+    ],
+    [
+      "if",
+      "ejecuta",
+      "Bloque de instrucciones"
+    ],
+    [
+      "if",
+      "evalúa",
+      "condición lógica"
+    ],
+    [
+      "if",
+      "permite dividir",
+      "Flujo de control selectivo"
+    ],
+    [
+      "if",
+      "puede suceder",
+      "if"
+    ],
+    [
+      "if",
+      "se denomina",
+      "if"
+    ],
+    [
+      "import",
+      "se usa para",
+      "Bibliotecas"
+    ],
+    [
+      "inicio",
+      "es parámetro de",
+      "range()"
+    ],
+    [
+      "input()",
+      "devuelve tipo",
+      "Cadena"
+    ],
+    [
+      "input()",
+      "lee datos desde",
+      "consola"
+    ],
+    [
+      "interacción con el usuario",
+      "es parte fundamental de",
+      "programa"
+    ],
+    [
+      "intérprete",
+      "detecta",
+      "Errores de compilación"
+    ],
+    [
+      "lenguaje ensamblador",
+      "utiliza",
+      "símbolos y mnemónicos"
+    ],
+    [
+      "lenguaje máquina",
+      "está compuesto por",
+      "código binario"
+    ],
+    [
+      "lenguajes de alto nivel",
+      "incluyen ejemplos como",
+      "C"
+    ],
+    [
+      "lenguajes de alto nivel",
+      "incluyen ejemplos como",
+      "Java"
+    ],
+    [
+      "lenguajes de alto nivel",
+      "incluyen ejemplos como",
+      "Python"
+    ],
+    [
+      "lenguajes de alto nivel",
+      "ocultan detalles técnicos como",
+      "Registros"
+    ],
+    [
+      "lenguajes de alto nivel",
+      "ocultan detalles técnicos como",
+      "gestión directa de memoria"
+    ],
+    [
+      "listas inmutables",
+      "útiles para",
+      "datos que no deben cambiar"
+    ],
+    [
+      "listas ordenadas",
+      "mantienen",
+      "orden específico"
+    ],
+    [
+      "objeto inmutable",
+      "no permiten",
+      "modificaciones"
+    ],
+    [
+      "objeto iterable",
+      "puede ser",
+      "Cadena"
+    ],
+    [
+      "objeto iterable",
+      "puede ser",
+      "Diccionarios"
+    ],
+    [
+      "objeto iterable",
+      "puede ser",
+      "Listas"
+    ],
+    [
+      "objeto iterable",
+      "puede ser",
+      "Tuplas"
+    ],
+    [
+      "objeto iterable",
+      "puede ser",
+      "range()"
+    ],
+    [
+      "operadores condicionales",
+      "se usan en",
+      "estructuras selectivas"
+    ],
+    [
+      "operadores lógicos",
+      "se usan en",
+      "estructuras selectivas"
+    ],
+    [
+      "paso",
+      "es parámetro de",
+      "range()"
+    ],
+    [
+      "pensamiento computacional",
+      "consiste en",
+      "descomponer problemas"
+    ],
+    [
+      "pensamiento computacional",
+      "implica",
+      "Algoritmos"
+    ],
+    [
+      "pensamiento computacional",
+      "implica",
+      "descomponer problemas"
+    ],
+    [
+      "pensamiento computacional",
+      "implica",
+      "identificar patrones"
+    ],
+    [
+      "pensamiento computacional",
+      "se apoya en",
+      "Algoritmos"
+    ],
+    [
+      "print()",
+      "muestra información en",
+      "consola"
+    ],
+    [
+      "problemas",
+      "incluyen",
+      "codificación"
+    ],
+    [
+      "problemas",
+      "incluyen",
+      "diseño"
+    ],
+    [
+      "problemas",
+      "requieren",
+      "Mantenimiento"
+    ],
+    [
+      "problemas",
+      "requieren",
+      "análisis"
+    ],
+    [
+      "problemas",
+      "requieren",
+      "ejecución"
+    ],
+    [
+      "problemas",
+      "requieren",
+      "solución"
+    ],
+    [
+      "procesador",
+      "ejecuta",
+      "Instrucciones"
+    ],
+    [
+      "procesador",
+      "es un",
+      "circuito electrónico"
+    ],
+    [
+      "programa",
+      "está compuesto por",
+      "Expresiones"
+    ],
+    [
+      "programa",
+      "está compuesto por",
+      "Instrucciones"
+    ],
+    [
+      "programa",
+      "está compuesto por",
+      "constantes"
+    ],
+    [
+      "programa",
+      "está compuesto por",
+      "palabras reservadas"
+    ],
+    [
+      "programa",
+      "está compuesto por",
+      "variables"
+    ],
+    [
+      "programa",
+      "incluye",
+      "Comentarios"
+    ],
+    [
+      "programa",
+      "se divide en",
+      "Módulos"
+    ],
+    [
+      "programar",
+      "implica desarrollar",
+      "pensamiento computacional"
+    ],
+    [
+      "programar",
+      "requiere comprender",
+      "problemas"
+    ],
+    [
+      "pseudocódigo",
+      "utiliza",
+      "lenguaje natural"
+    ],
+    [
+      "range()",
+      "es utilizada en",
+      "El bucle for en Python"
+    ],
+    [
+      "slicing",
+      "es una técnica para extraer partes de",
+      "Iterables y secuencias"
+    ],
+    [
+      "tablas de multiplicar",
+      "muestra usando",
+      "Bucles anidados"
+    ],
+    [
+      "tablas hash",
+      "permiten acceso rápido a",
+      "pares clave-valor"
+    ],
+    [
+      "tipos de datos básicos",
+      "incluyen",
+      "Cadena"
+    ],
+    [
+      "tipos de datos básicos",
+      "incluyen",
+      "booleano"
+    ],
+    [
+      "tipos de datos básicos",
+      "incluyen",
+      "entero"
+    ],
+    [
+      "tipos de datos básicos",
+      "incluyen",
+      "float"
+    ],
+    [
+      "try",
+      "contiene",
+      "Excepciones"
+    ],
+    [
+      "árboles balanceados",
+      "mantienen orden de los elementos con",
+      "tiempos de acceso eficientes"
+    ]
+  ]
+}
