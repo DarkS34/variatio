@@ -16,6 +16,9 @@ for pattern in NOISY_WARNING_MODULES:
 
 logger.remove()
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 logger.level("DEBUG",   color="<blue><dim>")
 logger.level("INFO",    color="<white>")
 logger.level("SUCCESS", color="<bold><green>")

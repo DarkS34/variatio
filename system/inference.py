@@ -21,6 +21,9 @@ class GenerationResponse:
 class OllamaEngine:
     name = "ollama"
 
+    def __init__(self):
+        self._client = ollama.Client(host=config.OLLAMA_HOST)
+
     def is_available(self) -> bool:
         try:
             response = httpx.get(config.OLLAMA_HOST, timeout=3.0)
@@ -31,7 +34,7 @@ class OllamaEngine:
     def generate(self, model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
         options = {} if think is None else {"think": think}
         try:
-            resp = ollama.generate(model=model, prompt=prompt, **options)
+            resp = self._client.generate(model=model, prompt=prompt, **options)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
         return GenerationResponse(
@@ -40,12 +43,12 @@ class OllamaEngine:
 
     def embed(self, model: str, text: str) -> list[float]:
         try:
-            return ollama.embeddings(model=model, prompt=text)["embedding"]
+            return self._client.embeddings(model=model, prompt=text)["embedding"]
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama embedding failed for model '{model}': {e}") from e
 
     def ensure_model(self, model: str) -> bool:
-        installed = [info["model"] for info in ollama.list()["models"]]
+        installed = [info["model"] for info in self._client.list()["models"]]
         if model in installed:
             return True
         return self._pull(model)
@@ -59,7 +62,7 @@ class OllamaEngine:
     def _pull(self, model: str) -> bool:
         try:
             logger.info(f"Downloading model '{model}'...")
-            download_progress = ollama.pull(model, stream=True)
+            download_progress = self._client.pull(model, stream=True)
 
             pbar = None
             for partial_progress in download_progress:
