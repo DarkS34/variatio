@@ -1,13 +1,12 @@
 import json
-from json_repair import repair_json
-from pathlib import Path
 
+from json_repair import repair_json
 from loguru import logger
 
-from system import config, inference
-
+from . import config, inference
 from .embedder import Embedder
-from .prompts import tag_concepts_prompt, json_repair_prompt
+from .prompts import tag_concepts_prompt
+from .utils import parse_with_repair
 
 
 class ConceptTagger:
@@ -16,16 +15,18 @@ class ConceptTagger:
         embedder: Embedder,
         concept_tagger_model: str,
         primary_field: str,
+        context: dict | None = None,
         top_k_candidates: int = 10,
     ):
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
         self.primary_field = primary_field
+        self.context = context
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
 
     def tag(self, statement: str) -> dict:
-        empty = {"concepts": [], "primary_concept": None, "domain": None}
+        empty = {"concepts": [], "primary_concept": None}
 
         candidates = self.embedder.top_k_concepts(statement, self.top_k_candidates)
         if not candidates:
@@ -38,28 +39,25 @@ class ConceptTagger:
         )
         candidate_names = [c for c, _ in candidates]
 
-        prompt = tag_concepts_prompt(statement=statement, candidates=candidates_str)
+        prompt = tag_concepts_prompt(
+            statement=statement, candidates=candidates_str, context=self.context
+        )
 
         response = inference.generate(
             model=self.concept_tagger_model, prompt=prompt, think=False
         ).response
-        result = self._parse_and_validate(response, candidate_names)
 
-        for attempt in range(self.max_repair_attempts):
-            if result is not None:
-                break
-            logger.warning(f"Repair attempt {attempt + 1}/{self.max_repair_attempts}")
+        def parse(text: str) -> tuple[dict | None, str | None]:
+            parsed = self._parse_and_validate(text, candidate_names)
+            return parsed, None if parsed is not None else "invalid JSON or schema"
 
-            repair_prompt = json_repair_prompt(
-                broken_output=response, error_msg="invalid JSON or schema"
-            )
-
-            response = inference.generate(
-                model=self.concept_tagger_model, prompt=repair_prompt
-            ).response
-            result = self._parse_and_validate(response, candidate_names)
-            if result is not None:
-                logger.info(f"Repair attempt {attempt + 1} succeeded")
+        result, _ = parse_with_repair(
+            response,
+            parse,
+            repair_model=self.concept_tagger_model,
+            max_attempts=self.max_repair_attempts,
+            shape="objeto",
+        )
 
         if result is None:
             logger.error("Failed to tag statement after repairs, returning empty annotation")
@@ -102,7 +100,7 @@ class ConceptTagger:
             logger.error(f"Parse error: {e}")
             return None
 
-    def tag_all(self, exemplars_bank: dict, output_path: str) -> dict:
+    def tag_all(self, exemplars_bank: dict) -> dict:
         annotated: dict[str, dict] = {}
         total = len(exemplars_bank)
 
@@ -111,11 +109,6 @@ class ConceptTagger:
             annotation = self.tag(content[self.primary_field])
             annotated[c_id] = {**content, **annotation}
 
-        output = Path(output_path)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with output.open("w", encoding="utf-8") as f:
-            json.dump(annotated, f, ensure_ascii=False, indent=2)
-
-        logger.success(f"Saved {len(annotated)} annotated exercise(s) to {output}")
+        logger.success(f"Tagged {len(annotated)} item(s)")
 
         return annotated

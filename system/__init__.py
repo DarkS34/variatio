@@ -32,9 +32,9 @@ logger.add(
     colorize=True,
 )
 
-if not inference.is_available():
-    msg = f"Cannot connect to inference engine '{inference.engine_name()}'. Make sure it is running before initializing the agent."
-    logger.critical(msg)
-    raise RuntimeError(msg)
-else:
+def bootstrap() -> None:
+    if not inference.is_available():
+        msg = f"Cannot connect to inference engine '{inference.engine_name()}'. Make sure it is running before initializing the agent."
+        logger.critical(msg)
+        raise RuntimeError(msg)
     prepare_models()

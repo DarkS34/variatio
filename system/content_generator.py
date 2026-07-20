@@ -6,11 +6,12 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from system import config, inference
-from system.embedder import Embedder
-from system.knowledge_graph import KnowledgeGraph
-from system.content_profile import ContentProfile
-from system.prompts import generate_content_prompt, json_repair_prompt
+from . import config, inference
+from .content_profile import ContentProfile
+from .embedder import Embedder
+from .knowledge_graph import KnowledgeGraph
+from .prompts import generate_content_prompt
+from .utils import parse_with_repair
 
 
 THINK_TAG_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL | re.IGNORECASE)
@@ -31,6 +32,7 @@ class ContentGenerator:
         embedder: Embedder,
         content_profile: ContentProfile,
         generator_model: str,
+        repair_model: str = config.REPAIR_LLM,
     ):
         self.knowledge_graph = knowledge_graph
         self.exemplars_bank = exemplars_bank
@@ -39,6 +41,7 @@ class ContentGenerator:
         self.item_model = content_profile.content_item
         self.context = content_profile.content_context
         self.generator_model = generator_model
+        self.repair_model = repair_model
         self.general_generation_rules: list[str] = content_profile.general_generation_rules
         self.generation_field_guidance: dict[str, str] = content_profile.field_guidance("generation")
 
@@ -256,17 +259,17 @@ class ContentGenerator:
         resp = inference.generate(model=self.generator_model, prompt=prompt, think=True)
         body, thinking = self._split_thinking(resp.response, getattr(resp, "thinking", None))
 
-        item, err = self._parse_and_validate(body, fixed)
-        for attempt in range(1, self.max_repair_attempts + 1):
-            if item is not None:
-                break
-            logger.warning(f"repair {attempt}/{self.max_repair_attempts}: {err}")
-            repair_prompt = json_repair_prompt(
-                broken_output=body, error_msg=err or "invalid JSON"
-            )
-            resp = inference.generate(model=config.REPAIR_LLM, prompt=repair_prompt)
-            body, _ = self._split_thinking(resp.response, getattr(resp, "thinking", None))
-            item, err = self._parse_and_validate(body, fixed)
+        def parse(text: str) -> tuple[BaseModel | None, str | None]:
+            cleaned, _ = self._split_thinking(text, None)
+            return self._parse_and_validate(cleaned, fixed)
+
+        item, _ = parse_with_repair(
+            body,
+            parse,
+            repair_model=self.repair_model,
+            max_attempts=self.max_repair_attempts,
+            shape="objeto",
+        )
 
         if item is None:
             return None

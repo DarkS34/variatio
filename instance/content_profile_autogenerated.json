@@ -50,15 +50,6 @@
       "guidance": {
         "extraction": "Identificar el nivel basándose en los encabezados de sección del documento (ej. 'Ejercicios nivel básico', 'Ejercicios nivel intermedio', 'Ejercicio avanzado'). Si el ejercicio está en una sección general sin nivel especificado, asignar null."
       }
-    },
-    "is_solved": {
-      "schema": {
-        "type": "boolean"
-      },
-      "description": "Indica si el elemento es un ejercicio ya resuelto o un ejercicio propuesto.",
-      "guidance": {
-        "extraction": "Asignar true si el elemento se encuentra bajo la sección 'Ejercicios resueltos' o tiene una 'SOLUCION PROPUESTA' asociada. Asignar false si se encuentra bajo 'Ejercicios propuestos' o secciones similares de tareas pendientes."
-      }
     }
   }
 }

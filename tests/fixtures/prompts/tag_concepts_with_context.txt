@@ -1,0 +1,30 @@
+Clasifica el siguiente item de contenido educativo asignándole los conceptos del currículo que trabaja.
+
+# CONTEXTO
+- materia: Programación I
+- lenguaje_programacion: Python
+- nivel_educativo: Universitario
+
+# CONCEPTOS CANDIDATOS
+Los conceptos están ordenados de mayor a menor relevancia semántica respecto al texto del item:
+1. Funciones (score: 0.812)
+2. Parámetros (score: 0.640)
+
+# ESQUEMA DE SALIDA
+{
+  "concepts": ["Concepto A", "Concepto B"],
+  "primary_concept": "Concepto A"
+}
+
+# REGLAS
+- Usa ÚNICAMENTE conceptos de la lista de candidatos. No inventes ni parafrasees nombres.
+- `concepts`: lista de todos los conceptos que el item trabaja de forma explícita o necesaria.
+- `primary_concept`: el concepto central que el item pretende practicar. Debe aparecer también en `concepts`.
+- Si el item trabaja claramente un solo concepto, `concepts` tendrá un único elemento.
+- Si tras analizar los candidatos consideras que NINGUNO representa lo que el item practica de forma central, devuelve {"concepts": [], "primary_concept": null}. Usa esta opción con criterio: solo cuando ningún candidato describa el contenido real del item, no ante mera incertidumbre.
+- Responde SOLO con el JSON. Sin texto antes ni después, sin backticks, sin comentarios.
+
+# ITEM
+Escribe una función que sume dos números.
+
+JSON:

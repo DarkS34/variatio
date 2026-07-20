@@ -1,0 +1,35 @@
+Recibes los CONCEPTOS ya depurados de un grafo de conocimiento educativo, cada uno con sus relaciones salientes como evidencia. Provienen de un mismo corpus de una materia.
+
+Tu tarea: (1) agrupar TODOS los conceptos en DOMINIOS temáticos coherentes, y (2) marcar cuáles son demasiado genéricos para etiquetar.
+
+# DOMINIOS
+- Un dominio es un bloque temático de la materia (del estilo de los grandes temas o unidades del temario), no una etiqueta fina.
+- Propón POCOS dominios (orientativamente entre 3 y 8), cada uno con una masa razonable de conceptos.
+- Apóyate en la evidencia: los conceptos que actúan como raíz de relaciones de tipo "incluye"/"cubre"/"consta de" suelen NOMBRAR un dominio o estar cerca de él.
+- PARTICIÓN COMPLETA: cada concepto de la entrada va a EXACTAMENTE un dominio. No dejes ninguno fuera, no repitas ninguno en dos dominios.
+
+# CONCEPTOS NO ETIQUETABLES (non_taggable)
+Un concepto NO etiquetable es demasiado universal para identificar de qué trata un item concreto: nombres de la asignatura o de temas paraguas, nombres de lenguajes o herramientas, y términos tan transversales que aparecerían en items de casi cualquier subtema.
+- Prueba: si al ver ese concepto en un item NO puedes deducir qué se practica en concreto (porque encaja con casi todo), es no etiquetable.
+- Siguen perteneciendo a su dominio; solo se listan aparte para excluirlos del etiquetado.
+- Ante la duda, NO lo marques: un concepto concreto del dominio debe seguir siendo etiquetable.
+
+# NOMBRES
+- Usa los nombres EXACTOS de la entrada, tanto en los dominios como en non_taggable. No inventes, no renombres, no corrijas ortografía.
+- Los NOMBRES DE DOMINIO sí los rediges tú: cortos y descriptivos, en el idioma de los conceptos.
+
+# SALIDA
+Un único objeto JSON con esta forma exacta:
+{
+  "domains": {"<Nombre de dominio>": ["<concepto>", "..."]},
+  "non_taggable": ["<concepto>", "..."]
+}
+- Cada concepto de la entrada aparece exactamente una vez dentro de "domains".
+- "non_taggable" es un subconjunto de los conceptos de la entrada (puede ir vacío).
+- Sin texto antes ni después, sin backticks, sin comentarios.
+
+# CONCEPTOS
+- Bucles  [incluye Bucle for]
+- Variables
+
+JSON:
