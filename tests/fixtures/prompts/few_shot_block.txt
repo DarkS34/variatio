@@ -1,0 +1,7 @@
+---
+ITEM (points=3):
+Recorre una lista de precios.
+SOLUTION:
+def f(): pass
+DIFFICULTY_LEVEL:
+básico

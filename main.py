@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from system import config
+from system import bootstrap, config
 from system.content_profile import ContentProfile
 from system.knowledge_graph import KnowledgeGraph
 from system.exemplars_bank import ExemplarsBank
@@ -81,7 +81,13 @@ def _annotate_bank(bank: dict, tagger: ConceptTagger) -> dict:
     if bank and all("concepts" in item for item in bank.values()):
         logger.info("Exemplars bank already annotated — skipping tagging")
         return bank
-    return tagger.tag_all(bank, config.EXEMPLARS_BANK_PATH)
+
+    annotated = tagger.tag_all(bank)
+    config.EXEMPLARS_BANK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with config.EXEMPLARS_BANK_PATH.open("w", encoding="utf-8") as f:
+        json.dump(annotated, f, ensure_ascii=False, indent=2)
+    logger.success(f"Saved {len(annotated)} annotated item(s) to {config.EXEMPLARS_BANK_PATH}")
+    return annotated
 
 
 def _pick_target_concepts(annotated_bank: dict, k: int) -> list[str]:
@@ -92,7 +98,18 @@ def _pick_target_concepts(annotated_bank: dict, k: int) -> list[str]:
     return sorted(counts, key=lambda c: counts[c], reverse=True)[:k]
 
 
-if __name__ == "__main__":
+def _report(results: list) -> None:
+    logger.success(f"Generated {len(results)} item(s)")
+    for i, result in enumerate(results, 1):
+        print(f"\n===================== ITEM {i} =====================")
+        print(result.item.model_dump_json(indent=2))
+        if result.thinking:
+            print(f"\n--- thinking ---\n{result.thinking}")
+
+
+def main(n: int = 2) -> list:
+    bootstrap()
+
     content_profile = _resolve_content_profile()
     graph = KnowledgeGraph(_resolve_kg_path())
     bank = _resolve_bank(content_profile)
@@ -105,7 +122,10 @@ if __name__ == "__main__":
     )
 
     tagger = ConceptTagger(
-        embedder, config.CONCEPT_TAGGER_LLM, primary_field=content_profile.primary_field
+        embedder,
+        config.CONCEPT_TAGGER_LLM,
+        primary_field=content_profile.primary_field,
+        context=content_profile.content_context,
     )
     annotated_bank = _annotate_bank(bank, tagger)
     embedder.enrich_index_with_content(annotated_bank)
@@ -118,21 +138,21 @@ if __name__ == "__main__":
         generator_model=config.CONTENT_GENERATION_LLM,
     )
 
-    targets = _pick_target_concepts(annotated_bank, k=2)
+    targets = _pick_target_concepts(annotated_bank, k=n)
     if not targets:
         logger.error("No tagged concepts available to drive generation — aborting demo")
         raise SystemExit(1)
 
-    logger.info(f"Generating 2 item(s) for target concepts: {targets}")
+    logger.info(f"Generating {n} item(s) for target concepts: {targets}")
     results = generator.generate(
         concepts=targets,
-        n=2,
-        fixed={"difficulty_level": "intermedio", "is_solved": True},
+        n=n,
+        fixed={"difficulty_level": "intermedio"},
     )
 
-    logger.success(f"Generated {len(results)} item(s)")
-    for i, result in enumerate(results, 1):
-        print(f"\n===================== ITEM {i} =====================")
-        print(result.item.model_dump_json(indent=2))
-        if result.thinking:
-            print(f"\n--- thinking ---\n{result.thinking}")
+    _report(results)
+    return results
+
+
+if __name__ == "__main__":
+    main()

@@ -1,12 +1,13 @@
 import hashlib
 import json
+from pathlib import Path
 
-from . import config, inference
 import numpy as np
 from loguru import logger
 
-from system.knowledge_graph import KnowledgeGraph
-from .prompts import concept_descrition_prompt
+from . import config, inference
+from .knowledge_graph import KnowledgeGraph
+from .prompts import concept_description_prompt
 
 
 class Embedder:
@@ -16,39 +17,62 @@ class Embedder:
         embedding_model: str,
         primary_field: str,
         context: dict,
+        descriptions_path: str | Path | None = None,
+        concepts_cache_path: str | Path | None = None,
+        exemplars_bank_cache_path: str | Path | None = None,
     ):
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
         self.primary_field = primary_field
         self.context = context
 
+        self.descriptions_path = Path(descriptions_path or config.CONCEPT_DESCRIPTIONS_PATH)
+        self.concepts_cache_path = Path(concepts_cache_path or config.CONCEPTS_EMBEDDINGS_PATH)
+        self.exemplars_bank_cache_path = Path(
+            exemplars_bank_cache_path or config.EXEMPLARS_BANK_EMBEDDINGS_PATH
+        )
+
         self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD
 
         self.concepts_index: dict[str, np.ndarray] = {}
         self.exemplars_bank_index: dict[str, np.ndarray] = {}
         self.concept_descriptions: dict[str, str] = {}
+        self.exemplars_bank: dict[str, dict] = {}
+        self._cached_exemplars_bank_fingerprint: str | None = None
 
-        self._load_or_generate_descriptions()
+        self._ensure_descriptions()
+        self._ensure_concepts_index()
 
+        self.merged_index: dict[str, np.ndarray] = dict(self.concepts_index)
+        self._load_previous_bank_index()
+
+    # SETUP ---------------------------------------------------------------------------------------
+
+    def _ensure_concepts_index(self) -> None:
         if self._is_concept_cache_valid():
             self._load_concept_cache()
             logger.info(f"Loaded concepts index from cache ({len(self.concepts_index)} concepts)")
-        else:
-            logger.info("Building concepts index...")
-            self.init_index_with_concepts()
-            self._save_concept_cache()
-            logger.info(f"Saved concepts index cache ({len(self.concepts_index)} concepts)")
+            return
+        logger.info("Building concepts index...")
+        self.init_index_with_concepts()
+        self._save_concept_cache()
+        logger.info(f"Saved concepts index cache ({len(self.concepts_index)} concepts)")
 
-        self.index: dict[str, np.ndarray] = dict(self.concepts_index)
+    # The bank index persisted by the previous run is a warm start for this run's tagging:
+    # enrich_index_with_content re-embeds and re-merges it once the current bank is known.
+    def _load_previous_bank_index(self) -> None:
+        if not self.exemplars_bank_cache_path.exists():
+            logger.warning(
+                "Exemplars bank embeddings cache not found - call enrich_index_with_content to generate it."
+            )
+            return
+        self._load_exemplars_bank_cache()
+        self._merge_into_index()
+        logger.info(
+            f"Loaded exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)"
+        )
 
-        if config.EXEMPLARS_BANK_EMBEDDINGS_PATH.exists():
-            self._load_exemplars_bank_cache()
-            self._merge_into_index()
-            logger.info(f"Loaded exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)")
-        else:
-            logger.warning("Exemplars bank embeddings cache not found - call enrich_index_with_content to generate it.")
-
-    # FIGERPRINTS ---------------------------------------------------------------------------------
+    # FINGERPRINTS --------------------------------------------------------------------------------
 
     def _concept_fingerprint(self) -> str:
         taggable = self.knowledge_graph.taggable_concepts
@@ -69,55 +93,46 @@ class Embedder:
         entries_serialized = json.dumps(entries, ensure_ascii=False)
         return hashlib.md5(f"{self.embedding_model}::{entries_serialized}".encode()).hexdigest()
 
-    # CONCEPT CACHE VALIDATION --------------------------------------------------------------------
+    # CONCEPT CACHE --------------------------------------------------------------------
 
     def _is_concept_cache_valid(self) -> bool:
-        if not config.CONCEPTS_EMBEDDINGS_PATH.exists():
+        if not self.concepts_cache_path.exists():
             return False
         try:
-            data = np.load(config.CONCEPTS_EMBEDDINGS_PATH, allow_pickle=True)
+            data = np.load(self.concepts_cache_path, allow_pickle=True)
             return str(data["fingerprint"]) == self._concept_fingerprint()
         except Exception:
             return False
 
     def _load_concept_cache(self) -> None:
-        data = np.load(config.CONCEPTS_EMBEDDINGS_PATH, allow_pickle=True)
+        data = np.load(self.concepts_cache_path, allow_pickle=True)
         self.concepts_index = dict(zip(data["keys"], data["vectors"]))
 
     def _save_concept_cache(self) -> None:
-        config.CONCEPTS_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self.concepts_cache_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez(
-            config.CONCEPTS_EMBEDDINGS_PATH,
+            self.concepts_cache_path,
             keys=list(self.concepts_index.keys()),
             vectors=np.array(list(self.concepts_index.values())),
             fingerprint=self._concept_fingerprint(),
         )
 
-    # EXEMPLARS BANK CACHE VALIDATION -------------------------------------------------------------
-
-    def _is_exemplars_bank_cache_valid(self) -> bool:
-        if not config.EXEMPLARS_BANK_EMBEDDINGS_PATH.exists():
-            return False
-        try:
-            data = np.load(config.EXEMPLARS_BANK_EMBEDDINGS_PATH, allow_pickle=True)
-            return str(data["fingerprint"]) == self._exemplars_bank_fingerprint()
-        except Exception:
-            return False
+    # EXEMPLARS BANK CACHE -------------------------------------------------------------
 
     def _load_exemplars_bank_cache(self) -> None:
-        data = np.load(config.EXEMPLARS_BANK_EMBEDDINGS_PATH, allow_pickle=True)
+        data = np.load(self.exemplars_bank_cache_path, allow_pickle=True)
         self.exemplars_bank_index = dict(zip(data["keys"], data["vectors"]))
         self.exemplars_bank = json.loads(str(data["assignments"]))
         self._cached_exemplars_bank_fingerprint = str(data["fingerprint"])
 
     def _save_exemplars_bank_cache(self) -> None:
-        config.EXEMPLARS_BANK_EMBEDDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self.exemplars_bank_cache_path.parent.mkdir(parents=True, exist_ok=True)
         assignments = {
             ex_id: {"concepts": sorted(ex.get("concepts", []))}
             for ex_id, ex in self.exemplars_bank.items()
         }
         np.savez(
-            config.EXEMPLARS_BANK_EMBEDDINGS_PATH,
+            self.exemplars_bank_cache_path,
             keys=list(self.exemplars_bank_index.keys()),
             vectors=np.array(list(self.exemplars_bank_index.values())),
             assignments=json.dumps(assignments, ensure_ascii=False),
@@ -126,9 +141,9 @@ class Embedder:
 
     # CONCEPT DESCRIPTIONS ------------------------------------------------------------------------
 
-    def _load_or_generate_descriptions(self) -> None:
-        if config.CONCEPT_DESCRIPTIONS_PATH.exists():
-            with config.CONCEPT_DESCRIPTIONS_PATH.open(encoding="utf-8") as f:
+    def _ensure_descriptions(self) -> None:
+        if self.descriptions_path.exists():
+            with self.descriptions_path.open(encoding="utf-8") as f:
                 self.concept_descriptions = json.load(f)
 
         missing = [
@@ -150,9 +165,9 @@ class Embedder:
                 logger.warning(f"Falling back to legacy describe for '{concept}': {e}")
                 self.concept_descriptions[concept] = self._simple_describe(concept)
 
-        config.CONCEPT_DESCRIPTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self.descriptions_path.parent.mkdir(parents=True, exist_ok=True)
         
-        with config.CONCEPT_DESCRIPTIONS_PATH.open("w", encoding="utf-8") as f:
+        with self.descriptions_path.open("w", encoding="utf-8") as f:
             json.dump(self.concept_descriptions, f, ensure_ascii=False, indent=2)
         logger.success(f"Saved {len(self.concept_descriptions)} concept descriptions to cache")
 
@@ -165,7 +180,7 @@ class Embedder:
             if c != concept and c not in self.knowledge_graph.generic_non_taggable_concepts
         ]
 
-        prompt = concept_descrition_prompt(
+        prompt = concept_description_prompt(
             concept=concept,
             domain=domain,
             relations=relations,
@@ -176,46 +191,38 @@ class Embedder:
         return response.strip()
 
     def _collect_relations(self, concept: str) -> dict[str, list[str]]:
-        relations: dict[str, list[str]] = {}
-        for verb, graph in self.knowledge_graph.graphs.items():
-            if concept not in graph:
-                continue
-            if graph.is_directed():
-                successors = sorted(graph.successors(concept))
-                predecessors = sorted(graph.predecessors(concept))
-                if successors:
-                    relations[f"este concepto {verb}"] = successors
-                if predecessors:
-                    relations[f"{verb} este concepto"] = predecessors
-            else:
-                nbrs = sorted(graph.neighbors(concept))
-                if nbrs:
-                    relations[verb] = nbrs
-        return relations
-
-    def _simple_describe(self, concept: str) -> str:
         kg = self.knowledge_graph
-        domain = kg.concept_domain[concept]
-        lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
+        relations: dict[str, list[str]] = {}
 
         for verb, graph in kg.graphs.items():
             if not kg.details(verb).get("use_in_embedding", True):
                 continue
-            if graph.is_directed():
-                forward = sorted(graph.predecessors(concept))
-                backward = sorted(graph.successors(concept))
-                if forward:
-                    lines.append(f'Este concepto {verb}: {", ".join(forward)}.')
-                for s in backward:
-                    lines.append(f"{s} {verb} este concepto.")
-            else:
-                nbrs = sorted(graph.neighbors(concept))
-                if nbrs:
-                    lines.append(f'Este concepto {verb}: {", ".join(nbrs)}.')
+            if concept not in graph:
+                continue
+            if not graph.is_directed():
+                neighbors = kg.neighbors(concept, verb)
+                if neighbors:
+                    relations[verb] = neighbors
+                continue
+            successors = kg.neighbors(concept, verb, direction="out")
+            predecessors = kg.neighbors(concept, verb, direction="in")
+            if successors:
+                relations[f"este concepto {verb}"] = successors
+            if predecessors:
+                relations[f"{verb} este concepto"] = predecessors
 
+        return relations
+
+    def _simple_describe(self, concept: str) -> str:
+        domain = self.knowledge_graph.concept_domain[concept]
+        lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
+        lines.extend(
+            f'{verb}: {", ".join(neighbors)}.'
+            for verb, neighbors in self._collect_relations(concept).items()
+        )
         return "\n".join(lines)
 
-    # BUILD INDICES -------------------------------------------------------------------------------
+    # INDICES -------------------------------------------------------------------------------
 
     def init_index_with_concepts(self) -> None:
         for concept in self.knowledge_graph.taggable_concepts:
@@ -225,10 +232,7 @@ class Embedder:
         self.exemplars_bank = annotated_bank
         new_fingerprint = self._exemplars_bank_fingerprint()
 
-        if (
-            getattr(self, "_cached_exemplars_bank_fingerprint", None) == new_fingerprint
-            and self.exemplars_bank_index
-        ):
+        if self._cached_exemplars_bank_fingerprint == new_fingerprint and self.exemplars_bank_index:
             logger.info("Exemplars bank index already up to date; skipping re-embedding.")
             return
 
@@ -256,9 +260,9 @@ class Embedder:
             ]
 
             all_vecs = [name_vec] + example_vecs
-            self.index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
+            self.merged_index[concept] = self._l2_normalize(np.mean(all_vecs, axis=0))
 
-    # TECHNICAL STUFF -----------------------------------------------------------------------------
+    # VECTOR MATH -----------------------------------------------------------------------------
 
     def _embed(self, text: str) -> np.ndarray:
         resp = inference.embed(model=self.embedding_model, text=text)
@@ -271,12 +275,12 @@ class Embedder:
     def cosine_similarity(self, vec_a: np.ndarray, vec_b: np.ndarray) -> float:
         return float(np.dot(vec_a, vec_b))
 
-    # RETRIEVE  -----------------------------------------------------------------------------
+    # RETRIEVAL -----------------------------------------------------------------------------
 
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
         vec = self._embed(text)
         scores = sorted(
-            ((c, self.cosine_similarity(vec, v)) for c, v in self.index.items()),
+            ((c, self.cosine_similarity(vec, v)) for c, v in self.merged_index.items()),
             key=lambda x: x[1],
             reverse=True,
         )

@@ -1,0 +1,52 @@
+Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
+
+# CONTEXTO
+- materia: Programación I
+- lenguaje_programacion: Python
+- nivel_educativo: Universitario
+
+# CONCEPTOS OBJETIVO
+El item debe practicar estos conceptos del currículo y no introducir otros más avanzados:
+- **Bucles**
+
+# VALORES FIJOS PARA ESTA GENERACIÓN
+Algunos campos del schema ya tienen su valor decidido por el orquestador. Respétalos exactamente:
+(no hay valores fijos)
+
+# REGLAS DE GENERACIÓN
+- Usa nombres significativos.
+
+# CREATIVIDAD DE TEMÁTICA
+La temática (cover story / contexto narrativo) debe ser ORIGINAL y CREATIVA. Inventa un dominio narrativo concreto: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... cualquier ámbito reconocible. NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los items previos del lote. La sustancia (qué se trabaja) viene fijada por las secciones anteriores; lo que cambia entre items es el envoltorio narrativo.
+
+# EJEMPLOS DE REFERENCIA
+Los siguientes items trabajan conceptos relacionados. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
+(Ningún ejemplo disponible — genera el item de cero respetando las reglas anteriores.)
+
+# FORMA DE LA SALIDA
+Debes devolver una INSTANCIA conforme al schema, NO el schema en sí. La salida es un único objeto JSON cuyas claves de nivel superior son exactamente las propiedades definidas por el schema, con valores concretos. NO incluyas `properties`, `type`, `required`, `$defs`, `title` ni ningún otro metadato del schema.
+
+Esqueleto exacto de la forma esperada (rellena los valores; las claves vienen del schema y son las únicas válidas):
+{
+  "statement": <valor concreto para statement>
+}
+
+# GUÍA POR CAMPO
+Instrucciones específicas para la generación de cada campo. Complementan la `description` del schema (que describe la naturaleza intrínseca del campo):
+(ningún campo con guía específica adicional)
+
+# SCHEMA DE REFERENCIA (consulta para constraints como minLength/Literal/pattern; NO lo copies)
+{
+  "type": "object",
+  "properties": {
+    "statement": {"type": "string"}
+  }
+}
+
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON que sea una instancia conforme al schema. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Las claves de nivel superior son exactamente las del schema — ni más, ni menos, ni con otros nombres.
+- Escapa correctamente saltos de línea (`\n`) y comillas internas (`\"`) dentro de strings.
+
+JSON:

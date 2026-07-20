@@ -1,0 +1,23 @@
+Recibes los VERBOS de relación de un grafo de conocimiento educativo extraído automáticamente. Son de texto libre y ruidosos (hay muchas formas de decir lo mismo). Cada uno viene con un ejemplo `origen → destino` para desambiguar su dirección y sentido.
+
+Tu tarea: asignar a CADA verbo exactamente UNO de estos cuatro tipos canónicos, respetando el sentido `origen → destino` del ejemplo.
+
+# TIPOS CANÓNICOS
+- `prerrequisito`: el origen NECESITA/PRESUPONE el destino, o el destino debe dominarse/existir antes que el origen (dependencia, requisito, "se apoya en", "requiere", "presupone").
+- `es_un`: el origen es un TIPO, caso o subclase del destino (relación es-un / clasificación: "es un tipo de", "es ejemplo de", "es una variante de").
+- `parte_de`: el origen forma PARTE de, se compone dentro de, o está contenido en el destino; incluye también la composición inversa "el origen incluye/contiene al destino" (relación todo-parte: "incluye", "cubre", "consta de", "forma parte de").
+- `relacionado`: cualquier otra asociación semántica que no encaje limpiamente en las tres anteriores (relación genérica, no direccional).
+
+# REGLAS
+- Devuelve CADA verbo de la entrada exactamente una vez como clave.
+- El valor es UNO de: "prerrequisito", "es_un", "parte_de", "relacionado". Nada más.
+- Fíjate en el ejemplo `origen → destino`: si el sentido natural va al revés del tipo, elige el tipo que encaje con ese sentido o usa "relacionado".
+- Ante la duda, usa "relacionado". No fuerces un tipo específico si no es claro.
+
+# SALIDA
+Un único objeto JSON `{"<verbo>": "<tipo>", "...": "..."}`. Sin texto antes ni después, sin backticks, sin comentarios.
+
+# VERBOS
+- "incluye"  (p.ej. Bucles → Bucle for)
+
+JSON:

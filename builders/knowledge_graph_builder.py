@@ -21,6 +21,8 @@ from system.prompts import (
     type_graph_relations_prompt,
 )
 
+from . import _source_docs
+
 
 class _LMProgressCallback(BaseCallback):
     def __init__(self):
@@ -46,8 +48,6 @@ class _LMProgressCallback(BaseCallback):
 
 
 class KnowledgeGraphBuilder:
-    SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
-
     RELATION_TYPES = {
         "prerrequisito": {
             "verbose": "tiene como prerrequisito",
@@ -110,12 +110,7 @@ class KnowledgeGraphBuilder:
         output_file_path: str,
         cluster: bool = False,
     ) -> dict:
-        input_path = Path(input_dir)
-        files = sorted(
-            p
-            for p in input_path.iterdir()
-            if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTS
-        )
+        files = _source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported files found in: {input_dir}")
             return {}
@@ -126,7 +121,7 @@ class KnowledgeGraphBuilder:
         texts: dict[Path, str] = {}
         for file_path in files:
             try:
-                texts[file_path] = self._to_text(file_path)
+                texts[file_path] = _source_docs.to_markdown(self._docling, file_path)
             except Exception as e:
                 logger.exception(f"[{file_path.name}] skipped: {e}")
         if not texts:
@@ -161,7 +156,7 @@ class KnowledgeGraphBuilder:
 
         merged = graphs[0] if len(graphs) == 1 else self._kg.aggregate(graphs)
         staging = self._to_dict(merged)
-        self._save(staging, output_file_path)
+        _source_docs.save_json(staging, output_file_path)
         logger.success(
             f"Staging KG written — {len(staging['entities'])} entity(ies), "
             f"{len(staging['relations'])} relation(s) → {output_file_path}"
@@ -185,12 +180,12 @@ class KnowledgeGraphBuilder:
         det_map, representatives = self._deterministic_merge(nodes)
         logger.info(f"Deterministic merge — {len(nodes)} → {len(representatives)} node(s)")
 
-        canonical, drop = self._propose_mapping(representatives, graph["relations"], det_map)
+        canonical, drop = self._propose_alias_mapping(representatives, graph["relations"], det_map)
         llm_map = self._llm_alias_map(canonical, set(representatives))
-        node_map = self._compose(nodes, det_map, llm_map, drop)
-        cleaned = self._apply(graph, node_map)
+        node_map = self._compose_node_map(nodes, det_map, llm_map, drop)
+        cleaned = self._apply_node_map(graph, node_map)
 
-        self._save(cleaned, output_path)
+        _source_docs.save_json(cleaned, output_path)
         logger.success(
             f"Cleaned proposal → {output_path} — "
             f"entities {len(graph['entities'])}→{len(cleaned['entities'])}, "
@@ -225,7 +220,7 @@ class KnowledgeGraphBuilder:
             "generic_non_taggable_concepts": non_taggable,
             "relations": typed,
         }
-        self._save(curated, output_path)
+        _source_docs.save_json(curated, output_path)
         logger.success(
             f"Curated draft → {output_path} — "
             f"{len(universe)} concept(s), {len(typed)} typed relation group(s)"
@@ -233,14 +228,6 @@ class KnowledgeGraphBuilder:
         return curated
 
     # HELPERS -------------------------------------------------------------------------------------
-
-    def _to_text(self, input_path: Path) -> str:
-        suffix = input_path.suffix.lower()
-        if suffix in (".md", ".txt"):
-            return input_path.read_text(encoding="utf-8")
-        if suffix in (".pdf", ".docx"):
-            return self._docling.convert(str(input_path)).document.export_to_markdown()
-        raise ValueError(f"Unsupported file extension: {suffix}")
 
     # Sets/tuplas → listas ordenadas: JSON-serializable y con diffs estables para la curación manual.
     @staticmethod
@@ -255,13 +242,6 @@ class KnowledgeGraphBuilder:
         if graph.edge_clusters:
             out["edge_clusters"] = {k: sorted(v) for k, v in graph.edge_clusters.items()}
         return out
-
-    @staticmethod
-    def _save(staging: dict, output_file_path: str) -> None:
-        output_path = Path(output_file_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("w", encoding="utf-8") as f:
-            json.dump(staging, f, ensure_ascii=False, indent=2)
 
     # CLEANUP -------------------------------------------------------------------------------------
 
@@ -316,7 +296,7 @@ class KnowledgeGraphBuilder:
             lines.append(f"- {n}" + (f"  [{evidence}]" if evidence else ""))
         return "\n".join(lines)
 
-    def _propose_mapping(self, nodes: list[str], relations: list[list], det_map: dict) -> tuple[dict, set]:
+    def _propose_alias_mapping(self, nodes: list[str], relations: list[list], det_map: dict) -> tuple[dict, set]:
         prompt = clean_graph_nodes_prompt(self._nodes_block(nodes, relations, det_map))
         response = inference.generate(model=config.KG_CLEANUP_LLM, think=False, prompt=prompt).response
         raw = repair_json(response, return_objects=True)
@@ -340,7 +320,7 @@ class KnowledgeGraphBuilder:
     # Compose deterministic merge -> LLM merge -> drops into one node->canonical map;
     # a dropped node maps to None.
     @staticmethod
-    def _compose(nodes: list[str], det_map: dict, llm_map: dict, drop: set) -> dict:
+    def _compose_node_map(nodes: list[str], det_map: dict, llm_map: dict, drop: set) -> dict:
         node_map = {}
         for n in nodes:
             rep = det_map.get(n, n)
@@ -348,7 +328,7 @@ class KnowledgeGraphBuilder:
         return node_map
 
     @staticmethod
-    def _apply(graph: dict, node_map: dict) -> dict:
+    def _apply_node_map(graph: dict, node_map: dict) -> dict:
         entities = sorted({c for c in node_map.values() if c})
         ents = set(entities)
         relations = set()

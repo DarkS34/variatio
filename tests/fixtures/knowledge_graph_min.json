@@ -1,0 +1,55 @@
+{
+  "concepts_by_domains": {
+    "Fundamentos": [
+      "Variables",
+      "Tipos de datos",
+      "Programación"
+    ],
+    "Control de flujo": [
+      "Bucles",
+      "Bucle for",
+      "Bucle while",
+      "Condicionales"
+    ]
+  },
+  "generic_non_taggable_concepts": [
+    "Programación"
+  ],
+  "relations": [
+    {
+      "details": {
+        "verbose": "tiene como prerrequisito",
+        "directed": true,
+        "acyclic": true,
+        "use_in_embedding": false
+      },
+      "relations_data": {
+        "Bucles": ["Variables"],
+        "Condicionales": ["Tipos de datos"]
+      }
+    },
+    {
+      "details": {
+        "verbose": "es un tipo de",
+        "directed": true,
+        "acyclic": false,
+        "use_in_embedding": true
+      },
+      "relations_data": {
+        "Bucle for": ["Bucles"],
+        "Bucle while": ["Bucles"]
+      }
+    },
+    {
+      "details": {
+        "verbose": "se relaciona con",
+        "directed": false,
+        "acyclic": false,
+        "use_in_embedding": true
+      },
+      "relations_data": {
+        "Variables": ["Tipos de datos"]
+      }
+    }
+  ]
+}

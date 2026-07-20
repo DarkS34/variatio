@@ -12,4 +12,4 @@ icd_vector_db
 *.md
 plans
 exemplars_bank*.json
-*test.py
+/*test.py

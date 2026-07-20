@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from system import config
+from . import config
 
 
 class ExemplarsBank:
