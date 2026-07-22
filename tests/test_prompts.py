@@ -14,10 +14,12 @@ PUBLIC_PROMPTS = {
     "clean_graph_nodes_prompt",
     "concept_description_prompt",
     "curate_graph_domains_prompt",
+    "extract_typed_graph_prompt",
     "format_content_prompt",
     "generate_content_prompt",
     "infer_content_profile_prompt",
     "json_repair_prompt",
+    "link_global_relations_prompt",
     "tag_concepts_prompt",
     "type_graph_relations_prompt",
 }
@@ -196,6 +198,29 @@ def test_type_graph_relations_prompt(assert_snapshot):
         prompts.type_graph_relations_prompt(
             edges_block='- "incluye"  (p.ej. Bucles → Bucle for)'
         ),
+    )
+
+
+def test_extract_typed_graph_prompt(assert_snapshot):
+    assert_snapshot(
+        "extract_typed_graph",
+        prompts.extract_typed_graph_prompt(
+            source_text="Una lista es una colección ordenada y mutable de elementos."
+        ),
+    )
+
+
+def test_extract_typed_graph_prompt_is_domain_agnostic():
+    rendered = prompts.extract_typed_graph_prompt(source_text="El soneto es un tipo de poema.")
+
+    assert "Python" not in rendered
+    assert "Mamífero" in rendered
+
+
+def test_link_global_relations_prompt(assert_snapshot):
+    assert_snapshot(
+        "link_global_relations",
+        prompts.link_global_relations_prompt(concepts_block="- Listas\n- Tuplas\n- Diccionarios"),
     )
 
 

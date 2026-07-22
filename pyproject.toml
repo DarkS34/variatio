@@ -13,7 +13,6 @@ dependencies = [
     "scipy>=1.15.3",
     "tqdm>=4.67.3",
     "json-repair>=0.59.5",
-    "kg-gen>=0.4.0",
 ]
 
 [dependency-groups]
@@ -25,6 +24,3 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
-filterwarnings = [
-    "ignore:The 'prefix' argument in InputField/OutputField is deprecated:DeprecationWarning",
-]

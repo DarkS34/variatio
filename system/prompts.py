@@ -250,6 +250,90 @@ JSON:"""
 # ── GRAFO DE CONOCIMIENTO ─────────────────────────────────────────────────────
 
 
+_RELATION_TYPES_BLOCK = """\
+- `prerrequisito`: el ORIGEN presupone/necesita el DESTINO; el destino debe dominarse ANTES que el origen. Lectura: «para aprender ORIGEN hay que saber antes DESTINO». Ejemplos de distintas áreas:
+  · ["Búsqueda binaria", "prerrequisito", "Lista ordenada"]
+  · ["Multiplicación", "prerrequisito", "Suma"]
+  · ["Cálculo integral", "prerrequisito", "Derivadas"]
+- `es_un`: el ORIGEN es un TIPO, caso o subclase del DESTINO. Lectura: «ORIGEN es un tipo de DESTINO». Ejemplos:
+  · ["Ballena", "es_un", "Mamífero"]
+  · ["Soneto", "es_un", "Poema"]
+  · ["Triángulo equilátero", "es_un", "Triángulo"]
+- `parte_de`: el ORIGEN es un COMPONENTE del DESTINO; el destino es el TODO que lo contiene. Lectura: «ORIGEN es parte de DESTINO». Ejemplos:
+  · ["Núcleo", "parte_de", "Célula"]
+  · ["Estribillo", "parte_de", "Canción"]
+  · ["Motor", "parte_de", "Automóvil"]
+- `relacionado`: asociación semántica genuina que NO encaja limpiamente en las tres anteriores. No direccional. Ejemplos:
+  · ["Oferta", "relacionado", "Demanda"]
+  · ["Fotosíntesis", "relacionado", "Respiración celular"]"""
+
+
+def extract_typed_graph_prompt(source_text: str) -> str:
+    return f"""\
+Extrae un GRAFO DE CONOCIMIENTO de un fragmento de material educativo de CUALQUIER materia. Identifica los CONCEPTOS de la materia y las RELACIONES TIPADAS entre ellos, directamente en el esquema de abajo.
+
+# QUÉ ES UN CONCEPTO VÁLIDO
+Un concepto NOMBRA una idea de la materia: un término que podría figurar como entrada de un glosario o índice (una cosa, técnica, categoría, estructura, fenómeno o entidad con nombre). NO es una frase que describe o predica algo.
+- Prueba del glosario: si NO lo pondrías como entrada de un índice de la materia, NO es un concepto.
+- NO extraigas: metadatos del documento (títulos de sección, bibliografía, licencias, autores), escenarios anecdóticos de los ejemplos (objetos, personajes o situaciones concretas que solo ilustran), ni fragmentos que se leen como parte de una oración (empiezan por verbo, contienen un verbo conjugado, o expresan una condición o acción).
+- Usa un nombre conciso y canónico para cada concepto (sustantivo o sintagma nominal), tal como aparecería en un índice. No repitas el mismo concepto con variantes de mayúsculas o plural.
+
+# TIPOS DE RELACIÓN (respeta la DIRECCIÓN origen → destino)
+Cada relación es un triple [origen, tipo, destino]. La dirección importa: elige el orden que haga verdadera la lectura indicada.
+{_RELATION_TYPES_BLOCK}
+
+# REGLAS DE RELACIONES
+- Origen y destino deben ser DISTINTOS y ambos deben aparecer en tu lista `concepts`. Prohibido relacionar un concepto consigo mismo.
+- Prefiere el tipo ESPECÍFICO (prerrequisito/es_un/parte_de) cuando su lectura sea claramente verdadera; reserva `relacionado` para asociaciones reales que no sean de dependencia, clasificación ni composición. No fuerces un tipo si dudas, pero tampoco uses `relacionado` como cajón por defecto.
+- Extrae solo relaciones SUSTENTADAS por el texto del fragmento, no por conocimiento externo.
+
+# SALIDA
+Un único objeto JSON con esta forma exacta:
+{{
+  "concepts": ["<concepto>", "..."],
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
+}}
+- `tipo` es uno de: "prerrequisito", "es_un", "parte_de", "relacionado". Nada más.
+- Todo origen y destino de `relations` debe estar en `concepts`.
+- Si el fragmento no aporta conceptos extraíbles, devuelve {{"concepts": [], "relations": []}}.
+- Sin texto antes ni después, sin backticks, sin comentarios.
+
+# FRAGMENTO
+{source_text}
+
+JSON:"""
+
+
+def link_global_relations_prompt(concepts_block: str) -> str:
+    return f"""\
+Recibes el INVENTARIO COMPLETO de conceptos de un grafo de conocimiento, extraídos de todo el material de una misma materia. La extracción se hizo por fragmentos, así que faltan relaciones entre conceptos que nunca aparecieron juntos en un mismo fragmento.
+
+Tu tarea: proponer las RELACIONES TIPADAS que estructuran la materia a nivel GLOBAL — sobre todo el esqueleto que atraviesa distintas partes del temario: cadenas de prerrequisitos, jerarquías es_un y composiciones parte_de entre conceptos que quizá se explicaron en secciones distintas.
+
+# TIPOS DE RELACIÓN (respeta la DIRECCIÓN origen → destino)
+{_RELATION_TYPES_BLOCK}
+
+# REGLAS
+- Origen y destino deben ser DISTINTOS y ambos deben aparecer LITERALMENTE en el inventario. No inventes conceptos nuevos ni cambies su nombre.
+- Propón relaciones verdaderas para la materia en su conjunto; céntrate en las que conectan partes distintas del temario, no en repetir lo obvio de un mismo subtema.
+- Prefiere el tipo ESPECÍFICO (prerrequisito/es_un/parte_de); usa `relacionado` solo para asociaciones reales que no sean de dependencia, clasificación ni composición.
+- No propongas una relación de un concepto consigo mismo.
+
+# SALIDA
+Un único objeto JSON con esta forma exacta:
+{{
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
+}}
+- `tipo` es uno de: "prerrequisito", "es_un", "parte_de", "relacionado".
+- Todo origen y destino debe estar en el inventario.
+- Sin texto antes ni después, sin backticks, sin comentarios.
+
+# INVENTARIO DE CONCEPTOS
+{concepts_block}
+
+JSON:"""
+
+
 def clean_graph_nodes_prompt(nodes_block: str) -> str:
     return f"""\
 Recibes los NODOS de un grafo de conocimiento extraído automáticamente de un corpus educativo, cada uno con sus relaciones salientes como evidencia. La extracción es ruidosa: hay duplicados, variantes, metadatos y fragmentos que no son conceptos.
@@ -304,7 +388,8 @@ Tu tarea: (1) agrupar TODOS los conceptos en DOMINIOS temáticos coherentes, y (
 - Un dominio es un bloque temático de la materia (del estilo de los grandes temas o unidades del temario), no una etiqueta fina.
 - Propón POCOS dominios (orientativamente entre 3 y 8), cada uno con una masa razonable de conceptos.
 - Apóyate en la evidencia: los conceptos que actúan como raíz de relaciones de tipo "incluye"/"cubre"/"consta de" suelen NOMBRAR un dominio o estar cerca de él.
-- PARTICIÓN COMPLETA: cada concepto de la entrada va a EXACTAMENTE un dominio. No dejes ninguno fuera, no repitas ninguno en dos dominios.
+- PARTICIÓN COMPLETA Y OBLIGATORIA: la salida debe contener TODOS y CADA UNO de los conceptos de la entrada, exactamente una vez. Recórrelos uno a uno y colócalos todos; no omitas ninguno por prisa ni por dudar, y no repitas ninguno en dos dominios.
+- SIN CAJÓN DE SASTRE: si un concepto no encaja con claridad, asígnalo al dominio MÁS AFÍN según su temática o sus relaciones. Está PROHIBIDO dejar un concepto sin dominio y PROHIBIDO crear un dominio genérico de descarte tipo "Otros", "Varios", "Misceláneo" o "Sin clasificar".
 
 # CONCEPTOS NO ETIQUETABLES (non_taggable)
 Un concepto NO etiquetable es demasiado universal para identificar de qué trata un item concreto: nombres de la asignatura o de temas paraguas, nombres de lenguajes o herramientas, y términos tan transversales que aparecerían en items de casi cualquier subtema.
@@ -323,6 +408,7 @@ Un único objeto JSON con esta forma exacta:
   "non_taggable": ["<concepto>", "..."]
 }}
 - Cada concepto de la entrada aparece exactamente una vez dentro de "domains".
+- Antes de responder, comprueba que el número de conceptos repartidos en "domains" coincide con el número de conceptos de la entrada: si falta alguno, ubícalo en su dominio más afín.
 - "non_taggable" es un subconjunto de los conceptos de la entrada (puede ir vacío).
 - Sin texto antes ni después, sin backticks, sin comentarios.
 

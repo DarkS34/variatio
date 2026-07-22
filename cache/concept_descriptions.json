@@ -299,5 +299,10 @@
   "slicing": "Mostrar cómo extraer una porción específica de una cadena o iterable, considerando el inicio y el final deseados, o mediante un tamaño fijo de elementos.",
   "subcadenas": "Extraer una secuencia continua de caracteres de una cadena más grande utilizando índices o notación específica como el slicing.",
   "tolerantes a errores": "Manejar la posible ocurrencia de un error inesperado durante la ejecución del programa mediante bloques controlados, para que el flujo no se interrumpa abruptamente.",
-  "versiones anteriores": "Analizar cómo el estado de un sistema o dato en un punto anterior de la ejecución se puede recuperar o comparar para entender el flujo o el estado actual."
+  "versiones anteriores": "Analizar cómo el estado de un sistema o dato en un punto anterior de la ejecución se puede recuperar o comparar para entender el flujo o el estado actual.",
+  "vector": "Se refiere a una secuencia ordenada de elementos de un solo eje, lo que lo distingue de estructuras bidimensionales o colecciones de pares clave-valor. Se puede pensar en él como una colección lineal de ítems.",
+  "int()": "Convertir explícitamente un tipo de dato, como una cadena, a un entero mediante la función int().",
+  "estáticos": "Identificar y corregir fallos en la estructura del código que impiden su compilación, manifestándose como errores en la sintaxis o el tipado.",
+  "Vocales": "Se refiere a la estructura fonética de las palabras que componen el código o el texto a procesar, determinando qué caracteres deben ser tratados como vocales para realizar ciertas transformaciones o validaciones.",
+  "errores difíciles de detectar": "Detectar fallos en el control de flujo o en el manejo de dependencias que solo se manifiestan bajo ciertas secuencias de llamadas o manipulación de estados intermediarios."
 }
