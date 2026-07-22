@@ -2,15 +2,16 @@
   "content_context": {
     "materia": "Programación I / Fundamentos de Programación",
     "lenguaje_programacion": "Python",
-    "nivel_educativo": "Universitario",
+    "nivel_educativo": "Universitario / Formación Técnica",
     "idioma": "Español"
   },
   "general_generation_rules": [
-    "Los ejercicios deben centrarse en la lógica de programación fundamental: tipos de datos, funciones, estructuras de control (if, while, for), listas, diccionarios y recursividad.",
-    "Se debe fomentar el uso de docstrings en las funciones, detallando parámetros, objetivo y precondiciones.",
-    "En los ejercicios de nivel básico o intermedio, se debe priorizar la validación de entradas del usuario (uso de try-except o funciones de validación).",
-    "Cuando se soliciten funciones, se debe especificar claramente el tipo de dato de entrada y el de salida.",
-    "El estilo de los enunciados debe ser directo, planteando un problema del mundo real o un reto técnico concreto."
+    "Utilizar nombres de variables y subprogramas significativos y descriptivos.",
+    "Incluir documentación (docstrings) en todas las funciones siguiendo el formato: parámetros, objetivo y precondiciones.",
+    "Fomentar la modularización mediante el uso de funciones.",
+    "Incluir la validación de entradas del usuario (ej. mediante bloques try-except) en ejercicios de nivel intermedio o avanzado.",
+    "En ejercicios básicos, restringir el uso de estructuras selectivas (if) o iterativas (for/while) según se indique específicamente en el enunciado.",
+    "Proporcionar un código de prueba (probador) para verificar el funcionamiento de la solución."
   ],
   "primary_field": "statement",
   "fields": {
@@ -18,10 +19,10 @@
       "schema": {
         "type": "string"
       },
-      "description": "El enunciado del ejercicio, problema o actividad.",
+      "description": "El enunciado del ejercicio o problema, que describe la tarea de programación a realizar.",
       "guidance": {
-        "extraction": "Extraer el texto que describe la tarea a realizar. Incluye instrucciones adicionales, fórmulas matemáticas o restricciones mencionadas en el enunciado. Excluir el número del ejercicio (ej. '1.', '2.') y encabezados de sección como 'Ejercicios propuestos'. Si el enunciado incluye un ejemplo de entrada/salida o una tabla de datos, este debe incluirse como parte del texto.",
-        "generation": "Redactar un problema de programación claro y conciso. Debe especificar la entrada esperada, la transformación o cálculo necesario y el resultado final deseado."
+        "extraction": "Extraer el texto literal que describe la actividad. Comienza normalmente después de un número de enumeración (ej. '1.') y termina antes de cualquier marcador de solución ('SOLUCION PROPUESTA:') o del inicio del siguiente ejercicio. Se deben incluir fórmulas matemáticas, tablas de criterios o fragmentos de código que formen parte de la instrucción.",
+        "generation": "Redactar una tarea de programación clara y concisa. Debe especificar la entrada esperada, el proceso de transformación y la salida requerida, integrando restricciones técnicas si el nivel lo requiere."
       }
     },
     "solution": {
@@ -31,10 +32,10 @@
           "null"
         ]
       },
-      "description": "El código fuente de la solución propuesta.",
+      "description": "La implementación en Python que resuelve el problema planteado, incluyendo opcionalmente el código de prueba.",
       "guidance": {
-        "extraction": "Extraer el bloque de código que sigue inmediatamente a marcadores como 'SOLUCION PROPUESTA:' o que aparece justo después del enunciado en los ejercicios resueltos. Incluir la definición de funciones, docstrings y el código de prueba ('probador') si está presente. El campo debe ser null si el ejercicio es 'propuesto' y no tiene solución adjunta.",
-        "generation": "Escribir el código en Python siguiendo las buenas prácticas: nombres de variables significativos, modularización mediante funciones y documentación interna (docstrings) con parámetros, objetivo y precondiciones."
+        "extraction": "Extraer el contenido literal que sigue a la etiqueta 'SOLUCION PROPUESTA:'. Incluye la definición de funciones, el cuerpo del programa y los bloques de prueba (marcados como '#Probador' o '#Prueba'). Si el ejercicio está en la sección de 'Ejercicios propuestos' y no presenta código asociado, el valor debe ser null.",
+        "generation": "Escribir un código en Python limpio, eficiente y comentado. Debe cumplir estrictamente con las restricciones del enunciado y seguir las reglas generales de generación (docstrings y nombres significativos)."
       }
     },
     "difficulty_level": {
@@ -42,13 +43,21 @@
         "enum": [
           "básico",
           "intermedio",
-          "avanzado",
-          null
+          "avanzado"
         ]
       },
-      "description": "El nivel de dificultad del ejercicio.",
+      "description": "El nivel de complejidad del ejercicio según los siguientes criterios: 'básico' para sintaxis simple, tipos de datos y funciones elementales; 'intermedio' para estructuras de datos (listas, diccionarios), algoritmos básicos y validación de datos; 'avanzado' para recursividad, algoritmos de ordenación complejos o problemas de lógica integradora.",
       "guidance": {
-        "extraction": "Identificar el nivel basándose en los encabezados de sección del documento (ej. 'Ejercicios nivel básico', 'Ejercicios nivel intermedio', 'Ejercicio avanzado'). Si el ejercicio está en una sección general sin nivel especificado, asignar null."
+        "extraction": "Si el ejercicio se encuentra bajo un encabezado explícito de nivel (ej. 'Ejercicios nivel básico'), usar ese valor. En caso contrario, aplicar el criterio de clasificación basado en los conceptos técnicos presentes en el statement (ej. si menciona 'recursividad' o 'bubble sort', clasificar como 'avanzado')."
+      }
+    },
+    "topic": {
+      "schema": {
+        "type": "string"
+      },
+      "description": "El concepto fundamental de programación que el ejercicio busca evaluar (ej. Tipos de datos, Funciones, Estructuras Condicionales, Listas, Diccionarios, Recursividad, Ordenación).",
+      "guidance": {
+        "extraction": "Identificar la palabra clave o concepto técnico predominante en el enunciado. Si no hay una etiqueta explícita, deducirlo del contenido: ej. presencia de 'def' y docstrings -> 'Funciones'; presencia de 'while' o 'for' -> 'Bucles'; presencia de 'recursive' o 'recursiva' -> 'Recursividad'."
       }
     }
   }
