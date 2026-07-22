@@ -54,6 +54,21 @@ def split_blocks(text: str) -> list[str]:
     return [restored for restored in (_restore(p) for p in pieces) if restored]
 
 
+def chunk_text(text: str, max_chars: int) -> list[str]:
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    chunks: list[str] = []
+    current = ""
+    for paragraph in paragraphs:
+        if current and len(current) + len(paragraph) + 2 > max_chars:
+            chunks.append(current)
+            current = paragraph
+        else:
+            current = f"{current}\n\n{paragraph}" if current else paragraph
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def save_json(data: dict, output_file_path: str | Path) -> None:
     output_path = Path(output_file_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

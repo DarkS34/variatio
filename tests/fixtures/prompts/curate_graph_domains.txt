@@ -6,7 +6,8 @@ Tu tarea: (1) agrupar TODOS los conceptos en DOMINIOS temáticos coherentes, y (
 - Un dominio es un bloque temático de la materia (del estilo de los grandes temas o unidades del temario), no una etiqueta fina.
 - Propón POCOS dominios (orientativamente entre 3 y 8), cada uno con una masa razonable de conceptos.
 - Apóyate en la evidencia: los conceptos que actúan como raíz de relaciones de tipo "incluye"/"cubre"/"consta de" suelen NOMBRAR un dominio o estar cerca de él.
-- PARTICIÓN COMPLETA: cada concepto de la entrada va a EXACTAMENTE un dominio. No dejes ninguno fuera, no repitas ninguno en dos dominios.
+- PARTICIÓN COMPLETA Y OBLIGATORIA: la salida debe contener TODOS y CADA UNO de los conceptos de la entrada, exactamente una vez. Recórrelos uno a uno y colócalos todos; no omitas ninguno por prisa ni por dudar, y no repitas ninguno en dos dominios.
+- SIN CAJÓN DE SASTRE: si un concepto no encaja con claridad, asígnalo al dominio MÁS AFÍN según su temática o sus relaciones. Está PROHIBIDO dejar un concepto sin dominio y PROHIBIDO crear un dominio genérico de descarte tipo "Otros", "Varios", "Misceláneo" o "Sin clasificar".
 
 # CONCEPTOS NO ETIQUETABLES (non_taggable)
 Un concepto NO etiquetable es demasiado universal para identificar de qué trata un item concreto: nombres de la asignatura o de temas paraguas, nombres de lenguajes o herramientas, y términos tan transversales que aparecerían en items de casi cualquier subtema.
@@ -25,6 +26,7 @@ Un único objeto JSON con esta forma exacta:
   "non_taggable": ["<concepto>", "..."]
 }
 - Cada concepto de la entrada aparece exactamente una vez dentro de "domains".
+- Antes de responder, comprueba que el número de conceptos repartidos en "domains" coincide con el número de conceptos de la entrada: si falta alguno, ubícalo en su dominio más afín.
 - "non_taggable" es un subconjunto de los conceptos de la entrada (puede ir vacío).
 - Sin texto antes ni después, sin backticks, sin comentarios.
 

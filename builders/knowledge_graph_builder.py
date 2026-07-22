@@ -4,47 +4,24 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
-import dspy
+import networkx as nx
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, InputFormat, PdfFormatOption
-from dspy.utils.callback import BaseCallback
 from json_repair import repair_json
-from kg_gen import KGGen
-from kg_gen.utils.chunk_text import chunk_text
 from loguru import logger
 
 from system import config, inference
 from system.prompts import (
     clean_graph_nodes_prompt,
     curate_graph_domains_prompt,
+    extract_typed_graph_prompt,
+    link_global_relations_prompt,
     type_graph_relations_prompt,
 )
+from system.utils import parse_with_repair
 
 from . import _source_docs
-
-
-class _LMProgressCallback(BaseCallback):
-    def __init__(self):
-        self._done = 0
-        self._total = 0
-        self._last_bucket = -1
-
-    # The builder sets the expected number of LM calls before extraction starts.
-    def start(self, total: int):
-        self._done = 0
-        self._total = total
-        self._last_bucket = -1
-
-    def on_lm_end(self, call_id, outputs, exception=None):
-        if not self._total:
-            return
-        self._done += 1
-        pct = min(100, self._done * 100 // self._total)
-        # Report in 10% steps only, so it shows progress instead of per-call noise.
-        if pct // 10 > self._last_bucket:
-            self._last_bucket = pct // 10
-            logger.info(f"Building knowledge graph… {pct}%")
 
 
 class KnowledgeGraphBuilder:
@@ -78,10 +55,6 @@ class KnowledgeGraphBuilder:
     def __init__(self, model: str = config.KG_BUILDER_LLM, verbose: bool = True):
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        self._progress = _LMProgressCallback()
-        if verbose:
-            dspy.settings.configure(callbacks=[self._progress])
-
         pdf_options = PdfPipelineOptions()
         pdf_options.do_ocr = False
         pdf_options.do_table_structure = False
@@ -96,20 +69,11 @@ class KnowledgeGraphBuilder:
             },
         )
 
-        self._kg = KGGen(
-            model=f"ollama_chat/{model}",
-            api_base=config.OLLAMA_HOST,
-            api_key="ollama",
-            temperature=0.0,
-        )
+        self.model = model
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE
+        self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
 
-    def build(
-        self,
-        input_dir: str,
-        output_file_path: str,
-        cluster: bool = False,
-    ) -> dict:
+    def build(self, input_dir: str, output_file_path: str) -> dict:
         files = _source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported files found in: {input_dir}")
@@ -117,51 +81,110 @@ class KnowledgeGraphBuilder:
 
         logger.info(f"Found {len(files)} file(s) - extracting knowledge graph")
 
-        # Read every file up front so the total call count for progress is known.
-        texts: dict[Path, str] = {}
-        for file_path in files:
+        concepts: set[str] = set()
+        relations: set[tuple[str, str, str]] = set()
+        for idx, file_path in enumerate(files, 1):
             try:
-                texts[file_path] = _source_docs.to_markdown(self._docling, file_path)
+                text = _source_docs.to_markdown(self._docling, file_path)
             except Exception as e:
                 logger.exception(f"[{file_path.name}] skipped: {e}")
-        if not texts:
-            logger.error("No text extracted from any file")
-            return {}
-
-        # 2 LM calls per chunk (entities + relations); used to report % progress.
-        total_calls = 2 * sum(len(chunk_text(t, self.chunk_size)) for t in texts.values())
-        self._progress.start(total_calls)
-
-        graphs = []
-        for idx, (file_path, text) in enumerate(texts.items(), 1):
-            tag = f"[{idx}/{len(texts)} {file_path.name}]"
-            logger.info(f"{tag} extracting from text ({len(text):,} chars)")
-            try:
-                graph = self._kg.generate(
-                    input_data=text,
-                    chunk_size=self.chunk_size,
-                    cluster=cluster,
-                )
-            except Exception as e:
-                logger.exception(f"{tag} skipped: {e}")
                 continue
-            graphs.append(graph)
-            logger.success(
-                f"{tag} {len(graph.entities)} entity(ies), {len(graph.relations)} relation(s)"
-            )
+            chunks = _source_docs.chunk_text(text, self.chunk_size)
+            logger.info(f"[{idx}/{len(files)} {file_path.name}] {len(chunks)} chunk(s)")
+            for ci, chunk in enumerate(chunks, 1):
+                tag = f"[{idx}/{len(files)} {file_path.name} · chunk {ci}/{len(chunks)}] "
+                chunk_concepts, chunk_relations = self._extract_from_chunk(chunk, tag)
+                concepts.update(chunk_concepts)
+                relations.update(tuple(r) for r in chunk_relations)
 
-        if not graphs:
-            logger.error("No graph produced from any file")
+        if not concepts:
+            logger.error("No concepts extracted from any file")
             return {}
 
-        merged = graphs[0] if len(graphs) == 1 else self._kg.aggregate(graphs)
-        staging = self._to_dict(merged)
+        for src, _, tgt in relations:
+            concepts.update((src, tgt))
+
+        before = len(relations)
+        relations.update(tuple(r) for r in self._link_global(sorted(concepts)))
+        logger.info(f"Global linking pass added {len(relations) - before} relation(s)")
+
+        staging = self._assemble(concepts, relations)
         _source_docs.save_json(staging, output_file_path)
         logger.success(
             f"Staging KG written — {len(staging['entities'])} entity(ies), "
             f"{len(staging['relations'])} relation(s) → {output_file_path}"
         )
         return staging
+
+    # EXTRACTION ----------------------------------------------------------------------------------
+
+    def _extract_from_chunk(self, chunk: str, log_prefix: str) -> tuple[list[str], list[list[str]]]:
+        prompt = extract_typed_graph_prompt(chunk)
+        response = inference.generate(model=self.model, think=False, prompt=prompt).response
+        raw = self._parse_graph_object(response, log_prefix)
+        if raw is None:
+            return [], []
+        concepts = [c.strip() for c in raw.get("concepts", []) if isinstance(c, str) and c.strip()]
+        relations = self._valid_relations(raw.get("relations", []), allowed=None)
+        return concepts, relations
+
+    def _link_global(self, inventory: list[str]) -> list[list[str]]:
+        if len(inventory) < 2:
+            return []
+        prompt = link_global_relations_prompt(self._concepts_block(inventory))
+        response = inference.generate(model=self.model, think=False, prompt=prompt).response
+        raw = self._parse_graph_object(response, "[global] ")
+        if raw is None:
+            return []
+        return self._valid_relations(raw.get("relations", []), allowed=set(inventory))
+
+    def _parse_graph_object(self, response: str, log_prefix: str) -> dict | None:
+        def parse(text: str) -> tuple[dict | None, str | None]:
+            raw = repair_json(text, return_objects=True)
+            if not isinstance(raw, dict):
+                return None, "model did not return a JSON object"
+            return raw, None
+
+        result, error = parse_with_repair(
+            response,
+            parse,
+            repair_model=config.REPAIR_LLM,
+            max_attempts=self.max_repair_attempts,
+            shape="objeto",
+            log_prefix=log_prefix,
+        )
+        if result is None:
+            logger.warning(f"{log_prefix}unrecoverable JSON: {error}")
+        return result
+
+    @classmethod
+    def _valid_relations(cls, raw: list, allowed: set[str] | None) -> list[list[str]]:
+        out = []
+        for triple in raw or []:
+            if not (isinstance(triple, list) and len(triple) == 3):
+                continue
+            if not all(isinstance(x, str) for x in triple):
+                continue
+            src, rel, tgt = (x.strip() for x in triple)
+            if not (src and tgt) or src == tgt or rel not in cls.RELATION_TYPES:
+                continue
+            if allowed is not None and (src not in allowed or tgt not in allowed):
+                continue
+            out.append([src, rel, tgt])
+        return out
+
+    @staticmethod
+    def _concepts_block(concepts: list[str]) -> str:
+        return "\n".join(f"- {c}" for c in concepts)
+
+    @staticmethod
+    def _assemble(concepts: set[str], relations: set[tuple[str, str, str]]) -> dict:
+        rels = sorted(list(r) for r in relations)
+        return {
+            "entities": sorted(concepts),
+            "edges": sorted({r[1] for r in rels}),
+            "relations": rels,
+        }
 
     # clean proposes a deduplicated, denoised graph for manual review; it never
     # touches the curated knowledge_graph.json.
@@ -212,7 +235,9 @@ class KnowledgeGraphBuilder:
         )
 
         universe = {c for cs in concepts_by_domains.values() for c in cs}
-        typed = self._type_relations(graph["edges"], relations, universe)
+        identity = {key: key for key in self.RELATION_TYPES}
+        typed = self._build_typed_relations(identity, relations, universe)
+        typed = self._break_cycles(typed)
         logger.info(f"Relations — {len(typed)} typed group(s) over {len(universe)} concept(s)")
 
         curated = {
@@ -226,22 +251,6 @@ class KnowledgeGraphBuilder:
             f"{len(universe)} concept(s), {len(typed)} typed relation group(s)"
         )
         return curated
-
-    # HELPERS -------------------------------------------------------------------------------------
-
-    # Sets/tuplas → listas ordenadas: JSON-serializable y con diffs estables para la curación manual.
-    @staticmethod
-    def _to_dict(graph) -> dict:
-        out = {
-            "entities": sorted(graph.entities),
-            "edges": sorted(graph.edges),
-            "relations": sorted(list(r) for r in graph.relations),
-        }
-        if graph.entity_clusters:
-            out["entity_clusters"] = {k: sorted(v) for k, v in graph.entity_clusters.items()}
-        if graph.edge_clusters:
-            out["edge_clusters"] = {k: sorted(v) for k, v in graph.edge_clusters.items()}
-        return out
 
     # CLEANUP -------------------------------------------------------------------------------------
 
@@ -412,4 +421,29 @@ class KnowledgeGraphBuilder:
                 continue
             relations_data = {s: sorted(data[s]) for s in sorted(data)}
             typed.append({"details": dict(details), "relations_data": relations_data})
+        return typed
+
+    @staticmethod
+    def _break_cycles(typed: list[dict]) -> list[dict]:
+        for group in typed:
+            details = group["details"]
+            if not (details.get("acyclic") and details.get("directed")):
+                continue
+            graph = nx.DiGraph()
+            for src, targets in group["relations_data"].items():
+                graph.add_edges_from((src, tgt) for tgt in targets)
+            removed = []
+            while not nx.is_directed_acyclic_graph(graph):
+                src, tgt = nx.find_cycle(graph)[-1][:2]
+                graph.remove_edge(src, tgt)
+                removed.append((src, tgt))
+            if not removed:
+                continue
+            rebuilt = defaultdict(list)
+            for src, tgt in graph.edges():
+                rebuilt[src].append(tgt)
+            group["relations_data"] = {s: sorted(rebuilt[s]) for s in sorted(rebuilt)}
+            logger.warning(
+                f"Broke {len(removed)} back-edge(s) in acyclic '{details['verbose']}': {removed}"
+            )
         return typed

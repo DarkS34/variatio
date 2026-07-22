@@ -1,0 +1,46 @@
+Extrae un GRAFO DE CONOCIMIENTO de un fragmento de material educativo de CUALQUIER materia. Identifica los CONCEPTOS de la materia y las RELACIONES TIPADAS entre ellos, directamente en el esquema de abajo.
+
+# QUÉ ES UN CONCEPTO VÁLIDO
+Un concepto NOMBRA una idea de la materia: un término que podría figurar como entrada de un glosario o índice (una cosa, técnica, categoría, estructura, fenómeno o entidad con nombre). NO es una frase que describe o predica algo.
+- Prueba del glosario: si NO lo pondrías como entrada de un índice de la materia, NO es un concepto.
+- NO extraigas: metadatos del documento (títulos de sección, bibliografía, licencias, autores), escenarios anecdóticos de los ejemplos (objetos, personajes o situaciones concretas que solo ilustran), ni fragmentos que se leen como parte de una oración (empiezan por verbo, contienen un verbo conjugado, o expresan una condición o acción).
+- Usa un nombre conciso y canónico para cada concepto (sustantivo o sintagma nominal), tal como aparecería en un índice. No repitas el mismo concepto con variantes de mayúsculas o plural.
+
+# TIPOS DE RELACIÓN (respeta la DIRECCIÓN origen → destino)
+Cada relación es un triple [origen, tipo, destino]. La dirección importa: elige el orden que haga verdadera la lectura indicada.
+- `prerrequisito`: el ORIGEN presupone/necesita el DESTINO; el destino debe dominarse ANTES que el origen. Lectura: «para aprender ORIGEN hay que saber antes DESTINO». Ejemplos de distintas áreas:
+  · ["Búsqueda binaria", "prerrequisito", "Lista ordenada"]
+  · ["Multiplicación", "prerrequisito", "Suma"]
+  · ["Cálculo integral", "prerrequisito", "Derivadas"]
+- `es_un`: el ORIGEN es un TIPO, caso o subclase del DESTINO. Lectura: «ORIGEN es un tipo de DESTINO». Ejemplos:
+  · ["Ballena", "es_un", "Mamífero"]
+  · ["Soneto", "es_un", "Poema"]
+  · ["Triángulo equilátero", "es_un", "Triángulo"]
+- `parte_de`: el ORIGEN es un COMPONENTE del DESTINO; el destino es el TODO que lo contiene. Lectura: «ORIGEN es parte de DESTINO». Ejemplos:
+  · ["Núcleo", "parte_de", "Célula"]
+  · ["Estribillo", "parte_de", "Canción"]
+  · ["Motor", "parte_de", "Automóvil"]
+- `relacionado`: asociación semántica genuina que NO encaja limpiamente en las tres anteriores. No direccional. Ejemplos:
+  · ["Oferta", "relacionado", "Demanda"]
+  · ["Fotosíntesis", "relacionado", "Respiración celular"]
+
+# REGLAS DE RELACIONES
+- Origen y destino deben ser DISTINTOS y ambos deben aparecer en tu lista `concepts`. Prohibido relacionar un concepto consigo mismo.
+- Prefiere el tipo ESPECÍFICO (prerrequisito/es_un/parte_de) cuando su lectura sea claramente verdadera; reserva `relacionado` para asociaciones reales que no sean de dependencia, clasificación ni composición. No fuerces un tipo si dudas, pero tampoco uses `relacionado` como cajón por defecto.
+- Extrae solo relaciones SUSTENTADAS por el texto del fragmento, no por conocimiento externo.
+
+# SALIDA
+Un único objeto JSON con esta forma exacta:
+{
+  "concepts": ["<concepto>", "..."],
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
+}
+- `tipo` es uno de: "prerrequisito", "es_un", "parte_de", "relacionado". Nada más.
+- Todo origen y destino de `relations` debe estar en `concepts`.
+- Si el fragmento no aporta conceptos extraíbles, devuelve {"concepts": [], "relations": []}.
+- Sin texto antes ni después, sin backticks, sin comentarios.
+
+# FRAGMENTO
+Una lista es una colección ordenada y mutable de elementos.
+
+JSON:

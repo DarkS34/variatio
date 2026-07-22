@@ -226,3 +226,47 @@ def test_build_typed_relations_does_not_alias_the_relation_type_table():
     typed[0]["details"]["verbose"] = "MUTADO"
 
     assert KGB.RELATION_TYPES["relacionado"]["verbose"] == "se relaciona con"
+
+
+# CYCLE BREAKING -----------------------------------------------------------------------------
+
+
+def test_break_cycles_drops_the_back_edge_of_an_acyclic_relation():
+    typed = [
+        {
+            "details": {"verbose": "tiene como prerrequisito", "directed": True, "acyclic": True},
+            "relations_data": {"Algoritmo": ["Programa"], "Programa": ["Algoritmo"]},
+        }
+    ]
+
+    out = KGB._break_cycles(typed)
+
+    assert out[0]["relations_data"] == {"Algoritmo": ["Programa"]}
+
+
+def test_break_cycles_leaves_cyclic_allowed_relations_untouched():
+    data = {"Biblioteca": ["Módulos"], "Módulos": ["Biblioteca"]}
+    typed = [
+        {
+            "details": {"verbose": "es parte de", "directed": True, "acyclic": False},
+            "relations_data": dict(data),
+        }
+    ]
+
+    out = KGB._break_cycles(typed)
+
+    assert out[0]["relations_data"] == data
+
+
+def test_break_cycles_keeps_an_already_acyclic_relation_intact():
+    data = {"Recursividad": ["Caso base"], "Programa": ["Algoritmo"]}
+    typed = [
+        {
+            "details": {"verbose": "tiene como prerrequisito", "directed": True, "acyclic": True},
+            "relations_data": dict(data),
+        }
+    ]
+
+    out = KGB._break_cycles(typed)
+
+    assert out[0]["relations_data"] == data
