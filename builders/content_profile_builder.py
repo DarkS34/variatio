@@ -109,7 +109,9 @@ class ContentProfileBuilder:
 
     def _infer(self, sample: str) -> dict:
         prompt = infer_content_profile_prompt(sample)
-        response = inference.generate(model=self.model, think=False, prompt=prompt).response
+        think = inference.supports_thinking(self.model)
+        logger.info(f"Inferring with '{self.model}' (thinking {'on' if think else 'off'})")
+        response = inference.generate(model=self.model, think=think, prompt=prompt).response
         profile = self._parse(response)
         err = self._validate(profile)
 

@@ -23,6 +23,7 @@ class OllamaEngine:
 
     def __init__(self):
         self._client = ollama.Client(host=config.OLLAMA_HOST)
+        self._thinking: dict[str, bool] = {}
 
     def is_available(self) -> bool:
         try:
@@ -40,6 +41,16 @@ class OllamaEngine:
         return GenerationResponse(
             response=resp.response, thinking=getattr(resp, "thinking", None)
         )
+
+    def supports_thinking(self, model: str) -> bool:
+        if model not in self._thinking:
+            try:
+                capabilities = self._client.show(model).capabilities or []
+            except (ollama.ResponseError, httpx.RequestError) as e:
+                logger.warning(f"Could not read capabilities of '{model}': {e}")
+                capabilities = []
+            self._thinking[model] = "thinking" in capabilities
+        return self._thinking[model]
 
     def embed(self, model: str, text: str) -> list[float]:
         try:
@@ -107,6 +118,10 @@ def engine_name() -> str:
 
 def generate(model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
     return engine().generate(model=model, prompt=prompt, think=think)
+
+
+def supports_thinking(model: str) -> bool:
+    return engine().supports_thinking(model)
 
 
 def embed(model: str, text: str) -> list[float]:
