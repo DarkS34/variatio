@@ -1,7 +1,0 @@
-{
-  "statement": <valor concreto para statement>,
-  "solution": <valor concreto para solution>,
-  "difficulty_level": "intermedio",
-  "points": <valor concreto para points>,
-  "tags": <valor concreto para tags>
-}

@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 # File Paths & Cache
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -7,8 +7,9 @@ SYSTEM_DIR = PROJECT_ROOT / "system"
 INSTANCE_DIR = PROJECT_ROOT / "instance"
 CACHE_DIR = PROJECT_ROOT / "cache"
 
-RAW_EXEMPLARS_BANK_DIR = PROJECT_ROOT / "raw_exemplars_bank"
-RAW_CORPUS_DIR = PROJECT_ROOT / "raw_corpus"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_base_data"
+RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
+RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"
 KG_PATH = INSTANCE_DIR / "knowledge_graph.json"
 KG_STAGING_PATH = INSTANCE_DIR / "knowledge_graph_partial.json"
 KG_CLEANED_PATH = INSTANCE_DIR / "knowledge_graph_cleaned.json"
@@ -24,6 +25,7 @@ EXEMPLARS_BANK_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "exemplars_bank_embe
 # System & Logging
 NOISY_LOGGERS = ("docling", "docling_core", "docling_ibm_models", "PIL")
 NOISY_WARNING_MODULES = (r"docling.*", r"PIL.*")
+
 
 # Network & Infrastructure
 INFERENCE_ENGINE = "ollama"
