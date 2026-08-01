@@ -7,9 +7,5 @@ icd_vector_db
 *.egg-info/
 .vscode/
 .pytest_cache
-*.docx
-*.pdf
+/raw*
 *.md
-plans
-exemplars_bank*.json
-/*test.py

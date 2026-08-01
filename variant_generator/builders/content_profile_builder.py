@@ -4,9 +4,9 @@ from pathlib import Path
 from json_repair import repair_json
 from loguru import logger
 
-from system import config, inference
-from system.content_profile import ContentProfile
-from system.prompts import infer_content_profile_prompt, json_repair_prompt
+from .. import config, inference
+from ..content_profile import ContentProfile
+from ..prompts import infer_content_profile_prompt, json_repair_prompt
 
 from . import _source_docs
 

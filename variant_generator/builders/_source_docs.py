@@ -2,8 +2,6 @@ import json
 import re
 from pathlib import Path
 
-from docling.document_converter import DocumentConverter, InputFormat
-
 SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 PLAIN_TEXT_EXTS = (".md", ".txt")
 CONVERTED_EXTS = (".pdf", ".docx")
@@ -13,7 +11,15 @@ SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
 FENCE_TOKEN_RE = re.compile(r"§§FENCE(\d+)§§")
 
 
-def default_converter() -> DocumentConverter:
+def default_converter():
+    try:
+        from docling.document_converter import DocumentConverter, InputFormat
+    except ImportError as e:
+        raise ImportError(
+            "The builders need Docling, which is an optional extra. "
+            "Install it with: uv sync --extra builders"
+        ) from e
+
     return DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
 
 
@@ -25,7 +31,7 @@ def list_source_files(input_dir: str | Path) -> list[Path]:
     )
 
 
-def to_markdown(converter: DocumentConverter, input_path: Path) -> str:
+def to_markdown(converter, input_path: Path) -> str:
     suffix = input_path.suffix.lower()
     if suffix in PLAIN_TEXT_EXTS:
         return input_path.read_text(encoding="utf-8")

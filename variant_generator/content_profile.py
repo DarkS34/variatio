@@ -7,24 +7,21 @@ from typing import Literal, ClassVar
 
 from pydantic import BaseModel, Field, create_model
 
-_REQUIRED_KEYS = (
-    "content_context",
-    "general_generation_rules",
-    "primary_field",
-    "fields",
-)
-
-_SCALAR_TYPES  = {
-    "string": str,
-    "integer": int,
-    "number": float,
-    "boolean": bool,
-    "null": type(None),
-}
-_GUIDANCE_KEYS = ("extraction", "generation")
-
 class ContentProfile:
-
+    _REQUIRED_KEYS: ClassVar[tuple] = (
+        "content_context",
+        "general_generation_rules",
+        "primary_field",
+        "fields",
+    )
+    _SCALAR_TYPES: ClassVar[dict] = {
+        "string": str,
+        "integer": int,
+        "number": float,
+        "boolean": bool,
+        "null": type(None),
+    }
+    _GUIDANCE_KEYS: ClassVar[tuple] = ("extraction", "generation")
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
