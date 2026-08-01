@@ -1,11 +1,5 @@
-input_data
 .venv
-results
 __pycache__
-.env
-icd_vector_db
-*.egg-info/
 .vscode/
-.pytest_cache
 /raw*
 *.md
