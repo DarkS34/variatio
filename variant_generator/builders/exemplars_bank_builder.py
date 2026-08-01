@@ -6,10 +6,10 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from system import config, inference
-from system.content_profile import ContentProfile
-from system.prompts import format_content_prompt
-from system.utils import parse_with_repair
+from .. import config, inference
+from ..content_profile import ContentProfile
+from ..prompts import format_content_prompt
+from ..utils import parse_with_repair
 
 from . import _source_docs
 

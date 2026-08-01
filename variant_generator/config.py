@@ -3,7 +3,7 @@ from pathlib import Path
 
 # File Paths & Cache
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SYSTEM_DIR = PROJECT_ROOT / "system"
+SYSTEM_DIR = PROJECT_ROOT / "variant_generator"
 INSTANCE_DIR = PROJECT_ROOT / "instance"
 CACHE_DIR = PROJECT_ROOT / "cache"
 
@@ -41,8 +41,17 @@ EMBEDDING_LLM = "embeddinggemma:latest"
 CONCEPT_TAGGER_LLM = "gemma4:e4b-it-q4_K_M"
 REPAIR_LLM = "gemma4:e4b-it-q4_K_M"
 CONTENT_GENERATION_LLM = "gemma4:e4b-it-q4_K_M"
-KG_BUILDER_LLM = "gemma4:31b-it-q4_K_M"
-KG_CLEANUP_LLM = "gemma4:31b-it-q4_K_M"
+
+
+# kg-builder (lazy import in builders/knowledge_graph_builder.py). Deliberately NOT named
+# `*_LLM`: prepare_models() would pull and warm them on every run; they are ensured only
+# when a KG build actually triggers.
+KG_BUILDER_EXTRACTION_MODEL = "gemma4:31b-it-q4_K_M"
+KG_BUILDER_CURATION_MODEL = "gemma4:31b-it-q4_K_M"
+KG_BUILDER_CHUNK_SIZE = 12000
+KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
+KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
+KG_RELATION_SCHEMA = "es"
 
 
 # Content Processing
@@ -51,4 +60,3 @@ SCHEMA_INFERENCE_BUDGET = 48_000
 MAX_JSON_REPAIR_TRIES = 3
 EMBEDDER_SIMILARITY_THRESHOLD = 0.3
 MAX_FEW_SHOT_EXAMPLES = 4
-KG_BUILDER_CHUNK_SIZE = 12000

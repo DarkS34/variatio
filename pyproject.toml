@@ -1,26 +1,39 @@
 [project]
 name = "graph-guided-llm-content-generator"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [
     "loguru>=0.7.3",
-    "docling>=2.0.0",
     "networkx>=3.4.2",
     "numpy>=2.2.6",
     "ollama>=0.4.7",
     "scipy>=1.15.3",
     "tqdm>=4.67.3",
     "json-repair>=0.59.5",
+    "pydantic>=2.11.2",
 ]
 
+# Authoring-only. Docling drags ~540 MB (torch, transformers, docling-parse) that the
+# runtime pipeline never touches; it is imported lazily in builders/_source_docs.py.
+# kg-builder is imported lazily in builders/knowledge_graph_builder.py.
+[project.optional-dependencies]
+builders = ["docling>=2.0.0", "kg-builder"]
+
+# uv has no `default-extras`, so the extra is repeated here to keep a plain
+# `uv sync` able to run the builders locally.
 [dependency-groups]
-dev = [
-    "pytest>=8.0.0",
-]
+dev = ["kg-builder", "docling>=2.0.0"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-q"
+[project.scripts]
+variant-generator = "variant_generator.cli:main"
+
+[tool.uv.sources]
+kg-builder = { git = "https://github.com/DarkS34/kg-builder" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["variant_generator"]
