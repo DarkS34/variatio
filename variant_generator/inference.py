@@ -58,6 +58,16 @@ class OllamaEngine:
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama embedding failed for model '{model}': {e}") from e
 
+    def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        try:
+            return list(self._client.embed(model=model, input=texts)["embeddings"])
+        except (ollama.ResponseError, httpx.RequestError) as e:
+            raise InferenceError(
+                f"Ollama batch embedding failed for model '{model}': {e}"
+            ) from e
+
     def ensure_model(self, model: str) -> bool:
         installed = [info["model"] for info in self._client.list()["models"]]
         if model in installed:
@@ -126,6 +136,10 @@ def supports_thinking(model: str) -> bool:
 
 def embed(model: str, text: str) -> list[float]:
     return engine().embed(model=model, text=text)
+
+
+def embed_batch(model: str, texts: list[str]) -> list[list[float]]:
+    return engine().embed_batch(model=model, texts=texts)
 
 
 def is_available() -> bool:

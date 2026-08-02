@@ -10,7 +10,6 @@ from .. import config, inference
 from ..content_profile import ContentProfile
 from ..prompts import format_content_prompt
 from ..utils import parse_with_repair
-
 from . import _source_docs
 
 

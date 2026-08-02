@@ -130,19 +130,32 @@ Descripción:"""
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────
 
 
-def tag_concepts_prompt(statement: str, candidates: str, context: dict | None = None) -> str:
+def tag_concepts_prompt(
+    statement: str,
+    candidates: str,
+    relations: str = "",
+    context: dict | None = None,
+) -> str:
     context_block = ""
     if context:
         context_lines = "\n".join(f"- {key}: {value}" for key, value in context.items())
         context_block = f"\n# CONTEXTO\n{context_lines}\n"
 
+    relations_block = ""
+    if relations.strip():
+        relations_block = (
+            "\n# RELACIONES ENTRE LOS CANDIDATOS\n"
+            "Relaciones del grafo de conocimiento entre los propios candidatos. Úsalas para elegir el NIVEL DE ESPECIFICIDAD correcto:\n"
+            f"{relations}\n"
+        )
+
     return f"""\
 Clasifica el siguiente item de contenido educativo asignándole los conceptos del currículo que trabaja.
 {context_block}
 # CONCEPTOS CANDIDATOS
-Los conceptos están ordenados de mayor a menor relevancia semántica respecto al texto del item:
+Ordenados de mayor a menor relevancia semántica respecto al texto del item. Bajo cada nombre está la descripción del concepto: describe qué clase de item lo ejemplifica o practica. Juzga por la descripción, no por el nombre.
 {candidates}
-
+{relations_block}
 # ESQUEMA DE SALIDA
 {{
   "concepts": ["Concepto A", "Concepto B"],
@@ -153,6 +166,8 @@ Los conceptos están ordenados de mayor a menor relevancia semántica respecto a
 - Usa ÚNICAMENTE conceptos de la lista de candidatos. No inventes ni parafrasees nombres.
 - `concepts`: lista de todos los conceptos que el item trabaja de forma explícita o necesaria.
 - `primary_concept`: el concepto central que el item pretende practicar. Debe aparecer también en `concepts`.
+- ESPECIFICIDAD: elige como `primary_concept` el concepto MÁS ESPECÍFICO que el item practique de verdad. Si un candidato es un tipo de otro, o parte de otro, y el item trabaja el específico, el específico es el primario; incluye el general en `concepts` solo si el item lo trabaja además por sí mismo.
+- El orden de los candidatos es una pista, no una respuesta: el primero no tiene por qué ser el primario.
 - Si el item trabaja claramente un solo concepto, `concepts` tendrá un único elemento.
 - Si tras analizar los candidatos consideras que NINGUNO representa lo que el item practica de forma central, devuelve {{"concepts": [], "primary_concept": null}}. Usa esta opción con criterio: solo cuando ningún candidato describa el contenido real del item, no ante mera incertidumbre.
 - Responde SOLO con el JSON. Sin texto antes ni después, sin backticks, sin comentarios.
