@@ -151,7 +151,9 @@ class ContentProfile:
         return cls._scalar(t)
 
     @classmethod
-    def _scalar(cls, t: str):
+    def _scalar(cls, t: str | None):
+        if t is None:
+            t = "null"
         if t not in cls._SCALAR_TYPES:
             raise ValueError(f"Unsupported scalar type: '{t}'")
         return cls._SCALAR_TYPES[t]
