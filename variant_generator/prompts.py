@@ -265,9 +265,46 @@ JSON:"""
 # ── PERFIL DE CONTENIDO ───────────────────────────────────────────────────────
 
 
+CONTENT_PROFILE_FIELD_NAMING = """\
+- CLAVES EN INGLÉS (INNEGOCIABLE): los nombres de campo — las claves del objeto `fields` — van SIEMPRE en inglés, en snake_case y en ASCII puro; cada uno debe casar con `^[a-z][a-z0-9_]*$` (sin acentos, sin ñ, sin espacios, sin mayúsculas, sin guiones). Es la ÚNICA parte del perfil que no va en el idioma del material: `description`, `guidance`, `general_generation_rules` y `content_context` sí van en ese idioma. Traduce el ROL del campo, no transcribas su etiqueta: «enunciado» → `statement`, «solución» → `solution`, «nivel de dificultad» → `difficulty_level`.
+- VOCABULARIO CANÓNICO: los nombres deben ser estables entre dominios distintos. Si un campo desempeña uno de estos roles, usa EXACTAMENTE ese nombre en vez de inventar un sinónimo:
+  · el texto principal que plantea la tarea, el problema o la pregunta → `statement`
+  · la respuesta, resolución o resultado esperado → `solution`
+  · el grado de dificultad o exigencia → `difficulty_level`
+  · el título o nombre corto del elemento → `title`
+  · las alternativas de una pregunta cerrada → `options`
+  · la explicación o justificación de la respuesta → `explanation`
+  · la modalidad o formato del elemento → `item_type`
+  Inventa un nombre nuevo SOLO si el rol del campo no aparece en esta lista; entonces aplícale las mismas reglas. No añadas sufijos que describan el soporte concreto de esta muestra: `statement`, no `instruction_text`; `solution`, no `solution_code`.\
+"""
+
+
+CONTENT_PROFILE_SCHEMA_GRAMMAR = """\
+`schema` es SIEMPRE un objeto JSON. Nunca una lista, nunca una cadena suelta. TODAS sus claves van DENTRO de ese objeto; ninguna como hermana de `schema`. Vocabulario permitido, y ninguno más:
+- `"type"`: uno de `"string"`, `"integer"`, `"number"`, `"boolean"`, `"array"`, `"object"`.
+- `"type"` como LISTA de esos mismos nombres, para valores que admiten ausencia: {"type": ["string", "null"]}. Dentro de `type` todo son NOMBRES DE TIPO entrecomillados, `"null"` incluido.
+- con `"type": "array"`, la clave `"items"` va DENTRO del schema: {"type": "array", "items": {"type": "string"}}.
+- `"enum"`: lista no vacía de VALORES literales permitidos (no nombres de tipo), para campos categóricos: {"enum": ["básico", "intermedio", "avanzado"]}. SOLO aquí, y solo si el campo admite ausencia según la POLÍTICA DE NULOS, puede aparecer el literal JSON `null` como un valor más de la lista.
+- restricciones opcionales, dentro del mismo objeto: `"minLength"`, `"maxLength"`, `"minimum"`, `"maximum"`, `"default"`.
+
+Formas VÁLIDAS de `schema` — no hay ninguna más:
+  {"type": "string"}
+  {"type": ["string", "null"]}
+  {"type": "array", "items": {"type": "string"}}
+  {"enum": [1, 2, 3, 4]}
+
+Formas INVÁLIDAS (errores reales ya cometidos; no los repitas):
+  ["string", "null"]                    → falta el envoltorio: es {"type": ["string", "null"]}
+  {"type": "array"} + `items` hermana   → `items` va dentro del objeto `schema`
+  {"type": "str"} / "text" / "list"     → esos nombres de tipo no existen\
+"""
+
+
 def infer_content_profile_prompt(sample: str) -> str:
     return f"""\
 Analiza una muestra representativa de materiales educativos en bruto (ejercicios, problemas, actividades) y deduce el PERFIL DE CONTENIDO que describe su estructura. El perfil define, de forma abstracta, la forma de cada elemento de contenido del dominio: qué campos lo componen, de qué tipo son, cómo se extraen de un documento y cómo se generaría uno nuevo.
+
+El perfil es la ÚNICA pieza que instancia el sistema para un dominio: el mismo motor sirve para ejercicios de programación, problemas de física, preguntas de test, fichas de vocabulario o supuestos prácticos. Describe lo que la muestra TIENE, pero con nombres de campo que seguirían teniendo sentido en cualquiera de esos otros dominios; no eleves a estructura lo que es una peculiaridad del formato de estos documentos.
 
 La muestra puede provenir de varios documentos distintos, separados por líneas `===== DOCUMENTO: ... =====`. Deduce la estructura COMÚN a todos, no la de uno solo.
 
@@ -290,19 +327,20 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
 # content_context
 Metadatos del dominio inferidos de la muestra (p. ej. materia/asignatura, nivel educativo, idioma, lenguaje de programación si aplica). Objeto de pares clave→valor de texto. Incluye solo lo que deduzcas con seguridad.
 
-# fields
+# fields — CÓMO SE LLAMAN
+{CONTENT_PROFILE_FIELD_NAMING}
+
+# fields — CUÁLES INCLUIR
 Un campo por cada pieza de información ESENCIAL que compone un elemento.
 
-- CLAVES EN INGLÉS: los nombres de campo (las claves del objeto `fields`) van SIEMPRE en inglés y en snake_case (p. ej. `statement`, `solution`, `difficulty_level`), aunque el material esté en otro idioma. Es la ÚNICA parte que no va en el idioma del dominio; el resto de textos (`description`, `guidance`…) sí.
-- MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un elemento. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica en la muestra. Al mismo tiempo, NO omitas nada esencial para representar o generar el elemento (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera.
-- PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío; contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
+- MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un elemento. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica en la muestra. Al mismo tiempo, NO omitas nada esencial para representar o generar el elemento (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera. Lo habitual son 3-5 campos.
+- PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío (`is_solved`, `has_solution`: eso ya lo dice que `solution` sea null); contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
+- NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`topic_tags`, `concepts`, `keywords`, `subject`…). El sistema anota eso aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe al dominio entero (asignatura, nivel educativo, idioma) va en `content_context`, no en `fields`.
+- COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el elemento, (b) recuperarlo semánticamente y (c) generar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el texto que porta la carga semántica (el `primary_field`, obligatorio); el resultado esperado, cuando el material lo trae o lo admite; y al menos un campo CLASIFICATORIO que un orquestador pueda fijar como parámetro al pedir un elemento nuevo (dificultad, nivel, modalidad…). Si la muestra no etiqueta ese eje clasificatorio pero es deducible observando el elemento, decláralo igualmente y define el criterio (ver POLÍTICA DE NULOS).
 
 Para cada campo:
-- `schema`: la forma del valor. Usa ÚNICAMENTE este vocabulario:
-  · `"type"`: uno de "string", "integer", "number", "boolean", "null"; o "array" (con `"items"`); o una LISTA de tipos para valores opcionales (p. ej. `["string", "null"]`).
-  · o bien `"enum"`: lista no vacía de valores permitidos (para campos categóricos, p. ej. una dificultad `[1, 2, 3, 4]`). Los elementos de `enum` son VALORES literales, no nombres de tipo. SOLO si el campo admite ausencia según la POLÍTICA DE NULOS, incluye el literal JSON `null` (p. ej. `["básico", "avanzado", null]`), NUNCA la cadena `"null"` — esa sería el texto "null" y haría fallar la validación cuando el valor real sea nulo.
-  · restricciones opcionales: `"minLength"`/`"maxLength"` (strings), `"minimum"`/`"maximum"` (números), `"default"` (valor por defecto si el campo es opcional).
-  No uses ningún otro tipo ni palabra clave.
+- `schema`: la forma del valor.
+{CONTENT_PROFILE_SCHEMA_GRAMMAR}
 - `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma del dominio.
 - `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
 - `guidance.generation`: cómo GENERAR este campo al crear un elemento nuevo desde cero. **Inclúyela SOLO si el campo se genera de verdad** (ver criterio abajo); si no, omítela y deja en `guidance` únicamente `extraction`.
@@ -333,10 +371,36 @@ Reglas generales, transversales a todos los campos, que debería respetar la gen
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
 - Los nombres de campo (claves de `fields`) SIEMPRE en inglés y snake_case. El resto de texto de cara al humano (`description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material de la muestra.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` únicamente donde el contenido pueda no existir.
-- Escapa saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+- Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
+- ANTES DE RESPONDER, verifica las tres cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` casa con `^[a-z][a-z0-9_]*$`; (3) `primary_field` es exactamente una de esas claves.
 
 <<<MUESTRA>>>
 {sample}
 <<<FIN>>>
+
+JSON:"""
+
+
+def repair_content_profile_prompt(profile: str, error_msg: str) -> str:
+    return f"""\
+El siguiente PERFIL DE CONTENIDO parsea como JSON válido pero no cumple el formato exigido. Corrígelo.
+
+# ERROR DE VALIDACIÓN
+{error_msg}
+
+# PERFIL A CORREGIR
+{profile}
+
+# FORMATO DE `schema` — causa habitual del error
+{CONTENT_PROFILE_SCHEMA_GRAMMAR}
+
+# NOMBRES DE CAMPO
+{CONTENT_PROFILE_FIELD_NAMING}
+
+# REGLAS
+- Conserva el contenido original (`description`, `guidance`, reglas, contexto) tal cual; corrige SOLO lo que incumple el formato. Si renombras un campo, renómbralo también donde se le referencie.
+- Claves de nivel superior exactamente: `content_context`, `general_generation_rules`, `primary_field`, `fields`.
+- `primary_field` debe ser una de las claves de `fields`.
+- Devuelve UN ÚNICO objeto JSON. Nada antes, nada después. Sin backticks, sin comentarios, sin explicaciones.
 
 JSON:"""

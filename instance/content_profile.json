@@ -1,0 +1,56 @@
+{
+  "content_context": {
+    "subject": "Fundamentos de Programación / Introducción a la Informática",
+    "language_of_instruction": "Spanish",
+    "programming_language": "Python"
+  },
+  "general_generation_rules": [
+    "Los enunciados deben ser descriptivos y concretos, especificando claramente las variables implicadas.",
+    "La solución debe incluir el código funcional necesario para resolver la tarea descrita en el enunciado.",
+    "En soluciones de Python se observan docstrings estándar con tipos (int -> float) y precondiciones; priorizar esta documentación si no está implícita.",
+    "El nombre de las variables debe ser descriptivo según convención del dominio (snake_case, semántico)."
+  ],
+  "primary_field": "statement",
+  "fields": {
+    "statement": {
+      "schema": {
+        "type": "string"
+      },
+      "description": "Enunciado de la tarea o problema. Contiene las instrucciones textuales, fórmulas (texto plano) y datos numéricos explícitos que conforman el requerimiento del ejercicio.",
+      "guidance": {
+        "extraction": "Copiar todo el texto bajo el número del ejercicio desde su inicio hasta encontrar la marca 'SOLUCION PROPUESTA', un nuevo numerador o fin de bloque. Normalizar marcadores numéricos ('1.', '- ') quitándolos si no aportan contexto, pero mantener fórmulas matemáticas dentro del cuerpo como texto plano (sin LaTeX $$).",
+        "generation": "Redactar una instrucción clara y autosuficiente que defina las entradas esperadas. Especificar tipos de datos implícitos en el enunciado. Evitar ambigüedad sobre qué debe mostrar o calcularse."
+      }
+    },
+    "solution": {
+      "schema": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": "Código fuente (solución propuesta) y comentarios que resuelven el enunciado. Puede incluir definiciones de funciones, algoritmos paso a paso o cálculos resultantes.",
+      "guidance": {
+        "extraction": "Localizar la sección encabezada por 'SOLUCION PROPUESTA' bajo cada ejercicio (si existe). Extraer únicamente las líneas que contienen código ejecutable y comentarios técnicos. Excluir marcadores de prueba ('# Probador'), impresiones finales solo para validación manual o imports no estrictamente necesarios si el objetivo es modular.",
+        "generation": "Generar un bloque de código Python funcional capaz de resolver la tarea planteada en statement. Incluir nombres significativos y docstrings siguiendo formato (OBJ: ..., PRE: ...) cuando se definen funciones."
+      }
+    },
+    "difficulty_level": {
+      "schema": {
+        "type": [
+          "string",
+          null
+        ],
+        "enum": [
+          "básico",
+          "intermedio",
+          "avanzado"
+        ]
+      },
+      "description": "Nivel de exigencia del ejercicio. Si el texto no etiqueta explícitamente (ej: 'Ejercicio avanzado'), se infiere por complejidad sintáctica o algorítmica requerida; si es ambigua, dejar null.",
+      "guidance": {
+        "extraction": "Buscar etiquetas explícitas en encabezados o títulos ('nivel básico', 'avanzado'). Si no hay etiqueta visible per item pero está implícito por sección (ej: bajo 'Ejercicios nivel básico'), asignar categoría de esa cabecera. Para ejercicios sin contexto ni código complejo, inferir como intermedio."
+      }
+    }
+  }
+}

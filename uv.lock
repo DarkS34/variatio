@@ -760,7 +760,7 @@ wheels = [
 [[package]]
 name = "kg-builder"
 version = "0.1.0"
-source = { git = "https://github.com/DarkS34/kg-builder#2cf911239ea6b02e563cf251a9e014d6c3edb12e" }
+source = { git = "https://github.com/DarkS34/kg-builder#57bb38eb46e4a9eb2caeab71a32ced920b2a0f76" }
 dependencies = [
     { name = "docling" },
     { name = "httpx" },

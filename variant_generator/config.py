@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 
-# File Paths & Cache
+# File Paths & Cache ----------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SYSTEM_DIR = PROJECT_ROOT / "variant_generator"
 INSTANCE_DIR = PROJECT_ROOT / "instance"
 CACHE_DIR = PROJECT_ROOT / "cache"
 
-RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_base_data"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_1"
 RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
 RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"
 KG_PATH = INSTANCE_DIR / "knowledge_graph.json"
@@ -22,55 +22,55 @@ CONCEPTS_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "concepts_embeddings.npz"
 EXEMPLARS_BANK_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "exemplars_bank_embeddings.npz"
 
 
-# System & Logging
+# System & Logging ----------------------------------------------
 NOISY_LOGGERS = ("docling", "docling_core", "docling_ibm_models", "PIL")
 NOISY_WARNING_MODULES = (r"docling.*", r"PIL.*")
 
 
-# Network & Infrastructure
+# Inference ----------------------------------------------
 INFERENCE_ENGINE = "ollama"
 _OLLAMA_HOST = os.environ.setdefault("OLLAMA_HOST", "localhost:13434")
 OLLAMA_HOST = _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 os.environ["OLLAMA_HOST"] = OLLAMA_HOST
 
 
-# LLMs
-CONTENT_PROFILE_BUILDER_LLM = "qwen3.6:35b"
-CONTENT_FORMATTING_LLM = "qwen3.6:35b"
+# LLMs ----------------------------------------------
+CONTENT_PROFILE_BUILDER_LLM = "qwen3.5:35b-a3b-q8_0"
+CONTENT_FORMATTING_LLM = "qwen3.5:35b-a3b-q8_0"
+
 EMBEDDING_LLM = "qwen3-embedding:4b"
-# qwen3-embedding is instruction-tuned and asymmetric: the query carries an "Instruct: <task>
-# \nQuery: " header stating what is being retrieved, the indexed side carries nothing. Unlike
-# embeddinggemma's prefixes (measured: no gain), this one is load-bearing — it lifted the
-# correct-vs-best-wrong margin from 0.119 to 0.152 on the calibration probe. Both prefixes are
-# part of the embeddings fingerprint, so editing them rebuilds the concept and bank indices.
+
+CONCEPT_TAGGER_LLM = "qwen3.5:35b-a3b-q8_0"
+
+KG_BUILDER_EXTRACTION_MODEL = "qwen3.5:35b-a3b-q8_0"
+KG_BUILDER_CURATION_MODEL = "gemma4:31b-it-q4_K_M"
+
+CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
+
+REPAIR_LLM = "qwen3.5:4b-q8_0"
+
+
+# Content Processing ----------------------------------------------
+SCHEMA_INFERENCE_BUDGET = 32_000
+KG_BUILDER_CHUNK_SIZE = 12_000
+MAX_CHUNK_SIZE = 3_500
+
+KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
+KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
+KG_RELATION_SCHEMA = "es"
+
 EMBEDDING_QUERY_PREFIX = (
     "Instruct: Dado el enunciado de un item de contenido educativo, recupera la descripción "
     "del concepto del currículo que el item practica\nQuery: "
 )
 EMBEDDING_DOCUMENT_PREFIX = ""
 EMBEDDING_BATCH_SIZE = 16
-CONCEPT_TAGGER_LLM = "qwen3.6:35b"
-REPAIR_LLM = "qwen3.5:4b-q8_0"
-CONTENT_GENERATION_LLM = "qwen3.6:35b"
-
-
-# kg-builder (lazy import in builders/knowledge_graph_builder.py). Deliberately NOT named
-# `*_LLM`: prepare_models() would pull and warm them on every run; they are ensured only
-# when a KG build actually triggers.
-KG_BUILDER_EXTRACTION_MODEL = "qwen3.6:35b"
-KG_BUILDER_CURATION_MODEL = "qwen3.6:35b"
-KG_BUILDER_CHUNK_SIZE = 12000
-KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
-KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
-KG_RELATION_SCHEMA = "es"
-
-
-# Content Processing
-MAX_CHUNK_SIZE = 3500
-SCHEMA_INFERENCE_BUDGET = 48_000
-MAX_JSON_REPAIR_TRIES = 3
 EMBEDDER_SIMILARITY_THRESHOLD = 0.40
 EMBEDDER_RELATIVE_MARGIN = 0.15
 EMBEDDER_DESCRIPTION_WEIGHT = 0.5
+
 TAGGER_TOP_K_CANDIDATES = 10
+
 MAX_FEW_SHOT_EXAMPLES = 4
+
+MAX_JSON_REPAIR_TRIES = 3
