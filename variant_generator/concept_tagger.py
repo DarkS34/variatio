@@ -16,7 +16,7 @@ class ConceptTagger:
         concept_tagger_model: str,
         primary_field: str,
         context: dict | None = None,
-        top_k_candidates: int = 10,
+        top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
     ):
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
@@ -33,31 +33,26 @@ class ConceptTagger:
             logger.warning(f"No embedder candidates for statement: {statement[:80]}...")
             return empty
 
-        candidates_str = "\n".join(
-            f"{i + 1}. {concept} (score: {score:.3f})"
-            for i, (concept, score) in enumerate(candidates)
-        )
+        if len(candidates) == 1:
+            concept, score = candidates[0]
+            logger.info(f"Single dominant candidate '{concept}' ({score:.3f}) — skipping LLM verification")
+            return {"concepts": [concept], "primary_concept": concept}
+
         candidate_names = [c for c, _ in candidates]
-
         prompt = tag_concepts_prompt(
-            statement=statement, candidates=candidates_str, context=self.context
+            statement=statement,
+            candidates=self._candidates_block(candidates),
+            relations=self._relations_block(candidate_names),
+            context=self.context,
         )
 
-        response = inference.generate(
-            model=self.concept_tagger_model, prompt=prompt, think=False
-        ).response
+        result = self._verify(prompt, candidate_names, think=False)
 
-        def parse(text: str) -> tuple[dict | None, str | None]:
-            parsed = self._parse_and_validate(text, candidate_names)
-            return parsed, None if parsed is not None else "invalid JSON or schema"
-
-        result, _ = parse_with_repair(
-            response,
-            parse,
-            repair_model=self.concept_tagger_model,
-            max_attempts=self.max_repair_attempts,
-            shape="objeto",
-        )
+        if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
+            logger.info(f"Inconclusive tagging — retrying with thinking: {statement[:40]}...")
+            escalated = self._verify(prompt, candidate_names, think=True)
+            if not self._is_inconclusive(escalated):
+                result = escalated
 
         if result is None:
             logger.error("Failed to tag statement after repairs, returning empty annotation")
@@ -72,6 +67,69 @@ class ConceptTagger:
             return empty
 
         return result
+
+    @staticmethod
+    def _is_inconclusive(result: dict | None) -> bool:
+        return result is None or result["primary_concept"] is None
+
+    def _verify(self, prompt: str, candidate_names: list[str], think: bool) -> dict | None:
+        response = inference.generate(
+            model=self.concept_tagger_model, prompt=prompt, think=think
+        ).response
+
+        def parse(text: str) -> tuple[dict | None, str | None]:
+            parsed = self._parse_and_validate(text, candidate_names)
+            return parsed, None if parsed is not None else "invalid JSON or schema"
+
+        result, _ = parse_with_repair(
+            response,
+            parse,
+            repair_model=self.concept_tagger_model,
+            max_attempts=self.max_repair_attempts,
+            shape="objeto",
+        )
+        return result
+
+    def _candidates_block(self, candidates: list[tuple[str, float]]) -> str:
+        descriptions = self.embedder.concept_descriptions
+        lines = []
+        for i, (concept, _) in enumerate(candidates, 1):
+            lines.append(f"{i}. {concept}")
+            description = " ".join((descriptions.get(concept) or "").split())
+            if description:
+                lines.append(f"   {description}")
+        return "\n".join(lines)
+
+    def _relations_block(self, candidate_names: list[str]) -> str:
+        kg = self.embedder.knowledge_graph
+        names = set(candidate_names)
+        lines: list[str] = []
+        seen: set[tuple] = set()
+
+        for verb, graph in kg.graphs.items():
+            directed = graph.is_directed()
+            for concept in candidate_names:
+                if concept not in graph:
+                    continue
+                neighbors = (
+                    kg.neighbors(concept, verb, direction="out")
+                    if directed
+                    else kg.neighbors(concept, verb)
+                )
+                for neighbor in neighbors:
+                    if neighbor == concept or neighbor not in names:
+                        continue
+                    key = (
+                        (verb, concept, neighbor)
+                        if directed
+                        else (verb, *sorted((concept, neighbor)))
+                    )
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    lines.append(f"- {concept} {verb} {neighbor}")
+
+        return "\n".join(lines)
 
     def _parse_and_validate(self, response: str, candidate_names: list[str]) -> dict | None:
         try:
@@ -100,15 +158,25 @@ class ConceptTagger:
             logger.error(f"Parse error: {e}")
             return None
 
-    def tag_all(self, exemplars_bank: dict) -> dict:
-        annotated: dict[str, dict] = {}
-        total = len(exemplars_bank)
+    @staticmethod
+    def pending_ids(exemplars_bank: dict) -> list[str]:
+        return [c_id for c_id, content in exemplars_bank.items() if not content.get("concepts")]
 
-        for idx, (c_id, content) in enumerate(exemplars_bank.items(), 1):
+    def tag_all(self, exemplars_bank: dict) -> dict:
+        pending = self.pending_ids(exemplars_bank)
+        annotated = dict(exemplars_bank)
+        total = len(pending)
+
+        already_tagged = len(exemplars_bank) - total
+        if already_tagged:
+            logger.info(f"Reusing {already_tagged} existing annotation(s)")
+
+        for idx, c_id in enumerate(pending, 1):
             logger.info(f"[{idx}/{total}] Tagging content {c_id}")
+            content = exemplars_bank[c_id]
             annotation = self.tag(content[self.primary_field])
             annotated[c_id] = {**content, **annotation}
 
-        logger.success(f"Tagged {len(annotated)} item(s)")
+        logger.success(f"Tagged {total} item(s)")
 
         return annotated

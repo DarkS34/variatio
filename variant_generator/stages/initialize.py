@@ -79,7 +79,7 @@ def initialize() -> PipelineContext:
 
 
 def _annotate(bank: dict, tagger: ConceptTagger) -> dict:
-    if bank and all("concepts" in item for item in bank.values()):
+    if bank and not tagger.pending_ids(bank):
         logger.info("Exemplars bank already annotated — skipping tagging")
         return bank
 
