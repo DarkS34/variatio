@@ -26,7 +26,7 @@ class ExemplarsBankBuilder:
         self.context = content_profile.content_context
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
-        self.chunk_size = config.MAX_CHUNK_SIZE
+        self.chunk_size = config.EXEMPLARS_BANK_CHUNK_SIZE
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 

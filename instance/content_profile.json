@@ -47,7 +47,7 @@
           "avanzado"
         ]
       },
-      "description": "Nivel de exigencia del ejercicio. Si el texto no etiqueta explícitamente (ej: 'Ejercicio avanzado'), se infiere por complejidad sintáctica o algorítmica requerida; si es ambigua, dejar null.",
+      "description": "Nivel de exigencia del ejercicio. Si el texto no etiqueta explícitamente (ej: 'Ejercicio avanzado'), se infiere por complejidad sintáctica o algorítmica requerida.",
       "guidance": {
         "extraction": "Buscar etiquetas explícitas en encabezados o títulos ('nivel básico', 'avanzado'). Si no hay etiqueta visible per item pero está implícito por sección (ej: bajo 'Ejercicios nivel básico'), asignar categoría de esa cabecera. Para ejercicios sin contexto ni código complejo, inferir como intermedio."
       }
