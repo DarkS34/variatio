@@ -46,6 +46,18 @@ class ContentProfile:
         with path.open(encoding="utf-8") as f:
             return json.load(f)
 
+    # Editors (the CLI's own builder, the web UI) need to know whether a candidate
+    # profile would load *before* writing it. Same rules, same errors, one authority.
+    @classmethod
+    def validate_raw(cls, raw: dict) -> None:
+        cls._validate(raw)
+        fields = {name: cls._spec_to_field(spec) for name, spec in raw["fields"].items()}
+        create_model("ContentItemCandidate", **fields)
+
+    @property
+    def raw(self) -> dict:
+        return copy.deepcopy(self._raw)
+
     @classmethod
     def _validate(cls, raw: dict) -> None:
         if not isinstance(raw, dict):

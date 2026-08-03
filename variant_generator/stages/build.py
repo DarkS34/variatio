@@ -1,6 +1,6 @@
 from loguru import logger
 
-from .. import config
+from .. import config, progress
 from ..builders.content_profile_builder import ContentProfileBuilder
 from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
@@ -50,8 +50,23 @@ _BUILDERS = {
 }
 
 
+_LABELS = {
+    _artifacts.CONTENT_PROFILE: "Perfil de contenido",
+    _artifacts.KNOWLEDGE_GRAPH: "Grafo de conocimiento",
+    _artifacts.EXEMPLARS_BANK: "Banco de ejemplos",
+}
+
+
+def build_artifact(artifact: str) -> dict:
+    if artifact not in _BUILDERS:
+        raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
+    with progress.step(f"build_{artifact}", f"Construyendo: {_LABELS[artifact]}"):
+        return _BUILDERS[artifact]()
+
+
 def build_missing() -> list[str]:
     missing = _artifacts.missing_artifacts()
     for artifact in missing:
-        _BUILDERS[artifact]()
+        progress.checkpoint()
+        build_artifact(artifact)
     return missing

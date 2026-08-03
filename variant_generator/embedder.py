@@ -5,9 +5,130 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from . import config, inference
+from . import config, inference, progress
 from .knowledge_graph import KnowledgeGraph
 from .prompts import concept_description_prompt
+
+
+class ConceptDescriber:
+    """Writes and caches the prose that concepts are matched against.
+
+    These descriptions *are* the retrieval surface: `top_k_concepts` scores an item
+    against their embeddings, so a bad description silently poisons every tag derived
+    from it. Kept separate from Embedder so a host can generate and review them as a
+    step of its own, before anything is indexed.
+    """
+
+    def __init__(
+        self,
+        knowledge_graph: KnowledgeGraph,
+        context: dict,
+        path: str | Path | None = None,
+    ):
+        self.knowledge_graph = knowledge_graph
+        self.context = context
+        self.path = Path(path or config.CONCEPT_DESCRIPTIONS_PATH)
+
+    def load(self) -> dict[str, str]:
+        if not self.path.exists():
+            return {}
+        with self.path.open(encoding="utf-8") as f:
+            return json.load(f)
+
+    def save(self, descriptions: dict[str, str]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(f"{self.path.suffix}.tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(descriptions, f, ensure_ascii=False, indent=2)
+        tmp.replace(self.path)
+
+    def ensure(
+        self,
+        descriptions: dict[str, str] | None = None,
+        concepts: list[str] | None = None,
+        overwrite: bool = False,
+    ) -> dict[str, str]:
+        descriptions = self.load() if descriptions is None else dict(descriptions)
+        targets = concepts if concepts is not None else self.knowledge_graph.taggable_concepts
+
+        pending = list(targets) if overwrite else [c for c in targets if c not in descriptions]
+        if not pending:
+            logger.info(f"Loaded {len(targets)} taggable concept description(s) from cache")
+            return descriptions
+
+        logger.info(f"Generating {len(pending)} concept description(s)...")
+        with progress.step(
+            "descriptions", "Generando descripciones de conceptos", total=len(pending)
+        ) as reporter:
+            for i, concept in enumerate(pending, 1):
+                progress.checkpoint()
+                logger.info(f"[{i}/{len(pending)}] Generating description: {concept}")
+                reporter.tick(i, detail=concept)
+                try:
+                    descriptions[concept] = self.describe(concept)
+                except progress.Cancelled:
+                    raise
+                except Exception as e:
+                    logger.warning(f"Falling back to legacy describe for '{concept}': {e}")
+                    descriptions[concept] = self.simple_describe(concept)
+                # Checkpoint after every concept: a cancelled run keeps what it wrote.
+                self.save(descriptions)
+
+        logger.success(f"Saved {len(descriptions)} concept descriptions to cache")
+        return descriptions
+
+    def describe(self, concept: str) -> str:
+        domain = self.knowledge_graph.concept_domain[concept]
+        relations = self.collect_relations(concept)
+        siblings = [
+            c
+            for c in self.knowledge_graph.concepts_by_domains[domain]
+            if c != concept and c not in self.knowledge_graph.generic_non_taggable_concepts
+        ]
+
+        prompt = concept_description_prompt(
+            concept=concept,
+            domain=domain,
+            relations=relations,
+            siblings=siblings,
+            context=self.context,
+        )
+        response = inference.generate(
+            model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt
+        ).response
+        return response.strip()
+
+    def collect_relations(self, concept: str) -> dict[str, list[str]]:
+        kg = self.knowledge_graph
+        relations: dict[str, list[str]] = {}
+
+        for verb, graph in kg.graphs.items():
+            if not kg.details(verb).get("use_in_embedding", True):
+                continue
+            if concept not in graph:
+                continue
+            if not graph.is_directed():
+                neighbors = kg.neighbors(concept, verb)
+                if neighbors:
+                    relations[verb] = neighbors
+                continue
+            successors = kg.neighbors(concept, verb, direction="out")
+            predecessors = kg.neighbors(concept, verb, direction="in")
+            if successors:
+                relations[f"este concepto {verb}"] = successors
+            if predecessors:
+                relations[f"{verb} este concepto"] = predecessors
+
+        return relations
+
+    def simple_describe(self, concept: str) -> str:
+        domain = self.knowledge_graph.concept_domain[concept]
+        lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
+        lines.extend(
+            f'{verb}: {", ".join(neighbors)}.'
+            for verb, neighbors in self.collect_relations(concept).items()
+        )
+        return "\n".join(lines)
 
 
 class Embedder:
@@ -50,6 +171,7 @@ class Embedder:
         self._exemplar_matrix: np.ndarray = np.zeros((0, 0))
         self._exemplar_rows_by_concept: dict[str, list[int]] = {}
 
+        self.describer = ConceptDescriber(knowledge_graph, context, self.descriptions_path)
         self._ensure_descriptions()
         self._ensure_concepts_index()
 
@@ -187,91 +309,16 @@ class Embedder:
     # CONCEPT DESCRIPTIONS ------------------------------------------------------------------------
 
     def _ensure_descriptions(self) -> None:
-        if self.descriptions_path.exists():
-            with self.descriptions_path.open(encoding="utf-8") as f:
-                self.concept_descriptions = json.load(f)
-
-        missing = [
-            c for c in self.knowledge_graph.taggable_concepts
-            if c not in self.concept_descriptions
-        ]
-        if not missing:
-            logger.info(
-                f"Loaded {len(self.knowledge_graph.taggable_concepts)} taggable concept descriptions from cache"
-            )
-            return
-
-        logger.info(f"Generating {len(missing)} concept description(s)...")
-        for i, concept in enumerate(missing, 1):
-            logger.info(f"[{i}/{len(missing)}] Generating description: {concept}")
-            try:
-                self.concept_descriptions[concept] = self._generate_description(concept)
-            except Exception as e:
-                logger.warning(f"Falling back to legacy describe for '{concept}': {e}")
-                self.concept_descriptions[concept] = self._simple_describe(concept)
-
-        self.descriptions_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with self.descriptions_path.open("w", encoding="utf-8") as f:
-            json.dump(self.concept_descriptions, f, ensure_ascii=False, indent=2)
-        logger.success(f"Saved {len(self.concept_descriptions)} concept descriptions to cache")
-
-    def _generate_description(self, concept: str) -> str:
-        domain = self.knowledge_graph.concept_domain[concept]
-        relations = self._collect_relations(concept)
-        siblings = [
-            c
-            for c in self.knowledge_graph.concepts_by_domains[domain]
-            if c != concept and c not in self.knowledge_graph.generic_non_taggable_concepts
-        ]
-
-        prompt = concept_description_prompt(
-            concept=concept,
-            domain=domain,
-            relations=relations,
-            siblings=siblings,
-            context=self.context,
-        )
-        response = inference.generate(model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt).response
-        return response.strip()
-
-    def _collect_relations(self, concept: str) -> dict[str, list[str]]:
-        kg = self.knowledge_graph
-        relations: dict[str, list[str]] = {}
-
-        for verb, graph in kg.graphs.items():
-            if not kg.details(verb).get("use_in_embedding", True):
-                continue
-            if concept not in graph:
-                continue
-            if not graph.is_directed():
-                neighbors = kg.neighbors(concept, verb)
-                if neighbors:
-                    relations[verb] = neighbors
-                continue
-            successors = kg.neighbors(concept, verb, direction="out")
-            predecessors = kg.neighbors(concept, verb, direction="in")
-            if successors:
-                relations[f"este concepto {verb}"] = successors
-            if predecessors:
-                relations[f"{verb} este concepto"] = predecessors
-
-        return relations
-
-    def _simple_describe(self, concept: str) -> str:
-        domain = self.knowledge_graph.concept_domain[concept]
-        lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
-        lines.extend(
-            f'{verb}: {", ".join(neighbors)}.'
-            for verb, neighbors in self._collect_relations(concept).items()
-        )
-        return "\n".join(lines)
+        self.concept_descriptions = self.describer.ensure()
 
     # INDICES -------------------------------------------------------------------------------
 
     def init_index_with_concepts(self) -> None:
         concepts = self.knowledge_graph.taggable_concepts
-        vectors = self._embed_many([self.concept_descriptions[c] for c in concepts], "document")
+        with progress.step("index_concepts", "Indexando conceptos", total=len(concepts)) as reporter:
+            vectors = self._embed_many(
+                [self.concept_descriptions[c] for c in concepts], "document", reporter
+            )
         self.concepts_index = dict(zip(concepts, vectors))
 
     def enrich_index_with_content(self, annotated_bank: dict) -> None:
@@ -298,9 +345,14 @@ class Embedder:
                 f"Embedding {len(pending)} exemplars bank example(s) "
                 f"({len(reusable)} reused from cache)..."
             )
-            vectors = self._embed_many(
-                [annotated_bank[ex_id][self.primary_field] for ex_id in pending], "document"
-            )
+            with progress.step(
+                "embed_bank", "Indexando el banco de ejemplos", total=len(pending)
+            ) as reporter:
+                vectors = self._embed_many(
+                    [annotated_bank[ex_id][self.primary_field] for ex_id in pending],
+                    "document",
+                    reporter,
+                )
             reusable.update(zip(pending, vectors))
 
         self.exemplars_bank_index = {ex_id: reusable[ex_id] for ex_id in annotated_bank}
@@ -377,15 +429,20 @@ class Embedder:
         self._embed_cache[key] = vector
         return vector
 
-    def _embed_many(self, texts: list[str], kind: str) -> list[np.ndarray]:
+    def _embed_many(self, texts: list[str], kind: str, reporter=None) -> list[np.ndarray]:
         keys = [self._prefix(kind) + t for t in texts]
         pending = [k for k in dict.fromkeys(keys) if k not in self._embed_cache]
 
+        done = 0
         for start in range(0, len(pending), config.EMBEDDING_BATCH_SIZE):
+            progress.checkpoint()
             batch = pending[start : start + config.EMBEDDING_BATCH_SIZE]
             vectors = inference.embed_batch(model=self.embedding_model, texts=batch)
             for key, vector in zip(batch, vectors):
                 self._embed_cache[key] = self._l2_normalize(np.array(vector, dtype=np.float32))
+            done += len(batch)
+            if reporter is not None:
+                reporter.tick(done)
 
         return [self._embed_cache[k] for k in keys]
 

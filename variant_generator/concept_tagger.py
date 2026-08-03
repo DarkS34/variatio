@@ -1,12 +1,15 @@
 import json
+from collections.abc import Callable
 
 from json_repair import repair_json
 from loguru import logger
 
-from . import config, inference
+from . import config, inference, progress
 from .embedder import Embedder
 from .prompts import tag_concepts_prompt
 from .utils import parse_with_repair
+
+TRACE_KEY = "_tagging"
 
 
 class ConceptTagger:
@@ -25,18 +28,42 @@ class ConceptTagger:
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
 
-    def tag(self, statement: str) -> dict:
-        empty = {"concepts": [], "primary_concept": None}
+    # Every annotation carries how it was reached: which concepts were in play, with what
+    # scores, and who decided. Without it a reviewer sees a tag and no way to judge it.
+    def _trace(self, candidates: list[tuple[str, float]], method: str) -> dict:
+        return {
+            TRACE_KEY: {
+                "candidates": [[c, round(float(s), 4)] for c, s in candidates],
+                "method": method,
+                "model": self.concept_tagger_model,
+                "threshold": self.embedder.similarity_threshold,
+                "margin": self.embedder.relative_margin,
+            }
+        }
 
+    def tag(self, statement: str) -> dict:
         candidates = self.embedder.top_k_concepts(statement, self.top_k_candidates)
+        progress.emit(
+            "retrieval",
+            query=statement[:200],
+            candidates=[[c, round(float(s), 4)] for c, s in candidates],
+        )
+
+        def empty(method: str) -> dict:
+            return {"concepts": [], "primary_concept": None, **self._trace(candidates, method)}
+
         if not candidates:
             logger.warning(f"No embedder candidates for statement: {statement[:80]}...")
-            return empty
+            return empty("no_candidates")
 
         if len(candidates) == 1:
             concept, score = candidates[0]
             logger.info(f"Single dominant candidate '{concept}' ({score:.3f}) — skipping LLM verification")
-            return {"concepts": [concept], "primary_concept": concept}
+            return {
+                "concepts": [concept],
+                "primary_concept": concept,
+                **self._trace(candidates, "single_dominant"),
+            }
 
         candidate_names = [c for c, _ in candidates]
         prompt = tag_concepts_prompt(
@@ -46,6 +73,7 @@ class ConceptTagger:
             context=self.context,
         )
 
+        method = "llm"
         result = self._verify(prompt, candidate_names, think=False)
 
         if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
@@ -53,10 +81,11 @@ class ConceptTagger:
             escalated = self._verify(prompt, candidate_names, think=True)
             if not self._is_inconclusive(escalated):
                 result = escalated
+                method = "llm_thinking"
 
         if result is None:
             logger.error("Failed to tag statement after repairs, returning empty annotation")
-            return empty
+            return empty("failed")
 
         if result["primary_concept"] is None:
             candidates_log = ", ".join(f"{c} ({s:.3f})" for c, s in candidates)
@@ -64,9 +93,9 @@ class ConceptTagger:
                 f"LLM rejected all candidates for statement: {statement[:40]}...\n"
                 f"  Candidates were: {candidates_log}"
             )
-            return empty
+            return empty("rejected")
 
-        return result
+        return {**result, **self._trace(candidates, method)}
 
     @staticmethod
     def _is_inconclusive(result: dict | None) -> bool:
@@ -162,8 +191,17 @@ class ConceptTagger:
     def pending_ids(exemplars_bank: dict) -> list[str]:
         return [c_id for c_id, content in exemplars_bank.items() if not content.get("concepts")]
 
-    def tag_all(self, exemplars_bank: dict) -> dict:
-        pending = self.pending_ids(exemplars_bank)
+    def tag_all(
+        self,
+        exemplars_bank: dict,
+        ids: list[str] | None = None,
+        on_item: "Callable[[str, dict], None] | None" = None,
+    ) -> dict:
+        pending = (
+            [i for i in ids if i in exemplars_bank]
+            if ids is not None
+            else self.pending_ids(exemplars_bank)
+        )
         annotated = dict(exemplars_bank)
         total = len(pending)
 
@@ -171,11 +209,23 @@ class ConceptTagger:
         if already_tagged:
             logger.info(f"Reusing {already_tagged} existing annotation(s)")
 
-        for idx, c_id in enumerate(pending, 1):
-            logger.info(f"[{idx}/{total}] Tagging content {c_id}")
-            content = exemplars_bank[c_id]
-            annotation = self.tag(content[self.primary_field])
-            annotated[c_id] = {**content, **annotation}
+        with progress.step("tagging", "Etiquetando el banco con conceptos del grafo", total) as reporter:
+            for idx, c_id in enumerate(pending, 1):
+                progress.checkpoint()
+                logger.info(f"[{idx}/{total}] Tagging content {c_id}")
+                content = exemplars_bank[c_id]
+                reporter.tick(idx, detail=c_id)
+                annotation = self.tag(content[self.primary_field])
+                annotated[c_id] = {**content, **annotation}
+                progress.emit(
+                    "item.tagged",
+                    id=c_id,
+                    concepts=annotation["concepts"],
+                    primary_concept=annotation["primary_concept"],
+                    method=annotation[TRACE_KEY]["method"],
+                )
+                if on_item is not None:
+                    on_item(c_id, annotated[c_id])
 
         logger.success(f"Tagged {total} item(s)")
 

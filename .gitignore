@@ -3,3 +3,8 @@ __pycache__
 .vscode/
 /raw*
 *.md
+instance/.history/
+instance/.runs/
+instance/.review_state.json
+web/node_modules
+web/dist

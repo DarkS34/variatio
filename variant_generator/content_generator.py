@@ -6,7 +6,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import config, inference
+from . import config, inference, progress
 from .content_profile import ContentProfile
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
@@ -68,38 +68,50 @@ class ContentGenerator:
             logger.warning(
                 f"No few-shot examples found for concepts={concepts}, fixed={fixed} — falling back to zero-shot"
             )
+        progress.emit("few_shot", ids=[ex_id for ex_id, _ in few_shot], concepts=concepts)
 
         target_block = self._format_target_concepts(concepts)
         curriculum_block = self._format_curriculum(curriculum)
         rules_block = "\n".join(f"- {r}" for r in self.general_generation_rules)
-        few_shot_block = self._build_few_shot_block(few_shot)
+        few_shot_block = self._build_few_shot_block([item for _, item in few_shot])
         instance_template = self._build_instance_template(fixed)
         field_guidance_block = self._build_field_guidance_block(fixed)
         fixed_values_block = self._build_fixed_values_block(fixed)
 
         accepted: list[GeneratedContent] = []
-        for i in range(n):
-            already = self._collect_already_generated(accepted)
-            prompt = generate_content_prompt(
-                context=self.context,
-                target_concepts_block=target_block,
-                curriculum_block=curriculum_block,
-                rules_block=rules_block,
-                few_shot_block=few_shot_block,
-                already_generated=already,
-                instance_template=instance_template,
-                field_guidance_block=field_guidance_block,
-                fixed_values_block=fixed_values_block,
-                schema=self.schema_str,
-            )
+        with progress.step("generate", "Generando ítems", total=n) as reporter:
+            for i in range(n):
+                progress.checkpoint()
+                already = self._collect_already_generated(accepted)
+                prompt = generate_content_prompt(
+                    context=self.context,
+                    target_concepts_block=target_block,
+                    curriculum_block=curriculum_block,
+                    rules_block=rules_block,
+                    few_shot_block=few_shot_block,
+                    already_generated=already,
+                    instance_template=instance_template,
+                    field_guidance_block=field_guidance_block,
+                    fixed_values_block=fixed_values_block,
+                    schema=self.schema_str,
+                )
 
-            logger.info(f"[{i + 1}/{n}] generating item")
-            result = self._generate_one(prompt, fixed)
-            if result is None:
-                logger.warning(f"[{i + 1}/{n}] generation failed; skipping")
-                continue
-            accepted.append(result)
-            logger.success(f"[{i + 1}/{n}] item accepted")
+                logger.info(f"[{i + 1}/{n}] generating item")
+                reporter.tick(i + 1)
+                progress.emit("prompt", index=i + 1, text=prompt)
+                result = self._generate_one(prompt, fixed)
+                if result is None:
+                    logger.warning(f"[{i + 1}/{n}] generation failed; skipping")
+                    progress.emit("item.rejected", index=i + 1)
+                    continue
+                accepted.append(result)
+                logger.success(f"[{i + 1}/{n}] item accepted")
+                progress.emit(
+                    "item.produced",
+                    index=i + 1,
+                    item=result.item.model_dump(mode="json"),
+                    thinking=result.thinking,
+                )
 
         if len(accepted) < n:
             logger.warning(f"Generated {len(accepted)}/{n} items")
@@ -139,11 +151,13 @@ class ContentGenerator:
                     f"Target concepts not contained in curriculum: {outside}"
                 )
 
-    def _select_few_shot(self, concepts: list[str], fixed: dict[str, object]) -> list[dict]:
+    def _select_few_shot(
+        self, concepts: list[str], fixed: dict[str, object]
+    ) -> list[tuple[str, dict]]:
         target = set(concepts)
         candidates = [
-            item
-            for item in self.exemplars_bank.values()
+            (ex_id, item)
+            for ex_id, item in self.exemplars_bank.items()
             if target.intersection(item.get("concepts") or [])
         ]
         if not candidates:
@@ -151,7 +165,9 @@ class ContentGenerator:
 
         if fixed:
             matching = [
-                c for c in candidates if all(c.get(k) == v for k, v in fixed.items())
+                (ex_id, c)
+                for ex_id, c in candidates
+                if all(c.get(k) == v for k, v in fixed.items())
             ]
             if len(matching) >= self.max_few_shot:
                 candidates = matching
@@ -256,7 +272,12 @@ class ContentGenerator:
     def _generate_one(
         self, prompt: str, fixed: dict[str, object]
     ) -> GeneratedContent | None:
-        resp = inference.generate(model=self.generator_model, prompt=prompt, think=True)
+        resp = inference.generate_stream(
+            model=self.generator_model,
+            prompt=prompt,
+            think=True,
+            on_token=progress.token_sink("item"),
+        )
         body, thinking = self._split_thinking(resp.response, getattr(resp, "thinking", None))
 
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
