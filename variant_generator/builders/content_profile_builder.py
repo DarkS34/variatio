@@ -5,7 +5,7 @@ from pathlib import Path
 from json_repair import repair_json
 from loguru import logger
 
-from .. import config, inference
+from .. import config, inference, progress
 from ..content_profile import ContentProfile
 from ..prompts import (
     infer_content_profile_prompt,
@@ -40,12 +40,14 @@ class ContentProfileBuilder:
             return {}
 
         logger.info(f"Found {len(files)} file(s) - inferring content profile")
-        sample = self._gather_sample(files)
+        with progress.step("sample", "Leyendo una muestra del corpus", len(files)):
+            sample = self._gather_sample(files)
         if not sample.strip():
             logger.error("No content extracted from any file")
             return {}
 
-        profile = self._infer(sample)
+        with progress.step("infer_profile", "Infiriendo el perfil de contenido"):
+            profile = self._infer(sample)
         if not profile:
             logger.error("Could not produce a content profile draft")
             return {}
@@ -68,7 +70,9 @@ class ContentProfileBuilder:
     # all are represented and no item is truncated mid-way.
     def _gather_sample(self, files: list[Path]) -> str:
         per_doc: list[tuple[str, list[str]]] = []
-        for file_path in files:
+        for idx, file_path in enumerate(files, 1):
+            progress.checkpoint()
+            progress.tick("sample", idx, len(files), detail=file_path.name)
             try:
                 content = _source_docs.to_markdown(self._docling, file_path)
             except RuntimeError as e:

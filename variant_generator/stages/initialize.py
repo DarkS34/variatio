@@ -1,5 +1,5 @@
-import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from loguru import logger
 
@@ -19,10 +19,27 @@ class PipelineContext:
     knowledge_graph: KnowledgeGraph
     embedder: Embedder
     exemplars_bank: dict
+    tagger: ConceptTagger
     generator: ContentGenerator
+    content_profile_path: Path
+    knowledge_graph_path: Path
+
+    # The bank is the one artifact that changes while the context is alive (tagging,
+    # manual edits). Swapping it means re-embedding and re-merging the index; doing it
+    # here keeps embedder and generator from drifting apart.
+    def apply_bank(self, bank: dict) -> None:
+        self.exemplars_bank = bank
+        self.embedder.enrich_index_with_content(bank)
+        self.generator.exemplars_bank = bank
 
 
-def initialize() -> PipelineContext:
+def initialize(tag: bool = False) -> PipelineContext:
+    """Load the instance and warm the indices.
+
+    Read-only by default: tagging is a separate, explicit act (`stages.tag_bank`)
+    because it rewrites the exemplars bank. `tag=True` restores the old all-in-one
+    behaviour the CLI relies on.
+    """
     profile_path = _artifacts.content_profile_path()
     if profile_path is None:
         raise _artifacts.MissingArtifactError(_artifacts.CONTENT_PROFILE)
@@ -57,35 +74,30 @@ def initialize() -> PipelineContext:
         primary_field=content_profile.primary_field,
         context=content_profile.content_context,
     )
-
-    annotated_bank = _annotate(bank, tagger)
-    embedder.enrich_index_with_content(annotated_bank)
-
     generator = ContentGenerator(
         knowledge_graph=knowledge_graph,
-        exemplars_bank=annotated_bank,
+        exemplars_bank=bank,
         embedder=embedder,
         content_profile=content_profile,
         generator_model=config.CONTENT_GENERATION_LLM,
     )
 
-    return PipelineContext(
+    context = PipelineContext(
         content_profile=content_profile,
         knowledge_graph=knowledge_graph,
         embedder=embedder,
-        exemplars_bank=annotated_bank,
+        exemplars_bank=bank,
+        tagger=tagger,
         generator=generator,
+        content_profile_path=profile_path,
+        knowledge_graph_path=kg_path,
     )
 
+    if tag:
+        from .tag import tag_bank
 
-def _annotate(bank: dict, tagger: ConceptTagger) -> dict:
-    if bank and not tagger.pending_ids(bank):
-        logger.info("Exemplars bank already annotated — skipping tagging")
-        return bank
+        tag_bank(context)
+    else:
+        embedder.enrich_index_with_content(bank)
 
-    annotated = tagger.tag_all(bank)
-    config.EXEMPLARS_BANK_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with config.EXEMPLARS_BANK_PATH.open("w", encoding="utf-8") as f:
-        json.dump(annotated, f, ensure_ascii=False, indent=2)
-    logger.success(f"Saved {len(annotated)} annotated item(s) to {config.EXEMPLARS_BANK_PATH}")
-    return annotated
+    return context

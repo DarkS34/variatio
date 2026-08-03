@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* shadcn token names, so components copied from the registry drop straight in.
+   Light and dark follow the OS; there is no toggle to get out of sync. */
+:root {
+  --background: oklch(0.99 0.002 250);
+  --foreground: oklch(0.21 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 260);
+  --primary: oklch(0.52 0.17 258);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --secondary: oklch(0.96 0.006 255);
+  --secondary-foreground: oklch(0.28 0.02 260);
+  --muted: oklch(0.96 0.006 255);
+  --muted-foreground: oklch(0.53 0.02 258);
+  --accent: oklch(0.95 0.02 255);
+  --accent-foreground: oklch(0.28 0.02 260);
+  --destructive: oklch(0.58 0.21 27);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.6 0.14 155);
+  --warning: oklch(0.72 0.15 75);
+  --info: oklch(0.62 0.13 240);
+  --border: oklch(0.9 0.008 255);
+  --input: oklch(0.9 0.008 255);
+  --ring: oklch(0.62 0.14 258);
+  --radius: 0.6rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.17 0.012 260);
+    --foreground: oklch(0.93 0.006 250);
+    --card: oklch(0.21 0.014 260);
+    --card-foreground: oklch(0.93 0.006 250);
+    --popover: oklch(0.22 0.015 260);
+    --popover-foreground: oklch(0.93 0.006 250);
+    --primary: oklch(0.68 0.15 258);
+    --primary-foreground: oklch(0.17 0.02 260);
+    --secondary: oklch(0.26 0.015 260);
+    --secondary-foreground: oklch(0.93 0.006 250);
+    --muted: oklch(0.26 0.015 260);
+    --muted-foreground: oklch(0.68 0.014 258);
+    --accent: oklch(0.3 0.02 260);
+    --accent-foreground: oklch(0.95 0.006 250);
+    --destructive: oklch(0.64 0.19 25);
+    --destructive-foreground: oklch(0.98 0.005 250);
+    --success: oklch(0.7 0.15 155);
+    --warning: oklch(0.79 0.14 75);
+    --info: oklch(0.7 0.12 240);
+    --border: oklch(0.3 0.015 260);
+    --input: oklch(0.32 0.015 260);
+    --ring: oklch(0.6 0.13 258);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes vg-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes vg-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes vg-pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-fade-in {
+  animation: vg-fade-in 0.18s ease-out;
+}
+.animate-slide-up {
+  animation: vg-slide-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animate-pulse-soft {
+  animation: vg-pulse-soft 1.6s ease-in-out infinite;
+}
+
+/* The token stream and the log console can produce a lot of rows; keep their
+   scrollbars unobtrusive so they read as part of the panel. */
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--muted-foreground) 35%, transparent);
+  border-radius: 999px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -6,7 +6,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from .. import config, inference
+from .. import config, inference, progress
 from ..content_profile import ContentProfile
 from ..prompts import format_content_prompt
 from ..utils import parse_with_repair
@@ -51,21 +51,27 @@ class ExemplarsBankBuilder:
         self._id_counter = self._max_id(bank)
         logger.info(f"Found {len(files)} file(s) - Starting from C{self._id_counter + 1:03d}")
 
-        for idx, file_path in enumerate(files, 1):
-            tag = f"[{idx}/{len(files)} {file_path.name}]"
-            try:
-                new_items = self._process_file(file_path, tag=tag)
-            except Exception as e:
-                logger.exception(f"{tag} skipped: {e}")
-                continue
+        with progress.step("extract", "Extrayendo ítems de los documentos", len(files)) as reporter:
+            for idx, file_path in enumerate(files, 1):
+                progress.checkpoint()
+                tag = f"[{idx}/{len(files)} {file_path.name}]"
+                reporter.tick(idx, detail=file_path.name)
+                try:
+                    new_items = self._process_file(file_path, tag=tag)
+                except progress.Cancelled:
+                    raise
+                except Exception as e:
+                    logger.exception(f"{tag} skipped: {e}")
+                    continue
 
-            if not new_items:
-                logger.warning(f"{tag} produced 0 items")
-                continue
+                if not new_items:
+                    logger.warning(f"{tag} produced 0 items")
+                    continue
 
-            bank.update(new_items)
-            _source_docs.save_json(bank, output_file_path)
-            logger.success(f"{tag} +{len(new_items)} → checkpoint saved ({len(bank)} total)")
+                bank.update(new_items)
+                _source_docs.save_json(bank, output_file_path)
+                logger.success(f"{tag} +{len(new_items)} → checkpoint saved ({len(bank)} total)")
+                progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
         logger.success(f"Directory done — {len(bank)} item(s) in {output_file_path}")
         return bank
@@ -73,7 +79,8 @@ class ExemplarsBankBuilder:
     # PIPELINE ------------------------------------------------------------------------------------
 
     def _process_file(self, file_path: Path, tag: str) -> dict[str, dict]:
-        content = _source_docs.to_markdown(self._docling, file_path)
+        with progress.step("convert", f"Convirtiendo {file_path.name} a markdown"):
+            content = _source_docs.to_markdown(self._docling, file_path)
         logger.info(f"{tag} markdown ready ({len(content):,} chars)")
 
         batches = self._build_batches(content)
@@ -82,16 +89,23 @@ class ExemplarsBankBuilder:
         logger.info(f"{tag} split into {len(batches)} batch(es)")
 
         items: dict[str, dict] = {}
-        for b_idx, batch in enumerate(batches, 1):
-            b_tag = f"{tag} batch {b_idx}/{len(batches)}"
-            try:
-                extracted = self._extract_batch(batch, b_tag)
-            except Exception as e:
-                logger.error(f"{b_tag} failed: {e}")
-                continue
-            for raw in extracted:
-                items[self._next_id()] = {**raw, "source": file_path.stem}
-            logger.info(f"{b_tag} extracted {len(extracted)} item(s)")
+        with progress.step(
+            "extract_batches", f"{file_path.name}: extrayendo lotes", len(batches)
+        ) as reporter:
+            for b_idx, batch in enumerate(batches, 1):
+                progress.checkpoint()
+                b_tag = f"{tag} batch {b_idx}/{len(batches)}"
+                reporter.tick(b_idx)
+                try:
+                    extracted = self._extract_batch(batch, b_tag)
+                except progress.Cancelled:
+                    raise
+                except Exception as e:
+                    logger.error(f"{b_tag} failed: {e}")
+                    continue
+                for raw in extracted:
+                    items[self._next_id()] = {**raw, "source": file_path.stem}
+                logger.info(f"{b_tag} extracted {len(extracted)} item(s)")
         return items
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:

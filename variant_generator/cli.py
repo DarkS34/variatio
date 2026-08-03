@@ -70,7 +70,7 @@ def _report(results: list) -> None:
 
 
 def _generate_and_report(args: argparse.Namespace) -> None:
-    context = stages.initialize()
+    context = stages.initialize(tag=True)
     results = stages.generate(
         context,
         concepts=args.concepts,
@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 logger.info("All instance artifacts already present")
         elif args.command == "init":
-            stages.initialize()
+            stages.initialize(tag=True)
         elif args.command == "generate":
             _generate_and_report(args)
         elif args.command == "all":

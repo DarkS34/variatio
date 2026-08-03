@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from . import config, inference
+from . import config, inference, progress
 from .prompts import json_repair_prompt
 
 
@@ -38,6 +38,13 @@ def parse_with_repair(
 
         logger.warning(
             f"{log_prefix}repair {attempt}/{max_attempts}: {str(error).replace(chr(10), ' | ')}"
+        )
+        progress.emit(
+            "repair",
+            attempt=attempt,
+            max_attempts=max_attempts,
+            error=str(error)[:300],
+            where=log_prefix.strip() or shape,
         )
         prompt = json_repair_prompt(
             broken_output=response, error_msg=error or "invalid JSON", shape=shape

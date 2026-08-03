@@ -2,7 +2,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from .. import config, inference
+from .. import config, inference, progress
 
 
 def _upstream():
@@ -41,9 +41,15 @@ class KnowledgeGraphBuilder:
     def build(self, input_dir: str | Path) -> dict:
         self._builder.bootstrap()
 
-        staging = self._builder.build(input_dir)
+        with progress.step("kg_extract", "Extrayendo entidades y relaciones del corpus"):
+            staging = self._builder.build(input_dir)
         if not staging:
             raise RuntimeError(f"No knowledge graph could be extracted from: {input_dir}")
 
-        self._builder.clean()
-        return self._builder.curate()
+        progress.checkpoint()
+        with progress.step("kg_clean", "Limpiando y fusionando duplicados"):
+            self._builder.clean()
+
+        progress.checkpoint()
+        with progress.step("kg_curate", "Curando dominios y conceptos"):
+            return self._builder.curate()
