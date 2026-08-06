@@ -7,12 +7,13 @@ import {
   Library,
   Network,
   Play,
+  ScrollText,
   Share2,
   WifiOff,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { RunDrawer, useActiveRun } from "@/components/RunDrawer";
+import { RunDrawer, useActiveRun, type DrawerTab } from "@/components/RunDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
@@ -43,6 +44,39 @@ function useElapsed(startedAt: number | null | undefined, live: boolean) {
   return Math.max(0, (now - startedAt) * 1000);
 }
 
+/**
+ * What is still pending, in one line — nothing else.
+ *
+ * The detail of a run lives in the drawer; up here the only questions worth answering
+ * are "is something missing?" and "can I generate yet?". Anything more turns the header
+ * into a second log.
+ */
+function Readiness() {
+  const pipeline = usePipeline();
+  const stages = pipeline.data?.stages ?? [];
+  if (stages.length === 0) return null;
+
+  const missing = stages.filter((stage) => stage.status === "missing");
+  const stale = stages.filter((stage) => stage.status === "stale");
+  const draft = stages.filter((stage) => stage.status === "draft");
+
+  const [tone, text] =
+    missing.length > 0
+      ? (["bg-muted-foreground/50", `Falta construir: ${missing.map((s) => s.label).join(", ")}`] as const)
+      : stale.length > 0
+        ? (["bg-destructive", `Obsoleto: ${stale.map((s) => s.label).join(", ")}`] as const)
+        : draft.length > 0
+          ? (["bg-[var(--warning)]", `Pendiente de aprobar: ${draft.map((s) => s.label).join(", ")}`] as const)
+          : (["bg-[var(--success)]", "Listo para generar"] as const);
+
+  return (
+    <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+      <span className={cn("size-1.5 shrink-0 rounded-full", tone)} />
+      <span className="truncate">{text}</span>
+    </span>
+  );
+}
+
 /** Level 1 of "what is happening": one glance, from any screen. */
 function JobIndicator({ onOpen }: { onOpen: () => void }) {
   const run = useActiveRun();
@@ -53,34 +87,34 @@ function JobIndicator({ onOpen }: { onOpen: () => void }) {
   const elapsed = useElapsed(run?.job?.started_at ?? null, Boolean(running));
   const step = useMemo(() => run?.steps.filter((s) => s.status === "running").at(-1), [run]);
 
-  if (!run || !run.job) {
+  if (!stream.connected) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {stream.connected ? (
-          <>
-            <span className="size-1.5 rounded-full bg-[var(--success)]" />
-            En reposo
-          </>
-        ) : (
-          <>
-            <WifiOff className="size-3.5" />
-            Sin conexión con el servidor
-          </>
-        )}
+        <WifiOff className="size-3.5" />
+        Sin conexión con el servidor
       </div>
     );
   }
 
+  if (!run || !run.job) return <Readiness />;
+
   if (!running) {
     const tone = run.job.status === "failed" ? "danger" : run.job.status === "cancelled" ? "outline" : "success";
     return (
-      <button onClick={onOpen} className="flex items-center gap-2 text-xs" title="Ver la última ejecución">
-        <Badge variant={tone as never}>
-          {run.job.status === "failed" ? <AlertTriangle /> : <CircleCheck />}
-          {run.job.label}
-        </Badge>
-        <span className="tabular-nums text-muted-foreground">{duration(run.job.elapsed_ms)}</span>
-      </button>
+      <div className="flex min-w-0 items-center gap-3">
+        <Readiness />
+        <button
+          onClick={onOpen}
+          className="flex shrink-0 items-center gap-2 text-xs"
+          title="Ver la última ejecución"
+        >
+          <Badge variant={tone as never}>
+            {run.job.status === "failed" ? <AlertTriangle /> : <CircleCheck />}
+            {run.job.label}
+          </Badge>
+          <span className="tabular-nums text-muted-foreground">{duration(run.job.elapsed_ms)}</span>
+        </button>
+      </div>
     );
   }
 
@@ -165,9 +199,15 @@ function StageDot({ status, locked }: { status: StageState["status"]; locked: bo
 export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>("progress");
   const pipeline = usePipeline();
   const health = useHealth();
   const stream = useStream();
+
+  const openDrawer = (tab: DrawerTab) => {
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
 
   useEffect(() => {
     runStore.connect();
@@ -207,8 +247,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="ml-auto flex min-w-0 items-center gap-4">
-            <JobIndicator onOpen={() => setDrawerOpen(true)} />
+          <div className="ml-auto flex min-w-0 items-center gap-3">
+            <JobIndicator onOpen={() => openDrawer("progress")} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openDrawer("logs")}
+              title="Ver el registro completo de la sesión"
+            >
+              <ScrollText />
+              <span className="hidden lg:inline">Registro</span>
+              {stream.logs.length > 0 ? (
+                <span className="tabular-nums text-muted-foreground">{stream.logs.length}</span>
+              ) : null}
+            </Button>
           </div>
         </div>
 
@@ -248,16 +300,35 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <RunDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <RunDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        tab={drawerTab}
+        onTab={setDrawerTab}
+      />
 
       {!drawerOpen ? (
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium shadow-lg transition-transform hover:-translate-y-0.5"
-        >
-          <Activity className="size-4" />
-          Ver ejecución
-        </button>
+        <div className="fixed bottom-4 right-4 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-xs font-medium shadow-lg">
+          <button
+            onClick={() => openDrawer("progress")}
+            className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"
+          >
+            <Activity className="size-4" />
+            Ver ejecución
+          </button>
+          <span className="h-5 w-px bg-border" />
+          <button
+            onClick={() => openDrawer("logs")}
+            title="Ver el registro"
+            aria-label="Ver el registro"
+            className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ScrollText className="size-4" />
+            {stream.logs.length > 0 ? (
+              <span className="tabular-nums">{stream.logs.length}</span>
+            ) : null}
+          </button>
+        </div>
       ) : null}
     </div>
   );

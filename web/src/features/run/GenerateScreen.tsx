@@ -1,6 +1,7 @@
 import { Ban, Copy, Download, Lock, Play, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
 import { RunTimeline } from "@/components/RunTimeline";
@@ -458,6 +459,16 @@ export function GenerateScreen() {
                     height="12rem"
                   />
                   <TechnicalDetails run={run} />
+                  {run.activity.length > 0 ? (
+                    <details className="rounded-lg border border-border">
+                      <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+                        Qué ha ido pasando ({run.activity.length})
+                      </summary>
+                      <div className="thin-scroll max-h-56 overflow-y-auto border-t border-border p-3">
+                        <ActivityFeed lines={run.activity} />
+                      </div>
+                    </details>
+                  ) : null}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">

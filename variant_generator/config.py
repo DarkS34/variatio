@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INSTANCE_DIR = PROJECT_ROOT / "instance"
 CACHE_DIR = PROJECT_ROOT / "cache"
-RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_1"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data"
 
 RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
 RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"

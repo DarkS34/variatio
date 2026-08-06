@@ -1,6 +1,8 @@
 import { AlertTriangle, Check, CircleDashed, Cpu, Loader2, X } from "lucide-react";
 
+import { InfoHint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/misc";
+import { stepExplain } from "@/lib/explain";
 import { duration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StepView } from "@/state/runStore";
@@ -31,6 +33,7 @@ export function RunTimeline({ steps, className }: { steps: StepView[]; className
       {steps.map((step, index) => {
         const running = step.status === "running";
         const hasBar = running && Boolean(step.total);
+        const explain = stepExplain(step.id);
         return (
           <li
             key={step.key}
@@ -46,15 +49,18 @@ export function RunTimeline({ steps, className }: { steps: StepView[]; className
 
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex items-baseline justify-between gap-3">
-                <p
-                  className={cn(
-                    "truncate text-sm",
-                    running ? "font-medium" : "text-muted-foreground",
-                    step.status === "failed" && "text-destructive",
-                  )}
-                >
-                  {step.label}
-                </p>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "truncate text-sm",
+                      running ? "font-medium" : "text-muted-foreground",
+                      step.status === "failed" && "text-destructive",
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                  {explain ? <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint> : null}
+                </span>
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                   {step.total ? (
                     <>
@@ -67,6 +73,9 @@ export function RunTimeline({ steps, className }: { steps: StepView[]; className
                 </span>
               </div>
 
+              {running && explain ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">{explain}</p>
+              ) : null}
               {step.detail ? (
                 <p className="truncate text-xs text-muted-foreground">{step.detail}</p>
               ) : null}

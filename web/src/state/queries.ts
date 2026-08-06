@@ -14,6 +14,7 @@ export const keys = {
   bank: (params: Record<string, unknown>) => ["bank", params] as const,
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
+  raw: ["raw"] as const,
 };
 
 export function useStream() {
@@ -46,6 +47,10 @@ export function useDescriptions() {
 
 export function useCoverage() {
   return useQuery({ queryKey: keys.coverage, queryFn: api.coverage });
+}
+
+export function useRaw() {
+  return useQuery({ queryKey: keys.raw, queryFn: api.raw });
 }
 
 /** Everything an artifact write can invalidate, in one place. */
