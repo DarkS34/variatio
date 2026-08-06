@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
@@ -108,12 +109,16 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
       </div>
 
       {missing.length > 0 ? (
-        <Alert tone="warning" title={`${missing.length} concepto(s) sin descripción`}>
-          <p>
-            Sin descripción no hay vector con el que comparar: esos conceptos nunca saldrán como
-            candidatos al etiquetar.
-          </p>
-        </Alert>
+        <Alert
+          tone="warning"
+          title={`${missing.length} concepto(s) sin descripción`}
+          action={
+            <InfoHint label="Por qué importan las descripciones">
+              La descripción es el texto contra el que se emparejan los ítems. Sin ella no hay
+              vector con el que comparar: el concepto nunca sale como candidato al etiquetar.
+            </InfoHint>
+          }
+        />
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">

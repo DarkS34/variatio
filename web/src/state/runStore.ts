@@ -38,12 +38,16 @@ export interface ProducedItem {
   thinking?: string | null;
 }
 
+/** Which side of the stream the model is writing on right now. */
+export type StreamPhase = "idle" | "thinking" | "answering";
+
 export interface RunView {
   jobId: string;
   job: Job | null;
   steps: StepView[];
   answer: string;
   thinking: string;
+  phase: StreamPhase;
   logs: LogLine[];
   items: ProducedItem[];
   repairs: { attempt: number; max_attempts: number; error: string; where: string }[];
@@ -75,6 +79,7 @@ function emptyRun(jobId: string): RunView {
     steps: [],
     answer: "",
     thinking: "",
+    phase: "idle",
     logs: [],
     items: [],
     repairs: [],
@@ -147,8 +152,10 @@ class RunStore {
       const payload = JSON.parse(message.data) as VgEvent & { events?: VgEvent[] };
       if (payload.kind === "stream.ready") {
         this.commit({ gap: Boolean((payload as any).gap) });
+        // `apply` advances lastSeq to the last replayed event. The bus's own last_seq can
+        // already be ahead of that replay, and adopting it here would make the reducer
+        // discard the live events in between — the tokens produced while we connected.
         for (const event of payload.events ?? []) this.apply(event);
-        this.commit({ lastSeq: Math.max(this.state.lastSeq, (payload as any).last_seq ?? 0) });
         return;
       }
       if (payload.kind === "stream.heartbeat") return;
@@ -231,6 +238,7 @@ class RunStore {
           ...run,
           job: event.job ?? run.job,
           finishedAt: event.ts,
+          phase: "idle",
           steps: run.steps.map((s) =>
             s.status === "running"
               ? { ...s, status: event.kind === "job.finished" ? "ok" : "cancelled" }
@@ -307,17 +315,29 @@ class RunStore {
       case "token": {
         const steps = this.settleModel(run.steps);
         if (event.channel === "thinking") {
-          return { ...run, steps, thinking: tail(run.thinking + event.text, MAX_TOKENS) };
+          return {
+            ...run,
+            steps,
+            phase: "thinking",
+            thinking: tail(run.thinking + event.text, MAX_TOKENS),
+          };
         }
-        return { ...run, steps, answer: tail(run.answer + event.text, MAX_TOKENS) };
+        return {
+          ...run,
+          steps,
+          phase: "answering",
+          answer: tail(run.answer + event.text, MAX_TOKENS),
+        };
       }
 
       case "retrieval":
         return { ...run, retrieval: { query: event.query, candidates: event.candidates ?? [] } };
       case "few_shot":
         return { ...run, fewShot: event.ids ?? [] };
+      // A new prompt is a new item: the panes start empty rather than appending the
+      // next item's tokens to the previous one's.
       case "prompt":
-        return { ...run, prompt: event.text ?? null, answer: "", thinking: "" };
+        return { ...run, prompt: event.text ?? null, answer: "", thinking: "", phase: "idle" };
       case "repair":
         return {
           ...run,
@@ -334,6 +354,7 @@ class RunStore {
       case "item.produced":
         return {
           ...run,
+          phase: "idle",
           items: [...run.items, { index: event.index, item: event.item, thinking: event.thinking }],
         };
       case "item.tagged":

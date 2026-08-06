@@ -216,6 +216,16 @@ def generate_content_prompt(
             f"{curriculum_block}\n"
         )
 
+    # Announcing "(no hay valores fijos)" only invites the model to reason about an
+    # instruction that does not apply; without pinned fields the section does not exist.
+    fixed_section = ""
+    if fixed_values_block.strip():
+        fixed_section = (
+            "\n# VALORES FIJOS PARA ESTA GENERACIÓN\n"
+            "Algunos campos del schema ya tienen su valor decidido por el orquestador. Respétalos exactamente:\n"
+            f"{fixed_values_block}\n"
+        )
+
     return f"""\
 Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
 
@@ -225,11 +235,7 @@ Genera UN nuevo elemento de contenido conforme al schema indicado abajo.
 # CONCEPTOS OBJETIVO
 El item debe practicar estos conceptos del currículo y no introducir otros más avanzados:
 {target_concepts_block}
-{curriculum_section}
-# VALORES FIJOS PARA ESTA GENERACIÓN
-Algunos campos del schema ya tienen su valor decidido por el orquestador. Respétalos exactamente:
-{fixed_values_block}
-
+{curriculum_section}{fixed_section}
 # REGLAS DE GENERACIÓN
 {rules_block}
 

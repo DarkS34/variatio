@@ -11,11 +11,13 @@ function Section({
   title,
   count,
   children,
+  icon,
   defaultOpen = false,
 }: {
   title: string;
   count?: number;
   children: ReactNode;
+  icon?: ReactNode;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -24,9 +26,10 @@ function Section({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+        {icon}
         {title}
         {count !== undefined ? (
           <Badge variant="outline" className="ml-auto">
@@ -137,11 +140,7 @@ export function TechnicalDetails({ run }: { run: RunView }) {
         </Section>
       ) : null}
 
-      <Section title="Consola" count={run.logs.length}>
-        <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Terminal className="size-3.5" />
-          Salida cruda del pipeline
-        </div>
+      <Section title="Consola" count={run.logs.length} icon={<Terminal className="size-3.5" />}>
         <LogConsole logs={run.logs} />
       </Section>
     </div>

@@ -2,7 +2,6 @@
   "concepts_by_domains": {
     "Fundamentos y Algoritmos": [
       "Algoritmia",
-      "Algoritmo",
       "Burbuja",
       "Busqueda binaria",
       "Busqueda lineal",
@@ -22,7 +21,8 @@
       "Pensamiento computacional",
       "Problema",
       "Pseudocódigo",
-      "máximo común divisor (MCD)"
+      "máximo común divisor (MCD)",
+      "Algoritmo"
     ],
     "Estructuras de Datos": [
       "Arrays",

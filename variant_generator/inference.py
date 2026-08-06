@@ -10,6 +10,10 @@ from . import config, progress
 
 TokenSink = Callable[[str, str], None]
 
+THINK_OPEN = "<think>"
+THINK_CLOSE = "</think>"
+_MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
+
 
 class InferenceError(Exception):
     pass
@@ -19,6 +23,91 @@ class InferenceError(Exception):
 class GenerationResponse:
     response: str
     thinking: str | None = None
+
+
+class ThinkingSplitter:
+    """Routes `<think>…</think>` out of the answer, chunk by chunk.
+
+    Some models report their reasoning in the SDK's own `thinking` field; others just
+    print the tags inline in the response. Without this the inline ones flood the answer
+    pane with their scratchpad and the final parse has to guess which of the JSON blobs
+    they wrote along the way was the actual answer.
+
+    Chunks arrive at arbitrary boundaries, so a tag can be cut in half between two of
+    them: whatever trailing text could still grow into a tag is held back until the next
+    chunk decides it.
+    """
+
+    def __init__(self) -> None:
+        self._inside = False
+        self._pending = ""
+
+    @property
+    def inside(self) -> bool:
+        """True when the stream ended (or paused) in the middle of a think block."""
+        return self._inside
+
+    def feed(self, text: str) -> list[tuple[str, str]]:
+        """`(text, channel)` pairs for one chunk, with the tags themselves removed."""
+        if not text:
+            return []
+
+        out: list[tuple[str, str]] = []
+        buffer = self._pending + text
+        self._pending = ""
+
+        while buffer:
+            tag = THINK_CLOSE if self._inside else THINK_OPEN
+            index = buffer.lower().find(tag)
+            if index < 0:
+                break
+            if index:
+                out.append((buffer[:index], self._channel))
+            buffer = buffer[index + len(tag) :]
+            self._inside = not self._inside
+
+        held = _partial_tag_length(buffer)
+        if held:
+            self._pending = buffer[len(buffer) - held :]
+            buffer = buffer[: len(buffer) - held]
+        if buffer:
+            out.append((buffer, self._channel))
+        return out
+
+    def flush(self) -> list[tuple[str, str]]:
+        """Whatever was held back waiting for a tag that never arrived."""
+        if not self._pending:
+            return []
+        out = [(self._pending, self._channel)]
+        self._pending = ""
+        return out
+
+    @property
+    def _channel(self) -> str:
+        return "thinking" if self._inside else "answer"
+
+
+def _partial_tag_length(buffer: str) -> int:
+    """Length of the trailing slice that could still turn out to be a think tag."""
+    lowered = buffer.lower()
+    for size in range(min(len(buffer), _MAX_TAG - 1), 0, -1):
+        suffix = lowered[-size:]
+        if THINK_OPEN.startswith(suffix) or THINK_CLOSE.startswith(suffix):
+            return size
+    return 0
+
+
+def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResponse:
+    """Same split as the streaming path, for a response that arrived in one piece."""
+    splitter = ThinkingSplitter()
+    answer: list[str] = []
+    thinking: list[str] = [sdk_thinking.strip()] if (sdk_thinking or "").strip() else []
+    for part, channel in [*splitter.feed(text or ""), *splitter.flush()]:
+        (thinking if channel == "thinking" else answer).append(part)
+    return GenerationResponse(
+        response="".join(answer).strip(),
+        thinking="\n\n".join(p.strip() for p in thinking if p.strip()) or None,
+    )
 
 
 class OllamaEngine:
@@ -43,16 +132,25 @@ class OllamaEngine:
             progress.model_loading(model, role)
             self._loaded = model
 
+    # Asking a model that has no reasoning mode to think is a hard error in Ollama, so
+    # the request is only made of models that advertise the capability.
+    def _think_option(self, model: str, think: bool | None) -> dict:
+        if think is None:
+            return {}
+        if not self.supports_thinking(model):
+            logger.debug(f"Model '{model}' has no thinking mode; ignoring think={think}")
+            return {}
+        return {"think": think}
+
     def generate(self, model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
         self._announce_model(model, "generation")
-        options = {} if think is None else {"think": think}
         try:
-            resp = self._client.generate(model=model, prompt=prompt, **options)
+            resp = self._client.generate(
+                model=model, prompt=prompt, **self._think_option(model, think)
+            )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
-        return GenerationResponse(
-            response=resp.response, thinking=getattr(resp, "thinking", None)
-        )
+        return split_thinking(resp.response, getattr(resp, "thinking", None))
 
     def generate_stream(
         self,
@@ -65,29 +163,35 @@ class OllamaEngine:
             return self.generate(model=model, prompt=prompt, think=think)
 
         self._announce_model(model, "generation")
-        options = {} if think is None else {"think": think}
+        splitter = ThinkingSplitter()
         answer: list[str] = []
         thinking: list[str] = []
+
+        def take(parts: list[tuple[str, str]]) -> None:
+            for text, channel in parts:
+                (thinking if channel == "thinking" else answer).append(text)
+                on_token(text, channel)
+
         try:
             for chunk in self._client.generate(
-                model=model, prompt=prompt, stream=True, **options
+                model=model, prompt=prompt, stream=True, **self._think_option(model, think)
             ):
                 thought = getattr(chunk, "thinking", None)
                 if thought:
                     thinking.append(thought)
                     on_token(thought, "thinking")
-                text = chunk.response
-                if text:
-                    answer.append(text)
-                    on_token(text, "answer")
+                # The response text may carry inline `<think>` spans; the answer channel
+                # must only ever receive what is actually part of the answer.
+                take(splitter.feed(chunk.response or ""))
                 # Streaming hands back control on every chunk, which is exactly where a
                 # cooperative cancel can take effect without waiting for the full answer.
                 progress.checkpoint()
+            take(splitter.flush())
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
 
         return GenerationResponse(
-            response="".join(answer), thinking="".join(thinking) or None
+            response="".join(answer).strip(), thinking="".join(thinking).strip() or None
         )
 
     def supports_thinking(self, model: str) -> bool:

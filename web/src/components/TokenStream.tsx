@@ -1,43 +1,74 @@
-import { Brain, ChevronRight } from "lucide-react";
+import { Brain, ChevronRight, CornerDownLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { StreamPhase } from "@/state/runStore";
+
+/** Follows the tail of a growing pane until the reader scrolls away from it. */
+function useAutoScroll<T extends HTMLElement>(content: string, enabled = true) {
+  const ref = useRef<T>(null);
+  const [pinned, setPinned] = useState(true);
+
+  useEffect(() => {
+    if (!pinned || !enabled) return;
+    ref.current?.scrollTo({ top: ref.current.scrollHeight });
+  }, [content, pinned, enabled]);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (el) setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
+  };
+
+  return { ref, pinned, setPinned, onScroll };
+}
 
 /**
- * The answer as it is written, with the model's reasoning one click away.
+ * The answer as it is written, with the reasoning that led to it.
  *
- * The `<think>` block is genuinely useful but four times longer than the answer; putting
- * it behind a toggle keeps it available without letting it drown the result.
+ * Reasoning is four times longer than the answer, so it does not get the same room:
+ * it opens by itself while the model is thinking — the only moment it is the whole
+ * story — and folds away as soon as the answer starts. Clicking pins that choice
+ * until the next item.
  */
 export function TokenStream({
   answer,
   thinking,
+  phase = "idle",
   active,
   className,
   height = "16rem",
 }: {
   answer: string;
   thinking: string;
+  phase?: StreamPhase;
   active: boolean;
   className?: string;
   height?: string;
 }) {
-  const [showThinking, setShowThinking] = useState(false);
-  const answerRef = useRef<HTMLPreElement>(null);
-  const thinkingRef = useRef<HTMLPreElement>(null);
-  const [pinned, setPinned] = useState(true);
+  const [override, setOverride] = useState<boolean | null>(null);
+  const thinkingLive = active && phase === "thinking";
+  const showThinking = override ?? thinkingLive;
 
+  const answerPane = useAutoScroll<HTMLPreElement>(answer);
+  const thinkingPane = useAutoScroll<HTMLPreElement>(thinking, showThinking);
+
+  // Each item restarts the panes; so does the reader's choice about the reasoning.
   useEffect(() => {
-    if (!pinned) return;
-    answerRef.current?.scrollTo({ top: answerRef.current.scrollHeight });
-    thinkingRef.current?.scrollTo({ top: thinkingRef.current.scrollHeight });
-  }, [answer, thinking, pinned]);
+    if (!thinking) setOverride(null);
+  }, [thinking]);
 
   if (!answer && !thinking) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>
-        {active ? "Esperando la respuesta del modelo…" : "Sin salida del modelo todavía."}
+      <p className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}>
+        {active ? (
+          <>
+            <span className="size-1.5 animate-pulse-soft rounded-full bg-[var(--info)]" />
+            Esperando al modelo
+          </>
+        ) : (
+          "Sin salida del modelo"
+        )}
       </p>
     );
   }
@@ -45,23 +76,33 @@ export function TokenStream({
   return (
     <div className={cn("space-y-2", className)}>
       {thinking ? (
-        <div className="rounded-lg border border-border">
+        <div className="overflow-hidden rounded-lg border border-border">
           <button
             type="button"
-            onClick={() => setShowThinking((value) => !value)}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => setOverride(!showThinking)}
+            className={cn(
+              "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition-colors",
+              thinkingLive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
           >
             <ChevronRight className={cn("size-3.5 transition-transform", showThinking && "rotate-90")} />
-            <Brain className="size-3.5" />
-            Ver razonamiento
-            <span className="ml-auto tabular-nums">{thinking.length.toLocaleString("es-ES")} car.</span>
+            <Brain className={cn("size-3.5", thinkingLive && "animate-pulse-soft")} />
+            Razonamiento
+            {thinkingLive ? (
+              <span className="text-muted-foreground">en curso…</span>
+            ) : null}
+            <span className="ml-auto tabular-nums text-muted-foreground">
+              {thinking.length.toLocaleString("es-ES")}
+            </span>
           </button>
           {showThinking ? (
             <pre
-              ref={thinkingRef}
-              className="thin-scroll max-h-48 overflow-auto border-t border-border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground"
+              ref={thinkingPane.ref}
+              onScroll={thinkingPane.onScroll}
+              className="thin-scroll max-h-48 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground"
             >
               {thinking}
+              {thinkingLive ? <Caret /> : null}
             </pre>
           ) : null}
         </div>
@@ -69,28 +110,34 @@ export function TokenStream({
 
       <div className="relative">
         <pre
-          ref={answerRef}
-          onScroll={(event) => {
-            const el = event.currentTarget;
-            setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
-          }}
+          ref={answerPane.ref}
+          onScroll={answerPane.onScroll}
           className="thin-scroll overflow-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap"
           style={{ height }}
         >
-          {answer}
-          {active ? <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse-soft bg-primary align-middle" /> : null}
+          {answer || (
+            <span className="text-muted-foreground italic">
+              {thinkingLive ? "El modelo aún está razonando" : "Sin respuesta todavía"}
+            </span>
+          )}
+          {active && phase === "answering" ? <Caret /> : null}
         </pre>
-        {!pinned ? (
+        {!answerPane.pinned ? (
           <Button
             size="sm"
             variant="secondary"
             className="absolute bottom-2 right-2 shadow"
-            onClick={() => setPinned(true)}
+            onClick={() => answerPane.setPinned(true)}
           >
-            Seguir al final
+            <CornerDownLeft />
+            Al final
           </Button>
         ) : null}
       </div>
     </div>
   );
+}
+
+function Caret() {
+  return <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse-soft bg-primary align-middle" />;
 }

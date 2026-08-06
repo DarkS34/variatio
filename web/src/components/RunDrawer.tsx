@@ -93,13 +93,19 @@ export function RunDrawer({ open, onClose }: { open: boolean; onClose: () => voi
                 <Badge variant="info">{run.taggedCount} etiquetado(s)</Badge>
               ) : null}
             </div>
-            <TokenStream answer={run.answer} thinking={run.thinking} active={active} height="14rem" />
+            <TokenStream
+              answer={run.answer}
+              thinking={run.thinking}
+              phase={run.phase}
+              active={active}
+              height="14rem"
+            />
             <TechnicalDetails run={run} />
           </div>
         </div>
       ) : (
         <p className="p-6 text-center text-sm text-muted-foreground">
-          Aún no se ha ejecutado nada en esta sesión.
+          Nada ejecutado en esta sesión.
         </p>
       )}
     </aside>
