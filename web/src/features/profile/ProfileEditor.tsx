@@ -6,6 +6,7 @@ import { StageGate } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -538,7 +539,13 @@ export function ProfileEditor() {
           </Card>
 
           <div className="flex items-center gap-3">
-            <Label className="shrink-0">Campo primario</Label>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Label>Campo primario</Label>
+              <InfoHint label="Qué es el campo primario">
+                El texto que se etiqueta y se embebe: define de qué trata cada ítem y es contra lo
+                que se emparejan los conceptos.
+              </InfoHint>
+            </div>
             <Select
               value={draft.primary_field}
               onChange={(event) => update({ primary_field: event.target.value })}
@@ -550,9 +557,6 @@ export function ProfileEditor() {
                 </option>
               ))}
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Es el texto que se etiqueta y se embebe: define de qué trata cada ítem.
-            </p>
           </div>
 
           <Separator />

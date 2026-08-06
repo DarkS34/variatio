@@ -59,8 +59,10 @@ export function truncate(text: string, limit: number): string {
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
 
-/** Stable, readable hue per domain — same colour in the graph, the table and the legend. */
+/** Stable, readable hue per domain — same colour in the graph, the table and the legend.
+ *  A cool arc (teal → blue → violet) rather than the whole wheel: still one colour per
+ *  domain, but they belong to the same palette as the rest of the app. */
 export function domainColour(index: number, total: number): string {
-  const hue = Math.round((index / Math.max(1, total)) * 330);
-  return `oklch(0.68 0.14 ${hue})`;
+  const hue = 185 + Math.round((index / Math.max(1, total)) * 120);
+  return `oklch(0.66 0.1 ${hue})`;
 }

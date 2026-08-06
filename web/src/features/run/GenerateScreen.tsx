@@ -10,6 +10,7 @@ import { useActiveRun } from "@/components/RunDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import type { ContentProfile, FieldSpec } from "@/lib/types";
@@ -53,6 +54,7 @@ function FixedField({
       <div className="flex items-center gap-2">
         <Switch checked={enabled} onCheckedChange={onToggle} label={`fijar ${name}`} />
         <span className="font-mono text-sm">{name}</span>
+        {guidance ? <InfoHint label={`Guía de ${name}`}>{guidance}</InfoHint> : null}
         <Badge variant="outline" className="ml-auto">
           {type}
         </Badge>
@@ -90,8 +92,6 @@ function FixedField({
           )}
         </div>
       ) : null}
-
-      {guidance ? <p className="mt-2 text-xs text-muted-foreground">{guidance}</p> : null}
     </div>
   );
 }
@@ -221,8 +221,17 @@ export function GenerateScreen() {
       else if (outside.length > 0)
         found.push(`Estos conceptos objetivo no están en el currículo: ${outside.join(", ")}.`);
     }
+    // Fijar un campo a vacío le pide al modelo que lo deje en blanco, y así vuelve.
+    const blank = Object.keys(enabled).filter(
+      (field) =>
+        enabled[field] &&
+        (fixed[field] === undefined ||
+          fixed[field] === null ||
+          (typeof fixed[field] === "string" && !(fixed[field] as string).trim())),
+    );
+    if (blank.length > 0) found.push(`Campos fijos sin valor: ${blank.join(", ")}.`);
     return found;
-  }, [n, concepts, curriculum, useCurriculum]);
+  }, [n, concepts, curriculum, useCurriculum, enabled, fixed]);
 
   const zeroShot = useMemo(
     () => concepts.filter((name) => (conceptList.find((c) => c.name === name)?.exemplars ?? 0) === 0),
@@ -245,7 +254,10 @@ export function GenerateScreen() {
     const params: Record<string, unknown> = { n, concepts };
     const activeFixed: Record<string, unknown> = {};
     for (const [field, on] of Object.entries(enabled)) {
-      if (on && fixed[field] !== undefined) activeFixed[field] = fixed[field];
+      const value = fixed[field];
+      if (!on || value === undefined || value === null) continue;
+      if (typeof value === "string" && !value.trim()) continue;
+      activeFixed[field] = value;
     }
     if (Object.keys(activeFixed).length > 0) params.fixed = activeFixed;
     if (useCurriculum && curriculum.length > 0) params.curriculum = curriculum;
@@ -254,19 +266,19 @@ export function GenerateScreen() {
 
   return (
     <div className="space-y-5">
-      <header>
+      <header className="flex items-center gap-2">
         <h1 className="text-xl font-semibold tracking-tight">Generar variantes</h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Entrada determinista: eliges los conceptos del grafo, cuántos ítems quieres y qué campos
-          del esquema quedan fijos. El resto lo redacta el modelo guiado por los ejemplos del banco.
-        </p>
+        <InfoHint label="Cómo se genera">
+          Eliges los conceptos del grafo, cuántos ítems quieres y qué campos del esquema quedan
+          fijos. El resto lo redacta el modelo guiado por los ejemplos del banco.
+        </InfoHint>
       </header>
 
       {!unlocked ? (
-        <Alert tone="warning" title="La generación está bloqueada">
+        <Alert tone="warning" title="Generación bloqueada">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
-            Faltan por aprobar:{" "}
+            Sin aprobar:{" "}
             {(pipeline.data?.stages ?? [])
               .filter((s) => s.status !== "approved")
               .map((s) => s.label)
@@ -279,7 +291,13 @@ export function GenerateScreen() {
         <div className={cn("space-y-4", !unlocked && "pointer-events-none opacity-50")}>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Conceptos objetivo</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>Conceptos objetivo</CardTitle>
+                <InfoHint label="Qué son los conceptos objetivo">
+                  Lo que el ítem debe practicar. Salen del grafo, y los ejemplos few-shot se
+                  eligen entre los ítems del banco etiquetados con ellos.
+                </InfoHint>
+              </div>
             </CardHeader>
             <CardContent>
               <ConceptPicker
@@ -291,7 +309,7 @@ export function GenerateScreen() {
               {zeroShot.length > 0 ? (
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-[var(--warning)]">
                   <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                  Sin ejemplos en el banco: {zeroShot.join(", ")}. Se generarán en zero-shot.
+                  Sin ejemplos, se generarán en zero-shot: {zeroShot.join(", ")}.
                 </p>
               ) : null}
             </CardContent>
@@ -300,15 +318,16 @@ export function GenerateScreen() {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle className="flex-1">Currículo</CardTitle>
+                <CardTitle>Currículo</CardTitle>
+                <InfoHint label="Para qué sirve el currículo">
+                  Restringe lo que el modelo puede dar por sabido: no introducirá nada fuera de
+                  esta lista. Los conceptos objetivo deben estar dentro.
+                </InfoHint>
+                <span className="flex-1" />
                 <Switch checked={useCurriculum} onCheckedChange={setUseCurriculum} label="currículo" />
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Restringe lo que el modelo puede dar por sabido. Los conceptos objetivo deben estar
-                dentro.
-              </p>
+            <CardContent className={useCurriculum ? undefined : "hidden"}>
               {useCurriculum ? (
                 <ConceptPicker
                   concepts={conceptList}
@@ -325,7 +344,14 @@ export function GenerateScreen() {
           {profile ? (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle>Campos fijos</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle>Campos fijos</CardTitle>
+                  <InfoHint label="Qué hacen los campos fijos">
+                    Un campo fijado se le impone al modelo y se conserva tal cual en el ítem. Sin
+                    fijar, lo decide él. Fijar un campo exige darle valor: en blanco no es un
+                    valor.
+                  </InfoHint>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 {Object.entries(profile.fields).map(([name, spec]) => (
@@ -427,6 +453,7 @@ export function GenerateScreen() {
                   <TokenStream
                     answer={run.answer}
                     thinking={run.thinking}
+                    phase={run.phase}
                     active={Boolean(running)}
                     height="12rem"
                   />
@@ -434,8 +461,7 @@ export function GenerateScreen() {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Cuando lances la generación verás aquí, en vivo, cada paso y la respuesta del
-                  modelo escribiéndose.
+                  Aquí aparecerán los pasos y la respuesta del modelo, en vivo.
                 </p>
               )}
             </CardContent>

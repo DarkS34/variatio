@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
@@ -127,11 +128,13 @@ function ItemEditor({
 
         <div className="space-y-3">
           <div>
-            <Label>Conceptos</Label>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Solo conceptos del grafo. El primero marcado es el principal, y es el que decide de
-              qué concepto es ejemplo este ítem.
-            </p>
+            <div className="mb-2 flex items-center gap-1.5">
+              <Label>Conceptos</Label>
+              <InfoHint label="Cómo se etiqueta un ítem">
+                Solo conceptos del grafo. El marcado como principal es el que decide de qué
+                concepto es ejemplo este ítem.
+              </InfoHint>
+            </div>
             <ConceptPicker
               concepts={concepts}
               selected={selected}
@@ -403,7 +406,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Cobertura del currículo</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>Cobertura del currículo</CardTitle>
+                <InfoHint label="Qué mide la cobertura">
+                  Cuántos conceptos etiquetables tienen al menos un ítem del banco. Los que no lo
+                  tienen se generan en zero-shot, sin ejemplo que imitar.
+                </InfoHint>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {coverage.data ? (
@@ -415,10 +424,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     </span>
                   </div>
                   <Progress value={coverage.data.covered} max={coverage.data.total} />
-                  <p className="text-xs text-muted-foreground">
-                    Los {coverage.data.without_exemplars.length} conceptos sin ejemplo se generarán
-                    en zero-shot.
-                  </p>
                 </>
               ) : (
                 <Skeleton className="h-12" />
@@ -428,7 +433,14 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Umbrales de recuperación</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>Umbrales de recuperación</CardTitle>
+                <InfoHint label="Qué controlan los umbrales">
+                  Por debajo de la similitud mínima un ítem se queda sin candidatos y, por tanto,
+                  sin concepto. El margen relativo decide cuándo un candidato gana por poco y hay
+                  que verificarlo con el LLM.
+                </InfoHint>
+              </div>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between">
@@ -439,10 +451,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 <span className="text-muted-foreground">Margen relativo</span>
                 <span className="tabular-nums">{listing?.thresholds.relative_margin ?? "—"}</span>
               </div>
-              <p className="pt-1 text-xs text-muted-foreground">
-                Por debajo de la similitud mínima un ítem se queda sin candidatos y, por tanto, sin
-                concepto.
-              </p>
             </CardContent>
           </Card>
         </div>

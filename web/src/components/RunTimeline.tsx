@@ -22,9 +22,7 @@ function Icon({ step }: { step: StepView }) {
 export function RunTimeline({ steps, className }: { steps: StepView[]; className?: string }) {
   if (steps.length === 0) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>
-        Todavía no ha empezado ningún paso.
-      </p>
+      <p className={cn("text-sm text-muted-foreground", className)}>Sin pasos todavía.</p>
     );
   }
 

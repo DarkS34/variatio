@@ -1,6 +1,5 @@
 import json
 import random
-import re
 
 from json_repair import repair_json
 from loguru import logger
@@ -14,7 +13,44 @@ from .prompts import generate_content_prompt
 from .utils import parse_with_repair
 
 
-THINK_TAG_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL | re.IGNORECASE)
+def json_objects(text: str) -> list[str]:
+    """Every balanced `{…}` span in `text`, in the order they were written.
+
+    A model that is told to answer with one JSON object still writes drafts, examples
+    and code around it. Handing the whole reply to `repair_json` makes it choose for
+    us — and it chooses the first blob it finds, which is the draft. Slicing the
+    candidates out first lets the caller pick the one that actually fits the schema.
+    """
+    spans: list[str] = []
+    depth = 0
+    start = 0
+    in_string = False
+    escaped = False
+
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                spans.append(text[start : index + 1])
+
+    # A reply cut off mid-object is still worth repairing: it is usually the answer.
+    if depth:
+        spans.append(text[start:])
+    return spans
 
 
 class GeneratedContent(BaseModel):
@@ -60,7 +96,7 @@ class ContentGenerator:
         fixed: dict[str, object] | None = None,
         curriculum: list[str] | None = None,
     ) -> list[GeneratedContent]:
-        fixed = dict(fixed or {})
+        fixed = self._clean_fixed(fixed)
         self._validate_input(concepts, fixed, n, curriculum)
 
         few_shot = self._select_few_shot(concepts, fixed)
@@ -119,6 +155,24 @@ class ContentGenerator:
             logger.success(f"Generated {len(accepted)}/{n} items")
 
         return accepted
+
+    @staticmethod
+    def _clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
+        """Drop blank pins.
+
+        Pinning a field to `""` asks the prompt to demand an empty value and then
+        overwrites whatever the model wrote with it, so the item comes back with the
+        field empty. Nobody ever means that: an empty box in the UI means "not pinned".
+        """
+        kept = {
+            name: value
+            for name, value in (fixed or {}).items()
+            if not (value is None or (isinstance(value, str) and not value.strip()))
+        }
+        dropped = sorted(set(fixed or {}) - set(kept))
+        if dropped:
+            logger.warning(f"Ignoring fixed fields with no value: {', '.join(dropped)}")
+        return kept
 
     def _validate_input(
         self,
@@ -267,7 +321,7 @@ class ContentGenerator:
             if desc:
                 entry += f"\n  Descripción del schema: {desc}"
             lines.append(entry)
-        return "\n".join(lines) if lines else "(no hay valores fijos)"
+        return "\n".join(lines)
 
     def _generate_one(
         self, prompt: str, fixed: dict[str, object]
@@ -278,11 +332,13 @@ class ContentGenerator:
             think=True,
             on_token=progress.token_sink("item"),
         )
-        body, thinking = self._split_thinking(resp.response, getattr(resp, "thinking", None))
+        thinking = resp.thinking
+        # A model that forgets to close `<think>` leaves the whole reply on the reasoning
+        # side; the answer is still in there, at the end.
+        body = resp.response or (thinking or "")
 
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
-            cleaned, _ = self._split_thinking(text, None)
-            return self._parse_and_validate(cleaned, fixed)
+            return self._parse_and_validate(inference.split_thinking(text).response, fixed)
 
         item, _ = parse_with_repair(
             body,
@@ -296,29 +352,46 @@ class ContentGenerator:
             return None
         return GeneratedContent(item=item, thinking=thinking)
 
-    @staticmethod
-    def _split_thinking(text: str, sdk_thinking: str | None) -> tuple[str, str | None]:
-        inline = [m.strip() for m in THINK_TAG_RE.findall(text or "")]
-        body = THINK_TAG_RE.sub("", text or "").strip()
-        parts = []
-        if sdk_thinking and sdk_thinking.strip():
-            parts.append(sdk_thinking.strip())
-        if inline:
-            parts.extend(inline)
-        thinking = "\n\n".join(parts) if parts else None
-        return body, thinking
-
     def _parse_and_validate(
         self, response: str, fixed: dict[str, object]
     ) -> tuple[BaseModel | None, str | None]:
+        """The best schema-conforming object in the reply, not merely the first one.
+
+        Candidates are scored by how much of the schema they cover and, on a tie, the
+        last one wins: models write their drafts before their answer.
+        """
+        candidates = json_objects(response) or [response]
+        best: BaseModel | None = None
+        best_score = -1
+        error = "no JSON object in the model output"
+
+        for candidate in candidates:
+            raw = self._as_object(candidate)
+            if raw is None:
+                continue
+            score = len(self.schema_fields.intersection(raw))
+            if best is not None and score < best_score:
+                continue
+            try:
+                item = self.item_model(**{**raw, **fixed})
+            except (ValidationError, ValueError, TypeError) as e:
+                error = f"{type(e).__name__}: {str(e)}"
+                continue
+            best, best_score = item, score
+
+        if best is None:
+            return None, error
+        return best, None
+
+    def _as_object(self, candidate: str) -> dict | None:
+        """One repaired JSON object, picking the richest element if it came as a list."""
         try:
-            cleaned = response.strip()
-            raw = repair_json(cleaned, return_objects=True)
-            if isinstance(raw, list):
-                raw = raw[0] if raw else None
-            if not isinstance(raw, dict):
-                return None, "top-level JSON is not an object"
-            raw.update(fixed)
-            return self.item_model(**raw), None
-        except (json.JSONDecodeError, ValidationError, ValueError, TypeError) as e:
-            return None, f"{type(e).__name__}: {str(e)}"
+            raw = repair_json(candidate.strip(), return_objects=True)
+        except (json.JSONDecodeError, ValueError, TypeError):
+            return None
+        if isinstance(raw, list):
+            objects = [element for element in raw if isinstance(element, dict)]
+            if not objects:
+                return None
+            raw = max(objects, key=lambda o: len(self.schema_fields.intersection(o)))
+        return raw if isinstance(raw, dict) else None

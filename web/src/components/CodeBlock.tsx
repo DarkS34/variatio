@@ -61,8 +61,8 @@ function tokenize(source: string): Token[] {
 
 const COLOURS: Record<string, string> = {
   comment: "text-muted-foreground italic",
-  string: "text-[var(--success)]",
-  number: "text-[var(--warning)]",
+  string: "text-[var(--code-string)]",
+  number: "text-[var(--code-number)]",
   keyword: "text-primary font-medium",
   operator: "text-muted-foreground",
   plain: "",

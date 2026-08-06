@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { RunDrawer, useActiveRun } from "@/components/RunDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/misc";
 import { duration } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
@@ -212,17 +213,27 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {offline || missingModels.length > 0 ? (
-          <div className="border-t border-border bg-[color-mix(in_oklch,var(--warning)_12%,transparent)] px-4 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--warning)_12%,transparent)] px-4 py-1.5 text-xs">
             {offline ? (
-              <span>
-                No hay conexión con Ollama en <code className="font-mono">{health.data?.host}</code>.
-                Los trabajos fallarán hasta que arranque.
-              </span>
+              <>
+                <span>
+                  Ollama no responde en <code className="font-mono">{health.data?.host}</code>
+                </span>
+                <InfoHint label="Qué implica">
+                  Cualquier trabajo que necesite el modelo fallará al arrancar. La interfaz sigue
+                  siendo navegable: lo ya construido se lee de disco.
+                </InfoHint>
+              </>
             ) : (
-              <span>
-                Modelos no instalados: <code className="font-mono">{missingModels.join(", ")}</code>.
-                Un trabajo que los use fallará.
-              </span>
+              <>
+                <span>
+                  Modelos sin instalar:{" "}
+                  <code className="font-mono">{missingModels.join(", ")}</code>
+                </span>
+                <InfoHint label="Qué implica">
+                  Los trabajos que usen esos modelos fallarán. El resto de la cadena funciona.
+                </InfoHint>
+              </>
             )}
           </div>
         ) : null}

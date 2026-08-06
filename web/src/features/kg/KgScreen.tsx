@@ -1,5 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowRight, FolderPlus, Link2, Plus, Search, Trash2, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  FolderPlus,
+  Link2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StageGate } from "@/components/StageGate";
@@ -7,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -77,11 +87,12 @@ function ConceptDetail({
           </Select>
         </div>
         <div className="flex items-center justify-between rounded-md border border-border p-2">
-          <div>
+          <div className="flex items-center gap-1.5">
             <p className="text-sm">Etiquetable</p>
-            <p className="text-xs text-muted-foreground">
-              Los no etiquetables quedan fuera del retrieval y de la generación.
-            </p>
+            <InfoHint label="Qué significa etiquetable">
+              Un concepto no etiquetable queda fuera del retrieval y de la generación: sigue en el
+              grafo por sus relaciones, pero ningún ítem se le asigna.
+            </InfoHint>
           </div>
           <Switch
             checked={concept.taggable}
@@ -120,10 +131,7 @@ function ConceptDetail({
         </div>
       ) : (
         <Alert tone="warning">
-          <p className="text-xs">
-            Sin descripción: este concepto no puede competir en el retrieval. Genérala en la
-            pestaña de descripciones.
-          </p>
+          <p className="text-xs">Sin descripción: no compite en el retrieval.</p>
         </Alert>
       )}
 
@@ -504,7 +512,7 @@ function GraphExplorer() {
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Selecciona un concepto en el grafo o en la lista para verlo y editarlo.
+                  Selecciona un concepto para editarlo.
                 </p>
               )}
             </CardContent>
@@ -529,16 +537,20 @@ function GraphExplorer() {
               {domain.name}
               <span className="text-xs text-muted-foreground">{domain.concepts.length}</span>
               <button
+                aria-label={`Renombrar ${domain.name}`}
+                title="Renombrar"
                 onClick={() => {
                   const next = window.prompt("Nuevo nombre del dominio", domain.name);
                   if (next?.trim() && next !== domain.name)
                     api.renameDomain(domain.name, next.trim()).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
-                renombrar
+                <Pencil className="size-3.5" />
               </button>
               <button
+                aria-label={`Eliminar ${domain.name}`}
+                title={`Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`}
                 onClick={() => {
                   if (
                     !window.confirm(
@@ -548,9 +560,9 @@ function GraphExplorer() {
                     return;
                   api.deleteDomain(domain.name).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-xs text-destructive"
+                className="text-muted-foreground transition-colors hover:text-destructive"
               >
-                eliminar
+                <Trash2 className="size-3.5" />
               </button>
             </div>
           ))}
@@ -616,16 +628,14 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
         <Alert
           tone="success"
           className="mt-4"
-          title="El grafo está listo para etiquetar"
+          title="Grafo listo para etiquetar"
           action={
             <Button size="sm" onClick={() => navigate("/preparar/banco")}>
               Ir al banco
               <ArrowRight />
             </Button>
           }
-        >
-          <p>Todos los conceptos etiquetables tienen descripción.</p>
-        </Alert>
+        />
       ) : null}
     </StageGate>
   );
