@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from .. import config
+from .. import config, progress
 from ..concept_tagger import ConceptTagger
 from ..content_generator import ContentGenerator
 from ..content_profile import ContentProfile
@@ -55,12 +55,27 @@ def initialize(tag: bool = False) -> PipelineContext:
             f"curate it manually into {config.KG_PATH.name}"
         )
 
-    bank = ExemplarsBank(config.EXEMPLARS_BANK_PATH).bank
-    if bank is None:
-        raise _artifacts.MissingArtifactError(_artifacts.EXEMPLARS_BANK)
+    with progress.step("load_instance", "Cargando la instancia (perfil, grafo y banco)"):
+        bank = ExemplarsBank(config.EXEMPLARS_BANK_PATH).bank
+        if bank is None:
+            raise _artifacts.MissingArtifactError(_artifacts.EXEMPLARS_BANK)
 
-    content_profile = ContentProfile(profile_path)
-    knowledge_graph = KnowledgeGraph(kg_path)
+        content_profile = ContentProfile(profile_path)
+        knowledge_graph = KnowledgeGraph(kg_path)
+
+        logger.info(
+            f"Content profile: {len(content_profile.field_specs)} field(s), "
+            f"primary '{content_profile.primary_field}' ({profile_path.name})"
+        )
+        logger.info(
+            f"Knowledge graph: {len(knowledge_graph.all_concepts)} concept(s), "
+            f"{len(knowledge_graph.taggable_concepts)} taggable, "
+            f"{len(knowledge_graph.relation_details)} relation type(s) ({kg_path.name})"
+        )
+        logger.info(
+            f"Exemplars bank: {len(bank)} item(s), "
+            f"{sum(1 for item in bank.values() if item.get('concepts'))} already tagged"
+        )
 
     embedder = Embedder(
         knowledge_graph,

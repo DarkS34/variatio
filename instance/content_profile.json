@@ -37,13 +37,11 @@
     },
     "difficulty_level": {
       "schema": {
-        "type": [
-          "string",
-          null
-        ],
+        "type": "string",
         "enum": [
-          "básico",
+          "fácil",
           "intermedio",
+          "difícil",
           "avanzado"
         ]
       },

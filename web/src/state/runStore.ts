@@ -1,3 +1,4 @@
+import { describeEvent, type ActivityLine } from "@/lib/explain";
 import type { Job, VgEvent } from "@/lib/types";
 
 /**
@@ -30,6 +31,7 @@ export interface LogLine {
   level: string;
   module: string;
   message: string;
+  jobId: string | null;
 }
 
 export interface ProducedItem {
@@ -49,6 +51,7 @@ export interface RunView {
   thinking: string;
   phase: StreamPhase;
   logs: LogLine[];
+  activity: ActivityLine[];
   items: ProducedItem[];
   repairs: { attempt: number; max_attempts: number; error: string; where: string }[];
   retrieval: { query: string; candidates: [string, number][] } | null;
@@ -62,6 +65,8 @@ export interface RunView {
 
 const MAX_TOKENS = 120_000;
 const MAX_LOGS = 3_000;
+const MAX_SESSION_LOGS = 8_000;
+const MAX_ACTIVITY = 600;
 const MAX_RUNS = 12;
 
 export interface StreamState {
@@ -69,6 +74,8 @@ export interface StreamState {
   lastSeq: number;
   currentJobId: string | null;
   runs: Record<string, RunView>;
+  /** Every log line of the session, whatever job produced it: the "ver logs" view. */
+  logs: LogLine[];
   gap: boolean;
 }
 
@@ -81,6 +88,7 @@ function emptyRun(jobId: string): RunView {
     thinking: "",
     phase: "idle",
     logs: [],
+    activity: [],
     items: [],
     repairs: [],
     retrieval: null,
@@ -97,12 +105,24 @@ function tail(text: string, limit: number) {
   return text.length > limit ? text.slice(text.length - limit) : text;
 }
 
+function toLogLine(event: VgEvent): LogLine {
+  return {
+    seq: event.seq,
+    ts: event.ts,
+    level: event.level,
+    module: event.module,
+    message: event.message,
+    jobId: event.job_id,
+  };
+}
+
 class RunStore {
   private state: StreamState = {
     connected: false,
     lastSeq: 0,
     currentJobId: null,
     runs: {},
+    logs: [],
     gap: false,
   };
   private listeners = new Set<() => void>();
@@ -213,8 +233,14 @@ class RunStore {
     this.commit({
       runs: this.prune(runs),
       currentJobId,
+      logs: event.kind === "log" ? this.appendSessionLog(event) : this.state.logs,
       lastSeq: Math.max(this.state.lastSeq, event.seq ?? 0),
     });
+  }
+
+  private appendSessionLog(event: VgEvent): LogLine[] {
+    const logs = [...this.state.logs, toLogLine(event)];
+    return logs.length > MAX_SESSION_LOGS ? logs.slice(-MAX_SESSION_LOGS) : logs;
   }
 
   private prune(runs: Record<string, RunView>) {
@@ -227,6 +253,22 @@ class RunStore {
   }
 
   private reduce(run: RunView, event: VgEvent): RunView {
+    return this.withActivity(this.reduceRun(run, event), event);
+  }
+
+  // The event stream is written for the code; this is the running commentary a human
+  // reads instead. Kept next to the reducer so a new event kind is described once.
+  private withActivity(run: RunView, event: VgEvent): RunView {
+    const described = describeEvent(event);
+    if (!described) return run;
+    const activity = [...run.activity, { seq: event.seq, ts: event.ts, ...described }];
+    return {
+      ...run,
+      activity: activity.length > MAX_ACTIVITY ? activity.slice(-MAX_ACTIVITY) : activity,
+    };
+  }
+
+  private reduceRun(run: RunView, event: VgEvent): RunView {
     switch (event.kind) {
       case "job.queued":
       case "job.started":
@@ -361,14 +403,7 @@ class RunStore {
         return { ...run, taggedCount: run.taggedCount + 1 };
 
       case "log": {
-        const line: LogLine = {
-          seq: event.seq,
-          ts: event.ts,
-          level: event.level,
-          module: event.module,
-          message: event.message,
-        };
-        const logs = [...run.logs, line];
+        const logs = [...run.logs, toLogLine(event)];
         return { ...run, logs: logs.length > MAX_LOGS ? logs.slice(-MAX_LOGS) : logs };
       }
 

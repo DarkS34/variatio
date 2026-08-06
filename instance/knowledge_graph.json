@@ -1,7 +1,6 @@
 {
   "concepts_by_domains": {
     "Fundamentos y Algoritmos": [
-      "Algoritmia",
       "Burbuja",
       "Busqueda binaria",
       "Busqueda lineal",
@@ -22,6 +21,7 @@
       "Problema",
       "Pseudocódigo",
       "máximo común divisor (MCD)",
+      "Algoritmia",
       "Algoritmo"
     ],
     "Estructuras de Datos": [
@@ -132,6 +132,8 @@
     ]
   },
   "generic_non_taggable_concepts": [
+    "Algoritmia",
+    "Algoritmo",
     "C",
     "Java",
     "Lenguaje de programación",

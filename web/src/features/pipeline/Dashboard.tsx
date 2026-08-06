@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   ArrowRight,
+  ChevronRight,
   CircleCheck,
   CircleDashed,
   Cpu,
@@ -9,8 +10,11 @@ import {
   Pencil,
   Server,
   TriangleAlert,
+  UploadCloud,
 } from "lucide-react";
+import { useState } from "react";
 
+import { RawImport } from "@/components/RawImport";
 import { StageBadge } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,11 +22,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Separator, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
-import { duration, when } from "@/lib/format";
+import { JOB_EXPLAIN } from "@/lib/explain";
+import { ENGINE_LABEL, bytes, duration, when } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useHealth, useInvalidateChain, usePipeline, useSubmitJob } from "@/state/queries";
+import {
+  useHealth,
+  useInvalidateChain,
+  usePipeline,
+  useRaw,
+  useSubmitJob,
+} from "@/state/queries";
 
 const SCREEN: Record<string, string> = {
   content_profile: "/preparar/perfil",
@@ -39,10 +50,20 @@ const EXPLAIN: Record<string, string> = {
     "Los ítems extraídos de los documentos, etiquetados con conceptos del grafo. Alimentan los ejemplos few-shot de la generación.",
 };
 
-function StageCard({ stage, index }: { stage: StageState; index: number }) {
+function StageCard({
+  stage,
+  index,
+  rawMissing,
+}: {
+  stage: StageState;
+  index: number;
+  rawMissing: string | null;
+}) {
   const submit = useSubmitJob();
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
+  const buildable = !blocked && !rawMissing;
+  const build = JOB_EXPLAIN[stage.build_job];
 
   return (
     <Card
@@ -98,6 +119,13 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
           </p>
         ) : null}
 
+        {rawMissing && !blocked ? (
+          <p className="flex items-center gap-1.5 text-xs text-[var(--warning)]">
+            <UploadCloud className="size-3.5" />
+            Faltan documentos en «{rawMissing}»: impórtalos antes de construir.
+          </p>
+        ) : null}
+
         {stage.approved_at && stage.status === "approved" ? (
           <p className="text-xs text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
         ) : null}
@@ -106,7 +134,7 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
           {missing ? (
             <Button
               size="sm"
-              disabled={blocked || submit.isPending}
+              disabled={!buildable || submit.isPending}
               onClick={() => submit.mutate({ kind: stage.build_job })}
             >
               <Hammer />
@@ -124,7 +152,7 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
             <Button
               size="sm"
               variant="ghost"
-              disabled={blocked || submit.isPending}
+              disabled={!buildable || submit.isPending}
               onClick={() => submit.mutate({ kind: stage.build_job })}
               title="Vuelve a ejecutar el constructor sobre los datos en bruto"
             >
@@ -132,14 +160,79 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
               Reconstruir
             </Button>
           ) : null}
+          {build ? (
+            <InfoHint label="Qué ocurre al construir" className="self-center">
+              <p>{build.what}</p>
+              <p className="mt-1">
+                <span className="font-medium">Produce:</span> {build.produces}
+              </p>
+              <p className="mt-1">
+                <span className="font-medium">Coste:</span> {build.cost}
+              </p>
+            </InfoHint>
+          ) : null}
         </div>
       </CardContent>
     </Card>
   );
 }
 
+function RawSection() {
+  const raw = useRaw();
+  const slots = raw.data?.slots ?? [];
+  const emptySlots = slots.filter((slot) => slot.files.length === 0);
+  const [open, setOpen] = useState(false);
+  const expanded = open || emptySlots.length > 0;
+  const total = slots.reduce((sum, slot) => sum + slot.files.length, 0);
+  const size = slots.reduce((sum, slot) => sum + slot.bytes, 0);
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          disabled={emptySlots.length > 0}
+          className="flex items-center gap-1.5 text-sm font-medium disabled:cursor-default"
+        >
+          {emptySlots.length > 0 ? (
+            <UploadCloud className="size-4 text-[var(--warning)]" />
+          ) : (
+            <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} />
+          )}
+          Datos en bruto
+        </button>
+        <InfoHint label="Qué son los datos en bruto">
+          Los documentos de partida. No forman parte del programa: se copian a{" "}
+          <span className="font-mono">raw_data</span> y cada construcción los vuelve a leer de
+          disco. Sin ellos no hay nada que construir.
+        </InfoHint>
+        {total > 0 ? (
+          <span className="text-xs text-muted-foreground">
+            {total} archivo(s) · {bytes(size)}
+          </span>
+        ) : null}
+        {emptySlots.length > 0 ? (
+          <Badge variant="warning">
+            {emptySlots.map((slot) => slot.label.toLowerCase()).join(" y ")} sin archivos
+          </Badge>
+        ) : null}
+        {!expanded ? (
+          <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+            <UploadCloud />
+            Importar
+          </Button>
+        ) : null}
+      </div>
+
+      {expanded ? <RawImport /> : null}
+    </section>
+  );
+}
+
 function SystemCard() {
   const health = useHealth();
+  const raw = useRaw();
   const invalidate = useInvalidateChain();
   const index = useMutation({
     mutationFn: () => api.submitJob("index", {}, true),
@@ -155,7 +248,8 @@ function SystemCard() {
     );
   }
 
-  const { available, host, models, context_ready, paths } = health.data;
+  const { available, engine, host, models, context_ready } = health.data;
+  const slots = raw.data?.slots ?? [];
 
   return (
     <Card>
@@ -167,15 +261,25 @@ function SystemCard() {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Motor de inferencia</span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            Motor de inferencia
+            <InfoHint label="Dónde responde el motor">
+              Todo el tráfico de modelos pasa por aquí. Atiende en{" "}
+              <span className="font-mono">{host}</span>; si deja de responder, los trabajos
+              fallan al arrancar pero la interfaz sigue navegable.
+            </InfoHint>
+          </span>
+          <span className="flex items-center gap-1.5" title={host}>
             <span
               className={cn(
                 "size-1.5 rounded-full",
                 available ? "bg-[var(--success)]" : "bg-destructive",
               )}
             />
-            <code className="font-mono text-xs">{host}</code>
+            <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
+            {available ? null : (
+              <span className="text-xs text-destructive">sin conexión</span>
+            )}
           </span>
         </div>
 
@@ -225,30 +329,34 @@ function SystemCard() {
         <Separator />
 
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p className="flex items-center gap-1.5">
-            {paths.raw_exemplars_exists ? (
-              <CircleCheck className="size-3.5 text-[var(--success)]" />
-            ) : (
-              <CircleDashed className="size-3.5" />
-            )}
-            <span className="font-mono">{paths.raw_exemplars}</span>
-          </p>
-          <p className="flex items-center gap-1.5">
-            {paths.raw_corpus_exists ? (
-              <CircleCheck className="size-3.5 text-[var(--success)]" />
-            ) : (
-              <CircleDashed className="size-3.5" />
-            )}
-            <span className="font-mono">{paths.raw_corpus}</span>
-          </p>
+          {slots.map((slot) => (
+            <p key={slot.kind} className="flex items-center gap-1.5">
+              {slot.files.length > 0 ? (
+                <CircleCheck className="size-3.5 shrink-0 text-[var(--success)]" />
+              ) : (
+                <CircleDashed className="size-3.5 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1 truncate" title={slot.path}>
+                {slot.label}
+              </span>
+              <span className="tabular-nums">{slot.files.length} archivo(s)</span>
+            </p>
+          ))}
         </div>
       </CardContent>
     </Card>
   );
 }
 
+const RAW_FOR: Record<string, string> = {
+  content_profile: "exemplars",
+  exemplars_bank: "exemplars",
+  knowledge_graph: "corpus",
+};
+
 export function Dashboard() {
   const pipeline = usePipeline();
+  const raw = useRaw();
   const { navigate } = useRouter();
 
   if (pipeline.isLoading) {
@@ -264,6 +372,9 @@ export function Dashboard() {
   const stages = pipeline.data?.stages ?? [];
   const unlocked = pipeline.data?.generation_unlocked ?? false;
   const next = stages.find((s) => s.status !== "approved");
+  const emptySlots = (raw.data?.slots ?? []).filter((slot) => slot.files.length === 0);
+  const rawMissingFor = (artifact: string) =>
+    emptySlots.find((slot) => slot.kind === RAW_FOR[artifact])?.label ?? null;
 
   return (
     <div className="space-y-6">
@@ -275,6 +386,18 @@ export function Dashboard() {
           congelada.
         </InfoHint>
       </header>
+
+      {emptySlots.length > 0 ? (
+        <Alert tone="warning" title="Faltan datos en bruto">
+          <p>
+            {emptySlots.map((slot) => slot.label).join(" y ")} no{" "}
+            {emptySlots.length > 1 ? "tienen" : "tiene"} ningún documento. Impórtalos aquí abajo:
+            son la materia prima de la que se construye toda la cadena.
+          </p>
+        </Alert>
+      ) : null}
+
+      <RawSection />
 
       {next ? (
         <Alert
@@ -310,7 +433,12 @@ export function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
           {stages.map((stage, index) => (
-            <StageCard key={stage.artifact} stage={stage} index={index} />
+            <StageCard
+              key={stage.artifact}
+              stage={stage}
+              index={index}
+              rawMissing={rawMissingFor(stage.artifact)}
+            />
           ))}
         </div>
         <div className="space-y-4">

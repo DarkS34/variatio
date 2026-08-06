@@ -12,6 +12,18 @@ export function duration(ms: number | null | undefined): string {
   return `${hours} h ${(minutes % 60).toString().padStart(2, "0")} min`;
 }
 
+export function bytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  const kb = value / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  return mb < 1024 ? `${mb.toFixed(1)} MB` : `${(mb / 1024).toFixed(2)} GB`;
+}
+
+export const ENGINE_LABEL: Record<string, string> = {
+  ollama: "Ollama",
+};
+
 export function clock(ts: number): string {
   return new Date(ts * 1000).toLocaleTimeString("es-ES", { hour12: false });
 }

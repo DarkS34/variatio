@@ -405,10 +405,37 @@ function GraphExplorer() {
           {totals.described} con descripción
         </span>
         <span>{totals.with_exemplars} con ejemplos</span>
-        <span className="ml-auto flex flex-wrap items-center gap-1">
+      </div>
+
+      {error ? (
+        <Alert tone="danger" title="Error al editar el grafo">
+          <p>{error}</p>
+        </Alert>
+      ) : null}
+
+      {/* El grafo manda: ancho completo y alto de ventana. Las listas van debajo, donde
+          caben en horizontal en vez de estrangular el lienzo. */}
+      <div className="h-[clamp(26rem,60vh,46rem)] w-full">
+        <GraphCanvas
+          graph={graph.data}
+          selected={selected}
+          onSelect={setSelected}
+          highlight={highlight}
+          hiddenRelations={hiddenRelations}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        <span className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 text-muted-foreground">Relaciones:</span>
           {graph.data.relations.map((relation, index) => (
             <button
               key={relation.key}
+              title={
+                hiddenRelations.has(index)
+                  ? "Mostrar esta relación"
+                  : "Ocultar esta relación del grafo"
+              }
               onClick={() =>
                 setHiddenRelations((current) => {
                   const next = new Set(current);
@@ -421,108 +448,120 @@ function GraphExplorer() {
                 "rounded-full border px-2 py-0.5 transition-colors",
                 hiddenRelations.has(index)
                   ? "border-border text-muted-foreground/50 line-through"
-                  : "border-border text-foreground",
+                  : "border-border text-foreground hover:bg-accent",
               )}
             >
               {relation.verbose ?? relation.key} · {relation.count}
             </button>
           ))}
         </span>
+        <span className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 text-muted-foreground">Dominios:</span>
+          {graph.data.groups.map((group, index) => (
+            <button
+              key={group.name}
+              onClick={() => setDomainFilter(domainFilter === group.name ? "" : group.name)}
+              title="Filtrar por este dominio"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
+                domainFilter === group.name
+                  ? "border-primary text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ background: domainColour(index, graph.data!.groups.length) }}
+              />
+              {group.name}
+              <span className="tabular-nums">{group.count}</span>
+            </button>
+          ))}
+        </span>
       </div>
 
-      {error ? (
-        <Alert tone="danger" title="Error al editar el grafo">
-          <p>{error}</p>
-        </Alert>
-      ) : null}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle>Conceptos ({filtered.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto p-0">
+            <table className="w-full text-sm">
+              <tbody>
+                {filtered.map((concept) => {
+                  const groupIndex = graph.data!.groups.findIndex((g) => g.name === concept.domain);
+                  return (
+                    <tr
+                      key={concept.name}
+                      onClick={() => setSelected(concept.name)}
+                      className={cn(
+                        "cursor-pointer border-b border-border transition-colors hover:bg-accent",
+                        selected === concept.name && "bg-primary/10",
+                      )}
+                    >
+                      <td className="w-1 py-1.5 pl-3">
+                        <span
+                          className="block size-2 rounded-full"
+                          style={{
+                            background: domainColour(
+                              Math.max(0, groupIndex),
+                              graph.data!.groups.length,
+                            ),
+                          }}
+                        />
+                      </td>
+                      <td className="min-w-0 py-1.5 pl-2 pr-2">
+                        <span className={cn(!concept.taggable && "text-muted-foreground line-through")}>
+                          {concept.name}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap py-1.5 pr-3 text-right text-xs text-muted-foreground">
+                        {!concept.description ? (
+                          <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
+                        ) : null}
+                        <span className="ml-2 tabular-nums">{concept.exemplars}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="p-4 text-center text-sm text-muted-foreground">
+                      Ningún concepto coincide con el filtro.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="h-[36rem]">
-          <GraphCanvas
-            graph={graph.data}
-            selected={selected}
-            onSelect={setSelected}
-            highlight={highlight}
-            hiddenRelations={hiddenRelations}
-          />
-        </div>
-
-        <div className="grid min-h-0 gap-4 lg:grid-cols-2 xl:h-[36rem] xl:grid-cols-1 xl:grid-rows-2">
-          <Card className="flex min-h-0 flex-col overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle>Conceptos ({filtered.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="thin-scroll min-h-0 max-h-96 flex-1 overflow-y-auto p-0 xl:max-h-none">
-              <table className="w-full text-sm">
-                <tbody>
-                  {filtered.map((concept) => {
-                    const groupIndex = graph.data!.groups.findIndex((g) => g.name === concept.domain);
-                    return (
-                      <tr
-                        key={concept.name}
-                        onClick={() => setSelected(concept.name)}
-                        className={cn(
-                          "cursor-pointer border-b border-border transition-colors hover:bg-accent",
-                          selected === concept.name && "bg-primary/10",
-                        )}
-                      >
-                        <td className="w-1 py-1.5 pl-3">
-                          <span
-                            className="block size-2 rounded-full"
-                            style={{
-                              background: domainColour(
-                                Math.max(0, groupIndex),
-                                graph.data!.groups.length,
-                              ),
-                            }}
-                          />
-                        </td>
-                        <td className="min-w-0 py-1.5 pl-2 pr-2">
-                          <span className={cn(!concept.taggable && "text-muted-foreground line-through")}>
-                            {concept.name}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap py-1.5 pr-3 text-right text-xs text-muted-foreground">
-                          {!concept.description ? (
-                            <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
-                          ) : null}
-                          <span className="ml-2 tabular-nums">{concept.exemplars}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          <Card className="flex min-h-0 flex-col overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle>{selectedConcept ? selectedConcept.name : "Detalle"}</CardTitle>
-            </CardHeader>
-            <CardContent className="thin-scroll min-h-0 max-h-[28rem] flex-1 overflow-y-auto xl:max-h-none">
-              {selectedConcept ? (
-                <ConceptDetail
-                  key={selectedConcept.name}
-                  concept={selectedConcept}
-                  domains={domains}
-                  relations={relations}
-                  concepts={concepts}
-                  onChanged={refresh}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Selecciona un concepto para editarlo.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle>{selectedConcept ? selectedConcept.name : "Detalle"}</CardTitle>
+          </CardHeader>
+          <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto">
+            {selectedConcept ? (
+              <ConceptDetail
+                key={selectedConcept.name}
+                concept={selectedConcept}
+                domains={domains}
+                relations={relations}
+                concepts={concepts}
+                onChanged={refresh}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Selecciona un concepto en el grafo o en la lista para editarlo.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle>Dominios</CardTitle>
+          <CardTitle>Dominios ({(kg.data.domains ?? []).length})</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {(kg.data.domains ?? []).map((domain, index) => (

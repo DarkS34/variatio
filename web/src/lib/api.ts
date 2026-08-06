@@ -8,6 +8,10 @@ import type {
   KgSummary,
   Pipeline,
   ProfilePayload,
+  RawKind,
+  RawListing,
+  RawSlot,
+  RawUpload,
   VgEvent,
 } from "./types";
 
@@ -54,6 +58,33 @@ const put = <T>(path: string, body: unknown) =>
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 
+/** Uploads go through XHR, not fetch: a 500 MB PDF needs a progress bar, and fetch
+ *  still cannot report how much of a request body it has sent. */
+function upload(path: string, files: File[], onProgress?: (fraction: number) => void) {
+  const form = new FormData();
+  for (const file of files) form.append("files", file, file.name);
+
+  return new Promise<RawUpload>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", path);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let body: any = null;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        /* fall through to the status line */
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body as RawUpload);
+      else reject(new ApiError(body?.detail ?? `${xhr.status} ${xhr.statusText}`, xhr.status));
+    };
+    xhr.onerror = () => reject(new ApiError("No se pudo contactar con el servidor", 0));
+    xhr.send(form);
+  });
+}
+
 export const api = {
   health: () => request<Health>("/api/health"),
 
@@ -66,6 +97,14 @@ export const api = {
     ),
   restore: (artifact: string, snapshotId: string) =>
     post<Pipeline>(`/api/pipeline/${artifact}/restore`, { snapshot_id: snapshotId }),
+
+  raw: () => request<RawListing>("/api/raw"),
+  uploadRaw: (kind: RawKind, files: File[], onProgress?: (fraction: number) => void) =>
+    upload(`/api/raw/${kind}`, files, onProgress),
+  deleteRaw: (kind: RawKind, name: string) =>
+    request<{ deleted: string; slot: RawSlot }>(`/api/raw/${kind}/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }),
 
   profile: () => request<ProfilePayload>("/api/profile"),
   validateProfile: (profile: ContentProfile) =>

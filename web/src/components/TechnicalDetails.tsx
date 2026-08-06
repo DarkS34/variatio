@@ -1,11 +1,10 @@
-import { ChevronRight, Terminal } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
-import { clock } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { LogLine, RunView } from "@/state/runStore";
+import type { RunView } from "@/state/runStore";
 
 function Section({
   title,
@@ -38,42 +37,6 @@ function Section({
         ) : null}
       </button>
       {open ? <div className="border-t border-border p-3">{children}</div> : null}
-    </div>
-  );
-}
-
-const LEVEL_COLOUR: Record<string, string> = {
-  DEBUG: "text-muted-foreground",
-  INFO: "text-foreground",
-  SUCCESS: "text-[var(--success)]",
-  WARNING: "text-[var(--warning)]",
-  ERROR: "text-destructive",
-  CRITICAL: "text-destructive",
-};
-
-function LogConsole({ logs }: { logs: LogLine[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    ref.current?.scrollTo({ top: ref.current.scrollHeight });
-  }, [logs.length]);
-
-  if (logs.length === 0) {
-    return <p className="text-xs text-muted-foreground">Sin registros.</p>;
-  }
-
-  // Only the tail is rendered: a build emits thousands of lines and the earlier ones
-  // are already in the run's JSONL on disk.
-  const visible = logs.slice(-400);
-  return (
-    <div ref={ref} className="thin-scroll max-h-64 overflow-auto font-mono text-[11px] leading-relaxed">
-      {visible.map((line) => (
-        <div key={line.seq} className="flex gap-2">
-          <span className="shrink-0 text-muted-foreground">{clock(line.ts)}</span>
-          <span className={cn("w-16 shrink-0", LEVEL_COLOUR[line.level] ?? "")}>{line.level}</span>
-          <span className="shrink-0 text-muted-foreground">{line.module}</span>
-          <span className="min-w-0 whitespace-pre-wrap break-words">{line.message}</span>
-        </div>
-      ))}
     </div>
   );
 }
@@ -139,10 +102,6 @@ export function TechnicalDetails({ run }: { run: RunView }) {
           <CodeBlock code={run.prompt} language="text" maxHeight="18rem" />
         </Section>
       ) : null}
-
-      <Section title="Consola" count={run.logs.length} icon={<Terminal className="size-3.5" />}>
-        <LogConsole logs={run.logs} />
-      </Section>
     </div>
   );
 }
