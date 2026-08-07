@@ -78,3 +78,24 @@ export function domainColour(index: number, total: number): string {
   const hue = 185 + Math.round((index / Math.max(1, total)) * 120);
   return `oklch(0.66 0.1 ${hue})`;
 }
+
+/** Colour of a relation TYPE, for the edges. Domains colour the nodes out of the cool
+ *  arc above; edges are a different mark, so they get warm, saturated hues that read as
+ *  lines over it — except the catch-all association, which is deliberately almost grey
+ *  because it is the most numerous and the least informative. Keyed by the schema key so
+ *  the same relation keeps its colour across instances and languages. */
+const RELATION_TONE: Record<string, [number, number]> = {
+  prerrequisito: [70, 0.14],
+  prerequisite: [70, 0.14],
+  es_un: [330, 0.11],
+  is_a: [330, 0.11],
+  parte_de: [150, 0.11],
+  part_of: [150, 0.11],
+  relacionado: [260, 0.02],
+  related_to: [260, 0.02],
+};
+
+export function relationColour(type: string, index: number): string {
+  const [hue, chroma] = RELATION_TONE[type] ?? [(index * 71 + 20) % 360, 0.1];
+  return `oklch(0.63 ${chroma} ${hue})`;
+}

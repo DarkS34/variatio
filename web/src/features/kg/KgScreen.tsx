@@ -21,7 +21,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
-import { domainColour } from "@/lib/format";
+import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -351,7 +351,10 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) {
     return (
       <Alert tone="info" title="Todavía no hay grafo de conocimiento">
-        <p>Constrúyelo desde el panel para poder revisarlo.</p>
+        <p>
+          Púlsalo en «Construir», aquí arriba, para extraerlo del corpus. El progreso aparece en
+          esta misma pantalla.
+        </p>
       </Alert>
     );
   }
@@ -445,13 +448,26 @@ function GraphExplorer() {
                 })
               }
               className={cn(
-                "rounded-full border px-2 py-0.5 transition-colors",
+                "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
                 hiddenRelations.has(index)
                   ? "border-border text-muted-foreground/50 line-through"
                   : "border-border text-foreground hover:bg-accent",
               )}
             >
+              {/* Un trazo, no un punto: es el color de una arista del lienzo, no el de un nodo. */}
+              <span
+                className="h-0.5 w-3 rounded-full"
+                style={{
+                  background: relationColour(relation.type ?? relation.key, index),
+                  opacity: hiddenRelations.has(index) ? 0.3 : 1,
+                }}
+              />
               {relation.verbose ?? relation.key} · {relation.count}
+              {relation.prerequisite ? (
+                <span className="text-muted-foreground" title="Ordena la vista de currículo">
+                  ↕
+                </span>
+              ) : null}
             </button>
           ))}
         </span>

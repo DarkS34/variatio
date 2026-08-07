@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from .relations import BUILTIN_SCHEMAS
+
 # File Paths & Cache ----------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INSTANCE_DIR = PROJECT_ROOT / "instance"
@@ -53,10 +55,14 @@ SCHEMA_INFERENCE_BUDGET =   32_000
 EXEMPLARS_BANK_CHUNK_SIZE = 12_000
 
 KG_BUILDER_CHUNK_SIZE =     12_000
-KG_RELATION_SCHEMA =        "es"
-KG_PREREQUISITE_RELATION =  "tiene como prerrequisito"
+KG_MAX_EVIDENCE_RELATIONS = 6
+KG_BUILDER_PLURAL_SUFFIXES =            ("s",)
 KG_BUILDER_MERGE_QUALIFIER_PATTERN =    r"\s+en (python|java)\b"
 KG_BUILDER_UNCLASSIFIED_DOMAIN =        "Sin clasificar"
+
+KG_RELATION_SCHEMA = "es"
+RELATION_SCHEMA = BUILTIN_SCHEMAS[KG_RELATION_SCHEMA]
+KG_PREREQUISITE_RELATION = RELATION_SCHEMA.prerequisite_verbose
 
 
 # Embedding & Retrieval ----------------------------------------------

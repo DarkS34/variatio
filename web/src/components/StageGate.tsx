@@ -1,14 +1,17 @@
-import { CircleCheck, Lock, RotateCcw, TriangleAlert } from "lucide-react";
+import { CircleCheck, Lock, RotateCcw, TriangleAlert, UploadCloud } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { BuildButton } from "@/components/BuildButton";
+import { BuildProgress } from "@/components/BuildProgress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, when } from "@/lib/format";
+import { Link } from "@/lib/router";
 import type { StageState } from "@/lib/types";
-import { useInvalidateChain } from "@/state/queries";
+import { useInvalidateChain, useRawMissingFor } from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
 
 export function StageBadge({ stage }: { stage: StageState }) {
@@ -37,6 +40,7 @@ export function StageGate({
   children: ReactNode;
 }) {
   const invalidate = useInvalidateChain();
+  const rawMissing = useRawMissingFor(stage?.artifact);
   const approve = useMutation({
     mutationFn: () => api.approve(stage!.artifact),
     onSuccess: invalidate,
@@ -55,7 +59,8 @@ export function StageGate({
   }
 
   const blocked = Boolean(stage.blocked_reason);
-  const ready = stage.status !== "missing" && stage.status !== "building";
+  const building = stage.status === "building";
+  const ready = !building && stage.status !== "missing";
 
   return (
     <div className="space-y-5">
@@ -78,6 +83,7 @@ export function StageGate({
 
         <div className="flex shrink-0 items-center gap-2">
           {actions}
+          {building ? null : <BuildButton stage={stage} />}
           {ready && !blocked ? (
             stage.status === "approved" ? (
               <Button variant="outline" onClick={() => reopen.mutate()} disabled={reopen.isPending}>
@@ -115,17 +121,39 @@ export function StageGate({
         </Alert>
       ) : null}
 
-      {stage.status === "missing" ? (
-        <Alert tone="info" title="Sin construir">
-          <p>Constrúyelo para poder revisarlo.</p>
-        </Alert>
+      {/* Construir desde aquí y desde el panel es la misma acción: quien llega a esta
+          pantalla y la encuentra vacía no debería tener que volver atrás para arrancarla. */}
+      {stage.status === "missing" && !building ? (
+        rawMissing ? (
+          <Alert
+            tone="warning"
+            title="Faltan los datos de partida"
+            action={
+              <Link to="/">
+                <Button size="sm" variant="outline">
+                  <UploadCloud />
+                  Importar
+                </Button>
+              </Link>
+            }
+          >
+            <p>
+              «{rawMissing}» no tiene ningún documento, y es la materia prima de{" "}
+              {stage.label.toLowerCase()}. Impórtalos desde el panel y vuelve aquí.
+            </p>
+          </Alert>
+        ) : (
+          <Alert
+            tone="info"
+            title="Sin construir"
+            action={<BuildButton stage={stage} />}
+          >
+            <p>Constrúyelo aquí mismo para poder revisarlo; el progreso se muestra en esta página.</p>
+          </Alert>
+        )
       ) : null}
 
-      {stage.status === "building" ? (
-        <Alert tone="info" title="Construyéndose">
-          <p>El progreso está en el panel de ejecución.</p>
-        </Alert>
-      ) : null}
+      {building ? <BuildProgress artifact={stage.artifact} /> : null}
 
       <div className={blocked ? "pointer-events-none select-none opacity-45" : undefined}>
         {children}

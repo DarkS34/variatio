@@ -43,10 +43,24 @@ export interface ProducedItem {
 /** Which side of the stream the model is writing on right now. */
 export type StreamPhase = "idle" | "thinking" | "answering";
 
+/**
+ * How far the whole build is, not just the running step.
+ *
+ * Steps nest and each one only knows its own total, so no step can answer "how much is
+ * left". The builders declare what each phase costs and the core turns that into one
+ * 0-100 number; this is where it lands.
+ */
+export interface OverallProgress {
+  percent: number;
+  label: string | null;
+  detail: string | null;
+}
+
 export interface RunView {
   jobId: string;
   job: Job | null;
   steps: StepView[];
+  overall: OverallProgress | null;
   answer: string;
   thinking: string;
   phase: StreamPhase;
@@ -84,6 +98,7 @@ function emptyRun(jobId: string): RunView {
     jobId,
     job: null,
     steps: [],
+    overall: null,
     answer: "",
     thinking: "",
     phase: "idle",
@@ -281,11 +296,22 @@ class RunStore {
           job: event.job ?? run.job,
           finishedAt: event.ts,
           phase: "idle",
+          overall: null,
           steps: run.steps.map((s) =>
             s.status === "running"
               ? { ...s, status: event.kind === "job.finished" ? "ok" : "cancelled" }
               : s,
           ),
+        };
+
+      case "build.progress":
+        return {
+          ...run,
+          overall: {
+            percent: event.percent ?? 0,
+            label: event.label ?? run.overall?.label ?? null,
+            detail: event.detail ?? null,
+          },
         };
 
       case "step.started": {

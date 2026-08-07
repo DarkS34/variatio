@@ -152,9 +152,29 @@ export interface KgSummary {
   };
 }
 
+export interface GraphRelation {
+  /** The verbose label, which is also the name the edit endpoints speak. */
+  key: string;
+  verbose?: string;
+  /** Schema key when the relation is one the builder knows about: what fixes its colour. */
+  type?: string;
+  directed: boolean;
+  acyclic?: boolean;
+  use_in_embedding?: boolean;
+  prerequisite?: boolean;
+  count: number;
+}
+
 export interface GraphView {
-  meta: { title: string; kind: string; generated: string; isolated: number };
-  relations: { key: string; verbose?: string; directed: boolean; count: number }[];
+  meta: {
+    title: string;
+    kind: string;
+    generated: string;
+    isolated: number;
+    /** Index into `relations` of the prerequisite relation, or null when there is none. */
+    prerequisite?: number | null;
+  };
+  relations: GraphRelation[];
   groups: { name: string; count: number }[];
   /** [name, groupIndex, nonTaggable] */
   nodes: [string, number, number][];

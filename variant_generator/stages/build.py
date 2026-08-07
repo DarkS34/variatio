@@ -1,6 +1,7 @@
 from loguru import logger
 
 from .. import config, progress
+from ..builders import content_profile_builder, exemplars_bank_builder, knowledge_graph_builder
 from ..builders.content_profile_builder import ContentProfileBuilder
 from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
@@ -56,12 +57,21 @@ _LABELS = {
     _artifacts.EXEMPLARS_BANK: "Banco de ejemplos",
 }
 
+# Each builder declares what its phases cost; installing the plan here is what turns
+# "some step is running" into a percentage of the whole build, for all three alike.
+_PHASES = {
+    _artifacts.CONTENT_PROFILE: content_profile_builder.BUILD_PHASES,
+    _artifacts.KNOWLEDGE_GRAPH: knowledge_graph_builder.BUILD_PHASES,
+    _artifacts.EXEMPLARS_BANK: exemplars_bank_builder.BUILD_PHASES,
+}
+
 
 def build_artifact(artifact: str) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
     with progress.step(f"build_{artifact}", f"Construyendo: {_LABELS[artifact]}"):
-        return _BUILDERS[artifact]()
+        with progress.overall(_PHASES[artifact]):
+            return _BUILDERS[artifact]()
 
 
 def build_missing() -> list[str]:

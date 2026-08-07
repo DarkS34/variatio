@@ -560,6 +560,7 @@ name = "graph-guided-llm-content-generator"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "json-repair" },
     { name = "loguru" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -576,7 +577,6 @@ dependencies = [
 [package.optional-dependencies]
 builders = [
     { name = "docling" },
-    { name = "kg-builder" },
 ]
 server = [
     { name = "fastapi" },
@@ -589,7 +589,6 @@ server = [
 dev = [
     { name = "docling" },
     { name = "fastapi" },
-    { name = "kg-builder" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
@@ -599,8 +598,8 @@ dev = [
 requires-dist = [
     { name = "docling", marker = "extra == 'builders'", specifier = ">=2.0.0" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "json-repair", specifier = ">=0.59.5" },
-    { name = "kg-builder", marker = "extra == 'builders'", git = "https://github.com/DarkS34/kg-builder" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "numpy", specifier = ">=2.2.6" },
@@ -618,7 +617,6 @@ provides-extras = ["builders", "server"]
 dev = [
     { name = "docling", specifier = ">=2.0.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "kg-builder", git = "https://github.com/DarkS34/kg-builder" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
     { name = "websockets", specifier = ">=13.0" },
@@ -839,21 +837,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
-]
-
-[[package]]
-name = "kg-builder"
-version = "0.1.0"
-source = { git = "https://github.com/DarkS34/kg-builder#57bb38eb46e4a9eb2caeab71a32ced920b2a0f76" }
-dependencies = [
-    { name = "docling" },
-    { name = "httpx" },
-    { name = "json-repair" },
-    { name = "loguru" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "ollama" },
-    { name = "tqdm" },
 ]
 
 [[package]]

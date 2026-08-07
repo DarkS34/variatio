@@ -188,7 +188,10 @@ export function ProfileEditor() {
   if (!query.data?.exists || !draft) {
     return (
       <Alert tone="info" title="Todavía no hay perfil de contenido">
-        <p>Constrúyelo desde el panel para poder revisarlo.</p>
+        <p>
+          Púlsalo en «Construir», aquí arriba, para inferirlo de los ejemplares en bruto. El
+          progreso aparece en esta misma pantalla.
+        </p>
       </Alert>
     );
   }

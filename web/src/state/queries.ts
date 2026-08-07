@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { api } from "@/lib/api";
-import { runStore } from "./runStore";
+import type { ArtifactName } from "@/lib/types";
+import { runStore, type RunView } from "./runStore";
 
 export const keys = {
   health: ["health"] as const,
@@ -19,6 +20,29 @@ export const keys = {
 
 export function useStream() {
   return useSyncExternalStore(runStore.subscribe, runStore.getSnapshot, runStore.getSnapshot);
+}
+
+/** The most recent run that builds this artifact, running or not. */
+export function useArtifactRun(artifact: ArtifactName | undefined): RunView | null {
+  const stream = useStream();
+  return useMemo(() => {
+    if (!artifact) return null;
+    const runs = Object.values(stream.runs).filter((run) => run.job?.artifact === artifact);
+    if (runs.length === 0) return null;
+    return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
+  }, [stream, artifact]);
+}
+
+/** A wall clock that only ticks while something is running. */
+export function useElapsed(startedAt: number | null | undefined, live: boolean) {
+  const [now, setNow] = useState(() => Date.now() / 1000);
+  useEffect(() => {
+    if (!live) return;
+    const timer = window.setInterval(() => setNow(Date.now() / 1000), 1000);
+    return () => window.clearInterval(timer);
+  }, [live]);
+  if (!startedAt) return null;
+  return Math.max(0, (now - startedAt) * 1000);
 }
 
 export function useHealth() {
@@ -51,6 +75,21 @@ export function useCoverage() {
 
 export function useRaw() {
   return useQuery({ queryKey: keys.raw, queryFn: api.raw });
+}
+
+/**
+ * The label of the raw slot this artifact needs and that has no documents, or null.
+ *
+ * Which slot feeds which artifact is declared by the server (`slot.feeds`), so the
+ * screens never carry a second copy of that mapping.
+ */
+export function useRawMissingFor(artifact: ArtifactName | undefined): string | null {
+  const raw = useRaw();
+  if (!artifact) return null;
+  const slot = (raw.data?.slots ?? []).find(
+    (candidate) => candidate.feeds.includes(artifact) && candidate.files.length === 0,
+  );
+  return slot?.label ?? null;
 }
 
 /** Everything an artifact write can invalidate, in one place. */
