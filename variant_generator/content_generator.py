@@ -107,7 +107,9 @@ class ContentGenerator:
         progress.emit("few_shot", ids=[ex_id for ex_id, _ in few_shot], concepts=concepts)
 
         target_block = self._format_target_concepts(concepts)
-        curriculum_block = self._format_curriculum(curriculum)
+        prerequisites_block = self._format_concept_list(self._prerequisites(concepts))
+        excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
+        curriculum_block = self._format_concept_list(curriculum or [])
         rules_block = "\n".join(f"- {r}" for r in self.general_generation_rules)
         few_shot_block = self._build_few_shot_block([item for _, item in few_shot])
         instance_template = self._build_instance_template(fixed)
@@ -122,6 +124,8 @@ class ContentGenerator:
                 prompt = generate_content_prompt(
                     context=self.context,
                     target_concepts_block=target_block,
+                    prerequisites_block=prerequisites_block,
+                    excluded_concepts_block=excluded_block,
                     curriculum_block=curriculum_block,
                     rules_block=rules_block,
                     few_shot_block=few_shot_block,
@@ -241,10 +245,27 @@ class ContentGenerator:
                 lines.append(f"- **{c}**")
         return "\n".join(lines)
 
-    def _format_curriculum(self, curriculum: list[str] | None) -> str:
-        if not curriculum:
-            return ""
-        return "\n".join(f"- {c}" for c in curriculum)
+    def _neighbors(self, concepts: list[str], direction: str) -> list[str]:
+        relation = config.KG_PREREQUISITE_RELATION
+        if not self.knowledge_graph.has_relation(relation):
+            return []
+        found: set[str] = set()
+        for concept in concepts:
+            found.update(self.knowledge_graph.neighbors(concept, relation, direction=direction))
+        return sorted(found - set(concepts))
+
+    def _prerequisites(self, concepts: list[str]) -> list[str]:
+        return self._neighbors(concepts, "out")
+
+    def _posteriors(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
+        posteriors = self._neighbors(concepts, "in")
+        if curriculum:
+            posteriors = [c for c in posteriors if c not in set(curriculum)]
+        return posteriors
+
+    @staticmethod
+    def _format_concept_list(concepts: list[str]) -> str:
+        return "\n".join(f"- {c}" for c in concepts)
 
     def _build_few_shot_block(self, few_shot: list[dict]) -> str:
         if not few_shot:

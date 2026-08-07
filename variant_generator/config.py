@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INSTANCE_DIR = PROJECT_ROOT / "instance"
 CACHE_DIR = PROJECT_ROOT / "cache"
-RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_1"
 
 RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
 RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"
@@ -54,14 +54,16 @@ EXEMPLARS_BANK_CHUNK_SIZE = 12_000
 
 KG_BUILDER_CHUNK_SIZE =     12_000
 KG_RELATION_SCHEMA =        "es"
+KG_PREREQUISITE_RELATION =  "tiene como prerrequisito"
 KG_BUILDER_MERGE_QUALIFIER_PATTERN =    r"\s+en (python|java)\b"
 KG_BUILDER_UNCLASSIFIED_DOMAIN =        "Sin clasificar"
 
 
 # Embedding & Retrieval ----------------------------------------------
 EMBEDDING_QUERY_PREFIX = (
-    "Instruct: Dado el enunciado de un item de contenido educativo, recupera la descripción "
-    "del concepto del currículo que el item practica\nQuery: "
+    "Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del "
+    "currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como "
+    "herramienta\nQuery: "
 )
 EMBEDDING_DOCUMENT_PREFIX = ""
 EMBEDDING_BATCH_SIZE = 16

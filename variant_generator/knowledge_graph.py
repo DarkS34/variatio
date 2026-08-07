@@ -64,6 +64,9 @@ class KnowledgeGraph:
     def details(self, relation: str) -> dict:
         return self.relation_details[relation]
 
+    def has_relation(self, relation: str) -> bool:
+        return relation in self.graphs
+
     def neighbors(self, concept: str, relation: str, direction: str = "out") -> list[str]:
         graph = self.graphs[relation]
 
