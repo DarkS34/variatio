@@ -9,7 +9,7 @@ from . import bootstrap, stages
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="variant-generator",
-        description="Knowledge graph-guided generation of educational content variants.",
+        description="Knowledge graph-guided generation of educational items: exercises grounded in a curriculum graph.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
