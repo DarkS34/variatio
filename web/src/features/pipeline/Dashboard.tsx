@@ -5,7 +5,6 @@ import {
   CircleCheck,
   CircleDashed,
   Cpu,
-  Hammer,
   Lock,
   Pencil,
   Server,
@@ -14,6 +13,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { BuildButton } from "@/components/BuildButton";
+import { BuildProgress } from "@/components/BuildProgress";
 import { RawImport } from "@/components/RawImport";
 import { StageBadge } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,7 @@ import {
   useInvalidateChain,
   usePipeline,
   useRaw,
-  useSubmitJob,
+  useRawMissingFor,
 } from "@/state/queries";
 
 const SCREEN: Record<string, string> = {
@@ -50,19 +51,11 @@ const EXPLAIN: Record<string, string> = {
     "Los ítems extraídos de los documentos, etiquetados con conceptos del grafo. Alimentan los ejemplos few-shot de la generación.",
 };
 
-function StageCard({
-  stage,
-  index,
-  rawMissing,
-}: {
-  stage: StageState;
-  index: number;
-  rawMissing: string | null;
-}) {
-  const submit = useSubmitJob();
+function StageCard({ stage, index }: { stage: StageState; index: number }) {
+  const rawMissing = useRawMissingFor(stage.artifact);
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
-  const buildable = !blocked && !rawMissing;
+  const building = stage.status === "building";
   const build = JOB_EXPLAIN[stage.build_job];
 
   return (
@@ -130,17 +123,10 @@ function StageCard({
           <p className="text-xs text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
         ) : null}
 
+        {building ? <BuildProgress artifact={stage.artifact} /> : null}
+
         <div className="flex flex-wrap gap-2 pt-1">
-          {missing ? (
-            <Button
-              size="sm"
-              disabled={!buildable || submit.isPending}
-              onClick={() => submit.mutate({ kind: stage.build_job })}
-            >
-              <Hammer />
-              Construir
-            </Button>
-          ) : (
+          {missing ? null : (
             <Link to={SCREEN[stage.artifact]}>
               <Button size="sm" variant={stage.status === "approved" ? "outline" : "default"} disabled={blocked}>
                 <Pencil />
@@ -148,18 +134,9 @@ function StageCard({
               </Button>
             </Link>
           )}
-          {!missing ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!buildable || submit.isPending}
-              onClick={() => submit.mutate({ kind: stage.build_job })}
-              title="Vuelve a ejecutar el constructor sobre los datos en bruto"
-            >
-              <Hammer />
-              Reconstruir
-            </Button>
-          ) : null}
+          {building ? null : (
+            <BuildButton stage={stage} variant={missing ? "default" : "ghost"} />
+          )}
           {build ? (
             <InfoHint label="Qué ocurre al construir" className="self-center">
               <p>{build.what}</p>
@@ -348,12 +325,6 @@ function SystemCard() {
   );
 }
 
-const RAW_FOR: Record<string, string> = {
-  content_profile: "exemplars",
-  exemplars_bank: "exemplars",
-  knowledge_graph: "corpus",
-};
-
 export function Dashboard() {
   const pipeline = usePipeline();
   const raw = useRaw();
@@ -373,8 +344,6 @@ export function Dashboard() {
   const unlocked = pipeline.data?.generation_unlocked ?? false;
   const next = stages.find((s) => s.status !== "approved");
   const emptySlots = (raw.data?.slots ?? []).filter((slot) => slot.files.length === 0);
-  const rawMissingFor = (artifact: string) =>
-    emptySlots.find((slot) => slot.kind === RAW_FOR[artifact])?.label ?? null;
 
   return (
     <div className="space-y-6">
@@ -433,12 +402,7 @@ export function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
           {stages.map((stage, index) => (
-            <StageCard
-              key={stage.artifact}
-              stage={stage}
-              index={index}
-              rawMissing={rawMissingFor(stage.artifact)}
-            />
+            <StageCard key={stage.artifact} stage={stage} index={index} />
           ))}
         </div>
         <div className="space-y-4">

@@ -18,9 +18,12 @@ from typing import Protocol
 __all__ = [
     "Cancelled",
     "Emitter",
+    "advance",
     "checkpoint",
     "emit",
     "model_loading",
+    "overall",
+    "phase",
     "reset_emitter",
     "set_emitter",
     "should_cancel",
@@ -132,6 +135,77 @@ def _finish(step_id: str, status: str, started: float, error: str | None = None)
 
 def tick(step_id: str, current: int, total: int | None = None, detail: str | None = None) -> None:
     emit("step.progress", id=step_id, current=current, total=total, detail=detail)
+
+
+# OVERALL PROGRESS --------------------------------------------------------------------------------
+
+# Steps say *what* is running; they cannot say how much of the whole is left, because a
+# build's phases cost wildly different amounts of time. A phase plan declares those costs
+# once and turns the run into a single honest 0-100 bar.
+
+
+class _Overall:
+    __slots__ = ("_labels", "_spans", "_total", "_key")
+
+    def __init__(self, plan: tuple[tuple[str, str, int], ...]):
+        self._labels = {key: label for key, label, _ in plan}
+        self._spans: dict[str, tuple[int, int]] = {}
+        base = 0
+        for key, _, weight in plan:
+            self._spans[key] = (base, weight)
+            base += weight
+        self._total = base or 1
+        self._key: str | None = None
+
+    def phase(self, key: str, detail: str | None = None) -> None:
+        self._key = key
+        self.at(0.0, detail)
+
+    def at(self, fraction: float, detail: str | None = None) -> None:
+        if self._key is None:
+            return
+        base, weight = self._spans[self._key]
+        done = base + weight * min(max(fraction, 0.0), 1.0)
+        emit(
+            "build.progress",
+            percent=round(done * 100 / self._total),
+            label=self._labels[self._key],
+            detail=detail,
+        )
+
+    def finish(self) -> None:
+        emit("build.progress", percent=100, label=None, detail=None)
+
+
+_overall: contextvars.ContextVar["_Overall | None"] = contextvars.ContextVar(
+    "variant_generator_overall", default=None
+)
+
+
+@contextmanager
+def overall(plan: tuple[tuple[str, str, int], ...]):
+    """Install a weighted `(key, label, weight)` phase plan for the duration of a build."""
+    bar = _Overall(plan)
+    token = _overall.set(bar)
+    try:
+        yield bar
+        bar.finish()
+    finally:
+        _overall.reset(token)
+
+
+def phase(key: str, detail: str | None = None) -> None:
+    """Enter a phase of the installed plan; a no-op when the stage runs standalone."""
+    bar = _overall.get()
+    if bar is not None:
+        bar.phase(key, detail)
+
+
+def advance(fraction: float, detail: str | None = None) -> None:
+    """How far along the current phase is, as a 0-1 fraction of that phase alone."""
+    bar = _overall.get()
+    if bar is not None:
+        bar.at(fraction, detail)
 
 
 def model_loading(model: str, role: str) -> None:

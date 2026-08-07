@@ -15,6 +15,12 @@ from ..prompts import (
 from . import _source_docs
 
 
+BUILD_PHASES = (
+    ("sample", "Leyendo una muestra del corpus", 30),
+    ("infer", "Infiriendo el esquema de un ítem", 70),
+)
+
+
 class ContentProfileBuilder:
     FIELD_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -40,14 +46,17 @@ class ContentProfileBuilder:
             return {}
 
         logger.info(f"Found {len(files)} file(s) - inferring content profile")
+        progress.phase("sample", f"0/{len(files)} documento(s)")
         with progress.step("sample", "Leyendo una muestra del corpus", len(files)):
             sample = self._gather_sample(files)
         if not sample.strip():
             logger.error("No content extracted from any file")
             return {}
 
+        progress.phase("infer", f"{len(sample):,} caracteres de muestra en una sola llamada")
         with progress.step("infer_profile", "Infiriendo el perfil de contenido"):
             profile = self._infer(sample)
+        progress.advance(1.0)
         if not profile:
             logger.error("Could not produce a content profile draft")
             return {}
@@ -73,6 +82,7 @@ class ContentProfileBuilder:
         for idx, file_path in enumerate(files, 1):
             progress.checkpoint()
             progress.tick("sample", idx, len(files), detail=file_path.name)
+            progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
             try:
                 content = _source_docs.to_markdown(self._docling, file_path)
             except RuntimeError as e:

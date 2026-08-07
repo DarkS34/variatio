@@ -1,0 +1,54 @@
+{
+  "content_context": {
+    "subject": "Programación",
+    "programming_language": "Python",
+    "language_of_instruction": "Español",
+    "educational_level": "Grado universitario"
+  },
+  "general_generation_rules": [
+    "Utilizar programación modular definida explícitamente mediante funciones o subprogramas.",
+    "Incluir documentación estructurada para cada función con etiquetas tipo, objetivo (OBJ) y precondiciones (PRE).",
+    "Emplear identificadores descriptivos y significativos para variables, parámetros y funciones.",
+    "Adjuntar inmediatamente al código un bloque de prueba o probador que invoque la solución con valores de ejemplo y muestre los resultados por pantalla.",
+    "Respetar estrictamente las restricciones algorítmicas o estructurales indicadas en el enunciado (p. ej., prohibición de bibliotecas concretas, imposición de recursión o métodos de ordenación específicos)."
+  ],
+  "primary_field": "statement",
+  "fields": {
+    "statement": {
+      "schema": {
+        "type": "string"
+      },
+      "description": "Texto imperativo que plantea la tarea de programación al alumno, especificando objetivos, entradas esperadas, salidas requeridas y cualquier restricción algorítmica o estructural.",
+      "guidance": {
+        "extraction": "Copiar literalmente el texto descriptivo situado tras el número o viñeta del ejercicio, deteniéndose antes del siguiente elemento enumerado o del marcador SOLUCION PROPUESTA: Eliminar numeraciones, viñetas y saltos de formato. Conservar fórmulas, fragmentos de código contextual e instrucciones implícitas en la redacción original. Excluir las reglas generales aplicables a toda la sección si no forman parte integrante de este enunciado específico.",
+        "generation": "Redactar una instrucción clara y concisa en modo imperativo que describa exactamente qué debe calcular o implementar el programa. Especificar claramente los datos de entrada, el formato de salida por consola y cualquier restricción técnica explícita (p. ej., uso obligatorio de funciones, prohibición de operadores concretos, implementación recursiva). Utilizar terminología precisa propia de la asignatura y mantener un tono académico directo en español."
+      }
+    },
+    "difficulty_level": {
+      "schema": {
+        "enum": [
+          "básico",
+          "intermedio",
+          "avanzado"
+        ]
+      },
+      "description": "Nivel de complejidad cognitiva y técnica del ejercicio. Básico: traducción directa de fórmulas matemáticas, operaciones aritméticas simples o entrada/salida básica sin estructuras de control complejas. Intermedio: requiere diseño modular con funciones, uso de condicionales y bucles, y estructuras de datos elementales como listas o diccionarios para resolver problemas contextualizados. Avanzado: implica algoritmos no triviales (ordenación, búsqueda binaria, recursión compleja, manipulación avanzada de datos, integración de múltiples módulos o resolución de problemas tipo concurso con restricciones estrictas).",
+      "guidance": {
+        "extraction": "Leer el encabezado de sección donde figura el ejercicio (p. ej., Ejercicios nivel básico, Ejercicio avanzado) y mapear directamente al valor del enum correspondiente. Si carece de etiqueta explícita, analizar la complejidad siguiendo los criterios definidos en description y asignar el nivel adecuado. Nunca devolver null."
+      }
+    },
+    "solution": {
+      "schema": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": "Código fuente Python completo que resuelve el enunciado, incluyendo definición de funciones o subprogramas, documentación interna y bloques de prueba o probador.",
+      "guidance": {
+        "extraction": "Localizar el bloque de código Python situado inmediatamente después del encabezado SOLUCION PROPUESTA: o equivalente en ejercicios resueltos. Copiar el fragmento completo tal cual aparece, preservando identación, comentarios, docstrings y código del probador. Si el ejercicio se encuentra en una sección no resuelta o no presenta dicho marcador, asignar null.",
+        "generation": "Generar un script Python ejecutable que cumpla íntegramente el enunciado. Estructurar la solución mediante funciones o subprogramas con nombres descriptivos. Documentar cada función usando docstrings o comentarios con las etiquetas OBJ y PRE. Incluir al final un bloque de invocatoria o probador que ejecute las funciones principales con datos de ejemplo realistas y muestre los resultados por pantalla. Respetar las restricciones algorítmicas del enunciado."
+      }
+    }
+  }
+}

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+
 import { RunDrawer, useActiveRun, type DrawerTab } from "@/components/RunDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,14 @@ import { duration } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useCancelJob, useHealth, usePipeline, useStream } from "@/state/queries";
+import {
+  useCancelJob,
+  useElapsed,
+  useHealth,
+  useInvalidateChain,
+  usePipeline,
+  useStream,
+} from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
 const NAV = [
@@ -32,17 +40,6 @@ const NAV = [
   { path: "/preparar/banco", label: "Banco", icon: Library, artifact: "exemplars_bank" },
   { path: "/generar", label: "Generar", icon: Play, artifact: null },
 ] as const;
-
-function useElapsed(startedAt: number | null | undefined, live: boolean) {
-  const [now, setNow] = useState(() => Date.now() / 1000);
-  useEffect(() => {
-    if (!live) return;
-    const timer = window.setInterval(() => setNow(Date.now() / 1000), 1000);
-    return () => window.clearInterval(timer);
-  }, [live]);
-  if (!startedAt) return null;
-  return Math.max(0, (now - startedAt) * 1000);
-}
 
 /**
  * What is still pending, in one line — nothing else.
@@ -118,6 +115,10 @@ function JobIndicator({ onOpen }: { onOpen: () => void }) {
     );
   }
 
+  // El porcentaje global manda sobre el del paso: un paso puede ir por 8/8 y quedar
+  // aún media construcción por delante.
+  const overall = run.overall;
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       <button onClick={onOpen} className="flex min-w-0 items-center gap-2 text-left">
@@ -126,9 +127,13 @@ function JobIndicator({ onOpen }: { onOpen: () => void }) {
           <span className="relative inline-flex size-2 rounded-full bg-[var(--info)]" />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium">{step?.label ?? run.job.label}</p>
+          <p className="truncate text-xs font-medium">
+            {overall?.label ?? step?.label ?? run.job.label}
+          </p>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            {step?.total ? (
+            {overall ? (
+              <span className="tabular-nums">{overall.percent} %</span>
+            ) : step?.total ? (
               <span className="tabular-nums">
                 {step.current ?? 0}/{step.total}
               </span>
@@ -138,7 +143,9 @@ function JobIndicator({ onOpen }: { onOpen: () => void }) {
           </div>
         </div>
       </button>
-      {step?.total ? (
+      {overall ? (
+        <Progress value={overall.percent} max={100} className="hidden w-28 md:block" />
+      ) : step?.total ? (
         <Progress value={step.current ?? 0} max={step.total} className="hidden w-28 md:block" />
       ) : null}
       <Button
@@ -203,6 +210,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pipeline = usePipeline();
   const health = useHealth();
   const stream = useStream();
+  const invalidate = useInvalidateChain();
 
   const openDrawer = (tab: DrawerTab) => {
     setDrawerTab(tab);
@@ -213,9 +221,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     runStore.connect();
   }, []);
 
-  // The pipeline is derived from files on disk; a job that finishes changes it.
+  // A build rewrites the artifact behind every screen, so a finished job invalidates
+  // the whole chain, not just the pipeline: otherwise the graph tab keeps showing the
+  // KG it read before the build that just replaced it.
   useEffect(() => {
-    if (stream.currentJobId === null) pipeline.refetch();
+    if (stream.currentJobId === null) invalidate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream.currentJobId]);
 

@@ -71,9 +71,16 @@ export const STEP_EXPLAIN: Record<string, string> = {
   build_exemplars_bank: "Extrae los ítems de los documentos y los valida contra el perfil.",
   sample: "Lee una muestra del corpus hasta llenar el presupuesto de contexto.",
   infer_profile: "Pide al modelo el esquema de campos y sus guías de extracción y generación.",
-  kg_extract: "Recorre el corpus por trozos pidiendo entidades y relaciones. Es la parte larga.",
-  kg_clean: "Normaliza nombres, fusiona duplicados y rompe los ciclos que el grafo no admite.",
-  kg_curate: "Agrupa los conceptos en dominios y vacía la bolsa de «Sin clasificar».",
+  kg_convert:
+    "Docling convierte y trocea todo el corpus antes de extraer nada, para que la extracción sepa cuántos fragmentos son en total.",
+  kg_extract:
+    "Una llamada al modelo por fragmento, pidiendo conceptos y relaciones. Es la parte larga: la barra avanza fragmento a fragmento.",
+  kg_link:
+    "Una única pasada sobre el inventario completo de conceptos, buscando las relaciones entre temas que la extracción por trozos no pudo ver.",
+  kg_clean:
+    "Normaliza nombres y fusiona duplicados: primero mecánicamente (mayúsculas, acentos, plurales) y después con una propuesta de alias del modelo.",
+  kg_curate:
+    "Agrupa los conceptos en dominios, marca los no etiquetables, tipa las relaciones y rompe los ciclos que el grafo no admite. Aquí se escribe el borrador.",
   convert: "Docling convierte el documento a markdown antes de extraer nada.",
   extract: "Un documento tras otro, guardando el banco después de cada uno.",
   extract_batches: "El documento se trocea y cada trozo se extrae por separado para que quepa en contexto.",

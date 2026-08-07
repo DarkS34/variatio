@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [
+    "httpx>=0.27.0",
     "loguru>=0.7.3",
     "networkx>=3.4.2",
     "numpy>=2.2.6",
@@ -16,9 +17,8 @@ dependencies = [
 
 # Authoring-only. Docling drags ~540 MB (torch, transformers, docling-parse) that the
 # runtime pipeline never touches; it is imported lazily in builders/_source_docs.py.
-# kg-builder is imported lazily in builders/knowledge_graph_builder.py.
 [project.optional-dependencies]
-builders = ["docling>=2.0.0", "kg-builder"]
+builders = ["docling>=2.0.0"]
 # The web UI's backend. Kept out of the runtime so the CLI stays a plain library.
 server = [
     "fastapi>=0.115.0",
@@ -31,7 +31,6 @@ server = [
 # `uv sync` able to run the builders and the server locally.
 [dependency-groups]
 dev = [
-    "kg-builder",
     "docling>=2.0.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -42,9 +41,6 @@ dev = [
 [project.scripts]
 variant-generator = "variant_generator.cli:main"
 variant-generator-server = "server.__main__:main"
-
-[tool.uv.sources]
-kg-builder = { git = "https://github.com/DarkS34/kg-builder" }
 
 [build-system]
 requires = ["hatchling"]

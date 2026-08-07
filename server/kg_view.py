@@ -1,35 +1,43 @@
 """The graph as the canvas wants it: positional nodes and links, grouped by domain.
 
-kg-builder already computes this view model for its standalone HTML viewer, so we
-reuse it when it is installed. It is an optional extra, though, and the graph screen
-is not optional, so there is a local equivalent that produces the same shape from
-`KnowledgeGraph` alone.
+Nodes and links are emitted as positional arrays because they dominate the payload
+and the whole graph is re-read on every load of the screen.
 """
 
+import re
+import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
+from variant_generator import config
 from variant_generator.knowledge_graph import KnowledgeGraph
 
 
+def _slug(text: str) -> str:
+    stripped = "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    )
+    return re.sub(r"[^a-z0-9]+", "_", stripped.lower()).strip("_") or "relation"
+
+
+# `key` is the verbose label because that is the name the edit endpoints speak.
+# `type` is the schema key when the relation is one the builder knows about: it is
+# what gives a relation the same colour and the same meaning across instances.
+def _relation_entry(verbose: str, details: dict) -> dict:
+    known = config.RELATION_SCHEMA.by_verbose(verbose)
+    return {
+        "key": verbose,
+        "verbose": verbose,
+        "type": known.key if known is not None else _slug(verbose),
+        "directed": bool(details.get("directed", True)),
+        "acyclic": bool(details.get("acyclic", False)),
+        "use_in_embedding": bool(details.get("use_in_embedding", True)),
+        "prerequisite": verbose == config.KG_PREREQUISITE_RELATION,
+        "count": 0,
+    }
+
+
 def build(graph_raw: dict, kg: KnowledgeGraph, title: str = "Grafo de conocimiento") -> dict:
-    try:
-        from kg_builder import BUILTIN_SCHEMAS
-        from kg_builder.visualization import build_view_model
-
-        from variant_generator import config
-
-        return build_view_model(
-            graph_raw,
-            BUILTIN_SCHEMAS.get(config.KG_RELATION_SCHEMA),
-            title=title,
-            source="instance",
-        )
-    except Exception:  # noqa: BLE001 - the local fallback is not a degraded mode
-        return _local(kg, title)
-
-
-def _local(kg: KnowledgeGraph, title: str) -> dict:
     names = list(kg.all_concepts)
     node_index = {name: i for i, name in enumerate(names)}
 
@@ -42,29 +50,21 @@ def _local(kg: KnowledgeGraph, title: str) -> dict:
     ]
     group_index = {group["name"]: i for i, group in enumerate(groups)}
 
-    # `verbose` is the name the edit endpoints speak; kg-builder's view model carries
-    # it too, so the client can identify a relation the same way on either path.
     relations = [
-        {
-            "key": verb,
-            "verbose": verb,
-            "directed": bool(details.get("directed", True)),
-            "acyclic": bool(details.get("acyclic", False)),
-            "use_in_embedding": bool(details.get("use_in_embedding", True)),
-            "count": 0,
-        }
-        for verb, details in kg.relation_details.items()
+        _relation_entry(verbose, details) for verbose, details in kg.relation_details.items()
     ]
     relation_index = {relation["key"]: i for i, relation in enumerate(relations)}
 
     links: list[list[int]] = []
     seen: set[tuple] = set()
     degree = [0] * len(names)
-    for verb, nx_graph in kg.graphs.items():
-        r = relation_index[verb]
+    for verbose, nx_graph in kg.graphs.items():
+        r = relation_index[verbose]
         symmetric = not nx_graph.is_directed()
         for source, target in nx_graph.edges():
             s, t = node_index.get(source), node_index.get(target)
+            # Self-loops have nothing to draw; a symmetric relation stated in both
+            # directions is one edge, not two lines on top of each other.
             if s is None or t is None or s == t:
                 continue
             signature = (min(s, t), max(s, t), r) if symmetric else (s, t, r)
@@ -85,6 +85,10 @@ def _local(kg: KnowledgeGraph, title: str) -> dict:
         for name in names
     ]
 
+    prerequisite = next(
+        (i for i, relation in enumerate(relations) if relation["prerequisite"]), None
+    )
+
     return {
         "meta": {
             "title": title,
@@ -92,6 +96,7 @@ def _local(kg: KnowledgeGraph, title: str) -> dict:
             "kind": "curated",
             "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "isolated": sum(1 for d in degree if d == 0),
+            "prerequisite": prerequisite,
         },
         "relations": relations,
         "groups": groups,

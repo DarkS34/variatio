@@ -11,24 +11,39 @@ SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
 FENCE_TOKEN_RE = re.compile(r"§§FENCE(\d+)§§")
 
 
-def default_converter():
+def default_converter(ocr: bool = False, table_structure: bool = True):
     try:
-        from docling.document_converter import DocumentConverter, InputFormat
+        from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.document_converter import (
+            DocumentConverter,
+            InputFormat,
+            PdfFormatOption,
+        )
     except ImportError as e:
         raise ImportError(
             "The builders need Docling, which is an optional extra. "
             "Install it with: uv sync --extra builders"
         ) from e
 
-    return DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.DOCX])
+    pdf_options = PdfPipelineOptions()
+    pdf_options.do_ocr = ocr
+    pdf_options.do_table_structure = table_structure
 
-
-def list_source_files(input_dir: str | Path) -> list[Path]:
-    return sorted(
-        p
-        for p in Path(input_dir).iterdir()
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS
+    return DocumentConverter(
+        allowed_formats=[InputFormat.PDF, InputFormat.DOCX],
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_options=pdf_options, backend=PyPdfiumDocumentBackend
+            )
+        },
     )
+
+
+def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Path]:
+    root = Path(input_dir)
+    candidates = root.rglob("*") if recursive else root.iterdir()
+    return sorted(p for p in candidates if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS)
 
 
 def to_markdown(converter, input_path: Path) -> str:

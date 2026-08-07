@@ -1,33 +1,44 @@
-import { Maximize2, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
+import { Maximize2, Network, RotateCw, Tag, Waypoints, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { domainColour } from "@/lib/format";
 import type { GraphView } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  draw,
+  drawMinimap,
+  radiusOf,
+  readPalette,
+  type LabelMode,
+  type Scene,
+} from "./graph/draw";
+import {
+  curriculumPositions,
+  forceStep,
+  PADDING,
+  seedBodies,
+  settleTowardTargets,
+  type Body,
+  type LayoutMode,
+} from "./graph/layout";
+import { buildModel } from "./graph/model";
 
 /**
- * Force-directed layout on a canvas, drawn by hand.
+ * The knowledge graph, drawn by hand on a canvas, in two layouts.
  *
- * 118 concepts and ~180 edges do not need a physics library: a Fruchterman-Reingold
- * relaxation is a few dozen lines, and owning the render loop is what lets the graph
- * share selection with the table beside it and follow the app's own theme.
+ * A curriculum graph is two things at once and no single picture shows both: a web of
+ * semantic neighbourhoods, which a force layout shows and a layered one destroys, and
+ * an ORDER of prerequisites, which a force layout hides completely. So the engine owns
+ * both and animates between them — `layout.ts` produces positions, `draw.ts` paints,
+ * and this file owns the loop, the camera and the pointer.
  *
- * Owning the loop also means owning when it stops. Three rules keep it cheap:
- * the frame is only requested while the layout is hot or something changed; nothing
- * inside a frame reads the DOM (size comes from a ResizeObserver, colours from a
- * cached palette — both used to force a reflow on every single frame); and the
- * props the drawing depends on live in refs, so a keystroke in the search box
- * repaints instead of tearing down and restarting the animation.
+ * Owning the loop means owning when it stops. Three rules keep it cheap: a frame is
+ * only requested while the layout is moving or something changed; nothing inside a
+ * frame reads the DOM (size comes from a ResizeObserver, colours from a cached
+ * palette — both used to force a reflow on every single frame); and the props the
+ * drawing depends on live in refs, so a keystroke in the search box repaints instead
+ * of tearing down and restarting the animation.
  */
-
-interface Body {
-  x: number;
-  y: number;
-  dx: number;
-  dy: number;
-  pinned: boolean;
-}
 
 interface Props {
   graph: GraphView;
@@ -38,38 +49,11 @@ interface Props {
   className?: string;
 }
 
-const MIN_SCALE = 0.2;
+const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
 const SETTLED = 0.4;
 const COOLING = 0.975;
-const PADDING = 44;
-const LABEL_SCALE = 1.1;
-const HUB_LABELS = 14;
-
-// Fruchterman-Reingold constants, measured against this graph (118 concepts, 182
-// edges) rather than guessed. Unbounded, the relaxation spread to ~5000 units and the
-// camera had to zoom out to 0.2 to show it — the "graph is tiny and half off-screen"
-// this replaces. Bounding it to the canvas and tuning these two makes the layout fill
-// the frame with a single node touching the border: REPULSION sets the edge length
-// (~78 px), GRAVITY keeps the periphery off the boundary.
-const REPULSION = 0.45;
-const GRAVITY = 0.5;
-
-function readPalette() {
-  const styles = getComputedStyle(document.documentElement);
-  const read = (name: string, fallback: string) =>
-    styles.getPropertyValue(name).trim() || fallback;
-  return {
-    foreground: read("--foreground", "#111"),
-    muted: read("--muted-foreground", "#888"),
-    border: read("--border", "#ddd"),
-    background: read("--card", "#fff"),
-  };
-}
-
-function radiusOf(degree: number) {
-  return 4 + Math.min(9, Math.sqrt(degree) * 2.2);
-}
+const MINIMAP = { width: 150, height: 104, margin: 10 };
 
 export function GraphCanvas({
   graph,
@@ -85,6 +69,7 @@ export function GraphCanvas({
   const bodies = useRef<Body[]>([]);
   const view = useRef({ x: 0, y: 0, scale: 1 });
   const temperature = useRef(0);
+  const settling = useRef(false);
   const size = useRef({ width: 0, height: 0 });
   const palette = useRef(readPalette());
   const dirty = useRef(true);
@@ -99,47 +84,24 @@ export function GraphCanvas({
     y: number;
     moved: number;
   }>({ mode: "none", index: -1, x: 0, y: 0, moved: 0 });
+
   const [hovered, setHovered] = useState<number | null>(null);
+  const [tip, setTip] = useState({ x: 0, y: 0 });
   const hoveredRef = useRef<number | null>(null);
   hoveredRef.current = hovered;
 
-  const nodeCount = graph.nodes.length;
+  const [mode, setMode] = useState<LayoutMode>("force");
+  const [labels, setLabels] = useState<LabelMode>("auto");
+  const [arrows, setArrows] = useState(true);
 
-  const model = useMemo(() => {
-    const degrees = new Array<number>(nodeCount).fill(0);
-    const adjacency = new Map<number, Set<number>>();
-    for (const [source, target] of graph.links) {
-      degrees[source] += 1;
-      degrees[target] += 1;
-      if (!adjacency.has(source)) adjacency.set(source, new Set());
-      if (!adjacency.has(target)) adjacency.set(target, new Set());
-      adjacency.get(source)!.add(target);
-      adjacency.get(target)!.add(source);
-    }
-    const nameIndex = new Map<string, number>();
-    graph.nodes.forEach(([name], index) => nameIndex.set(name, index));
-    // One colour string per domain, built once: `domainColour` inside the draw loop
-    // meant 118 template strings a frame for six distinct values.
-    const colours = graph.groups.map((_, index) => domainColour(index, graph.groups.length));
-    // A graph with no labels is a constellation. The hubs get theirs permanently — few
-    // enough not to collide, and they are what you navigate by.
-    const hubs = new Set(
-      degrees
-        .map((degree, index) => [degree, index])
-        .sort((a, b) => b[0] - a[0])
-        .slice(0, HUB_LABELS)
-        .filter(([degree]) => degree > 1)
-        .map(([, index]) => index),
-    );
-    return { degrees, adjacency, nameIndex, colours, hubs };
-  }, [graph, nodeCount]);
+  const model = useMemo(() => buildModel(graph), [graph]);
 
   const modelRef = useRef(model);
   modelRef.current = model;
   const graphRef = useRef(graph);
   graphRef.current = graph;
-  const viewProps = useRef({ selected, highlight, hiddenRelations });
-  viewProps.current = { selected, highlight, hiddenRelations };
+  const viewProps = useRef({ selected, highlight, hiddenRelations, mode, labels, arrows });
+  viewProps.current = { selected, highlight, hiddenRelations, mode, labels, arrows };
 
   const wake = useCallback(() => {
     if (frame.current === null) frame.current = requestAnimationFrame(() => loopRef.current());
@@ -181,9 +143,7 @@ export function GraphCanvas({
       MIN_SCALE,
       Math.min(1.4, (width - PADDING * 2) / spanX, (height - PADDING * 2) / spanY),
     );
-    const centreX = (minX + maxX) / 2;
-    const centreY = (minY + maxY) / 2;
-    view.current = { x: -centreX * scale, y: -centreY * scale, scale };
+    view.current = { x: -((minX + maxX) / 2) * scale, y: -((minY + maxY) / 2) * scale, scale };
     return true;
   }, []);
 
@@ -200,37 +160,57 @@ export function GraphCanvas({
     pendingFit.current = false;
   }, []);
 
-  // Seed by domain: nodes of the same group start on the same arc, so the relaxation
-  // starts from something already grouped and settles into readable clusters instead
-  // of a ring that untangles itself on camera.
-  useEffect(() => {
-    const groupCount = Math.max(1, graph.groups.length);
-    const halfWidth = Math.max(200, size.current.width / 2 - PADDING);
-    const halfHeight = Math.max(150, size.current.height / 2 - PADDING);
-    const seen = new Map<number, number>();
-    bodies.current = graph.nodes.map(([, group]) => {
-      const rank = seen.get(group) ?? 0;
-      seen.set(group, rank + 1);
-      const angle = (group / groupCount) * Math.PI * 2;
-      const spread = 30 + Math.sqrt(rank + 1) * 18;
-      return {
-        x: Math.cos(angle) * halfWidth * 0.55 + Math.cos(rank * 2.4) * spread,
-        y: Math.sin(angle) * halfHeight * 0.55 + Math.sin(rank * 2.4) * spread,
-        dx: 0,
-        dy: 0,
-        pinned: false,
-      };
-    });
+  const relayout = useCallback(() => {
     pendingFit.current = true;
+    if (viewProps.current.mode === "curriculum") {
+      const targets = curriculumPositions(graphRef.current, modelRef.current);
+      bodies.current.forEach((body, index) => {
+        body.pinned = false;
+        body.tx = targets[index]?.x ?? body.x;
+        body.ty = targets[index]?.y ?? body.y;
+      });
+      settling.current = true;
+      wake();
+      return;
+    }
+    bodies.current = seedBodies(graphRef.current, size.current);
+    reheat();
+  }, [reheat, wake]);
+
+  useEffect(() => {
+    bodies.current = seedBodies(graph, size.current);
+    pendingFit.current = true;
+    settling.current = false;
     reheat();
     repaint();
   }, [graph, reheat, repaint]);
 
-  // Selection, search highlight and relation filters change what is drawn, never the
-  // simulation: mark the canvas dirty and let the loop draw one more frame.
+  // Switching layout never rebuilds the bodies: each one is given a target and eased
+  // into it, so the same node stays the same dot and you can watch the cloud fold into
+  // levels. That continuity is the whole reason both views live in one canvas.
+  useEffect(() => {
+    if (mode === "curriculum") {
+      const targets = curriculumPositions(graph, model);
+      bodies.current.forEach((body, index) => {
+        body.pinned = false;
+        body.tx = targets[index]?.x ?? body.x;
+        body.ty = targets[index]?.y ?? body.y;
+      });
+      temperature.current = 0;
+      settling.current = true;
+    } else {
+      settling.current = false;
+      reheat(0.55);
+    }
+    pendingFit.current = true;
+    wake();
+  }, [mode, graph, model, reheat, wake]);
+
+  // Selection, search highlight and filters change what is drawn, never the simulation:
+  // mark the canvas dirty and let the loop draw one more frame.
   useEffect(() => {
     repaint();
-  }, [selected, highlight, hiddenRelations, hovered, repaint]);
+  }, [selected, highlight, hiddenRelations, hovered, labels, arrows, repaint]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -254,268 +234,86 @@ export function GraphCanvas({
       dirty.current = true;
     };
 
-    const simulate = () => {
-      const list = bodies.current;
-      const n = list.length;
-      if (n === 0) return;
-      const halfWidth = Math.max(200, size.current.width / 2 - PADDING);
-      const halfHeight = Math.max(150, size.current.height / 2 - PADDING);
-      const k = REPULSION * Math.sqrt((halfWidth * 2 * halfHeight * 2) / n);
-      const links = graphRef.current.links;
-      const hidden = viewProps.current.hiddenRelations;
-
-      for (const body of list) {
-        body.dx = 0;
-        body.dy = 0;
-      }
-
-      for (let i = 0; i < n; i += 1) {
-        const a = list[i];
-        for (let j = i + 1; j < n; j += 1) {
-          const b = list[j];
-          let deltaX = a.x - b.x;
-          let deltaY = a.y - b.y;
-          let distance = Math.hypot(deltaX, deltaY);
-          if (distance < 0.01) {
-            deltaX = Math.random() - 0.5;
-            deltaY = Math.random() - 0.5;
-            distance = 0.01;
-          }
-          const force = (k * k) / distance;
-          const ux = (deltaX / distance) * force;
-          const uy = (deltaY / distance) * force;
-          a.dx += ux;
-          a.dy += uy;
-          b.dx -= ux;
-          b.dy -= uy;
-        }
-      }
-
-      for (const [source, target, relation] of links) {
-        if (hidden?.has(relation)) continue;
-        const a = list[source];
-        const b = list[target];
-        if (!a || !b) continue;
-        const deltaX = a.x - b.x;
-        const deltaY = a.y - b.y;
-        const distance = Math.max(0.01, Math.hypot(deltaX, deltaY));
-        const force = (distance * distance) / k;
-        const ux = (deltaX / distance) * force;
-        const uy = (deltaY / distance) * force;
-        a.dx -= ux;
-        a.dy -= uy;
-        b.dx += ux;
-        b.dy += uy;
-      }
-
-      // Gravity is elliptical, not round: pulling harder vertically than horizontally
-      // makes the cloud take the shape of the canvas instead of a circle with two
-      // empty margins. The clamp afterwards is classic FR — the frame is the world.
-      const gravityY = GRAVITY * (halfWidth / halfHeight);
-      const temp = temperature.current;
-      for (const body of list) {
-        if (body.pinned) continue;
-        body.dx -= body.x * GRAVITY;
-        body.dy -= body.y * gravityY;
-        const magnitude = Math.max(0.01, Math.hypot(body.dx, body.dy));
-        const move = Math.min(magnitude, temp);
-        body.x = Math.max(-halfWidth, Math.min(halfWidth, body.x + (body.dx / magnitude) * move));
-        body.y = Math.max(-halfHeight, Math.min(halfHeight, body.y + (body.dy / magnitude) * move));
-      }
-      temperature.current = temp * COOLING;
-    };
-
-    const draw = () => {
-      const { width, height } = size.current;
-      if (width === 0 || height === 0) return;
-
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
-      const { foreground, muted, border, background } = palette.current;
-      const { degrees, adjacency, nameIndex, colours, hubs } = modelRef.current;
-      const { selected: current, highlight: marked, hiddenRelations: hidden } = viewProps.current;
-      const { nodes, links } = graphRef.current;
-      const list = bodies.current;
-      const scale = view.current.scale;
-
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
-      context.save();
-      context.translate(width / 2 + view.current.x, height / 2 + view.current.y);
-      context.scale(scale, scale);
-
-      const selectedIndex = current ? (nameIndex.get(current) ?? -1) : -1;
-      const focus = hoveredRef.current !== null ? hoveredRef.current : selectedIndex;
-      const near = focus >= 0 ? adjacency.get(focus) : undefined;
-
-      // Edges in two batched paths instead of a stroke per edge: one for the muted
-      // background, one for the ones touching the focused node.
-      context.lineWidth = 1 / scale;
-      context.strokeStyle = border;
-      context.globalAlpha = focus >= 0 ? 0.12 : 0.5;
-      context.beginPath();
-      for (const [source, target, relation] of links) {
-        if (hidden?.has(relation)) continue;
-        if (focus >= 0 && (source === focus || target === focus)) continue;
-        const a = list[source];
-        const b = list[target];
-        if (!a || !b) continue;
-        context.moveTo(a.x, a.y);
-        context.lineTo(b.x, b.y);
-      }
-      context.stroke();
-
-      if (focus >= 0) {
-        context.strokeStyle = foreground;
-        context.globalAlpha = 0.75;
-        context.lineWidth = 1.4 / scale;
-        context.beginPath();
-        for (const [source, target, relation] of links) {
-          if (hidden?.has(relation)) continue;
-          if (source !== focus && target !== focus) continue;
-          const a = list[source];
-          const b = list[target];
-          if (!a || !b) continue;
-          context.moveTo(a.x, a.y);
-          context.lineTo(b.x, b.y);
-        }
-        context.stroke();
-      }
-
-      const labels: {
-        text: string;
-        x: number;
-        y: number;
-        strong: boolean;
-        dim: boolean;
-        weight: number;
-      }[] = [];
-      const showAll = scale > LABEL_SCALE;
-
-      context.globalAlpha = 1;
-      for (let index = 0; index < nodes.length; index += 1) {
-        const body = list[index];
-        if (!body) continue;
-        const [name, group, nonTaggable] = nodes[index];
-        const radius = radiusOf(degrees[index] ?? 0);
-        const isFocus = index === focus;
-        const isNear = near?.has(index) ?? false;
-        const isMarked = marked ? marked.has(name) : true;
-        const dimmed = (focus >= 0 && !isFocus && !isNear) || !isMarked;
-
-        context.globalAlpha = dimmed ? 0.18 : 1;
-        context.fillStyle = colours[group] ?? muted;
-        context.beginPath();
-        context.arc(body.x, body.y, radius, 0, Math.PI * 2);
-        context.fill();
-
-        if (nonTaggable) {
-          context.strokeStyle = background;
-          context.lineWidth = 2 / scale;
-          context.stroke();
-        }
-        if (index === selectedIndex) {
-          context.globalAlpha = 1;
-          context.strokeStyle = foreground;
-          context.lineWidth = 2.5 / scale;
-          context.beginPath();
-          context.arc(body.x, body.y, radius + 3.5, 0, Math.PI * 2);
-          context.stroke();
-        }
-
-        if (
-          isFocus ||
-          isNear ||
-          index === selectedIndex ||
-          showAll ||
-          (hubs.has(index) && !dimmed) ||
-          (marked && marked.size <= 14 && isMarked)
-        ) {
-          labels.push({
-            text: name,
-            x: body.x,
-            y: body.y - radius - 4 / scale,
-            strong: isFocus || index === selectedIndex,
-            dim: dimmed,
-            weight: degrees[index] ?? 0,
-          });
-        }
-      }
-
-      // Labels last and grouped by weight: `context.font` is a parsed string, and
-      // setting it per node was most of the per-frame cost at this node count. The
-      // ones the user asked for (focus, selection) are drawn first and always; the
-      // rest give way to whatever is already on the canvas instead of overprinting it.
-      context.textAlign = "center";
-      context.textBaseline = "alphabetic";
-      const placed: [number, number, number, number][] = [];
-      const lineHeight = 13 / scale;
-
-      const paint = (strong: boolean) => {
-        const chosen = labels
-          .filter((label) => label.strong === strong)
-          .sort((a, b) => b.weight - a.weight);
-        if (chosen.length === 0) return;
-        context.font = `${strong ? 600 : 400} ${11 / scale}px ui-sans-serif, system-ui`;
-        context.fillStyle = strong ? foreground : muted;
-        for (const label of chosen) {
-          const half = context.measureText(label.text).width / 2;
-          const box: [number, number, number, number] = [
-            label.x - half,
-            label.y - lineHeight,
-            label.x + half,
-            label.y + lineHeight * 0.3,
-          ];
-          if (!strong && placed.some((r) => box[0] < r[2] && box[2] > r[0] && box[1] < r[3] && box[3] > r[1])) {
-            continue;
-          }
-          placed.push(box);
-          context.globalAlpha = label.dim ? 0.3 : 1;
-          context.fillText(label.text, label.x, label.y);
-        }
+    const scene = (): Scene => {
+      const props = viewProps.current;
+      const current = props.selected ? (modelRef.current.nameIndex.get(props.selected) ?? -1) : -1;
+      return {
+        graph: graphRef.current,
+        model: modelRef.current,
+        bodies: bodies.current,
+        view: view.current,
+        frame: size.current,
+        palette: palette.current,
+        mode: props.mode,
+        labels: props.labels,
+        arrows: props.arrows,
+        hulls: true,
+        selected: current,
+        focused: hoveredRef.current ?? -1,
+        highlight: props.highlight,
+        hiddenRelations: props.hiddenRelations,
       };
-      paint(true);
-      paint(false);
-
-      context.globalAlpha = 1;
-      context.restore();
     };
 
     loopRef.current = () => {
       frame.current = null;
-      const hot = temperature.current > SETTLED;
-      if (hot) {
-        simulate();
-        dirty.current = true;
+      const curriculum = viewProps.current.mode === "curriculum";
+      let moving = false;
+
+      if (curriculum && settling.current) {
+        moving = settleTowardTargets(bodies.current);
+        settling.current = moving;
+      } else if (!curriculum && temperature.current > SETTLED) {
+        forceStep(
+          bodies.current,
+          graphRef.current.links,
+          size.current,
+          temperature.current,
+          viewProps.current.hiddenRelations,
+        );
+        temperature.current *= COOLING;
+        moving = true;
       }
-      // The camera follows the relaxation while it expands and stops when it settles,
-      // so the graph is never half off-canvas — and one pan or zoom hands it over.
+      if (moving) dirty.current = true;
+
+      // The camera follows the layout while it moves and stops when it settles, so the
+      // graph is never half off-canvas — and one pan or zoom hands it over for good.
       if (pendingFit.current) {
         applyFit();
         dirty.current = true;
-        if (!hot) pendingFit.current = false;
+        if (!moving) pendingFit.current = false;
       }
+
       if (dirty.current) {
-        draw();
+        const current = scene();
+        draw(context, current);
+        drawMinimap(context, current, {
+          x: size.current.width - MINIMAP.width - MINIMAP.margin,
+          y: size.current.height - MINIMAP.height - MINIMAP.margin,
+          width: MINIMAP.width,
+          height: MINIMAP.height,
+        });
         dirty.current = false;
       }
-      if (hot) frame.current = requestAnimationFrame(() => loopRef.current());
+      if (moving) frame.current = requestAnimationFrame(() => loopRef.current());
     };
 
-    // The frame is the world, so a resized panel needs the layout to flow into it —
-    // a gentle reheat, not the full relaxation the user already watched once.
+    // The frame is the world in force mode, so a resized panel needs the layout to flow
+    // into it — a gentle reheat, not the full relaxation the user already watched once.
     let known = { width: 0, height: 0 };
     const observer = new ResizeObserver(() => {
       syncSize();
       const changed =
         Math.abs(known.width - size.current.width) > 24 ||
         Math.abs(known.height - size.current.height) > 24;
-      if (changed && known.width > 0) reheat(0.25);
+      if (changed && known.width > 0 && viewProps.current.mode === "force") reheat(0.25);
       known = { ...size.current };
       wake();
     });
     observer.observe(wrap);
     syncSize();
     known = { ...size.current };
+    if (bodies.current.length === 0) bodies.current = seedBodies(graphRef.current, size.current);
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onTheme = () => {
@@ -555,10 +353,7 @@ export function GraphCanvas({
 
   const zoom = (factor: number) => {
     takeCamera();
-    view.current.scale = Math.min(
-      MAX_SCALE,
-      Math.max(MIN_SCALE, view.current.scale * factor),
-    );
+    view.current.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.current.scale * factor));
     repaint();
   };
 
@@ -577,7 +372,7 @@ export function GraphCanvas({
     let bestDistance = Infinity;
     bodies.current.forEach((body, index) => {
       const distance = Math.hypot(body.x - world.x, body.y - world.y);
-      const radius = radiusOf(degrees[index] ?? 0) + 4 / view.current.scale;
+      const radius = radiusOf(degrees[index] ?? 0) + 5 / view.current.scale;
       if (distance < radius && distance < bestDistance) {
         best = index;
         bestDistance = distance;
@@ -594,11 +389,18 @@ export function GraphCanvas({
     pointer.current = { mode: "none", index: -1, x: 0, y: 0, moved: 0 };
   };
 
+  const hoveredNode = hovered !== null ? graph.nodes[hovered] : undefined;
+
   return (
     <div
       ref={wrapRef}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "f") fit();
+        if (event.key === "Escape") onSelect(null);
+      }}
       className={cn(
-        "relative h-full w-full overflow-hidden rounded-lg border border-border bg-card",
+        "relative h-full w-full overflow-hidden rounded-lg border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
     >
@@ -623,6 +425,10 @@ export function GraphCanvas({
             const index = pick(event);
             const next = index >= 0 ? index : null;
             if (next !== hoveredRef.current) setHovered(next);
+            if (next !== null) {
+              const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
+              setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+            }
             return;
           }
           const deltaX = event.clientX - state.x;
@@ -638,6 +444,10 @@ export function GraphCanvas({
             const body = bodies.current[state.index];
             body.x += deltaX / view.current.scale;
             body.y += deltaY / view.current.scale;
+            // In the layered view a body is held by its target, not by the simulation:
+            // move the target too or it springs back the moment you let go.
+            body.tx = body.x;
+            body.ty = body.y;
           }
           repaint();
         }}
@@ -657,6 +467,39 @@ export function GraphCanvas({
         }}
       />
 
+      <div className="pointer-events-auto absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border bg-card/90 p-0.5 shadow-sm backdrop-blur">
+        {(
+          [
+            { value: "force", label: "Vecindario", icon: Network, hint: "Conceptos cerca de aquellos con los que se relacionan" },
+            {
+              value: "curriculum",
+              label: "Currículo",
+              icon: Waypoints,
+              hint: model.curriculumEdges
+                ? `Un nivel por profundidad de prerrequisitos: lo de arriba se enseña antes (${model.curriculumEdges} relación(es) lo ordenan)`
+                : "El grafo no tiene relaciones de prerrequisito que ordenar",
+            },
+          ] as const
+        ).map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            title={option.hint}
+            disabled={option.value === "curriculum" && model.curriculumEdges === 0}
+            onClick={() => setMode(option.value)}
+            className={cn(
+              "flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+              mode === option.value
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            )}
+          >
+            <option.icon className="size-3.5" />
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <div className="absolute right-2 top-2 flex flex-col gap-1">
         <Button variant="secondary" size="icon-sm" onClick={() => zoom(1.2)} aria-label="Acercar">
           <ZoomIn />
@@ -664,29 +507,81 @@ export function GraphCanvas({
         <Button variant="secondary" size="icon-sm" onClick={() => zoom(1 / 1.2)} aria-label="Alejar">
           <ZoomOut />
         </Button>
-        <Button variant="secondary" size="icon-sm" onClick={fit} aria-label="Encuadrar" title="Encuadrar todo">
+        <Button
+          variant="secondary"
+          size="icon-sm"
+          onClick={fit}
+          aria-label="Encuadrar"
+          title="Encuadrar todo (F)"
+        >
           <Maximize2 />
         </Button>
         <Button
           variant="secondary"
           size="icon-sm"
-          onClick={() => {
-            pendingFit.current = true;
-            reheat();
-          }}
+          onClick={relayout}
           aria-label="Recolocar"
           title="Recolocar el grafo"
         >
           <RotateCw />
         </Button>
+        <Button
+          variant={labels === "none" ? "outline" : "secondary"}
+          size="icon-sm"
+          onClick={() => setLabels(labels === "auto" ? "all" : labels === "all" ? "none" : "auto")}
+          aria-label="Etiquetas"
+          title={
+            labels === "auto"
+              ? "Etiquetas: automáticas (clic para verlas todas)"
+              : labels === "all"
+                ? "Etiquetas: todas (clic para ocultarlas)"
+                : "Etiquetas: ocultas (clic para volver a automáticas)"
+          }
+        >
+          <Tag />
+        </Button>
       </div>
 
-      {hovered !== null && graph.nodes[hovered] ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded-md border border-border bg-popover/95 px-2 py-1 text-xs shadow">
-          <span className="font-medium">{graph.nodes[hovered][0]}</span>
-          <span className="ml-2 text-muted-foreground">
-            {graph.groups[graph.nodes[hovered][1]]?.name} · grado {model.degrees[hovered] ?? 0}
-          </span>
+      <div className="pointer-events-none absolute bottom-2 left-2 flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => setArrows(!arrows)}
+          className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+        >
+          {arrows ? "Ocultar sentido" : "Mostrar sentido"}
+        </button>
+        <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+          {graph.nodes.length} conceptos · {graph.links.length} relaciones
+          {graph.meta.isolated > 0 ? ` · ${graph.meta.isolated} aislados` : ""}
+        </span>
+      </div>
+
+      {/* Un grafo con pocos prerrequisitos apila casi todo en el nivel 0. Eso es un dato
+          sobre el grafo, no un fallo de la vista: decirlo evita que parezca lo segundo. */}
+      {mode === "curriculum" && model.levelCount < 3 ? (
+        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--warning)_40%,transparent)] bg-[color-mix(in_oklch,var(--warning)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
+          Solo {model.curriculumEdges} relación(es) de prerrequisito ordenan {graph.nodes.length}{" "}
+          conceptos, así que casi todo cae en el nivel 0. Añade prerrequisitos en el detalle de cada
+          concepto para que esta vista diga algo.
+        </p>
+      ) : null}
+
+      {hoveredNode ? (
+        <div
+          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-xs shadow-lg backdrop-blur"
+          style={{
+            left: Math.min(tip.x + 14, Math.max(0, size.current.width - 260)),
+            top: Math.max(4, tip.y - 46),
+          }}
+        >
+          <p className="font-medium">{hoveredNode[0]}</p>
+          <p className="text-muted-foreground">
+            {graph.groups[hoveredNode[1]]?.name} · grado {model.degrees[hovered!] ?? 0}
+            {mode === "curriculum" && model.curriculumEdges > 0
+              ? ` · nivel ${model.levels[hovered!]}`
+              : ""}
+          </p>
+          {hoveredNode[2] ? <p className="text-muted-foreground">no etiquetable</p> : null}
         </div>
       ) : null}
     </div>

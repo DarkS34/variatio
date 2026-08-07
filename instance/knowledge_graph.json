@@ -1,0 +1,1686 @@
+{
+  "concepts_by_domains": {
+    "Fundamentos y Algoritmia": [
+      "Algoritmo",
+      "Algoritmo completo",
+      "Algoritmo de Euclides",
+      "Algoritmo de búsqueda",
+      "Burbuja",
+      "Búsqueda",
+      "Búsqueda Binaria",
+      "Búsqueda Secuencial",
+      "Característica de un algoritmo",
+      "Complejidad algorítmica",
+      "Complejidad espacial",
+      "Complejidad temporal",
+      "Determinismo",
+      "Diagramas de flujo",
+      "Eficiencia",
+      "Euclides",
+      "Finito",
+      "Inserción Directa",
+      "Instrucciones realizables",
+      "Instrucción condicional",
+      "Instrucción repetitiva",
+      "Instrucción secuencial",
+      "Lenguaje natural",
+      "Modo de expresar algoritmos",
+      "Máximo común divisor",
+      "Métodos básicos de ordenación",
+      "Métodos de inserción",
+      "Métodos de intercambio",
+      "Métodos de selección",
+      "No ambigüedad",
+      "Notación Big-O",
+      "Ordenación",
+      "Propiedad esencial de algoritmo",
+      "Pseudocódigo",
+      "Realizable",
+      "Receta",
+      "Representaciones gráficas",
+      "Representación de un algoritmo",
+      "Tipo de instrucciones en un algoritmo",
+      "Tortilla francesa",
+      "Algoritmia"
+    ],
+    "Programación y Flujo de Control": [
+      "!=",
+      "<",
+      "<=",
+      "==",
+      ">",
+      ">=",
+      "Bloque de código",
+      "Bucle",
+      "Bucle for",
+      "Bucles anidados",
+      "Bucles infinitos",
+      "Condicional múltiple",
+      "Condición lógica",
+      "El bucle repetir",
+      "Estructuras anidadas",
+      "Estructuras de control",
+      "Estructuras de control iterativas",
+      "Estructuras selectivas",
+      "Estructuras selectivas múltiples",
+      "Estructuras selectivas múltiples con elif",
+      "Estructuras selectivas: definición y funcionamiento",
+      "Excepciones",
+      "False",
+      "Flujo de control",
+      "Flujo de control selectivo con if y else",
+      "Función range()",
+      "If simple",
+      "Ifs sucesivos",
+      "Iteración",
+      "Modularización de condiciones",
+      "Operadores condicionales",
+      "Operadores lógicos",
+      "Proceso iterativo",
+      "Sangrado",
+      "Sentencia while",
+      "True",
+      "bloque else",
+      "bloque except",
+      "bloque finally",
+      "bloque try",
+      "break",
+      "continue",
+      "instrucción controvertida"
+    ],
+    "Tipos de Datos y Estructuras": [
+      "Acceso a posiciones",
+      "Acceso por clave",
+      "ArrayList",
+      "Arrays",
+      "Booleano",
+      "Cadenas",
+      "Cola",
+      "Colas concurrentes",
+      "Colas de prioridad",
+      "Colas dobles",
+      "Colecciones de Datos",
+      "Colecciones de Tamaño Fijo",
+      "Colecciones de Tamaño Variable",
+      "Colección inmutable",
+      "Colisiones",
+      "Complejos",
+      "Concatenación",
+      "Conjunto",
+      "Corchetes",
+      "Data.Map",
+      "Diccionario",
+      "Elemento mutable",
+      "Elementos homogéneos",
+      "Entero",
+      "Estructuras de datos",
+      "Estructuras persistentes",
+      "FIFO",
+      "Flotantes",
+      "Función hash",
+      "HashMap",
+      "Heterogeneidad",
+      "Inmutabilidad",
+      "LIFO",
+      "Lista",
+      "Lista ordenada",
+      "Listas inmutables",
+      "Mapas",
+      "Mutabilidad",
+      "Objetos inmutables",
+      "Objetos mutables",
+      "Pareja clave-valor",
+      "Pila",
+      "Pilas de registros",
+      "Pilas y Colas",
+      "Real",
+      "Registros",
+      "Secuencia",
+      "Secuencia inmutable",
+      "Slicing",
+      "Subsecuencia",
+      "Tablas hash",
+      "Tipo de datos",
+      "TreeSet",
+      "Tuplas",
+      "clave",
+      "set",
+      "valor",
+      "Árboles balanceados",
+      "Índice"
+    ],
+    "Modularidad y Subprogramas": [
+      "Acoplamiento",
+      "Cabecera",
+      "Caso base",
+      "Cohesión",
+      "Cohesión y Acoplamiento",
+      "Documentación de los subprogramas",
+      "Factorial",
+      "Funciones",
+      "Implementación de subprogramas",
+      "Legibilidad",
+      "Lista de argumentos",
+      "Llamada recursiva",
+      "Modularidad",
+      "Módulos",
+      "OBJ",
+      "PRE",
+      "Palíndromo",
+      "Paso de Parámetros",
+      "Paso por referencia",
+      "Paso por valor",
+      "Pila de llamadas",
+      "Potenciación",
+      "Procedimiento",
+      "Recuento de vocales",
+      "Recursividad",
+      "Referencias",
+      "Retorno",
+      "Reutilización de código",
+      "Serie de Fibonacci",
+      "Subprograma",
+      "Subprograma recursivo",
+      "Variables globales",
+      "Variables locales",
+      "ambito de las variables",
+      "argumento",
+      "copia",
+      "desbordamiento de la pila de invocaciones",
+      "efectos laterales indeseados",
+      "efectos secundarios indeseados",
+      "parametro formal",
+      "parametro real",
+      "parámetros",
+      "programación orientada a contratos",
+      "subproblemas"
+    ],
+    "Entorno de Desarrollo y Lenguajes": [
+      "Biblioteca",
+      "Biblioteca turtle",
+      "C",
+      "Clojure",
+      "Compilador",
+      "Conjunto de instrucciones x86",
+      "Código binario",
+      "Docstrings",
+      "Documentación",
+      "Familia x86",
+      "Fortran",
+      "Haskell",
+      "Intérprete",
+      "Java",
+      "Lenguaje",
+      "Lenguaje de programación",
+      "Lenguaje ensamblador",
+      "Lenguaje máquina",
+      "Linters",
+      "Logo",
+      "Memoria",
+      "Memoria principal",
+      "Microprocesador",
+      "Mnemónicos",
+      "PEP 257",
+      "PEP 484",
+      "PEP 8",
+      "Palabras reservadas",
+      "Procesador",
+      "Python",
+      "Resaltado de sintaxis",
+      "Scala",
+      "Sintaxis Intel",
+      "Símbolos",
+      "Traductor",
+      "Uso de Bibliotecas en Python",
+      "agrupación por funcionalidad relacionada",
+      "análisis estático",
+      "archivo .py",
+      "creación de bibliotecas propias",
+      "math",
+      "nombres de variable en Python",
+      "numpy",
+      "random",
+      "tiempo de compilación",
+      "tiempo de ejecución"
+    ],
+    "Resolución de Problemas y Ejecución": [
+      "Abstracción",
+      "Almacenamiento persistente",
+      "Análisis",
+      "Archivo",
+      "Archivos binarios",
+      "Archivos de texto",
+      "Archivos indizados",
+      "Asociación",
+      "Automatización",
+      "Bases de datos",
+      "Casting",
+      "Ciencia",
+      "Codificación",
+      "Combinación de elementos",
+      "Comentarios",
+      "Concepto",
+      "Constante",
+      "Conversiones de tipo",
+      "Conversiones explícitas",
+      "Conversión implícita",
+      "Código",
+      "Dato",
+      "Depuración",
+      "Descomposición",
+      "Diseño",
+      "E",
+      "Ejecución",
+      "Entrada",
+      "Entrada y salida",
+      "Error en tiempo de ejecución",
+      "Errores",
+      "Errores de compilación",
+      "Errores de ejecución",
+      "Errores en los algoritmos",
+      "Errores sintácticos",
+      "Expresiones",
+      "F-strings",
+      "Fin",
+      "Flujo de un programa",
+      "Función type",
+      "Gestión directa de memoria",
+      "Identificación de patrones",
+      "Identificador",
+      "Indención incorrecta",
+      "Informática",
+      "Inicio",
+      "Instrucciones",
+      "Introducción a la Programación",
+      "Lecturas recomendadas",
+      "Mantenimiento",
+      "Notación",
+      "Notación [inicio:fin:salto]",
+      "Operaciones con cadenas",
+      "Operadores",
+      "Operandos",
+      "PI",
+      "Patrones",
+      "Pensamiento computacional",
+      "Precedencia",
+      "Preposiciones",
+      "Problema",
+      "Problemas y algoritmos",
+      "Programa",
+      "Programa sin estructuras de control",
+      "Programación",
+      "Programación I",
+      "Programador",
+      "Pruebas",
+      "Resolución de problemas con ordenador",
+      "Resumen",
+      "Salida",
+      "Salto",
+      "Secuencial",
+      "Solución",
+      "TypeError",
+      "Técnica",
+      "Validación de datos",
+      "ValueError",
+      "Variable",
+      "ZeroDivisionError",
+      "calidad del diseño",
+      "codificar",
+      "cálculos",
+      "código principal",
+      "ejecución secuencial",
+      "escritura",
+      "función input",
+      "función print()",
+      "input()",
+      "print()",
+      "resultado indeseado",
+      "sistema de software",
+      "tipo de error"
+    ],
+    "Sin clasificar": [
+      "Clases",
+      "Division entera",
+      "Elemento del programa",
+      "Estrategia de resolución",
+      "Expresión de algoritmos",
+      "Funciones especiales",
+      "Inversión de cadena",
+      "Lenguaje formal",
+      "Objetos",
+      "Operaciones sobre secuencias",
+      "Orden",
+      "Paréntesis",
+      "Resto de la división",
+      "bucle externo",
+      "bucle interno",
+      "cuerpo del bucle",
+      "indexación",
+      "llamada",
+      "mecanismo para capturar y manejar excepciones",
+      "tipo de estructura de control",
+      "variable de control"
+    ]
+  },
+  "generic_non_taggable_concepts": [
+    "Algoritmia",
+    "Algoritmo",
+    "Ciencia",
+    "Concepto",
+    "Informática",
+    "Introducción a la Programación",
+    "Lenguaje de programación",
+    "Programa",
+    "Programación",
+    "Tipo de datos",
+    "Técnica"
+  ],
+  "relations": [
+    {
+      "details": {
+        "verbose": "tiene como prerrequisito",
+        "directed": true,
+        "acyclic": true,
+        "use_in_embedding": false
+      },
+      "relations_data": {
+        "Búsqueda Binaria": [
+          "Lista ordenada"
+        ],
+        "Errores de compilación": [
+          "Linters",
+          "Resaltado de sintaxis"
+        ],
+        "Errores de ejecución": [
+          "Pruebas",
+          "Validación de datos"
+        ],
+        "Estructuras selectivas": [
+          "Condición lógica"
+        ],
+        "Flujo de control": [
+          "Estructuras de control"
+        ],
+        "Inmutabilidad": [
+          "Mutabilidad"
+        ],
+        "Pensamiento computacional": [
+          "Algoritmo",
+          "Programa"
+        ],
+        "Procesador": [
+          "Lenguaje máquina"
+        ],
+        "Programación": [
+          "Pensamiento computacional"
+        ],
+        "Recursividad": [
+          "Caso base"
+        ],
+        "Subprograma": [
+          "Paso de Parámetros"
+        ],
+        "Traductor": [
+          "Algoritmo"
+        ]
+      }
+    },
+    {
+      "details": {
+        "verbose": "es un tipo de",
+        "directed": true,
+        "acyclic": false,
+        "use_in_embedding": true
+      },
+      "relations_data": {
+        "!=": [
+          "Operadores condicionales"
+        ],
+        "<": [
+          "Operadores condicionales"
+        ],
+        "<=": [
+          "Operadores condicionales"
+        ],
+        "==": [
+          "Operadores condicionales"
+        ],
+        ">": [
+          "Operadores condicionales"
+        ],
+        ">=": [
+          "Operadores condicionales"
+        ],
+        "Acceso a posiciones": [
+          "Acceso a posiciones"
+        ],
+        "Acoplamiento": [
+          "Acoplamiento"
+        ],
+        "Algoritmia": [
+          "Ciencia"
+        ],
+        "Algoritmo": [
+          "Algoritmo",
+          "Solución",
+          "Técnica"
+        ],
+        "Algoritmo de Euclides": [
+          "Algoritmo"
+        ],
+        "Archivo": [
+          "Colecciones de Datos"
+        ],
+        "Archivos binarios": [
+          "Archivo"
+        ],
+        "Archivos de texto": [
+          "Archivo"
+        ],
+        "Archivos indizados": [
+          "Archivo"
+        ],
+        "ArrayList": [
+          "Colecciones de Tamaño Variable",
+          "Lista"
+        ],
+        "Arrays": [
+          "Arrays",
+          "Colecciones de Datos",
+          "Colecciones de Tamaño Fijo",
+          "Colecciones de Tamaño Variable",
+          "Estructuras de datos",
+          "Tipo de datos"
+        ],
+        "Biblioteca": [
+          "Biblioteca",
+          "agrupación por funcionalidad relacionada"
+        ],
+        "Biblioteca turtle": [
+          "Biblioteca"
+        ],
+        "Booleano": [
+          "Tipo de datos"
+        ],
+        "Bucle": [
+          "Bucle",
+          "Estructuras de control",
+          "tipo de estructura de control"
+        ],
+        "Bucle for": [
+          "Bucle",
+          "Bucle for",
+          "Estructuras de control iterativas"
+        ],
+        "Bucles anidados": [
+          "Estructuras de control iterativas"
+        ],
+        "Bucles infinitos": [
+          "Bucles infinitos"
+        ],
+        "Burbuja": [
+          "Métodos básicos de ordenación",
+          "Métodos de intercambio"
+        ],
+        "Búsqueda Binaria": [
+          "Algoritmo",
+          "Algoritmo de búsqueda"
+        ],
+        "Búsqueda Secuencial": [
+          "Algoritmo",
+          "Algoritmo de búsqueda"
+        ],
+        "C": [
+          "Lenguaje",
+          "Lenguaje de programación"
+        ],
+        "Cabecera": [
+          "Cabecera"
+        ],
+        "Cadenas": [
+          "Arrays",
+          "Cadenas",
+          "Colecciones de Datos",
+          "Objetos inmutables",
+          "Secuencia",
+          "Secuencia inmutable",
+          "Tipo de datos"
+        ],
+        "Caso base": [
+          "Caso base"
+        ],
+        "Casting": [
+          "Casting",
+          "Conversiones de tipo",
+          "Conversiones explícitas"
+        ],
+        "Clases": [
+          "Tipo de datos"
+        ],
+        "Clojure": [
+          "Lenguaje de programación"
+        ],
+        "Cohesión": [
+          "Cohesión"
+        ],
+        "Cola": [
+          "Estructuras de datos",
+          "Pilas y Colas"
+        ],
+        "Colas concurrentes": [
+          "Cola"
+        ],
+        "Colas de prioridad": [
+          "Cola",
+          "Pilas y Colas"
+        ],
+        "Colas dobles": [
+          "Cola",
+          "Colas dobles",
+          "Pilas y Colas"
+        ],
+        "Colecciones de Datos": [
+          "Estructuras de datos",
+          "Tipo de datos"
+        ],
+        "Colecciones de Tamaño Fijo": [
+          "Colecciones de Tamaño Fijo"
+        ],
+        "Colecciones de Tamaño Variable": [
+          "Colecciones de Tamaño Variable"
+        ],
+        "Comentarios": [
+          "Comentarios"
+        ],
+        "Compilador": [
+          "Traductor"
+        ],
+        "Complejos": [
+          "Tipo de datos"
+        ],
+        "Condicional múltiple": [
+          "Estructuras selectivas",
+          "Estructuras selectivas múltiples"
+        ],
+        "Condición lógica": [
+          "Condición lógica"
+        ],
+        "Conjunto": [
+          "Colecciones de Datos",
+          "Estructuras de datos"
+        ],
+        "Constante": [
+          "Constante",
+          "Elemento del programa",
+          "Tipo de datos"
+        ],
+        "Conversiones de tipo": [
+          "Conversión implícita"
+        ],
+        "Conversiones explícitas": [
+          "Conversiones de tipo"
+        ],
+        "Conversión implícita": [
+          "Conversiones de tipo"
+        ],
+        "Data.Map": [
+          "Diccionario",
+          "Mapas"
+        ],
+        "Descomposición": [
+          "Estrategia de resolución"
+        ],
+        "Determinismo": [
+          "Característica de un algoritmo",
+          "Propiedad esencial de algoritmo"
+        ],
+        "Diagramas de flujo": [
+          "Modo de expresar algoritmos",
+          "Representaciones gráficas"
+        ],
+        "Diccionario": [
+          "Colecciones de Datos",
+          "Diccionario",
+          "Estructuras de datos",
+          "Objetos mutables",
+          "Tipo de datos"
+        ],
+        "Division entera": [
+          "Subprograma recursivo"
+        ],
+        "Docstrings": [
+          "Docstrings",
+          "Documentación"
+        ],
+        "Documentación de los subprogramas": [
+          "Documentación"
+        ],
+        "E": [
+          "Constante"
+        ],
+        "Ejecución": [
+          "Ejecución"
+        ],
+        "El bucle repetir": [
+          "Bucle",
+          "Estructuras de control iterativas"
+        ],
+        "Entero": [
+          "Objetos inmutables",
+          "Tipo de datos"
+        ],
+        "Errores": [
+          "Errores",
+          "Problema"
+        ],
+        "Errores de compilación": [
+          "Errores",
+          "Errores sintácticos"
+        ],
+        "Estrategia de resolución": [
+          "Algoritmo"
+        ],
+        "Estructuras anidadas": [
+          "Estructuras de control",
+          "Estructuras selectivas"
+        ],
+        "Estructuras de control": [
+          "Concepto",
+          "Estructuras de control"
+        ],
+        "Estructuras de control iterativas": [
+          "Estructuras de control"
+        ],
+        "Estructuras de datos": [
+          "Concepto"
+        ],
+        "Estructuras persistentes": [
+          "Colecciones de Datos"
+        ],
+        "Estructuras selectivas": [
+          "Estructuras de control",
+          "tipo de estructura de control"
+        ],
+        "Estructuras selectivas múltiples": [
+          "Condicional múltiple",
+          "Estructuras selectivas múltiples"
+        ],
+        "Estructuras selectivas múltiples con elif": [
+          "Estructuras selectivas",
+          "Estructuras selectivas múltiples"
+        ],
+        "Euclides": [
+          "Algoritmo de Euclides"
+        ],
+        "Excepciones": [
+          "Error en tiempo de ejecución",
+          "Estructuras de control",
+          "Excepciones"
+        ],
+        "Expresiones": [
+          "Combinación de elementos"
+        ],
+        "Factorial": [
+          "Problema",
+          "Recursividad"
+        ],
+        "False": [
+          "Booleano",
+          "Condición lógica",
+          "Variable"
+        ],
+        "Finito": [
+          "Característica de un algoritmo",
+          "Finito",
+          "Propiedad esencial de algoritmo"
+        ],
+        "Flotantes": [
+          "Objetos inmutables"
+        ],
+        "Flujo de control": [
+          "Concepto"
+        ],
+        "Flujo de control selectivo con if y else": [
+          "Estructuras selectivas"
+        ],
+        "Fortran": [
+          "Lenguaje de programación"
+        ],
+        "Funciones": [
+          "Concepto",
+          "Funciones",
+          "Subprograma"
+        ],
+        "Gestión directa de memoria": [
+          "Técnica"
+        ],
+        "HashMap": [
+          "Tablas hash"
+        ],
+        "Haskell": [
+          "Lenguaje de programación"
+        ],
+        "If simple": [
+          "Estructuras selectivas",
+          "Flujo de control selectivo con if y else"
+        ],
+        "Ifs sucesivos": [
+          "Estructuras selectivas",
+          "Flujo de control selectivo con if y else"
+        ],
+        "Inserción Directa": [
+          "Métodos básicos de ordenación",
+          "Métodos de inserción"
+        ],
+        "Instrucciones": [
+          "Elemento del programa",
+          "Instrucciones"
+        ],
+        "Instrucciones realizables": [
+          "Característica de un algoritmo",
+          "Concepto"
+        ],
+        "Instrucción condicional": [
+          "Instrucciones realizables",
+          "Tipo de instrucciones en un algoritmo"
+        ],
+        "Instrucción repetitiva": [
+          "Instrucciones realizables",
+          "Tipo de instrucciones en un algoritmo"
+        ],
+        "Instrucción secuencial": [
+          "Instrucciones realizables",
+          "Tipo de instrucciones en un algoritmo"
+        ],
+        "Intérprete": [
+          "Traductor"
+        ],
+        "Inversión de cadena": [
+          "Subprograma recursivo"
+        ],
+        "Iteración": [
+          "Iteración"
+        ],
+        "Java": [
+          "Lenguaje",
+          "Lenguaje de programación"
+        ],
+        "Lenguaje de programación": [
+          "Lenguaje",
+          "Lenguaje de programación",
+          "Lenguaje formal"
+        ],
+        "Lenguaje ensamblador": [
+          "Lenguaje",
+          "Lenguaje de programación"
+        ],
+        "Lenguaje máquina": [
+          "Lenguaje",
+          "Lenguaje de programación"
+        ],
+        "Lenguaje natural": [
+          "Modo de expresar algoritmos"
+        ],
+        "Lista": [
+          "Colecciones de Tamaño Variable",
+          "Estructuras de datos",
+          "Lista",
+          "Objetos mutables",
+          "Secuencia",
+          "Tipo de datos"
+        ],
+        "Lista ordenada": [
+          "Lista"
+        ],
+        "Logo": [
+          "Lenguaje de programación"
+        ],
+        "Memoria": [
+          "Memoria"
+        ],
+        "Memoria principal": [
+          "Memoria"
+        ],
+        "Microprocesador": [
+          "Microprocesador",
+          "Procesador"
+        ],
+        "Modularización de condiciones": [
+          "Técnica"
+        ],
+        "Mutabilidad": [
+          "Estructuras de datos"
+        ],
+        "Máximo común divisor": [
+          "Problema"
+        ],
+        "Métodos básicos de ordenación": [
+          "Algoritmo"
+        ],
+        "Métodos de inserción": [
+          "Métodos básicos de ordenación"
+        ],
+        "Métodos de intercambio": [
+          "Métodos básicos de ordenación"
+        ],
+        "Métodos de selección": [
+          "Métodos básicos de ordenación"
+        ],
+        "Módulos": [
+          "Subprograma"
+        ],
+        "No ambigüedad": [
+          "Característica de un algoritmo",
+          "No ambigüedad",
+          "Propiedad esencial de algoritmo"
+        ],
+        "Notación Big-O": [
+          "Algoritmo",
+          "Notación",
+          "Notación Big-O"
+        ],
+        "Objetos inmutables": [
+          "Mutabilidad",
+          "Objetos",
+          "Objetos inmutables"
+        ],
+        "Objetos mutables": [
+          "Mutabilidad",
+          "Objetos",
+          "Objetos mutables"
+        ],
+        "Operadores": [
+          "Operadores"
+        ],
+        "Operadores condicionales": [
+          "Operadores",
+          "Operadores condicionales"
+        ],
+        "Operadores lógicos": [
+          "Operadores",
+          "Operadores lógicos"
+        ],
+        "Ordenación": [
+          "Ordenación"
+        ],
+        "PEP 8": [
+          "Documentación"
+        ],
+        "PI": [
+          "Constante"
+        ],
+        "Palabras reservadas": [
+          "Palabras reservadas"
+        ],
+        "Palíndromo": [
+          "Problema",
+          "Recursividad"
+        ],
+        "Paso de Parámetros": [
+          "Paso de Parámetros",
+          "Paso por referencia"
+        ],
+        "Paso por referencia": [
+          "Paso de Parámetros",
+          "Paso por referencia",
+          "argumento"
+        ],
+        "Paso por valor": [
+          "Paso de Parámetros",
+          "argumento"
+        ],
+        "Patrones": [
+          "Abstracción"
+        ],
+        "Pensamiento computacional": [
+          "Concepto"
+        ],
+        "Pila": [
+          "Estructuras de datos",
+          "Pilas y Colas"
+        ],
+        "Pilas y Colas": [
+          "Colecciones de Datos"
+        ],
+        "Potenciación": [
+          "Subprograma recursivo"
+        ],
+        "Problema": [
+          "Concepto"
+        ],
+        "Procedimiento": [
+          "Subprograma"
+        ],
+        "Programa": [
+          "Algoritmo",
+          "Lenguaje de programación",
+          "Representación de un algoritmo",
+          "Secuencia"
+        ],
+        "Programa sin estructuras de control": [
+          "Secuencial"
+        ],
+        "Programación": [
+          "Informática"
+        ],
+        "Programador": [
+          "Programador"
+        ],
+        "Pseudocódigo": [
+          "Modo de expresar algoritmos"
+        ],
+        "Python": [
+          "Lenguaje",
+          "Lenguaje de programación",
+          "Python"
+        ],
+        "Real": [
+          "Tipo de datos"
+        ],
+        "Realizable": [
+          "Propiedad esencial de algoritmo"
+        ],
+        "Receta": [
+          "Algoritmo",
+          "Receta"
+        ],
+        "Recuento de vocales": [
+          "Problema",
+          "Subprograma recursivo"
+        ],
+        "Recursividad": [
+          "Funciones",
+          "Programación"
+        ],
+        "Referencias": [
+          "Referencias"
+        ],
+        "Registros": [
+          "Colecciones de Datos",
+          "Tipo de datos"
+        ],
+        "Representación de un algoritmo": [
+          "Concepto"
+        ],
+        "Sangrado": [
+          "Sangrado"
+        ],
+        "Scala": [
+          "Lenguaje de programación"
+        ],
+        "Secuencia": [
+          "Colecciones de Datos",
+          "Secuencia"
+        ],
+        "Sentencia while": [
+          "Bucle",
+          "Estructuras de control iterativas"
+        ],
+        "Serie de Fibonacci": [
+          "Problema",
+          "Recursividad"
+        ],
+        "Subprograma": [
+          "Elemento del programa",
+          "Subprograma"
+        ],
+        "Subprograma recursivo": [
+          "Recursividad",
+          "Subprograma"
+        ],
+        "Tablas hash": [
+          "Colecciones de Datos"
+        ],
+        "Tipo de datos": [
+          "Tipo de datos"
+        ],
+        "Tipo de instrucciones en un algoritmo": [
+          "Concepto"
+        ],
+        "Tortilla francesa": [
+          "Receta"
+        ],
+        "TreeSet": [
+          "Conjunto"
+        ],
+        "True": [
+          "Booleano",
+          "Condición lógica",
+          "Variable"
+        ],
+        "Tuplas": [
+          "Colección inmutable",
+          "Lista",
+          "Listas inmutables",
+          "Objetos inmutables",
+          "Secuencia",
+          "Tipo de datos"
+        ],
+        "TypeError": [
+          "Errores de ejecución"
+        ],
+        "ValueError": [
+          "tipo de error"
+        ],
+        "Variable": [
+          "Tipo de datos",
+          "Variable"
+        ],
+        "Variables globales": [
+          "ambito de las variables"
+        ],
+        "Variables locales": [
+          "ambito de las variables"
+        ],
+        "ZeroDivisionError": [
+          "Errores de ejecución",
+          "tipo de error"
+        ],
+        "break": [
+          "instrucción controvertida"
+        ],
+        "calidad del diseño": [
+          "Concepto"
+        ],
+        "continue": [
+          "instrucción controvertida"
+        ],
+        "función input": [
+          "input()"
+        ],
+        "math": [
+          "Biblioteca"
+        ],
+        "random": [
+          "Biblioteca"
+        ],
+        "set": [
+          "Objetos mutables"
+        ],
+        "Árboles balanceados": [
+          "Colecciones de Datos",
+          "Estructuras de datos"
+        ]
+      }
+    },
+    {
+      "details": {
+        "verbose": "es parte de",
+        "directed": true,
+        "acyclic": false,
+        "use_in_embedding": true
+      },
+      "relations_data": {
+        "Acoplamiento": [
+          "Subprograma"
+        ],
+        "Algoritmo": [
+          "Programa"
+        ],
+        "Análisis": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Arrays": [
+          "Colecciones de Datos"
+        ],
+        "Biblioteca": [
+          "Modularidad"
+        ],
+        "Biblioteca turtle": [
+          "Python"
+        ],
+        "Bucle": [
+          "Estructuras de control"
+        ],
+        "Bucles infinitos": [
+          "Sentencia while"
+        ],
+        "Burbuja": [
+          "Algoritmo completo"
+        ],
+        "Cabecera": [
+          "Implementación de subprogramas"
+        ],
+        "Cadenas": [
+          "Secuencia"
+        ],
+        "Caso base": [
+          "Subprograma recursivo"
+        ],
+        "Codificación": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Cohesión": [
+          "Subprograma"
+        ],
+        "Cohesión y Acoplamiento": [
+          "Modularidad"
+        ],
+        "Cola": [
+          "Colecciones de Datos"
+        ],
+        "Complejidad espacial": [
+          "Complejidad algorítmica"
+        ],
+        "Complejidad temporal": [
+          "Complejidad algorítmica"
+        ],
+        "Condición lógica": [
+          "Estructuras selectivas: definición y funcionamiento"
+        ],
+        "Conjunto": [
+          "Colecciones de Datos"
+        ],
+        "Conjunto de instrucciones x86": [
+          "Lenguaje máquina"
+        ],
+        "Constante": [
+          "Expresiones"
+        ],
+        "Corchetes": [
+          "Lista"
+        ],
+        "Código binario": [
+          "Lenguaje máquina"
+        ],
+        "Dato": [
+          "Programa"
+        ],
+        "Diccionario": [
+          "Colecciones de Datos"
+        ],
+        "Diseño": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Division entera": [
+          "Algoritmo de Euclides"
+        ],
+        "Documentación de los subprogramas": [
+          "Modularidad"
+        ],
+        "Ejecución": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Elemento del programa": [
+          "Introducción a la Programación",
+          "Programa"
+        ],
+        "Entrada y salida": [
+          "Introducción a la Programación"
+        ],
+        "Errores": [
+          "Introducción a la Programación"
+        ],
+        "Estrategia de resolución": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Estructuras anidadas": [
+          "Estructuras selectivas"
+        ],
+        "Estructuras de control": [
+          "Flujo de control",
+          "Programación I"
+        ],
+        "Expresión de algoritmos": [
+          "Introducción a la Programación"
+        ],
+        "F-strings": [
+          "Introducción a la Programación"
+        ],
+        "Fin": [
+          "Notación [inicio:fin:salto]"
+        ],
+        "Flujo de control selectivo con if y else": [
+          "Estructuras selectivas"
+        ],
+        "Funciones": [
+          "Modularidad"
+        ],
+        "Función range()": [
+          "Bucle for"
+        ],
+        "Identificador": [
+          "Variable"
+        ],
+        "Inicio": [
+          "Notación [inicio:fin:salto]"
+        ],
+        "Instrucciones": [
+          "Implementación de subprogramas",
+          "Programa"
+        ],
+        "Introducción a la Programación": [
+          "Programación I"
+        ],
+        "Lenguaje de programación": [
+          "Introducción a la Programación"
+        ],
+        "Lista": [
+          "Colecciones de Datos"
+        ],
+        "Llamada recursiva": [
+          "Subprograma recursivo"
+        ],
+        "Mantenimiento": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Mnemónicos": [
+          "Lenguaje ensamblador"
+        ],
+        "Modularidad": [
+          "Programación I"
+        ],
+        "Modularización de condiciones": [
+          "Estructuras selectivas"
+        ],
+        "Módulos": [
+          "Biblioteca",
+          "Flujo de control"
+        ],
+        "OBJ": [
+          "Cabecera"
+        ],
+        "Objetos inmutables": [
+          "Objetos inmutables"
+        ],
+        "Objetos mutables": [
+          "Objetos mutables"
+        ],
+        "Operadores": [
+          "Expresiones"
+        ],
+        "Operadores condicionales": [
+          "Condición lógica"
+        ],
+        "Operadores lógicos": [
+          "Condición lógica"
+        ],
+        "PEP 484": [
+          "Documentación de los subprogramas"
+        ],
+        "PRE": [
+          "Cabecera"
+        ],
+        "Palabras reservadas": [
+          "nombres de variable en Python"
+        ],
+        "Paso de Parámetros": [
+          "Modularidad"
+        ],
+        "Pensamiento computacional": [
+          "Introducción a la Programación"
+        ],
+        "Pila": [
+          "Colecciones de Datos"
+        ],
+        "Pilas de registros": [
+          "Registros"
+        ],
+        "Problema": [
+          "Entrada"
+        ],
+        "Problemas y algoritmos": [
+          "Introducción a la Programación"
+        ],
+        "Programador": [
+          "Programa"
+        ],
+        "Registros": [
+          "Colecciones de Datos"
+        ],
+        "Resolución de problemas con ordenador": [
+          "Introducción a la Programación",
+          "Proceso iterativo"
+        ],
+        "Resto de la división": [
+          "Algoritmo de Euclides"
+        ],
+        "Retorno": [
+          "Implementación de subprogramas"
+        ],
+        "Salto": [
+          "Notación [inicio:fin:salto]"
+        ],
+        "Sangrado": [
+          "Bloque de código",
+          "Estructuras de control"
+        ],
+        "Slicing": [
+          "Técnica"
+        ],
+        "Solución": [
+          "Resolución de problemas con ordenador"
+        ],
+        "Subsecuencia": [
+          "Secuencia"
+        ],
+        "Símbolos": [
+          "Lenguaje ensamblador"
+        ],
+        "Tuplas": [
+          "Colecciones de Datos"
+        ],
+        "Uso de Bibliotecas en Python": [
+          "Modularidad"
+        ],
+        "Variable": [
+          "Expresiones",
+          "Programa"
+        ],
+        "Variables locales": [
+          "Subprograma"
+        ],
+        "archivo .py": [
+          "creación de bibliotecas propias"
+        ],
+        "bloque else": [
+          "mecanismo para capturar y manejar excepciones"
+        ],
+        "bloque except": [
+          "mecanismo para capturar y manejar excepciones"
+        ],
+        "bloque finally": [
+          "mecanismo para capturar y manejar excepciones"
+        ],
+        "bloque try": [
+          "mecanismo para capturar y manejar excepciones"
+        ],
+        "bucle externo": [
+          "Bucles anidados"
+        ],
+        "bucle interno": [
+          "Bucles anidados"
+        ],
+        "codificar": [
+          "Programa"
+        ],
+        "cálculos": [
+          "Instrucciones"
+        ],
+        "función input": [
+          "Entrada y salida"
+        ],
+        "función print()": [
+          "Entrada y salida"
+        ],
+        "input()": [
+          "Entrada y salida"
+        ],
+        "numpy": [
+          "Biblioteca"
+        ],
+        "parametro formal": [
+          "Cabecera"
+        ],
+        "print()": [
+          "Entrada y salida"
+        ],
+        "programación orientada a contratos": [
+          "Documentación de los subprogramas"
+        ],
+        "resultado indeseado": [
+          "Errores"
+        ],
+        "variable de control": [
+          "Bucle for"
+        ]
+      }
+    },
+    {
+      "details": {
+        "verbose": "se relaciona con",
+        "directed": false,
+        "acyclic": false,
+        "use_in_embedding": true
+      },
+      "relations_data": {
+        "Acceso a posiciones": [
+          "Operaciones sobre secuencias"
+        ],
+        "Acoplamiento": [
+          "Subprograma"
+        ],
+        "Algoritmo": [
+          "Eficiencia",
+          "Lenguaje"
+        ],
+        "Asociación": [
+          "Operadores"
+        ],
+        "Bases de datos": [
+          "Archivos indizados"
+        ],
+        "Bucle": [
+          "break",
+          "continue"
+        ],
+        "Búsqueda Secuencial": [
+          "Búsqueda Binaria"
+        ],
+        "C": [
+          "Arrays"
+        ],
+        "Clojure": [
+          "Estructuras persistentes"
+        ],
+        "Cohesión": [
+          "Subprograma"
+        ],
+        "Complejidad algorítmica": [
+          "Eficiencia"
+        ],
+        "Condición lógica": [
+          "Condición lógica",
+          "Operadores condicionales",
+          "Operadores lógicos"
+        ],
+        "Constante": [
+          "Programa"
+        ],
+        "Dato": [
+          "Variable"
+        ],
+        "Depuración": [
+          "Subprograma"
+        ],
+        "Docstrings": [
+          "Comentarios"
+        ],
+        "Documentación": [
+          "nombres de variable en Python"
+        ],
+        "Eficiencia": [
+          "Algoritmia"
+        ],
+        "El bucle repetir": [
+          "Estructuras de control iterativas"
+        ],
+        "Estructuras selectivas": [
+          "Condición lógica"
+        ],
+        "Excepciones": [
+          "Errores",
+          "Flujo de control"
+        ],
+        "FIFO": [
+          "Cola"
+        ],
+        "Familia x86": [
+          "Conjunto de instrucciones x86"
+        ],
+        "Flujo de un programa": [
+          "Ejecución"
+        ],
+        "Función range()": [
+          "Bucle for"
+        ],
+        "Función type": [
+          "Tipo de datos"
+        ],
+        "Haskell": [
+          "Listas inmutables",
+          "Mapas"
+        ],
+        "Intérprete": [
+          "Python"
+        ],
+        "Iteración": [
+          "Bucle for"
+        ],
+        "Java": [
+          "HashMap",
+          "TreeSet"
+        ],
+        "LIFO": [
+          "Pila"
+        ],
+        "Legibilidad": [
+          "Subprograma"
+        ],
+        "Linters": [
+          "PEP 484"
+        ],
+        "Lista": [
+          "Métodos básicos de ordenación",
+          "Recursividad"
+        ],
+        "Logo": [
+          "Biblioteca turtle"
+        ],
+        "Mantenimiento": [
+          "Subprograma"
+        ],
+        "Memoria": [
+          "Instrucciones",
+          "Variable"
+        ],
+        "Microprocesador": [
+          "Instrucciones",
+          "cálculos"
+        ],
+        "Máximo común divisor": [
+          "Algoritmo de Euclides"
+        ],
+        "Métodos básicos de ordenación": [
+          "Métodos básicos de ordenación"
+        ],
+        "Notación Big-O": [
+          "Complejidad temporal"
+        ],
+        "Operaciones con cadenas": [
+          "Entrada y salida"
+        ],
+        "PEP 257": [
+          "Docstrings"
+        ],
+        "PEP 8": [
+          "Docstrings"
+        ],
+        "Paso de Parámetros": [
+          "Funciones",
+          "Procedimiento",
+          "efectos secundarios indeseados"
+        ],
+        "Paso por referencia": [
+          "Paso por referencia",
+          "Referencias"
+        ],
+        "Paso por valor": [
+          "Paso por referencia",
+          "copia"
+        ],
+        "Pensamiento computacional": [
+          "Abstracción",
+          "Algoritmo",
+          "Descomposición",
+          "Identificación de patrones",
+          "Programa"
+        ],
+        "Pila": [
+          "Cola"
+        ],
+        "Precedencia": [
+          "Operadores"
+        ],
+        "Problema": [
+          "Algoritmo"
+        ],
+        "Programador": [
+          "Algoritmo"
+        ],
+        "Pruebas": [
+          "Subprograma"
+        ],
+        "Python": [
+          "Arrays",
+          "Mutabilidad"
+        ],
+        "Receta": [
+          "Algoritmo"
+        ],
+        "Recursividad": [
+          "subproblemas"
+        ],
+        "Reutilización de código": [
+          "Subprograma"
+        ],
+        "Scala": [
+          "Estructuras persistentes"
+        ],
+        "Sintaxis Intel": [
+          "Conjunto de instrucciones x86"
+        ],
+        "Tortilla francesa": [
+          "Receta"
+        ],
+        "Traductor": [
+          "Conversión implícita"
+        ],
+        "Tuplas": [
+          "Diccionario"
+        ],
+        "Uso de Bibliotecas en Python": [
+          "Uso de Bibliotecas en Python"
+        ],
+        "Variable": [
+          "Programa",
+          "nombres de variable en Python"
+        ],
+        "Variables globales": [
+          "Acoplamiento"
+        ],
+        "análisis estático": [
+          "PEP 484"
+        ],
+        "break": [
+          "Bucle",
+          "continue"
+        ],
+        "clave": [
+          "Diccionario"
+        ],
+        "continue": [
+          "Bucle"
+        ],
+        "desbordamiento de la pila de invocaciones": [
+          "Caso base"
+        ],
+        "efectos laterales indeseados": [
+          "escritura"
+        ],
+        "efectos secundarios indeseados": [
+          "Variables globales"
+        ],
+        "tiempo de compilación": [
+          "Traductor"
+        ],
+        "valor": [
+          "Diccionario"
+        ],
+        "Índice": [
+          "Lista"
+        ]
+      }
+    }
+  ]
+}

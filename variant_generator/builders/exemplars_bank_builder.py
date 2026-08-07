@@ -13,6 +13,9 @@ from ..utils import parse_with_repair
 from . import _source_docs
 
 
+BUILD_PHASES = (("extract", "Extrayendo ítems de los documentos", 100),)
+
+
 class ExemplarsBankBuilder:
     ID_RE = re.compile(r"^C(\d+)$")
 
@@ -51,11 +54,16 @@ class ExemplarsBankBuilder:
         self._id_counter = self._max_id(bank)
         logger.info(f"Found {len(files)} file(s) - Starting from C{self._id_counter + 1:03d}")
 
+        progress.phase("extract", f"0/{len(files)} documento(s)")
         with progress.step("extract", "Extrayendo ítems de los documentos", len(files)) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
                 tag = f"[{idx}/{len(files)} {file_path.name}]"
                 reporter.tick(idx, detail=file_path.name)
+                progress.advance(
+                    (idx - 1) / len(files),
+                    f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
+                )
                 try:
                     new_items = self._process_file(file_path, tag=tag)
                 except progress.Cancelled:
@@ -73,6 +81,7 @@ class ExemplarsBankBuilder:
                 logger.success(f"{tag} +{len(new_items)} → checkpoint saved ({len(bank)} total)")
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
+        progress.advance(1.0, f"{len(bank)} ítem(s)")
         logger.success(f"Directory done — {len(bank)} item(s) in {output_file_path}")
         return bank
 
