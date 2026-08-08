@@ -15,7 +15,6 @@ export interface StepView {
   key: string;
   id: string;
   label: string;
-  kind: "step" | "model";
   status: StepStatus;
   total?: number | null;
   current?: number;
@@ -71,7 +70,6 @@ export interface RunView {
   retrieval: { query: string; candidates: [string, number][] } | null;
   fewShot: string[];
   prompt: string | null;
-  model: string | null;
   taggedCount: number;
   startedAt: number | null;
   finishedAt: number | null;
@@ -109,7 +107,6 @@ function emptyRun(jobId: string): RunView {
     retrieval: null,
     fewShot: [],
     prompt: null,
-    model: null,
     taggedCount: 0,
     startedAt: null,
     finishedAt: null,
@@ -319,12 +316,11 @@ class RunStore {
         return {
           ...run,
           steps: [
-            ...this.settleModel(run.steps),
+            ...run.steps,
             {
               key,
               id: event.id,
               label: event.label,
-              kind: "step",
               status: "running",
               total: event.total ?? null,
               current: 0,
@@ -360,43 +356,19 @@ class RunStore {
           })),
         };
 
-      // Swapping weights on one GPU costs real seconds. Showing it as a step is the
-      // difference between "working" and "frozen".
-      case "model.loading":
-        if (run.model === event.model) return run;
-        return {
-          ...run,
-          model: event.model,
-          steps: [
-            ...this.settleModel(run.steps),
-            {
-              key: `model:${event.model}#${run.steps.length}`,
-              id: `model:${event.model}`,
-              label: `Cargando modelo ${event.model}`,
-              kind: "model",
-              status: "running",
-              startedAt: event.ts,
-            },
-          ],
-        };
-
-      case "token": {
-        const steps = this.settleModel(run.steps);
+      case "token":
         if (event.channel === "thinking") {
           return {
             ...run,
-            steps,
             phase: "thinking",
             thinking: tail(run.thinking + event.text, MAX_TOKENS),
           };
         }
         return {
           ...run,
-          steps,
           phase: "answering",
           answer: tail(run.answer + event.text, MAX_TOKENS),
         };
-      }
 
       case "retrieval":
         return { ...run, retrieval: { query: event.query, candidates: event.candidates ?? [] } };
@@ -447,15 +419,6 @@ class RunStore {
       }
     }
     return steps;
-  }
-
-  private settleModel(steps: StepView[]) {
-    if (!steps.some((s) => s.kind === "model" && s.status === "running")) return steps;
-    return steps.map((s) =>
-      s.kind === "model" && s.status === "running"
-        ? { ...s, status: "ok" as StepStatus, ms: Date.now() - s.startedAt * 1000 }
-        : s,
-    );
   }
 }
 

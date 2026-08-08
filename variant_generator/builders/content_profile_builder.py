@@ -30,7 +30,7 @@ class ContentProfileBuilder:
         verbose: bool = True,
     ):
         self.model = model
-        self.budget = config.SCHEMA_INFERENCE_BUDGET
+        self.budget = config.CP_SCHEMA_INFERENCE_BUDGET
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
 
         logger.enable(__name__) if verbose else logger.disable(__name__)

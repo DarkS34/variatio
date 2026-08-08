@@ -54,9 +54,8 @@ class EventBus:
     def _append_jsonl(self, job_id: str, event: Event) -> None:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         path = self.run_dir / f"{job_id}.jsonl"
-        with contextlib.suppress(OSError):
-            with path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(event.to_dict(), ensure_ascii=False) + "\n")
+        with (contextlib.suppress(OSError), path.open("a", encoding="utf-8") as f):
+            f.write(json.dumps(event.to_dict(), ensure_ascii=False) + "\n")
 
     def _fan_out(self, event: Event) -> None:
         loop = self._loop

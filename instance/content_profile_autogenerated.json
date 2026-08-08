@@ -1,16 +1,16 @@
 {
   "content_context": {
-    "subject": "Programación",
-    "programming_language": "Python",
-    "language_of_instruction": "Español",
-    "educational_level": "Grado universitario"
+    "subject": "Fundamentos de Programación",
+    "educational_level": "primer curso de grado universitario",
+    "language_of_instruction": "español",
+    "programming_language": "Python"
   },
   "general_generation_rules": [
-    "Utilizar programación modular definida explícitamente mediante funciones o subprogramas.",
-    "Incluir documentación estructurada para cada función con etiquetas tipo, objetivo (OBJ) y precondiciones (PRE).",
-    "Emplear identificadores descriptivos y significativos para variables, parámetros y funciones.",
-    "Adjuntar inmediatamente al código un bloque de prueba o probador que invoque la solución con valores de ejemplo y muestre los resultados por pantalla.",
-    "Respetar estrictamente las restricciones algorítmicas o estructurales indicadas en el enunciado (p. ej., prohibición de bibliotecas concretas, imposición de recursión o métodos de ordenación específicos)."
+    "Usar identificadores en snake_case descriptivos y evitar nombres genéricos o letras sueltas sin contexto.",
+    "Incluir docstrings para todas las funciones siguiendo el formato de la asignatura: comentarios con tipo de retorno (->), OBJ (objetivo) y PRE (precondiciones).",
+    "No usar estructuras selectivas, iterativas o funciones predefinidas si el enunciado lo prohíbe explícitamente; si no se indica, aplicar la estructura más idiomática de Python.",
+    "Validar entradas del usuario con bloques try-except cuando corresponda, o declarar en PRE que la entrada es válida y está dentro del rango esperado.",
+    "Incluir al final un pequeño probador o llamada a funciones con valores de ejemplo, comentado con #Probador."
   ],
   "primary_field": "statement",
   "fields": {
@@ -18,10 +18,10 @@
       "schema": {
         "type": "string"
       },
-      "description": "Texto imperativo que plantea la tarea de programación al alumno, especificando objetivos, entradas esperadas, salidas requeridas y cualquier restricción algorítmica o estructural.",
+      "description": "Enunciado completo del ejercicio que describe la tarea de programación a realizar por el estudiante, incluyendo datos de entrada, formato de salida deseado y restricciones específicas si las hubiera.",
       "guidance": {
-        "extraction": "Copiar literalmente el texto descriptivo situado tras el número o viñeta del ejercicio, deteniéndose antes del siguiente elemento enumerado o del marcador SOLUCION PROPUESTA: Eliminar numeraciones, viñetas y saltos de formato. Conservar fórmulas, fragmentos de código contextual e instrucciones implícitas en la redacción original. Excluir las reglas generales aplicables a toda la sección si no forman parte integrante de este enunciado específico.",
-        "generation": "Redactar una instrucción clara y concisa en modo imperativo que describa exactamente qué debe calcular o implementar el programa. Especificar claramente los datos de entrada, el formato de salida por consola y cualquier restricción técnica explícita (p. ej., uso obligatorio de funciones, prohibición de operadores concretos, implementación recursiva). Utilizar terminología precisa propia de la asignatura y mantener un tono académico directo en español."
+        "extraction": "Localizar cada ejercicio numerado bajo los apartados Ejercicios resueltos o Ejercicios propuestos. Copiar literalmente todo el texto que sigue al número de orden y al punto, desde el inicio de la instrucción hasta encontrar otro número de ejercicio, un encabezado de sección, una línea vacía seguida de texto no relacionado, o la aparición explícita de SOLUCION PROPUESTA. Eliminar los números de enumeración iniciales. No copiar instrucciones generales previas a varios ejercicios. Si el enunciado contiene bloques de código o fórmulas embebidas, conservarlos como texto plano respetando la indentación.",
+        "generation": "Redactar un enunciado claro y autónomo en español. Especificar qué debe calcularse o implementarse, los tipos de datos esperados para la entrada y lo que se debe mostrar o retornar. Si el ejercicio impone restricciones técnicas (por ejemplo, no usar funciones predefinidas, prohibir bucles, requerir recursividad), incorporarlas de forma explícita en el texto. Mantener un tono directivo propio de cuadernos de trabajo universitario."
       }
     },
     "solution": {
@@ -31,10 +31,10 @@
           "null"
         ]
       },
-      "description": "Código fuente Python completo que resuelve el enunciado, incluyendo definición de funciones o subprogramas, documentación interna y bloques de prueba o probador.",
+      "description": "Código fuente en Python que resuelve el enunciado, incluyendo la definición de funciones, lógica principal y un probador o llamadas de ejemplo. Solo se proporciona cuando el material incluye una resolución explícita.",
       "guidance": {
-        "extraction": "Localizar el bloque de código Python situado inmediatamente después del encabezado SOLUCION PROPUESTA: o equivalente en ejercicios resueltos. Copiar el fragmento completo tal cual aparece, preservando identación, comentarios, docstrings y código del probador. Si el ejercicio se encuentra en una sección no resuelta o no presenta dicho marcador, asignar null.",
-        "generation": "Generar un script Python ejecutable que cumpla íntegramente el enunciado. Estructurar la solución mediante funciones o subprogramas con nombres descriptivos. Documentar cada función usando docstrings o comentarios con las etiquetas OBJ y PRE. Incluir al final un bloque de invocatoria o probador que ejecute las funciones principales con datos de ejemplo realistas y muestre los resultados por pantalla. Respetar las restricciones algorítmicas del enunciado."
+        "extraction": "Buscar literalmente SOLUCION PROPUESTA inmediatamente después del número del ejercicio en los apartados de ejercicios resueltos. Copiar todo el bloque de código resultante hasta encontrar el siguiente número de ejercicio, un encabezado de sección o fin de documento. Incluir docstrings, comentarios de tipo y el probador si están presentes. Si la cabecera indica Ejercicios propuestos y no aparece la frase clave, asignar null.",
+        "generation": "Generar código Python válido y ejecutable que cumpla estrictamente el enunciado. Utilizar snake_case para nombres de variables y funciones. Incluir docstrings con formato de comentario multilínea especificando firma, OBJ y PRE. Si la solución requiere interacción con usuario, usar input/print; si es puramente funcional, retornar valores. Añadir al final un bloque comentado #Probador que invoque la función principal con parámetros de prueba razonables. Mantener indentación estándar de 4 espacios."
       }
     },
     "difficulty_level": {
@@ -45,9 +45,9 @@
           "avanzado"
         ]
       },
-      "description": "Nivel de complejidad cognitiva y técnica del ejercicio. Básico: traducción directa de fórmulas matemáticas, operaciones aritméticas simples o entrada/salida básica sin estructuras de control complejas. Intermedio: requiere diseño modular con funciones, uso de condicionales y bucles, y estructuras de datos elementales como listas o diccionarios para resolver problemas contextualizados. Avanzado: implica algoritmos no triviales (ordenación, búsqueda binaria, recursión compleja, manipulación avanzada de datos, integración de múltiples módulos o resolución de problemas tipo concurso con restricciones estrictas).",
+      "description": "Grado de exigencia cognitiva y técnica del ejercicio. Criterio de clasificación interno: básico se asigna a ejercicios que aplican sintaxis elemental, operadores o estructuras de control simples sin requerir modularización compleja; se identifica cuando el enunciado es directo y no exige diseñar algoritmos desde cero. intermedio corresponde a tareas que requieren diseño de funciones con múltiples parámetros, uso de estructuras de datos (listas, diccionarios), lógica condicional anidada o iteraciones estándar; suele aparecer implícitamente en cuadernos centrales o etiquetado como nivel básico. avanzado se reserva para problemas que exigen recursividad explícita, algoritmos de ordenación/búsqueda no triviales, optimización de recursos, adaptación de problemas externos o múltiples subapartados con validación exhaustiva; también cuando el material etiqueta explícitamente Ejercicio avanzado.",
       "guidance": {
-        "extraction": "Leer el encabezado de sección donde figura el ejercicio (p. ej., Ejercicios nivel básico, Ejercicio avanzado) y mapear directamente al valor del enum correspondiente. Si carece de etiqueta explícita, analizar la complejidad siguiendo los criterios definidos en description y asignar el nivel adecuado. Nunca devolver null."
+        "extraction": "Revisar si el texto del enunciado contiene la etiqueta literal nivel básico o Ejercicio avanzado; en ese caso, asignar dicho valor. Si no hay etiqueta, analizar la complejidad técnica: si solo pide imprimir, convertir tipos o usar una función directa sin algoritmos propios, clasificar como básico. Si requiere funciones con lógica interna, manejo de listas/diccionarios o control de flujo estándar, asignar intermedio. Si exige recursividad, algoritmos completos (ordenación, búsqueda), validación robusta o adaptación de problemas complejos, asignar avanzado. Nunca asignar null."
       }
     }
   }

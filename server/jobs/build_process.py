@@ -6,7 +6,7 @@ import sys
 
 from variant_generator import config, progress
 
-from .build_worker import MARKER
+from .protocol import MARKER
 from .runner import JobControl
 
 MAX_LOG_CHARS = 500

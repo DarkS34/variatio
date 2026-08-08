@@ -117,7 +117,7 @@ def listing(
         },
         "thresholds": {
             "similarity": config.EMBEDDER_SIMILARITY_THRESHOLD,
-            "relative_margin": config.EMBEDDER_RELATIVE_MARGIN,
+            "top_k": config.TAGGER_TOP_K_CANDIDATES,
         },
     }
 
