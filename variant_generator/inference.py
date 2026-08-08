@@ -116,7 +116,6 @@ class OllamaEngine:
     def __init__(self):
         self._client = ollama.Client(host=config.OLLAMA_HOST)
         self._thinking: dict[str, bool] = {}
-        self._loaded: str | None = None
 
     def is_available(self) -> bool:
         try:
@@ -124,13 +123,6 @@ class OllamaEngine:
             return response.status_code == 200
         except httpx.ConnectError:
             return False
-
-    # A single GPU cannot hold two 30B models: every switch reloads weights and stalls
-    # for seconds. Announce it so the UI shows "loading X" instead of looking frozen.
-    def _announce_model(self, model: str, role: str) -> None:
-        if self._loaded != model:
-            progress.model_loading(model, role)
-            self._loaded = model
 
     # Asking a model that has no reasoning mode to think is a hard error in Ollama, so
     # the request is only made of models that advertise the capability.
@@ -143,7 +135,6 @@ class OllamaEngine:
         return {"think": think}
 
     def generate(self, model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
-        self._announce_model(model, "generation")
         try:
             resp = self._client.generate(
                 model=model, prompt=prompt, **self._think_option(model, think)
@@ -162,7 +153,6 @@ class OllamaEngine:
         if on_token is None:
             return self.generate(model=model, prompt=prompt, think=think)
 
-        self._announce_model(model, "generation")
         splitter = ThinkingSplitter()
         answer: list[str] = []
         thinking: list[str] = []
@@ -205,7 +195,6 @@ class OllamaEngine:
         return self._thinking[model]
 
     def embed(self, model: str, text: str) -> list[float]:
-        self._announce_model(model, "embedding")
         try:
             return self._client.embeddings(model=model, prompt=text)["embedding"]
         except (ollama.ResponseError, httpx.RequestError) as e:
@@ -214,7 +203,6 @@ class OllamaEngine:
     def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        self._announce_model(model, "embedding")
         try:
             return list(self._client.embed(model=model, input=texts)["embeddings"])
         except (ollama.ResponseError, httpx.RequestError) as e:

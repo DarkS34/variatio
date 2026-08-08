@@ -7,6 +7,10 @@ the server down with it.
 
 Anything printed that is not prefixed with MARKER is somebody else's output (docling,
 tqdm) and is forwarded as a log line, so the protocol survives noisy dependencies.
+
+Nothing else in the package may import this module: it is executed as `__main__`, and
+an earlier import would make runpy warn on every build. That is why MARKER lives in
+`protocol`.
 """
 
 import argparse
@@ -14,7 +18,7 @@ import json
 import signal
 import sys
 
-MARKER = "@@EVT@@"
+from .protocol import MARKER
 
 
 def send(kind: str, **payload) -> None:

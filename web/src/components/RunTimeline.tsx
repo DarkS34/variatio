@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, CircleDashed, Cpu, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, CircleDashed, Loader2, X } from "lucide-react";
 
 import { InfoHint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/misc";
@@ -9,11 +9,7 @@ import type { StepView } from "@/state/runStore";
 
 function Icon({ step }: { step: StepView }) {
   if (step.status === "running") {
-    return step.kind === "model" ? (
-      <Cpu className="size-4 animate-pulse-soft text-[var(--info)]" />
-    ) : (
-      <Loader2 className="size-4 animate-spin text-[var(--info)]" />
-    );
+    return <Loader2 className="size-4 animate-spin text-[var(--info)]" />;
   }
   if (step.status === "ok") return <Check className="size-4 text-[var(--success)]" />;
   if (step.status === "failed") return <AlertTriangle className="size-4 text-destructive" />;

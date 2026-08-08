@@ -83,7 +83,8 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     logger.info(
         f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s). "
         f"Cada uno recupera candidatos del índice y los verifica con '{config.CONCEPT_TAGGER_LLM}' "
-        f"(umbral {config.EMBEDDER_SIMILARITY_THRESHOLD}, margen {config.EMBEDDER_RELATIVE_MARGIN})."
+        f"(umbral {config.EMBEDDER_SIMILARITY_THRESHOLD}, "
+        f"{config.TAGGER_TOP_K_CANDIDATES} candidatos como máximo)."
     )
     bank = stages.tag_bank(context, ids=ids)
     untagged = [i for i, item in bank.items() if not item.get("concepts")]

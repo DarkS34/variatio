@@ -186,10 +186,18 @@ export interface GraphView {
 
 export interface TaggingTrace {
   candidates: [string, number][];
-  method: "single_dominant" | "llm" | "llm_thinking" | "rejected" | "failed" | "no_candidates" | "manual";
+  method:
+    | "single_dominant"
+    | "llm"
+    | "llm_thinking"
+    | "llm_wide"
+    | "llm_wide_thinking"
+    | "rejected"
+    | "failed"
+    | "no_candidates"
+    | "manual";
   model?: string;
   threshold?: number;
-  margin?: number;
 }
 
 export interface BankItem {
@@ -210,7 +218,7 @@ export interface BankListing {
   fields: string[];
   sources: string[];
   totals: { items: number; tagged: number; untagged: number };
-  thresholds: { similarity: number; relative_margin: number };
+  thresholds: { similarity: number; top_k: number };
 }
 
 export interface Coverage {

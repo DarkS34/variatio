@@ -20,6 +20,7 @@ class ConceptTagger:
         primary_field: str,
         context: dict | None = None,
         top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
+        fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
     ):
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
@@ -27,6 +28,7 @@ class ConceptTagger:
         self.context = context
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
+        self.fallback_top_k = fallback_top_k
 
     # Every annotation carries how it was reached: which concepts were in play, with what
     # scores, and who decided. Without it a reviewer sees a tag and no way to judge it.
@@ -37,7 +39,6 @@ class ConceptTagger:
                 "method": method,
                 "model": self.concept_tagger_model,
                 "threshold": self.embedder.similarity_threshold,
-                "margin": self.embedder.relative_margin,
             }
         }
 
@@ -65,23 +66,21 @@ class ConceptTagger:
                 **self._trace(candidates, "single_dominant"),
             }
 
-        candidate_names = [c for c, _ in candidates]
-        prompt = tag_concepts_prompt(
-            statement=statement,
-            candidates=self._candidates_block(candidates),
-            relations=self._relations_block(candidate_names),
-            context=self.context,
-        )
+        result, method = self._resolve(statement, candidates, "llm")
 
-        method = "llm"
-        result = self._verify(prompt, candidate_names, think=False)
-
-        if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
-            logger.info(f"Inconclusive tagging — retrying with thinking: {statement[:40]}...")
-            escalated = self._verify(prompt, candidate_names, think=True)
-            if not self._is_inconclusive(escalated):
-                result = escalated
-                method = "llm_thinking"
+        # A rejection means the objective was not among the candidates, and the band is the
+        # ceiling of the whole tagging: what the prefilter drops, the LLM can never recover.
+        # Widening it is only worth its cost for the few items that got nothing, so it runs
+        # here and not by default.
+        if self._is_inconclusive(result) and self.fallback_top_k > len(candidates):
+            wide = self.embedder.top_k_concepts(statement, self.fallback_top_k)
+            if len(wide) > len(candidates):
+                logger.info(
+                    f"No candidate accepted — retrying with {len(wide)} candidates: {statement[:40]}..."
+                )
+                escalated, escalated_method = self._resolve(statement, wide, "llm_wide")
+                if not self._is_inconclusive(escalated):
+                    result, method, candidates = escalated, escalated_method, wide
 
         if result is None:
             logger.error("Failed to tag statement after repairs, returning empty annotation")
@@ -96,6 +95,25 @@ class ConceptTagger:
             return empty("rejected")
 
         return {**result, **self._trace(candidates, method)}
+
+    def _resolve(
+        self, statement: str, candidates: list[tuple[str, float]], method: str
+    ) -> tuple[dict | None, str]:
+        candidate_names = [c for c, _ in candidates]
+        prompt = tag_concepts_prompt(
+            statement=statement,
+            candidates=self._candidates_block(candidates),
+            relations=self._relations_block(candidate_names),
+            context=self.context,
+        )
+
+        result = self._verify(prompt, candidate_names, think=False)
+        if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
+            logger.info(f"Inconclusive tagging — retrying with thinking: {statement[:40]}...")
+            escalated = self._verify(prompt, candidate_names, think=True)
+            if not self._is_inconclusive(escalated):
+                return escalated, f"{method}_thinking"
+        return result, method
 
     @staticmethod
     def _is_inconclusive(result: dict | None) -> bool:
@@ -208,6 +226,10 @@ class ConceptTagger:
         already_tagged = len(exemplars_bank) - total
         if already_tagged:
             logger.info(f"Reusing {already_tagged} existing annotation(s)")
+
+        self.embedder.prefetch_queries(
+            [exemplars_bank[c_id][self.primary_field] for c_id in pending]
+        )
 
         with progress.step("tagging", "Etiquetando el banco con conceptos del grafo", total) as reporter:
             for idx, c_id in enumerate(pending, 1):

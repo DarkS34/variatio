@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { LogViewer } from "@/components/LogViewer";
 import { RunTimeline } from "@/components/RunTimeline";
-import { TechnicalDetails } from "@/components/TechnicalDetails";
-import { TokenStream } from "@/components/TokenStream";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
@@ -17,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useCancelJob, useStream } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 
-export type DrawerTab = "progress" | "model" | "logs";
+export type DrawerTab = "progress" | "logs";
 
 export function useActiveRun(): RunView | null {
   const stream = useStream();
@@ -71,9 +69,6 @@ export function RunDrawer({
               </p>
             </InfoHint>
           ) : null}
-          {run?.model ? (
-            <span className="truncate text-xs text-muted-foreground">· {run.model}</span>
-          ) : null}
         </div>
 
         <span className={cn("text-xs font-medium", run?.job ? JOB_STATUS[status]?.tone : "text-muted-foreground")}>
@@ -89,7 +84,6 @@ export function RunDrawer({
           <Tabs
             items={[
               { value: "progress", label: "Progreso" },
-              { value: "model", label: "Modelo" },
               {
                 value: "logs",
                 label: "Registro",
@@ -152,7 +146,7 @@ export function RunDrawer({
           <p className="p-6 text-center text-sm text-muted-foreground">
             Nada ejecutado en esta sesión.
           </p>
-        ) : tab === "progress" ? (
+        ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-3">
               <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -179,17 +173,6 @@ export function RunDrawer({
               </div>
               <ActivityFeed lines={run.activity} />
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <TokenStream
-              answer={run.answer}
-              thinking={run.thinking}
-              phase={run.phase}
-              active={active}
-              height={tall ? "34rem" : "16rem"}
-            />
-            <TechnicalDetails run={run} />
           </div>
         )}
       </div>

@@ -85,7 +85,7 @@ def concept_description_prompt(
     concept: str,
     domain: str,
     relations: dict[str, list[str]],
-    siblings: list[str],
+    siblings: dict[str, str],
     context: dict,
 ) -> str:
     context_block = ""
@@ -104,8 +104,16 @@ def concept_description_prompt(
 
     siblings_block = ""
     if siblings:
+        sibling_lines = []
+        for name, text in siblings.items():
+            written = " ".join((text or "").split())
+            sibling_lines.append(f"- {name}: {written}" if written else f"- {name}")
         siblings_block = (
-            f"\n# OTROS CONCEPTOS DEL MISMO BLOQUE TEMÁTICO\n{', '.join(siblings)}\n"
+            "\n# OTROS CONCEPTOS DEL MISMO BLOQUE TEMÁTICO\n"
+            "Tu descripción compite con estas: se comparan todas contra el mismo ejercicio y solo una debe encajar. "
+            "Las que ya están escritas se muestran con su texto.\n"
+            + "\n".join(sibling_lines)
+            + "\n"
         )
 
     return f"""\
@@ -128,6 +136,7 @@ Un ejercicio USA muchos conceptos y PRACTICA solo uno o dos. La descripción deb
 - No uses ejemplos concretos genéricos: placeholders típicos, datos de relleno o escenarios neutros que aparezcan en ejercicios de varios conceptos diferentes. Si das un ejemplo, que sea uno cuyo enunciado SOLO tendría sentido si el objetivo de aprendizaje fuera este.
 - Para conceptos paraguas o troncales con pocos detalles propios, prefiere una descripción MUY CORTA y sobria que mencione únicamente lo que los distingue de los conceptos hermanos. Mejor 1 frase específica que 4 frases genéricas.
 - Si lo que has escrito también describiría a un concepto hermano, REESCRÍBELO o RECÓRTALO hasta que no.
+- Lee las descripciones ya escritas de los hermanos antes de responder. Si la tuya se solapa con alguna, el solapamiento es el error: quédate solo con lo que este concepto tiene y aquel no. Cuando dos hermanos son facetas de una misma tarea (la parte y el todo, el mecanismo y su uso), describe EXACTAMENTE tu faceta y da por supuesta la otra.
 
 # REGLAS DE FORMA
 - 1-4 frases, según haga falta para ser específico sin caer en lo genérico.
@@ -489,15 +498,36 @@ def _kg_type_preference_rule(schema) -> str:
     )
 
 
-def extract_typed_graph_prompt(source_text: str, schema) -> str:
+def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> str:
+    location_block = ""
+    if location:
+        location_block = (
+            "\n# WHERE THIS FRAGMENT SITS IN THE MATERIAL\n"
+            f"{location}\n"
+            "This is the heading path of the section the fragment was taken from. Use it to "
+            "tell what the section is ABOUT from what it merely mentions in passing, and to "
+            "name concepts the way this part of the syllabus names them — the neighbouring "
+            "fragments of this same section are being read with this same heading, so their "
+            "names have to come out identical to yours.\n"
+        )
+
     return f"""\
 Extract a KNOWLEDGE GRAPH from a fragment of teaching material on ANY subject. Identify the CONCEPTS of the subject and the TYPED RELATIONS between them, directly in the schema given below.
+{location_block}
 
 # WHAT COUNTS AS A VALID CONCEPT
 A concept NAMES an idea of the subject: a term that could be an entry in a glossary or an index (a thing, technique, category, structure, phenomenon or named entity). It is NOT a phrase that describes or predicates something.
 - Glossary test: if you would NOT put it as an entry in an index of the subject, it is NOT a concept.
 - Do NOT extract: document metadata (section titles, bibliography, licences, authors), incidental scenarios from examples (objects, characters or specific situations that merely illustrate), or fragments that read as part of a sentence (they start with a verb, contain a conjugated verb, or express a condition or an action).
-- Use a concise, canonical name for each concept (a noun or noun phrase), as it would appear in an index. Do not repeat the same concept with casing or plural variants.
+
+# NAMING CANON (CRITICAL)
+This fragment is one of hundreds extracted independently from the same corpus, and the results are merged by NAME. Two fragments that name the same idea differently produce two concepts that will never be reconciled, so do not name what this fragment happens to say — name what the index of the subject would say.
+- SINGULAR always, even if the fragment speaks in plural.
+- NOUN form, never the adjective or the quality: name the thing, not its property.
+- No articles, no determiners, no possessives.
+- No qualifier borrowed from the example, the exercise or the tool at hand: name the concept, then stop.
+- Keep the wording the teaching material itself uses for the idea when it has one; do not translate it, do not modernise it, do not expand an abbreviation the material keeps short.
+- The same idea must come out with the SAME name every time, whichever fragment it appears in.
 
 {_KG_LANGUAGE_RULE}
 
@@ -527,11 +557,22 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-def link_global_relations_prompt(concepts_block: str, schema) -> str:
-    return f"""\
-You are given the COMPLETE INVENTORY of concepts of a knowledge graph, extracted from the whole body of teaching material of a single subject. Extraction ran fragment by fragment, so relations between concepts that never appeared together in the same fragment are missing.
+_KG_TEACHING_ORDER_RULE = """\
+# THE TEACHING ORDER IS THE POINT
+Fragment-by-fragment extraction sees a dependency only when two concepts are explained in the same breath, which is exactly when the material does NOT need to state it. The ordering of the syllabus is therefore almost entirely missing, and recovering it is the main reason this pass exists.
+- Go through the concepts asking, for each one: what must a student ALREADY understand before this can be taught? Every such answer that is itself on the list is a relation to propose.
+- A dependency is real even if the two concepts never appeared together: that they are far apart in the material is evidence FOR proposing it here, not against.
+- Most concepts of a subject rest on something else. A concept with nothing before it should be the exception — the true starting points — not the norm.
+- Do not chain what is already implied: state the DIRECT dependency, not the whole ancestry. If A rests on B and B on C, do not also relate A to C.
+- Being cautious is not free here: a dependency you leave out is one no later step can recover.
+- Prefer BOTH ends to be things a student is taught and could be examined on. The extraction also picked up tooling, notation, library calls and document vocabulary; an ordering hung off those describes the material rather than the syllabus, and nothing downstream can use it. When a dependency is real but one end is such a term, look for the taught concept behind it and relate that one instead."""
 
-Your task: propose the TYPED RELATIONS that structure the subject at a GLOBAL level — above all the backbone that cuts across different parts of the syllabus: chains of dependencies, hierarchies and compositions between concepts that may have been explained in different sections.
+
+def link_domain_relations_prompt(domain: str, nodes_block: str, schema) -> str:
+    return f"""\
+You are given the concepts of ONE thematic block, «{domain}», of a knowledge graph built from the teaching material of a single subject. Each concept is listed with the relations already known about it, as evidence.
+
+Your task: propose the TYPED RELATIONS that are MISSING between the concepts of this block — above all the order in which they have to be taught.
 
 {_KG_LANGUAGE_RULE}
 
@@ -539,10 +580,11 @@ Your task: propose the TYPED RELATIONS that structure the subject at a GLOBAL le
 {schema.catalog_block()}
 
 # RULES
-- Source and target must be DIFFERENT and both must appear LITERALLY in the inventory. Do not invent new concepts and do not rewrite their names.
-- Propose relations that are true for the subject as a whole; focus on those connecting different parts of the syllabus, not on restating the obvious inside one subtopic.
+- Source and target must be DIFFERENT and both must appear LITERALLY in the list below. Do not invent concepts, do not rewrite their names, and do not relate a concept to itself.
+- Do NOT restate a relation already shown as evidence. Only what is missing.
 {_kg_type_preference_rule(schema)}
-- Do not propose a relation from a concept to itself.
+
+{_KG_TEACHING_ORDER_RULE}
 
 # OUTPUT
 A single JSON object with exactly this shape:
@@ -550,51 +592,113 @@ A single JSON object with exactly this shape:
   "relations": [["<source>", "<type>", "<target>"], "..."]
 }}
 - `type` is one of: {schema.key_list()}.
-- Every source and target must be in the inventory.
+- If nothing is missing, return {{"relations": []}}.
 - No text before or after, no backticks, no comments.
 
-# CONCEPT INVENTORY
-{concepts_block}
+# CONCEPTS OF «{domain}» (with the relations already known)
+{nodes_block}
 
 JSON:"""
 
 
-def clean_graph_nodes_prompt(nodes_block: str) -> str:
+def link_cross_domain_relations_prompt(domains_block: str, schema) -> str:
     return f"""\
-You are given the NODES of a knowledge graph automatically extracted from a corpus of teaching material, each with its outgoing relations as evidence. The extraction is noisy: there are duplicates, variants, metadata and fragments that are not concepts.
+You are given the concepts of a knowledge graph built from the teaching material of a single subject, grouped into the THEMATIC BLOCKS of the syllabus. The relations inside each block have already been proposed.
 
-Your task: propose a cleanup as a MAPPING, without losing conceptual information.
+Your task: propose ONLY the TYPED RELATIONS that CROSS from one block to another — the backbone that orders the syllabus as a whole and that no reading of a single block could reveal.
 
-# WHAT COUNTS AS A VALID NODE
-A valid node NAMES a concept of the domain: a term that could be an entry in a glossary or an index of the subject (a thing, idea, technique, category or named entity). It is NOT a phrase that describes, explains or predicates something.
+{_KG_LANGUAGE_RULE}
 
-# WHAT TO DO
-- MERGE variants of the same concept under a single canonical name: casing differences, singular/plural, articles, parenthetical annotations, or context suffixes (the same term with and without the name of a system or tool).
-- REMOVE anything that does NOT name a concept:
-  · document metadata (section titles, table of contents, bibliography, licences) and proper names of authors or works;
-  · incidental scenarios from examples (objects, characters or specific situations that merely illustrate);
-  · FRAGMENTS: descriptive phrases, clauses or predicates that read as part of a sentence instead of naming a concept (they start with a verb, contain a conjugated verb, or express a condition, property or action).
-- REMOVE concepts clearly foreign to the domain (infer the domain from the set of nodes).
+# RELATION TYPES (respect the SOURCE → TARGET direction)
+{schema.catalog_block()}
 
-# WHEN IN DOUBT
-- Glossary test: if you would NOT put it as an entry in an index of the subject, it goes to "drop".
-- With domain CONCEPTS, keep: do not remove a term just because it is short, generic or infrequent.
-- With FRAGMENTS, remove even when in doubt.
-- Between two concepts, prefer merging over removing.
+# RULES
+- Source and target must belong to DIFFERENT blocks. A relation between two concepts of the same block will be discarded: it is not what this pass is for.
+- Both must appear LITERALLY in the lists below. Do not invent concepts and do not rewrite their names.
+{_kg_type_preference_rule(schema)}
 
-# CANONICAL NAME
-- The canonical name MUST be one of the names in the input list. Do not invent new names, do not translate them, do not fix their spelling.
-- Choose the most general and complete form; NEVER merge a general concept into a more specific one.
-- Use the relations to disambiguate short names.
+{_KG_TEACHING_ORDER_RULE}
+- Work block by block: for each one, ask which concepts of the EARLIER blocks it rests on. The blocks are given in the order the material presents them, which is itself evidence about the teaching order — but it is not conclusive, and a later block can hold a prerequisite of an earlier one.
 
 # OUTPUT
 A single JSON object with exactly this shape:
 {{
-  "canonical": {{"<canonical name>": ["<alias>", "..."]}},
-  "drop": ["<node to remove>", "..."]
+  "relations": [["<source>", "<type>", "<target>"], "..."]
 }}
-- Every input node appears exactly once: as a canonical key, inside an alias list, or in "drop".
-- A concept without variants goes in as a canonical key with an empty alias list.
+- `type` is one of: {schema.key_list()}.
+- No text before or after, no backticks, no comments.
+
+# THEMATIC BLOCKS AND THEIR CONCEPTS
+{domains_block}
+
+JSON:"""
+
+
+def merge_candidate_groups_prompt(groups_block: str) -> str:
+    return f"""\
+You are given SMALL GROUPS of node names from a knowledge graph automatically extracted from a corpus of teaching material, each name with its outgoing relations as evidence. Extraction ran fragment by fragment and each fragment named things in its own words, so the SAME idea arrives several times wearing different grammar. The groups were formed by NAME SIMILARITY alone, which is a suspicion, not a verdict: many groups hold names that merely resemble each other and must be left alone.
+
+Your task: inside EACH group, and never across groups, decide which names are THE SAME CONCEPT and must be folded into one.
+
+# THE MERGE TEST: ONE GLOSSARY ENTRY, ONE CONCEPT
+- Would an index of the subject give these names ONE entry or TWO? If one, merge them, however different their grammar.
+- Merge across grammatical form: the adjective, the noun and the quality of the same idea are one concept; so are the singular, the plural and the plural noun phrase; so are a term and the same term with the object it applies to attached.
+- Merge a term and its own definition-as-a-name: when one name states the idea and another spells out that same idea as a longer phrase, they are one concept.
+- Do NOT merge two ideas a student could be examined on separately, even when they always appear together: a mechanism and the technique that uses it stay apart, and so do a part and the whole it belongs to, and so do a general term and one of its specific kinds.
+- Do NOT merge two names just because they belong to the same topic, are related, or often appear together. Sharing a word is not evidence.
+- Use the relations as evidence: names with clearly different relations are usually different concepts.
+- Over-merging costs more than under-merging: a concept lost by merging cannot be recovered later. When the two readings are equally defensible, leave them apart.
+
+# CANONICAL NAME
+- The canonical MUST be one of the names of its own group, copied exactly. Do not invent names, do not translate them, do not fix their spelling.
+- Prefer the shortest form that still names the idea completely, and the one written as a noun.
+
+# OUTPUT
+A single JSON object with exactly this shape:
+{{
+  "merges": [{{"canonical": "<name>", "aliases": ["<name>", "..."]}}, "..."]
+}}
+- One entry per set of names that ARE the same concept. Names that merge with nothing simply do not appear.
+- Never put names from two different groups in the same entry.
+- If nothing in any group merges, return {{"merges": []}}.
+- No text before or after, no backticks, no comments.
+
+# GROUPS
+{groups_block}
+
+JSON:"""
+
+
+def filter_graph_nodes_prompt(nodes_block: str) -> str:
+    return f"""\
+You are given part of the NODES of a knowledge graph automatically extracted from a corpus of teaching material on a single subject, each with its outgoing relations as evidence. The extraction is noisy: alongside the concepts of the subject it picked up metadata, incidental scenarios and sentence fragments.
+
+Your task: list the nodes that do NOT name a concept of the subject and must be removed. Everything you do not list is kept.
+
+# WHAT COUNTS AS A VALID NODE
+A valid node NAMES a concept of the subject: a term that could be an entry in a glossary or an index (a thing, idea, technique, category, structure, phenomenon or named entity). It is NOT a phrase that describes, explains or predicates something.
+
+# REMOVE
+- Document metadata: section titles, tables of contents, bibliography, licences, and the proper names of authors or works.
+- Incidental scenarios from the examples: the objects, characters, datasets or specific situations that merely illustrate.
+- FRAGMENTS: descriptive phrases, clauses or predicates that read as part of a sentence instead of naming a concept — they start with a verb, contain a conjugated verb, or state a condition, a property or an action.
+- Nodes clearly foreign to the subject (infer the subject from the set of nodes).
+
+# KEEP
+- Do not remove a term for being short, elementary, generic or infrequent. Rarity is not evidence of noise here, and whether a concept is useful as a LABEL is decided much later by someone else — that is not your question.
+- When a node names something of the subject at all, keep it.
+
+# WHEN IN DOUBT
+- Glossary test: if you would NOT put it as an entry in an index of the subject, remove it.
+- With a FRAGMENT, remove even when in doubt. With a CONCEPT, keep even when in doubt.
+
+# OUTPUT
+A single JSON object with exactly this shape:
+{{
+  "drop": {{"<node>": "<why it does not name a concept, 10 words max>"}}
+}}
+- The keys are EXACT names from the list below. Do not invent, rename, translate or fix spelling.
+- Judge only the nodes listed here. If all of them are concepts, return {{"drop": {{}}}}.
 - No text before or after, no backticks, no comments.
 
 # NODES
@@ -607,7 +711,7 @@ def curate_graph_domains_prompt(nodes_block: str) -> str:
     return f"""\
 You are given the already cleaned CONCEPTS of a knowledge graph, each with its outgoing relations as evidence. They come from a single corpus of teaching material on one subject.
 
-Your task: (1) group ALL the concepts into coherent thematic DOMAINS, and (2) mark which ones are too generic to be used as labels.
+Your task: group ALL the concepts into coherent thematic DOMAINS.
 
 # DOMAINS
 - A domain is a thematic block of the subject (in the style of the main topics or units of a syllabus), not a fine-grained tag.
@@ -616,28 +720,102 @@ Your task: (1) group ALL the concepts into coherent thematic DOMAINS, and (2) ma
 - COMPLETE AND MANDATORY PARTITION: the output must contain EACH AND EVERY concept of the input, exactly once. Go through them one by one and place them all; do not skip any out of haste or doubt, and do not repeat any in two domains.
 - NO CATCH-ALL: if a concept does not fit clearly, assign it to the MOST RELATED domain according to its theme or its relations. It is FORBIDDEN to leave a concept without a domain, and FORBIDDEN to create a generic dumping-ground domain such as "Other", "Various", "Miscellaneous" or "Unclassified".
 
-# NON-TAGGABLE CONCEPTS (non_taggable)
-A non-taggable concept is too universal to identify what a specific learning item is about: names of the subject itself or of umbrella topics, names of languages or tools, and terms so transversal that they would appear in items of almost any subtopic.
-- Test: if seeing that concept in an item does NOT let you tell what is being practised in particular (because it fits almost everything), it is non-taggable.
-- They still belong to their domain; they are only listed apart so they can be excluded from labelling.
-- When in doubt, do NOT mark it: a specific domain concept must remain taggable.
-
 # NAMES
-- Use the EXACT input names, both in the domains and in non_taggable. Do not invent, rename, translate or fix spelling.
+- Use the EXACT input names for the concepts. Do not invent, rename, translate or fix spelling.
 - The DOMAIN NAMES are yours to write: short and descriptive, in the SAME LANGUAGE as the concepts.
 
 # OUTPUT
 A single JSON object with exactly this shape:
 {{
-  "domains": {{"<Domain name>": ["<concept>", "..."]}},
-  "non_taggable": ["<concept>", "..."]
+  "domains": {{"<Domain name>": ["<concept>", "..."]}}
 }}
 - Every input concept appears exactly once inside "domains".
 - Before answering, check that the number of concepts spread across "domains" matches the number of concepts in the input: if any is missing, place it in its most related domain.
-- "non_taggable" is a subset of the input concepts (it may be empty).
 - No text before or after, no backticks, no comments.
 
 # CONCEPTS
+{nodes_block}
+
+JSON:"""
+
+
+# Asked to partition several hundred concepts in one turn, the model reliably forgets a
+# fifth of them however loudly the prompt insists on completeness — 84 of 399 in the
+# reference build. Rather than insisting harder, the leftovers are handed back as their own,
+# much smaller question, with the domains already decided so this pass cannot invent more.
+def assign_leftover_concepts_prompt(domains_block: str, nodes_block: str) -> str:
+    return f"""\
+The concepts of a knowledge graph built from the teaching material of a single subject have already been grouped into thematic domains. The concepts below were LEFT OUT of that grouping — not because they are wrong, but because they were overlooked.
+
+Your task: place EVERY concept below into ONE of the EXISTING domains.
+
+# RULES
+- The domain names are FIXED. Use them exactly as written. Do NOT create new domains, do NOT rename them, do NOT leave a concept out.
+- Every concept below must appear exactly once in the output.
+- Assign by theme and by the relation evidence: the domain that already holds the concepts this one relates to is almost always the right one.
+- There is no "other" and no "unclassified": if a concept seems to fit nowhere, choose the domain it is LEAST unrelated to.
+- Use the EXACT input names. Do not invent, rename, translate or fix spelling.
+
+# OUTPUT
+A single JSON object with exactly this shape:
+{{
+  "domains": {{"<existing domain name>": ["<concept>", "..."]}}
+}}
+- Only domains that receive at least one concept need to appear.
+- No text before or after, no backticks, no comments.
+
+# EXISTING DOMAINS AND WHAT THEY ALREADY HOLD
+{domains_block}
+
+# CONCEPTS TO PLACE (with the relations already known)
+{nodes_block}
+
+JSON:"""
+
+
+def review_taggable_concepts_prompt(domain: str, domains_block: str, nodes_block: str) -> str:
+    return f"""\
+You are reviewing ONE thematic domain of a knowledge graph built from a corpus of teaching material on a single subject. The graph exists to LABEL learning items (exercises, problems, assessment tasks), and a label answers exactly one question: what does this item make the student PRACTISE?
+
+Your task: decide which of the concepts listed below are USELESS AS LABELS and must be excluded from labelling. Everything you do not list stays usable as a label.
+
+# THE TEST: DOES IT DISCRIMINATE?
+For each concept, in this order:
+1. Could an item have THIS concept as its objective — one that a student who has mastered everything else except this could NOT solve? If not, exclude it.
+2. Could this same label be put, without lying, on items that practise clearly different things from different parts of the syllabus? If yes, exclude it.
+A label that fits almost everything tells you nothing about anything.
+
+# EXCLUDE
+- One of any two concepts of this domain that would end up labelling the SAME items — the ones no exercise could tell apart because whatever practises one practises the other. Keep the one a teacher would write on the exam, exclude the other. (A concept that survives as a label is still in the graph through its relations.)
+- The subject, the course or the discipline itself, its units, and umbrella terms that just name a part of the syllabus.
+- Generic activities or stages of the work: writing, running, designing, analysing, testing, documenting, maintaining, solving, and the like.
+- Cross-cutting qualities and virtues: quality, efficiency as a virtue, readability, correctness, usefulness — unless the corpus treats it as a technical object with content and criteria of its own.
+- Vocabulary of the MATERIAL instead of the subject: concept, technique, notation, example, summary, recommended reading, introduction, beginning, end, section titles.
+- Languages, tools, platforms, libraries, standards and their names.
+- A parent term whose specific children are also on the list and which adds nothing beyond them.
+- Single letters and symbols, isolated values, and the objects, characters or scenarios of the illustrative examples.
+
+# KEEP
+- Any specific technique, structure, mechanism, operation, rule or phenomenon of the subject, EVEN IF elementary: elementary is not the same as generic. An item can be about it.
+- Whatever a student can be asked to apply, build, trace, compare, choose between or fix.
+- Do not exclude a concept for being short, frequent, or a prerequisite of many others: what matters is whether an item can be ABOUT it, not how often it is used as a tool.
+
+# WHEN IN DOUBT, EXCLUDE
+An excluded concept stays in the graph and keeps doing its work through its relations (prerequisites, hierarchy, composition); it is only never used as a label. One kept concept that does not discriminate pollutes the labelling of the whole corpus.
+
+# OUTPUT
+A single JSON object with exactly this shape:
+{{
+  "non_taggable": {{"<concept>": "<why it does not discriminate, 12 words max>"}}
+}}
+- The keys are EXACT names from the list below. Do not invent, rename, translate or fix spelling.
+- Judge only the concepts of this domain. If all of them discriminate, return {{"non_taggable": {{}}}}.
+- No text before or after, no backticks, no comments.
+
+# DOMAINS OF THE SUBJECT (context: this is the whole syllabus)
+{domains_block}
+
+# CONCEPTS OF THE DOMAIN «{domain}» (with their outgoing relations as evidence)
 {nodes_block}
 
 JSON:"""

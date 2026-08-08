@@ -21,7 +21,6 @@ __all__ = [
     "advance",
     "checkpoint",
     "emit",
-    "model_loading",
     "overall",
     "phase",
     "reset_emitter",
@@ -206,11 +205,6 @@ def advance(fraction: float, detail: str | None = None) -> None:
     bar = _overall.get()
     if bar is not None:
         bar.at(fraction, detail)
-
-
-def model_loading(model: str, role: str) -> None:
-    """Swapping models on a single GPU costs real seconds; make it a visible step."""
-    emit("model.loading", model=model, role=role)
 
 
 def token_sink(stream: str) -> Callable[[str, str], None] | None:

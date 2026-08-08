@@ -26,12 +26,6 @@ import type { BankItem, KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCoverage, useInvalidateChain, useKg, useSubmitJob } from "@/state/queries";
 
-function margin(item: BankItem): number | null {
-  const candidates = item._tagging?.candidates ?? [];
-  if (candidates.length < 2) return null;
-  return candidates[0][1] - candidates[1][1];
-}
-
 function ItemEditor({
   item,
   fields,
@@ -199,8 +193,6 @@ function ItemRow({
 }) {
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
-  const gap = margin(item);
-  const narrow = gap !== null && gap < 0.05;
   const text = String(item[primaryField] ?? "");
 
   return (
@@ -264,11 +256,6 @@ function ItemRow({
                 </Badge>
               ))
             )}
-            {narrow ? (
-              <Badge variant="info" title="El primer y el segundo candidato quedaron muy cerca">
-                margen {gap!.toFixed(3)}
-              </Badge>
-            ) : null}
           </div>
         </td>
         <td className="whitespace-nowrap py-2 pr-3 text-right">
@@ -437,8 +424,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 <CardTitle>Umbrales de recuperación</CardTitle>
                 <InfoHint label="Qué controlan los umbrales">
                   Por debajo de la similitud mínima un ítem se queda sin candidatos y, por tanto,
-                  sin concepto. El margen relativo decide cuándo un candidato gana por poco y hay
-                  que verificarlo con el LLM.
+                  sin concepto. El número de candidatos es cuántos conceptos del grafo llegan al
+                  LLM para que decida entre ellos.
                 </InfoHint>
               </div>
             </CardHeader>
@@ -448,8 +435,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 <span className="tabular-nums">{listing?.thresholds.similarity ?? "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Margen relativo</span>
-                <span className="tabular-nums">{listing?.thresholds.relative_margin ?? "—"}</span>
+                <span className="text-muted-foreground">Candidatos por ítem</span>
+                <span className="tabular-nums">{listing?.thresholds.top_k ?? "—"}</span>
               </div>
             </CardContent>
           </Card>
