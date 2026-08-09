@@ -12,6 +12,7 @@ from ..prompts import (
     json_repair_prompt,
     repair_content_profile_prompt,
 )
+from ..utils import ensure_models
 from . import _source_docs
 
 
@@ -26,7 +27,7 @@ class ContentProfileBuilder:
 
     def __init__(
         self,
-        model: str = config.CONTENT_PROFILE_BUILDER_LLM,
+        model: str = config.CP_INFER_MODEL,
         verbose: bool = True,
     ):
         self.model = model
@@ -39,7 +40,12 @@ class ContentProfileBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
+    def bootstrap(self) -> None:
+        ensure_models([self.model, config.REPAIR_LLM], "content profile")
+
     def build(self, input_dir: str, output_file_path: str) -> dict:
+        self.bootstrap()
+
         files = _source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported files found in: {input_dir}")

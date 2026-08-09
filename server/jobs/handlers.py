@@ -48,7 +48,7 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     concepts = job.params.get("concepts")
     overwrite = bool(job.params.get("overwrite"))
     logger.info(
-        f"Escribiendo descripciones con '{config.CONCEPT_TAGGER_LLM}': "
+        f"Escribiendo descripciones con '{config.DESCRIPTION_GENERATION_LLM}': "
         + (
             f"{len(concepts)} concepto(s) seleccionado(s)"
             if concepts

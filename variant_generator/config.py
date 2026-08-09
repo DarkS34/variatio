@@ -29,43 +29,53 @@ INFERENCE_ENGINE = "ollama"
 
 _OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost:13434")
 OLLAMA_HOST = (
-    _OLLAMA_HOST
-    if _OLLAMA_HOST.startswith(("http://", "https://"))
-    else f"http://{_OLLAMA_HOST}"
+    _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 )
-
-
-# Models ----------------------------------------------
-CONTENT_PROFILE_BUILDER_LLM =   "qwen3.6:35b-a3b-q8_0"
-
-KG_BUILDER_EXTRACTION_MODEL =   "qwen3.6:35b-a3b-q8_0"
-KG_BUILDER_CURATION_MODEL =     "qwen3.6:35b-a3b-q8_0"
-
-CONTENT_FORMATTING_LLM =        "qwen3.6:35b-a3b-q8_0"
-DESCRIPTION_GENERATION_LLM =    "qwen3.6:35b-a3b-q8_0"
-
-EMBEDDING_LLM =                 "qwen3-embedding:4b"
-CONCEPT_TAGGER_LLM =            "qwen3.6:35b-a3b-q8_0"
-
-CONTENT_GENERATION_LLM =        "gemma4:31b-it-q4_K_M"
-
-REPAIR_LLM =                    "qwen3.6:35b-a3b-q8_0"
-
 
 
 # CP = Content Profile
 # EB = Exemplars Bank
 # KG = Knowledge Graph
 
+# Models ----------------------------------------------
+
+# Content profile builder
+CP_INFER_MODEL = "qwen3.6:35b-a3b-q8_0"
+
+# Exemplars bank builder
+EB_EXTRACT_MODEL = "qwen3.6:35b-a3b-q8_0"
+
+# Knowledge graph builder
+KG_EXTRACT_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_CLEAN_EMBEDDING_MODEL = "qwen3-embedding:4b"
+KG_CLEAN_MERGE_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_CLEAN_DROP_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_DOMAINS_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_DOMAINS_LEFTOVERS_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_LINK_DOMAIN_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_LINK_CROSS_DOMAIN_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_TAGGABLE_MODEL = "qwen3.6:35b-a3b-q8_0"
+
+# Runtime pipeline
+EMBEDDING_LLM = "qwen3-embedding:4b"
+DESCRIPTION_GENERATION_LLM = "qwen3.6:35b-a3b-q8_0"
+CONCEPT_TAGGER_LLM = "qwen3.6:35b-a3b-q8_0"
+CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
+
+REPAIR_LLM = "qwen3.6:35b-a3b-q8_0"
+
+EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
+
+
 # Builders ----------------------------------------------
-CP_SCHEMA_INFERENCE_BUDGET =   32_000
+CP_SCHEMA_INFERENCE_BUDGET = 32_000
 EB_CHUNK_SIZE = 12_000
 
-KG_BUILDER_CHUNK_SIZE =     12_000
+KG_BUILDER_CHUNK_SIZE = 12_000
 KG_MAX_EVIDENCE_RELATIONS = 6
-KG_BUILDER_PLURAL_SUFFIXES =            ("s",)
-KG_BUILDER_MERGE_QUALIFIER_PATTERN =    r"\s+en (python|java)\b"
-KG_BUILDER_UNCLASSIFIED_DOMAIN =        "Sin clasificar"
+KG_BUILDER_PLURAL_SUFFIXES = ("s",)
+KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
+KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
 
 KG_RELATION_SCHEMA = "es"
 RELATION_SCHEMA = BUILTIN_SCHEMAS[KG_RELATION_SCHEMA]
@@ -73,11 +83,8 @@ KG_PREREQUISITE_RELATION = RELATION_SCHEMA.prerequisite_verbose
 
 
 # Embedding & Retrieval ----------------------------------------------
-EMBEDDING_QUERY_PREFIX = (
-    "Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del "
-    "currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como "
-    "herramienta\nQuery: "
-)
+EMBEDDING_QUERY_PREFIX = "Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como herramienta\nQuery: "
+
 EMBEDDING_DOCUMENT_PREFIX = ""
 EMBEDDING_BATCH_SIZE = 16
 

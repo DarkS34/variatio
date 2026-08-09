@@ -20,7 +20,7 @@ from ..prompts import (
     review_taggable_concepts_prompt,
 )
 from ..relations import RelationSchema
-from ..utils import parse_with_repair
+from ..utils import ensure_models, parse_with_repair
 from . import _source_docs
 
 MIN_SINGULARIZE_LENGTH = 3
@@ -42,6 +42,19 @@ BUILD_PHASES = (
     ("taggable", "Revisando qué conceptos sirven como etiqueta", 20),
 )
 
+BUILD_MODELS = [
+    config.KG_EXTRACT_MODEL,
+    config.KG_CLEAN_EMBEDDING_MODEL,
+    config.KG_CLEAN_MERGE_MODEL,
+    config.KG_CLEAN_DROP_MODEL,
+    config.KG_DOMAINS_MODEL,
+    config.KG_DOMAINS_LEFTOVERS_MODEL,
+    config.KG_LINK_DOMAIN_MODEL,
+    config.KG_LINK_CROSS_DOMAIN_MODEL,
+    config.KG_TAGGABLE_MODEL,
+    config.REPAIR_LLM,
+]
+
 
 class KnowledgeGraphBuilder:
     def __init__(self, schema: RelationSchema | None = None, verbose: bool = True):
@@ -62,24 +75,7 @@ class KnowledgeGraphBuilder:
     # PUBLIC API ----------------------------------------------------------------------------------
 
     def bootstrap(self) -> None:
-        models = list(
-            dict.fromkeys(
-                (
-                    config.KG_BUILDER_EXTRACTION_MODEL,
-                    config.KG_BUILDER_CURATION_MODEL,
-                    config.REPAIR_LLM,
-                    config.EMBEDDING_LLM,
-                )
-            )
-        )
-        logger.info(f"Preparing knowledge graph model(s): {', '.join(models)}")
-        failed = [m for m in models if not inference.ensure_model(m)]
-        if failed:
-            raise RuntimeError(f"Failed to install model(s): {', '.join(failed)}")
-        for model in models:
-            progress.checkpoint()
-            inference.warmup(model, is_embedding=(model == config.EMBEDDING_LLM))
-        logger.success("Knowledge graph models ready")
+        ensure_models(BUILD_MODELS, "knowledge graph")
 
     def build(self, input_dir: str | Path) -> dict:
         self.bootstrap()
@@ -214,7 +210,7 @@ class KnowledgeGraphBuilder:
     ) -> tuple[list[str], list[list[str]]]:
         prompt = extract_typed_graph_prompt(chunk, self.schema, location)
         response = inference.generate(
-            model=config.KG_BUILDER_EXTRACTION_MODEL, prompt=prompt, think=False
+            model=config.KG_EXTRACT_MODEL, prompt=prompt, think=False
         ).response
         raw = self._parse_object(response, log_prefix)
         if raw is None:
@@ -407,7 +403,7 @@ class KnowledgeGraphBuilder:
                     self._groups_block(batch, relations, det_map)
                 )
                 response = inference.generate(
-                    model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+                    model=config.KG_CLEAN_MERGE_MODEL, prompt=prompt, think=True
                 ).response
                 raw = self._parse_object(response, f"[merge {idx}/{len(batches)}] ")
                 if raw is None:
@@ -472,7 +468,9 @@ class KnowledgeGraphBuilder:
             for start in range(0, len(names), config.EMBEDDING_BATCH_SIZE):
                 progress.checkpoint()
                 batch = names[start : start + config.EMBEDDING_BATCH_SIZE]
-                vectors.extend(inference.embed_batch(model=config.EMBEDDING_LLM, texts=batch))
+                vectors.extend(
+                    inference.embed_batch(model=config.KG_CLEAN_EMBEDDING_MODEL, texts=batch)
+                )
         except progress.Cancelled:
             raise
         except Exception as e:
@@ -541,7 +539,7 @@ class KnowledgeGraphBuilder:
                 # compilación` with it. The deliberation is what keeps this pass timid, and a
                 # concept dropped here is gone from the graph for good.
                 response = inference.generate(
-                    model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+                    model=config.KG_CLEAN_DROP_MODEL, prompt=prompt, think=True
                 ).response
                 raw = self._parse_object(response, f"[drop {idx}/{len(batches)}] ")
                 if raw is None:
@@ -630,7 +628,7 @@ class KnowledgeGraphBuilder:
     def _curate_domains(self, concepts: list[str], relations: list[list]) -> dict:
         prompt = curate_graph_domains_prompt(self._nodes_block(concepts, relations, {}))
         response = inference.generate(
-            model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+            model=config.KG_DOMAINS_MODEL, prompt=prompt, think=True
         ).response
         raw = self._parse_object(response, "[domains] ") or {}
         by_domain = self._reconcile_domains(concepts, raw.get("domains", {}) or {})
@@ -687,7 +685,7 @@ class KnowledgeGraphBuilder:
                 self._domains_block(placed), self._nodes_block(batch, relations, {})
             )
             response = inference.generate(
-                model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=False
+                model=config.KG_DOMAINS_LEFTOVERS_MODEL, prompt=prompt, think=False
             ).response
             raw = self._parse_object(response, f"[domains · leftovers {idx}/{len(batches)}] ") or {}
             for domain, members in (raw.get("domains") or {}).items():
@@ -744,7 +742,7 @@ class KnowledgeGraphBuilder:
             domain, self._nodes_block(members, relations, {}), self.schema
         )
         response = inference.generate(
-            model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+            model=config.KG_LINK_DOMAIN_MODEL, prompt=prompt, think=True
         ).response
         raw = self._parse_object(response, f"[link · {domain}] ")
         if raw is None:
@@ -758,7 +756,7 @@ class KnowledgeGraphBuilder:
             self._domains_block(concepts_by_domains), self.schema
         )
         response = inference.generate(
-            model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+            model=config.KG_LINK_CROSS_DOMAIN_MODEL, prompt=prompt, think=True
         ).response
         raw = self._parse_object(response, "[link · global] ")
         if raw is None:
@@ -840,7 +838,7 @@ class KnowledgeGraphBuilder:
             self._nodes_block(members, relations, {}),
         )
         response = inference.generate(
-            model=config.KG_BUILDER_CURATION_MODEL, prompt=prompt, think=True
+            model=config.KG_TAGGABLE_MODEL, prompt=prompt, think=True
         ).response
         raw = self._parse_object(response, f"[taggable · {domain}] ") or {}
         verdicts = raw.get("non_taggable") or {}

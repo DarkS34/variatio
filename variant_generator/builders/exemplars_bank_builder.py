@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from .. import config, inference, progress
 from ..content_profile import ContentProfile
 from ..prompts import format_content_prompt
-from ..utils import parse_with_repair
+from ..utils import ensure_models, parse_with_repair
 from . import _source_docs
 
 
@@ -42,9 +42,14 @@ class ExemplarsBankBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
+    def bootstrap(self) -> None:
+        ensure_models([config.EB_EXTRACT_MODEL, config.REPAIR_LLM], "exemplars bank")
+
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
     # llamador pueda usarlo sin releerlo (el loader ExemplarsBank sigue siendo la vía de carga).
     def build(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
+        self.bootstrap()
+
         files = _source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported files found in: {input_dir}")
@@ -125,7 +130,7 @@ class ExemplarsBankBuilder:
             field_guidance_block=self._extraction_guidance_block,
         )
         response = inference.generate(
-            model=config.CONTENT_FORMATTING_LLM, think=False, prompt=prompt
+            model=config.EB_EXTRACT_MODEL, think=False, prompt=prompt
         ).response
 
         items, err = parse_with_repair(

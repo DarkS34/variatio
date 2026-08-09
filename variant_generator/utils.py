@@ -12,14 +12,22 @@ def prepare_models() -> None:
     )
 
     logger.info(f"Initializing models on '{inference.engine_name()}' engine")
-    failed = [m for m in all_models if not inference.ensure_model(m)]
+    ensure_models(all_models, "runtime")
+
+
+def ensure_models(models: list[str], label: str) -> None:
+    unique = list(dict.fromkeys(models))
+    logger.info(f"Preparing {label} model(s): {', '.join(unique)}")
+
+    failed = [m for m in unique if not inference.ensure_model(m)]
     if failed:
         raise RuntimeError(f"Failed to install model(s): {', '.join(failed)}")
 
-    for m in all_models:
-        inference.warmup(m, is_embedding=(m == config.EMBEDDING_LLM))
+    for m in unique:
+        progress.checkpoint()
+        inference.warmup(m, is_embedding=(m in config.EMBEDDING_MODELS))
 
-    logger.success("All models loaded")
+    logger.success(f"{label} models ready")
 
 
 def parse_with_repair(
