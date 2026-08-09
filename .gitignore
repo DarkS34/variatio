@@ -8,3 +8,4 @@ instance/.runs/
 instance/.review_state.json
 web/node_modules
 web/dist
+*.md
