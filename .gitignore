@@ -2,5 +2,9 @@
 .vscode/
 __pycache__
 /raw*
+cache/markdown
+instance/.history/
+instance/.runs/
+instance/.review_state.json
 web/node_modules
 web/dist
