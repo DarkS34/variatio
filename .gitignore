@@ -1,10 +1,6 @@
 .venv
-__pycache__
 .vscode/
+__pycache__
 /raw*
-*.md
-instance/.history/
-instance/.runs/
-instance/.review_state.json
 web/node_modules
 web/dist
