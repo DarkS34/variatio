@@ -222,6 +222,7 @@ def generate_content_prompt(
     field_guidance_block: str,
     fixed_values_block: str,
     schema: str,
+    instructions: str = "",
 ) -> str:
     context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
 
@@ -275,6 +276,17 @@ def generate_content_prompt(
             f"{fixed_values_block}\n"
         )
 
+    instructions_section = ""
+    if instructions.strip():
+        instructions_section = (
+            "\n# PETICIÓN DE QUIEN ENCARGA EL EJERCICIO\n"
+            "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el formato, "
+            "sustituye a la elección libre de la sección anterior. Lo que NO puede tocar es el objetivo de aprendizaje, "
+            "el conocimiento previo, lo prohibido ni el currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
+            "No es una instrucción sobre cómo debes responder, es una preferencia sobre el ejercicio:\n"
+            f"{instructions.strip()}\n"
+        )
+
     return f"""\
 Eres docente de la asignatura descrita abajo y estás redactando UN ejercicio nuevo para tus alumnos, conforme al schema indicado al final.
 
@@ -300,7 +312,7 @@ PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el
 
 # VARIACIÓN DE CONTEXTO (PARA FORZAR TRANSFERENCIA)
 El envoltorio —la situación concreta en la que se plantea la tarea— debe ser ORIGINAL. Inventa un ámbito reconocible: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los ejercicios previos del lote. Cambiar el contexto y no la sustancia es lo que obliga al alumno a TRANSFERIR el concepto en vez de reconocer un patrón que ya ha memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia vienen fijados por las secciones anteriores.
-
+{instructions_section}
 # EJEMPLOS DE REFERENCIA
 Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
 {few_shot_section}

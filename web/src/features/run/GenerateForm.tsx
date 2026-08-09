@@ -1,0 +1,396 @@
+import { Ban, Check, Minus, Play, Plus, TriangleAlert } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+
+import { ConceptPicker } from "@/components/ConceptPicker";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/input";
+import { Alert, Spinner } from "@/components/ui/misc";
+import type { ContentProfile, GenerateParams, GraphView, KgConcept } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+import { DecisionField, describeDecision } from "./DecisionField";
+import { FormStep } from "./FormStep";
+import { adjacency, posteriors, priorClosure, priors } from "./prerequisites";
+
+const MAX_ITEMS = 20;
+/** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
+const MAX_INSTRUCTIONS = 600;
+
+export interface FormState {
+  n: number;
+  concepts: string[];
+  curriculum: string[];
+  decisions: Record<string, unknown>;
+  instructions: string;
+}
+
+export const EMPTY_FORM: FormState = {
+  n: 2,
+  concepts: [],
+  curriculum: [],
+  decisions: {},
+  instructions: "",
+};
+
+export function toParams(state: FormState): GenerateParams {
+  const params: GenerateParams = { n: state.n, concepts: state.concepts };
+  const fixed: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(state.decisions)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && !value.trim()) continue;
+    fixed[field] = value;
+  }
+  if (Object.keys(fixed).length > 0) params.fixed = fixed;
+  if (state.curriculum.length > 0) params.curriculum = state.curriculum;
+  if (state.instructions.trim()) params.instructions = state.instructions.trim();
+  return params;
+}
+
+export function summarize(state: FormState, profile: ContentProfile | null): string {
+  const parts = [`${state.n} ítem${state.n === 1 ? "" : "s"}`];
+  parts.push(state.concepts.join(" · ") || "sin conceptos");
+  for (const field of userDecidedFields(profile)) {
+    const value = state.decisions[field];
+    if (value !== undefined && value !== null && value !== "") parts.push(String(value));
+  }
+  if (state.curriculum.length > 0) parts.push(`currículo de ${state.curriculum.length}`);
+  if (state.instructions.trim()) parts.push("con instrucciones");
+  return parts.join(" · ");
+}
+
+function userDecidedFields(profile: ContentProfile | null): string[] {
+  if (!profile) return [];
+  return Object.entries(profile.fields)
+    .filter(([, spec]) => spec.decided_by === "user")
+    .map(([name]) => name);
+}
+
+// The two lists the graph derives are read as a contrast, not as prose: one is what the
+// item may lean on and the other what it may not name at all. Same shape, opposite tone.
+function ConceptTrack({
+  tone,
+  icon,
+  label,
+  concepts,
+}: {
+  tone: "given" | "forbidden";
+  icon: ReactNode;
+  label: string;
+  concepts: string[];
+}) {
+  if (concepts.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide",
+          tone === "given" ? "text-[var(--success)]" : "text-[var(--warning)]",
+        )}
+      >
+        {icon}
+        {label}
+      </span>
+      {concepts.map((name) => (
+        <span
+          key={name}
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-xs",
+            tone === "given"
+              ? "border-[color-mix(in_oklch,var(--success)_35%,transparent)] text-[var(--success)]"
+              : "border-[color-mix(in_oklch,var(--warning)_35%,transparent)] text-[var(--warning)] line-through decoration-[var(--warning)]/50",
+          )}
+        >
+          {name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Count({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+  // A stepper rather than a number box: emptying the box yields NaN, which compares
+  // false against every bound and used to travel all the way to the server as null.
+  const clamp = (next: number) => onChange(Math.min(MAX_ITEMS, Math.max(1, next)));
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-border p-1">
+      <Button variant="ghost" size="icon-sm" onClick={() => clamp(value - 1)} disabled={value <= 1}>
+        <Minus />
+      </Button>
+      <span className="w-8 text-center text-sm font-medium tabular-nums">{value}</span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => clamp(value + 1)}
+        disabled={value >= MAX_ITEMS}
+      >
+        <Plus />
+      </Button>
+    </div>
+  );
+}
+
+export function GenerateForm({
+  state,
+  onChange,
+  profile,
+  concepts,
+  graph,
+  disabled,
+  running,
+  pending,
+  error,
+  blockedInstructions,
+  onLaunch,
+  onCancel,
+}: {
+  state: FormState;
+  onChange: (next: FormState) => void;
+  profile: ContentProfile | null;
+  concepts: KgConcept[];
+  graph: GraphView | undefined;
+  disabled: boolean;
+  running: boolean;
+  pending: boolean;
+  error: string | null;
+  blockedInstructions: string | null;
+  onLaunch: () => void;
+  onCancel: () => void;
+}) {
+  const [open, setOpen] = useState<string | null>("concepts");
+  const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
+
+  const decided = userDecidedFields(profile);
+  const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
+  const chosen = state.concepts.length > 0;
+
+  const given = useMemo(
+    () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
+    [graphAdjacency, state.concepts, chosen],
+  );
+  const forbidden = useMemo(
+    () => (graphAdjacency && chosen ? posteriors(graphAdjacency, state.concepts) : []),
+    [graphAdjacency, state.concepts, chosen],
+  );
+
+  const zeroShot = useMemo(
+    () =>
+      state.concepts.filter(
+        (name) => (concepts.find((c) => c.name === name)?.exemplars ?? 0) === 0,
+      ),
+    [state.concepts, concepts],
+  );
+
+  // Same rules the generator enforces server-side; failing here is just faster.
+  const problems = useMemo(() => {
+    const found: string[] = [];
+    if (state.concepts.length === 0) found.push("Elige al menos un concepto objetivo.");
+    if (state.curriculum.length > 0) {
+      const inside = new Set(state.curriculum);
+      const outside = state.concepts.filter((c) => !inside.has(c));
+      if (outside.length > 0)
+        found.push(`Estos conceptos objetivo no están en el currículo: ${outside.join(", ")}.`);
+
+      // The graph carries every concept it extracted; only the taggable ones can be
+      // named in a curriculum. The picker filters them out and so does the closure, so
+      // this only fires if some other path ever puts one here.
+      const taggable = new Set(concepts.filter((c) => c.taggable).map((c) => c.name));
+      const unusable = state.curriculum.filter((c) => !taggable.has(c));
+      if (unusable.length > 0)
+        found.push(`Estos conceptos del currículo no son etiquetables: ${unusable.join(", ")}.`);
+    }
+    if (state.instructions.trim().length > MAX_INSTRUCTIONS)
+      found.push(`Las instrucciones no pueden pasar de ${MAX_INSTRUCTIONS} caracteres.`);
+    return found;
+  }, [state.concepts, state.curriculum, state.instructions, concepts]);
+
+  const step = (id: string) => ({
+    open: open === id,
+    onOpen: () => setOpen(open === id ? null : id),
+  });
+
+  const decisionSummary = decided
+    .map((field) => describeDecision(field, state.decisions[field]))
+    .join(" · ");
+
+  let index = 0;
+
+  return (
+    <div className={cn("space-y-1", disabled && "pointer-events-none opacity-50")}>
+      <FormStep
+        index={++index}
+        title="¿Qué debe practicar el alumno?"
+        hint="Lo que el ítem debe hacer practicar, no lo que menciona. Sale del grafo, y los ejemplos few-shot se eligen entre los ítems del banco etiquetados con estos conceptos."
+        answered={chosen}
+        summary={state.concepts.join(" · ") || "Ningún concepto elegido todavía"}
+        {...step("concepts")}
+      >
+        <ConceptPicker
+          concepts={concepts}
+          selected={state.concepts}
+          onChange={(next) => patch({ concepts: next })}
+          emptyHint="Elige los conceptos que deben practicarse"
+        />
+
+        {zeroShot.length > 0 ? (
+          <p className="flex items-start gap-1.5 text-xs text-[var(--warning)]">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            Sin ejemplos en el banco, se generarán en zero-shot: {zeroShot.join(", ")}.
+          </p>
+        ) : null}
+
+        {given.length > 0 || forbidden.length > 0 ? (
+          <div className="space-y-2 rounded-lg border border-dashed border-border p-2.5">
+            <p className="text-xs text-muted-foreground">Lo que el grafo le dirá al modelo:</p>
+            <ConceptTrack
+              tone="given"
+              icon={<Check className="size-3" />}
+              label="se da por sabido"
+              concepts={given}
+            />
+            <ConceptTrack
+              tone="forbidden"
+              icon={<Ban className="size-3" />}
+              label="todavía no impartido"
+              concepts={forbidden}
+            />
+          </div>
+        ) : null}
+      </FormStep>
+
+      {chosen && decided.length > 0 ? (
+        <FormStep
+          index={++index}
+          title={decided.length === 1 ? "¿Cómo debe ser?" : "¿Cómo deben ser?"}
+          hint="Lo que decides tú en vez del modelo. El perfil de contenido marca qué campos se preguntan aquí; «Cualquiera» se lo deja a él."
+          answered={decided.some((field) => state.decisions[field] !== undefined)}
+          summary={decisionSummary}
+          {...step("decisions")}
+        >
+          {decided.map((field) => (
+            <DecisionField
+              key={field}
+              name={field}
+              spec={profile!.fields[field]}
+              value={state.decisions[field]}
+              onChange={(next) => patch({ decisions: { ...state.decisions, [field]: next } })}
+            />
+          ))}
+        </FormStep>
+      ) : null}
+
+      {chosen ? (
+        <FormStep
+          index={++index}
+          title="¿Qué ha visto ya el alumno?"
+          hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista. Los conceptos objetivo deben estar dentro."
+          optional
+          answered={state.curriculum.length > 0}
+          summary={
+            state.curriculum.length > 0
+              ? `${state.curriculum.length} conceptos`
+              : "Sin restricción de currículo"
+          }
+          {...step("curriculum")}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {graphAdjacency ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  patch({ curriculum: priorClosure(graphAdjacency, state.concepts) })
+                }
+              >
+                Todo lo anterior en el grafo
+              </Button>
+            ) : null}
+            {state.curriculum.length > 0 ? (
+              <Button size="sm" variant="ghost" onClick={() => patch({ curriculum: [] })}>
+                Quitar la restricción
+              </Button>
+            ) : null}
+          </div>
+
+          <ConceptPicker
+            concepts={concepts}
+            selected={state.curriculum}
+            onChange={(next) => patch({ curriculum: next })}
+            emptyHint="Sin restricción: el modelo se guía solo por el grafo"
+            showExemplarCount={false}
+            maxHeight="12rem"
+          />
+        </FormStep>
+      ) : null}
+
+      {chosen ? (
+        <FormStep
+          index={++index}
+          title="Instrucciones adicionales"
+          hint="Una petición libre para este lote. Se atiende siempre que no contradiga el objetivo, el conocimiento previo ni el currículo. Antes de entrar en el prompt la revisa un modelo juez."
+          optional
+          answered={state.instructions.trim().length > 0}
+          summary={state.instructions.trim() || "Ninguna"}
+          {...step("instructions")}
+        >
+          <Textarea
+            value={state.instructions}
+            maxLength={MAX_INSTRUCTIONS}
+            placeholder="Por ejemplo: que el contexto sea deportivo, o que el enunciado incluya una tabla de datos"
+            onChange={(event) => patch({ instructions: event.target.value })}
+            className={cn("min-h-20 text-sm", blockedInstructions && "border-destructive")}
+          />
+          <div className="flex items-center gap-2">
+            <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+              {state.instructions.length}/{MAX_INSTRUCTIONS}
+            </span>
+          </div>
+
+          {blockedInstructions ? (
+            <Alert tone="danger" title="Instrucciones bloqueadas">
+              <p>{blockedInstructions}</p>
+            </Alert>
+          ) : null}
+        </FormStep>
+      ) : null}
+
+      {chosen ? (
+        <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium">¿Cuántos ítems?</span>
+            <Count value={state.n} onChange={(n) => patch({ n })} />
+            {state.n > 1 ? (
+              <Badge variant="outline">no repetirán temática entre sí</Badge>
+            ) : null}
+          </div>
+
+          {problems.length > 0 ? (
+            <ul className="space-y-1 text-xs text-destructive">
+              {problems.map((problem) => (
+                <li key={problem}>· {problem}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+
+          {running ? (
+            <Button variant="outline" className="w-full" onClick={onCancel}>
+              <Ban />
+              Cancelar generación
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              disabled={problems.length > 0 || pending || disabled}
+              onClick={onLaunch}
+            >
+              {pending ? <Spinner /> : <Play />}
+              Generar {state.n} ítem{state.n === 1 ? "" : "s"}
+            </Button>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}

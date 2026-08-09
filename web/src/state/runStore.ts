@@ -1,5 +1,5 @@
 import { describeEvent, type ActivityLine } from "@/lib/explain";
-import type { Job, VgEvent } from "@/lib/types";
+import type { FewShotExemplar, Job, VgEvent } from "@/lib/types";
 
 /**
  * One live view of what the system is doing, fed by a single WebSocket.
@@ -68,7 +68,9 @@ export interface RunView {
   items: ProducedItem[];
   repairs: { attempt: number; max_attempts: number; error: string; where: string }[];
   retrieval: { query: string; candidates: [string, number][] } | null;
-  fewShot: string[];
+  guardrail: { ok: boolean; criteria: string | null; checked: boolean } | null;
+  /** null until the run says which exemplars it picked; [] means it fell back to zero-shot. */
+  fewShot: FewShotExemplar[] | null;
   prompt: string | null;
   taggedCount: number;
   startedAt: number | null;
@@ -105,7 +107,8 @@ function emptyRun(jobId: string): RunView {
     items: [],
     repairs: [],
     retrieval: null,
-    fewShot: [],
+    guardrail: null,
+    fewShot: null,
     prompt: null,
     taggedCount: 0,
     startedAt: null,
@@ -372,8 +375,23 @@ class RunStore {
 
       case "retrieval":
         return { ...run, retrieval: { query: event.query, candidates: event.candidates ?? [] } };
+      case "guardrail":
+        return {
+          ...run,
+          guardrail: {
+            ok: Boolean(event.ok),
+            criteria: event.criteria ?? null,
+            checked: Boolean(event.checked),
+          },
+        };
+      // Older events carried only the ids; an id with no body still renders as a row.
       case "few_shot":
-        return { ...run, fewShot: event.ids ?? [] };
+        return {
+          ...run,
+          fewShot:
+            (event.items as FewShotExemplar[] | undefined) ??
+            ((event.ids ?? []) as string[]).map((id) => ({ id, item: {} })),
+        };
       // A new prompt is a new item: the panes start empty rather than appending the
       // next item's tokens to the previous one's.
       case "prompt":

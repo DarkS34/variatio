@@ -22,6 +22,8 @@ class ContentProfile:
         "null": type(None),
     }
     _GUIDANCE_KEYS: ClassVar[tuple] = ("extraction", "generation")
+    _DECIDED_BY_VALUES: ClassVar[tuple] = ("user", "model")
+    _UNDECIDABLE_TYPES: ClassVar[tuple] = ("array", "object")
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -81,18 +83,19 @@ class ContentProfile:
                 f"'primary_field' = '{raw['primary_field']}' is not declared in 'fields'"
             )
         for name, spec in raw["fields"].items():
-            cls._validate_field_spec(name, spec)
+            cls._validate_field_spec(name, spec, is_primary=name == raw["primary_field"])
 
     @classmethod
-    def _validate_field_spec(cls, name: str, spec: dict) -> None:
+    def _validate_field_spec(cls, name: str, spec: dict, is_primary: bool = False) -> None:
         if not isinstance(spec, dict):
             raise ValueError(f"Field '{name}' spec must be an object")
-        
+
         schema = spec.get("schema")
         if not isinstance(schema, dict) or not schema:
             raise ValueError(f"Field '{name}' must declare a non-empty 'schema' object")
         if "type" not in schema and "enum" not in schema:
             raise ValueError(f"Field '{name}' schema must declare 'type' or 'enum'")
+        cls._validate_decided_by(name, spec, schema, is_primary)
         guidance = spec.get("guidance")
         if guidance is not None:
             if not isinstance(guidance, dict):
@@ -102,6 +105,34 @@ class ContentProfile:
                 raise ValueError(
                     f"Field '{name}' 'guidance' has unknown keys: {sorted(unknown)} (allowed: {list(cls._GUIDANCE_KEYS)})"
                 )
+
+    @classmethod
+    def _validate_decided_by(cls, name: str, spec: dict, schema: dict, is_primary: bool) -> None:
+        decided_by = spec.get("decided_by")
+        if decided_by is None:
+            return
+        if decided_by not in cls._DECIDED_BY_VALUES:
+            raise ValueError(
+                f"Field '{name}' 'decided_by' must be one of {list(cls._DECIDED_BY_VALUES)}, got {decided_by!r}"
+            )
+        if decided_by != "user":
+            return
+        if is_primary:
+            raise ValueError(
+                f"Field '{name}' is the primary field: it carries the item itself, so it cannot be 'decided_by': 'user'"
+            )
+        if "enum" not in schema and schema.get("type") in cls._UNDECIDABLE_TYPES:
+            raise ValueError(
+                f"Field '{name}' is of type '{schema['type']}': there is no choice to offer, so it cannot be 'decided_by': 'user'"
+            )
+
+    @property
+    def user_decided_fields(self) -> list[str]:
+        return [
+            name
+            for name, spec in self.field_specs.items()
+            if spec.get("decided_by") == "user"
+        ]
 
     def stripped_schema(self) -> dict:
         schema = copy.deepcopy(self.content_item.model_json_schema())

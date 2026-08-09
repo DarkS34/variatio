@@ -67,7 +67,10 @@ export const STEP_EXPLAIN: Record<string, string> = {
     "Vectoriza de una tacada todos los enunciados por etiquetar, en lotes, para que el etiquetado no alterne entre el modelo de embeddings y el del tagger ítem a ítem.",
   tagging:
     "Por cada ítem: candidatos por similitud sobre los vectores ya calculados y, si hay más de uno plausible, una verificación del modelo.",
-  generate: "Un ítem por vuelta: ejemplos, prompt, generación en streaming y validación contra el esquema.",
+  guardrail:
+    "Un modelo juez lee las instrucciones adicionales antes de que entren en el prompt y decide si contienen algo dañino o un intento de saltarse las restricciones del ejercicio. Solo se ejecuta si has escrito algo.",
+  generate:
+    "Una variante por vuelta, con los mismos ejemplares en todas: prompt, generación en streaming y validación contra el esquema.",
   build_content_profile: "Infiere el esquema de un ítem a partir de los ejemplares en bruto.",
   build_knowledge_graph: "Construye el grafo desde el corpus: extracción, limpieza y curación.",
   build_exemplars_bank: "Extrae los ítems de los documentos y los valida contra el perfil.",
@@ -145,11 +148,22 @@ export function describeEvent(event: VgEvent): { text: string; tone: ActivityTon
         tone: "info",
       };
     }
-    case "few_shot":
+    case "guardrail":
+      if (!event.checked) {
+        return { text: "No se pudieron revisar las instrucciones; siguen adelante", tone: "warn" };
+      }
+      if (event.ok) return { text: "Instrucciones adicionales revisadas: correctas", tone: "good" };
+      return { text: `Instrucciones bloqueadas por «${event.criteria}»`, tone: "bad" };
+    case "few_shot": {
+      const used = (event.items ?? event.ids ?? []).length;
+      if (used === 0) {
+        return { text: "Sin ejemplares en el banco: se genera en zero-shot", tone: "warn" };
+      }
       return {
-        text: `${(event.ids ?? []).length} ejemplo(s) del banco usados como few-shot`,
+        text: `${used} ejemplar(es) del banco usados para el few-shot prompting`,
         tone: "info",
       };
+    }
     case "prompt":
       return {
         text: `Prompt enviado (${(event.text ?? "").length.toLocaleString("es-ES")} caracteres)`,
