@@ -61,6 +61,7 @@ EMBEDDING_LLM = "qwen3-embedding:4b"
 DESCRIPTION_GENERATION_LLM = "qwen3.6:35b-a3b-q8_0"
 CONCEPT_TAGGER_LLM = "qwen3.6:35b-a3b-q8_0"
 CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
+GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 
 REPAIR_LLM = "qwen3.6:35b-a3b-q8_0"
 
@@ -107,6 +108,9 @@ TAGGER_TOP_K_CANDIDATES = 10
 TAGGER_FALLBACK_TOP_K = 30
 MAX_FEW_SHOT_EXAMPLES = 4
 MAX_JSON_REPAIR_TRIES = 3
+
+GENERATION_INSTRUCTIONS_MAX_CHARS = 600
+GUARDRAIL_CRITERIA = ("harm", "jailbreak")
 
 
 # Logging ----------------------------------------------

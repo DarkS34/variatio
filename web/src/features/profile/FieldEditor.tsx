@@ -168,17 +168,28 @@ function Segmented({
   value,
   options,
   onChange,
+  disabled = false,
+  title,
 }: {
   value: string;
   options: { value: string; label: string }[];
   onChange: (next: string) => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
+    <div
+      title={title}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg bg-muted p-1",
+        disabled && "opacity-60",
+      )}
+    >
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
+          disabled={disabled}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
@@ -186,6 +197,7 @@ function Segmented({
             value === option.value
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
+            disabled && "cursor-not-allowed hover:text-muted-foreground",
           )}
         >
           {option.label}
@@ -282,6 +294,11 @@ export function FieldEditor({
   const Icon = META[type].icon;
   const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, name);
   const canBePrimary = type === "string";
+  // Mirrors ContentProfile._validate_decided_by: the primary field IS the item, and a
+  // list or a free object has no choice to put in front of whoever asks for the item.
+  const undecidable =
+    isPrimary || ((type === "array" || type === "object") && !Array.isArray(schema.enum));
+  const decidedBy = spec.decided_by ?? "model";
 
   const setSchema = (patch: Record<string, any>) =>
     onChange({ ...spec, schema: { ...schema, ...patch } });
@@ -448,6 +465,30 @@ export function FieldEditor({
                 options={[
                   { value: "required", label: "Obligatorio" },
                   { value: "optional", label: "Opcional" },
+                ]}
+              />
+            </Row>
+
+            <Row
+              label="Quién lo decide"
+              hint="«Quien genera» hace que la pantalla de generación pregunte por este campo antes de lanzar. «El modelo» lo deja fuera del formulario y lo redacta él."
+            >
+              <Segmented
+                value={decidedBy}
+                disabled={undecidable}
+                title={
+                  isPrimary
+                    ? "El campo primario es el ítem en sí: no es una preferencia que se elija antes de generar"
+                    : undecidable
+                      ? "Una lista o un objeto libre no admiten un control con el que elegir antes de generar"
+                      : undefined
+                }
+                onChange={(next) =>
+                  onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
+                }
+                options={[
+                  { value: "model", label: "El modelo" },
+                  { value: "user", label: "Quien genera" },
                 ]}
               />
             </Row>

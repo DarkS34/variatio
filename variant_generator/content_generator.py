@@ -5,7 +5,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import config, inference, progress
+from . import config, guardrail, inference, progress
 from .content_profile import ContentProfile
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
@@ -53,6 +53,10 @@ def json_objects(text: str) -> list[str]:
     return spans
 
 
+def _public_fields(item: dict) -> dict:
+    return {name: value for name, value in item.items() if not name.startswith("_")}
+
+
 class GeneratedContent(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -95,16 +99,24 @@ class ContentGenerator:
         n: int = 1,
         fixed: dict[str, object] | None = None,
         curriculum: list[str] | None = None,
+        instructions: str | None = None,
     ) -> list[GeneratedContent]:
         fixed = self._clean_fixed(fixed)
-        self._validate_input(concepts, fixed, n, curriculum)
+        instructions = (instructions or "").strip()
+        self._validate_input(concepts, fixed, n, curriculum, instructions)
+        self._screen_instructions(instructions)
 
         few_shot = self._select_few_shot(concepts, fixed)
         if not few_shot:
             logger.warning(
                 f"No few-shot examples found for concepts={concepts}, fixed={fixed} — falling back to zero-shot"
             )
-        progress.emit("few_shot", ids=[ex_id for ex_id, _ in few_shot], concepts=concepts)
+        progress.emit(
+            "few_shot",
+            ids=[ex_id for ex_id, _ in few_shot],
+            items=[{"id": ex_id, "item": _public_fields(item)} for ex_id, item in few_shot],
+            concepts=concepts,
+        )
 
         target_block = self._format_target_concepts(concepts)
         prerequisites_block = self._format_concept_list(self._prerequisites(concepts))
@@ -117,7 +129,7 @@ class ContentGenerator:
         fixed_values_block = self._build_fixed_values_block(fixed)
 
         accepted: list[GeneratedContent] = []
-        with progress.step("generate", "Generando ítems", total=n) as reporter:
+        with progress.step("generate", "Generando variantes", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
                 already = self._collect_already_generated(accepted)
@@ -134,6 +146,7 @@ class ContentGenerator:
                     field_guidance_block=field_guidance_block,
                     fixed_values_block=fixed_values_block,
                     schema=self.schema_str,
+                    instructions=instructions,
                 )
 
                 logger.info(f"[{i + 1}/{n}] generating item")
@@ -178,15 +191,36 @@ class ContentGenerator:
             logger.warning(f"Ignoring fixed fields with no value: {', '.join(dropped)}")
         return kept
 
+    # The instruction is free text from whoever asks for the item and it is concatenated
+    # into a prompt whose pedagogical constraints are the whole point, so it is judged
+    # before it gets there. Only when there is something to judge: no text, no model call.
+    @staticmethod
+    def _screen_instructions(instructions: str) -> None:
+        if not instructions:
+            return
+        # The raise stays inside the step so a block marks the step itself failed: a green
+        # tick on "reviewing" next to a failed job would read as if something else broke.
+        with progress.step("guardrail", "Revisando las instrucciones"):
+            verdict = guardrail.check(instructions)
+            if verdict.blocked:
+                raise ValueError(
+                    f"Las instrucciones adicionales no han pasado la revisión: el modelo juez ha detectado {verdict.reason}."
+                )
+
     def _validate_input(
         self,
         concepts: list[str],
         fixed: dict[str, object],
         n: int,
         curriculum: list[str] | None,
+        instructions: str = "",
     ) -> None:
         if n < 1:
             raise ValueError(f"n must be >= 1, got {n}")
+        if len(instructions) > config.GENERATION_INSTRUCTIONS_MAX_CHARS:
+            raise ValueError(
+                f"instructions must be at most {config.GENERATION_INSTRUCTIONS_MAX_CHARS} characters, got {len(instructions)}"
+            )
         if not concepts:
             raise ValueError("concepts must be a non-empty list")
         unknown_concepts = [c for c in concepts if c not in self.taggable_concepts]

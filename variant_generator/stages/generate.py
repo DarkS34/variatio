@@ -8,6 +8,7 @@ def generate(
     n: int = 1,
     fixed: dict[str, object] | None = None,
     curriculum: list[str] | None = None,
+    instructions: str | None = None,
 ) -> list[GeneratedContent]:
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
     if not targets:
@@ -15,7 +16,7 @@ def generate(
             "No target concepts: none were given and the exemplars bank has no tagged concepts"
         )
     return context.generator.generate(
-        concepts=targets, n=n, fixed=fixed, curriculum=curriculum
+        concepts=targets, n=n, fixed=fixed, curriculum=curriculum, instructions=instructions
     )
 
 

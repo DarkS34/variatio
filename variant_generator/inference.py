@@ -134,10 +134,20 @@ class OllamaEngine:
             return {}
         return {"think": think}
 
-    def generate(self, model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
+    def generate(
+        self,
+        model: str,
+        prompt: str,
+        think: bool | None = None,
+        system: str | None = None,
+    ) -> GenerationResponse:
+        system_option = {} if system is None else {"system": system}
         try:
             resp = self._client.generate(
-                model=model, prompt=prompt, **self._think_option(model, think)
+                model=model,
+                prompt=prompt,
+                **system_option,
+                **self._think_option(model, think),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
@@ -273,8 +283,10 @@ def engine_name() -> str:
     return config.INFERENCE_ENGINE
 
 
-def generate(model: str, prompt: str, think: bool | None = None) -> GenerationResponse:
-    return engine().generate(model=model, prompt=prompt, think=think)
+def generate(
+    model: str, prompt: str, think: bool | None = None, system: str | None = None
+) -> GenerationResponse:
+    return engine().generate(model=model, prompt=prompt, think=think, system=system)
 
 
 def generate_stream(

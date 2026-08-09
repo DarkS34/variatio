@@ -111,6 +111,8 @@ export interface FieldSpec {
   schema: Record<string, any>;
   description?: string;
   guidance?: { extraction?: string; generation?: string };
+  /** Who chooses the value. Absent means "model": only "user" fields are asked for. */
+  decided_by?: "user" | "model";
 }
 
 export interface ContentProfile {
@@ -118,6 +120,14 @@ export interface ContentProfile {
   general_generation_rules: string[];
   primary_field: string;
   fields: Record<string, FieldSpec>;
+}
+
+export interface GenerateParams {
+  n: number;
+  concepts: string[];
+  fixed?: Record<string, unknown>;
+  curriculum?: string[];
+  instructions?: string;
 }
 
 export interface ProfilePayload {
@@ -207,6 +217,12 @@ export interface BankItem {
   primary_concept?: string | null;
   _tagging?: TaggingTrace;
   [field: string]: unknown;
+}
+
+/** One exemplar exactly as it went into the few-shot block of the prompt. */
+export interface FewShotExemplar {
+  id: string;
+  item: Record<string, unknown>;
 }
 
 export interface BankListing {

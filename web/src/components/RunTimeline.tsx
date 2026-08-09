@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, CircleDashed, Loader2, X } from "lucide-react";
+import { Fragment, type ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/misc";
@@ -17,8 +18,34 @@ function Icon({ step }: { step: StepView }) {
   return <CircleDashed className="size-4 text-muted-foreground" />;
 }
 
-export function RunTimeline({ steps, className }: { steps: StepView[]; className?: string }) {
-  if (steps.length === 0) {
+function Insert({ children, last }: { children: ReactNode; last: boolean }) {
+  return (
+    <li className="flex gap-3 px-2 py-0.5">
+      <div className="flex w-4 shrink-0 justify-center">
+        {last ? null : <span className="w-px flex-1 bg-border" />}
+      </div>
+      <div className="min-w-0 flex-1 pb-1">{children}</div>
+    </li>
+  );
+}
+
+// Evidence a step consumed, shown where it was produced instead of in a pile below the
+// timeline: `slots[id]` is rendered just before the step with that id, and after the
+// last step while that step has not started yet.
+export function RunTimeline({
+  steps,
+  className,
+  slots,
+}: {
+  steps: StepView[];
+  className?: string;
+  slots?: Record<string, ReactNode>;
+}) {
+  const pending = Object.entries(slots ?? {}).filter(
+    ([id, node]) => node && !steps.some((step) => step.id === id),
+  );
+
+  if (steps.length === 0 && pending.length === 0) {
     return (
       <p className={cn("text-sm text-muted-foreground", className)}>Sin pasos todavía.</p>
     );
@@ -27,62 +54,73 @@ export function RunTimeline({ steps, className }: { steps: StepView[]; className
   return (
     <ol className={cn("space-y-1", className)}>
       {steps.map((step, index) => {
+        const slot = slots?.[step.id];
         const running = step.status === "running";
         const hasBar = running && Boolean(step.total);
         const explain = stepExplain(step.id);
         return (
-          <li
-            key={step.key}
-            className={cn(
-              "relative flex gap-3 rounded-md px-2 py-1.5 transition-colors",
-              running && "bg-accent/60",
-            )}
-          >
-            <div className="flex flex-col items-center">
-              <Icon step={step} />
-              {index < steps.length - 1 ? <span className="mt-1 w-px flex-1 bg-border" /> : null}
-            </div>
-
-            <div className="min-w-0 flex-1 pb-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "truncate text-sm",
-                      running ? "font-medium" : "text-muted-foreground",
-                      step.status === "failed" && "text-destructive",
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                  {explain ? <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint> : null}
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {step.total ? (
-                    <>
-                      {step.current ?? 0}/{step.total}
-                    </>
-                  ) : null}
-                  {step.ms !== undefined && !running ? (
-                    <span className="ml-2">{duration(step.ms)}</span>
-                  ) : null}
-                </span>
+          <Fragment key={step.key}>
+            {slot ? <Insert last={false}>{slot}</Insert> : null}
+            <li
+              className={cn(
+                "relative flex gap-3 rounded-md px-2 py-1.5 transition-colors",
+                running && "bg-accent/60",
+              )}
+            >
+              <div className="flex flex-col items-center">
+                <Icon step={step} />
+                {index < steps.length - 1 ? <span className="mt-1 w-px flex-1 bg-border" /> : null}
               </div>
 
-              {running && explain ? (
-                <p className="text-xs leading-relaxed text-muted-foreground">{explain}</p>
-              ) : null}
-              {step.detail ? (
-                <p className="truncate text-xs text-muted-foreground">{step.detail}</p>
-              ) : null}
-              {step.error ? <p className="text-xs text-destructive">{step.error}</p> : null}
-              {hasBar ? (
-                <Progress value={step.current ?? 0} max={step.total} className="mt-1.5" />
-              ) : null}
-            </div>
-          </li>
+              <div className="min-w-0 flex-1 pb-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "truncate text-sm",
+                        running ? "font-medium" : "text-muted-foreground",
+                        step.status === "failed" && "text-destructive",
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                    {explain ? (
+                      <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {step.total ? (
+                      <>
+                        {step.current ?? 0}/{step.total}
+                      </>
+                    ) : null}
+                    {step.ms !== undefined && !running ? (
+                      <span className="ml-2">{duration(step.ms)}</span>
+                    ) : null}
+                  </span>
+                </div>
+
+                {running && explain ? (
+                  <p className="text-xs leading-relaxed text-muted-foreground">{explain}</p>
+                ) : null}
+                {step.detail ? (
+                  <p className="truncate text-xs text-muted-foreground">{step.detail}</p>
+                ) : null}
+                {step.error ? <p className="text-xs text-destructive">{step.error}</p> : null}
+                {hasBar ? (
+                  <Progress value={step.current ?? 0} max={step.total} className="mt-1.5" />
+                ) : null}
+              </div>
+            </li>
+          </Fragment>
         );
       })}
+
+      {pending.map(([id, node]) => (
+        <Insert key={id} last>
+          {node}
+        </Insert>
+      ))}
     </ol>
   );
 }

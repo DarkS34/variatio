@@ -107,6 +107,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     concepts = params.get("concepts") or None
     fixed = params.get("fixed") or None
     curriculum = params.get("curriculum") or None
+    instructions = params.get("instructions") or None
 
     logger.info(
         f"Generando {n} ítem(s) con '{config.CONTENT_GENERATION_LLM}' sobre "
@@ -118,8 +119,17 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         logger.info(
             f"Currículo activo con {len(curriculum)} concepto(s): el ítem no podrá exigir nada fuera de ahí"
         )
+    if instructions:
+        logger.info(f"Instrucciones adicionales: «{instructions}»")
 
-    results = stages.generate(context, concepts=concepts, n=n, fixed=fixed, curriculum=curriculum)
+    results = stages.generate(
+        context,
+        concepts=concepts,
+        n=n,
+        fixed=fixed,
+        curriculum=curriculum,
+        instructions=instructions,
+    )
     if len(results) < n:
         logger.warning(
             f"Se pidieron {n} ítem(s) y se validaron {len(results)}: el resto no pasó el esquema"

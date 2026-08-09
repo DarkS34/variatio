@@ -69,18 +69,6 @@ export function TechnicalDetails({ run }: { run: RunView }) {
         </Section>
       ) : null}
 
-      {run.fewShot.length > 0 ? (
-        <Section title="Ejemplos few-shot usados" count={run.fewShot.length}>
-          <div className="flex flex-wrap gap-1">
-            {run.fewShot.map((id) => (
-              <Badge key={id} variant="secondary">
-                {id}
-              </Badge>
-            ))}
-          </div>
-        </Section>
-      ) : null}
-
       {run.repairs.length > 0 ? (
         <Section title="Reparaciones de JSON" count={run.repairs.length}>
           <ul className="space-y-1.5">

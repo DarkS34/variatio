@@ -46,6 +46,11 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
         metavar="CONCEPT",
         help="restrict generation to this concept set",
     )
+    parser.add_argument(
+        "--instructions",
+        metavar="TEXT",
+        help="free-text request for this batch (screened by the guardrail model before use)",
+    )
 
 
 def _parse_fixed(pairs: list[str]) -> dict[str, object]:
@@ -77,6 +82,7 @@ def _generate_and_report(args: argparse.Namespace) -> None:
         n=args.n,
         fixed=_parse_fixed(args.fixed),
         curriculum=args.curriculum,
+        instructions=args.instructions,
     )
     _report(results)
 

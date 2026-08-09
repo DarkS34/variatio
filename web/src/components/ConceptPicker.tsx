@@ -1,9 +1,10 @@
-import { Check, Search, X } from "lucide-react";
+import { ChevronRight, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +14,27 @@ import { cn } from "@/lib/utils";
  * It is fed exclusively from the knowledge graph and has no free-text input, so a
  * concept that is not in the graph cannot be invented by hand either — the same rule
  * the tagger enforces on the LLM's output.
+ *
+ * Concepts are drawn as chips inside collapsible domains rather than one row each: a
+ * curriculum is a couple of hundred names, and a flat list of them says nothing about
+ * how they are grouped or how much of a domain is already chosen. The domain dot uses
+ * the same palette as the graph viewer, so a domain is the same colour on both screens.
  */
+
+const MAX_VISIBLE_CHIPS = 14;
+
+/** Reproduces `server/kg_view.build`'s group order (-size, name), which fixes the colours. */
+function domainColours(concepts: KgConcept[]): Map<string, string> {
+  const sizes = new Map<string, number>();
+  for (const concept of concepts) {
+    sizes.set(concept.domain, (sizes.get(concept.domain) ?? 0) + 1);
+  }
+  const ordered = [...sizes.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"),
+  );
+  return new Map(ordered.map(([name], index) => [name, domainColour(index, ordered.length)]));
+}
+
 export function ConceptPicker({
   concepts,
   selected,
@@ -34,6 +55,17 @@ export function ConceptPicker({
   maxHeight?: string;
 }) {
   const [query, setQuery] = useState("");
+  const [override, setOverride] = useState<Record<string, boolean>>({});
+  const [showAllSelected, setShowAllSelected] = useState(false);
+
+  const colours = useMemo(() => domainColours(concepts), [concepts]);
+  const domainOf = useMemo(
+    () => new Map(concepts.map((concept) => [concept.name, concept.domain])),
+    [concepts],
+  );
+  const chosen = useMemo(() => new Set(selected), [selected]);
+  const searching = query.trim().length > 0;
+  const visible = showAllSelected ? selected : selected.slice(0, MAX_VISIBLE_CHIPS);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -50,11 +82,11 @@ export function ConceptPicker({
       bucket.push(concept);
       byDomain.set(concept.domain, bucket);
     }
-    return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
   }, [concepts, query]);
 
   const toggle = (name: string) => {
-    if (selected.includes(name)) {
+    if (chosen.has(name)) {
       const next = selected.filter((c) => c !== name);
       onChange(next);
       if (primary === name) onPrimaryChange?.(next[0] ?? null);
@@ -64,19 +96,44 @@ export function ConceptPicker({
     }
   };
 
+  const toggleDomain = (items: KgConcept[], allChosen: boolean) => {
+    const names = items.map((concept) => concept.name);
+    if (allChosen) {
+      const next = selected.filter((c) => !names.includes(c));
+      onChange(next);
+      if (primary && names.includes(primary)) onPrimaryChange?.(next[0] ?? null);
+    } else {
+      const next = [...selected, ...names.filter((name) => !chosen.has(name))];
+      onChange(next);
+      if (!primary) onPrimaryChange?.(next[0] ?? null);
+    }
+  };
+
+  const setAll = (open: boolean) =>
+    setOverride(Object.fromEntries(grouped.map(([domain]) => [domain, open])));
+
+  const anyOpen = grouped.some(
+    ([domain, items]) =>
+      override[domain] ?? (searching || items.some((concept) => chosen.has(concept.name))),
+  );
+
   return (
     <div className="space-y-2">
       <div className="flex min-h-8 flex-wrap items-center gap-1.5">
         {selected.length === 0 ? (
           <span className="text-sm text-muted-foreground">{emptyHint}</span>
         ) : (
-          selected.map((name) => (
+          visible.map((name) => (
             <Badge
               key={name}
               variant={primary === name ? "default" : "secondary"}
               className="pr-1"
               title={primary === name ? "Concepto principal" : undefined}
             >
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ background: colours.get(domainOf.get(name) ?? "") }}
+              />
               {onPrimaryChange ? (
                 <button
                   type="button"
@@ -100,6 +157,11 @@ export function ConceptPicker({
             </Badge>
           ))
         )}
+        {selected.length > MAX_VISIBLE_CHIPS ? (
+          <Button variant="ghost" size="sm" onClick={() => setShowAllSelected((v) => !v)}>
+            {showAllSelected ? "Ver menos" : `+${selected.length - MAX_VISIBLE_CHIPS} más`}
+          </Button>
+        ) : null}
         {selected.length > 1 ? (
           <Button variant="ghost" size="sm" onClick={() => onChange([])}>
             Limpiar
@@ -107,14 +169,21 @@ export function ConceptPicker({
         ) : null}
       </div>
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar concepto o dominio…"
-          className="pl-8"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar concepto o dominio…"
+            className="pl-8"
+          />
+        </div>
+        {grouped.length > 1 ? (
+          <Button variant="ghost" size="sm" onClick={() => setAll(!anyOpen)}>
+            {anyOpen ? "Plegar todo" : "Desplegar todo"}
+          </Button>
+        ) : null}
       </div>
 
       <div
@@ -124,52 +193,109 @@ export function ConceptPicker({
         {grouped.length === 0 ? (
           <p className="p-4 text-center text-sm text-muted-foreground">Sin resultados</p>
         ) : (
-          grouped.map(([domain, items]) => (
-            <div key={domain}>
-              <div className="sticky top-0 z-10 border-b border-border bg-muted/80 px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
-                {domain}
-              </div>
-              {items.map((concept) => {
-                const isSelected = selected.includes(concept.name);
-                return (
+          grouped.map(([domain, items]) => {
+            const picked = items.filter((concept) => chosen.has(concept.name)).length;
+            const open = override[domain] ?? (searching || picked > 0);
+            const colour = colours.get(domain);
+            return (
+              <div key={domain} className="border-b border-border last:border-b-0">
+                <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted/85 px-2 py-1.5 backdrop-blur">
                   <button
-                    key={concept.name}
                     type="button"
-                    onClick={() => toggle(concept.name)}
+                    onClick={() =>
+                      setOverride((current) => ({ ...current, [domain]: !open }))
+                    }
+                    aria-expanded={open}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                  >
+                    <ChevronRight
+                      className={cn(
+                        "size-3.5 shrink-0 text-muted-foreground transition-transform",
+                        open && "rotate-90",
+                      )}
+                    />
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: colour }}
+                    />
+                    <span className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {domain}
+                    </span>
+                  </button>
+
+                  <span
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent",
-                      isSelected && "bg-primary/10",
+                      "shrink-0 text-[11px] tabular-nums",
+                      picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded border",
-                        isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input",
-                      )}
-                    >
-                      {isSelected ? <Check className="size-3" /> : null}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{concept.name}</span>
-                    {showExemplarCount ? (
-                      <span
-                        className={cn(
-                          "shrink-0 text-xs tabular-nums",
-                          concept.exemplars === 0 ? "text-[var(--warning)]" : "text-muted-foreground",
-                        )}
-                        title={
-                          concept.exemplars === 0
-                            ? "Sin ejemplos en el banco: se generará en zero-shot"
-                            : `${concept.exemplars} ejemplo(s) en el banco`
-                        }
-                      >
-                        {concept.exemplars}
-                      </span>
-                    ) : null}
+                    {picked}/{items.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleDomain(items, picked === items.length)}
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    {picked === items.length ? "ninguno" : "todos"}
                   </button>
-                );
-              })}
-            </div>
-          ))
+                </div>
+
+                {open ? (
+                  <div className="flex flex-wrap gap-1.5 p-2">
+                    {items.map((concept) => {
+                      const isSelected = chosen.has(concept.name);
+                      const zeroShot = showExemplarCount && concept.exemplars === 0;
+                      return (
+                        <button
+                          key={concept.name}
+                          type="button"
+                          onClick={() => toggle(concept.name)}
+                          title={
+                            showExemplarCount
+                              ? zeroShot
+                                ? "Sin ejemplos en el banco: se generará en zero-shot"
+                                : `${concept.exemplars} ejemplo(s) en el banco`
+                              : undefined
+                          }
+                          className={cn(
+                            "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-accent",
+                          )}
+                        >
+                          <span className="truncate">{concept.name}</span>
+                          {showExemplarCount ? (
+                            zeroShot ? (
+                              <span
+                                className={cn(
+                                  "size-1.5 shrink-0 rounded-full",
+                                  isSelected
+                                    ? "bg-primary-foreground/70"
+                                    : "bg-[var(--warning)]",
+                                )}
+                              />
+                            ) : (
+                              <span
+                                className={cn(
+                                  "shrink-0 tabular-nums",
+                                  isSelected
+                                    ? "text-primary-foreground/70"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                {concept.exemplars}
+                              </span>
+                            )
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
