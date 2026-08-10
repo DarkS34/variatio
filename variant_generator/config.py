@@ -44,9 +44,10 @@ OLLAMA_HOST = (
 LLM_HEAVY = "qwen3.6:35b-a3b-q8_0"
 LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
 LLM_SMALL = "granite4.1:3b"
+GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 
 # Content profile builder
-CP_INFER_MODEL = LLM_HEAVY
+CP_INFER_MODEL = LLM_MEDIUM
 
 # Exemplars bank builder
 EB_EXTRACT_MODEL = LLM_HEAVY
@@ -67,7 +68,7 @@ EMBEDDING_LLM = "qwen3-embedding:4b"
 DESCRIPTION_GENERATION_LLM = LLM_MEDIUM
 CONCEPT_TAGGER_LLM = LLM_MEDIUM
 CONTENT_GENERATION_LLM = LLM_MEDIUM
-GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
+
 
 REPAIR_LLM = LLM_SMALL
 
