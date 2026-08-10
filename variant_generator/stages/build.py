@@ -69,9 +69,9 @@ _PHASES = {
 def build_artifact(artifact: str) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
-    with progress.step(f"build_{artifact}", f"Construyendo: {_LABELS[artifact]}"):
-        with progress.overall(_PHASES[artifact]):
-            return _BUILDERS[artifact]()
+    
+    with progress.step(f"build_{artifact}", f"Construyendo: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
+        return _BUILDERS[artifact]()
 
 
 def build_missing() -> list[str]:

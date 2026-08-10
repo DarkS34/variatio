@@ -17,9 +17,12 @@ dependencies = [
 
 # Authoring-only. Docling drags ~540 MB (torch, transformers, docling-parse) that the
 # runtime pipeline never touches; it is imported lazily in builders/_source_docs.py.
+
 [project.optional-dependencies]
 builders = ["docling>=2.0.0"]
+
 # The web UI's backend. Kept out of the runtime so the CLI stays a plain library.
+
 server = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -29,6 +32,7 @@ server = [
 
 # uv has no `default-extras`, so the extras are repeated here to keep a plain
 # `uv sync` able to run the builders and the server locally.
+
 [dependency-groups]
 dev = [
     "docling>=2.0.0",
