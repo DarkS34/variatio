@@ -23,6 +23,11 @@ import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE_CHIPS = 14;
 
+/** Same rule `ContentGenerator._select_few_shot` applies: any tag counts, not just the primary. */
+export function hasExemplars(concept: KgConcept): boolean {
+  return concept.exemplars > 0;
+}
+
 /** Reproduces `server/kg_view.build`'s group order (-size, name), which fixes the colours. */
 function domainColours(concepts: KgConcept[]): Map<string, string> {
   const sizes = new Map<string, number>();
@@ -43,6 +48,7 @@ export function ConceptPicker({
   onPrimaryChange,
   emptyHint = "Ningún concepto seleccionado",
   showExemplarCount = true,
+  onlyWithExemplars = false,
   maxHeight = "18rem",
 }: {
   concepts: KgConcept[];
@@ -52,6 +58,7 @@ export function ConceptPicker({
   onPrimaryChange?: (next: string | null) => void;
   emptyHint?: string;
   showExemplarCount?: boolean;
+  onlyWithExemplars?: boolean;
   maxHeight?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -72,6 +79,9 @@ export function ConceptPicker({
     const matching = concepts.filter(
       (concept) =>
         concept.taggable &&
+        // Something already chosen stays visible even when it does not pass the filter,
+        // or it would vanish from the list while still counting as selected.
+        (!onlyWithExemplars || hasExemplars(concept) || chosen.has(concept.name)) &&
         (!needle ||
           concept.name.toLowerCase().includes(needle) ||
           concept.domain.toLowerCase().includes(needle)),
@@ -83,7 +93,7 @@ export function ConceptPicker({
       byDomain.set(concept.domain, bucket);
     }
     return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
-  }, [concepts, query]);
+  }, [concepts, query, onlyWithExemplars, chosen]);
 
   const toggle = (name: string) => {
     if (chosen.has(name)) {

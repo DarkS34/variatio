@@ -134,6 +134,14 @@ class OllamaEngine:
             return {}
         return {"think": think}
 
+    # Left to itself Ollama allocates the KV cache for the model's declared context,
+    # which is where most of this box's VRAM was going. `config.LLM_CONTEXT` is the
+    # single place that decides it, so no call site has to know.
+    @staticmethod
+    def _context_option(model: str) -> dict:
+        num_ctx = config.LLM_CONTEXT.get(model)
+        return {} if num_ctx is None else {"options": {"num_ctx": num_ctx}}
+
     def generate(
         self,
         model: str,
@@ -148,6 +156,7 @@ class OllamaEngine:
                 prompt=prompt,
                 **system_option,
                 **self._think_option(model, think),
+                **self._context_option(model),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
@@ -174,7 +183,11 @@ class OllamaEngine:
 
         try:
             for chunk in self._client.generate(
-                model=model, prompt=prompt, stream=True, **self._think_option(model, think)
+                model=model,
+                prompt=prompt,
+                stream=True,
+                **self._think_option(model, think),
+                **self._context_option(model),
             ):
                 thought = getattr(chunk, "thinking", None)
                 if thought:
@@ -206,7 +219,9 @@ class OllamaEngine:
 
     def embed(self, model: str, text: str) -> list[float]:
         try:
-            return self._client.embeddings(model=model, prompt=text)["embedding"]
+            return self._client.embeddings(
+                model=model, prompt=text, **self._context_option(model)
+            )["embedding"]
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama embedding failed for model '{model}': {e}") from e
 
@@ -214,7 +229,11 @@ class OllamaEngine:
         if not texts:
             return []
         try:
-            return list(self._client.embed(model=model, input=texts)["embeddings"])
+            return list(
+                self._client.embed(model=model, input=texts, **self._context_option(model))[
+                    "embeddings"
+                ]
+            )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(
                 f"Ollama batch embedding failed for model '{model}': {e}"

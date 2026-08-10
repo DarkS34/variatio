@@ -155,6 +155,24 @@ def _restore_fences(text: str, fences: list[str]) -> str:
     return FENCE_TOKEN_RE.sub(lambda m: fences[int(m.group(1))], text)
 
 
+def headings_by_level(text: str) -> dict[int, list[str]]:
+    masked, _ = _mask_fences(text)
+    levels: dict[int, list[str]] = {}
+    seen: dict[int, set[str]] = {}
+    for line in masked.splitlines():
+        heading = HEADING_RE.match(line)
+        if not heading:
+            continue
+        level = len(heading.group(1))
+        title = " ".join(heading.group(2).split())
+        key = title.casefold()
+        if key in seen.setdefault(level, set()):
+            continue
+        seen[level].add(key)
+        levels.setdefault(level, []).append(title)
+    return levels
+
+
 def split_blocks(text: str) -> list[str]:
     masked, fences = _mask_fences(text)
     pieces = (

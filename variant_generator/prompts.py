@@ -719,16 +719,39 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-def curate_graph_domains_prompt(nodes_block: str) -> str:
+def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> str:
+    sources_block = ""
+    sources_rule = ""
+    if documents_block:
+        sources_block = (
+            "\n# THE DOCUMENTS THE CORPUS IS MADE OF\n"
+            f"{documents_block}\n"
+            "Each document is listed under a code with the title it gives itself; titles that "
+            "nearly every document repeats (the course header, standing section names) have "
+            "already been removed, so what is left is what tells one document apart from "
+            "another. Each concept below carries, in parentheses after its relations, the "
+            "codes of the documents it was extracted from.\n"
+        )
+        sources_rule = (
+            "\n- START FROM THE DOCUMENT TITLES: teaching material is already organised by "
+            "topic, so a title that names a thematic block is a valid domain name, and the "
+            "concepts extracted from that document are its natural members. They are a "
+            "STARTING POINT, not a constraint: merge several documents into one domain, split "
+            "a document that covers several blocks, rewrite a title that describes a document "
+            "rather than a theme, and ignore any title that names no theme at all. A concept "
+            "that appears in many documents is a cross-cutting one — place it by its meaning, "
+            "not by its first document."
+        )
+
     return f"""\
 You are given the already cleaned CONCEPTS of a knowledge graph, each with its outgoing relations as evidence. They come from a single corpus of teaching material on one subject.
 
 Your task: group ALL the concepts into coherent thematic DOMAINS.
-
+{sources_block}
 # DOMAINS
 - A domain is a thematic block of the subject (in the style of the main topics or units of a syllabus), not a fine-grained tag.
 - Propose FEW domains (as a guideline, between 3 and 8), each with a reasonable mass of concepts.
-- Use the relation evidence: a concept that many others point to, or that aggregates many parts, usually NAMES a domain or sits close to one.
+- Use the relation evidence: a concept that many others point to, or that aggregates many parts, usually NAMES a domain or sits close to one.{sources_rule}
 - COMPLETE AND MANDATORY PARTITION: the output must contain EACH AND EVERY concept of the input, exactly once. Go through them one by one and place them all; do not skip any out of haste or doubt, and do not repeat any in two domains.
 - NO CATCH-ALL: if a concept does not fit clearly, assign it to the MOST RELATED domain according to its theme or its relations. It is FORBIDDEN to leave a concept without a domain, and FORBIDDEN to create a generic dumping-ground domain such as "Other", "Various", "Miscellaneous" or "Unclassified".
 
