@@ -1,11 +1,11 @@
 import { Ban, Check, Minus, Play, Plus, TriangleAlert } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { ConceptPicker } from "@/components/ConceptPicker";
+import { ConceptPicker, hasExemplars } from "@/components/ConceptPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { Alert, Spinner } from "@/components/ui/misc";
+import { Alert, Spinner, Switch } from "@/components/ui/misc";
 import type { ContentProfile, GenerateParams, GraphView, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +158,7 @@ export function GenerateForm({
   onCancel: () => void;
 }) {
   const [open, setOpen] = useState<string | null>("concepts");
+  const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
   const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
 
   const decided = userDecidedFields(profile);
@@ -173,13 +174,34 @@ export function GenerateForm({
     [graphAdjacency, state.concepts, chosen],
   );
 
-  const zeroShot = useMemo(
-    () =>
-      state.concepts.filter(
-        (name) => (concepts.find((c) => c.name === name)?.exemplars ?? 0) === 0,
-      ),
-    [state.concepts, concepts],
+  const byName = useMemo(
+    () => new Map(concepts.map((concept) => [concept.name, concept])),
+    [concepts],
   );
+
+  const zeroShot = useMemo(
+    () => state.concepts.filter((name) => !byName.has(name) || !hasExemplars(byName.get(name)!)),
+    [state.concepts, byName],
+  );
+
+  // The bank is searched with the whole set at once, so one concept with exemplars is
+  // enough to keep the batch out of zero-shot: the warning is about the empty set, not
+  // about each name that happens to have none.
+  const wholeBatchZeroShot = chosen && zeroShot.length === state.concepts.length;
+
+  const withoutExemplars = useMemo(
+    () => concepts.filter((concept) => concept.taggable && !hasExemplars(concept)).length,
+    [concepts],
+  );
+  // Anything already chosen stays on screen, so it is not part of what the filter hides.
+  const hidden = withoutExemplars - zeroShot.length;
+
+  const applyFilter = (next: boolean) => {
+    setOnlyWithExemplars(next);
+    if (next && zeroShot.length > 0) {
+      patch({ concepts: state.concepts.filter((name) => !zeroShot.includes(name)) });
+    }
+  };
 
   // Same rules the generator enforces server-side; failing here is just faster.
   const problems = useMemo(() => {
@@ -225,17 +247,48 @@ export function GenerateForm({
         summary={state.concepts.join(" · ") || "Ningún concepto elegido todavía"}
         {...step("concepts")}
       >
+        {withoutExemplars > 0 ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+            <Switch
+              checked={onlyWithExemplars}
+              onCheckedChange={applyFilter}
+              label="Solo conceptos con ejemplares en el banco"
+            />
+            <span className="text-xs font-medium">Solo conceptos con ejemplares en el banco</span>
+            <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+              {onlyWithExemplars
+                ? `${hidden} oculto${hidden === 1 ? "" : "s"} sin ejemplares`
+                : `${withoutExemplars} sin ningún ejemplar a la vista`}
+            </span>
+          </div>
+        ) : null}
+
         <ConceptPicker
           concepts={concepts}
           selected={state.concepts}
           onChange={(next) => patch({ concepts: next })}
+          onlyWithExemplars={onlyWithExemplars}
           emptyHint="Elige los conceptos que deben practicarse"
         />
 
-        {zeroShot.length > 0 ? (
+        {!onlyWithExemplars && withoutExemplars > 0 ? (
           <p className="flex items-start gap-1.5 text-xs text-[var(--warning)]">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-            Sin ejemplos en el banco, se generarán en zero-shot: {zeroShot.join(", ")}.
+            Con el filtro apagado puedes elegir conceptos sin ningún ítem en el banco. Si
+            ninguno de los elegidos tiene ejemplares, la generación será zero-shot y la
+            calidad del resultado puede empeorar.
+          </p>
+        ) : null}
+
+        {wholeBatchZeroShot ? (
+          <p className="flex items-start gap-1.5 text-xs text-[var(--warning)]">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            Ningún concepto elegido tiene ejemplares en el banco: se generará en zero-shot.
+          </p>
+        ) : zeroShot.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Sin ejemplares propios, pero el lote sí tendrá ejemplos de los demás conceptos:{" "}
+            {zeroShot.join(", ")}.
           </p>
         ) : null}
 

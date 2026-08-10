@@ -39,33 +39,51 @@ OLLAMA_HOST = (
 
 # Models ----------------------------------------------
 
+# Tiers. These names must NOT end in `_LLM`: `utils.prepare_models()` warms every
+# `*_LLM` it finds here, and a generation run must not pay for a build's models.
+LLM_HEAVY = "qwen3.6:35b-a3b-q8_0"
+LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
+LLM_SMALL = "granite4.1:3b"
+
 # Content profile builder
-CP_INFER_MODEL = "qwen3.6:35b-a3b-q8_0"
+CP_INFER_MODEL = LLM_HEAVY
 
 # Exemplars bank builder
-EB_EXTRACT_MODEL = "qwen3.6:35b-a3b-q8_0"
+EB_EXTRACT_MODEL = LLM_HEAVY
 
 # Knowledge graph builder
-KG_EXTRACT_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_EXTRACT_MODEL = LLM_HEAVY
 KG_CLEAN_EMBEDDING_MODEL = "qwen3-embedding:4b"
-KG_CLEAN_MERGE_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_CLEAN_DROP_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_DOMAINS_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_DOMAINS_LEFTOVERS_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_LINK_DOMAIN_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_LINK_CROSS_DOMAIN_MODEL = "qwen3.6:35b-a3b-q8_0"
-KG_TAGGABLE_MODEL = "qwen3.6:35b-a3b-q8_0"
+KG_CLEAN_MERGE_MODEL = LLM_HEAVY
+KG_CLEAN_DROP_MODEL = LLM_HEAVY
+KG_DOMAINS_MODEL = LLM_MEDIUM
+KG_DOMAINS_LEFTOVERS_MODEL = LLM_SMALL
+KG_LINK_DOMAIN_MODEL = LLM_MEDIUM
+KG_LINK_CROSS_DOMAIN_MODEL = LLM_MEDIUM
+KG_TAGGABLE_MODEL = LLM_MEDIUM
 
 # Runtime pipeline
 EMBEDDING_LLM = "qwen3-embedding:4b"
-DESCRIPTION_GENERATION_LLM = "qwen3.6:35b-a3b-q8_0"
-CONCEPT_TAGGER_LLM = "qwen3.6:35b-a3b-q8_0"
-CONTENT_GENERATION_LLM = "gemma4:31b-it-q4_K_M"
+DESCRIPTION_GENERATION_LLM = LLM_MEDIUM
+CONCEPT_TAGGER_LLM = LLM_MEDIUM
+CONTENT_GENERATION_LLM = LLM_MEDIUM
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 
-REPAIR_LLM = "qwen3.6:35b-a3b-q8_0"
+REPAIR_LLM = LLM_SMALL
 
 EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
+
+# Ollama sizes the KV cache from each Modelfile's declared context, which on this set
+# costs 10.0 GiB of VRAM for 4.7 GiB of guardrail weights. Measured ceilings of what
+# each model is actually asked to read.
+LLM_CONTEXT = {
+    LLM_HEAVY: 16384,
+    LLM_MEDIUM: 32768,
+    LLM_SMALL: 16384,
+    GUARDRAIL_LLM: 8192,
+    EMBEDDING_LLM: 4096,
+    KG_CLEAN_EMBEDDING_MODEL: 4096,
+}
 
 
 # Builders ----------------------------------------------
@@ -77,6 +95,8 @@ KG_MAX_EVIDENCE_RELATIONS = 6
 KG_BUILDER_PLURAL_SUFFIXES = ("s",)
 KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
 KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
+KG_BUILDER_MAX_TITLES_PER_DOC = 3
+KG_BUILDER_TITLE_UBIQUITY = 0.6
 
 KG_RELATION_SCHEMA = "es"
 RELATION_SCHEMA = BUILTIN_SCHEMAS[KG_RELATION_SCHEMA]

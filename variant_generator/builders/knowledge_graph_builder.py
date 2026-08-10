@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import networkx as nx
@@ -101,15 +101,12 @@ class KnowledgeGraphBuilder:
         if not documents:
             return {}
 
-        concepts, relations = self._extract_documents(documents)
-        if not concepts:
+        origins, relations = self._extract_documents(documents)
+        if not origins:
             logger.error("No concepts extracted from any file")
             return {}
 
-        for source, _, target in relations:
-            concepts.update((source, target))
-
-        staging = self._assemble(concepts, relations)
+        staging = self._assemble(origins, relations, documents)
         logger.success(
             f"Extraction done — {len(staging['entities'])} entity(ies), "
             f"{len(staging['relations'])} relation(s)"
@@ -121,7 +118,7 @@ class KnowledgeGraphBuilder:
     # 40-chunk lecture and a 3-chunk one weigh the same in it.
     def _convert_corpus(
         self, input_dir: str | Path, recursive: bool
-    ) -> list[tuple[str, list[tuple[str, str]]]]:
+    ) -> list[tuple[str, list[str], list[tuple[str, str]]]]:
         files = _source_docs.list_source_files(input_dir, recursive=recursive)
         if not files:
             logger.error(f"No supported files found in: {input_dir}")
@@ -130,7 +127,7 @@ class KnowledgeGraphBuilder:
         logger.info(f"Found {len(files)} file(s) - converting the corpus to markdown")
         progress.phase("convert", f"0/{len(files)} documento(s)")
 
-        documents: list[tuple[str, list[str]]] = []
+        converted: list[tuple[str, dict[int, list[str]], list[tuple[str, str]]]] = []
         with progress.step(
             "kg_convert", "Convirtiendo los documentos del corpus", len(files)
         ) as reporter:
@@ -152,27 +149,60 @@ class KnowledgeGraphBuilder:
                 if not chunks:
                     logger.warning(f"[{file_path.name}] produced no text")
                     continue
-                documents.append((file_path.name, chunks))
+                converted.append(
+                    (file_path.name, _source_docs.headings_by_level(text), chunks)
+                )
                 logger.info(f"[{idx}/{len(files)} {file_path.name}] {len(chunks)} chunk(s)")
+
+        titles = self._select_titles([levels for _, levels, _ in converted])
+        documents = [
+            (name, titles[idx], chunks)
+            for idx, (name, _, chunks) in enumerate(converted)
+        ]
+        for name, doc_titles, _ in documents:
+            logger.info(f"[{name}] title(s): {' · '.join(doc_titles) or '—'}")
 
         progress.advance(1.0, f"{len(documents)} documento(s) listos")
         return documents
 
+    @staticmethod
+    def _select_titles(levels_per_doc: list[dict[int, list[str]]]) -> list[list[str]]:
+        total = len(levels_per_doc)
+        seen = Counter()
+        for levels in levels_per_doc:
+            for titles in levels.values():
+                seen.update({t.casefold() for t in titles})
+
+        selected = []
+        for levels in levels_per_doc:
+            chosen: list[str] = []
+            for level in sorted(levels):
+                kept = [
+                    t
+                    for t in levels[level]
+                    if total < 2 or seen[t.casefold()] / total <= config.KG_BUILDER_TITLE_UBIQUITY
+                ]
+                if kept:
+                    chosen = kept[: config.KG_BUILDER_MAX_TITLES_PER_DOC]
+                    break
+            selected.append(chosen)
+        return selected
+
     def _extract_documents(
-        self, documents: list[tuple[str, list[tuple[str, str]]]]
-    ) -> tuple[set[str], set[tuple[str, str, str]]]:
-        total = sum(len(chunks) for _, chunks in documents)
+        self, documents: list[tuple[str, list[str], list[tuple[str, str]]]]
+    ) -> tuple[dict[str, set[int]], set[tuple[str, str, str]]]:
+        total = sum(len(chunks) for _, _, chunks in documents)
         logger.info(f"Extracting from {total} chunk(s) across {len(documents)} document(s)")
         progress.phase("extract", f"0/{total} fragmento(s)")
 
-        concepts: set[str] = set()
+        origins: dict[str, set[int]] = defaultdict(set)
         relations: set[tuple[str, str, str]] = set()
         done = 0
 
         with progress.step(
             "kg_extract", "Extrayendo conceptos y relaciones", total
         ) as reporter:
-            for name, chunks in documents:
+            for di, (name, _, chunks) in enumerate(documents):
                 for ci, (location, chunk) in enumerate(chunks, 1):
                     progress.checkpoint()
                     done += 1
@@ -180,28 +210,32 @@ class KnowledgeGraphBuilder:
                         done,
                         detail=(
                             f"{name} · {location or f'fragmento {ci}'} · "
-                            f"{len(concepts)} concepto(s), {len(relations)} relación(es)"
+                            f"{len(origins)} concepto(s), {len(relations)} relación(es)"
                         ),
                     )
                     progress.advance(
                         (done - 1) / total,
-                        f"fragmento {done}/{total} · {len(concepts)} concepto(s)",
+                        f"fragmento {done}/{total} · {len(origins)} concepto(s)",
                     )
                     tag = f"[{name} · chunk {ci}/{len(chunks)}] "
                     chunk_concepts, chunk_relations = self._extract_from_chunk(
                         chunk, tag, location
                     )
-                    concepts.update(chunk_concepts)
+                    for concept in chunk_concepts:
+                        origins[concept].add(di)
+                    for source, _key, target in chunk_relations:
+                        origins[source].add(di)
+                        origins[target].add(di)
                     relations.update(tuple(r) for r in chunk_relations)
                     progress.emit(
                         "artifact.progress",
                         name="knowledge_graph",
-                        count=len(concepts),
+                        count=len(origins),
                         detail=f"{len(relations)} relación(es)",
                     )
 
-        progress.advance(1.0, f"{len(concepts)} concepto(s), {len(relations)} relación(es)")
-        return concepts, relations
+        progress.advance(1.0, f"{len(origins)} concepto(s), {len(relations)} relación(es)")
+        return dict(origins), relations
 
     # The only per-chunk call of the build, so the only one that stays without reasoning:
     # every other model call here happens a handful of times and can afford to think.
@@ -252,12 +286,18 @@ class KnowledgeGraphBuilder:
         return "\n".join(f"- {c}" for c in concepts)
 
     @staticmethod
-    def _assemble(concepts: set[str], relations: set[tuple[str, str, str]]) -> dict:
+    def _assemble(
+        origins: dict[str, set[int]],
+        relations: set[tuple[str, str, str]],
+        documents: list[tuple[str, list[str], list[tuple[str, str]]]],
+    ) -> dict:
         rels = sorted(list(r) for r in relations)
         return {
-            "entities": sorted(concepts),
+            "entities": sorted(origins),
             "edges": sorted({r[1] for r in rels}),
             "relations": rels,
+            "documents": [{"name": name, "titles": titles} for name, titles, _ in documents],
+            "origins": {name: sorted(origins[name]) for name in sorted(origins)},
         }
 
     # CLEANUP -------------------------------------------------------------------------------------
@@ -354,12 +394,32 @@ class KnowledgeGraphBuilder:
     # Each node is listed with its outgoing relations (remapped to survivors)
     # so the model can disambiguate short or ambiguous names.
     @classmethod
-    def _nodes_block(cls, nodes: list[str], relations: list[list], node_map: dict) -> str:
+    def _nodes_block(
+        cls,
+        nodes: list[str],
+        relations: list[list],
+        node_map: dict,
+        origins: dict[str, list[int]] | None = None,
+    ) -> str:
         outgoing = cls._outgoing(relations, node_map)
         lines = []
         for n in nodes:
             evidence = "; ".join(outgoing[n][: config.KG_MAX_EVIDENCE_RELATIONS])
-            lines.append(f"- {n}" + (f"  [{evidence}]" if evidence else ""))
+            sources = (origins or {}).get(n) or []
+            line = f"- {n}"
+            if evidence:
+                line += f"  [{evidence}]"
+            if sources:
+                line += "  (" + ", ".join(f"D{i + 1}" for i in sources) + ")"
+            lines.append(line)
+        return "\n".join(lines)
+
+    @staticmethod
+    def _documents_block(documents: list[dict]) -> str:
+        lines = []
+        for idx, document in enumerate(documents, 1):
+            label = " · ".join(document.get("titles") or []) or document.get("name", "")
+            lines.append(f"- D{idx}: {label}")
         return "\n".join(lines)
 
     @classmethod
@@ -580,10 +640,17 @@ class KnowledgeGraphBuilder:
             # Keep a relation only when both remapped endpoints survive as entities.
             if canon_source in ents and canon_target in ents:
                 relations.add((canon_source, relation, canon_target))
+        origins = defaultdict(set)
+        for name, sources in (graph.get("origins") or {}).items():
+            canonical = node_map.get(name)
+            if canonical in ents:
+                origins[canonical].update(sources)
         return {
             "entities": entities,
             "edges": sorted({r[1] for r in relations}),
             "relations": sorted(list(r) for r in relations),
+            "documents": graph.get("documents") or [],
+            "origins": {name: sorted(origins[name]) for name in sorted(origins)},
         }
 
     # CURATE --------------------------------------------------------------------------------------
@@ -597,7 +664,9 @@ class KnowledgeGraphBuilder:
         progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
         with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
             progress.checkpoint()
-            concepts_by_domains = self._curate_domains(concepts, relations)
+            concepts_by_domains = self._curate_domains(
+                concepts, relations, cleaned.get("documents") or [], cleaned.get("origins") or {}
+            )
             logger.info(f"Domains — {len(concepts_by_domains)} domain(s)")
         progress.advance(1.0, f"{len(concepts_by_domains)} dominio(s)")
 
@@ -625,8 +694,17 @@ class KnowledgeGraphBuilder:
         )
         return curated
 
-    def _curate_domains(self, concepts: list[str], relations: list[list]) -> dict:
-        prompt = curate_graph_domains_prompt(self._nodes_block(concepts, relations, {}))
+    def _curate_domains(
+        self,
+        concepts: list[str],
+        relations: list[list],
+        documents: list[dict],
+        origins: dict[str, list[int]],
+    ) -> dict:
+        prompt = curate_graph_domains_prompt(
+            self._nodes_block(concepts, relations, {}, origins),
+            self._documents_block(documents),
+        )
         response = inference.generate(
             model=config.KG_DOMAINS_MODEL, prompt=prompt, think=True
         ).response
