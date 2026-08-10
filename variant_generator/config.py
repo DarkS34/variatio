@@ -74,10 +74,12 @@ REPAIR_LLM = LLM_SMALL
 EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
 
 # Ollama sizes the KV cache from each Modelfile's declared context, which on this set
-# costs 10.0 GiB of VRAM for 4.7 GiB of guardrail weights. Measured ceilings of what
-# each model is actually asked to read.
+# costs 10.0 GiB of VRAM for 4.7 GiB of guardrail weights. These are measured ceilings
+# of prompt PLUS generation: num_ctx bounds the whole window, so a value that only fits
+# the prompt makes a thinking model spend its remaining budget reasoning and return an
+# empty answer (`done_reason: length`), which reads downstream as unparseable JSON.
 LLM_CONTEXT = {
-    LLM_HEAVY: 16384,
+    LLM_HEAVY: 32768,
     LLM_MEDIUM: 32768,
     LLM_SMALL: 16384,
     GUARDRAIL_LLM: 8192,
