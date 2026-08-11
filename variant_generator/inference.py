@@ -214,6 +214,7 @@ class OllamaEngine:
             except (ollama.ResponseError, httpx.RequestError) as e:
                 logger.warning(f"Could not read capabilities of '{model}': {e}")
                 capabilities = []
+                
             self._thinking[model] = "thinking" in capabilities
         return self._thinking[model]
 
@@ -229,15 +230,9 @@ class OllamaEngine:
         if not texts:
             return []
         try:
-            return list(
-                self._client.embed(model=model, input=texts, **self._context_option(model))[
-                    "embeddings"
-                ]
-            )
+            return list(self._client.embed(model=model, input=texts, **self._context_option(model))["embeddings"])
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(
-                f"Ollama batch embedding failed for model '{model}': {e}"
-            ) from e
+            raise InferenceError(f"Ollama batch embedding failed for model '{model}': {e}") from e
 
     def installed_models(self) -> list[str]:
         try:

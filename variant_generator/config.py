@@ -32,15 +32,6 @@ OLLAMA_HOST = (
     _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 )
 
-
-# CP = Content Profile
-# EB = Exemplars Bank
-# KG = Knowledge Graph
-
-# Models ----------------------------------------------
-
-# Tiers. These names must NOT end in `_LLM`: `utils.prepare_models()` warms every
-# `*_LLM` it finds here, and a generation run must not pay for a build's models.
 LLM_HEAVY = "qwen3.6:35b-a3b-q8_0"
 LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
 LLM_SMALL = "granite4.1:3b"
@@ -74,11 +65,6 @@ REPAIR_LLM = LLM_SMALL
 
 EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
 
-# Ollama sizes the KV cache from each Modelfile's declared context, which on this set
-# costs 10.0 GiB of VRAM for 4.7 GiB of guardrail weights. These are measured ceilings
-# of prompt PLUS generation: num_ctx bounds the whole window, so a value that only fits
-# the prompt makes a thinking model spend its remaining budget reasoning and return an
-# empty answer (`done_reason: length`), which reads downstream as unparseable JSON.
 LLM_CONTEXT = {
     LLM_HEAVY: 32768,
     LLM_MEDIUM: 32768,

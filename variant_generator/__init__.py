@@ -4,8 +4,9 @@ import warnings
 
 from loguru import logger
 
-from .config import NOISY_LOGGERS, NOISY_WARNING_MODULES
 from . import inference
+from .config import NOISY_LOGGERS, NOISY_WARNING_MODULES
+
 # from .utils import prepare_models
 
 for name in NOISY_LOGGERS:
