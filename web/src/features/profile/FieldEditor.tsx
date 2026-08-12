@@ -57,14 +57,26 @@ const META: Record<FieldType, TypeMeta> = Object.fromEntries(
   TYPES.map((meta) => [meta.value, meta]),
 ) as Record<FieldType, TypeMeta>;
 
-const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+// Mirrors ContentProfile.NAME_RE and RESERVED_FIELD_NAMES: the names become Python
+// identifiers, so accents and ñ are out even though the vocabulary itself is Spanish.
+const NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
-export function fieldNameError(candidate: string, taken: string[], current?: string): string | null {
+const RESERVED = ["item_type", "id", "source", "concepts", "primary_concept"];
+
+export function nameError(candidate: string, taken: string[], current?: string): string | null {
   const value = candidate.trim();
   if (!value) return "El nombre no puede estar vacío";
   if (!NAME_PATTERN.test(value))
-    return "Solo letras, números y guiones bajos, y no puede empezar por número";
-  if (value !== current && taken.includes(value)) return "Ya existe un campo con ese nombre";
+    return "En minúsculas, sin tildes ni ñ: solo a-z, números y guiones bajos, empezando por letra";
+  if (value !== current && taken.includes(value)) return "Ya existe uno con ese nombre";
+  return null;
+}
+
+export function fieldNameError(candidate: string, taken: string[], current?: string): string | null {
+  const error = nameError(candidate, taken, current);
+  if (error) return error;
+  if (RESERVED.includes(candidate.trim()))
+    return `«${candidate.trim()}» está reservado por el sistema`;
   return null;
 }
 

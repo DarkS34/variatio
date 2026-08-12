@@ -1,0 +1,262 @@
+{
+  "C001": {
+    "item_type": "pregunta_test",
+    "titulo": "1",
+    "enunciado": "Dadas las siguientes líneas de código:",
+    "opciones": [
+      "El cuerpo del bucle externo se ejecuta 101 veces y el del bucle interno 100.",
+      "El cuerpo del bucle externo se ejecuta infinitas veces y el del bucle interno ninguna.",
+      "El cuerpo del bucle externo se ejecuta 1 vez y el del bucle interno ninguna.",
+      "Ninguna de las anteriores es correcta."
+    ],
+    "respuesta_correcta": "d",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C002": {
+    "item_type": "pregunta_test",
+    "titulo": "2",
+    "enunciado": "Indica la salida en pantalla del siguiente fragmento de programa en Python:",
+    "opciones": [
+      "Muestra por pantalla infinitos triángulos invertidos cuyo lado mayor es 8",
+      "Muestra por pantalla un triángulo de asteriscos de lado mayor infinito",
+      "Muestra por pantalla un triángulo de asteriscos invertido cuyo lado mayor es 8",
+      "Muestra por pantalla un triángulo de asteriscos invertido cuyo lado menor es 8"
+    ],
+    "respuesta_correcta": "a",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C003": {
+    "item_type": "pregunta_test",
+    "titulo": "3",
+    "enunciado": "Si calculo es el nombre de una función que recibe un parámetro, ¿cuál de las siguientes es la forma más correcta y habitual de invocarla?",
+    "opciones": [
+      "calculo(d)",
+      "x = calculo(d)",
+      "calculo = d",
+      "d = calculo"
+    ],
+    "respuesta_correcta": "b",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C004": {
+    "item_type": "pregunta_test",
+    "titulo": "4",
+    "enunciado": "Dado el siguiente programa, indica su salida por pantalla:",
+    "opciones": [
+      "10 y 9",
+      "10 y 10",
+      "9 y 9",
+      "9 y 10"
+    ],
+    "respuesta_correcta": "d",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C005": {
+    "item_type": "modificacion_codigo",
+    "enunciado": "Completa las partes punteadas del siguiente código para que el programa muestre por pantalla los números entre 1 y 10.000 que cumplan la siguiente condición: la suma de todos los enteros entre 1 y un número dado k es igual a la multiplicación de todos los enteros entre 1 y el número. Por ejemplo, para el entero 3 se cumple la condición anterior, ya que 1 + 2 + 3 = 1 x 2 x 3.",
+    "material_base": "1. for k in range (2, 10000):\n2.   ........................................\n3.   ........................................\n4.   for ........................................ :\n5.       sum+=j\n6.       mul*=j\n7.   if ........................................ :\n8.       print(\"El numero\", k,\"cumple la condición \")",
+    "opciones": [
+      "Línea 2: vacía, Línea 3: vacía, Línea 4: j in range(1, k), Línea 7: sum==mul",
+      "Línea 2: vacía, Línea 3: vacía, Línea 4: j in range(1, k+1), Línea 7: sum==mul",
+      "Línea 2: sum=0, Línea 3: mul=1, Línea 4: j in range(1, k+1), Línea 7: sum==mul",
+      "Línea 2: sum=0, Línea 3: mul=1, Línea 4: j in range(1, k), Línea 7: sum==k"
+    ],
+    "respuesta_correcta": "c",
+    "solucion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C006": {
+    "item_type": "modificacion_codigo",
+    "enunciado": "Indique cuáles serían los operadores necesarios en la sentencia punteada para que el resultado de la ejecución del siguiente código sea “A A”. En cada espacio ... puede aparecer un o ningún operador.",
+    "material_base": "x = True\ny = False\nsigue = True\nwhile sigue:\n    print (\"A \")\n    x = y or not x\n    if ........................................ : sigue=False",
+    "opciones": [
+      "not (y or (x and not y))",
+      "y or (x or not y)",
+      "Existen varias soluciones correctas",
+      "y or (not x and not y)"
+    ],
+    "respuesta_correcta": "c",
+    "solucion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C007": {
+    "item_type": "pregunta_test",
+    "titulo": "7",
+    "enunciado": "¿Para qué sirven los docstrings en Python?",
+    "opciones": [
+      "Para representar texto en nuestros programas",
+      "Para crear funciones más eficientes y robustas",
+      "Para documentar nuestro código, y son especialmente útiles porque la función help aplicada a un subprograma permite obtener dicha documentación",
+      "Son útiles solo en casos muy concretos, pues hacen perder tiempo de desarrollo"
+    ],
+    "respuesta_correcta": "c",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C008": {
+    "item_type": "pregunta_test",
+    "titulo": "8",
+    "enunciado": "La diferencia entre las instrucciones break y continue reside en...",
+    "opciones": [
+      "break fuerza la ejecución de la siguiente iteración de un bucle, mientras que continue fuerza la salida al bucle más externo",
+      "continue fuerza la ejecución de la siguiente iteración de un bucle, mientras que break fuerza la terminación del bucle actual",
+      "break fuerza la ejecución de la siguiente iteración de un bucle, mientras que continue fuerza la salida del bucle actual",
+      "En bucles anidados el comportamiento de ambos es análogo"
+    ],
+    "respuesta_correcta": "b",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C009": {
+    "item_type": "analisis_codigo",
+    "enunciado": "En el siguiente código...",
+    "material_base": "def f1(a):\n    return(int(a)*2)\n\ndef f2(a):\n    print(int(a)*2)",
+    "solucion": "Hay una diferencia evidente entre return y print pues una invocación a f1 puede emplearse en otra expresión numérica mayor y una invocación a f2 no puede",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C010": {
+    "item_type": "pregunta_test",
+    "titulo": "10",
+    "enunciado": "Si se ejecuta el siguiente código:",
+    "opciones": [
+      "Nada, porque el código es incorrecto",
+      "40 42 44",
+      "40 42 44 46 48 50",
+      "42 44 46 48 50"
+    ],
+    "respuesta_correcta": "c",
+    "explicacion": null,
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C011": {
+    "item_type": "escritura_codigo",
+    "titulo": "P1 (3 puntos)",
+    "enunciado": "Programa en Python un subprograma que, a partir de un número entero entre 2 y 10, muestre por pantalla un patrón triangular repetido 2 veces como el siguiente (ejemplo para n=4):",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def dibujar_patron(lado):\n    \"\"\" int -> None\n        OBJ: muestra por pantalla un patrón triangular\n        PRE: 2 <= lado <= 10\n    \"\"\"\n    for i in range(2): # las dos partes del patrón triangular\n        for j in range(1, lado + 1): # parte ascendente\n            for k in range(j): print('*', end=' ')\n            print()\n        for j in range(lado-1,0,-1): # parte descendente\n            for k in range(j): print('*', end=' ')\n            print()\n\n# probador\npatron(4)",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C012": {
+    "item_type": "escritura_codigo",
+    "titulo": "P2 (3 puntos)",
+    "enunciado": "Escribe un programa modularizado que calcule el número de potencias de 2 de una secuencia de números que se encuentran en una lista. Por ejemplo, la secuencia 5,7,8,10,11,13,15,16 tiene dos potencias de 2: 8 (2³) y 16(2⁴).",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def es_potencia2(n):\n    \"\"\" int -> bool\n        OBJ: determina si n es potencia de 2 o no\n    \"\"\"\n    while n%2 == 0: n/=2\n    return n==1\n\ndef num_potencias2(secuencia):\n    \"\"\" list -> int\n        OBJ: calcula el número de potencias de 2 de una serie\n    \"\"\"\n    contador_potencias = 0\n    for numero in secuencia:\n        if es_potencia2(numero): contador_potencias+= 1\n    return contador_potencias\n\n# probador\nprint(num_potencias2([5,7,8,10,11,13,15,16]))",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C013": {
+    "item_type": "escritura_codigo",
+    "titulo": "P3 (3 puntos)",
+    "enunciado": "Observa la siguiente serie numérica:\n$$1 + 1/2 + 2/3 + 3/5 + 5/8 + 8/13 + 13/21 + 21/34 + 34/55 + 55/89 + ...$$\ncomo se ve, en cada término el numerador es la suma de los 2 numeradores anteriores y lo mismo para el denominador. Esto pasa solo a partir del tercer término, dado que los dos primeros términos son fijos: 1 y 1/2.\n\nEscribe un programa que calcule y muestre por pantalla términos de la serie hasta que la diferencia entre el valor del término actual ($T_n$) y el calculado la vez anterior ($T_{n-1}$) sea menor que un valor epsilon predeterminado.",
+    "nivel_dificultad": "avanzado",
+    "solucion": "EPSILON = 1e-7\n\n# Imprime los dos primeros términos fijos de la serie\nprint('1 + 1/2', end=' ')\n\n# Prepara los valores para comenzar a iterar\npenultimo_numerador = penultimo_denominador = 1\nnumerador_anterior = 1\ndenominador_anterior = 2\nnumerador = numerador_anterior + penultimo_numerador\ndenominador = denominador_anterior + penultimo_denominador\n\n# Itera hasta que el término a añadir es suficientemente pequeño (< eps)\nwhile abs(numerador/denominador - numerador_anterior/denominador_anterior) > EPSILON:\n    print(f'+ {numerador}/{denominador}', end=' ')\n    penultimo_numerador = numerador_anterior\n    numerador_anterior = numerador\n    penultimo_denominador = denominador_anterior\n    denominador_anterior = denominador\n    numerador = numerador_anterior + penultimo_numerador\n    denominador = denominador_anterior + penultimo_denominador",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C014": {
+    "item_type": "escritura_codigo",
+    "titulo": "PE1 (1 punto)",
+    "enunciado": "Haz un subprograma que recibe una lista con 5 mediciones de temperatura y un umbral y dice cuántas hay por encima de dicho umbral (1punto)",
+    "nivel_dificultad": "basico",
+    "solucion": "def num_mediciones_superan_umbral(mediciones, umbral):\n    \"\"\" list, float -> int\n    OBJ: determina cuántas mediciones superan un umbral\n    PRE: mediciones es una lista de float\n    \"\"\"\n    sobre_umbral = 0\n    for medicion in mediciones:\n        if medicion > umbral: sobre_umbral+= 1\n    return sobre_umbral\n\n# probador\nprint(num_mediciones_superan_umbral([5,3,4,78,65,12],10))",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C015": {
+    "item_type": "escritura_codigo",
+    "titulo": "PE2 (1 punto)",
+    "enunciado": "Escribe un programa que calcule el número de pares e impares de una serie de números que se introducen por teclado (1 punto)",
+    "nivel_dificultad": "basico",
+    "solucion": "def cuenta_pares_impares(serie):\n    \"\"\" list -> int, int\n        OBJ: calcula el número de pares e impares de una serie\n        PRE: serie es una lista de enteros\n    \"\"\"\n    pares = impares = 0\n    for numero in serie:\n        if numero % 2 == 0: pares += 1\n        else: impares += 1\n    return pares, impares\n\n# probador\nprint(cuenta_pares_impares([5,3,4,13,8,15,12]))",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C016": {
+    "item_type": "escritura_codigo",
+    "titulo": "PE3 (1,5 puntos)",
+    "enunciado": "\"Un elefante se balanceaba\" es una canción tradicional con una letra muy sencilla:\n\n*1 elefante se balanceaba sobre la tela de una araña.*\n*Como veía que no se caía fue a llamar a otro elefante.*\n\nEl mismo verso se repite, cada vez con un elefante más, si bien no de la misma manera pues al principio es un elefante (singular) y después son más de uno:\n\n*30 elefantes se balanceaban sobre la tela de una araña.*\n*Como veían que no se caían fueron a llamar a otro elefante.*\n\nLa canción se completa cuando los intérpretes llegan a una cierta cota de aburrimiento. Tu tarea es escribir un programa modularizado en Python capaz de generar todos los versos de la canción y, puesto que en un programa es difícil predecir con qué número de elefantes se aburrirán y pararán los intérpretes, supondremos que dicho número se genera aleatoriamente cada vez que se ejecuta el programa.",
+    "nivel_dificultad": "intermedio",
+    "solucion": "import random\n\ndef escribe_verso(num_elefantes):\n    \"\"\" int-> string\n        OBJ: Retorna el verso de la cancion infantile con num_elefantes\n        PRE: num_elefantes > 0\n    \"\"\"\n    if num_elefantes==1:\n        return \"1 elefante se balanceaba sobre la tela de una araña.\n            Como veía que no se caía fue a llamar a otro elefante.\\n\"\n    else:\n        return f\"{num_elefantes} elefantes se balanceaban sobre la tela\nde una araña. Como veían que no se caían fueron a llamar\na otro elefante.\\n\"\n\n# probador\nversos = random.randint(2,20)\nfor elefantes in range(1,versos): print(escribe_verso(elefantes))",
+    "source": "Prog1_PEC1_Soluciones_definitivo"
+  },
+  "C017": {
+    "item_type": "analisis_codigo",
+    "enunciado": "¿Qué valor retornaría la llamada Fibo_Christmas(5,3) según el siguiente código?:",
+    "material_base": "def Fibo_Christmas(x,y):\n    if (y >= x): result = 1\n    else: result = Fibo_Christmas(x-2,y-1) + 2*Fibo_Christmas(x-1,y+1)\n    return result",
+    "solucion": "5",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C018": {
+    "item_type": "analisis_codigo",
+    "enunciado": "¿Con qué algoritmo ha sido ordenada? ¿Cuántas iteraciones se han llevado a cabo?",
+    "material_base": "[43, 4, 8, 16, 11, 40, 9, 14, 18, 5] -> [4, 5, 8, 9, 11, 40, 16, 14, 18, 43]",
+    "solucion": "Método de selección tras 4 o 5 iteraciones",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C019": {
+    "item_type": "analisis_codigo",
+    "enunciado": "Indica qué mensaje saldría por pantalla tras ejecutar el siguiente código:",
+    "material_base": "def reno1(x):\n    print('Rudolph',end='-')\n    return x\n\ndef reno2(x):\n    if x: print('Dasher',end='-')\n    return not x\n\nif(reno1(False) or reno2(True)): print(1,end='-')\nif(reno1(True) and reno2(False)): print(2,end='-')",
+    "solucion": "Rudolph-Dasher-Rudolph-2-",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C020": {
+    "item_type": "modificacion_codigo",
+    "enunciado": "Ayuda a Papá Noel completando el código siguiente para que, haciendo uso de un conjunto, se muestren en la pantalla de su trineo de reparto todas las coordenadas de las casas en que hay que depositar un regalo, pero claro, sin repeticiones... En resumen, si alguna coordenada aparece más de una vez en address_list solo se deberá mostrar una vez.",
+    "material_base": "address_list = [ [34.01,45.09], [11.31,5.69], [21.03,37.54],\n                [64.22,-13.04], [11.31,5.69], [-56.61,74.82]\n              ]\nunique_addresses = set()\nfor address in ______________ :\n    x,y = ________________________\n    unique_addresses.add(________________)\nfor _______________ in unique_addresses: print(coord)",
+    "opciones": null,
+    "respuesta_correcta": null,
+    "solucion": "for address in address_list :\n    x,y = address\n    unique_addresses.add((x,y))\nfor coord in unique_addresses: print(coord)",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C021": {
+    "item_type": "modificacion_codigo",
+    "enunciado": "Completa el código de la función all_different para detectar si un paquete de 4 caracteres indica el fin de un mensaje, con la condición de que no uses ni (a) break ni (b) un return desde dentro de un for. Te ha marcado lo que deberías cambiar.",
+    "material_base": "def all_different(paquete):\n    \"\"\" list-> bool \"\"\"\n    for i in range(1,len(paquete)):\n        if paquete[i] in paquete[:i] + paquete[i+1:]:\n            return False  # <---- cambiar\n    return True",
+    "opciones": null,
+    "respuesta_correcta": null,
+    "solucion": "def all_different(paquete):\n    \"\"\" list -> bool \"\"\"\n    i = 1\n    are_different = True\n    while are_different and i<len(paquete):\n        if paquete[i] in paquete[:i] + paquete[i+1:]:\n            are_different = False\n        i += 1\n    return are_different",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C022": {
+    "item_type": "escritura_codigo",
+    "titulo": "EJERCICIO 1",
+    "enunciado": "Escribe un subprograma recursivo que permita calcular valores de los polinomios de Hermite, Hn(x), siendo x un valor numérico (real) y n el orden del polinomio. Los polinomios de Hermite cumplen las siguientes propiedades:\n\nH₀(x) = 1, para todo x\nH₁(x) = 2·x\nHₙ(x) = 2·x·Hₙ₋₁(x) - 2·(n-1)·Hₙ₋₂(x), para todo n > 1",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def H(x, n):\n    \"\"\" float, int -> float\n        PRE: n>=0\n    \"\"\"\n    if n == 0: return 1.0\n    elif n== 1: return 2*x\n    elif n > 1: return 2*x*H(x,n-1) - 2*(n-1)*H(x,n-2)",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C023": {
+    "item_type": "escritura_codigo",
+    "titulo": "EJERCICIO 2.1",
+    "enunciado": "Tu primera tarea consiste pues en ayudar a ordenar la lista siguiendo la ruta recomendada. Para ello, implementa un subprograma que, a partir de la lista y de una ruta en formato texto (ejemplo: “PT-ES-FR-IT-AT-CH-DE-NL-BE”) adapte el método de inserción directa para ordenar ascendentemente la lista de entregas.",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def ordenar(entregas,ruta):\n    \"\"\" list, str -> None\n    OBJ: Ordena la lista de entregas por país, utilizando la ruta proporcionada.\n    Método de inserción.\n    \"\"\"\n    for i in range (1, len(entregas)):\n        clave = entregas[i]\n        j = i -1\n        while j >=0 and ruta.index(clave['pais']) < ruta.index(entregas[j]['pais']):\n            entregas[j+1] = entregas[j]\n            j -= 1\n        entregas[j+1] = clave",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C024": {
+    "item_type": "escritura_codigo",
+    "titulo": "EJERCICIO 2.2",
+    "enunciado": "Tu segunda tarea será facilitar el reparto de regalos en España. Para ello necesitamos, a partir de la lista ordenada resultado del apartado 1, extraer una sublista con todas las entregas para nuestro país España [1 p., 1.5 si lo haces recursivamente]",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def extraer_sublista_es(lista_entregas):\n    \"\"\" list -> list\n        OBJ: Extrae una sublista con todas las entregas para España\n    \"\"\"\n    lista_entregas_es = []\n    for entrega in lista_entregas:\n        if entrega['pais'] == 'ES':\n            lista_entregas_es.append(entrega)\n    return lista_entregas_es\n\ndef extraer_sublista_es_rec(lista_entregas):\n    \"\"\" list -> list\n        OBJ: Extrae recursivamente una sublista con todas las entregas para España\n    \"\"\"\n    if lista_entregas == []: return []\n    elif lista_entregas[0]['pais'] == 'ES':\n        return [lista_entregas[0]] + extraer_sublista_es_rec(lista_entregas[1:])\n    else: return extraer_sublista_es_rec(lista_entregas[1:])",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C025": {
+    "item_type": "escritura_codigo",
+    "titulo": "EJERCICIO 2.3",
+    "enunciado": "Una vez centrados en España, y para facilitar la asignación de repartos locales a cada elfo, necesitamos un diccionario donde se listen por código de provincia (los dos primeros dígitos del código postal) los regalos a entregar en esa zona, añadiendo los regalos únicamente, sin la dirección, con el objeto de planificar el número de elfos a asignar a cada provincia.",
+    "nivel_dificultad": "intermedio",
+    "solucion": "def clasificar_por_provincia(lista_entregas):\n    \"\"\" list -> dict\n        OBJ: Genera un diccionario donde se listan por código de provincia\n             los regalos a entregar en esa zona.\n    \"\"\"\n    entregas_por_provincia = {}\n    for entrega in lista_entregas:\n        cod_provincia = entrega['cod_postal'][:2]\n        if cod_provincia not in entregas_por_provincia:\n            entregas_por_provincia[cod_provincia] = entrega['lista_regalos']\n        else:\n            entregas_por_provincia[cod_provincia] += entrega['lista_regalos']\n    return entregas_por_provincia",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  },
+  "C026": {
+    "item_type": "escritura_codigo",
+    "titulo": "EJERCICIO 2.4",
+    "enunciado": "A partir del diccionario anterior y de un diccionario con la información por comunidades autónomas, Papá Noel necesita saber cuáles son las comunidades con un mayor y menor número de regalos por niño.",
+    "nivel_dificultad": "intermedio",
+    "solucion": "menor = [None, 0]\nmayor = [None, 0]\nfor comunidad in info_autonomias:\n    total_actual = 0\n    for provincia in info_autonomias[comunidad]['provincias']:\n        if provincia in entregas_por_provincia:\n            total_actual += len(entregas_por_provincia[provincia])\n    media_actual = total_actual / info_autonomias[comunidad]['num_ninnos']\n    if mayor[0] == None or media_actual > mayor[1]:\n        mayor[0] = comunidad\n        mayor[1] = media_actual\n    if menor[0] == None or media_actual < menor[1]:\n        menor[0] = comunidad\n        menor[1] = media_actual\n# probador\nprint('Mayor: ', mayor[0], ' - ', round(mayor[1],2),' regalos por niño/a')\nprint('Menor: ', menor[0], ' - ', round(menor[1],2),' regalos por niño/a')",
+    "source": "ProgI_PEC2_Ene2025_Soluciones"
+  }
+}

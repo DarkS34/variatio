@@ -1,5 +1,6 @@
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -320,7 +321,8 @@ class Embedder:
         self,
         knowledge_graph: KnowledgeGraph,
         embedding_model: str,
-        primary_field: str,
+        embed_text: Callable[[dict], str],
+        embed_signature: str,
         context: dict,
         descriptions_path: str | Path | None = None,
         concepts_cache_path: str | Path | None = None,
@@ -328,7 +330,8 @@ class Embedder:
     ):
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
-        self.primary_field = primary_field
+        self.embed_text = embed_text
+        self.embed_signature = embed_signature
         self.context = context
 
         self.descriptions_path = Path(descriptions_path or config.CONCEPT_DESCRIPTIONS_PATH)
@@ -390,8 +393,19 @@ class Embedder:
 
     # FINGERPRINTS --------------------------------------------------------------------------------
 
+    # `embed_signature` is which fields of each item type are indexed. It belongs here and
+    # not only in the per-item text hash because the CONCEPT cache is fingerprinted by this
+    # too: change the fields and the merged centroids change, while the descriptions that
+    # built them do not.
+    # Appended only when non-empty, so a profile that indexes primary fields alone produces
+    # the exact string this used to produce and keeps its caches: a separator on its own is
+    # enough to invalidate every vector for no change in the text they were built from.
     def _embedding_fingerprint(self) -> str:
-        return f"{self.embedding_model}::{config.EMBEDDING_QUERY_PREFIX}::{config.EMBEDDING_DOCUMENT_PREFIX}"
+        base = (
+            f"{self.embedding_model}::{config.EMBEDDING_QUERY_PREFIX}"
+            f"::{config.EMBEDDING_DOCUMENT_PREFIX}"
+        )
+        return f"{base}::{self.embed_signature}" if self.embed_signature else base
 
     @staticmethod
     def _text_fingerprint(text: str) -> str:
@@ -412,7 +426,7 @@ class Embedder:
         entries = sorted(
             (
                 ex_id,
-                self._text_fingerprint(ex[self.primary_field]),
+                self._text_fingerprint(self.embed_text(ex)),
                 sorted(ex.get("concepts", [])),
                 ex.get("primary_concept") or "",
             )
@@ -471,7 +485,7 @@ class Embedder:
             ex_id: {
                 "concepts": sorted(ex.get("concepts", [])),
                 "primary_concept": ex.get("primary_concept"),
-                "text": self._text_fingerprint(ex[self.primary_field]),
+                "text": self._text_fingerprint(self.embed_text(ex)),
             }
             for ex_id, ex in self.exemplars_bank.items()
         }
@@ -513,7 +527,7 @@ class Embedder:
             ex_id: cached_vectors[ex_id]
             for ex_id, ex in annotated_bank.items()
             if ex_id in cached_vectors
-            and cached_texts.get(ex_id) == self._text_fingerprint(ex[self.primary_field])
+            and cached_texts.get(ex_id) == self._text_fingerprint(self.embed_text(ex))
         }
         pending = [ex_id for ex_id in annotated_bank if ex_id not in reusable]
 
@@ -526,7 +540,7 @@ class Embedder:
                 "embed_bank", "Indexando el banco de ejemplos", total=len(pending)
             ) as reporter:
                 vectors = self._embed_many(
-                    [annotated_bank[ex_id][self.primary_field] for ex_id in pending],
+                    [self.embed_text(annotated_bank[ex_id]) for ex_id in pending],
                     "document",
                     reporter,
                 )
@@ -535,7 +549,7 @@ class Embedder:
         self.exemplars_bank_index = {ex_id: reusable[ex_id] for ex_id in annotated_bank}
         self._save_exemplars_bank_cache()
         self._cached_text_fingerprints = {
-            ex_id: self._text_fingerprint(ex[self.primary_field])
+            ex_id: self._text_fingerprint(self.embed_text(ex))
             for ex_id, ex in annotated_bank.items()
         }
         self._cached_exemplars_bank_fingerprint = new_fingerprint

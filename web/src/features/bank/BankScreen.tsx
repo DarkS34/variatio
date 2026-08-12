@@ -22,7 +22,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { TAGGING_METHOD, truncate } from "@/lib/format";
-import type { BankItem, KgConcept, StageState } from "@/lib/types";
+import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCoverage, useInvalidateChain, useKg, useSubmitJob } from "@/state/queries";
 
@@ -176,9 +176,20 @@ function ItemEditor({
   );
 }
 
+// Field names come from the profile and are subject-specific, so "is this code?" can only
+// ever be a guess; it decides presentation only, and guessing wrong costs a plain <p>.
+export function isCodeField(field: string): boolean {
+  const name = field.toLowerCase();
+  return ["soluc", "codigo", "code", "solution", "material"].some((hint) =>
+    name.includes(hint),
+  );
+}
+
 function ItemRow({
   item,
   primaryField,
+  secondaryFields,
+  typeLabel,
   selected,
   onToggle,
   onEdit,
@@ -186,6 +197,8 @@ function ItemRow({
 }: {
   item: BankItem;
   primaryField: string;
+  secondaryFields: string[];
+  typeLabel: string | null;
   selected: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -207,15 +220,29 @@ function ItemRow({
           <input type="checkbox" checked={selected} onChange={onToggle} className="mt-1" />
         </td>
         <td className="py-2 pl-2 font-mono text-xs text-muted-foreground">{item.id}</td>
+        {typeLabel ? (
+          <td className="py-2 pl-2">
+            <Badge variant="outline">{typeLabel}</Badge>
+          </td>
+        ) : null}
         <td className="min-w-0 py-2 pl-2 pr-3">
           <button onClick={onEdit} className="block text-left text-sm hover:underline">
             {truncate(text, 200)}
           </button>
           {open ? (
             <div className="mt-2 space-y-2">
-              {String(item.solution ?? "") ? (
-                <CodeBlock code={String(item.solution)} maxHeight="16rem" />
-              ) : null}
+              {secondaryFields.map((field) => {
+                const value = item[field];
+                if (value === null || value === undefined || value === "") return null;
+                return isCodeField(field) ? (
+                  <CodeBlock key={field} code={String(value)} maxHeight="16rem" />
+                ) : (
+                  <div key={field} className="space-y-0.5">
+                    <Label>{field}</Label>
+                    <p className="text-xs text-muted-foreground">{String(value)}</p>
+                  </div>
+                );
+              })}
               {item._tagging ? (
                 <div className="rounded-md border border-border p-2">
                   <p className="mb-1 text-xs text-muted-foreground">
@@ -307,6 +334,22 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
     () => (listing ? Math.max(1, Math.ceil(listing.total / listing.page_size)) : 1),
     [listing],
   );
+
+  // Which field carries an item's text is a property of its modality, not of the bank:
+  // two modalities can name their primary differently, so every row resolves its own.
+  const itemTypes: BankItemType[] = listing?.item_types ?? [];
+  const manyTypes = itemTypes.length > 1;
+  const typeOf = (item: BankItem | null): BankItemType | undefined => {
+    if (!item) return undefined;
+    if (item.item_type) return itemTypes.find((t) => t.key === item.item_type);
+    return itemTypes.length === 1 ? itemTypes[0] : undefined;
+  };
+  const primaryFieldFor = (item: BankItem | null) => typeOf(item)?.primary_field ?? "";
+  const fieldsFor = (item: BankItem | null) => typeOf(item)?.fields ?? [];
+  const labelFor = (item: BankItem | null) => typeOf(item)?.label ?? item?.item_type ?? "—";
+  const primaryHeader = manyTypes
+    ? [...new Set(itemTypes.map((t) => t.primary_field))].join(" / ")
+    : (itemTypes[0]?.primary_field ?? "contenido");
 
   const toggle = (id: string) =>
     setSelected((current) => {
@@ -521,7 +564,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="w-8 py-2 pl-3" />
                   <th className="w-16 py-2 pl-2 font-medium">id</th>
-                  <th className="py-2 pl-2 font-medium">{listing.primary_field}</th>
+                  {manyTypes ? <th className="w-40 py-2 pl-2 font-medium">modalidad</th> : null}
+                  <th className="py-2 pl-2 font-medium">{primaryHeader}</th>
                   <th className="w-72 py-2 font-medium">conceptos</th>
                   <th className="w-24 py-2" />
                 </tr>
@@ -531,7 +575,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                   <ItemRow
                     key={item.id}
                     item={item}
-                    primaryField={listing.primary_field}
+                    primaryField={primaryFieldFor(item)}
+                    secondaryFields={fieldsFor(item).filter((f) => f !== primaryFieldFor(item))}
+                    typeLabel={manyTypes ? labelFor(item) : null}
                     selected={selected.has(item.id)}
                     onToggle={() => toggle(item.id)}
                     onEdit={() => setEditing(item)}
@@ -599,8 +645,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       {editing && listing ? (
         <ItemEditor
           item={editing}
-          fields={listing.fields}
-          primaryField={listing.primary_field}
+          fields={fieldsFor(editing)}
+          primaryField={primaryFieldFor(editing)}
           concepts={concepts}
           onClose={() => setEditing(null)}
           onSaved={() => {

@@ -8,7 +8,7 @@ surface is manual editing, and it is validated here for the same reason.
 
 from variant_generator import config
 from variant_generator.concept_tagger import TRACE_KEY
-from variant_generator.content_profile import ContentProfile
+from variant_generator.content_profile import ITEM_TYPE_KEY, ContentProfile
 from variant_generator.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
@@ -16,7 +16,16 @@ from .. import deps, review, storage
 ARTIFACT = review.EXEMPLARS_BANK
 
 # Not part of the content schema, but part of every item on disk.
-META_FIELDS = ("source", "concepts", "primary_concept", TRACE_KEY)
+META_FIELDS = ("source", "concepts", "primary_concept", ITEM_TYPE_KEY, TRACE_KEY)
+
+
+# The listing sorts and searches over items the profile may no longer be able to place —
+# exactly the state a stale bank is in — so reading the primary text must never raise.
+def _primary_text(profile: ContentProfile, item: dict) -> str:
+    try:
+        return profile.primary_text(item)
+    except ValueError:
+        return ""
 
 
 class BankError(ValueError):
@@ -65,13 +74,13 @@ def listing(
     untagged: bool | None = None,
     query: str | None = None,
     source: str | None = None,
+    item_type: str | None = None,
     order: str = "suspicion",
     page: int = 1,
     page_size: int = 50,
 ) -> dict:
     bank = _load_bank()
     profile = _profile()
-    primary = profile.primary_field
 
     rows = [{"id": item_id, **item} for item_id, item in bank.items()]
 
@@ -83,12 +92,14 @@ def listing(
         rows = [r for r in rows if r.get("concepts")]
     if source:
         rows = [r for r in rows if r.get("source") == source]
+    if item_type:
+        rows = [r for r in rows if r.get(ITEM_TYPE_KEY) == item_type]
     if query:
         needle = query.lower()
         rows = [
             r
             for r in rows
-            if needle in str(r.get(primary) or "").lower() or needle in r["id"].lower()
+            if needle in _primary_text(profile, r).lower() or needle in r["id"].lower()
         ]
 
     if order == "suspicion":
@@ -107,8 +118,21 @@ def listing(
         "total": total,
         "page": page,
         "page_size": page_size,
-        "primary_field": primary,
-        "fields": list(profile.field_specs.keys()),
+        "item_types": [
+            {
+                "key": key,
+                "label": t.label,
+                "description": t.description,
+                "primary_field": t.primary_field,
+                "embed_fields": list(t.embed_fields),
+                "fields": list(t.field_specs),
+                "count": sum(
+                    1 for i in all_items if profile.type_key_of_safe(i) == key
+                ),
+            }
+            for key, t in profile.item_types.items()
+        ],
+        "default_type": profile.default_type,
         "sources": sorted({str(i.get("source")) for i in all_items if i.get("source")}),
         "totals": {
             "items": len(all_items),
@@ -153,19 +177,31 @@ def patch_item(item_id: str, fields: dict) -> dict:
         raise BankError(f"El ítem '{item_id}' no existe")
 
     profile = _profile()
-    schema_fields = set(profile.field_specs)
+    merged = {**bank[item_id], **fields}
+    try:
+        item_type = profile.item_type_of(merged)
+    except ValueError as exc:
+        raise BankError(str(exc)) from exc
+
+    schema_fields = set(item_type.field_specs)
     unknown = [k for k in fields if k not in schema_fields and k not in META_FIELDS]
     if unknown:
-        raise BankError(f"Campos desconocidos: {unknown}")
+        raise BankError(
+            f"Campos desconocidos para la modalidad '{item_type.key}': {unknown}"
+        )
 
-    updated = {**bank[item_id], **fields}
     # Validate exactly what the schema declares; the extra keys (source, tags, trace)
     # are ours and the model would reject or drop them.
-    candidate = {k: v for k, v in updated.items() if k in schema_fields}
+    candidate = {k: v for k, v in merged.items() if k in schema_fields}
     try:
-        profile.content_item(**candidate)
+        item_type.content_item(**candidate)
     except Exception as exc:  # noqa: BLE001 - pydantic errors are the message
         raise BankError(f"El ítem no cumple el esquema: {exc}") from exc
+
+    # Changing the modality rewrites the item's anatomy: the previous type's fields are
+    # dropped rather than left behind, where the next reader would take them for content.
+    meta = {k: v for k, v in merged.items() if k in META_FIELDS and k != ITEM_TYPE_KEY}
+    updated = {ITEM_TYPE_KEY: item_type.key, **candidate, **meta}
 
     bank[item_id] = updated
     result = _persist(bank, f"ítem '{item_id}' editado")
