@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
-import type { ContentProfile, GenerateParams, GraphView, KgConcept } from "@/lib/types";
+import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
+import type { ContentProfile, GenerateParams, GraphView, ItemTypeSpec, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { DecisionField, describeDecision } from "./DecisionField";
@@ -20,6 +21,8 @@ const MAX_INSTRUCTIONS = 600;
 export interface FormState {
   n: number;
   concepts: string[];
+  /** null means "the profile's first modality"; resolved against the profile on render. */
+  itemType: string | null;
   curriculum: string[];
   decisions: Record<string, unknown>;
   instructions: string;
@@ -28,13 +31,33 @@ export interface FormState {
 export const EMPTY_FORM: FormState = {
   n: 2,
   concepts: [],
+  itemType: null,
   curriculum: [],
   decisions: {},
   instructions: "",
 };
 
+/** The modality actually in force: what the form shows and what the run will produce. */
+export function activeTypeKey(
+  state: FormState,
+  profile: ContentProfile | null,
+): string | null {
+  const keys = typeKeys(profile);
+  if (state.itemType && keys.includes(state.itemType)) return state.itemType;
+  return defaultTypeKey(profile);
+}
+
+export function activeTypeSpec(
+  state: FormState,
+  profile: ContentProfile | null,
+): ItemTypeSpec | null {
+  const key = activeTypeKey(state, profile);
+  return key && profile ? profile.item_types[key] : null;
+}
+
 export function toParams(state: FormState): GenerateParams {
   const params: GenerateParams = { n: state.n, concepts: state.concepts };
+  if (state.itemType) params.item_type = state.itemType;
   const fixed: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(state.decisions)) {
     if (value === undefined || value === null) continue;
@@ -48,22 +71,17 @@ export function toParams(state: FormState): GenerateParams {
 }
 
 export function summarize(state: FormState, profile: ContentProfile | null): string {
+  const spec = activeTypeSpec(state, profile);
   const parts = [`${state.n} ítem${state.n === 1 ? "" : "s"}`];
+  if (spec && typeKeys(profile).length > 1) parts.push(spec.label || activeTypeKey(state, profile)!);
   parts.push(state.concepts.join(" · ") || "sin conceptos");
-  for (const field of userDecidedFields(profile)) {
+  for (const field of userDecidedFields(spec)) {
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
   }
   if (state.curriculum.length > 0) parts.push(`currículo de ${state.curriculum.length}`);
   if (state.instructions.trim()) parts.push("con instrucciones");
   return parts.join(" · ");
-}
-
-function userDecidedFields(profile: ContentProfile | null): string[] {
-  if (!profile) return [];
-  return Object.entries(profile.fields)
-    .filter(([, spec]) => spec.decided_by === "user")
-    .map(([name]) => name);
 }
 
 // The two lists the graph derives are read as a contrast, not as prose: one is what the
@@ -161,7 +179,10 @@ export function GenerateForm({
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
   const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
 
-  const decided = userDecidedFields(profile);
+  const types = typeKeys(profile);
+  const typeKey = activeTypeKey(state, profile);
+  const typeSpec = activeTypeSpec(state, profile);
+  const decided = userDecidedFields(typeSpec);
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
@@ -239,6 +260,50 @@ export function GenerateForm({
 
   return (
     <div className={cn("space-y-1", disabled && "pointer-events-none opacity-50")}>
+      {types.length > 1 ? (
+        <FormStep
+          index={++index}
+          title="¿Qué tipo de ítem?"
+          hint="La modalidad decide el esquema del ítem, sus reglas de redacción y de qué ejemplares del banco se sirve el few-shot: solo entran los de esta misma modalidad."
+          answered={Boolean(typeKey)}
+          summary={typeSpec?.label || typeKey || "Ninguna"}
+          {...step("itemType")}
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {types.map((key) => {
+              const spec = profile!.item_types[key];
+              const active = key === typeKey;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => patch({ itemType: key, decisions: {} })}
+                  className={cn(
+                    "rounded-lg border p-2.5 text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent/40",
+                  )}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {active ? <Check className="size-3.5 text-primary" /> : null}
+                    <span className="text-sm font-medium">{spec.label || key}</span>
+                  </span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                    {key}
+                  </span>
+                  {spec.description ? (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {spec.description}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </FormStep>
+      ) : null}
+
       <FormStep
         index={++index}
         title="¿Qué debe practicar el alumno?"
@@ -324,7 +389,7 @@ export function GenerateForm({
             <DecisionField
               key={field}
               name={field}
-              spec={profile!.fields[field]}
+              spec={typeSpec!.fields[field]}
               value={state.decisions[field]}
               onChange={(next) => patch({ decisions: { ...state.decisions, [field]: next } })}
             />

@@ -4,16 +4,21 @@ from pathlib import Path
 
 from json_repair import repair_json
 from loguru import logger
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from .. import config, inference, progress
-from ..content_profile import ContentProfile
+from ..content_profile import ITEM_TYPE_KEY, ContentProfile
 from ..prompts import format_content_prompt
 from ..utils import ensure_models, parse_with_repair
 from . import _source_docs
 
 
-BUILD_PHASES = (("extract", "Extrayendo ítems de los documentos", 100),)
+# Transcribing a PDF is one model call per page, so conversion is no longer the rounding
+# error it was when Docling did it in three seconds.
+BUILD_PHASES = (
+    ("convert", "Transcribiendo los documentos", 40),
+    ("extract", "Extrayendo ítems de los documentos", 60),
+)
 
 
 class ExemplarsBankBuilder:
@@ -25,7 +30,6 @@ class ExemplarsBankBuilder:
         verbose: bool = True,
     ):
         self.content_profile = content_profile
-        self.item_model = content_profile.content_item
         self.context = content_profile.content_context
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
@@ -33,17 +37,34 @@ class ExemplarsBankBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        self._docling = _source_docs.default_converter()
-        self._schema_str = json.dumps(content_profile.stripped_schema(), indent=2, ensure_ascii=False)
-        self._extraction_guidance_block = "\n".join(
-            f"- `{name}`: {text}" for name, text in content_profile.field_guidance("extraction").items()
-        )
+        self._docling = _source_docs.default_converter(ocr=config.EXEMPLARS_OCR)
+        self._type_keys = content_profile.type_keys
+        self._types_block = self._build_types_block(content_profile)
         self._id_counter = 0
+
+    @staticmethod
+    def _build_types_block(content_profile: ContentProfile) -> str:
+        blocks = []
+        for key, item_type in content_profile.item_types.items():
+            lines = [f"### `{key}` — {item_type.label}"]
+            if item_type.description:
+                lines.append(item_type.description)
+            lines.append("Schema de un ítem de esta modalidad:")
+            lines.append(item_type.schema_str())
+            guidance = item_type.field_guidance("extraction")
+            if guidance:
+                lines.append("Guía de extracción por campo — síguela literalmente:")
+                lines.extend(f"- `{name}`: {text}" for name, text in guidance.items())
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks)
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
     def bootstrap(self) -> None:
-        ensure_models([config.EB_EXTRACT_MODEL, config.REPAIR_LLM], "exemplars bank")
+        ensure_models(
+            [config.EXEMPLARS_TRANSCRIBE_MODEL, config.EB_EXTRACT_MODEL, config.REPAIR_LLM],
+            "exemplars bank",
+        )
 
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
     # llamador pueda usarlo sin releerlo (el loader ExemplarsBank sigue siendo la vía de carga).
@@ -59,6 +80,8 @@ class ExemplarsBankBuilder:
         self._id_counter = self._max_id(bank)
         logger.info(f"Found {len(files)} file(s) - Starting from C{self._id_counter + 1:03d}")
 
+        pages_by_file = self._convert(files)
+
         progress.phase("extract", f"0/{len(files)} documento(s)")
         with progress.step("extract", "Extrayendo ítems de los documentos", len(files)) as reporter:
             for idx, file_path in enumerate(files, 1):
@@ -70,7 +93,9 @@ class ExemplarsBankBuilder:
                     f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
                 )
                 try:
-                    new_items = self._process_file(file_path, tag=tag)
+                    new_items = self._process_file(
+                        file_path, pages_by_file.get(file_path, []), tag=tag
+                    )
                 except progress.Cancelled:
                     raise
                 except Exception as e:
@@ -92,10 +117,39 @@ class ExemplarsBankBuilder:
 
     # PIPELINE ------------------------------------------------------------------------------------
 
-    def _process_file(self, file_path: Path, tag: str) -> dict[str, dict]:
-        with progress.step("convert", f"Convirtiendo {file_path.name} a markdown"):
-            content = _source_docs.to_markdown(self._docling, file_path)
-        logger.info(f"{tag} markdown ready ({len(content):,} chars)")
+    # Pages are the unit of transcription and of the on-disk cache; batching stays a
+    # matter of size, over the whole document, so an exercise that straddles a page break
+    # is not cut in half before the extractor ever sees it.
+    def _convert(self, files: list[Path]) -> dict[Path, list[str]]:
+        progress.phase("convert", f"0/{len(files)} documento(s)")
+        pages_by_file: dict[Path, list[str]] = {}
+        with progress.step(
+            "convert", "Transcribiendo los documentos", len(files)
+        ) as reporter:
+            for idx, file_path in enumerate(files, 1):
+                progress.checkpoint()
+                reporter.tick(idx, detail=file_path.name)
+                progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
+                try:
+                    pages_by_file[file_path] = _source_docs.document_pages(
+                        file_path,
+                        converter=self._docling,
+                        ocr=config.EXEMPLARS_OCR,
+                        tag=f"[{idx}/{len(files)}] ",
+                    )
+                except progress.Cancelled:
+                    raise
+                except Exception as e:
+                    logger.exception(f"[{file_path.name}] conversion skipped: {e}")
+        progress.advance(1.0, f"{sum(len(p) for p in pages_by_file.values())} página(s)")
+        return pages_by_file
+
+    def _process_file(self, file_path: Path, pages: list[str], tag: str) -> dict[str, dict]:
+        content = _source_docs.join_pages(pages)
+        if not content.strip():
+            logger.warning(f"{tag} no usable content after transcription")
+            return {}
+        logger.info(f"{tag} markdown ready ({len(content):,} chars, {len(pages)} page(s))")
 
         batches = self._build_batches(content)
         if not batches:
@@ -125,9 +179,9 @@ class ExemplarsBankBuilder:
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
         prompt = format_content_prompt(
             content=batch,
-            schema=self._schema_str,
+            types_block=self._types_block,
             context=self.context,
-            field_guidance_block=self._extraction_guidance_block,
+            type_keys=self._type_keys,
         )
         response = inference.generate(
             model=config.EB_EXTRACT_MODEL, think=False, prompt=prompt
@@ -144,9 +198,13 @@ class ExemplarsBankBuilder:
 
         if items is None:
             raise ValueError(f"unrecoverable JSON after {self.max_repair_attempts} repairs: {err}")
-        return [item.model_dump() for item in items]
+        return items
 
-    def _parse_and_validate(self, response: str) -> tuple[list[BaseModel] | None, str | None]:
+    # Each raw object is validated against the schema of the modality it declares, so a
+    # mislabelled item fails loudly here instead of reaching the bank with the fields of
+    # another modality. A single type in the profile makes `item_type` optional: there is
+    # nothing to choose, and demanding it would only add a way for the model to fail.
+    def _parse_and_validate(self, response: str) -> tuple[list[dict] | None, str | None]:
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
             raw = repair_json(cleaned, return_objects=True)
@@ -154,7 +212,23 @@ class ExemplarsBankBuilder:
                 raw = [raw]
             if not isinstance(raw, list):
                 return None, "top-level JSON is neither object nor array"
-            return [self.item_model(**item) for item in raw], None
+
+            items: list[dict] = []
+            for entry in raw:
+                if not isinstance(entry, dict):
+                    return None, f"array element is not an object: {type(entry).__name__}"
+                key = entry.get(ITEM_TYPE_KEY) or (
+                    self.content_profile.default_type
+                    if len(self._type_keys) == 1
+                    else None
+                )
+                if key is None:
+                    return None, f"item is missing '{ITEM_TYPE_KEY}' (one of {self._type_keys})"
+                item_type = self.content_profile.item_type(str(key))
+                fields = {k: v for k, v in entry.items() if k != ITEM_TYPE_KEY}
+                validated = item_type.content_item(**fields).model_dump()
+                items.append({ITEM_TYPE_KEY: item_type.key, **validated})
+            return items, None
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             return None, f"{type(e).__name__}: {str(e)[:200]}"
 

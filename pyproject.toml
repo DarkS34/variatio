@@ -19,7 +19,9 @@ dependencies = [
 # runtime pipeline never touches; it is imported lazily in builders/_source_docs.py.
 
 [project.optional-dependencies]
-builders = ["docling>=2.0.0"]
+# pypdfium2 arrives with Docling anyway, but `_source_docs.page_images` imports it
+# directly to rasterise pages, so it is declared rather than relied on transitively.
+builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0"]
 
 # The web UI's backend. Kept out of the runtime so the CLI stays a plain library.
 
@@ -36,6 +38,8 @@ server = [
 [dependency-groups]
 dev = [
     "docling>=2.0.0",
+    "pypdfium2>=4.30.0",
+    "pillow>=10.0.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "websockets>=13.0",

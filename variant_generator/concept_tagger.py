@@ -17,14 +17,14 @@ class ConceptTagger:
         self,
         embedder: Embedder,
         concept_tagger_model: str,
-        primary_field: str,
+        embed_text: Callable[[dict], str],
         context: dict | None = None,
         top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
         fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
     ):
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
-        self.primary_field = primary_field
+        self.embed_text = embed_text
         self.context = context
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
@@ -228,7 +228,7 @@ class ConceptTagger:
             logger.info(f"Reusing {already_tagged} existing annotation(s)")
 
         self.embedder.prefetch_queries(
-            [exemplars_bank[c_id][self.primary_field] for c_id in pending]
+            [self.embed_text(exemplars_bank[c_id]) for c_id in pending]
         )
 
         with progress.step("tagging", "Etiquetando el banco con conceptos del grafo", total) as reporter:
@@ -237,7 +237,7 @@ class ConceptTagger:
                 logger.info(f"[{idx}/{total}] Tagging content {c_id}")
                 content = exemplars_bank[c_id]
                 reporter.tick(idx, detail=c_id)
-                annotation = self.tag(content[self.primary_field])
+                annotation = self.tag(self.embed_text(content))
                 annotated[c_id] = {**content, **annotation}
                 progress.emit(
                     "item.tagged",

@@ -115,16 +115,28 @@ export interface FieldSpec {
   decided_by?: "user" | "model";
 }
 
-export interface ContentProfile {
-  content_context: Record<string, string>;
-  general_generation_rules: string[];
+/** One modality of exercise: its own fields, its own primary and its own rules. */
+export interface ItemTypeSpec {
+  label?: string;
+  description?: string;
   primary_field: string;
+  /** Fields read together to decide which concept the item practises. Defaults to
+   *  [primary_field]; the solution is deliberately never in it. */
+  embed_fields?: string[];
+  general_generation_rules?: string[];
   fields: Record<string, FieldSpec>;
+}
+
+export interface ContentProfile {
+  /** Shared by every modality: it describes the subject, not the exercise. */
+  content_context: Record<string, string>;
+  item_types: Record<string, ItemTypeSpec>;
 }
 
 export interface GenerateParams {
   n: number;
   concepts: string[];
+  item_type?: string;
   fixed?: Record<string, unknown>;
   curriculum?: string[];
   instructions?: string;
@@ -213,10 +225,21 @@ export interface TaggingTrace {
 export interface BankItem {
   id: string;
   source?: string;
+  item_type?: string;
   concepts?: string[];
   primary_concept?: string | null;
   _tagging?: TaggingTrace;
   [field: string]: unknown;
+}
+
+export interface BankItemType {
+  key: string;
+  label: string;
+  description: string;
+  primary_field: string;
+  embed_fields: string[];
+  fields: string[];
+  count: number;
 }
 
 /** One exemplar exactly as it went into the few-shot block of the prompt. */
@@ -230,8 +253,8 @@ export interface BankListing {
   total: number;
   page: number;
   page_size: number;
-  primary_field: string;
-  fields: string[];
+  item_types: BankItemType[];
+  default_type: string;
   sources: string[];
   totals: { items: number; tagged: number; untagged: number };
   thresholds: { similarity: number; top_k: number };

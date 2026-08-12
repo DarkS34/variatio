@@ -5,32 +5,39 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
+import { isCodeField } from "@/features/bank/BankScreen";
+import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ContentProfile } from "@/lib/types";
-
-function isCode(field: string): boolean {
-  return field.toLowerCase().includes("solution") || field.toLowerCase().includes("code");
-}
 
 export function ResultCard({
   index,
   item,
+  itemType,
   thinking,
   profile,
 }: {
   index: number;
   item: Record<string, unknown>;
+  itemType?: string;
   thinking?: string | null;
   profile: ContentProfile;
 }) {
   const [showThinking, setShowThinking] = useState(false);
-  const primary = String(item[profile.primary_field] ?? "");
-  const others = Object.keys(profile.fields).filter((f) => f !== profile.primary_field);
+  const spec = itemTypeOf(profile, { item_type: itemType });
+  const primary = spec ? String(item[spec.primary_field] ?? "") : "";
+  const others = Object.keys(spec?.fields ?? {}).filter((f) => f !== spec?.primary_field);
+  const manyTypes = Object.keys(profile.item_types).length > 1;
 
   return (
     <Card className="animate-fade-in">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <CardTitle>Ítem {index}</CardTitle>
+          {manyTypes ? (
+            <span className="text-xs text-muted-foreground">
+              {typeLabel(profile, itemType ?? null)}
+            </span>
+          ) : null}
           <div className="ml-auto flex gap-1">
             <Button
               variant="ghost"
@@ -52,7 +59,7 @@ export function ResultCard({
           return (
             <div key={field} className="space-y-1">
               <Label>{field}</Label>
-              {isCode(field) ? (
+              {isCodeField(field) ? (
                 <CodeBlock code={String(value)} maxHeight="18rem" />
               ) : (
                 <p className="text-sm text-muted-foreground">{String(value)}</p>
@@ -79,18 +86,32 @@ export function ResultCard({
 }
 
 export function toMarkdown(
-  items: { item: Record<string, unknown> }[],
+  items: { item: Record<string, unknown>; item_type?: string }[],
   profile: ContentProfile,
 ): string {
   const lines: string[] = ["# Ítems generados", ""];
-  items.forEach(({ item }, index) => {
-    lines.push(`## Ítem ${index + 1}`, "", String(item[profile.primary_field] ?? ""), "");
-    for (const field of Object.keys(profile.fields)) {
-      if (field === profile.primary_field) continue;
+  items.forEach(({ item, item_type }, index) => {
+    const spec = itemTypeOf(profile, { item_type });
+    const heading = `## Ítem ${index + 1}`;
+    lines.push(
+      Object.keys(profile.item_types).length > 1
+        ? `${heading} · ${typeLabel(profile, item_type ?? null)}`
+        : heading,
+      "",
+      spec ? String(item[spec.primary_field] ?? "") : "",
+      "",
+    );
+    for (const field of Object.keys(spec?.fields ?? {})) {
+      if (field === spec?.primary_field) continue;
       const value = item[field];
       if (value === null || value === undefined || value === "") continue;
       lines.push(`### ${field}`, "");
-      lines.push(isCode(field) ? "```python" : "", String(value), isCode(field) ? "```" : "", "");
+      lines.push(
+        isCodeField(field) ? "```" : "",
+        String(value),
+        isCodeField(field) ? "```" : "",
+        "",
+      );
     }
   });
   return lines.join("\n");

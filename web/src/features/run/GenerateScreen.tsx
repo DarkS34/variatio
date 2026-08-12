@@ -48,10 +48,15 @@ export function GenerateScreen() {
     if (!isGenerate) return [];
     const fromResult = (run?.job?.result?.items ?? []) as {
       item: Record<string, unknown>;
+      item_type?: string;
       thinking?: string;
     }[];
     if (fromResult.length > 0) return fromResult;
-    return (run?.items ?? []).map((i) => ({ item: i.item, thinking: i.thinking ?? undefined }));
+    return (run?.items ?? []).map((i) => ({
+      item: i.item,
+      item_type: i.item_type,
+      thinking: i.thinking ?? undefined,
+    }));
   }, [isGenerate, run]);
 
   // A run that the guardrail stopped is not a generic failure: it is an answer about the
@@ -191,7 +196,7 @@ function Results({
   profile,
   run,
 }: {
-  results: { item: Record<string, unknown>; thinking?: string }[];
+  results: { item: Record<string, unknown>; item_type?: string; thinking?: string }[];
   profile: ContentProfile;
   run: RunView | null;
 }) {
@@ -247,6 +252,7 @@ function Results({
           key={index}
           index={index + 1}
           item={result.item}
+          itemType={result.item_type}
           thinking={result.thinking}
           profile={profile}
         />

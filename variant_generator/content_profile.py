@@ -1,19 +1,122 @@
 import copy
 import json
 import operator
+import re
 from functools import reduce
 from pathlib import Path
 from typing import Literal, ClassVar
 
 from pydantic import BaseModel, Field, create_model
 
+ITEM_TYPE_KEY = "item_type"
+
+RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_concept")
+
+
+class ItemType:
+    def __init__(self, key: str, raw: dict, content_context: dict):
+        self.key = key
+        self.label: str = raw.get("label") or key
+        self.description: str = raw.get("description") or ""
+        self.primary_field: str = raw["primary_field"]
+        self.embed_fields: list[str] = list(raw.get("embed_fields") or [self.primary_field])
+        self.general_generation_rules: list[str] = list(raw.get("general_generation_rules") or [])
+        self.field_specs: dict[str, dict] = raw["fields"]
+        self.content_context = content_context
+        self.content_item: type[BaseModel] = self._build_content_item()
+
+    def _build_content_item(self) -> type[BaseModel]:
+        fields = {
+            name: ContentProfile._spec_to_field(spec) for name, spec in self.field_specs.items()
+        }
+        model = create_model(f"ContentItem_{self.key}", **fields)
+        model.PRIMARY_FIELD = self.primary_field
+        model.ITEM_TYPE = self.key
+        return model
+
+    @property
+    def user_decided_fields(self) -> list[str]:
+        return [
+            name for name, spec in self.field_specs.items() if spec.get("decided_by") == "user"
+        ]
+
+    def stripped_schema(self) -> dict:
+        schema = copy.deepcopy(self.content_item.model_json_schema())
+        schema.pop("title", None)
+        for prop in schema.get("properties", {}).values():
+            prop.pop("guidance", None)
+        return schema
+
+    def schema_str(self) -> str:
+        return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
+
+    def field_guidance(self, task: str) -> dict[str, str]:
+        if task not in ContentProfile._GUIDANCE_KEYS:
+            raise ValueError(
+                f"Unknown task '{task}'; expected one of {list(ContentProfile._GUIDANCE_KEYS)}"
+            )
+        out: dict[str, str] = {}
+        for name, spec in self.field_specs.items():
+            text = (spec.get("guidance") or {}).get(task)
+            if text:
+                out[name] = text
+        return out
+
+    def primary_text(self, item: dict) -> str:
+        if self.primary_field not in item:
+            raise ValueError(
+                f"Item is missing its primary field '{self.primary_field}' "
+                f"(item type '{self.key}')"
+            )
+        return str(item[self.primary_field] or "")
+
+    # The text an item is indexed and retrieved by. Measured on this corpus: with the
+    # enunciado alone, three unrelated questions came back with the SAME top-3
+    # (Función / Lenguaje funcional / Bucle while) because a `analisis_codigo` enunciado
+    # is boilerplate — «¿qué imprime el siguiente código?» — and the concept lives in the
+    # code it hands the student. Adding that code separated them and raised the score
+    # (0.609 → 0.728). Adding the SOLUTION instead cost accuracy (12/12 → 11/12 top-1 on
+    # the reference bank), so this is a curated list per modality, not «todos los campos».
+    #
+    # With the default `[primary_field]` the result is byte-identical to `primary_text`:
+    # a profile that declares nothing new must not re-embed, and must keep the threshold
+    # `EMBEDDER_SIMILARITY_THRESHOLD` was calibrated on.
+    def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
+        primary = self.primary_text(item)
+        if self.embed_fields == [self.primary_field]:
+            return primary
+
+        parts: list[str] = []
+        for name in self.embed_fields:
+            if name == self.primary_field:
+                parts.append(primary)
+                continue
+            rendered = self._render_value(item.get(name))
+            if rendered:
+                if field_max_chars and len(rendered) > field_max_chars:
+                    rendered = rendered[:field_max_chars].rstrip() + " […]"
+                parts.append(f"{name}:\n{rendered}")
+        return "\n\n".join(p for p in parts if p)
+
+    @staticmethod
+    def _render_value(value) -> str:
+        if value is None or isinstance(value, bool):
+            return "" if value is None else str(value)
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (list, tuple)):
+            lines = [ItemType._render_value(v) for v in value]
+            return "\n".join(f"- {line}" for line in lines if line)
+        if isinstance(value, dict):
+            return "\n".join(
+                f"- {k}: {ItemType._render_value(v)}" for k, v in value.items() if v is not None
+            )
+        return str(value)
+
+
 class ContentProfile:
-    _REQUIRED_KEYS: ClassVar[tuple] = (
-        "content_context",
-        "general_generation_rules",
-        "primary_field",
-        "fields",
-    )
+    _REQUIRED_KEYS: ClassVar[tuple] = ("content_context", "item_types")
+    _TYPE_REQUIRED_KEYS: ClassVar[tuple] = ("primary_field", "fields")
     _SCALAR_TYPES: ClassVar[dict] = {
         "string": str,
         "integer": int,
@@ -24,24 +127,110 @@ class ContentProfile:
     _GUIDANCE_KEYS: ClassVar[tuple] = ("extraction", "generation")
     _DECIDED_BY_VALUES: ClassVar[tuple] = ("user", "model")
     _UNDECIDABLE_TYPES: ClassVar[tuple] = ("array", "object")
+    NAME_RE: ClassVar[re.Pattern] = re.compile(r"^[a-z][a-z0-9_]*$")
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
         self._raw = self._load(self.path)
         self._validate(self._raw)
         self.content_context: dict = self._raw["content_context"]
-        self.general_generation_rules: list[str] = list(self._raw["general_generation_rules"])
-        self.primary_field: str = self._raw["primary_field"]
-        self.field_specs: dict[str, dict] = self._raw["fields"]
-        self.content_item: type[BaseModel] = self._build_content_item()
-        
-    def _build_content_item(self) -> type[BaseModel]:
-        fields = {
-            name: self._spec_to_field(spec) for name, spec in self.field_specs.items()
+        self.item_types: dict[str, ItemType] = {
+            key: ItemType(key, spec, self.content_context)
+            for key, spec in self._raw["item_types"].items()
         }
-        model = create_model("ContentItem", **fields)
-        model.PRIMARY_FIELD = self.primary_field
-        return model
+
+    @property
+    def type_keys(self) -> list[str]:
+        return list(self.item_types)
+
+    @property
+    def default_type(self) -> str:
+        return next(iter(self.item_types))
+
+    def item_type(self, key: str | None = None) -> ItemType:
+        if key is None:
+            return self.item_types[self.default_type]
+        if key not in self.item_types:
+            raise ValueError(
+                f"Unknown item type '{key}'; the profile declares {self.type_keys}"
+            )
+        return self.item_types[key]
+
+    def type_key_of(self, item: dict) -> str:
+        key = item.get(ITEM_TYPE_KEY)
+        if key is None:
+            if len(self.item_types) == 1:
+                return self.default_type
+            raise ValueError(
+                f"Item has no '{ITEM_TYPE_KEY}' and the profile declares {self.type_keys}"
+            )
+        if key not in self.item_types:
+            raise ValueError(
+                f"Item declares unknown {ITEM_TYPE_KEY} '{key}'; "
+                f"the profile declares {self.type_keys}"
+            )
+        return str(key)
+
+    def type_key_of_safe(self, item: dict) -> str | None:
+        try:
+            return self.type_key_of(item)
+        except ValueError:
+            return None
+
+    def item_type_of(self, item: dict) -> ItemType:
+        return self.item_types[self.type_key_of(item)]
+
+    def primary_text(self, item: dict) -> str:
+        return self.item_type_of(item).primary_text(item)
+
+    def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
+        return self.item_type_of(item).embed_text(item, field_max_chars)
+
+    def primary_fields(self) -> dict[str, str]:
+        return {key: item_type.primary_field for key, item_type in self.item_types.items()}
+
+    def embed_fields(self) -> dict[str, list[str]]:
+        return {key: list(item_type.embed_fields) for key, item_type in self.item_types.items()}
+
+    # Feeds the embedding caches' fingerprint: changing which fields are indexed changes
+    # every vector, and the `.npz` files are keyed by model + prefixes only. Without this
+    # a profile edit would silently reuse vectors built from a different text.
+    #
+    # Empty when every modality indexes its primary field alone, which is the rule that
+    # was in force before `embed_fields` existed and produces byte-identical text. A
+    # profile that declares nothing new must not invalidate caches it still matches.
+    @property
+    def embed_signature(self) -> str:
+        fields = self.embed_fields()
+        if all(names == [self.item_types[key].primary_field] for key, names in fields.items()):
+            return ""
+        return json.dumps(fields, sort_keys=True, ensure_ascii=False)
+
+    # Everything that iterates the bank (embedding, tagging, few-shot) resolves each item
+    # against its declared type, so one item the profile cannot place would blow up deep
+    # inside a loop. Checking the whole bank at once buys a single actionable error instead.
+    def unplaceable_items(self, bank: dict) -> dict[str, str]:
+        problems: dict[str, str] = {}
+        for item_id, item in bank.items():
+            try:
+                self.primary_text(item)
+            except ValueError as exc:
+                problems[item_id] = str(exc)
+        return problems
+
+    # Reported, never truncated here. Ollama's two embedding endpoints disagree about
+    # oversized input — the batch one silently truncates, the single-text one returns a
+    # 500 — so an item over budget indexes fine and then fails at tagging with an opaque
+    # error. Naming it up front is the difference between a diagnosable warning and that.
+    def oversized_embed_items(
+        self, bank: dict, max_chars: int, field_max_chars: int = 0
+    ) -> dict[str, int]:
+        sizes: dict[str, int] = {}
+        for item_id, item in bank.items():
+            size = len(self.embed_text(item, field_max_chars))
+            if size > max_chars:
+                sizes[item_id] = size
+        return sizes
 
     @staticmethod
     def _load(path: Path) -> dict:
@@ -53,8 +242,12 @@ class ContentProfile:
     @classmethod
     def validate_raw(cls, raw: dict) -> None:
         cls._validate(raw)
-        fields = {name: cls._spec_to_field(spec) for name, spec in raw["fields"].items()}
-        create_model("ContentItemCandidate", **fields)
+        for key, spec in raw["item_types"].items():
+            fields = {
+                name: cls._spec_to_field(field_spec)
+                for name, field_spec in spec["fields"].items()
+            }
+            create_model(f"ItemCandidate_{key}", **fields)
 
     @property
     def raw(self) -> dict:
@@ -64,26 +257,91 @@ class ContentProfile:
     def _validate(cls, raw: dict) -> None:
         if not isinstance(raw, dict):
             raise ValueError("ContentProfile root must be an object")
-        
+
         missing = [k for k in cls._REQUIRED_KEYS if k not in raw]
-        
         if missing:
             raise ValueError(f"ContentProfile missing required keys: {missing}")
-        
+
         if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
             raise ValueError("'content_context' must be a non-empty object")
-        if not isinstance(raw["general_generation_rules"], list):
-            raise ValueError("'general_generation_rules' must be a list")
-        if not isinstance(raw["fields"], dict) or not raw["fields"]:
-            raise ValueError("'fields' must be a non-empty object")
-        if not isinstance(raw["primary_field"], str):
-            raise ValueError("'primary_field' must be a string")
-        if raw["primary_field"] not in raw["fields"]:
+        if not isinstance(raw["item_types"], dict) or not raw["item_types"]:
+            raise ValueError("'item_types' must be a non-empty object")
+
+        for key, spec in raw["item_types"].items():
+            cls._validate_item_type(key, spec)
+
+    @classmethod
+    def _validate_item_type(cls, key: str, spec: dict) -> None:
+        if not cls.NAME_RE.match(key):
             raise ValueError(
-                f"'primary_field' = '{raw['primary_field']}' is not declared in 'fields'"
+                f"Item type '{key}' must match {cls.NAME_RE.pattern} "
+                f"(lowercase ASCII, snake_case, no accents)"
             )
-        for name, spec in raw["fields"].items():
-            cls._validate_field_spec(name, spec, is_primary=name == raw["primary_field"])
+        if not isinstance(spec, dict):
+            raise ValueError(f"Item type '{key}' must be an object")
+
+        missing = [k for k in cls._TYPE_REQUIRED_KEYS if k not in spec]
+        if missing:
+            raise ValueError(f"Item type '{key}' missing required keys: {missing}")
+
+        if not isinstance(spec["fields"], dict) or not spec["fields"]:
+            raise ValueError(f"Item type '{key}': 'fields' must be a non-empty object")
+        if not isinstance(spec["primary_field"], str):
+            raise ValueError(f"Item type '{key}': 'primary_field' must be a string")
+        if spec["primary_field"] not in spec["fields"]:
+            raise ValueError(
+                f"Item type '{key}': 'primary_field' = '{spec['primary_field']}' "
+                f"is not declared in its 'fields'"
+            )
+        cls._validate_embed_fields(key, spec)
+        rules = spec.get("general_generation_rules")
+        if rules is not None and not isinstance(rules, list):
+            raise ValueError(f"Item type '{key}': 'general_generation_rules' must be a list")
+        for label_key in ("label", "description"):
+            if label_key in spec and not isinstance(spec[label_key], str):
+                raise ValueError(f"Item type '{key}': '{label_key}' must be a string")
+
+        for name, field_spec in spec["fields"].items():
+            cls._validate_field_name(key, name)
+            cls._validate_field_spec(
+                name, field_spec, is_primary=name == spec["primary_field"]
+            )
+
+    # The primary field is required in the list, not merely allowed: it is the only field
+    # guaranteed to carry the item itself, and a profile that indexed `opciones` alone
+    # would retrieve on the distractors. Order is preserved as declared.
+    @classmethod
+    def _validate_embed_fields(cls, key: str, spec: dict) -> None:
+        embed_fields = spec.get("embed_fields")
+        if embed_fields is None:
+            return
+        if not isinstance(embed_fields, list) or not embed_fields:
+            raise ValueError(f"Item type '{key}': 'embed_fields' must be a non-empty list")
+        unknown = [n for n in embed_fields if n not in spec["fields"]]
+        if unknown:
+            raise ValueError(
+                f"Item type '{key}': 'embed_fields' names field(s) it does not declare: {unknown}"
+            )
+        if len(set(embed_fields)) != len(embed_fields):
+            raise ValueError(f"Item type '{key}': 'embed_fields' has duplicates")
+        if spec["primary_field"] not in embed_fields:
+            raise ValueError(
+                f"Item type '{key}': 'embed_fields' must include the primary field "
+                f"'{spec['primary_field']}'"
+            )
+
+    @classmethod
+    def _validate_field_name(cls, type_key: str, name: str) -> None:
+        if not cls.NAME_RE.match(name):
+            raise ValueError(
+                f"Item type '{type_key}': field '{name}' must match {cls.NAME_RE.pattern} "
+                f"(lowercase ASCII, snake_case, no accents, no ñ)"
+            )
+        if name in RESERVED_FIELD_NAMES:
+            raise ValueError(
+                f"Item type '{type_key}': '{name}' is reserved by the pipeline "
+                f"(reserved: {list(RESERVED_FIELD_NAMES)})"
+            )
 
     @classmethod
     def _validate_field_spec(cls, name: str, spec: dict, is_primary: bool = False) -> None:
@@ -126,32 +384,6 @@ class ContentProfile:
                 f"Field '{name}' is of type '{schema['type']}': there is no choice to offer, so it cannot be 'decided_by': 'user'"
             )
 
-    @property
-    def user_decided_fields(self) -> list[str]:
-        return [
-            name
-            for name, spec in self.field_specs.items()
-            if spec.get("decided_by") == "user"
-        ]
-
-    def stripped_schema(self) -> dict:
-        schema = copy.deepcopy(self.content_item.model_json_schema())
-        for prop in schema.get("properties", {}).values():
-            prop.pop("guidance", None)
-        return schema
-
-    def field_guidance(self, task: str) -> dict[str, str]:
-        if task not in self._GUIDANCE_KEYS:
-            raise ValueError(
-                f"Unknown task '{task}'; expected one of {list(self._GUIDANCE_KEYS)}"
-            )
-        out: dict[str, str] = {}
-        for name, spec in self.field_specs.items():
-            text = (spec.get("guidance") or {}).get(task)
-            if text:
-                out[name] = text
-        return out
-
     @classmethod
     def _spec_to_field(cls, spec: dict) -> tuple:
         schema = spec["schema"]
@@ -185,7 +417,13 @@ class ContentProfile:
         if isinstance(t, list):
             if not t:
                 raise ValueError("'type' list must be non-empty")
-            return reduce(operator.or_, (cls._scalar(s) for s in t))
+            # Recurse instead of assuming every member is scalar: `{"type": ["array",
+            # "null"], "items": …}` is a list of options that may be absent, which is
+            # ordinary once one profile declares several modalities. Rejecting it only
+            # bought a repair round that ended up dropping the nullability.
+            return reduce(
+                operator.or_, (cls._py_type({**schema, "type": s}) for s in t)
+            )
         if t == "array":
             items_schema = schema.get("items", {"type": "string"})
             return list[cls._py_type(items_schema)]

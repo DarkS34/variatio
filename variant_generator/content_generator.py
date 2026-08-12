@@ -6,7 +6,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config, guardrail, inference, progress
-from .content_profile import ContentProfile
+from .content_profile import ITEM_TYPE_KEY, ContentProfile, ItemType
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
 from .prompts import generate_content_prompt
@@ -61,6 +61,7 @@ class GeneratedContent(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     item: BaseModel
+    item_type: str
     thinking: str | None = None
 
 
@@ -78,63 +79,63 @@ class ContentGenerator:
         self.exemplars_bank = exemplars_bank
         self.embedder = embedder
         self.content_profile = content_profile
-        self.item_model = content_profile.content_item
         self.context = content_profile.content_context
         self.generator_model = generator_model
         self.repair_model = repair_model
-        self.general_generation_rules: list[str] = content_profile.general_generation_rules
-        self.generation_field_guidance: dict[str, str] = content_profile.field_guidance("generation")
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.max_few_shot = config.MAX_FEW_SHOT_EXAMPLES
-        self.schema_dict = content_profile.stripped_schema()
-        self.schema_str = json.dumps(self.schema_dict, indent=2, ensure_ascii=False)
-        self.schema_fields = set(self.schema_dict.get("properties", {}))
         self.taggable_concepts = set(knowledge_graph.taggable_concepts)
-        self.primary_field = content_profile.primary_field
 
     def generate(
         self,
         concepts: list[str],
+        item_type: str | None = None,
         n: int = 1,
         fixed: dict[str, object] | None = None,
         curriculum: list[str] | None = None,
         instructions: str | None = None,
     ) -> list[GeneratedContent]:
+        target_type = self.content_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
         instructions = (instructions or "").strip()
-        self._validate_input(concepts, fixed, n, curriculum, instructions)
+        self._validate_input(target_type, concepts, fixed, n, curriculum, instructions)
         self._screen_instructions(instructions)
 
-        few_shot = self._select_few_shot(concepts, fixed)
+        few_shot = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
             logger.warning(
-                f"No few-shot examples found for concepts={concepts}, fixed={fixed} — falling back to zero-shot"
+                f"No few-shot examples found for type='{target_type.key}', concepts={concepts}, "
+                f"fixed={fixed} — falling back to zero-shot"
             )
         progress.emit(
             "few_shot",
             ids=[ex_id for ex_id, _ in few_shot],
             items=[{"id": ex_id, "item": _public_fields(item)} for ex_id, item in few_shot],
             concepts=concepts,
+            item_type=target_type.key,
         )
 
         target_block = self._format_target_concepts(concepts)
         prerequisites_block = self._format_concept_list(self._prerequisites(concepts))
         excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
         curriculum_block = self._format_concept_list(curriculum or [])
-        rules_block = "\n".join(f"- {r}" for r in self.general_generation_rules)
-        few_shot_block = self._build_few_shot_block([item for _, item in few_shot])
-        instance_template = self._build_instance_template(fixed)
-        field_guidance_block = self._build_field_guidance_block(fixed)
-        fixed_values_block = self._build_fixed_values_block(fixed)
+        rules_block = "\n".join(f"- {r}" for r in target_type.general_generation_rules)
+        few_shot_block = self._build_few_shot_block(target_type, [item for _, item in few_shot])
+        instance_template = self._build_instance_template(target_type, fixed)
+        field_guidance_block = self._build_field_guidance_block(target_type, fixed)
+        fixed_values_block = self._build_fixed_values_block(target_type, fixed)
+        item_type_block = self._build_item_type_block(target_type)
+        schema_str = target_type.schema_str()
 
         accepted: list[GeneratedContent] = []
         with progress.step("generate", "Generando variantes", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
-                already = self._collect_already_generated(accepted)
+                already = self._collect_already_generated(target_type, accepted)
                 prompt = generate_content_prompt(
                     context=self.context,
+                    item_type_block=item_type_block,
                     target_concepts_block=target_block,
                     prerequisites_block=prerequisites_block,
                     excluded_concepts_block=excluded_block,
@@ -145,14 +146,14 @@ class ContentGenerator:
                     instance_template=instance_template,
                     field_guidance_block=field_guidance_block,
                     fixed_values_block=fixed_values_block,
-                    schema=self.schema_str,
+                    schema=schema_str,
                     instructions=instructions,
                 )
 
-                logger.info(f"[{i + 1}/{n}] generating item")
+                logger.info(f"[{i + 1}/{n}] generating '{target_type.key}' item")
                 reporter.tick(i + 1)
                 progress.emit("prompt", index=i + 1, text=prompt)
-                result = self._generate_one(prompt, fixed)
+                result = self._generate_one(prompt, fixed, target_type)
                 if result is None:
                     logger.warning(f"[{i + 1}/{n}] generation failed; skipping")
                     progress.emit("item.rejected", index=i + 1)
@@ -163,6 +164,7 @@ class ContentGenerator:
                     "item.produced",
                     index=i + 1,
                     item=result.item.model_dump(mode="json"),
+                    item_type=target_type.key,
                     thinking=result.thinking,
                 )
 
@@ -209,6 +211,7 @@ class ContentGenerator:
 
     def _validate_input(
         self,
+        item_type: ItemType,
         concepts: list[str],
         fixed: dict[str, object],
         n: int,
@@ -226,10 +229,11 @@ class ContentGenerator:
         unknown_concepts = [c for c in concepts if c not in self.taggable_concepts]
         if unknown_concepts:
             raise ValueError(f"Unknown concepts (not in KG taggable set): {unknown_concepts}")
-        unknown_fields = [k for k in fixed if k not in self.schema_fields]
+        unknown_fields = [k for k in fixed if k not in item_type.field_specs]
         if unknown_fields:
             raise ValueError(
-                f"Unknown fixed fields (not in content_profile schema): {unknown_fields}"
+                f"Unknown fixed fields for item type '{item_type.key}': {unknown_fields} "
+                f"(it declares {list(item_type.field_specs)})"
             )
         if curriculum is not None:
             unknown_curriculum = [c for c in curriculum if c not in self.taggable_concepts]
@@ -249,13 +253,25 @@ class ContentGenerator:
     # on-target and the primary pool 100%, so the primaries go first and the rest only
     # fill the gap — ranked by similarity, because that is the best proxy available for
     # "closest to what we are asking for" among exemplars that are already off-objective.
+    # Modality is a hard filter, not a preference: an exemplar of another modality shows
+    # the model the wrong anatomy, and the few-shot block is the strongest signal in the
+    # prompt. With none of the right type the batch goes zero-shot, which is honest — the
+    # warning above says so — and better than teaching it to answer in the wrong shape.
+    def _is_type(self, item: dict, key: str) -> bool:
+        declared = item.get(ITEM_TYPE_KEY)
+        if declared is None:
+            return len(self.content_profile.item_types) == 1
+        return declared == key
+
     def _select_few_shot(
-        self, concepts: list[str], fixed: dict[str, object]
+        self, item_type: ItemType, concepts: list[str], fixed: dict[str, object]
     ) -> list[tuple[str, dict]]:
         target = set(concepts)
         primary: list[tuple[str, dict]] = []
         secondary: list[tuple[str, dict]] = []
         for ex_id, item in self.exemplars_bank.items():
+            if not self._is_type(item, item_type.key):
+                continue
             if not target.intersection(item.get("concepts") or []):
                 continue
             if item.get("primary_concept") in target:
@@ -321,11 +337,24 @@ class ContentGenerator:
     def _format_concept_list(concepts: list[str]) -> str:
         return "\n".join(f"- {c}" for c in concepts)
 
-    def _build_few_shot_block(self, few_shot: list[dict]) -> str:
+    def _build_item_type_block(self, item_type: ItemType) -> str:
+        lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
+        if item_type.description:
+            lines.append(item_type.description)
+        others = [t for k, t in self.content_profile.item_types.items() if k != item_type.key]
+        if others:
+            lines.append(
+                "Otras modalidades de la asignatura, que NO debes producir aquí: "
+                + ", ".join(f"{t.label} (`{t.key}`)" for t in others)
+                + "."
+            )
+        return "\n".join(lines)
+
+    def _build_few_shot_block(self, item_type: ItemType, few_shot: list[dict]) -> str:
         if not few_shot:
             return ""
-        primary = self.primary_field
-        properties = self.schema_dict.get("properties", {})
+        primary = item_type.primary_field
+        properties = item_type.stripped_schema().get("properties", {})
         parts = []
         for ex in few_shot:
             scalar_meta = []
@@ -344,6 +373,10 @@ class ContentGenerator:
                     text_blocks.append((name, value.strip()))
                 elif isinstance(value, (int, float, bool)):
                     scalar_meta.append(f"{name}={value}")
+                elif isinstance(value, list) and value:
+                    text_blocks.append(
+                        (name, "\n".join(f"- {entry}" for entry in value))
+                    )
             header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
             lines = ["---", f"ITEM{header}:", primary_text]
             for name, value in text_blocks:
@@ -352,18 +385,18 @@ class ContentGenerator:
             parts.append("\n".join(lines))
         return "\n".join(parts)
 
-    def _collect_already_generated(self, accepted: list[GeneratedContent]) -> list[str]:
-        if not self.primary_field:
-            return []
+    def _collect_already_generated(
+        self, item_type: ItemType, accepted: list[GeneratedContent]
+    ) -> list[str]:
         out = []
         for r in accepted:
-            value = getattr(r.item, self.primary_field, None)
+            value = getattr(r.item, item_type.primary_field, None)
             if isinstance(value, str) and value.strip():
                 out.append(value)
         return out
 
-    def _build_instance_template(self, fixed: dict[str, object]) -> str:
-        properties = self.schema_dict.get("properties", {})
+    def _build_instance_template(self, item_type: ItemType, fixed: dict[str, object]) -> str:
+        properties = item_type.stripped_schema().get("properties", {})
         lines = ["{"]
         items = list(properties.keys())
         for idx, name in enumerate(items):
@@ -376,18 +409,18 @@ class ContentGenerator:
         lines.append("}")
         return "\n".join(lines)
 
-    def _build_field_guidance_block(self, fixed: dict[str, object]) -> str:
+    def _build_field_guidance_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
         lines = [
             f"- `{name}`: {guidance}"
-            for name, guidance in self.generation_field_guidance.items()
+            for name, guidance in item_type.field_guidance("generation").items()
             if name not in fixed
         ]
         if not lines:
             return "(ningún campo con guía específica adicional; sigue las descripciones del schema)"
         return "\n".join(lines)
 
-    def _build_fixed_values_block(self, fixed: dict[str, object]) -> str:
-        properties = self.schema_dict.get("properties", {})
+    def _build_fixed_values_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
+        properties = item_type.stripped_schema().get("properties", {})
         lines = []
         for name, value in fixed.items():
             value_repr = json.dumps(value, ensure_ascii=False)
@@ -399,7 +432,7 @@ class ContentGenerator:
         return "\n".join(lines)
 
     def _generate_one(
-        self, prompt: str, fixed: dict[str, object]
+        self, prompt: str, fixed: dict[str, object], item_type: ItemType
     ) -> GeneratedContent | None:
         resp = inference.generate_stream(
             model=self.generator_model,
@@ -413,7 +446,9 @@ class ContentGenerator:
         body = resp.response or (thinking or "")
 
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
-            return self._parse_and_validate(inference.split_thinking(text).response, fixed)
+            return self._parse_and_validate(
+                inference.split_thinking(text).response, fixed, item_type
+            )
 
         item, _ = parse_with_repair(
             body,
@@ -425,30 +460,32 @@ class ContentGenerator:
 
         if item is None:
             return None
-        return GeneratedContent(item=item, thinking=thinking)
+        return GeneratedContent(item=item, item_type=item_type.key, thinking=thinking)
 
     def _parse_and_validate(
-        self, response: str, fixed: dict[str, object]
+        self, response: str, fixed: dict[str, object], item_type: ItemType
     ) -> tuple[BaseModel | None, str | None]:
         """The best schema-conforming object in the reply, not merely the first one.
 
         Candidates are scored by how much of the schema they cover and, on a tie, the
         last one wins: models write their drafts before their answer.
         """
+        schema_fields = set(item_type.field_specs)
         candidates = json_objects(response) or [response]
         best: BaseModel | None = None
         best_score = -1
         error = "no JSON object in the model output"
 
         for candidate in candidates:
-            raw = self._as_object(candidate)
+            raw = self._as_object(candidate, schema_fields)
             if raw is None:
                 continue
-            score = len(self.schema_fields.intersection(raw))
+            raw = {k: v for k, v in raw.items() if k != ITEM_TYPE_KEY}
+            score = len(schema_fields.intersection(raw))
             if best is not None and score < best_score:
                 continue
             try:
-                item = self.item_model(**{**raw, **fixed})
+                item = item_type.content_item(**{**raw, **fixed})
             except (ValidationError, ValueError, TypeError) as e:
                 error = f"{type(e).__name__}: {str(e)}"
                 continue
@@ -458,7 +495,8 @@ class ContentGenerator:
             return None, error
         return best, None
 
-    def _as_object(self, candidate: str) -> dict | None:
+    @staticmethod
+    def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
         """One repaired JSON object, picking the richest element if it came as a list."""
         try:
             raw = repair_json(candidate.strip(), return_objects=True)
@@ -468,5 +506,5 @@ class ContentGenerator:
             objects = [element for element in raw if isinstance(element, dict)]
             if not objects:
                 return None
-            raw = max(objects, key=lambda o: len(self.schema_fields.intersection(o)))
+            raw = max(objects, key=lambda o: len(schema_fields.intersection(o)))
         return raw if isinstance(raw, dict) else None

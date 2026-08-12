@@ -5,9 +5,9 @@ from .relations import BUILTIN_SCHEMAS
 
 # File Paths & Cache ----------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-INSTANCE_DIR = PROJECT_ROOT / "instance"
-CACHE_DIR = PROJECT_ROOT / "cache"
-RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_1"
+INSTANCE_DIR = PROJECT_ROOT / "instance_test"
+CACHE_DIR = PROJECT_ROOT / "cache_test"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_test"
 
 RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
 RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"
@@ -37,8 +37,24 @@ LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
 LLM_SMALL = "granite4.1:3b"
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 
+# Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
+# so there is one constant and not two that could drift and produce two different
+# markdowns for the same file.
+#
+# What carries fidelity here is the PROMPT, not the model. Measured on Prog1_PEC1 p.1:
+# without the character-by-character clause of `transcribe_page_prompt`, gemma4:31b
+# rewrote `a -= 1` as `a = a - 1`, invented `8 - (n-i)` for `(n-i)`, and turned
+# `x = x - 1` into `x = x + 1` — which inverts the answer to the very question being
+# transcribed. With the clause, both 30B-class models come back faithful. Weakening that
+# instruction silently reintroduces corrupt code into the bank.
+#
+# Between the two, the q8 kept the accent in «aquí» and the docstring's line break where
+# gemma4 lost both, and it is faster (20s vs 31s a page), so it takes the job.
+EXEMPLARS_TRANSCRIBE_MODEL = LLM_HEAVY
+
 # Content profile builder
-CP_INFER_MODEL = LLM_MEDIUM
+CP_SCAN_MODEL = LLM_HEAVY
+CP_CONSOLIDATE_MODEL = LLM_MEDIUM
 
 # Exemplars bank builder
 EB_EXTRACT_MODEL = LLM_HEAVY
@@ -76,7 +92,26 @@ LLM_CONTEXT = {
 
 
 # Builders ----------------------------------------------
-CP_SCHEMA_INFERENCE_BUDGET = 32_000
+# Page-image transcription of raw exemplars. Docling reads these PDFs as text and loses
+# three things at once: it detaches code blocks from the question that cites them, it
+# collapses their line breaks, and it drops the colour that marks the correct option.
+# Rendering the page and reading it as an image recovers all three.
+TRANSCRIBE_DPI = 200
+# Transcription is copying, not writing: at Ollama's default temperature the same page
+# came back with `a = 99` and `if a < 0 : break` dedented out of their `while True:`,
+# which silently changes what the exercise asks. Pinned to 0 for that reason.
+TRANSCRIBE_TEMPERATURE = 0.0
+TRANSCRIBE_MAX_RETRIES = 1
+# Bump when transcribe_page_prompt changes: it is part of the page cache fingerprint.
+TRANSCRIBE_PROMPT_VERSION = 1
+
+# Only reached by the Docling fallback (non-PDF sources, or PDFs whose transcription
+# failed): scanned pages whose text never made it into the PDF at all.
+EXEMPLARS_OCR = True
+
+CP_CHUNK_SIZE = 12_000
+CP_SCAN_EXCERPT_CHARS = 400
+CP_MAX_ITEM_TYPES = 6
 EB_CHUNK_SIZE = 12_000
 
 KG_BUILDER_CHUNK_SIZE = 12_000
@@ -93,11 +128,37 @@ KG_PREREQUISITE_RELATION = RELATION_SCHEMA.prerequisite_verbose
 
 
 # Embedding & Retrieval ----------------------------------------------
+# It still says «el enunciado de un ejercicio» although `embed_fields` may now append the
+# code the item hands the student. Generalising it to «un ejercicio» was tried and MEASURED
+# WORSE, so the wording stays: on the reference bank it moved 17/152 top-1s and cost margin
+# (0.0345 → 0.0328), dropping the lowest top-1 from 0.4065 to 0.3902 — under the threshold
+# below, i.e. one item that got candidates stops getting any. On the multi-field test bank,
+# where it should have paid off, it was a wash (top-1 0.6153 → 0.6045, margin +0.0014).
+# Same lesson as embeddinggemma: a prefix is a measured claim, never an intuition.
 EMBEDDING_QUERY_PREFIX = "Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como herramienta\nQuery: "
 
 EMBEDDING_DOCUMENT_PREFIX = ""
 EMBEDDING_BATCH_SIZE = 16
 
+# Caps each field `embed_fields` appends AFTER the primary one, so one long code listing
+# cannot crowd the others out of the context. Single-field profiles are not capped: their
+# text stays byte-identical to the primary field, which is what keeps their cached vectors
+# and the threshold below valid.
+EMBEDDING_FIELD_MAX_CHARS = 2000
+# The safe budget for one embedding call, enforced as a WARNING at initialize rather than
+# by truncating. Measured on qwen3-embedding:4b at num_ctx 4096, and the two paths disagree:
+# `embed_batch` (/api/embed) silently truncates above ~20 000 chars, while `embed`
+# (/api/embeddings) raises a 500 at ~15 500 — so the same oversized item indexes fine and
+# then blows up at tagging time. 12 000 keeps a margin under the lower of the two.
+EMBEDDING_MAX_CHARS = 12_000
+
+# Re-measured after `embed_fields` and it STAYS at 0.40 — the change does not move the
+# distribution it gates. Cold (a fresh bank, scored against pure concept descriptions, which
+# is the regime tagging runs in) the noise median went slightly DOWN, 0.3418 → 0.3329, and
+# the lowest real top-1 barely moved, 0.5005 → 0.4938. Warm (the reference bank, scored
+# against the merged index + the kNN leg, which is what the pipeline really does) the noise
+# median is 0.3776 — that is the 0.382 recorded here — and the lowest top-1 is 0.6226.
+# So 0.40 still sits above the noise in both regimes and below every observed real top-1.
 EMBEDDER_SIMILARITY_THRESHOLD = 0.40
 EMBEDDER_DESCRIPTION_WEIGHT = 0.5
 

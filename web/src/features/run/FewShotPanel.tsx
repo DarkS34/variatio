@@ -4,16 +4,14 @@ import { useState } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/input";
-import type { ContentProfile, FewShotExemplar } from "@/lib/types";
+import { itemTypeOf, typeKeyOf, typeLabel } from "@/lib/profile";
+import type { ContentProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function isCode(field: string): boolean {
-  return field.toLowerCase().includes("solution") || field.toLowerCase().includes("code");
-}
+import { isCodeField } from "@/features/bank/BankScreen";
 
-function primaryText(exemplar: FewShotExemplar, profile: ContentProfile | null): string {
-  const field = profile?.primary_field;
-  const value = field ? exemplar.item[field] : undefined;
+function primaryText(exemplar: FewShotExemplar, spec: ItemTypeSpec | null): string {
+  const value = spec ? exemplar.item[spec.primary_field] : undefined;
   return typeof value === "string" ? value.trim() : "";
 }
 
@@ -25,12 +23,15 @@ function Exemplar({
   profile: ContentProfile | null;
 }) {
   const [open, setOpen] = useState(false);
-  const statement = primaryText(exemplar, profile);
+  const item = exemplar.item as { item_type?: string };
+  const spec = itemTypeOf(profile, item);
+  const statement = primaryText(exemplar, spec);
   const concepts = (exemplar.item.concepts as string[] | undefined) ?? [];
   const primaryConcept = exemplar.item.primary_concept as string | undefined;
-  const others = Object.keys(profile?.fields ?? {}).filter(
-    (field) => field !== profile?.primary_field,
+  const others = Object.keys(spec?.fields ?? {}).filter(
+    (field) => field !== spec?.primary_field,
   );
+  const showType = Object.keys(profile?.item_types ?? {}).length > 1;
 
   return (
     <div className="rounded-lg border border-border bg-background">
@@ -49,6 +50,9 @@ function Exemplar({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[11px] text-muted-foreground">{exemplar.id}</span>
+            {showType ? (
+              <Badge variant="outline">{typeLabel(profile, typeKeyOf(profile, item))}</Badge>
+            ) : null}
             {primaryConcept ? (
               <Badge variant="default" className="gap-1">
                 <Target />
@@ -75,7 +79,7 @@ function Exemplar({
             return (
               <div key={field} className="space-y-1">
                 <Label>{field}</Label>
-                {isCode(field) ? (
+                {isCodeField(field) ? (
                   <CodeBlock code={String(value)} maxHeight="14rem" />
                 ) : (
                   <p className="text-xs text-muted-foreground">{String(value)}</p>

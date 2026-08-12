@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 from loguru import logger
@@ -64,9 +65,38 @@ def initialize(tag: bool = False) -> PipelineContext:
         knowledge_graph = KnowledgeGraph(kg_path)
 
         logger.info(
-            f"Content profile: {len(content_profile.field_specs)} field(s), "
-            f"primary '{content_profile.primary_field}' ({profile_path.name})"
+            f"Content profile: {len(content_profile.item_types)} item type(s) — "
+            + "; ".join(
+                f"{key} ({len(t.field_specs)} field(s), indexed by "
+                f"{'+'.join(t.embed_fields)})"
+                for key, t in content_profile.item_types.items()
+            )
+            + f" ({profile_path.name})"
         )
+
+        # Everything downstream resolves each item against the type it declares, so a bank
+        # extracted before a type was added or renamed would fail deep inside the embedding
+        # loop. One aggregated error here names the artifact that has to be rebuilt.
+        unplaceable = content_profile.unplaceable_items(bank)
+        if unplaceable:
+            sample = list(unplaceable.items())[:5]
+            raise ValueError(
+                f"{len(unplaceable)} bank item(s) do not match the content profile "
+                f"({profile_path.name}); the bank was built against a different one and "
+                f"has to be rebuilt. First: "
+                + "; ".join(f"{item_id}: {reason}" for item_id, reason in sample)
+            )
+        oversized = content_profile.oversized_embed_items(
+            bank, config.EMBEDDING_MAX_CHARS, config.EMBEDDING_FIELD_MAX_CHARS
+        )
+        if oversized:
+            worst = sorted(oversized.items(), key=lambda pair: -pair[1])[:5]
+            logger.warning(
+                f"{len(oversized)} bank item(s) exceed the {config.EMBEDDING_MAX_CHARS:,}-char "
+                f"embedding budget and may be truncated when indexed or rejected when tagged: "
+                + "; ".join(f"{item_id} ({size:,})" for item_id, size in worst)
+            )
+
         logger.info(
             f"Knowledge graph: {len(knowledge_graph.all_concepts)} concept(s), "
             f"{len(knowledge_graph.taggable_concepts)} taggable, "
@@ -77,16 +107,20 @@ def initialize(tag: bool = False) -> PipelineContext:
             f"{sum(1 for item in bank.values() if item.get('concepts'))} already tagged"
         )
 
+    embed_text = partial(
+        content_profile.embed_text, field_max_chars=config.EMBEDDING_FIELD_MAX_CHARS
+    )
     embedder = Embedder(
         knowledge_graph,
         config.EMBEDDING_LLM,
-        primary_field=content_profile.primary_field,
+        embed_text=embed_text,
+        embed_signature=content_profile.embed_signature,
         context=content_profile.content_context,
     )
     tagger = ConceptTagger(
         embedder,
         config.CONCEPT_TAGGER_LLM,
-        primary_field=content_profile.primary_field,
+        embed_text=embed_text,
         context=content_profile.content_context,
     )
     generator = ContentGenerator(

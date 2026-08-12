@@ -105,12 +105,15 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     params = job.params
     n = int(params.get("n") or 1)
     concepts = params.get("concepts") or None
+    item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None
     curriculum = params.get("curriculum") or None
     instructions = params.get("instructions") or None
 
+    resolved_type = context.content_profile.item_type(item_type)
     logger.info(
-        f"Generando {n} ítem(s) con '{config.CONTENT_GENERATION_LLM}' sobre "
+        f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
+        f"'{config.CONTENT_GENERATION_LLM}' sobre "
         + (", ".join(concepts) if concepts else "los conceptos más frecuentes del banco")
     )
     if fixed:
@@ -125,6 +128,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     results = stages.generate(
         context,
         concepts=concepts,
+        item_type=resolved_type.key,
         n=n,
         fixed=fixed,
         curriculum=curriculum,
@@ -139,8 +143,14 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     return {
         "requested": n,
         "produced": len(results),
+        "item_type": resolved_type.key,
         "items": [
-            {"item": r.item.model_dump(mode="json"), "thinking": r.thinking} for r in results
+            {
+                "item": r.item.model_dump(mode="json"),
+                "item_type": r.item_type,
+                "thinking": r.thinking,
+            }
+            for r in results
         ],
     }
 
