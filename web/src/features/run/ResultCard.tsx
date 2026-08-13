@@ -1,13 +1,27 @@
-import { Copy } from "lucide-react";
+import { Brain, ChevronRight, Copy } from "lucide-react";
 import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ContentProfile } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+/** A value that already fences its own code carries markdown, not raw source. */
+function isFenced(value: string): boolean {
+  return /^\s{0,3}(```|~~~)/m.test(value);
+}
+
+function FieldValue({ field, value }: { field: string; value: string }) {
+  if (isCodeField(field) && !isFenced(value)) {
+    return <CodeBlock code={value} maxHeight="18rem" />;
+  }
+  return <Markdown className="text-muted-foreground" codeMaxHeight="18rem">{value}</Markdown>;
+}
 
 export function ResultCard({
   index,
@@ -51,7 +65,7 @@ export function ResultCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{primary}</p>
+        <Markdown>{primary}</Markdown>
 
         {others.map((field) => {
           const value = item[field];
@@ -59,22 +73,30 @@ export function ResultCard({
           return (
             <div key={field} className="space-y-1">
               <Label>{field}</Label>
-              {isCodeField(field) ? (
-                <CodeBlock code={String(value)} maxHeight="18rem" />
-              ) : (
-                <p className="text-sm text-muted-foreground">{String(value)}</p>
-              )}
+              <FieldValue field={field} value={String(value)} />
             </div>
           );
         })}
 
         {thinking ? (
-          <div>
-            <Button variant="ghost" size="sm" onClick={() => setShowThinking((v) => !v)}>
-              {showThinking ? "Ocultar" : "Ver"} razonamiento
-            </Button>
+          <div className="overflow-hidden rounded-lg border border-border">
+            <button
+              type="button"
+              onClick={() => setShowThinking((v) => !v)}
+              aria-expanded={showThinking}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronRight
+                className={cn("size-3.5 transition-transform", showThinking && "rotate-90")}
+              />
+              <Brain className="size-3.5" />
+              Razonamiento
+              <span className="ml-auto tabular-nums">
+                {thinking.length.toLocaleString("es-ES")}
+              </span>
+            </button>
             {showThinking ? (
-              <pre className="thin-scroll mt-2 max-h-56 overflow-auto rounded-md border border-border p-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
+              <pre className="thin-scroll max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
                 {thinking}
               </pre>
             ) : null}
@@ -105,13 +127,11 @@ export function toMarkdown(
       if (field === spec?.primary_field) continue;
       const value = item[field];
       if (value === null || value === undefined || value === "") continue;
+      const text = String(value);
+      // Fencing something that already fences itself nests the blocks and breaks both.
+      const fence = isCodeField(field) && !isFenced(text);
       lines.push(`### ${field}`, "");
-      lines.push(
-        isCodeField(field) ? "```" : "",
-        String(value),
-        isCodeField(field) ? "```" : "",
-        "",
-      );
+      lines.push(fence ? "```" : "", text, fence ? "```" : "", "");
     }
   });
   return lines.join("\n");
