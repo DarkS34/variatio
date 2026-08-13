@@ -5,48 +5,54 @@
     "language_of_instruction": "Español",
     "programming_language": "Python"
   },
-  "general_generation_rules": [
-    "Utilizar nombres descriptivos y significativos para variables, parámetros y funciones.",
-    "Incluir docstrings en cada subprograma siguiendo el formato canónico: signatura (parámetros -> retorno), OBJ (objetivo) y PRE (precondiciones).",
-    "Añadir un bloque de prueba explícito tras la definición de funciones, precedido por comentarios como '#Probador' o '# Prueba', que contenga llamadas con valores representativos y sentencias print para validar la salida.",
-    "Mantener una indentación estricta de 4 espacios y evitar construcciones redundantes cuando se solicite explícitamente restringir el uso de bibliotecas o estructuras específicas."
-  ],
-  "primary_field": "statement",
-  "fields": {
-    "statement": {
-      "schema": {
-        "type": "string"
-      },
-      "description": "Texto que describe la situación, el problema o la tarea a resolver mediante código Python.",
-      "guidance": {
-        "extraction": "Copia literalmente el texto descriptivo que precede a cualquier bloque de código. Incluye todas las instrucciones específicas, restricciones numéricas o de implementación mencionadas en el enunciado. Descarta los números de enumeración (1., 2., etc.) y los encabezados de sección. Si el documento presenta una lista de ejercicios con un prefijo global, intégralo al final del enunciado o consérvalo en las reglas generales.",
-        "generation": "Redacta un problema concreto y autocontenido que requiera escribir un programa o función en Python. Describe claramente las entradas (si las hay), el proceso esperado y las salidas. Utiliza un tono directo e imperativo típico de los manuales docentes. Incluye restricciones explícitas si es pertinente para la dificultad o el objetivo pedagógico."
-      }
-    },
-    "solution": {
-      "schema": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "description": "Código Python que resuelve correctamente el ejercicio, incluyendo docstrings con tipo de parámetros y retorno, objetivos, precondiciones y un bloque de prueba o probador.",
-      "guidance": {
-        "extraction": "Localiza el bloque de código bajo la etiqueta 'SOLUCION PROPUESTA:' o similar en ejercicios marcados como resueltos. Copia literalmente el código Python, manteniendo indentación, docstrings y comentarios de prueba. Si no existe dicha sección o corresponde a un ejercicio propuesto, asigna null.",
-        "generation": "Genera una implementación completa en Python que cumpla el enunciado. Incluye obligatoriamente un docstring al inicio de cada función/procedimiento con la signatura, objetivo y precondiciones. Añade un bloque de comentarios precedido por '#Probador' o '# Prueba' con llamadas de ejemplo e impresiones que demuestren su funcionamiento. Respeta la nomenclatura clara y el estilo del material."
-      }
-    },
-    "difficulty_level": {
-      "schema": {
-        "enum": [
-          "básico",
-          "intermedio",
-          "avanzado"
-        ]
-      },
-      "description": "Nivel de exigencia cognitiva y técnica del ejercicio. Criterio de clasificación: 'básico' para sintaxis directa o estructuras elementales sin anidaciones complejas; 'intermedio' para combinación de múltiples conceptos, estructuras de control anidadas, listas/diccionarios, funciones con validación o algoritmos clásicos no triviales; 'avanzado' para recursión profunda, adaptación de algoritmos a criterios personalizados, diseño de estructuras de datos complejas o integración multimódulo.",
-      "guidance": {
-        "extraction": "Busca primero encabezados explícitos como '## Ejercicios nivel básico' o '## Ejercicio avanzado'. Si el documento los omite, analiza la complejidad sintáctica y conceptual del enunciado aplicando estrictamente el criterio definido en description: estructura simple -> básico; combinación de conceptos/funciones con validación -> intermedio; recursión avanzada/adaptación de algoritmos/diseño complejo -> avanzado. NUNCA asignes null."
+  "item_types": {
+    "escritura_codigo": {
+      "label": "Escritura de código",
+      "description": "El material plantea la tarea en prosa y pide al alumno que escriba desde cero el programa o la función que la resuelve. No se le entrega código de partida: produce la solución entera, y el material la acompaña de la suya cuando el ejercicio viene resuelto.",
+      "primary_field": "enunciado",
+      "general_generation_rules": [
+        "Utilizar nombres descriptivos y significativos para variables, parámetros y funciones.",
+        "Incluir docstrings en cada subprograma siguiendo el formato canónico: signatura (parámetros -> retorno), OBJ (objetivo) y PRE (precondiciones).",
+        "Añadir un bloque de prueba explícito tras la definición de funciones, precedido por comentarios como '#Probador' o '# Prueba', que contenga llamadas con valores representativos y sentencias print para validar la salida.",
+        "Mantener una indentación estricta de 4 espacios y evitar construcciones redundantes cuando se solicite explícitamente restringir el uso de bibliotecas o estructuras específicas."
+      ],
+      "fields": {
+        "enunciado": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "Texto que describe la situación, el problema o la tarea a resolver mediante código Python.",
+          "guidance": {
+            "extraction": "Copia literalmente el texto descriptivo que precede a cualquier bloque de código. Incluye todas las instrucciones específicas, restricciones numéricas o de implementación mencionadas en el enunciado. Descarta los números de enumeración (1., 2., etc.) y los encabezados de sección. Si el documento presenta una lista de ejercicios con un prefijo global, intégralo al final del enunciado o consérvalo en las reglas generales.",
+            "generation": "Redacta un problema concreto y autocontenido que requiera escribir un programa o función en Python. Describe claramente las entradas (si las hay), el proceso esperado y las salidas. Utiliza un tono directo e imperativo típico de los manuales docentes. Incluye restricciones explícitas si es pertinente para la dificultad o el objetivo pedagógico."
+          }
+        },
+        "solucion": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "Código Python que resuelve correctamente el ejercicio, incluyendo docstrings con tipo de parámetros y retorno, objetivos, precondiciones y un bloque de prueba o probador.",
+          "guidance": {
+            "extraction": "Localiza el bloque de código bajo la etiqueta 'SOLUCION PROPUESTA:' o similar en ejercicios marcados como resueltos. Copia literalmente el código Python, manteniendo indentación, docstrings y comentarios de prueba. Si no existe dicha sección o corresponde a un ejercicio propuesto, asigna null.",
+            "generation": "Genera una implementación completa en Python que cumpla el enunciado. Incluye obligatoriamente un docstring al inicio de cada función/procedimiento con la signatura, objetivo y precondiciones. Añade un bloque de comentarios precedido por '#Probador' o '# Prueba' con llamadas de ejemplo e impresiones que demuestren su funcionamiento. Respeta la nomenclatura clara y el estilo del material."
+          }
+        },
+        "nivel_dificultad": {
+          "schema": {
+            "enum": [
+              "básico",
+              "intermedio",
+              "avanzado"
+            ]
+          },
+          "description": "Nivel de exigencia cognitiva y técnica del ejercicio. Criterio de clasificación: 'básico' para sintaxis directa o estructuras elementales sin anidaciones complejas; 'intermedio' para combinación de múltiples conceptos, estructuras de control anidadas, listas/diccionarios, funciones con validación o algoritmos clásicos no triviales; 'avanzado' para recursión profunda, adaptación de algoritmos a criterios personalizados, diseño de estructuras de datos complejas o integración multimódulo.",
+          "guidance": {
+            "extraction": "Busca primero encabezados explícitos como '## Ejercicios nivel básico' o '## Ejercicio avanzado'. Si el documento los omite, analiza la complejidad sintáctica y conceptual del enunciado aplicando estrictamente el criterio definido en description: estructura simple -> básico; combinación de conceptos/funciones con validación -> intermedio; recursión avanzada/adaptación de algoritmos/diseño complejo -> avanzado. NUNCA asignes null."
+          }
+        }
       }
     }
   }

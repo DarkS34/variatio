@@ -36,6 +36,7 @@ export interface LogLine {
 export interface ProducedItem {
   index: number;
   item: Record<string, unknown>;
+  item_type?: string;
   thinking?: string | null;
 }
 
@@ -413,7 +414,15 @@ class RunStore {
         return {
           ...run,
           phase: "idle",
-          items: [...run.items, { index: event.index, item: event.item, thinking: event.thinking }],
+          items: [
+            ...run.items,
+            {
+              index: event.index,
+              item: event.item,
+              item_type: event.item_type,
+              thinking: event.thinking,
+            },
+          ],
         };
       case "item.tagged":
         return { ...run, taggedCount: run.taggedCount + 1 };

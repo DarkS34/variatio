@@ -39,14 +39,18 @@ export function RunPanel({
             ) : null,
           }}
         />
-        <Separator />
-        <TokenStream
-          answer={run.answer}
-          thinking={run.thinking}
-          phase={run.phase}
-          active={running}
-          height="14rem"
-        />
+        {running || run.thinking ? (
+          <>
+            <Separator />
+            <TokenStream
+              answer={run.answer}
+              thinking={run.thinking}
+              phase={run.phase}
+              active={running}
+              height="14rem"
+            />
+          </>
+        ) : null}
         <TechnicalDetails run={run} />
         {run.activity.length > 0 ? (
           <details className="rounded-lg border border-border">

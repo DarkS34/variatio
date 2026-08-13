@@ -30,6 +30,11 @@ function useAutoScroll<T extends HTMLElement>(content: string, enabled = true) {
  * it opens by itself while the model is thinking — the only moment it is the whole
  * story — and folds away as soon as the answer starts. Clicking pins that choice
  * until the next item.
+ *
+ * The raw answer pane lives only while the model is writing. Once the run ends the same
+ * text is on screen twice, once as tokens and once as the parsed item, and the parsed
+ * one is strictly better; what survives here is the reasoning, which the result cards
+ * only carry per item.
  */
 export function TokenStream({
   answer,
@@ -58,17 +63,13 @@ export function TokenStream({
     if (!thinking) setOverride(null);
   }, [thinking]);
 
-  if (!answer && !thinking) {
+  if (!active && !thinking) return null;
+
+  if (active && !answer && !thinking) {
     return (
       <p className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}>
-        {active ? (
-          <>
-            <span className="size-1.5 animate-pulse-soft rounded-full bg-[var(--info)]" />
-            Esperando al modelo
-          </>
-        ) : (
-          "Sin salida del modelo"
-        )}
+        <span className="size-1.5 animate-pulse-soft rounded-full bg-[var(--info)]" />
+        Esperando al modelo
       </p>
     );
   }
@@ -80,6 +81,7 @@ export function TokenStream({
           <button
             type="button"
             onClick={() => setOverride(!showThinking)}
+            aria-expanded={showThinking}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition-colors",
               thinkingLive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -108,32 +110,34 @@ export function TokenStream({
         </div>
       ) : null}
 
-      <div className="relative">
-        <pre
-          ref={answerPane.ref}
-          onScroll={answerPane.onScroll}
-          className="thin-scroll overflow-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap"
-          style={{ height }}
-        >
-          {answer || (
-            <span className="text-muted-foreground italic">
-              {thinkingLive ? "El modelo aún está razonando" : "Sin respuesta todavía"}
-            </span>
-          )}
-          {active && phase === "answering" ? <Caret /> : null}
-        </pre>
-        {!answerPane.pinned ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="absolute bottom-2 right-2 shadow"
-            onClick={() => answerPane.setPinned(true)}
+      {active ? (
+        <div className="relative">
+          <pre
+            ref={answerPane.ref}
+            onScroll={answerPane.onScroll}
+            className="thin-scroll overflow-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap"
+            style={{ height }}
           >
-            <CornerDownLeft />
-            Al final
-          </Button>
-        ) : null}
-      </div>
+            {answer || (
+              <span className="text-muted-foreground italic">
+                {thinkingLive ? "El modelo aún está razonando" : "Sin respuesta todavía"}
+              </span>
+            )}
+            {phase === "answering" ? <Caret /> : null}
+          </pre>
+          {!answerPane.pinned ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute bottom-2 right-2 shadow"
+              onClick={() => answerPane.setPinned(true)}
+            >
+              <CornerDownLeft />
+              Al final
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

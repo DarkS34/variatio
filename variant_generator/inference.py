@@ -115,7 +115,7 @@ class OllamaEngine:
 
     def __init__(self):
         self._client = ollama.Client(host=config.OLLAMA_HOST)
-        self._thinking: dict[str, bool] = {}
+        self._capabilities: dict[str, list[str]] = {}
 
     def is_available(self) -> bool:
         try:
@@ -137,10 +137,18 @@ class OllamaEngine:
     # Left to itself Ollama allocates the KV cache for the model's declared context,
     # which is where most of this box's VRAM was going. `config.LLM_CONTEXT` is the
     # single place that decides it, so no call site has to know.
+    #
+    # `temperature` shares the same options dict, so both are built here: assembling them
+    # separately is how one of them ends up overwriting the other.
     @staticmethod
-    def _context_option(model: str) -> dict:
+    def _context_option(model: str, temperature: float | None = None) -> dict:
+        options: dict = {}
         num_ctx = config.LLM_CONTEXT.get(model)
-        return {} if num_ctx is None else {"options": {"num_ctx": num_ctx}}
+        if num_ctx is not None:
+            options["num_ctx"] = num_ctx
+        if temperature is not None:
+            options["temperature"] = temperature
+        return {"options": options} if options else {}
 
     def generate(
         self,
@@ -148,15 +156,28 @@ class OllamaEngine:
         prompt: str,
         think: bool | None = None,
         system: str | None = None,
+        images: list[str] | None = None,
+        temperature: float | None = None,
     ) -> GenerationResponse:
         system_option = {} if system is None else {"system": system}
+        # Base64 PNGs, as Ollama expects them. Refusing up front beats the empty answer a
+        # text-only model gives when it is handed a picture it cannot see.
+        image_option: dict = {}
+        if images:
+            if not self.supports_vision(model):
+                raise InferenceError(
+                    f"Model '{model}' has no vision capability, so it cannot read the "
+                    f"{len(images)} image(s) it was given"
+                )
+            image_option = {"images": list(images)}
         try:
             resp = self._client.generate(
                 model=model,
                 prompt=prompt,
                 **system_option,
+                **image_option,
                 **self._think_option(model, think),
-                **self._context_option(model),
+                **self._context_option(model, temperature),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
@@ -207,16 +228,21 @@ class OllamaEngine:
             response="".join(answer).strip(), thinking="".join(thinking).strip() or None
         )
 
-    def supports_thinking(self, model: str) -> bool:
-        if model not in self._thinking:
+    def capabilities(self, model: str) -> list[str]:
+        if model not in self._capabilities:
             try:
-                capabilities = self._client.show(model).capabilities or []
+                capabilities = list(self._client.show(model).capabilities or [])
             except (ollama.ResponseError, httpx.RequestError) as e:
                 logger.warning(f"Could not read capabilities of '{model}': {e}")
                 capabilities = []
-                
-            self._thinking[model] = "thinking" in capabilities
-        return self._thinking[model]
+            self._capabilities[model] = capabilities
+        return self._capabilities[model]
+
+    def supports_thinking(self, model: str) -> bool:
+        return "thinking" in self.capabilities(model)
+
+    def supports_vision(self, model: str) -> bool:
+        return "vision" in self.capabilities(model)
 
     def embed(self, model: str, text: str) -> list[float]:
         try:
@@ -298,9 +324,21 @@ def engine_name() -> str:
 
 
 def generate(
-    model: str, prompt: str, think: bool | None = None, system: str | None = None
+    model: str,
+    prompt: str,
+    think: bool | None = None,
+    system: str | None = None,
+    images: list[str] | None = None,
+    temperature: float | None = None,
 ) -> GenerationResponse:
-    return engine().generate(model=model, prompt=prompt, think=think, system=system)
+    return engine().generate(
+        model=model,
+        prompt=prompt,
+        think=think,
+        system=system,
+        images=images,
+        temperature=temperature,
+    )
 
 
 def generate_stream(
@@ -316,6 +354,10 @@ def generate_stream(
 
 def supports_thinking(model: str) -> bool:
     return engine().supports_thinking(model)
+
+
+def supports_vision(model: str) -> bool:
+    return engine().supports_vision(model)
 
 
 def embed(model: str, text: str) -> list[float]:

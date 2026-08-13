@@ -36,12 +36,18 @@ export function Progress({
   }[tone];
 
   return (
-    <div className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}>
+    <div
+      className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={indeterminate ? undefined : 100}
+      aria-valuenow={indeterminate ? undefined : pct}
+    >
       <div
         className={cn(
-          "h-full rounded-full transition-[width] duration-300 ease-out",
+          "h-full rounded-full",
           colour,
-          indeterminate && "w-1/3 animate-pulse-soft",
+          indeterminate ? "w-1/3 animate-progress-sweep" : "transition-[width] duration-300 ease-out",
         )}
         style={indeterminate ? undefined : { width: `${pct}%` }}
       />

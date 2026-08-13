@@ -34,6 +34,11 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
         help="target concepts (default: most frequent tags in the bank)",
     )
     parser.add_argument(
+        "--item-type",
+        metavar="TYPE",
+        help="modality to generate, as declared in the content profile (default: the first one)",
+    )
+    parser.add_argument(
         "--fixed",
         action="append",
         default=[],
@@ -68,7 +73,7 @@ def _parse_fixed(pairs: list[str]) -> dict[str, object]:
 
 def _report(results: list) -> None:
     for i, result in enumerate(results, 1):
-        print(f"\n===================== ITEM {i} =====================")
+        print(f"\n============== ITEM {i} · {result.item_type} ==============")
         print(result.item.model_dump_json(indent=2))
         if result.thinking:
             print(f"\n--- thinking ---\n{result.thinking}")
@@ -79,6 +84,7 @@ def _generate_and_report(args: argparse.Namespace) -> None:
     results = stages.generate(
         context,
         concepts=args.concepts,
+        item_type=args.item_type,
         n=args.n,
         fixed=_parse_fixed(args.fixed),
         curriculum=args.curriculum,
