@@ -132,6 +132,15 @@ body {
   }
 }
 
+@keyframes vg-progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
 @keyframes vg-pulse-soft {
   0%,
   100% {
@@ -150,6 +159,17 @@ body {
 }
 .animate-pulse-soft {
   animation: vg-pulse-soft 1.6s ease-in-out infinite;
+}
+.animate-progress-sweep {
+  animation: vg-progress-sweep 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-progress-sweep {
+    animation: vg-pulse-soft 1.6s ease-in-out infinite;
+    transform: none;
+  }
 }
 
 /* The token stream and the log console can produce a lot of rows; keep their

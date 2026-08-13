@@ -1,0 +1,339 @@
+import { Fragment, useMemo, type ReactNode } from "react";
+
+import { CodeBlock } from "@/components/CodeBlock";
+import { cn } from "@/lib/utils";
+
+/**
+ * A deliberately small markdown renderer, for the same reason `CodeBlock` is a
+ * deliberately small highlighter: the markdown in this corpus is what a teacher writes
+ * — fenced snippets, option lists, the odd table Docling pulled out of a PDF — and a
+ * full CommonMark engine would cost more than it returns.
+ *
+ * Two departures from CommonMark, both forced by the content:
+ * - a single newline inside a paragraph is a line break, not a space. Multiple-choice
+ *   options arrive as consecutive lines (`a) …` / `b) …`) and joining them is wrong.
+ * - an unlabelled fence is plain text, not code. Half of them hold ASCII art the
+ *   exercise asks the student to reproduce, so Python colouring would be a lie.
+ */
+
+type Language = "python" | "json" | "text";
+
+type Block =
+  | { kind: "code"; code: string; language: Language }
+  | { kind: "heading"; level: number; text: string }
+  | { kind: "list"; ordered: boolean; items: string[] }
+  | { kind: "quote"; text: string }
+  | { kind: "table"; header: string[]; rows: string[][] }
+  | { kind: "rule" }
+  | { kind: "paragraph"; text: string };
+
+const FENCE = /^\s{0,3}(```|~~~)\s*([\w+#-]*)\s*$/;
+const HEADING = /^\s{0,3}(#{1,6})\s+(.*)$/;
+const RULE = /^\s{0,3}([-*_])\s*(?:\1\s*){2,}$/;
+const UNORDERED = /^\s*[-*+]\s+(.*)$/;
+const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
+const QUOTE = /^\s{0,3}>\s?(.*)$/;
+const TABLE_RULE = /^\s*\|?(?:\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?\s*$/;
+
+const LANGUAGES: Record<string, Language> = {
+  py: "python",
+  python: "python",
+  python3: "python",
+  json: "json",
+};
+
+function languageOf(tag: string): Language {
+  return LANGUAGES[tag.toLowerCase()] ?? "text";
+}
+
+function cells(row: string): string[] {
+  return row
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function parseBlocks(source: string): Block[] {
+  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: Block[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    const fence = FENCE.exec(line);
+    if (fence) {
+      const marker = fence[1];
+      const body: string[] = [];
+      index += 1;
+      while (index < lines.length && !lines[index].trimStart().startsWith(marker)) {
+        body.push(lines[index]);
+        index += 1;
+      }
+      index += 1;
+      blocks.push({ kind: "code", code: body.join("\n"), language: languageOf(fence[2]) });
+      continue;
+    }
+
+    if (RULE.test(line)) {
+      blocks.push({ kind: "rule" });
+      index += 1;
+      continue;
+    }
+
+    const heading = HEADING.exec(line);
+    if (heading) {
+      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2] });
+      index += 1;
+      continue;
+    }
+
+    if (QUOTE.test(line)) {
+      const body: string[] = [];
+      while (index < lines.length) {
+        const quoted = QUOTE.exec(lines[index]);
+        if (!quoted) break;
+        body.push(quoted[1]);
+        index += 1;
+      }
+      blocks.push({ kind: "quote", text: body.join("\n") });
+      continue;
+    }
+
+    // A header row is only a table if the next line is the alignment rule; without that
+    // check any prose containing a pipe would become a one-column table.
+    if (line.includes("|") && index + 1 < lines.length && TABLE_RULE.test(lines[index + 1])) {
+      const header = cells(line);
+      const rows: string[][] = [];
+      index += 2;
+      while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+        rows.push(cells(lines[index]));
+        index += 1;
+      }
+      blocks.push({ kind: "table", header, rows });
+      continue;
+    }
+
+    const pattern = UNORDERED.test(line) ? UNORDERED : ORDERED.test(line) ? ORDERED : null;
+    if (pattern) {
+      const items: string[] = [];
+      while (index < lines.length) {
+        const match = pattern.exec(lines[index]);
+        if (match) {
+          items.push(match[1]);
+          index += 1;
+          continue;
+        }
+        // A wrapped continuation line belongs to the item above it, not to a new block.
+        if (items.length > 0 && lines[index].trim() && !FENCE.test(lines[index])) {
+          items[items.length - 1] += `\n${lines[index].trim()}`;
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      blocks.push({ kind: "list", ordered: pattern === ORDERED, items });
+      continue;
+    }
+
+    const paragraph: string[] = [];
+    while (index < lines.length && lines[index].trim()) {
+      const next = lines[index];
+      if (FENCE.test(next) || HEADING.test(next) || RULE.test(next) || QUOTE.test(next)) break;
+      if (UNORDERED.test(next) || ORDERED.test(next)) break;
+      paragraph.push(next);
+      index += 1;
+    }
+    if (paragraph.length === 0) {
+      index += 1;
+      continue;
+    }
+    blocks.push({ kind: "paragraph", text: paragraph.join("\n") });
+  }
+
+  return blocks;
+}
+
+const INLINE =
+  /(`+)([\s\S]+?)\1|\*\*([\s\S]+?)\*\*|__([\s\S]+?)__|(?<![\w*])\*(?!\s)([\s\S]+?)(?<!\s)\*|(?<![\w_])_(?!\s)([\s\S]+?)(?<!\s)_|~~([\s\S]+?)~~|\[([^\]]+)\]\(([^)\s]+)[^)]*\)/;
+
+/** Inline spans, plus the newline-as-break rule the block layer relies on. */
+function renderInline(text: string, key = "i"): ReactNode[] {
+  const out: ReactNode[] = [];
+  let rest = text;
+  let n = 0;
+
+  while (rest) {
+    const match = INLINE.exec(rest);
+    if (!match) {
+      out.push(...withBreaks(rest, `${key}-${n}`));
+      break;
+    }
+    if (match.index > 0) out.push(...withBreaks(rest.slice(0, match.index), `${key}-${n}t`));
+
+    const id = `${key}-${n}`;
+    const [, , code, strongStar, strongUnderscore, emStar, emUnderscore, strike, label, href] =
+      match;
+
+    if (code !== undefined) {
+      out.push(
+        <code
+          key={id}
+          className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em] text-foreground"
+        >
+          {code}
+        </code>,
+      );
+    } else if (strongStar !== undefined || strongUnderscore !== undefined) {
+      out.push(
+        <strong key={id} className="font-semibold">
+          {renderInline(strongStar ?? strongUnderscore, id)}
+        </strong>,
+      );
+    } else if (emStar !== undefined || emUnderscore !== undefined) {
+      out.push(<em key={id}>{renderInline(emStar ?? emUnderscore, id)}</em>);
+    } else if (strike !== undefined) {
+      out.push(
+        <span key={id} className="line-through opacity-70">
+          {renderInline(strike, id)}
+        </span>,
+      );
+    } else if (label !== undefined) {
+      out.push(
+        <a
+          key={id}
+          href={href}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-primary underline underline-offset-2"
+        >
+          {renderInline(label, id)}
+        </a>,
+      );
+    }
+
+    rest = rest.slice(match.index + match[0].length);
+    n += 1;
+  }
+
+  return out;
+}
+
+function withBreaks(text: string, key: string): ReactNode[] {
+  const parts = text.split("\n");
+  return parts.map((part, i) => (
+    <Fragment key={`${key}-${i}`}>
+      {i > 0 ? <br /> : null}
+      {part}
+    </Fragment>
+  ));
+}
+
+export function Markdown({
+  children,
+  className,
+  codeMaxHeight = "20rem",
+}: {
+  children: string;
+  className?: string;
+  codeMaxHeight?: string;
+}) {
+  const blocks = useMemo(() => parseBlocks(children ?? ""), [children]);
+  if (blocks.length === 0) return null;
+
+  return (
+    <div className={cn("space-y-2 text-sm leading-relaxed break-words", className)}>
+      {blocks.map((block, index) => {
+        const key = `b${index}`;
+        switch (block.kind) {
+          case "code":
+            return (
+              <CodeBlock
+                key={key}
+                code={block.code}
+                language={block.language}
+                maxHeight={codeMaxHeight}
+              />
+            );
+          case "heading": {
+            const Tag = `h${Math.min(block.level + 2, 6)}` as "h3";
+            return (
+              <Tag
+                key={key}
+                className={cn(
+                  "mt-3 font-semibold first:mt-0",
+                  block.level <= 2 ? "text-[0.95rem]" : "text-sm",
+                )}
+              >
+                {renderInline(block.text, key)}
+              </Tag>
+            );
+          }
+          case "list": {
+            const Tag = block.ordered ? "ol" : "ul";
+            return (
+              <Tag
+                key={key}
+                className={cn(
+                  "space-y-1 pl-5 marker:text-muted-foreground",
+                  block.ordered ? "list-decimal" : "list-disc",
+                )}
+              >
+                {block.items.map((item, i) => (
+                  <li key={i}>{renderInline(item, `${key}-${i}`)}</li>
+                ))}
+              </Tag>
+            );
+          }
+          case "quote":
+            return (
+              <blockquote
+                key={key}
+                className="border-l-2 border-border pl-3 text-muted-foreground"
+              >
+                {renderInline(block.text, key)}
+              </blockquote>
+            );
+          case "table":
+            return (
+              <div key={key} className="thin-scroll overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      {block.header.map((cell, i) => (
+                        <th key={i} className="px-2.5 py-1.5 text-left font-medium">
+                          {renderInline(cell, `${key}-h${i}`)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.rows.map((row, r) => (
+                      <tr key={r} className="border-b border-border last:border-0">
+                        {row.map((cell, c) => (
+                          <td key={c} className="px-2.5 py-1.5 align-top">
+                            {renderInline(cell, `${key}-${r}-${c}`)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          case "rule":
+            return <hr key={key} className="border-border" />;
+          case "paragraph":
+            return <p key={key}>{renderInline(block.text, key)}</p>;
+        }
+      })}
+    </div>
+  );
+}
