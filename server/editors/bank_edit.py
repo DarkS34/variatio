@@ -11,7 +11,7 @@ from variant_generator.concept_tagger import TRACE_KEY
 from variant_generator.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variant_generator.knowledge_graph import KnowledgeGraph
 
-from .. import deps, review, storage
+from .. import deps, review, settings, storage
 
 ARTIFACT = review.EXEMPLARS_BANK
 
@@ -33,7 +33,7 @@ class BankError(ValueError):
 
 
 def _load_bank() -> dict:
-    bank = storage.read_json(config.EXEMPLARS_BANK_PATH)
+    bank = storage.read_json(settings.workspace().exemplars_bank_path)
     if bank is None:
         raise BankError("Todavía no hay banco de ejemplos")
     return bank
@@ -165,10 +165,10 @@ def coverage() -> dict:
 
 
 def _persist(bank: dict, note: str) -> dict:
-    storage.write_json(config.EXEMPLARS_BANK_PATH, bank, artifact=ARTIFACT)
+    storage.write_json(settings.workspace().exemplars_bank_path, bank, artifact=ARTIFACT)
     review.ReviewState().invalidate(ARTIFACT)
     deps.invalidate(note)
-    return {"hash": storage.sha256_of(config.EXEMPLARS_BANK_PATH)}
+    return {"hash": storage.sha256_of(settings.workspace().exemplars_bank_path)}
 
 
 def patch_item(item_id: str, fields: dict) -> dict:

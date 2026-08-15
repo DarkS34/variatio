@@ -3,11 +3,14 @@
 from pathlib import Path
 
 from variant_generator import config
+from variant_generator.workspace import Workspace
 
-INSTANCE_DIR: Path = config.INSTANCE_DIR
-HISTORY_DIR: Path = INSTANCE_DIR / ".history"
-RUNS_DIR: Path = INSTANCE_DIR / ".runs"
-REVIEW_STATE_PATH: Path = INSTANCE_DIR / ".review_state.json"
+
+# One process, one workspace — for now. Every server module asks for it through this
+# function rather than reading a path constant, so making it per-request later is a
+# change here and nowhere else.
+def workspace() -> Workspace:
+    return config.default_workspace()
 
 # Vite's dev server. In "local production" the API serves the built assets and
 # this stops mattering.

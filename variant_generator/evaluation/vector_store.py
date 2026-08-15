@@ -39,7 +39,9 @@ class FlatBankIndex:
         self.primary_text = primary_text
         self.type_key_of = type_key_of
         self.model = model or config.EMBEDDING_LLM
-        self.cache_path = Path(cache_path or config.EVAL_RAG_BANK_EMBEDDINGS_PATH)
+        self.cache_path = Path(
+            cache_path or config.default_workspace().eval_rag_bank_embeddings_path
+        )
 
         self.ids: list[str] = []
         self.types: list[str] = []

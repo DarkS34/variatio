@@ -12,10 +12,9 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from variant_generator import config
 from variant_generator.builders._source_docs import SUPPORTED_EXTS
 
-from . import review
+from . import review, settings
 
 CHUNK = 1024 * 1024
 MAX_BYTES = 512 * 1024 * 1024
@@ -44,11 +43,6 @@ SLOTS: dict[str, dict] = {
     },
 }
 
-_DIRS = {
-    CORPUS: config.RAW_CORPUS_DIR,
-    EXEMPLARS: config.RAW_EXEMPLARS_BANK_DIR,
-}
-
 _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -57,9 +51,11 @@ class RawError(Exception):
 
 
 def directory(kind: str) -> Path:
-    if kind not in _DIRS:
+    ws = settings.workspace()
+    dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
+    if kind not in dirs:
         raise RawError(f"Origen desconocido: '{kind}'")
-    return _DIRS[kind]
+    return dirs[kind]
 
 
 def listing() -> dict:

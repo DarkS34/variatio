@@ -10,10 +10,10 @@ import json
 import tempfile
 from pathlib import Path
 
-from variant_generator import config, stages
+from variant_generator import stages
 from variant_generator.knowledge_graph import KnowledgeGraph
 
-from .. import deps, review, storage
+from .. import deps, review, settings, storage
 
 ARTIFACT = review.KNOWLEDGE_GRAPH
 
@@ -33,7 +33,7 @@ def raw() -> dict:
 
 
 def _bank() -> dict:
-    return storage.read_json(config.EXEMPLARS_BANK_PATH) or {}
+    return storage.read_json(settings.workspace().exemplars_bank_path) or {}
 
 
 def summary() -> dict:

@@ -7,8 +7,8 @@ from . import config
 
 
 class ExemplarsBank:
-    def __init__(self, path: str | Path = config.EXEMPLARS_BANK_PATH):
-        self.path = Path(path)
+    def __init__(self, path: str | Path | None = None):
+        self.path = Path(path or config.default_workspace().exemplars_bank_path)
         self.bank = self._load(self.path) if self.path.is_file() else None
 
     @staticmethod

@@ -31,7 +31,7 @@ def backup(path: Path, artifact: str) -> Path | None:
     path = Path(path)
     if not path.is_file():
         return None
-    target_dir = settings.HISTORY_DIR / artifact
+    target_dir = settings.workspace().history_dir / artifact
     target_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     target = target_dir / f"{stamp}{path.suffix}"
@@ -59,7 +59,7 @@ def write_json(path: Path, data, artifact: str | None = None) -> Path:
 
 
 def history(artifact: str) -> list[dict]:
-    directory = settings.HISTORY_DIR / artifact
+    directory = settings.workspace().history_dir / artifact
     if not directory.is_dir():
         return []
     return [
@@ -73,7 +73,7 @@ def history(artifact: str) -> list[dict]:
 
 
 def restore(artifact: str, snapshot_id: str, target: Path) -> Path:
-    source = settings.HISTORY_DIR / artifact / snapshot_id
+    source = settings.workspace().history_dir / artifact / snapshot_id
     if not source.is_file():
         raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")
     return write_json(Path(target), read_json(source), artifact=artifact)

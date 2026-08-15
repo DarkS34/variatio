@@ -52,7 +52,7 @@ class ConceptDescriber:
     ):
         self.knowledge_graph = knowledge_graph
         self.context = context
-        self.path = Path(path or config.CONCEPT_DESCRIPTIONS_PATH)
+        self.path = Path(path or config.default_workspace().concept_descriptions_path)
         self.siblings_top_k = siblings_top_k
         self.collision_similarity = collision_similarity
         self._name_vectors: dict[str, np.ndarray] | None = None
@@ -334,10 +334,11 @@ class Embedder:
         self.embed_signature = embed_signature
         self.context = context
 
-        self.descriptions_path = Path(descriptions_path or config.CONCEPT_DESCRIPTIONS_PATH)
-        self.concepts_cache_path = Path(concepts_cache_path or config.CONCEPTS_EMBEDDINGS_PATH)
+        ws = config.default_workspace()
+        self.descriptions_path = Path(descriptions_path or ws.concept_descriptions_path)
+        self.concepts_cache_path = Path(concepts_cache_path or ws.concepts_embeddings_path)
         self.exemplars_bank_cache_path = Path(
-            exemplars_bank_cache_path or config.EXEMPLARS_BANK_EMBEDDINGS_PATH
+            exemplars_bank_cache_path or ws.exemplars_bank_embeddings_path
         )
 
         self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD

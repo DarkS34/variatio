@@ -28,7 +28,9 @@ class ExemplarsBankBuilder:
         self,
         exemplars_profile: ExemplarsProfile,
         verbose: bool = True,
+        workspace=None,
     ):
+        self.workspace = workspace or config.default_workspace()
         self.exemplars_profile = exemplars_profile
         self.context = exemplars_profile.content_context
 
@@ -157,6 +159,7 @@ class ExemplarsBankBuilder:
                         converter=self._docling,
                         ocr=config.EXEMPLARS_OCR,
                         tag=f"[{idx}/{len(files)}] ",
+                        cache_dir=self.workspace.markdown_cache_dir,
                     )
                 except progress.Cancelled:
                     raise

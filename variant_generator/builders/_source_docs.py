@@ -81,12 +81,18 @@ def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Pa
 # the right stage by reading the file. Freshness is make-style — the cache is used while it
 # is newer than its source — which also means a hand-fixed markdown survives until the
 # original document itself changes.
-def markdown_cache_path(source: str | Path) -> Path:
+def markdown_cache_path(source: str | Path, cache_dir: str | Path | None = None) -> Path:
     source = Path(source)
-    return Path(config.MARKDOWN_CACHE_DIR) / source.parent.name / f"{source.name}.md"
+    root = Path(cache_dir or config.default_workspace().markdown_cache_dir)
+    return root / source.parent.name / f"{source.name}.md"
 
 
-def to_markdown(converter, input_path: Path, use_cache: bool = True) -> str:
+def to_markdown(
+    converter,
+    input_path: Path,
+    use_cache: bool = True,
+    cache_dir: str | Path | None = None,
+) -> str:
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
     if suffix in PLAIN_TEXT_EXTS:
@@ -94,7 +100,7 @@ def to_markdown(converter, input_path: Path, use_cache: bool = True) -> str:
     if suffix not in CONVERTED_EXTS:
         raise ValueError(f"Unsupported file extension: {suffix}")
 
-    cached = markdown_cache_path(input_path) if use_cache else None
+    cached = markdown_cache_path(input_path, cache_dir) if use_cache else None
     if cached is not None and cached.exists():
         if cached.stat().st_mtime >= input_path.stat().st_mtime:
             logger.info(f"[{input_path.name}] markdown reused from {cached}")
@@ -308,9 +314,10 @@ META_NAME = "_meta.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 
 
-def document_cache_dir(source: str | Path) -> Path:
+def document_cache_dir(source: str | Path, cache_dir: str | Path | None = None) -> Path:
     source = Path(source)
-    return Path(config.MARKDOWN_CACHE_DIR) / source.parent.name / source.name
+    root = Path(cache_dir or config.default_workspace().markdown_cache_dir)
+    return root / source.parent.name / source.name
 
 
 def _page_path(cache_dir: Path, index: int) -> Path:
@@ -455,6 +462,7 @@ def document_pages(
     ocr: bool = False,
     use_cache: bool = True,
     tag: str = "",
+    cache_dir: str | Path | None = None,
 ) -> list[str]:
     """The document as a list of markdown pages, transcribed from images when it is a PDF.
 
@@ -477,11 +485,11 @@ def document_pages(
         ocr=False if is_pdf else ocr,
     )
 
-    cache_dir = document_cache_dir(source)
+    document_dir = document_cache_dir(source, cache_dir)
     if use_cache:
-        cached = _read_cached_pages(cache_dir, fingerprint)
+        cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
-            logger.info(f"{tag}{source.name}: {len(cached)} page(s) reused from {cache_dir}")
+            logger.info(f"{tag}{source.name}: {len(cached)} page(s) reused from {document_dir}")
             return cached
 
     if is_pdf:
@@ -496,8 +504,8 @@ def document_pages(
         logger.warning(f"{tag}{source.name}: produced no pages; not caching")
         return pages
     if use_cache:
-        _write_pages(cache_dir, pages, fingerprint)
-        logger.info(f"{tag}{source.name}: {len(pages)} page(s) written to {cache_dir}")
+        _write_pages(document_dir, pages, fingerprint)
+        logger.info(f"{tag}{source.name}: {len(pages)} page(s) written to {document_dir}")
     return pages
 
 

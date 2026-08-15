@@ -16,8 +16,9 @@ import threading
 import time
 from pathlib import Path
 
-from variant_generator import config
 from variant_generator.evaluation import ARMS, EvaluationSession
+
+from . import settings
 
 RATING_SCALES = ("originality", "complexity", "concept_fit", "soundness")
 USABILITY_VALUES = ("as_is", "with_edits", "no")
@@ -26,11 +27,11 @@ _lock = threading.RLock()
 
 
 def sessions_path() -> Path:
-    return config.EVAL_SESSIONS_DIR / "sessions.jsonl"
+    return settings.workspace().eval_sessions_dir / "sessions.jsonl"
 
 
 def trace_path(session_id: str) -> Path:
-    return config.EVAL_SESSIONS_DIR / f"{session_id}.json"
+    return settings.workspace().eval_sessions_dir / f"{session_id}.json"
 
 
 # WRITE -----------------------------------------------------------------------------------------

@@ -58,7 +58,9 @@ class ExemplarsProfileBuilder:
         scan_model: str = config.EP_SCAN_MODEL,
         consolidate_model: str = config.EP_CONSOLIDATE_MODEL,
         verbose: bool = True,
+        workspace=None,
     ):
+        self.workspace = workspace or config.default_workspace()
         self.scan_model = scan_model
         self.consolidate_model = consolidate_model
         self.chunk_size = config.EP_CHUNK_SIZE
@@ -143,6 +145,7 @@ class ExemplarsProfileBuilder:
                             converter=self._docling,
                             ocr=config.EXEMPLARS_OCR,
                             tag=f"[{idx}/{len(files)}] ",
+                            cache_dir=self.workspace.markdown_cache_dir,
                         )
                     )
                 except progress.Cancelled:

@@ -10,7 +10,7 @@ from .initialize import PipelineContext
 
 def save_bank(bank: dict, path: str | Path | None = None) -> Path:
     """Atomic write: a cancelled or crashed run never leaves a half-written bank."""
-    target = Path(path or config.EXEMPLARS_BANK_PATH)
+    target = Path(path or config.default_workspace().exemplars_bank_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(f"{target.suffix}.tmp")
     with tmp.open("w", encoding="utf-8") as f:
@@ -30,6 +30,8 @@ def tag_bank(
     re-tags those items even if they already carry concepts, which is what the
     review screen's "re-tag selected" does.
     """
+    path = path or context.workspace.exemplars_bank_path
+
     pending = (
         [i for i in ids if i in context.exemplars_bank]
         if ids is not None
@@ -56,6 +58,6 @@ def tag_bank(
         raise
 
     save_bank(annotated, path)
-    logger.success(f"Saved {len(annotated)} annotated item(s) to {path or config.EXEMPLARS_BANK_PATH}")
+    logger.success(f"Saved {len(annotated)} annotated item(s) to {path}")
     context.apply_bank(annotated)
     return annotated

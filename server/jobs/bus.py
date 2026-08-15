@@ -23,7 +23,7 @@ from .models import Event
 
 class EventBus:
     def __init__(self, run_dir: Path | None = None, buffer_size: int | None = None):
-        self.run_dir = Path(run_dir or settings.RUNS_DIR)
+        self.run_dir = Path(run_dir or settings.workspace().runs_dir)
         self._buffer: deque[Event] = deque(maxlen=buffer_size or settings.EVENT_BUFFER_SIZE)
         self._lock = threading.Lock()
         self._seq = 0

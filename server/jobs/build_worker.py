@@ -44,12 +44,13 @@ class StdoutEmitter:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="build-worker")
     parser.add_argument("artifact", choices=["exemplars_profile", "knowledge_graph", "exemplars_bank"])
+    parser.add_argument("--workspace", default=None, help="Workspace slug; omitted means the default one")
     args = parser.parse_args(argv)
 
     from loguru import logger
 
     import variant_generator
-    from variant_generator import progress, stages
+    from variant_generator import config, progress, stages
 
     emitter = StdoutEmitter()
     signal.signal(signal.SIGTERM, emitter.request_cancel)
@@ -72,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     progress.set_emitter(emitter)
     try:
         variant_generator.bootstrap()
-        result = stages.build_artifact(args.artifact)
+        result = stages.build_artifact(args.artifact, config.workspace(args.workspace))
     except progress.Cancelled:
         send("worker.cancelled")
         return 2

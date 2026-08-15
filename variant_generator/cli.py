@@ -3,7 +3,7 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, stages
+from . import bootstrap, config, stages
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -11,15 +11,31 @@ def build_parser() -> argparse.ArgumentParser:
         prog="variant-generator",
         description="Knowledge graph-guided generation of educational items: exercises grounded in a curriculum graph.",
     )
+
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--workspace",
+        metavar="SLUG",
+        help="operate on WORKSPACES_DIR/SLUG instead of the default single-user layout",
+    )
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("build", help="build the missing instance artifacts from raw_base_data/")
-    subparsers.add_parser("init", help="load the instance, tag the exemplars bank and warm the indices")
+    subparsers.add_parser(
+        "build", parents=[common], help="build the missing instance artifacts from raw_base_data/"
+    )
+    subparsers.add_parser(
+        "init", parents=[common], help="load the instance, tag the exemplars bank and warm the indices"
+    )
 
-    generate = subparsers.add_parser("generate", help="initialize, then generate new items")
+    generate = subparsers.add_parser(
+        "generate", parents=[common], help="initialize, then generate new items"
+    )
     _add_generation_args(generate)
 
-    run_all = subparsers.add_parser("all", help="build what is missing, then initialize and generate")
+    run_all = subparsers.add_parser(
+        "all", parents=[common], help="build what is missing, then initialize and generate"
+    )
     _add_generation_args(run_all)
 
     return parser
@@ -79,8 +95,8 @@ def _report(results: list) -> None:
             print(f"\n--- thinking ---\n{result.thinking}")
 
 
-def _generate_and_report(args: argparse.Namespace) -> None:
-    context = stages.initialize(tag=True)
+def _generate_and_report(args: argparse.Namespace, ws) -> None:
+    context = stages.initialize(tag=True, ws=ws)
     results = stages.generate(
         context,
         concepts=args.concepts,
@@ -96,21 +112,23 @@ def _generate_and_report(args: argparse.Namespace) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
+    ws = config.workspace(args.workspace)
+
     try:
         bootstrap()
         if args.command == "build":
-            built = stages.build_missing()
+            built = stages.build_missing(ws)
             if built:
                 logger.success(f"Built artifact(s): {', '.join(built)}")
             else:
                 logger.info("All instance artifacts already present")
         elif args.command == "init":
-            stages.initialize(tag=True)
+            stages.initialize(tag=True, ws=ws)
         elif args.command == "generate":
-            _generate_and_report(args)
+            _generate_and_report(args, ws)
         elif args.command == "all":
-            stages.build_missing()
-            _generate_and_report(args)
+            stages.build_missing(ws)
+            _generate_and_report(args, ws)
     except stages.MissingArtifactError as e:
         logger.error(f"{e} — run `variant-generator build` first")
         return 1

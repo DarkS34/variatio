@@ -10,4 +10,5 @@ instance/.review_state.json
 instance/.evaluations/
 web/node_modules
 web/dist
+workspaces/
 *.md

@@ -2,13 +2,14 @@ from fastapi import APIRouter
 
 from variant_generator import config, inference
 
-from .. import deps, runtime
+from .. import deps, runtime, settings
 
 router = APIRouter(prefix="/api", tags=["health"])
 
 
 @router.get("/health")
 def health() -> dict:
+    ws = settings.workspace()
     available = inference.is_available()
     required = inference.required_models()
 
@@ -40,12 +41,13 @@ def health() -> dict:
             "missing": missing,
         },
         "context_ready": deps.is_ready(),
+        "workspace": ws.slug,
         "paths": {
-            "instance": str(config.INSTANCE_DIR),
-            "raw_exemplars": str(config.RAW_EXEMPLARS_BANK_DIR),
-            "raw_corpus": str(config.RAW_CORPUS_DIR),
-            "raw_exemplars_exists": config.RAW_EXEMPLARS_BANK_DIR.is_dir(),
-            "raw_corpus_exists": config.RAW_CORPUS_DIR.is_dir(),
+            "instance": str(ws.instance_dir),
+            "raw_exemplars": str(ws.raw_exemplars_dir),
+            "raw_corpus": str(ws.raw_corpus_dir),
+            "raw_exemplars_exists": ws.raw_exemplars_dir.is_dir(),
+            "raw_corpus_exists": ws.raw_corpus_dir.is_dir(),
         },
         "busy": runtime.runner.is_busy(),
     }
