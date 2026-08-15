@@ -69,7 +69,7 @@ def run(commission: Commission, context) -> ArmResult:
 
     item = results[0].item.model_dump(mode="json") if results else None
     if item is None and error is None:
-        error = "el ítem generado no pasó la validación contra el perfil de contenido"
+        error = "el ítem generado no pasó la validación contra el perfil de ejemplares"
 
     return ArmResult(
         arm="system",

@@ -7,7 +7,7 @@ router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
 # The job that moves each stage forward, so the UI never has to hardcode it.
 NEXT_JOB = {
-    review.CONTENT_PROFILE: "build_profile",
+    review.EXEMPLARS_PROFILE: "build_profile",
     review.KNOWLEDGE_GRAPH: "build_kg",
     review.EXEMPLARS_BANK: "build_bank",
 }

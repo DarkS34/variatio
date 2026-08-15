@@ -22,7 +22,7 @@ import { keys, useRaw } from "@/state/queries";
  */
 
 const FEEDS: Record<string, string> = {
-  content_profile: "Perfil",
+  exemplars_profile: "Perfil",
   knowledge_graph: "Grafo",
   exemplars_bank: "Banco",
 };
@@ -182,12 +182,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {notice ? <p className="text-xs text-muted-foreground">{notice}</p> : null}
 
-        {empty ? (
-          <p className="text-xs text-muted-foreground">
-            Sin archivos todavía. No se puede construir nada de esta rama hasta que haya al menos
-            uno.
-          </p>
-        ) : (
+        {empty ? null : (
           <ul className="divide-y divide-border rounded-md border border-border">
             {visible.map((file) => (
               <li key={file.name} className="flex items-center gap-2 px-2 py-1.5 text-xs">

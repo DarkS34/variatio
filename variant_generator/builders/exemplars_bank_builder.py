@@ -7,7 +7,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from .. import config, inference, progress
-from ..content_profile import ITEM_TYPE_KEY, ContentProfile
+from ..exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from ..prompts import format_content_prompt
 from ..utils import ensure_models, parse_with_repair
 from . import _source_docs
@@ -26,11 +26,11 @@ class ExemplarsBankBuilder:
 
     def __init__(
         self,
-        content_profile: ContentProfile,
+        exemplars_profile: ExemplarsProfile,
         verbose: bool = True,
     ):
-        self.content_profile = content_profile
-        self.context = content_profile.content_context
+        self.exemplars_profile = exemplars_profile
+        self.context = exemplars_profile.content_context
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.EB_CHUNK_SIZE
@@ -38,14 +38,35 @@ class ExemplarsBankBuilder:
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
         self._docling = _source_docs.default_converter(ocr=config.EXEMPLARS_OCR)
-        self._type_keys = content_profile.type_keys
-        self._types_block = self._build_types_block(content_profile)
+        self._type_keys = exemplars_profile.type_keys
+        self._types_block = self._build_types_block(exemplars_profile)
+        self._extraction_schema = self._build_extraction_schema(exemplars_profile)
         self._id_counter = 0
 
+    # One branch per modality, so the decoder cannot hand back an item wearing the fields of
+    # another one — the failure `_parse_and_validate` exists to catch loudly. `item_type` is
+    # a `const` per branch and is only demanded when there is a choice to make: with a single
+    # modality the parser already fills it in, and requiring it would add a way to fail for
+    # nothing. Extraction is the one pass that legitimately answers with an empty array, and
+    # the schema allows that.
     @staticmethod
-    def _build_types_block(content_profile: ContentProfile) -> str:
+    def _build_extraction_schema(exemplars_profile: ExemplarsProfile) -> dict:
+        branches = []
+        several = len(exemplars_profile.item_types) > 1
+        for key, item_type in exemplars_profile.item_types.items():
+            schema = item_type.stripped_schema()
+            properties = {**schema.get("properties", {}), ITEM_TYPE_KEY: {"const": key}}
+            required = list(schema.get("required", []))
+            if several:
+                required.append(ITEM_TYPE_KEY)
+            branches.append({**schema, "properties": properties, "required": required})
+        items = branches[0] if len(branches) == 1 else {"anyOf": branches}
+        return {"type": "array", "items": items}
+
+    @staticmethod
+    def _build_types_block(exemplars_profile: ExemplarsProfile) -> str:
         blocks = []
-        for key, item_type in content_profile.item_types.items():
+        for key, item_type in exemplars_profile.item_types.items():
             lines = [f"### `{key}` — {item_type.label}"]
             if item_type.description:
                 lines.append(item_type.description)
@@ -184,7 +205,10 @@ class ExemplarsBankBuilder:
             type_keys=self._type_keys,
         )
         response = inference.generate(
-            model=config.EB_EXTRACT_MODEL, think=False, prompt=prompt
+            model=config.EB_EXTRACT_MODEL,
+            think=False,
+            prompt=prompt,
+            format=self._extraction_schema,
         ).response
 
         items, err = parse_with_repair(
@@ -193,6 +217,7 @@ class ExemplarsBankBuilder:
             repair_model=config.REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="array",
+            format=self._extraction_schema,
             log_prefix=f"{tag} ",
         )
 
@@ -218,13 +243,13 @@ class ExemplarsBankBuilder:
                 if not isinstance(entry, dict):
                     return None, f"array element is not an object: {type(entry).__name__}"
                 key = entry.get(ITEM_TYPE_KEY) or (
-                    self.content_profile.default_type
+                    self.exemplars_profile.default_type
                     if len(self._type_keys) == 1
                     else None
                 )
                 if key is None:
                     return None, f"item is missing '{ITEM_TYPE_KEY}' (one of {self._type_keys})"
-                item_type = self.content_profile.item_type(str(key))
+                item_type = self.exemplars_profile.item_type(str(key))
                 fields = {k: v for k, v in entry.items() if k != ITEM_TYPE_KEY}
                 validated = item_type.content_item(**fields).model_dump()
                 items.append({ITEM_TYPE_KEY: item_type.key, **validated})

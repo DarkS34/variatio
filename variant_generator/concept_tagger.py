@@ -12,6 +12,22 @@ from .utils import parse_with_repair
 TRACE_KEY = "_tagging"
 
 
+# The candidates go in as an `enum`, not as a bare `string`: «Usa ÚNICAMENTE conceptos de la
+# lista de candidatos» is already what the prompt demands, and this is the same rule stated
+# where the decoder can enforce it instead of hoping. `_parse_and_validate` still filters —
+# the escalated pass runs unconstrained (it thinks, and the two are incompatible), so an
+# invented name can still arrive from there.
+def tagging_schema(candidate_names: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "concepts": {"type": "array", "items": {"enum": list(candidate_names)}},
+            "primary_concept": {"enum": [*candidate_names, None]},
+        },
+        "required": ["concepts", "primary_concept"],
+    }
+
+
 class ConceptTagger:
     def __init__(
         self,
@@ -120,8 +136,14 @@ class ConceptTagger:
         return result is None or result["primary_concept"] is None
 
     def _verify(self, prompt: str, candidate_names: list[str], think: bool) -> dict | None:
+        schema = tagging_schema(candidate_names)
+        # The escalation exists to buy DELIBERATION on an item the first pass could not
+        # place, and the grammar would take exactly that away, so it goes unconstrained.
         response = inference.generate(
-            model=self.concept_tagger_model, prompt=prompt, think=think
+            model=self.concept_tagger_model,
+            prompt=prompt,
+            think=think,
+            format=None if think else schema,
         ).response
 
         def parse(text: str) -> tuple[dict | None, str | None]:
@@ -134,6 +156,7 @@ class ConceptTagger:
             repair_model=self.concept_tagger_model,
             max_attempts=self.max_repair_attempts,
             shape="objeto",
+            format=schema,
         )
         return result
 

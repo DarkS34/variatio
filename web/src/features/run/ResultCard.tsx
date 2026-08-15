@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
-import type { ContentProfile, ItemTypeSpec } from "@/lib/types";
+import type { ExemplarsProfile, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** A value that already fences its own code carries markdown, not raw source. */
@@ -67,7 +67,7 @@ export function ResultCard({
   item: Record<string, unknown>;
   itemType?: string;
   thinking?: string | null;
-  profile: ContentProfile;
+  profile: ExemplarsProfile;
 }) {
   const [showThinking, setShowThinking] = useState(false);
   const spec = itemTypeOf(profile, { item_type: itemType });
@@ -129,7 +129,7 @@ export function ResultCard({
 
 export function toMarkdown(
   items: { item: Record<string, unknown>; item_type?: string }[],
-  profile: ContentProfile,
+  profile: ExemplarsProfile,
 ): string {
   const lines: string[] = ["# Ítems generados", ""];
   items.forEach(({ item, item_type }, index) => {

@@ -5,7 +5,7 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/input";
 import { itemTypeOf, typeKeyOf, typeLabel } from "@/lib/profile";
-import type { ContentProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/types";
+import type { ExemplarsProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { isCodeField } from "@/features/bank/BankScreen";
@@ -20,7 +20,7 @@ function Exemplar({
   profile,
 }: {
   exemplar: FewShotExemplar;
-  profile: ContentProfile | null;
+  profile: ExemplarsProfile | null;
 }) {
   const [open, setOpen] = useState(false);
   const item = exemplar.item as { item_type?: string };
@@ -114,7 +114,7 @@ export function FewShotPanel({
   profile,
 }: {
   exemplars: FewShotExemplar[];
-  profile: ContentProfile | null;
+  profile: ExemplarsProfile | null;
 }) {
   const [open, setOpen] = useState(false);
 

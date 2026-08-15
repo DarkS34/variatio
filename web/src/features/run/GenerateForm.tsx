@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
 import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
-import type { ContentProfile, GenerateParams, GraphView, ItemTypeSpec, KgConcept } from "@/lib/types";
+import type { ExemplarsProfile, GenerateParams, GraphView, ItemTypeSpec, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { DecisionField, describeDecision } from "./DecisionField";
@@ -40,7 +40,7 @@ export const EMPTY_FORM: FormState = {
 /** The modality actually in force: what the form shows and what the run will produce. */
 export function activeTypeKey(
   state: FormState,
-  profile: ContentProfile | null,
+  profile: ExemplarsProfile | null,
 ): string | null {
   const keys = typeKeys(profile);
   if (state.itemType && keys.includes(state.itemType)) return state.itemType;
@@ -49,7 +49,7 @@ export function activeTypeKey(
 
 export function activeTypeSpec(
   state: FormState,
-  profile: ContentProfile | null,
+  profile: ExemplarsProfile | null,
 ): ItemTypeSpec | null {
   const key = activeTypeKey(state, profile);
   return key && profile ? profile.item_types[key] : null;
@@ -70,7 +70,7 @@ export function toParams(state: FormState): GenerateParams {
   return params;
 }
 
-export function summarize(state: FormState, profile: ContentProfile | null): string {
+export function summarize(state: FormState, profile: ExemplarsProfile | null): string {
   const spec = activeTypeSpec(state, profile);
   const parts = [`${state.n} ítem${state.n === 1 ? "" : "s"}`];
   if (spec && typeKeys(profile).length > 1) parts.push(spec.label || activeTypeKey(state, profile)!);
@@ -166,7 +166,7 @@ export function GenerateForm({
 }: {
   state: FormState;
   onChange: (next: FormState) => void;
-  profile: ContentProfile | null;
+  profile: ExemplarsProfile | null;
   concepts: KgConcept[];
   graph: GraphView | undefined;
   disabled: boolean;
@@ -313,7 +313,7 @@ export function GenerateForm({
 
       <FormStep
         index={++index}
-        title="¿Qué debe practicar el alumno?"
+        title="¿Qué hay que practicar?"
         hint="Lo que el ítem debe hacer practicar, no lo que menciona. Sale del grafo, y los ejemplos few-shot se eligen entre los ítems del banco etiquetados con estos conceptos."
         answered={chosen}
         summary={state.concepts.join(" · ") || "Ningún concepto elegido todavía"}
@@ -387,7 +387,7 @@ export function GenerateForm({
         <FormStep
           index={++index}
           title={decided.length === 1 ? "¿Cómo debe ser?" : "¿Cómo deben ser?"}
-          hint="Lo que decides tú en vez del modelo. El perfil de contenido marca qué campos se preguntan aquí; «Cualquiera» se lo deja a él."
+          hint="Lo que decides tú en vez del modelo. El perfil de ejemplares marca qué campos se preguntan aquí; «Cualquiera» se lo deja a él."
           answered={decided.some((field) => state.decisions[field] !== undefined)}
           summary={decisionSummary}
           {...step("decisions")}
@@ -407,7 +407,7 @@ export function GenerateForm({
       {chosen ? (
         <FormStep
           index={++index}
-          title="¿Qué ha visto ya el alumno?"
+          title="¿Qué se ha visto ya?"
           hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista. Los conceptos objetivo deben estar dentro."
           optional
           answered={state.curriculum.length > 0}

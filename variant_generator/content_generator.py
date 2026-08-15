@@ -6,7 +6,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config, guardrail, inference, progress
-from .content_profile import ITEM_TYPE_KEY, ContentProfile, ItemType
+from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
 from .prompts import generate_content_prompt
@@ -185,15 +185,15 @@ class ContentGenerator:
         knowledge_graph: KnowledgeGraph,
         exemplars_bank: dict,
         embedder: Embedder,
-        content_profile: ContentProfile,
+        exemplars_profile: ExemplarsProfile,
         generator_model: str,
         repair_model: str = config.REPAIR_LLM,
     ):
         self.knowledge_graph = knowledge_graph
         self.exemplars_bank = exemplars_bank
         self.embedder = embedder
-        self.content_profile = content_profile
-        self.context = content_profile.content_context
+        self.exemplars_profile = exemplars_profile
+        self.context = exemplars_profile.content_context
         self.generator_model = generator_model
         self.repair_model = repair_model
 
@@ -210,7 +210,7 @@ class ContentGenerator:
         curriculum: list[str] | None = None,
         instructions: str | None = None,
     ) -> list[GeneratedContent]:
-        target_type = self.content_profile.item_type(item_type)
+        target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
         instructions = (instructions or "").strip()
         self._validate_input(target_type, concepts, fixed, n, curriculum, instructions)
@@ -360,7 +360,7 @@ class ContentGenerator:
     def _is_type(self, item: dict, key: str) -> bool:
         declared = item.get(ITEM_TYPE_KEY)
         if declared is None:
-            return len(self.content_profile.item_types) == 1
+            return len(self.exemplars_profile.item_types) == 1
         return declared == key
 
     def _select_few_shot(
@@ -441,7 +441,7 @@ class ContentGenerator:
         lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
         if item_type.description:
             lines.append(item_type.description)
-        others = [t for k, t in self.content_profile.item_types.items() if k != item_type.key]
+        others = [t for k, t in self.exemplars_profile.item_types.items() if k != item_type.key]
         if others:
             lines.append(
                 "Otras modalidades de la asignatura, que NO debes producir aquí: "
@@ -516,12 +516,17 @@ class ContentGenerator:
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
             return parse_item(inference.split_thinking(text).response, fixed, item_type)
 
+        # The generating call above stays unconstrained because it THINKS, and a grammar
+        # would silence that. The repair does not need to think — it is reformatting text
+        # that already carries the whole item — so it is the natural place to put the
+        # schema, and it is where the key drift that this loop could never fix gets fixed.
         item, _ = parse_with_repair(
             body,
             parse,
             repair_model=self.repair_model,
             max_attempts=self.max_repair_attempts,
             shape="objeto",
+            format=item_type.stripped_schema(),
         )
 
         if item is None:

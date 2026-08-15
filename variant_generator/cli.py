@@ -36,7 +36,7 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--item-type",
         metavar="TYPE",
-        help="modality to generate, as declared in the content profile (default: the first one)",
+        help="modality to generate, as declared in the exemplars profile (default: the first one)",
     )
     parser.add_argument(
         "--fixed",

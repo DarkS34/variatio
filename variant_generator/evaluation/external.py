@@ -38,7 +38,7 @@ def unavailable_reason() -> str | None:
     return None
 
 
-def generate(prompt: str) -> str:
+def generate(prompt: str, schema: dict | None = None) -> str:
     reason = unavailable_reason()
     if reason:
         raise ArmUnavailable(reason)
@@ -48,8 +48,8 @@ def generate(prompt: str) -> str:
     logger.info(f"Calling external provider '{provider}' with model '{model}'")
     try:
         if provider == "gemini":
-            return _gemini(prompt, model)
-        return _groq(prompt, model)
+            return _gemini(prompt, model, schema)
+        return _groq(prompt, model, schema)
     except httpx.HTTPStatusError as e:
         raise ArmUnavailable(_http_reason(provider, e)) from e
     except httpx.RequestError as e:
@@ -58,11 +58,27 @@ def generate(prompt: str) -> str:
         raise ArmUnavailable(f"Respuesta ininteligible de {provider}: {e}") from e
 
 
-def _gemini(prompt: str, model: str) -> str:
+# The exemplars profile's own schema goes out UNTRANSLATED. Gemini documents an OpenAPI 3.0
+# subset, so a converter looked necessary, but `gemini-3.6-flash` takes the Pydantic schema
+# as it comes — `title`, `anyOf: [string, null]` and all — and answers with the exact keys.
+# Writing one anyway was actively worse: it dropped `minLength`/`maximum`, which
+# `_spec_to_field` does support, so this arm would have decoded under a WEAKER schema than
+# the local two. Parity of parsing is the one thing the comparison must not lose.
+def _gemini(prompt: str, model: str, schema: dict | None = None) -> str:
+    generation_config = (
+        {}
+        if schema is None
+        else {
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseSchema": schema,
+            }
+        }
+    )
     response = httpx.post(
         GEMINI_URL.format(model=model),
         headers={"x-goog-api-key": config.EVAL_EXTERNAL_API_KEY},
-        json={"contents": [{"parts": [{"text": prompt}]}]},
+        json={"contents": [{"parts": [{"text": prompt}]}], **generation_config},
         timeout=config.EVAL_EXTERNAL_TIMEOUT,
     )
     response.raise_for_status()
@@ -73,11 +89,43 @@ def _gemini(prompt: str, model: str) -> str:
     return "".join(part.get("text", "") for part in parts)
 
 
-def _groq(prompt: str, model: str) -> str:
+# Groq speaks OpenAI's `json_schema`, whose strict mode additionally demands
+# `additionalProperties: false` on every object — the one thing Pydantic does not emit.
+# UNTESTED against the live API: this box has no Groq key, and gemini is the configured
+# provider. If the arm ever comes back `unavailable` with a 400 from Groq, this is where.
+def _openai_schema(schema: dict) -> dict:
+    out = dict(schema)
+    if "properties" in out:
+        out["properties"] = {n: _openai_schema(s) for n, s in out["properties"].items()}
+        out["additionalProperties"] = False
+    if "items" in out:
+        out["items"] = _openai_schema(out["items"])
+    return out
+
+
+def _groq(prompt: str, model: str, schema: dict | None = None) -> str:
+    response_format = (
+        {}
+        if schema is None
+        else {
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "item",
+                    "schema": _openai_schema(schema),
+                    "strict": True,
+                },
+            }
+        }
+    )
     response = httpx.post(
         GROQ_URL,
         headers={"Authorization": f"Bearer {config.EVAL_EXTERNAL_API_KEY}"},
-        json={"model": model, "messages": [{"role": "user", "content": prompt}]},
+        json={
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            **response_format,
+        },
         timeout=config.EVAL_EXTERNAL_TIMEOUT,
     )
     response.raise_for_status()

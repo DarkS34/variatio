@@ -8,7 +8,7 @@ surface is manual editing, and it is validated here for the same reason.
 
 from variant_generator import config
 from variant_generator.concept_tagger import TRACE_KEY
-from variant_generator.content_profile import ITEM_TYPE_KEY, ContentProfile
+from variant_generator.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variant_generator.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
@@ -21,7 +21,7 @@ META_FIELDS = ("source", "concepts", "primary_concept", ITEM_TYPE_KEY, TRACE_KEY
 
 # The listing sorts and searches over items the profile may no longer be able to place —
 # exactly the state a stale bank is in — so reading the primary text must never raise.
-def _primary_text(profile: ContentProfile, item: dict) -> str:
+def _primary_text(profile: ExemplarsProfile, item: dict) -> str:
     try:
         return profile.primary_text(item)
     except ValueError:
@@ -39,11 +39,11 @@ def _load_bank() -> dict:
     return bank
 
 
-def _profile() -> ContentProfile:
-    path = review.current_path(review.CONTENT_PROFILE)
+def _profile() -> ExemplarsProfile:
+    path = review.current_path(review.EXEMPLARS_PROFILE)
     if path is None:
-        raise BankError("Falta el perfil de contenido")
-    return ContentProfile(path)
+        raise BankError("Falta el perfil de ejemplares")
+    return ExemplarsProfile(path)
 
 
 def _graph() -> KnowledgeGraph:

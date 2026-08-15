@@ -13,6 +13,7 @@ import {
   type Scene,
 } from "./graph/draw";
 import {
+  applyParking,
   curriculumPositions,
   forceStep,
   PADDING,
@@ -173,17 +174,17 @@ export function GraphCanvas({
       wake();
       return;
     }
-    bodies.current = seedBodies(graphRef.current, size.current);
+    bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
     reheat();
   }, [reheat, wake]);
 
   useEffect(() => {
-    bodies.current = seedBodies(graph, size.current);
+    bodies.current = seedBodies(graph, model, size.current);
     pendingFit.current = true;
     settling.current = false;
     reheat();
     repaint();
-  }, [graph, reheat, repaint]);
+  }, [graph, model, reheat, repaint]);
 
   // Switching layout never rebuilds the bodies: each one is given a target and eased
   // into it, so the same node stays the same dot and you can watch the cloud fold into
@@ -199,6 +200,7 @@ export function GraphCanvas({
       temperature.current = 0;
       settling.current = true;
     } else {
+      applyParking(bodies.current, model, size.current);
       settling.current = false;
       reheat(0.55);
     }
@@ -267,6 +269,7 @@ export function GraphCanvas({
         forceStep(
           bodies.current,
           graphRef.current.links,
+          modelRef.current,
           size.current,
           temperature.current,
           viewProps.current.hiddenRelations,
@@ -306,14 +309,24 @@ export function GraphCanvas({
       const changed =
         Math.abs(known.width - size.current.width) > 24 ||
         Math.abs(known.height - size.current.height) > 24;
-      if (changed && known.width > 0 && viewProps.current.mode === "force") reheat(0.25);
+      if (changed && known.width > 0 && viewProps.current.mode === "force") {
+        applyParking(bodies.current, modelRef.current, size.current);
+        reheat(0.25);
+      }
       known = { ...size.current };
       wake();
     });
     observer.observe(wrap);
     syncSize();
     known = { ...size.current };
-    if (bodies.current.length === 0) bodies.current = seedBodies(graphRef.current, size.current);
+    if (bodies.current.length === 0) {
+      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
+    } else {
+      // The layout effects above ran before the element had ever been measured, so they
+      // sized the isolated lane against a 0x0 frame and put it through the middle of the
+      // cloud. This is the first moment the real frame is known.
+      applyParking(bodies.current, modelRef.current, size.current);
+    }
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onTheme = () => {

@@ -1,15 +1,15 @@
 from ._artifacts import (
-    CONTENT_PROFILE,
+    EXEMPLARS_PROFILE,
     EXEMPLARS_BANK,
     KNOWLEDGE_GRAPH,
     MissingArtifactError,
-    content_profile_path,
+    exemplars_profile_path,
     knowledge_graph_path,
     missing_artifacts,
 )
 from .build import (
     build_artifact,
-    build_content_profile,
+    build_exemplars_profile,
     build_exemplars_bank,
     build_knowledge_graph,
     build_missing,
@@ -25,17 +25,17 @@ from .initialize import PipelineContext, initialize
 from .tag import save_bank, tag_bank
 
 __all__ = [
-    "CONTENT_PROFILE",
+    "EXEMPLARS_PROFILE",
     "EXEMPLARS_BANK",
     "KNOWLEDGE_GRAPH",
     "MissingArtifactError",
     "PipelineContext",
     "build_artifact",
-    "build_content_profile",
+    "build_exemplars_profile",
     "build_exemplars_bank",
     "build_knowledge_graph",
     "build_missing",
-    "content_profile_path",
+    "exemplars_profile_path",
     "describe_concepts",
     "evaluate",
     "generate",

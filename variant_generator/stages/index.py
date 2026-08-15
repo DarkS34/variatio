@@ -1,20 +1,20 @@
 from loguru import logger
 
-from ..content_profile import ContentProfile
+from ..exemplars_profile import ExemplarsProfile
 from ..embedder import ConceptDescriber
 from ..knowledge_graph import KnowledgeGraph
 from . import _artifacts
 
 
 def _describer() -> ConceptDescriber:
-    profile_path = _artifacts.content_profile_path()
+    profile_path = _artifacts.exemplars_profile_path()
     if profile_path is None:
-        raise _artifacts.MissingArtifactError(_artifacts.CONTENT_PROFILE)
+        raise _artifacts.MissingArtifactError(_artifacts.EXEMPLARS_PROFILE)
     kg_path = _artifacts.knowledge_graph_path()
     if kg_path is None:
         raise _artifacts.MissingArtifactError(_artifacts.KNOWLEDGE_GRAPH)
 
-    profile = ContentProfile(profile_path)
+    profile = ExemplarsProfile(profile_path)
     return ConceptDescriber(KnowledgeGraph(kg_path), profile.content_context)
 
 

@@ -27,7 +27,7 @@ class ItemType:
 
     def _build_content_item(self) -> type[BaseModel]:
         fields = {
-            name: ContentProfile._spec_to_field(spec) for name, spec in self.field_specs.items()
+            name: ExemplarsProfile._spec_to_field(spec) for name, spec in self.field_specs.items()
         }
         model = create_model(f"ContentItem_{self.key}", **fields)
         model.PRIMARY_FIELD = self.primary_field
@@ -51,9 +51,9 @@ class ItemType:
         return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
 
     def field_guidance(self, task: str) -> dict[str, str]:
-        if task not in ContentProfile._GUIDANCE_KEYS:
+        if task not in ExemplarsProfile._GUIDANCE_KEYS:
             raise ValueError(
-                f"Unknown task '{task}'; expected one of {list(ContentProfile._GUIDANCE_KEYS)}"
+                f"Unknown task '{task}'; expected one of {list(ExemplarsProfile._GUIDANCE_KEYS)}"
             )
         out: dict[str, str] = {}
         for name, spec in self.field_specs.items():
@@ -114,7 +114,7 @@ class ItemType:
         return str(value)
 
 
-class ContentProfile:
+class ExemplarsProfile:
     _REQUIRED_KEYS: ClassVar[tuple] = ("content_context", "item_types")
     _TYPE_REQUIRED_KEYS: ClassVar[tuple] = ("primary_field", "fields")
     _SCALAR_TYPES: ClassVar[dict] = {
@@ -256,11 +256,11 @@ class ContentProfile:
     @classmethod
     def _validate(cls, raw: dict) -> None:
         if not isinstance(raw, dict):
-            raise ValueError("ContentProfile root must be an object")
+            raise ValueError("ExemplarsProfile root must be an object")
 
         missing = [k for k in cls._REQUIRED_KEYS if k not in raw]
         if missing:
-            raise ValueError(f"ContentProfile missing required keys: {missing}")
+            raise ValueError(f"ExemplarsProfile missing required keys: {missing}")
 
         if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
             raise ValueError("'content_context' must be a non-empty object")

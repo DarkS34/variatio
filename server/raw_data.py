@@ -40,7 +40,7 @@ SLOTS: dict[str, dict] = {
             "Ejercicios, exámenes o prácticas ya resueltos. De aquí se infiere el perfil "
             "de contenido y se extrae el banco de ejemplos."
         ),
-        "feeds": [review.CONTENT_PROFILE, review.EXEMPLARS_BANK],
+        "feeds": [review.EXEMPLARS_PROFILE, review.EXEMPLARS_BANK],
     },
 }
 

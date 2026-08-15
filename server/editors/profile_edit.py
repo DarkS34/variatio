@@ -1,15 +1,15 @@
-"""Editing the content profile.
+"""Editing the exemplars profile.
 
-Validation is delegated to `ContentProfile` itself — the class that will have to load
+Validation is delegated to `ExemplarsProfile` itself — the class that will have to load
 the file at runtime is the only honest judge of whether an edit is valid, and the user
 gets the exact error the pipeline would raise.
 """
 
-from variant_generator.content_profile import ContentProfile
+from variant_generator.exemplars_profile import ExemplarsProfile
 
 from .. import deps, review, storage
 
-ARTIFACT = review.CONTENT_PROFILE
+ARTIFACT = review.EXEMPLARS_PROFILE
 
 
 def load() -> dict:
@@ -26,7 +26,7 @@ def load() -> dict:
 
 def validate(raw: dict) -> str | None:
     try:
-        ContentProfile.validate_raw(raw)
+        ExemplarsProfile.validate_raw(raw)
     except (ValueError, KeyError, TypeError) as exc:
         return f"{type(exc).__name__}: {exc}"
     return None
@@ -41,5 +41,5 @@ def save(raw: dict) -> dict:
     target = review.canonical_path(ARTIFACT)
     storage.write_json(target, raw, artifact=ARTIFACT)
     review.ReviewState().invalidate(ARTIFACT)
-    deps.invalidate("perfil de contenido editado")
+    deps.invalidate("perfil de ejemplares editado")
     return {"path": str(target), "hash": storage.sha256_of(target)}

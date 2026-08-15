@@ -1,6 +1,6 @@
 import type {
   BankListing,
-  ContentProfile,
+  ExemplarsProfile,
   Coverage,
   EvaluationDetail,
   EvaluationListing,
@@ -111,9 +111,9 @@ export const api = {
     }),
 
   profile: () => request<ProfilePayload>("/api/profile"),
-  validateProfile: (profile: ContentProfile) =>
+  validateProfile: (profile: ExemplarsProfile) =>
     post<{ valid: boolean; error: string | null }>("/api/profile/validate", { profile }),
-  saveProfile: (profile: ContentProfile) => put<{ pipeline: Pipeline }>("/api/profile", { profile }),
+  saveProfile: (profile: ExemplarsProfile) => put<{ pipeline: Pipeline }>("/api/profile", { profile }),
 
   kg: () => request<KgSummary>("/api/kg"),
   kgGraph: () => request<GraphView>("/api/kg/graph"),
