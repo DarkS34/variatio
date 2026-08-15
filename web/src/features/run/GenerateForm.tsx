@@ -1,4 +1,4 @@
-import { Ban, Check, Minus, Play, Plus, TriangleAlert } from "lucide-react";
+import { Ban, Check, Minus, Play, Plus, Scale, TriangleAlert } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ConceptPicker, hasExemplars } from "@/components/ConceptPicker";
@@ -161,6 +161,8 @@ export function GenerateForm({
   blockedInstructions,
   onLaunch,
   onCancel,
+  variant = "generate",
+  footnote,
 }: {
   state: FormState;
   onChange: (next: FormState) => void;
@@ -174,6 +176,11 @@ export function GenerateForm({
   blockedInstructions: string | null;
   onLaunch: () => void;
   onCancel: () => void;
+  /** "evaluation" drops the item counter: one item per arm is what makes the session
+   *  the statistical unit. Everything else is shared, which is precisely what
+   *  guarantees the commission is the same one on both screens. */
+  variant?: "generate" | "evaluation";
+  footnote?: ReactNode;
 }) {
   const [open, setOpen] = useState<string | null>("concepts");
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
@@ -474,13 +481,17 @@ export function GenerateForm({
 
       {chosen ? (
         <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium">¿Cuántos ítems?</span>
-            <Count value={state.n} onChange={(n) => patch({ n })} />
-            {state.n > 1 ? (
-              <Badge variant="outline">no repetirán temática entre sí</Badge>
-            ) : null}
-          </div>
+          {variant === "generate" ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium">¿Cuántos ítems?</span>
+              <Count value={state.n} onChange={(n) => patch({ n })} />
+              {state.n > 1 ? (
+                <Badge variant="outline">no repetirán temática entre sí</Badge>
+              ) : null}
+            </div>
+          ) : null}
+
+          {footnote}
 
           {problems.length > 0 ? (
             <ul className="space-y-1 text-xs text-destructive">
@@ -495,7 +506,7 @@ export function GenerateForm({
           {running ? (
             <Button variant="outline" className="w-full" onClick={onCancel}>
               <Ban />
-              Cancelar generación
+              {variant === "evaluation" ? "Cancelar la comparación" : "Cancelar generación"}
             </Button>
           ) : (
             <Button
@@ -503,8 +514,10 @@ export function GenerateForm({
               disabled={problems.length > 0 || pending || disabled}
               onClick={onLaunch}
             >
-              {pending ? <Spinner /> : <Play />}
-              Generar {state.n} ítem{state.n === 1 ? "" : "s"}
+              {pending ? <Spinner /> : variant === "evaluation" ? <Scale /> : <Play />}
+              {variant === "evaluation"
+                ? "Comparar tres propuestas"
+                : `Generar ${state.n} ítem${state.n === 1 ? "" : "s"}`}
             </Button>
           )}
         </div>

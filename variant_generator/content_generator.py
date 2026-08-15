@@ -57,6 +57,120 @@ def _public_fields(item: dict) -> dict:
     return {name: value for name, value in item.items() if not name.startswith("_")}
 
 
+def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
+    """Drop blank pins.
+
+    Pinning a field to `""` asks the prompt to demand an empty value and then
+    overwrites whatever the model wrote with it, so the item comes back with the
+    field empty. Nobody ever means that: an empty box in the UI means "not pinned".
+    """
+    kept = {
+        name: value
+        for name, value in (fixed or {}).items()
+        if not (value is None or (isinstance(value, str) and not value.strip()))
+    }
+    dropped = sorted(set(fixed or {}) - set(kept))
+    if dropped:
+        logger.warning(f"Ignoring fixed fields with no value: {', '.join(dropped)}")
+    return kept
+
+
+def parse_item(
+    response: str, fixed: dict[str, object], item_type: ItemType
+) -> tuple[BaseModel | None, str | None]:
+    """The best schema-conforming object in the reply, not merely the first one.
+
+    Candidates are scored by how much of the schema they cover and, on a tie, the
+    last one wins: models write their drafts before their answer.
+
+    Module level rather than a method because the evaluation arms have to parse with
+    EXACTLY this tolerance: a comparison where one arm loses to a crooked JSON that
+    another would have had repaired measures parsing, not content.
+    """
+    schema_fields = set(item_type.field_specs)
+    candidates = json_objects(response) or [response]
+    best: BaseModel | None = None
+    best_score = -1
+    error = "no JSON object in the model output"
+
+    for candidate in candidates:
+        raw = _as_object(candidate, schema_fields)
+        if raw is None:
+            continue
+        raw = {k: v for k, v in raw.items() if k != ITEM_TYPE_KEY}
+        score = len(schema_fields.intersection(raw))
+        if best is not None and score < best_score:
+            continue
+        try:
+            item = item_type.content_item(**{**raw, **fixed})
+        except (ValidationError, ValueError, TypeError) as e:
+            error = f"{type(e).__name__}: {str(e)}"
+            continue
+        best, best_score = item, score
+
+    if best is None:
+        return None, error
+    return best, None
+
+
+def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
+    """How an exemplar is shown to the model.
+
+    Module level for the same reason as `parse_item`: the evaluation's RAG arm has to
+    present its retrieved exemplars EXACTLY like this. Otherwise the comparison would
+    also be measuring how the examples were laid out, and the isolated variable stops
+    being the graph.
+
+    Branching on the Python type is deliberate: list-valued fields never reach the LLM
+    as raw JSON and enum-ish strings are rendered as full text blocks.
+    """
+    if not few_shot:
+        return ""
+    primary = item_type.primary_field
+    properties = item_type.stripped_schema().get("properties", {})
+    parts = []
+    for ex in few_shot:
+        scalar_meta = []
+        text_blocks: list[tuple[str, str]] = []
+        primary_text = ""
+        for name in properties:
+            if name not in ex:
+                continue
+            value = ex.get(name)
+            if value is None:
+                continue
+            if name == primary:
+                if isinstance(value, str) and value.strip():
+                    primary_text = value.strip()
+            elif isinstance(value, str) and value.strip():
+                text_blocks.append((name, value.strip()))
+            elif isinstance(value, (int, float, bool)):
+                scalar_meta.append(f"{name}={value}")
+            elif isinstance(value, list) and value:
+                text_blocks.append((name, "\n".join(f"- {entry}" for entry in value)))
+        header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
+        lines = ["---", f"ITEM{header}:", primary_text]
+        for name, value in text_blocks:
+            lines.append(f"{name.upper()}:")
+            lines.append(value)
+        parts.append("\n".join(lines))
+    return "\n".join(parts)
+
+
+def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
+    """One repaired JSON object, picking the richest element if it came as a list."""
+    try:
+        raw = repair_json(candidate.strip(), return_objects=True)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return None
+    if isinstance(raw, list):
+        objects = [element for element in raw if isinstance(element, dict)]
+        if not objects:
+            return None
+        raw = max(objects, key=lambda o: len(schema_fields.intersection(o)))
+    return raw if isinstance(raw, dict) else None
+
+
 class GeneratedContent(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -177,21 +291,7 @@ class ContentGenerator:
 
     @staticmethod
     def _clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
-        """Drop blank pins.
-
-        Pinning a field to `""` asks the prompt to demand an empty value and then
-        overwrites whatever the model wrote with it, so the item comes back with the
-        field empty. Nobody ever means that: an empty box in the UI means "not pinned".
-        """
-        kept = {
-            name: value
-            for name, value in (fixed or {}).items()
-            if not (value is None or (isinstance(value, str) and not value.strip()))
-        }
-        dropped = sorted(set(fixed or {}) - set(kept))
-        if dropped:
-            logger.warning(f"Ignoring fixed fields with no value: {', '.join(dropped)}")
-        return kept
+        return clean_fixed(fixed)
 
     # The instruction is free text from whoever asks for the item and it is concatenated
     # into a prompt whose pedagogical constraints are the whole point, so it is judged
@@ -351,39 +451,7 @@ class ContentGenerator:
         return "\n".join(lines)
 
     def _build_few_shot_block(self, item_type: ItemType, few_shot: list[dict]) -> str:
-        if not few_shot:
-            return ""
-        primary = item_type.primary_field
-        properties = item_type.stripped_schema().get("properties", {})
-        parts = []
-        for ex in few_shot:
-            scalar_meta = []
-            text_blocks: list[tuple[str, str]] = []
-            primary_text = ""
-            for name in properties:
-                if name not in ex:
-                    continue
-                value = ex.get(name)
-                if value is None:
-                    continue
-                if name == primary:
-                    if isinstance(value, str) and value.strip():
-                        primary_text = value.strip()
-                elif isinstance(value, str) and value.strip():
-                    text_blocks.append((name, value.strip()))
-                elif isinstance(value, (int, float, bool)):
-                    scalar_meta.append(f"{name}={value}")
-                elif isinstance(value, list) and value:
-                    text_blocks.append(
-                        (name, "\n".join(f"- {entry}" for entry in value))
-                    )
-            header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
-            lines = ["---", f"ITEM{header}:", primary_text]
-            for name, value in text_blocks:
-                lines.append(f"{name.upper()}:")
-                lines.append(value)
-            parts.append("\n".join(lines))
-        return "\n".join(parts)
+        return build_few_shot_block(item_type, few_shot)
 
     def _collect_already_generated(
         self, item_type: ItemType, accepted: list[GeneratedContent]
@@ -446,9 +514,7 @@ class ContentGenerator:
         body = resp.response or (thinking or "")
 
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
-            return self._parse_and_validate(
-                inference.split_thinking(text).response, fixed, item_type
-            )
+            return parse_item(inference.split_thinking(text).response, fixed, item_type)
 
         item, _ = parse_with_repair(
             body,
@@ -461,50 +527,3 @@ class ContentGenerator:
         if item is None:
             return None
         return GeneratedContent(item=item, item_type=item_type.key, thinking=thinking)
-
-    def _parse_and_validate(
-        self, response: str, fixed: dict[str, object], item_type: ItemType
-    ) -> tuple[BaseModel | None, str | None]:
-        """The best schema-conforming object in the reply, not merely the first one.
-
-        Candidates are scored by how much of the schema they cover and, on a tie, the
-        last one wins: models write their drafts before their answer.
-        """
-        schema_fields = set(item_type.field_specs)
-        candidates = json_objects(response) or [response]
-        best: BaseModel | None = None
-        best_score = -1
-        error = "no JSON object in the model output"
-
-        for candidate in candidates:
-            raw = self._as_object(candidate, schema_fields)
-            if raw is None:
-                continue
-            raw = {k: v for k, v in raw.items() if k != ITEM_TYPE_KEY}
-            score = len(schema_fields.intersection(raw))
-            if best is not None and score < best_score:
-                continue
-            try:
-                item = item_type.content_item(**{**raw, **fixed})
-            except (ValidationError, ValueError, TypeError) as e:
-                error = f"{type(e).__name__}: {str(e)}"
-                continue
-            best, best_score = item, score
-
-        if best is None:
-            return None, error
-        return best, None
-
-    @staticmethod
-    def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
-        """One repaired JSON object, picking the richest element if it came as a list."""
-        try:
-            raw = repair_json(candidate.strip(), return_objects=True)
-        except (json.JSONDecodeError, ValueError, TypeError):
-            return None
-        if isinstance(raw, list):
-            objects = [element for element in raw if isinstance(element, dict)]
-            if not objects:
-                return None
-            raw = max(objects, key=lambda o: len(schema_fields.intersection(o)))
-        return raw if isinstance(raw, dict) else None

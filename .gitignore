@@ -1,11 +1,13 @@
 .venv
 .vscode/
 __pycache__
+.env
 /raw*
 cache/markdown
 instance/.history/
 instance/.runs/
 instance/.review_state.json
+instance/.evaluations/
 web/node_modules
 web/dist
 *.md

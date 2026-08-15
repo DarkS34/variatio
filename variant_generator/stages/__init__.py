@@ -14,6 +14,7 @@ from .build import (
     build_knowledge_graph,
     build_missing,
 )
+from .evaluate import evaluate
 from .generate import generate
 from .index import (
     describe_concepts,
@@ -36,6 +37,7 @@ __all__ = [
     "build_missing",
     "content_profile_path",
     "describe_concepts",
+    "evaluate",
     "generate",
     "initialize",
     "knowledge_graph_path",

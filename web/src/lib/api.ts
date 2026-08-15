@@ -2,6 +2,10 @@ import type {
   BankListing,
   ContentProfile,
   Coverage,
+  EvaluationDetail,
+  EvaluationListing,
+  EvaluationParams,
+  EvaluationRating,
   GraphView,
   Health,
   Job,
@@ -176,4 +180,17 @@ export const api = {
     request<{ events: VgEvent[] }>(`/api/jobs/${id}/events?since=${since}`),
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
+
+  // No `n` anywhere in here: one item per arm per session is what makes the session the
+  // statistical unit of the study.
+  launchEvaluation: (params: EvaluationParams) =>
+    post<{ job: Job; since: number }>("/api/evaluation", params),
+  evaluations: (limit = 50, offset = 0) =>
+    request<EvaluationListing>(`/api/evaluation?limit=${limit}&offset=${offset}`),
+  evaluation: (id: string) => request<EvaluationDetail>(`/api/evaluation/${id}`),
+  /** The reveal: the response already carries the origins of the three proposals. */
+  chooseEvaluation: (id: string, choice: number | null, comment?: string) =>
+    post<EvaluationDetail>(`/api/evaluation/${id}/choice`, { choice, comment }),
+  rateEvaluation: (id: string, rating: Partial<EvaluationRating>) =>
+    post<EvaluationDetail>(`/api/evaluation/${id}/rating`, rating),
 };

@@ -20,6 +20,7 @@ __all__ = [
     "Emitter",
     "advance",
     "checkpoint",
+    "current_emitter",
     "emit",
     "overall",
     "phase",
@@ -52,6 +53,11 @@ _emitter: contextvars.ContextVar["Emitter | None"] = contextvars.ContextVar(
 
 def set_emitter(emitter: "Emitter | None") -> contextvars.Token:
     return _emitter.set(emitter)
+
+
+def current_emitter() -> "Emitter | None":
+    """Whoever is listening right now, so a caller can wrap it instead of replacing it."""
+    return _emitter.get()
 
 
 def reset_emitter(token: contextvars.Token) -> None:

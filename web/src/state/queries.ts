@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { api } from "@/lib/api";
-import type { ArtifactName } from "@/lib/types";
+import type {
+  ArtifactName,
+  EvaluationDetail,
+  EvaluationParams,
+  EvaluationRating,
+} from "@/lib/types";
 import { runStore, type RunView } from "./runStore";
 
 export const keys = {
@@ -16,6 +21,8 @@ export const keys = {
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
   raw: ["raw"] as const,
+  evaluations: ["evaluations"] as const,
+  evaluation: (id: string) => ["evaluations", id] as const,
 };
 
 export function useStream() {
@@ -126,4 +133,50 @@ export function useSubmitJob() {
 
 export function useCancelJob() {
   return useMutation({ mutationFn: (id: string) => api.cancelJob(id) });
+}
+
+/* Evaluation ----------------------------------------------------------------------- */
+
+export function useEvaluations(limit = 50) {
+  return useQuery({ queryKey: keys.evaluations, queryFn: () => api.evaluations(limit) });
+}
+
+export function useEvaluation(id: string | null) {
+  return useQuery({
+    queryKey: keys.evaluation(id ?? "none"),
+    queryFn: () => api.evaluation(id!),
+    enabled: Boolean(id),
+  });
+}
+
+export function useLaunchEvaluation() {
+  return useMutation({
+    mutationFn: (params: EvaluationParams) => api.launchEvaluation(params),
+    onSuccess: ({ job }) => runStore.setCurrentJob(job.id),
+  });
+}
+
+/** The choice and the rubric both return the whole session, so the cache takes the
+ *  response instead of refetching: the reveal must be instant, not a second round trip. */
+function useSessionMutation<T>(call: (id: string, payload: T) => Promise<EvaluationDetail>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: T }) => call(id, payload),
+    onSuccess: (detail) => {
+      client.setQueryData(keys.evaluation(detail.session.id), detail);
+      client.invalidateQueries({ queryKey: keys.evaluations });
+    },
+  });
+}
+
+export function useChooseProposal() {
+  return useSessionMutation<{ choice: number | null; comment?: string }>((id, payload) =>
+    api.chooseEvaluation(id, payload.choice, payload.comment),
+  );
+}
+
+export function useRateSession() {
+  return useSessionMutation<Partial<EvaluationRating>>((id, payload) =>
+    api.rateEvaluation(id, payload),
+  );
 }

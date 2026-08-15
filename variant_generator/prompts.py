@@ -389,6 +389,81 @@ Instrucciones específicas para la generación de cada campo. Complementan la `d
 JSON:"""
 
 
+# ── EVALUACIÓN COMPARATIVA ────────────────────────────────────────────────────
+#
+# Los dos prompts de las ramas de referencia del modo Evaluación. No los "mejores":
+# son deliberadamente pobres, porque miden qué aporta lo que el sistema añade.
+#
+# Lo que SÍ llevan, y por qué:
+#   · los nombres de concepto — un usuario medio escribe el tema;
+#   · el contexto docente — un profesor sabe a quién enseña;
+#   · la lista de claves de salida — sin ella la rama devuelve prosa y la comparación
+#     mediría formato en vez de contenido, que es un artefacto que invalida el experimento.
+# Lo que NO pueden llevar nunca: descripciones de concepto, prerrequisitos, posteriores,
+# currículo, o cualquier sección didáctica de `generate_content_prompt`. Todo eso solo
+# existe gracias al grafo, que es justo lo que se está midiendo.
+
+
+def naive_generation_prompt(
+    context: dict,
+    concepts: list[str],
+    keys: list[str],
+    fixed: dict[str, object] | None = None,
+    instructions: str = "",
+) -> str:
+    subject = context.get("subject") or context.get("materia") or "la asignatura"
+    level = context.get("educational_level") or context.get("nivel") or ""
+    language = context.get("language_of_instruction") or context.get("idioma") or ""
+
+    header = f"Eres profesor de {subject}"
+    if level:
+        header += f" ({level})"
+    header += "."
+
+    lines = [header, f"Escribe un ejercicio para tus alumnos sobre: {', '.join(concepts)}."]
+    if language:
+        lines.append(f"Redáctalo en {language}.")
+    for name, value in (fixed or {}).items():
+        lines.append(f"El campo {name} debe ser: {value}.")
+    if instructions.strip():
+        lines.append(instructions.strip())
+    lines.append(f"Devuélvelo en JSON con las claves: {', '.join(keys)}.")
+    return "\n".join(lines)
+
+
+def rag_generation_prompt(
+    naive_prompt: str,
+    exemplars_block: str,
+    rules_block: str,
+    schema: str,
+) -> str:
+    exemplars_section = ""
+    if exemplars_block.strip():
+        exemplars_section = (
+            "\n# EJEMPLOS DEL BANCO DE LA ASIGNATURA\n"
+            "Ejercicios reales de la asignatura, recuperados por similitud con el encargo. "
+            "Úsalos como referencia de forma y registro:\n"
+            f"{exemplars_block}\n"
+        )
+
+    rules_section = ""
+    if rules_block.strip():
+        rules_section = f"\n# REGLAS DE REDACCIÓN DE LA ASIGNATURA\n{rules_block}\n"
+
+    return f"""\
+{naive_prompt}
+{exemplars_section}{rules_section}
+# SCHEMA DE SALIDA
+{schema}
+
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON conforme al schema. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Las claves de nivel superior son exactamente las del schema.
+
+JSON:"""
+
+
 # ── PERFIL DE CONTENIDO ───────────────────────────────────────────────────────
 
 

@@ -9,7 +9,8 @@ export type JobKind =
   | "describe_concepts"
   | "index"
   | "tag"
-  | "generate";
+  | "generate"
+  | "evaluate";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
@@ -265,6 +266,116 @@ export interface Coverage {
   covered: number;
   total: number;
   without_exemplars: string[];
+}
+
+/* Evaluation ----------------------------------------------------------------------- */
+
+export type EvaluationArm = "naive" | "rag" | "system";
+
+export type ArmStatus = "ok" | "failed" | "unavailable";
+
+/**
+ * One proposal, as the server chooses to describe it.
+ *
+ * Before the choice everything past `item` is absent — and that is not the client being
+ * polite: the server never sends it. `status` is narrowed to "ok" | "no_item" too,
+ * because "unavailable" would point at the commercial arm before a card is read.
+ */
+export interface EvaluationPosition {
+  position: number;
+  status: ArmStatus | "no_item";
+  item: Record<string, unknown> | null;
+  arm?: EvaluationArm;
+  arm_label?: string;
+  model?: string;
+  provider?: string;
+  prompt?: string;
+  raw_response?: string;
+  exemplar_ids?: string[];
+  elapsed_ms?: number;
+  error?: string | null;
+}
+
+export type Usability = "as_is" | "with_edits" | "no";
+
+export interface EvaluationRating {
+  arm: string;
+  originality?: number;
+  complexity?: number;
+  concept_fit?: number;
+  soundness?: number;
+  usability?: Usability;
+  comment?: string;
+  rated_at?: number;
+}
+
+export interface EvaluationSessionHead {
+  id: string;
+  created_at: number;
+  job_id: string | null;
+  concepts: string[];
+  item_type: string;
+  fixed: Record<string, unknown>;
+  curriculum: string[];
+  instructions: string;
+  revealed: boolean;
+  choice: number | null;
+  choice_arm: EvaluationArm | null;
+  chosen_at: number | null;
+  evaluator_note: string | null;
+  rating: EvaluationRating | null;
+  seed: number | null;
+}
+
+export interface EvaluationDetail {
+  session: EvaluationSessionHead;
+  positions: EvaluationPosition[];
+}
+
+export interface EvaluationSummary {
+  id: string;
+  created_at: number;
+  concepts: string[];
+  item_type: string;
+  instructions: string;
+  choice: number | null;
+  choice_arm: EvaluationArm | null;
+  chosen_at: number | null;
+  rated: boolean;
+  /** Empty until the session is judged: before that it would name the blind cards. */
+  arm_status: Partial<Record<EvaluationArm, ArmStatus>>;
+  without_item: number;
+}
+
+export interface EvaluationAggregates {
+  sessions: number;
+  decided: number;
+  rated: number;
+  preferences: Record<string, number>;
+  arm_status: Record<string, Record<string, number>>;
+  rubric: {
+    n: number;
+    usability?: Record<Usability, number>;
+    [dimension: string]: any;
+  };
+}
+
+export interface EvaluationListing {
+  sessions: EvaluationSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+  aggregates: EvaluationAggregates;
+  arms: { key: EvaluationArm; label: string }[];
+  external: { provider: string; model: string; configured: boolean; reason: string | null };
+}
+
+export interface EvaluationParams {
+  concepts: string[];
+  item_type?: string;
+  fixed?: Record<string, unknown>;
+  curriculum?: string[];
+  instructions?: string;
 }
 
 /* Events --------------------------------------------------------------------------- */

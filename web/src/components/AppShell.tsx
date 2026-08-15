@@ -7,6 +7,7 @@ import {
   Library,
   Network,
   Play,
+  Scale,
   ScrollText,
   Share2,
   WifiOff,
@@ -39,6 +40,7 @@ const NAV = [
   { path: "/preparar/grafo", label: "Grafo", icon: Network, artifact: "knowledge_graph" },
   { path: "/preparar/banco", label: "Banco", icon: Library, artifact: "exemplars_bank" },
   { path: "/generar", label: "Generar", icon: Play, artifact: null },
+  { path: "/evaluar", label: "Evaluación", icon: Scale, artifact: null },
 ] as const;
 
 /**

@@ -3,11 +3,29 @@ from pathlib import Path
 
 from .relations import BUILTIN_SCHEMAS
 
+
+# A real environment variable always wins: the file is the convenience, the export is
+# the deliberate override. Only secrets and host settings live here — never a model
+# name or a threshold, which belong in this file where they can be reviewed in git.
+def _load_dotenv(path: Path) -> None:
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
 # File Paths & Cache ----------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-INSTANCE_DIR = PROJECT_ROOT / "instance_test"
-CACHE_DIR = PROJECT_ROOT / "cache_test"
-RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_test"
+
+_load_dotenv(PROJECT_ROOT / ".env")
+
+INSTANCE_DIR = PROJECT_ROOT / "instance"
+CACHE_DIR = PROJECT_ROOT / "cache"
+RAW_BASE_DATA_DIR = PROJECT_ROOT / "raw_data_1"
 
 RAW_EXEMPLARS_BANK_DIR = RAW_BASE_DATA_DIR / "raw_exemplars_bank"
 RAW_CORPUS_DIR = RAW_BASE_DATA_DIR / "raw_corpus"
@@ -181,6 +199,28 @@ MAX_JSON_REPAIR_TRIES = 3
 
 GENERATION_INSTRUCTIONS_MAX_CHARS = 600
 GUARDRAIL_CRITERIA = ("harm", "jailbreak")
+
+
+# Evaluation ----------------------------------------------
+# Only the Evaluation mode reads this block; the pipeline never imports `evaluation/`.
+#
+# `EVAL_EXTERNAL_MODEL_ID` deliberately does NOT end in `_MODEL`: `inference.required_models()`
+# collects those by introspection and `/api/health` demands them from Ollama, so the name
+# would surface in the UI as a model that is never installed. Ending in `_LLM` would be
+# worse — `prepare_models()` would try to pull it.
+#
+# The key comes from the environment (or the gitignored `.env`) and defaults to empty:
+# with no key the naive arm records itself `unavailable` and the session runs with two.
+EVAL_EXTERNAL_PROVIDER = os.environ.get("EVAL_EXTERNAL_PROVIDER", "gemini")
+EVAL_EXTERNAL_MODEL_ID = os.environ.get("EVAL_EXTERNAL_MODEL_ID", "gemini-3.6-flash")
+EVAL_EXTERNAL_API_KEY = os.environ.get("EVAL_EXTERNAL_API_KEY", "")
+EVAL_EXTERNAL_TIMEOUT = 60.0
+
+# Same k as the pipeline's few-shot, so the number of examples is not a loose variable
+# between the arms: what the comparison isolates is the graph, not the prompt budget.
+EVAL_RAG_TOP_K = MAX_FEW_SHOT_EXAMPLES
+EVAL_RAG_BANK_EMBEDDINGS_PATH = CACHE_DIR / "embeddings" / "eval_rag_bank.npz"
+EVAL_SESSIONS_DIR = INSTANCE_DIR / ".evaluations"
 
 
 # Logging ----------------------------------------------

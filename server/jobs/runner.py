@@ -10,6 +10,7 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 
 from loguru import logger
 
@@ -30,6 +31,7 @@ class JobControl:
         self.cancel_event = threading.Event()
         self._process: subprocess.Popen | None = None
         self._lock = threading.Lock()
+        self._logs_muted = False
 
     # progress.Emitter protocol
     def emit(self, kind: str, payload: dict) -> None:
@@ -37,6 +39,22 @@ class JobControl:
 
     def should_cancel(self) -> bool:
         return self.cancel_event.is_set()
+
+    # The loguru mirror does NOT go through the progress emitter, so a job that filters
+    # its events cannot filter its logs: the blind evaluation would still publish
+    # "few-shot seleccionado" and give away which proposal is the system's. Muted at the
+    # source; stderr and the log file keep everything, so the developer loses nothing.
+    @property
+    def logs_muted(self) -> bool:
+        return self._logs_muted
+
+    @contextmanager
+    def muted_logs(self):
+        self._logs_muted = True
+        try:
+            yield
+        finally:
+            self._logs_muted = False
 
     def attach_process(self, process: subprocess.Popen) -> None:
         with self._lock:
@@ -208,6 +226,8 @@ class JobRunner:
         worker_id = threading.get_ident()
 
         def sink(message) -> None:
+            if control.logs_muted:
+                return
             record = message.record
             control.emit(
                 "log",
