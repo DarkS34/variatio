@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { BankScreen } from "@/features/bank/BankScreen";
 import { Dashboard } from "@/features/pipeline/Dashboard";
+import { EvaluationScreen } from "@/features/evaluation/EvaluationScreen";
 import { KgScreen } from "@/features/kg/KgScreen";
 import { ProfileScreen } from "@/features/profile/ProfileEditor";
 import { GenerateScreen } from "@/features/run/GenerateScreen";
@@ -25,6 +26,8 @@ export function App() {
         return <BankScreen stage={stage("exemplars_bank")} />;
       case "/generar":
         return <GenerateScreen />;
+      case "/evaluar":
+        return <EvaluationScreen />;
       default:
         return (
           <EmptyState title="Esa página no existe">

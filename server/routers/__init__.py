@@ -1,4 +1,4 @@
-from . import bank, health, jobs, kg, pipeline, profile, raw, ws
+from . import bank, evaluation, health, jobs, kg, pipeline, profile, raw, ws
 
 ROUTERS = [
     health.router,
@@ -8,6 +8,7 @@ ROUTERS = [
     bank.router,
     raw.router,
     jobs.router,
+    evaluation.router,
     ws.router,
 ]
 

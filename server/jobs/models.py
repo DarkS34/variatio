@@ -11,6 +11,7 @@ JobKind = Literal[
     "index",
     "tag",
     "generate",
+    "evaluate",
 ]
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
@@ -23,6 +24,7 @@ JOB_LABELS: dict[str, str] = {
     "index": "Indexar conceptos y banco",
     "tag": "Etiquetar el banco",
     "generate": "Generar ítems",
+    "evaluate": "Evaluación comparativa",
 }
 
 # `build` runs out of process: a multi-hour job needs a cancel button that really

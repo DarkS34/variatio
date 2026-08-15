@@ -16,6 +16,7 @@ GATES: dict[str, str | None] = {
     "index": None,
     "tag": review.EXEMPLARS_BANK,
     "generate": "__all__",
+    "evaluate": "__all__",
 }
 
 
@@ -25,7 +26,7 @@ class JobBody(BaseModel):
     force: bool = False
 
 
-def _gate_error(kind: str) -> str | None:
+def gate_error(kind: str) -> str | None:
     gate = GATES.get(kind)
     if gate is None:
         return None
@@ -53,7 +54,7 @@ def submit(body: JobBody) -> dict:
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
     if not body.force:
-        error = _gate_error(body.kind)
+        error = gate_error(body.kind)
         if error:
             raise HTTPException(409, error)
 

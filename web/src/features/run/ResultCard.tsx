@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
-import type { ContentProfile } from "@/lib/types";
+import type { ContentProfile, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** A value that already fences its own code carries markdown, not raw source. */
@@ -21,6 +21,39 @@ function FieldValue({ field, value }: { field: string; value: string }) {
     return <CodeBlock code={value} maxHeight="18rem" />;
   }
   return <Markdown className="text-muted-foreground" codeMaxHeight="18rem">{value}</Markdown>;
+}
+
+/**
+ * The fields of one item, in the order the profile declares them.
+ *
+ * Shared with the evaluation's proposal cards so the three arms are rendered by the same
+ * code: a comparison where one card lays its fields out differently is measuring layout.
+ */
+export function ItemFields({
+  item,
+  spec,
+}: {
+  item: Record<string, unknown>;
+  spec: ItemTypeSpec | null;
+}) {
+  const primary = spec ? String(item[spec.primary_field] ?? "") : "";
+  const others = Object.keys(spec?.fields ?? {}).filter((f) => f !== spec?.primary_field);
+
+  return (
+    <>
+      <Markdown>{primary}</Markdown>
+      {others.map((field) => {
+        const value = item[field];
+        if (value === null || value === undefined || value === "") return null;
+        return (
+          <div key={field} className="space-y-1">
+            <Label>{field}</Label>
+            <FieldValue field={field} value={String(value)} />
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 export function ResultCard({
@@ -38,8 +71,6 @@ export function ResultCard({
 }) {
   const [showThinking, setShowThinking] = useState(false);
   const spec = itemTypeOf(profile, { item_type: itemType });
-  const primary = spec ? String(item[spec.primary_field] ?? "") : "";
-  const others = Object.keys(spec?.fields ?? {}).filter((f) => f !== spec?.primary_field);
   const manyTypes = Object.keys(profile.item_types).length > 1;
 
   return (
@@ -65,18 +96,7 @@ export function ResultCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Markdown>{primary}</Markdown>
-
-        {others.map((field) => {
-          const value = item[field];
-          if (value === null || value === undefined || value === "") return null;
-          return (
-            <div key={field} className="space-y-1">
-              <Label>{field}</Label>
-              <FieldValue field={field} value={String(value)} />
-            </div>
-          );
-        })}
+        <ItemFields item={item} spec={spec} />
 
         {thinking ? (
           <div className="overflow-hidden rounded-lg border border-border">

@@ -51,7 +51,8 @@
           "description": "Nivel de exigencia cognitiva y técnica del ejercicio. Criterio de clasificación: 'básico' para sintaxis directa o estructuras elementales sin anidaciones complejas; 'intermedio' para combinación de múltiples conceptos, estructuras de control anidadas, listas/diccionarios, funciones con validación o algoritmos clásicos no triviales; 'avanzado' para recursión profunda, adaptación de algoritmos a criterios personalizados, diseño de estructuras de datos complejas o integración multimódulo.",
           "guidance": {
             "extraction": "Busca primero encabezados explícitos como '## Ejercicios nivel básico' o '## Ejercicio avanzado'. Si el documento los omite, analiza la complejidad sintáctica y conceptual del enunciado aplicando estrictamente el criterio definido en description: estructura simple -> básico; combinación de conceptos/funciones con validación -> intermedio; recursión avanzada/adaptación de algoritmos/diseño complejo -> avanzado. NUNCA asignes null."
-          }
+          },
+          "decided_by": "user"
         }
       }
     }
