@@ -31,8 +31,8 @@ def index_for(context) -> FlatBankIndex:
     if _index is None or _index.bank is not context.exemplars_bank:
         _index = FlatBankIndex(
             bank=context.exemplars_bank,
-            primary_text=context.content_profile.primary_text,
-            type_key_of=context.content_profile.type_key_of_safe,
+            primary_text=context.exemplars_profile.primary_text,
+            type_key_of=context.exemplars_profile.type_key_of_safe,
         )
     return _index
 
@@ -50,7 +50,7 @@ def build_query(commission: Commission) -> str:
 
 
 def run(commission: Commission, context) -> ArmResult:
-    item_type = context.content_profile.item_type(commission.item_type)
+    item_type = context.exemplars_profile.item_type(commission.item_type)
     started = time.perf_counter()
 
     query = build_query(commission)
@@ -85,6 +85,7 @@ def run(commission: Commission, context) -> ArmResult:
         repair_model=config.REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="objeto",
+        format=item_type.stripped_schema(),
     )
 
     return ArmResult(

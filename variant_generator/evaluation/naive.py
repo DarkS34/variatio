@@ -21,9 +21,9 @@ from . import external
 
 
 def build_prompt(commission: Commission, context) -> str:
-    item_type = context.content_profile.item_type(commission.item_type)
+    item_type = context.exemplars_profile.item_type(commission.item_type)
     return naive_generation_prompt(
-        context=context.content_profile.content_context,
+        context=context.exemplars_profile.content_context,
         concepts=commission.concepts,
         keys=list(item_type.field_specs),
         fixed=commission.fixed,
@@ -32,7 +32,7 @@ def build_prompt(commission: Commission, context) -> str:
 
 
 def run(commission: Commission, context) -> ArmResult:
-    item_type = context.content_profile.item_type(commission.item_type)
+    item_type = context.exemplars_profile.item_type(commission.item_type)
     prompt = build_prompt(commission, context)
     started = time.perf_counter()
 
@@ -40,7 +40,7 @@ def run(commission: Commission, context) -> ArmResult:
         return round((time.perf_counter() - started) * 1000)
 
     try:
-        raw = external.generate(prompt)
+        raw = external.generate(prompt, item_type.stripped_schema())
     except ArmUnavailable as e:
         logger.warning(f"External arm unavailable: {e}")
         return ArmResult(
@@ -64,6 +64,7 @@ def run(commission: Commission, context) -> ArmResult:
         repair_model=config.REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="objeto",
+        format=item_type.stripped_schema(),
     )
 
     return ArmResult(

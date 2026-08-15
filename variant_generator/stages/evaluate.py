@@ -28,7 +28,7 @@ def evaluate(
     seed: int | None = None,
     job_id: str | None = None,
 ) -> EvaluationSession:
-    target_type = context.content_profile.item_type(item_type)
+    target_type = context.exemplars_profile.item_type(item_type)
     commission = Commission(
         concepts=list(concepts),
         item_type=target_type.key,

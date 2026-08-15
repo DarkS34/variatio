@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { ItemFields } from "@/features/run/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
-import type { ContentProfile, EvaluationPosition } from "@/lib/types";
+import type { ExemplarsProfile, EvaluationPosition } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
@@ -30,7 +30,7 @@ function ProposalCard({
   choosable,
 }: {
   position: EvaluationPosition;
-  profile: ContentProfile;
+  profile: ExemplarsProfile;
   itemType: string;
   revealed: boolean;
   chosen: boolean;
@@ -122,7 +122,7 @@ export function ComparisonGrid({
   pending,
 }: {
   positions: EvaluationPosition[];
-  profile: ContentProfile;
+  profile: ExemplarsProfile;
   itemType: string;
   revealed: boolean;
   choice: number | null;

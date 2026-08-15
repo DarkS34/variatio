@@ -112,7 +112,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     curriculum = params.get("curriculum") or None
     instructions = params.get("instructions") or None
 
-    resolved_type = context.content_profile.item_type(item_type)
+    resolved_type = context.exemplars_profile.item_type(item_type)
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
         f"'{config.CONTENT_GENERATION_LLM}' sobre "
@@ -190,7 +190,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     fixed = params.get("fixed") or None
     curriculum = params.get("curriculum") or None
     instructions = params.get("instructions") or None
-    resolved_type = context.content_profile.item_type(params.get("item_type") or None)
+    resolved_type = context.exemplars_profile.item_type(params.get("item_type") or None)
 
     logger.info(
         f"Comparación ciega de {len(ARMS)} propuestas de tipo «{resolved_type.label}» sobre "
@@ -231,7 +231,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
 
 
 HANDLERS = {
-    "build_profile": _build(review.CONTENT_PROFILE),
+    "build_profile": _build(review.EXEMPLARS_PROFILE),
     "build_kg": _build(review.KNOWLEDGE_GRAPH),
     "build_bank": _build(review.EXEMPLARS_BANK),
     "describe_concepts": handle_describe_concepts,

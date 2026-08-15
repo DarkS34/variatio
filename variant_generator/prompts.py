@@ -216,7 +216,7 @@ def tag_concepts_prompt(
         )
 
     return f"""\
-Actúas como el docente que cataloga el banco de ejercicios de una asignatura. Para el ejercicio de abajo, decide QUÉ CONCEPTOS DEL CURRÍCULO hace practicar al alumno.
+Estás catalogando el banco de ejercicios de una asignatura. Para el ejercicio de abajo, decide QUÉ CONCEPTOS DEL CURRÍCULO hace practicar a quien lo resuelve.
 {context_block}
 # CONCEPTOS CANDIDATOS
 Ordenados de mayor a menor relevancia semántica respecto al enunciado. Bajo cada nombre está la descripción del concepto: describe la tarea que se le plantea al alumno cuando lo practica. Juzga por la descripción, no por el nombre.
@@ -236,7 +236,7 @@ Todo ejercicio USA muchos conceptos y PRACTICA solo uno o dos. Aquí se etiqueta
 
 # REGLAS
 - Usa ÚNICAMENTE conceptos de la lista de candidatos. No inventes ni parafrasees nombres.
-- `primary_concept`: el OBJETIVO DE APRENDIZAJE del ejercicio — aquello por lo que un docente lo pondría en un examen. Debe aparecer también en `concepts`.
+- `primary_concept`: el OBJETIVO DE APRENDIZAJE del ejercicio — aquello que el ejercicio existe para poner a prueba, lo que se evaluaría con él. Debe aparecer también en `concepts`.
 - `concepts`: el primario más los demás conceptos que el ejercicio ponga a prueba de verdad. Rara vez pasan de tres; una lista larga casi siempre significa que has colado herramientas.
 - ESPECIFICIDAD: entre dos candidatos donde uno es un tipo de otro, o parte de otro, el primario es el MÁS ESPECÍFICO que el ejercicio practique de verdad. El general entra en `concepts` solo si el ejercicio lo evalúa además por sí mismo.
 - SECUENCIA DE APRENDIZAJE: si un candidato es prerrequisito de otro y ambos aparecen, lo normal es que el ejercicio practique el POSTERIOR y se apoye en el prerrequisito como base ya sabida. Etiqueta el prerrequisito solo si el enunciado lo pone a prueba de forma explícita.
@@ -307,8 +307,8 @@ def generate_content_prompt(
     curriculum_section = ""
     if curriculum_block.strip():
         curriculum_section = (
-            "\n# CURRÍCULO CUBIERTO POR EL ALUMNO (RESTRICCIÓN DURA)\n"
-            "Todo lo que el alumno ha visto hasta ahora. El ejercicio NO puede exigir ningún concepto fuera de esta lista. Los conceptos objetivo son un subconjunto de ella:\n"
+            "\n# CURRÍCULO YA CUBIERTO (RESTRICCIÓN DURA)\n"
+            "Todo lo que quien va a resolverlo ha visto hasta ahora. El ejercicio NO puede exigir ningún concepto fuera de esta lista. Los conceptos objetivo son un subconjunto de ella:\n"
             f"{curriculum_block}\n"
         )
 
@@ -318,14 +318,14 @@ def generate_content_prompt(
     if fixed_values_block.strip():
         fixed_section = (
             "\n# VALORES FIJOS PARA ESTE ENCARGO\n"
-            "Estos campos vienen decididos de antemano por quien encarga el ejercicio. Respétalos exactamente y redacta el resto en coherencia con ellos:\n"
+            "Estos campos vienen decididos de antemano por quien pide el ejercicio. Respétalos exactamente y redacta el resto en coherencia con ellos:\n"
             f"{fixed_values_block}\n"
         )
 
     instructions_section = ""
     if instructions.strip():
         instructions_section = (
-            "\n# PETICIÓN DE QUIEN ENCARGA EL EJERCICIO\n"
+            "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
             "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el formato, "
             "sustituye a la elección libre de la sección anterior. Lo que NO puede tocar es el objetivo de aprendizaje, "
             "el conocimiento previo, lo prohibido ni el currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
@@ -334,7 +334,9 @@ def generate_content_prompt(
         )
 
     return f"""\
-Eres docente de la asignatura descrita abajo y estás redactando UN ejercicio nuevo para tus alumnos, conforme al schema indicado al final.
+Eres experto en la didáctica de la asignatura descrita abajo y redactas UN ejercicio nuevo, conforme al schema indicado al final.
+
+Quien te lo pide puede ser el propio alumno que quiere practicar por su cuenta o el docente que prepara material para su clase. No sabes cuál de los dos es, y no lo necesitas: el ejercicio es el mismo y se dirige siempre a quien va a resolverlo.
 
 # CONTEXTO DOCENTE
 {context_lines}
@@ -359,6 +361,7 @@ PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el
 - RESOLUBLE: debe existir una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
 - SIN CARGA AJENA: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de empezar a pensar en el concepto es ruido que falsea la evaluación.
 - CALIBRADO: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
+- SIN VOZ DE AULA: el enunciado plantea la tarea y nada más. Ni saludos, ni presentaciones, ni ánimos, ni comentarios tuyos sobre el propio ejercicio; ni referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
 
 # VARIACIÓN DE CONTEXTO (PARA FORZAR TRANSFERENCIA)
 El envoltorio —la situación concreta en la que se plantea la tarea— debe ser ORIGINAL. Inventa un ámbito reconocible: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los ejercicios previos del lote. Cambiar el contexto y no la sustancia es lo que obliga al alumno a TRANSFERIR el concepto en vez de reconocer un patrón que ya ha memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia vienen fijados por las secciones anteriores.
@@ -396,9 +399,14 @@ JSON:"""
 #
 # Lo que SÍ llevan, y por qué:
 #   · los nombres de concepto — un usuario medio escribe el tema;
-#   · el contexto docente — un profesor sabe a quién enseña;
+#   · el contexto docente — quien pide el ejercicio, alumno o docente, sabe de qué
+#     asignatura y a qué nivel lo quiere;
 #   · la lista de claves de salida — sin ella la rama devuelve prosa y la comparación
-#     mediría formato en vez de contenido, que es un artefacto que invalida el experimento.
+#     mediría formato en vez de contenido, que es un artefacto que invalida el experimento;
+#   · una línea de registro — el modelo comercial abría el enunciado saludando y
+#     comentando el ejercicio. Eso es formato conversacional, no didáctica: dejarlo mediría
+#     cortesía en vez de calidad del ítem, exactamente el mismo artefacto que justifica la
+#     línea anterior. Dice qué NO poner, no cómo redactar el ejercicio.
 # Lo que NO pueden llevar nunca: descripciones de concepto, prerrequisitos, posteriores,
 # currículo, o cualquier sección didáctica de `generate_content_prompt`. Todo eso solo
 # existe gracias al grafo, que es justo lo que se está midiendo.
@@ -415,12 +423,12 @@ def naive_generation_prompt(
     level = context.get("educational_level") or context.get("nivel") or ""
     language = context.get("language_of_instruction") or context.get("idioma") or ""
 
-    header = f"Eres profesor de {subject}"
+    header = f"Eres experto en {subject}"
     if level:
-        header += f" ({level})"
+        header += f", a nivel de {level}"
     header += "."
 
-    lines = [header, f"Escribe un ejercicio para tus alumnos sobre: {', '.join(concepts)}."]
+    lines = [header, f"Escribe un ejercicio para practicar: {', '.join(concepts)}."]
     if language:
         lines.append(f"Redáctalo en {language}.")
     for name, value in (fixed or {}).items():
@@ -428,6 +436,10 @@ def naive_generation_prompt(
     if instructions.strip():
         lines.append(instructions.strip())
     lines.append(f"Devuélvelo en JSON con las claves: {', '.join(keys)}.")
+    lines.append(
+        "El contenido de los campos es el ejercicio en sí: sin saludos, sin presentaciones, "
+        "sin ánimos ni comentarios tuyos sobre el ejercicio, y sin nada de texto fuera del JSON."
+    )
     return "\n".join(lines)
 
 
@@ -464,10 +476,10 @@ def rag_generation_prompt(
 JSON:"""
 
 
-# ── PERFIL DE CONTENIDO ───────────────────────────────────────────────────────
+# ── PERFIL DE EJEMPLARES ───────────────────────────────────────────────────────
 
 
-CONTENT_PROFILE_FIELD_NAMING = """\
+EXEMPLARS_PROFILE_FIELD_NAMING = """\
 - CLAVES EN ESPAÑOL, SIN TILDES (INNEGOCIABLE): los nombres de campo — las claves del objeto `fields` — van en ESPAÑOL, en snake_case y en ASCII puro; cada uno debe casar con `^[a-z][a-z0-9_]*$`. Español sí, tildes no: se convierten en identificadores de código, así que escribe `solucion` y no «solución», `explicacion` y no «explicación», `disenio` o `diseno` y nunca «diseño». Sin ñ, sin espacios, sin mayúsculas, sin guiones.
 - VOCABULARIO CANÓNICO: los nombres deben ser estables entre asignaturas distintas, para que un ejercicio de programación y uno de física se describan con las mismas claves. Si un campo desempeña uno de estos roles, usa EXACTAMENTE ese nombre en vez de inventar un sinónimo:
   · el texto principal que plantea al alumno la tarea, el problema o la pregunta → `enunciado`
@@ -493,7 +505,7 @@ CONTENT_PROFILE_FIELD_NAMING = """\
 """
 
 
-CONTENT_PROFILE_SCHEMA_GRAMMAR = """\
+EXEMPLARS_PROFILE_SCHEMA_GRAMMAR = """\
 `schema` es SIEMPRE un objeto JSON. Nunca una lista, nunca una cadena suelta. TODAS sus claves van DENTRO de ese objeto; ninguna como hermana de `schema`. Vocabulario permitido, y ninguno más:
 - `"type"`: uno de `"string"`, `"integer"`, `"number"`, `"boolean"`, `"array"`, `"object"`.
 - `"type"` como LISTA de esos mismos nombres, para valores que admiten ausencia: {"type": ["string", "null"]}. Dentro de `type` todo son NOMBRES DE TIPO entrecomillados, `"null"` incluido.
@@ -527,7 +539,7 @@ Este fragmento es SOLO UNA PARTE del material: no intentes describir la asignatu
 Cuenta toda unidad que el material PLANTEA AL ALUMNO COMO TAREA. No cuentan: la exposición teórica, las explicaciones y definiciones, los ejemplos que ilustran una explicación sin pedir nada, los índices, los objetivos de la unidad, las rúbricas ni la bibliografía. Si el fragmento no plantea ninguna tarea, devuelve `{{"types": []}}`.
 
 # DOS MODALIDADES SON LA MISMA SI SE RELLENAN IGUAL
-La prueba, aplícala antes de separar nada: ¿un docente rellenaría las MISMAS piezas de información al redactar uno y otro? Si sí, es UNA modalidad, por muy distinto que sea el rótulo del documento.
+La prueba, aplícala antes de separar nada: ¿se rellenarían las MISMAS piezas de información al redactar uno y otro? Si sí, es UNA modalidad, por muy distinto que sea el rótulo del documento.
 - «Ejercicio propuesto» y «Ejercicio resuelto» son la MISMA modalidad: que uno traiga la solución y el otro no es un campo vacío, no una modalidad nueva.
 - «Ejercicio básico» y «Ejercicio avanzado» son la MISMA modalidad: la dificultad es un campo, no una modalidad.
 - «Ejercicio 3.1» y «Ejercicio 7.2» son la misma modalidad: la numeración y el tema no la cambian.
@@ -554,7 +566,7 @@ Un único objeto JSON:
 - `excerpt`: copia LITERAL, recortada a {excerpt_chars} caracteres, del ejemplar que mejor representa la modalidad. Es lo que verá el paso siguiente para redactar las instrucciones de extracción, así que elige uno completo y típico, no el más raro. Escapa saltos (`\\n`) y comillas (`\\"`).
 
 # NOMBRES DE CAMPO
-{CONTENT_PROFILE_FIELD_NAMING}
+{EXEMPLARS_PROFILE_FIELD_NAMING}
 
 # REGLAS DE SALIDA
 - Un único objeto JSON. Nada antes, nada después.
@@ -568,9 +580,9 @@ Un único objeto JSON:
 JSON:"""
 
 
-def consolidate_content_profile_prompt(findings: str, max_types: int) -> str:
+def consolidate_exemplars_profile_prompt(findings: str, max_types: int) -> str:
     return f"""\
-Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo previo encontró, fragmento a fragmento, en todo el material docente en bruto de una asignatura. Consolídalo en el PERFIL DE CONTENIDO definitivo.
+Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo previo encontró, fragmento a fragmento, en todo el material docente en bruto de una asignatura. Consolídalo en el PERFIL DE EJEMPLARES definitivo.
 
 El perfil es la ÚNICA pieza que instancia el sistema para una asignatura concreta: el mismo motor genera ejercicios de programación, problemas de física, preguntas de test o supuestos prácticos, pero siempre material de aprendizaje. Declara, de forma abstracta, la anatomía de cada modalidad de ejercicio de esta asignatura: qué campos la componen, de qué tipo son, cómo se extraen de un documento y cómo se redactaría uno nuevo.
 
@@ -603,7 +615,7 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
 Metadatos docentes de la asignatura, deducidos de los fragmentos de ejemplo del inventario. Objeto de pares clave→valor de texto. Aguas abajo, TODOS los prompts del sistema leen este bloque para fijar el registro, el nivel de exigencia y el idioma de lo que redactan, así que es lo que sitúa la asignatura entera. Usa estas claves canónicas cuando puedas deducir su valor con seguridad — `subject` (materia o asignatura), `educational_level` (etapa o curso: secundaria, primer curso de grado…), `language_of_instruction` (idioma de instrucción) — y añade las que la materia exija (p. ej. `programming_language`). Incluye solo lo que deduzcas con seguridad; nada inventado. Va UNA sola vez, fuera de `item_types`: describe la asignatura, no la modalidad.
 
 # item_types — CUÁNTAS MODALIDADES
-- FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si un docente rellenaría las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
+- FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si se rellenan las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
 - SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `guidance.generation` saldrían casi iguales, es una sola.
 - DESCARTA LO ANECDÓTICO. Una modalidad que aparece una vez en todo el corpus y que encaja razonablemente dentro de otra, va dentro de la otra. Solo sobrevive por su cuenta la que el material usa de verdad como formato propio.
 - COMO MUCHO {max_types} modalidades. Si te salen más, es que estás separando por tema o por dificultad en vez de por anatomía: vuelve a fusionar. Lo habitual son 1-3.
@@ -615,7 +627,7 @@ Para cada modalidad:
 - `general_generation_rules`: reglas transversales a todos los campos que debería respetar la redacción de ejercicios NUEVOS DE ESTA MODALIDAD: convenciones de estilo, notación, formato o alcance que observes de forma consistente. Describe cómo escribe ESTA asignatura esta modalidad, no buenas prácticas didácticas genéricas — de la calidad pedagógica ya se ocupa el generador. Una regla que solo tiene sentido para una modalidad (p. ej. exigir docstring y bloque de prueba) va SOLO en esa modalidad.
 
 # fields — CÓMO SE LLAMAN
-{CONTENT_PROFILE_FIELD_NAMING}
+{EXEMPLARS_PROFILE_FIELD_NAMING}
 - COHERENCIA ENTRE MODALIDADES: si dos modalidades tienen un campo con el mismo papel, debe llamarse IGUAL en las dos (`enunciado` en todas, no `enunciado` en una y `pregunta` en otra).
 
 # fields — CUÁLES INCLUIR
@@ -624,11 +636,11 @@ Un campo por cada pieza de información ESENCIAL que compone un ejercicio de esa
 - MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un ejercicio. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica. Al mismo tiempo, NO omitas nada esencial para representar o redactar el ejercicio (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera. Lo habitual son 3-5 campos por modalidad.
 - PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío (`is_solved`, `tiene_solucion`: eso ya lo dice que `solucion` sea null); contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
 - NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`temas`, `conceptos`, `palabras_clave`…). Qué concepto del currículo practica cada ejercicio lo anota el sistema aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe a la asignatura entera (materia, nivel educativo, idioma) va en `content_context`, no en `fields`.
-- COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el ejercicio, (b) recuperarlo semánticamente y (c) redactar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el enunciado que porta la carga semántica (el `primary_field`, obligatorio); la solución esperada, cuando el material la trae o la admite; y al menos un campo CLASIFICATORIO que un docente pueda fijar como parámetro al encargar un ejercicio nuevo (dificultad, nivel…). Si la muestra no etiqueta ese eje clasificatorio pero es deducible observando el ejercicio, decláralo igualmente y define el criterio (ver POLÍTICA DE NULOS).
+- COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el ejercicio, (b) recuperarlo semánticamente y (c) redactar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el enunciado que porta la carga semántica (el `primary_field`, obligatorio); la solución esperada, cuando el material la trae o la admite; y al menos un campo CLASIFICATORIO que se pueda fijar como parámetro al pedir un ejercicio nuevo (dificultad, nivel…). Si la muestra no etiqueta ese eje clasificatorio pero es deducible observando el ejercicio, decláralo igualmente y define el criterio (ver POLÍTICA DE NULOS).
 
 Para cada campo:
 - `schema`: la forma del valor.
-{CONTENT_PROFILE_SCHEMA_GRAMMAR}
+{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
 - `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma de instrucción de la asignatura.
 - `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
 - `guidance.generation`: cómo REDACTAR este campo al crear un ejercicio nuevo desde cero. **Inclúyela SOLO si el campo se redacta de verdad** (ver criterio abajo); si no, omítela y deja en `guidance` únicamente `extraction`.
@@ -644,19 +656,19 @@ Por tanto, para todo campo CLASIFICATORIO (nivel, categoría…):
 # QUÉ CAMPOS LLEVAN guidance.generation (SENTIDO COMÚN)
 No todos los campos se redactan; muchos son de ENTRADA, no de salida. Clasifica cada campo:
 - CONTENIDO REDACTADO — su valor es lo que se escribe al crear un ejercicio nuevo desde cero (el enunciado, la solución, las opciones). → `guidance` con `extraction` Y `generation`.
-- ENTRADA / CONTROL / METADATO — su valor NO se redacta: lo DECIDE de antemano el docente que encarga el ejercicio (un nivel de dificultad objetivo), es una etiqueta o clasificación, o solo tiene sentido al leer un documento ya existente (identificadores, procedencia, referencia al documento origen). → `guidance` con SOLO `extraction`; OMITE `generation`.
+- ENTRADA / CONTROL / METADATO — su valor NO se redacta: lo DECIDE de antemano quien pide el ejercicio (un nivel de dificultad objetivo), es una etiqueta o clasificación, o solo tiene sentido al leer un documento ya existente (identificadores, procedencia, referencia al documento origen). → `guidance` con SOLO `extraction`; OMITE `generation`.
 
-Prueba rápida: al encargar un ejercicio nuevo, ¿un docente FIJARÍA este valor como parámetro de entrada, o es una etiqueta/clasificación? → NO lleva `guidance.generation`. ¿Se REDACTA como parte del ejercicio creado? → SÍ la lleva. El `primary_field` es siempre contenido redactado: lleva `guidance.generation`.
+Prueba rápida: al pedir un ejercicio nuevo, ¿se FIJARÍA este valor como parámetro de entrada, o es una etiqueta/clasificación? → NO lleva `guidance.generation`. ¿Se REDACTA como parte del ejercicio creado? → SÍ la lleva. El `primary_field` es siempre contenido redactado: lleva `guidance.generation`.
 
 # primary_field
-Uno por modalidad. El nombre del campo que porta la CARGA SEMÁNTICA principal del ejercicio: el enunciado, el texto que plantea la tarea al alumno. Aguas abajo es lo que se compara contra el grafo del currículo para decidir qué concepto practica cada ejercicio, así que debe ser el campo que un docente leería para saber de qué va. Debe ser una de las claves de los `fields` de ESA modalidad.
+Uno por modalidad. El nombre del campo que porta la CARGA SEMÁNTICA principal del ejercicio: el enunciado, el texto que plantea la tarea al alumno. Aguas abajo es lo que se compara contra el grafo del currículo para decidir qué concepto practica cada ejercicio, así que debe ser el campo que se lee para saber de qué va el ejercicio. Debe ser una de las claves de los `fields` de ESA modalidad.
 
 # embed_fields
 La lista de campos que, JUNTOS, se leen para decidir qué concepto del currículo practica el ejercicio. Es una lista porque en algunas modalidades el enunciado por sí solo no dice de qué va el ejercicio: en «¿qué imprime el siguiente código?» el enunciado es una fórmula fija y el concepto está en el CÓDIGO QUE SE LE ENTREGA al alumno.
 
 - Empieza SIEMPRE por el `primary_field`, y añade después solo los campos que el alumno RECIBE junto al enunciado y sin los cuales el ejercicio no se entiende: el material de partida, el fragmento de código a analizar, las opciones de una pregunta de test.
 - NUNCA incluyas la SOLUCIÓN ni la explicación de la respuesta. Es la respuesta, no el ejercicio: al medirlo, incluirla EMPEORÓ el acierto. Tampoco incluyas campos clasificatorios (dificultad, nivel): no aportan concepto y añaden ruido idéntico en todos los ejercicios.
-- Prueba: tapa el campo. Si un docente que lee lo que queda ya no puede decir qué concepto se practica, el campo va en la lista. Si sigue pudiendo, se queda fuera.
+- Prueba: tapa el campo. Si al leer lo que queda ya no puede decirse qué concepto se practica, el campo va en la lista. Si sigue pudiendo decirse, se queda fuera.
 - Si el enunciado se basta solo, `embed_fields` es exactamente `["<primary_field>"]`.
 
 # REGLAS DE SALIDA
@@ -674,9 +686,9 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 JSON:"""
 
 
-def repair_content_profile_prompt(profile: str, error_msg: str) -> str:
+def repair_exemplars_profile_prompt(profile: str, error_msg: str) -> str:
     return f"""\
-El siguiente PERFIL DE CONTENIDO parsea como JSON válido pero no cumple el formato exigido. Corrígelo.
+El siguiente PERFIL DE EJEMPLARES parsea como JSON válido pero no cumple el formato exigido. Corrígelo.
 
 # ERROR DE VALIDACIÓN
 {error_msg}
@@ -685,10 +697,10 @@ El siguiente PERFIL DE CONTENIDO parsea como JSON válido pero no cumple el form
 {profile}
 
 # FORMATO DE `schema` — causa habitual del error
-{CONTENT_PROFILE_SCHEMA_GRAMMAR}
+{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
 
 # NOMBRES DE CAMPO
-{CONTENT_PROFILE_FIELD_NAMING}
+{EXEMPLARS_PROFILE_FIELD_NAMING}
 
 # REGLAS
 - Conserva el contenido original (`label`, `description`, `guidance`, reglas, contexto) tal cual; corrige SOLO lo que incumple el formato. Si renombras un campo, renómbralo también donde se le referencie.

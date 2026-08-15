@@ -19,7 +19,7 @@ export function App() {
       case "/":
         return <Dashboard />;
       case "/preparar/perfil":
-        return <ProfileScreen stage={stage("content_profile")} />;
+        return <ProfileScreen stage={stage("exemplars_profile")} />;
       case "/preparar/grafo":
         return <KgScreen stage={stage("knowledge_graph")} />;
       case "/preparar/banco":

@@ -1,8 +1,5 @@
 import {
   Activity,
-  AlertTriangle,
-  Ban,
-  CircleCheck,
   FileJson,
   Library,
   Network,
@@ -10,183 +7,98 @@ import {
   Scale,
   ScrollText,
   Share2,
-  WifiOff,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 
 
-import { RunDrawer, useActiveRun, type DrawerTab } from "@/components/RunDrawer";
-import { Badge } from "@/components/ui/badge";
+import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Progress } from "@/components/ui/misc";
-import { duration } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import {
-  useCancelJob,
-  useElapsed,
-  useHealth,
-  useInvalidateChain,
-  usePipeline,
-  useStream,
-} from "@/state/queries";
+import { useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
-const NAV = [
-  { path: "/", label: "Panel", icon: Activity, artifact: null },
-  { path: "/preparar/perfil", label: "Perfil", icon: FileJson, artifact: "content_profile" },
-  { path: "/preparar/grafo", label: "Grafo", icon: Network, artifact: "knowledge_graph" },
-  { path: "/preparar/banco", label: "Banco", icon: Library, artifact: "exemplars_bank" },
-  { path: "/generar", label: "Generar", icon: Play, artifact: null },
-  { path: "/evaluar", label: "Evaluación", icon: Scale, artifact: null },
-] as const;
-
 /**
- * What is still pending, in one line — nothing else.
+ * Three groups, separated on screen, because they are three different things.
  *
- * The detail of a run lives in the drawer; up here the only questions worth answering
- * are "is something missing?" and "can I generate yet?". Anything more turns the header
- * into a second log.
+ * «Panel» is where the chain is watched; the middle three are the instance being
+ * *prepared*, in the order they are prepared in; the last two *use* it. The separators
+ * are the whole point — without them six tabs read as one flat list and nothing says
+ * that the middle block has to be finished before the right one does anything.
+ *
+ * `qualifier` is the half of the name that only fits on a wide screen. It is dropped,
+ * never abbreviated: «Grafo» and «Perfil» are already what these are called out loud.
  */
-function Readiness() {
-  const pipeline = usePipeline();
-  const stages = pipeline.data?.stages ?? [];
-  if (stages.length === 0) return null;
-
-  const missing = stages.filter((stage) => stage.status === "missing");
-  const stale = stages.filter((stage) => stage.status === "stale");
-  const draft = stages.filter((stage) => stage.status === "draft");
-
-  const [tone, text] =
-    missing.length > 0
-      ? (["bg-muted-foreground/50", `Falta construir: ${missing.map((s) => s.label).join(", ")}`] as const)
-      : stale.length > 0
-        ? (["bg-destructive", `Obsoleto: ${stale.map((s) => s.label).join(", ")}`] as const)
-        : draft.length > 0
-          ? (["bg-[var(--warning)]", `Pendiente de aprobar: ${draft.map((s) => s.label).join(", ")}`] as const)
-          : (["bg-[var(--success)]", "Listo para generar"] as const);
-
-  return (
-    <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-      <span className={cn("size-1.5 shrink-0 rounded-full", tone)} />
-      <span className="truncate">{text}</span>
-    </span>
-  );
-}
-
-/** Level 1 of "what is happening": one glance, from any screen. */
-function JobIndicator({ onOpen }: { onOpen: () => void }) {
-  const run = useActiveRun();
-  const stream = useStream();
-  const cancel = useCancelJob();
-
-  const running = run?.job?.status === "running" || run?.job?.status === "queued";
-  const elapsed = useElapsed(run?.job?.started_at ?? null, Boolean(running));
-  const step = useMemo(() => run?.steps.filter((s) => s.status === "running").at(-1), [run]);
-
-  if (!stream.connected) {
-    return (
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <WifiOff className="size-3.5" />
-        Sin conexión con el servidor
-      </div>
-    );
-  }
-
-  if (!run || !run.job) return <Readiness />;
-
-  if (!running) {
-    const tone = run.job.status === "failed" ? "danger" : run.job.status === "cancelled" ? "outline" : "success";
-    return (
-      <div className="flex min-w-0 items-center gap-3">
-        <Readiness />
-        <button
-          onClick={onOpen}
-          className="flex shrink-0 items-center gap-2 text-xs"
-          title="Ver la última ejecución"
-        >
-          <Badge variant={tone as never}>
-            {run.job.status === "failed" ? <AlertTriangle /> : <CircleCheck />}
-            {run.job.label}
-          </Badge>
-          <span className="tabular-nums text-muted-foreground">{duration(run.job.elapsed_ms)}</span>
-        </button>
-      </div>
-    );
-  }
-
-  // El porcentaje global manda sobre el del paso: un paso puede ir por 8/8 y quedar
-  // aún media construcción por delante.
-  const overall = run.overall;
-
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <button onClick={onOpen} className="flex min-w-0 items-center gap-2 text-left">
-        <span className="relative flex size-2 shrink-0">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--info)] opacity-60" />
-          <span className="relative inline-flex size-2 rounded-full bg-[var(--info)]" />
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium">
-            {overall?.label ?? step?.label ?? run.job.label}
-          </p>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            {overall ? (
-              <span className="tabular-nums">{overall.percent} %</span>
-            ) : step?.total ? (
-              <span className="tabular-nums">
-                {step.current ?? 0}/{step.total}
-              </span>
-            ) : null}
-            <span className="tabular-nums">{duration(elapsed)}</span>
-            {stream.connected ? null : <span className="text-[var(--warning)]">reconectando…</span>}
-          </div>
-        </div>
-      </button>
-      {overall ? (
-        <Progress value={overall.percent} max={100} className="hidden w-28 md:block" />
-      ) : step?.total ? (
-        <Progress value={step.current ?? 0} max={step.total} className="hidden w-28 md:block" />
-      ) : null}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Cancelar"
-        title="Cancelar la ejecución"
-        onClick={() => cancel.mutate(run.job!.id)}
-      >
-        <Ban />
-      </Button>
-    </div>
-  );
-}
+const NAV = [
+  { path: "/", label: "Panel", qualifier: null, icon: Activity, artifact: null, group: "watch" },
+  {
+    path: "/preparar/grafo",
+    label: "Grafo",
+    qualifier: "de conocimiento",
+    icon: Network,
+    artifact: "knowledge_graph",
+    group: "prepare",
+  },
+  {
+    path: "/preparar/perfil",
+    label: "Perfil",
+    qualifier: "de ejemplares",
+    icon: FileJson,
+    artifact: "exemplars_profile",
+    group: "prepare",
+  },
+  {
+    path: "/preparar/banco",
+    label: "Banco",
+    qualifier: "de ejemplares",
+    icon: Library,
+    artifact: "exemplars_bank",
+    group: "prepare",
+  },
+  { path: "/generar", label: "Generar", qualifier: null, icon: Play, artifact: null, group: "use" },
+  { path: "/evaluar", label: "Evaluar", qualifier: null, icon: Scale, artifact: null, group: "use" },
+] as const;
 
 function NavItem({
   path,
   label,
+  qualifier,
   icon: Icon,
   stage,
   active,
+  accent,
 }: {
   path: string;
   label: string;
+  qualifier?: string | null;
   icon: typeof Activity;
   stage?: StageState;
   active: boolean;
+  /** The two tabs that *use* the instance are tinted, so the working half of the app is
+   *  findable without reading the labels. */
+  accent?: boolean;
 }) {
   const locked = Boolean(stage?.blocked_reason);
   return (
     <Link
       to={path}
+      title={qualifier ? `${label} ${qualifier}` : label}
       className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
-        active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:text-foreground",
+        "flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors",
+        accent
+          ? active
+            ? "bg-primary/15 font-medium text-foreground ring-1 ring-inset ring-primary/40"
+            : "bg-primary/[0.07] text-foreground/80 hover:bg-primary/15 hover:text-foreground"
+          : active
+            ? "bg-accent font-medium text-accent-foreground"
+            : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className="size-4" />
+      <Icon className={cn("size-4", accent && "text-primary")} />
       {label}
+      {qualifier ? <span className="hidden font-normal opacity-60 xl:inline">{qualifier}</span> : null}
       {stage ? <StageDot status={stage.status} locked={locked} /> : null}
     </Link>
   );
@@ -246,21 +158,30 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="hidden sm:inline">Generador de variantes</span>
           </Link>
 
-          <nav className="flex items-center gap-0.5">
-            {NAV.map((item) => (
-              <NavItem
-                key={item.path}
-                path={item.path}
-                label={item.label}
-                icon={item.icon}
-                stage={stageFor(item.artifact)}
-                active={path === item.path}
-              />
+          {/* La barra de pestañas es lo único que compite por el ancho aquí: el estado de
+              la ejecución vive en el Panel, no arriba, precisamente porque lo estrujaba
+              hasta hacer aparecer un scroll horizontal sobre las pestañas. Si aun así no
+              cabe, se desplaza sin pintar la barra de scroll. */}
+          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {NAV.map((item, index) => (
+              <Fragment key={item.path}>
+                {index > 0 && NAV[index - 1].group !== item.group ? (
+                  <span aria-hidden className="mx-1.5 h-5 w-px shrink-0 bg-border" />
+                ) : null}
+                <NavItem
+                  path={item.path}
+                  label={item.label}
+                  qualifier={item.qualifier}
+                  icon={item.icon}
+                  stage={stageFor(item.artifact)}
+                  active={path === item.path}
+                  accent={item.group === "use"}
+                />
+              </Fragment>
             ))}
           </nav>
 
-          <div className="ml-auto flex min-w-0 items-center gap-3">
-            <JobIndicator onOpen={() => openDrawer("progress")} />
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             <Button
               variant="ghost"
               size="sm"

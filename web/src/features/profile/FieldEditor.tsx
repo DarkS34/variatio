@@ -57,7 +57,7 @@ const META: Record<FieldType, TypeMeta> = Object.fromEntries(
   TYPES.map((meta) => [meta.value, meta]),
 ) as Record<FieldType, TypeMeta>;
 
-// Mirrors ContentProfile.NAME_RE and RESERVED_FIELD_NAMES: the names become Python
+// Mirrors ExemplarsProfile.NAME_RE and RESERVED_FIELD_NAMES: the names become Python
 // identifiers, so accents and ñ are out even though the vocabulary itself is Spanish.
 const NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
@@ -306,7 +306,7 @@ export function FieldEditor({
   const Icon = META[type].icon;
   const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, name);
   const canBePrimary = type === "string";
-  // Mirrors ContentProfile._validate_decided_by: the primary field IS the item, and a
+  // Mirrors ExemplarsProfile._validate_decided_by: the primary field IS the item, and a
   // list or a free object has no choice to put in front of whoever asks for the item.
   const undecidable =
     isPrimary || ((type === "array" || type === "object") && !Array.isArray(schema.enum));

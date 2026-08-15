@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import type { ContentProfile } from "@/lib/types";
+import type { ExemplarsProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
@@ -110,8 +110,9 @@ export function GenerateScreen() {
       <header className="flex items-center gap-2">
         <h1 className="text-xl font-semibold tracking-tight">Generar variantes</h1>
         <InfoHint label="Cómo se genera">
-          Eliges qué debe practicar el alumno y las decisiones que el perfil deja en tus manos;
-          el resto lo redacta el modelo, guiado por el grafo y por los ejemplos del banco.
+          Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil
+          deja en tus manos; el resto lo redacta el modelo, guiado por el grafo y por los
+          ejemplos del banco.
         </InfoHint>
       </header>
 
@@ -197,7 +198,7 @@ function Results({
   run,
 }: {
   results: { item: Record<string, unknown>; item_type?: string; thinking?: string }[];
-  profile: ContentProfile;
+  profile: ExemplarsProfile;
   run: RunView | null;
 }) {
   const requested = run?.job?.result?.requested;

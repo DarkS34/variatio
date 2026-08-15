@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
-  Hammer,
   RefreshCw,
   Search,
   Tags,
@@ -19,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, Checkbox, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { TAGGING_METHOD, truncate } from "@/lib/format";
 import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
@@ -214,10 +213,16 @@ function ItemRow({
         className={cn(
           "border-b border-border align-top transition-colors hover:bg-accent/60",
           untagged && "bg-[color-mix(in_oklch,var(--warning)_8%,transparent)]",
+          selected && "bg-primary/[0.07] hover:bg-primary/10",
         )}
       >
         <td className="py-2 pl-3">
-          <input type="checkbox" checked={selected} onChange={onToggle} className="mt-1" />
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onToggle}
+            label={`Seleccionar el ítem ${item.id}`}
+            className="mt-1"
+          />
         </td>
         <td className="py-2 pl-2 font-mono text-xs text-muted-foreground">{item.id}</td>
         {typeLabel ? (
@@ -359,10 +364,31 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       return next;
     });
 
+  // Select-all acts on the page, not on the whole bank: the ids of the other pages are
+  // not loaded, and re-tagging 3 000 items because a header box said "todos" is not what
+  // anyone means by it.
+  const pageIds = listing?.items.map((item) => item.id) ?? [];
+  const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;
+  const pageSelected = pageIds.length > 0 && selectedOnPage === pageIds.length;
+  const someSelected = selectedOnPage > 0 && !pageSelected;
+  const togglePage = () =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (pageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  // Extraer y volver a extraer son el mismo trabajo con consecuencias opuestas: con el
+  // banco vacío es el paso que falta, y con ítems dentro es un borrado de todo lo
+  // etiquetado y corregido. El botón lo dice y `BuildButton` pide confirmación.
+  const hasItems = (listing?.totals.items ?? 0) > 0;
+  const pendingTags = listing?.totals.untagged ?? 0;
+
   return (
     <StageGate
       stage={stage}
-      title="3 · Banco de ejemplos"
+      title="3 · Banco de ejemplares"
       description={
         <>
           Los ítems extraídos de los documentos y etiquetados con conceptos del grafo. Se revisan
@@ -370,28 +396,37 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           ganaron por poco margen.
         </>
       }
+      buildLabels={{
+        create: "Extraer",
+        redo: "Volver a extraer",
+        confirmRedo: hasItems
+          ? `Volver a extraer descarta los ${listing?.totals.items} ítem(s) que hay ahora —con sus etiquetas y las correcciones hechas a mano— y los vuelve a sacar de los documentos en bruto. ¿Continuar?`
+          : undefined,
+      }}
       actions={
         <>
           <Button
-            variant="outline"
-            disabled={submit.isPending}
-            onClick={() => submit.mutate({ kind: "build_bank" })}
-            title="Vuelve a extraer los ítems de los documentos en bruto"
-          >
-            <Hammer />
-            Extraer
-          </Button>
-          <Button
-            disabled={submit.isPending}
+            disabled={submit.isPending || (selected.size === 0 && pendingTags === 0)}
             onClick={() =>
               submit.mutate({
                 kind: "tag",
                 params: selected.size > 0 ? { ids: [...selected] } : {},
               })
             }
+            title={
+              selected.size > 0
+                ? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`
+                : pendingTags > 0
+                  ? `Etiqueta los ${pendingTags} ítem(s) que aún no tienen concepto`
+                  : hasItems
+                    ? "Todos los ítems ya tienen concepto: selecciona alguno para volver a etiquetarlo"
+                    : "No hay ítems que etiquetar: extrae el banco primero"
+            }
           >
             {submit.isPending ? <Spinner /> : <Tags />}
-            {selected.size > 0 ? `Re-etiquetar (${selected.size})` : "Etiquetar pendientes"}
+            {selected.size > 0
+              ? `Re-etiquetar (${selected.size})`
+              : `Etiquetar pendientes${pendingTags > 0 ? ` (${pendingTags})` : ""}`}
           </Button>
         </>
       }
@@ -562,7 +597,18 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="w-8 py-2 pl-3" />
+                  <th className="w-8 py-2 pl-3">
+                    <Checkbox
+                      checked={pageSelected}
+                      indeterminate={someSelected}
+                      onCheckedChange={togglePage}
+                      label={
+                        pageSelected
+                          ? "Deseleccionar los ítems de esta página"
+                          : "Seleccionar todos los ítems de esta página"
+                      }
+                    />
+                  </th>
                   <th className="w-16 py-2 pl-2 font-medium">id</th>
                   {manyTypes ? <th className="w-40 py-2 pl-2 font-medium">modalidad</th> : null}
                   <th className="py-2 pl-2 font-medium">{primaryHeader}</th>

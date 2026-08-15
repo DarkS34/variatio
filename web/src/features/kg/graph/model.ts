@@ -14,6 +14,13 @@ export interface GraphModel {
   domainColours: string[];
   relationColours: string[];
   hubs: Set<number>;
+  /** Domain index of each node, flattened out of `graph.nodes` for the hot loops. */
+  groupOf: number[];
+  groupCount: number;
+  /** Members of each domain, in node order. Empty domains keep their empty slot. */
+  domainMembers: number[][];
+  /** Nodes no relation ever mentions. They are laid out apart — see `layout.parkPositions`. */
+  isolated: number[];
   /** Prerequisite depth: 0 is "nothing has to be learned first". */
   levels: number[];
   levelCount: number;
@@ -23,7 +30,10 @@ export interface GraphModel {
   curriculumEdges: number;
 }
 
-const HUB_LABELS = 16;
+// A budget, not a rule: labels are dropped on collision anyway, so this only decides how
+// many are *offered*. 16 over 353 concepts left the graph anonymous — you could see the
+// shape of the thing and read none of it.
+const HUB_LABELS = 34;
 
 export function buildModel(graph: GraphView): GraphModel {
   const count = graph.nodes.length;
@@ -42,6 +52,15 @@ export function buildModel(graph: GraphView): GraphModel {
   const nameIndex = new Map<string, number>();
   graph.nodes.forEach(([name], index) => nameIndex.set(name, index));
 
+  const groupCount = Math.max(1, graph.groups.length);
+  const groupOf = graph.nodes.map(([, group]) => group);
+  const domainMembers: number[][] = Array.from({ length: groupCount }, () => []);
+  const isolated: number[] = [];
+  for (let index = 0; index < count; index += 1) {
+    domainMembers[groupOf[index]]?.push(index);
+    if (degrees[index] === 0) isolated.push(index);
+  }
+
   // One colour string per domain and per relation, built once: producing them inside
   // the draw loop meant hundreds of template strings a frame for a dozen values.
   const domainColours = graph.groups.map((_, index) => domainColour(index, graph.groups.length));
@@ -49,16 +68,18 @@ export function buildModel(graph: GraphView): GraphModel {
     relationColour(relation.type ?? relation.key, index),
   );
 
-  // A graph with no labels is a constellation. The hubs get theirs permanently — few
-  // enough not to collide, and they are what you navigate by.
-  const hubs = new Set(
-    degrees
-      .map((degree, index) => [degree, index])
-      .sort((a, b) => b[0] - a[0])
-      .slice(0, HUB_LABELS)
-      .filter(([degree]) => degree > 1)
-      .map(([, index]) => index),
-  );
+  // A graph with no labels is a constellation. The hubs get theirs permanently — they
+  // are what you navigate by — and every domain contributes its own biggest concept even
+  // if it never makes the global cut, so no region of the map is left unnamed.
+  const byDegree = [...Array(count).keys()].sort((a, b) => degrees[b] - degrees[a]);
+  const hubs = new Set(byDegree.slice(0, HUB_LABELS).filter((index) => degrees[index] > 1));
+  for (const members of domainMembers) {
+    const best = members.reduce(
+      (top, index) => (top < 0 || degrees[index] > degrees[top] ? index : top),
+      -1,
+    );
+    if (best >= 0 && degrees[best] > 1) hubs.add(best);
+  }
 
   const prerequisite =
     graph.meta.prerequisite ?? graph.relations.findIndex((relation) => relation.prerequisite);
@@ -72,6 +93,10 @@ export function buildModel(graph: GraphView): GraphModel {
     domainColours,
     relationColours,
     hubs,
+    groupOf,
+    groupCount,
+    domainMembers,
+    isolated,
     levels,
     levelCount,
     prerequisite: relationIndex,

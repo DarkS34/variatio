@@ -348,16 +348,7 @@ function GraphExplorer() {
 
   if (kg.isLoading || graph.isLoading) return <Skeleton className="h-[36rem]" />;
 
-  if (!kg.data || !graph.data) {
-    return (
-      <Alert tone="info" title="Todavía no hay grafo de conocimiento">
-        <p>
-          Púlsalo en «Construir», aquí arriba, para extraerlo del corpus. El progreso aparece en
-          esta misma pantalla.
-        </p>
-      </Alert>
-    );
-  }
+  if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
 
@@ -643,7 +634,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   return (
     <StageGate
       stage={stage}
-      title="2 · Grafo de conocimiento"
+      title="1 · Grafo de conocimiento"
       description={
         <>
           El vocabulario del sistema. Todo lo que se etiquete y se genere después saldrá de aquí:

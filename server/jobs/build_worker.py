@@ -43,7 +43,7 @@ class StdoutEmitter:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="build-worker")
-    parser.add_argument("artifact", choices=["content_profile", "knowledge_graph", "exemplars_bank"])
+    parser.add_argument("artifact", choices=["exemplars_profile", "knowledge_graph", "exemplars_bank"])
     args = parser.parse_args(argv)
 
     from loguru import logger

@@ -30,12 +30,19 @@ def ensure_models(models: list[str], label: str) -> None:
     logger.success(f"{label} models ready")
 
 
+# `format` is required for the same reason `shape` is: a silent default is what let the
+# tagger ask for an array while its parser demanded an object. It is what makes this loop
+# able to fix a SCHEMA error at all — the prompt alone only ever asked for valid JSON, so a
+# reply that parsed but named a field `sol` instead of `solucion` came back byte-identical
+# three times in a row and burned the whole budget. Under the grammar that key cannot be
+# written. Pass the schema when the caller has one, `"json"` when the shape is open-ended.
 def parse_with_repair(
     response: str,
     parse: Callable[[str], tuple[object | None, str | None]],
     repair_model: str,
     max_attempts: int,
     shape: str,
+    format: dict | str,
     log_prefix: str = "",
 ) -> tuple[object | None, str | None]:
     result, error = parse(response)
@@ -57,7 +64,9 @@ def parse_with_repair(
         prompt = json_repair_prompt(
             broken_output=response, error_msg=error or "invalid JSON", shape=shape
         )
-        response = inference.generate(model=repair_model, prompt=prompt).response
+        response = inference.generate(
+            model=repair_model, prompt=prompt, think=False, format=format
+        ).response
         result, error = parse(response)
 
     return result, error

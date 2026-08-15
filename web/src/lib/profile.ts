@@ -1,17 +1,17 @@
-import type { ContentProfile, ItemTypeSpec } from "@/lib/types";
+import type { ExemplarsProfile, ItemTypeSpec } from "@/lib/types";
 
-/** Mirrors ContentProfile.type_key_of: with a single modality declared, an item that
+/** Mirrors ExemplarsProfile.type_key_of: with a single modality declared, an item that
  *  never named one still belongs to it — there was nothing to choose. */
-export function typeKeys(profile: ContentProfile | null): string[] {
+export function typeKeys(profile: ExemplarsProfile | null): string[] {
   return profile ? Object.keys(profile.item_types) : [];
 }
 
-export function defaultTypeKey(profile: ContentProfile | null): string | null {
+export function defaultTypeKey(profile: ExemplarsProfile | null): string | null {
   return typeKeys(profile)[0] ?? null;
 }
 
 export function typeKeyOf(
-  profile: ContentProfile | null,
+  profile: ExemplarsProfile | null,
   item: { item_type?: string } | null | undefined,
 ): string | null {
   const keys = typeKeys(profile);
@@ -22,14 +22,14 @@ export function typeKeyOf(
 }
 
 export function itemTypeOf(
-  profile: ContentProfile | null,
+  profile: ExemplarsProfile | null,
   item: { item_type?: string } | null | undefined,
 ): ItemTypeSpec | null {
   const key = typeKeyOf(profile, item);
   return key && profile ? profile.item_types[key] : null;
 }
 
-export function typeLabel(profile: ContentProfile | null, key: string | null): string {
+export function typeLabel(profile: ExemplarsProfile | null, key: string | null): string {
   if (!key) return "sin modalidad";
   return profile?.item_types[key]?.label || key;
 }

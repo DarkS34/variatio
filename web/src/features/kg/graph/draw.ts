@@ -35,6 +35,13 @@ export interface Scene {
   hiddenRelations?: Set<number>;
 }
 
+interface HullLabel {
+  text: string;
+  x: number;
+  y: number;
+  colour: string;
+}
+
 const LABEL_SCALE = 1.05;
 const CURVE = 0.14;
 const ARROW = 7;
@@ -91,7 +98,9 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
   const focus = scene.focused >= 0 ? scene.focused : scene.selected;
   const near = focus >= 0 ? model.adjacency.get(focus) : undefined;
 
-  if (hulls && scene.mode === "force") drawHulls(context, scene, focus);
+  const hullLabels =
+    hulls && scene.mode === "force" ? drawHulls(context, scene, focus) : [];
+  if (scene.mode === "force") drawParkedLane(context, scene);
   if (scene.mode === "curriculum") drawLevels(context, scene);
 
   drawEdges(context, scene, focus, arrows);
@@ -163,6 +172,8 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     }
   }
 
+  drawHullLabels(context, scene, hullLabels, placed);
+
   // Labels last and grouped by weight: `context.font` is a parsed string, and setting
   // it per node was most of the per-frame cost at this node count. The ones the user
   // asked for (focus, selection) are drawn first and always; the rest give way to
@@ -217,7 +228,14 @@ function drawEdges(
   const { graph, model, bodies, view, palette } = scene;
   const { scale } = view;
   const hidden = scene.hiddenRelations;
-  const showArrows = arrows && scale > 0.55;
+
+  // Edge ink is budgeted by how many edges there are: the alpha that reads as "a few
+  // lines" on a 180-edge graph reads as a grey wash on a 500-edge one, and the wash is
+  // what buries the nodes. Same for the arrowheads — 485 of them at a zoom where each is
+  // four pixels wide is texture, not direction, so they wait until the zoom can show one.
+  const density = Math.min(1, graph.links.length / 260);
+  const restAlpha = 0.42 - density * 0.17;
+  const showArrows = arrows && scale > 0.55 + density * 0.35;
 
   // Edges are batched per relation type: one path per colour instead of a stroke per
   // edge. The focused node's own edges are held back and drawn on top, opaque.
@@ -226,8 +244,8 @@ function drawEdges(
   for (let relation = 0; relation < graph.relations.length; relation += 1) {
     if (hidden?.has(relation)) continue;
     context.strokeStyle = model.relationColours[relation] ?? palette.border;
-    context.globalAlpha = focus >= 0 ? 0.08 : 0.45;
-    context.lineWidth = 1.1 / scale;
+    context.globalAlpha = focus >= 0 ? 0.07 : restAlpha;
+    context.lineWidth = 1 / scale;
     context.beginPath();
     let drawn = 0;
     for (const link of graph.links) {
@@ -252,7 +270,7 @@ function drawEdges(
     for (let relation = 0; relation < graph.relations.length; relation += 1) {
       if (hidden?.has(relation) || !graph.relations[relation].directed) continue;
       context.fillStyle = model.relationColours[relation] ?? palette.border;
-      context.globalAlpha = 0.45;
+      context.globalAlpha = restAlpha;
       for (const [source, target, kind] of graph.links) {
         if (kind !== relation) continue;
         arrowhead(context, scene, source, target);
@@ -317,38 +335,160 @@ function arrowhead(
   context.fill();
 }
 
-/** A soft blob behind each domain. Not a convex hull: a hull around an outlier swallows
- *  half the canvas. Overlapping discs, one per node, union into a shape that follows
- *  where the domain actually is and degrades gracefully when it is scattered. */
-function drawHulls(context: CanvasRenderingContext2D, scene: Scene, focus: number) {
-  const { graph, model, bodies, view } = scene;
-  if (focus >= 0) return;
-
-  const members = new Map<number, number[]>();
-  graph.nodes.forEach(([, group], index) => {
-    if (!members.has(group)) members.set(group, []);
-    members.get(group)!.push(index);
-  });
+/**
+ * A soft region behind each domain, with its name on it.
+ *
+ * Not a convex hull: a hull around an outlier swallows half the canvas. Overlapping
+ * discs, one per node, union into a shape that follows where the domain actually is and
+ * degrades gracefully when it is scattered.
+ *
+ * Two things make it a map rather than fog. Parked nodes are excluded, so a domain's
+ * blob does not stretch across the canvas to reach its own isolated members. And the
+ * domain is NAMED, at the centre of its members: an unlabelled tint is decoration, and
+ * seven of them in similar colours is worse than none — you had to match the blob
+ * against a legend somewhere else on the page to learn anything from it.
+ *
+ * Only the blob is painted here, because it is a background. The names are returned for
+ * `drawHullLabels` to paint over the nodes.
+ */
+function drawHulls(
+  context: CanvasRenderingContext2D,
+  scene: Scene,
+  focus: number,
+): HullLabel[] {
+  const { graph, model, bodies, view, palette } = scene;
+  if (focus >= 0) return [];
 
   // The discs grow as you zoom out, so a blob keeps roughly the same weight on screen
   // instead of dissolving into the background at low scale.
-  const radius = 34 / Math.max(0.6, view.scale) + 18;
+  const radius = 26 / Math.max(0.6, view.scale) + 16;
+  const labels: HullLabel[] = [];
 
-  context.globalAlpha = 0.07;
-  for (const [group, nodes] of members) {
-    if (nodes.length < 3) continue;
+  for (let group = 0; group < model.groupCount; group += 1) {
+    const nodes = model.domainMembers[group];
+    if (!nodes || nodes.length < 3) continue;
+
+    context.globalAlpha = 0.09;
     context.fillStyle = model.domainColours[group] ?? "transparent";
     context.beginPath();
+    let sumX = 0;
+    let sumY = 0;
+    let seen = 0;
+    // Parked members are skipped inline rather than filtered out: this runs every frame,
+    // and a `.filter()` per domain is one array per domain per frame.
     for (const node of nodes) {
       const body = bodies[node];
-      if (!body) continue;
+      if (!body || body.parked) continue;
       // moveTo the arc's own start point: otherwise each disc drags a chord in from
       // wherever the previous one ended, and the union fills with stray wedges.
       context.moveTo(body.x + radius, body.y);
       context.arc(body.x, body.y, radius, 0, Math.PI * 2);
+      sumX += body.x;
+      sumY += body.y;
+      seen += 1;
     }
     context.fill();
+
+    const name = graph.groups[group]?.name;
+    if (seen > 0 && name) {
+      labels.push({
+        text: name.toUpperCase(),
+        x: sumX / seen,
+        y: sumY / seen,
+        colour: model.domainColours[group] ?? palette.muted,
+      });
+    }
   }
+
+  context.globalAlpha = 1;
+  return labels;
+}
+
+/**
+ * The domain names, over every blob and over the nodes: a name that a node can cover is
+ * a name you cannot read, and the blob it belongs to is exactly where the nodes are.
+ *
+ * The boxes it claims are pushed into the label grid, so the concept labels that give
+ * way to each other give way to these too instead of overprinting them.
+ */
+function drawHullLabels(
+  context: CanvasRenderingContext2D,
+  scene: Scene,
+  labels: HullLabel[],
+  placed: [number, number, number, number][],
+) {
+  if (labels.length === 0) return;
+  const { view, palette } = scene;
+  const size = Math.min(22, 13 / view.scale);
+
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `700 ${size}px ui-sans-serif, system-ui`;
+  context.lineJoin = "round";
+  for (const label of labels) {
+    const halfWidth = context.measureText(label.text).width / 2;
+    placed.push([
+      label.x - halfWidth,
+      label.y - size * 0.6,
+      label.x + halfWidth,
+      label.y + size * 0.6,
+    ]);
+    // A wider, more opaque halo than the concept labels get: this one is over the nodes
+    // and their edges now, not over an empty tint, so it has to cut its own hole.
+    context.globalAlpha = 0.75;
+    context.lineWidth = 5 / view.scale;
+    context.strokeStyle = palette.background;
+    context.strokeText(label.text, label.x, label.y);
+    context.globalAlpha = 0.9;
+    context.fillStyle = label.colour;
+    context.fillText(label.text, label.x, label.y);
+  }
+  context.globalAlpha = 1;
+}
+
+/**
+ * The lane the isolated concepts were parked in, told apart from the graph.
+ *
+ * Without the rule and the caption the column reads as a part of the layout that went
+ * wrong. With them it reads as what it is: the concepts no relation mentions, which is
+ * the single most actionable thing this view can point at — every one of them is a
+ * missing edge.
+ */
+function drawParkedLane(context: CanvasRenderingContext2D, scene: Scene) {
+  const { model, bodies, view, palette } = scene;
+  if (model.isolated.length === 0) return;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const node of model.isolated) {
+    const body = bodies[node];
+    if (!body) continue;
+    if (body.x < minX) minX = body.x;
+    if (body.y < minY) minY = body.y;
+    if (body.y > maxY) maxY = body.y;
+  }
+  if (!Number.isFinite(minX)) return;
+
+  const rule = minX - 26;
+  context.strokeStyle = palette.border;
+  context.lineWidth = 1 / view.scale;
+  context.globalAlpha = 0.7;
+  context.beginPath();
+  context.moveTo(rule, minY - 22);
+  context.lineTo(rule, maxY + 22);
+  context.stroke();
+
+  context.save();
+  context.translate(rule - 10, (minY + maxY) / 2);
+  context.rotate(-Math.PI / 2);
+  context.globalAlpha = 0.75;
+  context.fillStyle = palette.muted;
+  context.font = `600 ${Math.min(18, 10 / view.scale)}px ui-sans-serif, system-ui`;
+  context.textAlign = "center";
+  context.textBaseline = "alphabetic";
+  context.fillText(`${model.isolated.length} SIN RELACIONES`, 0, 0);
+  context.restore();
   context.globalAlpha = 1;
 }
 

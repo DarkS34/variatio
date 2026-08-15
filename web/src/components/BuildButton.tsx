@@ -5,6 +5,15 @@ import { Spinner } from "@/components/ui/misc";
 import type { StageState } from "@/lib/types";
 import { useHealth, usePipeline, useRawMissingFor, useSubmitJob } from "@/state/queries";
 
+/** What the two halves of the action are called on a given screen, when the generic
+ *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
+export interface BuildLabels {
+  create: string;
+  redo: string;
+  /** Shown before a redo that would throw away work. Absent means no confirmation. */
+  confirmRedo?: string;
+}
+
 /**
  * The one way to launch a build, wherever it is pressed.
  *
@@ -12,17 +21,24 @@ import { useHealth, usePipeline, useRawMissingFor, useSubmitJob } from "@/state/
  * it — an unapproved upstream, an empty raw slot, no engine, something already running —
  * live here once. A disabled button always says why in its tooltip; that is the whole
  * point of centralising it.
+ *
+ * Creating and redoing are the same job with opposite consequences — the first fills an
+ * empty slot, the second discards what is in it — so they never share a label, an icon
+ * or a variant. A screen may rename the pair (the bank *extracts*; it does not "build"),
+ * but the distinction itself is not a screen's to drop.
  */
 export function BuildButton({
   stage,
   variant,
   size = "sm",
   className,
+  labels,
 }: {
   stage: StageState;
   variant?: "default" | "outline" | "ghost";
   size?: "sm" | "default";
   className?: string;
+  labels?: BuildLabels;
 }) {
   const submit = useSubmitJob();
   const pipeline = usePipeline();
@@ -43,6 +59,11 @@ export function BuildButton({
           ? `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
           : null;
 
+  const launch = () => {
+    if (!missing && labels?.confirmRedo && !window.confirm(labels.confirmRedo)) return;
+    submit.mutate({ kind: stage.build_job });
+  };
+
   return (
     <Button
       size={size}
@@ -53,12 +74,12 @@ export function BuildButton({
         reason ??
         (missing
           ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto`
-          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe el borrador de ${stage.label.toLowerCase()}`)
+          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}`)
       }
-      onClick={() => submit.mutate({ kind: stage.build_job })}
+      onClick={launch}
     >
       {submit.isPending ? <Spinner /> : missing ? <Hammer /> : <RefreshCw />}
-      {missing ? "Construir" : "Reconstruir"}
+      {missing ? (labels?.create ?? "Construir") : (labels?.redo ?? "Reconstruir")}
     </Button>
   );
 }

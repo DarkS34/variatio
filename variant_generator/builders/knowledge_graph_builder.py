@@ -25,6 +25,86 @@ from . import _source_docs
 
 MIN_SINGULARIZE_LENGTH = 3
 
+
+# One schema per shape the prompts already draw in their `# OUTPUT` block, stated where the
+# decoder can enforce it. Only the two passes that do NOT think are constrained at the call
+# itself; the rest reach these through their repair, which is where an unusable answer was
+# costing three calls that could not fix a schema error.
+#
+# A triple is pinned to three strings and no further. Naming the middle element with an
+# `enum` needs `prefixItems`, and Ollama's converter ACCEPTS it and then ignores it, which
+# is worse than refusing: asked for `[string, <relation key>, string]` it happily answered
+# `["Bucle while", "Variable", "tiene como prerrequisito"]` — the type in slot 2. A schema
+# this engine accepts is not necessarily one it enforces, so `_valid_relations` stays the
+# authority on the vocabulary and on the order.
+_RELATIONS_SCHEMA = {
+    "type": "array",
+    "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3},
+}
+
+EXTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "concepts": {"type": "array", "items": {"type": "string"}},
+        "relations": _RELATIONS_SCHEMA,
+    },
+    "required": ["concepts", "relations"],
+}
+
+LINK_SCHEMA = {
+    "type": "object",
+    "properties": {"relations": _RELATIONS_SCHEMA},
+    "required": ["relations"],
+}
+
+
+MERGE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "merges": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "canonical": {"type": "string"},
+                    "aliases": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["canonical", "aliases"],
+            },
+        }
+    },
+    "required": ["merges"],
+}
+
+# `drop`, `domains` and `non_taggable` are open-ended maps — the keys are concept or domain
+# names the model writes — so they are `additionalProperties`, which Ollama's converter
+# accepts. What the schema pins is the ENVELOPE: the top-level key and the value type. The
+# `drop` parser also accepts a bare list, and that tolerance stays for the unconstrained path.
+DROP_SCHEMA = {
+    "type": "object",
+    "properties": {"drop": {"type": "object", "additionalProperties": {"type": "string"}}},
+    "required": ["drop"],
+}
+
+DOMAINS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "domains": {
+            "type": "object",
+            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+        }
+    },
+    "required": ["domains"],
+}
+
+TAGGABLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "non_taggable": {"type": "object", "additionalProperties": {"type": "string"}}
+    },
+    "required": ["non_taggable"],
+}
+
 # Shares of a whole build, taken from a timed run rather than from how the code looks. The
 # previous numbers guessed extraction at 48 % because it is the only per-chunk phase; it
 # measured 8 %, while the handful of calls that reason over the whole inventory — linking,
@@ -244,22 +324,23 @@ class KnowledgeGraphBuilder:
     ) -> tuple[list[str], list[list[str]]]:
         prompt = extract_typed_graph_prompt(chunk, self.schema, location)
         response = inference.generate(
-            model=config.KG_EXTRACT_MODEL, prompt=prompt, think=False
+            model=config.KG_EXTRACT_MODEL, prompt=prompt, think=False, format=EXTRACT_SCHEMA
         ).response
-        raw = self._parse_object(response, log_prefix)
+        raw = self._parse_object(response, log_prefix, EXTRACT_SCHEMA)
         if raw is None:
             return [], []
         concepts = [c.strip() for c in raw.get("concepts", []) if isinstance(c, str) and c.strip()]
         relations = self._valid_relations(raw.get("relations", []), allowed=None)
         return concepts, relations
 
-    def _parse_object(self, response: str, log_prefix: str) -> dict | None:
+    def _parse_object(self, response: str, log_prefix: str, format: dict) -> dict | None:
         result, error = parse_with_repair(
             response,
             _parse_json_object,
             repair_model=config.REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="object",
+            format=format,
             log_prefix=log_prefix,
         )
         if result is None:
@@ -465,7 +546,7 @@ class KnowledgeGraphBuilder:
                 response = inference.generate(
                     model=config.KG_CLEAN_MERGE_MODEL, prompt=prompt, think=True
                 ).response
-                raw = self._parse_object(response, f"[merge {idx}/{len(batches)}] ")
+                raw = self._parse_object(response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA)
                 if raw is None:
                     continue
                 alias_map.update(self._merge_alias_map(raw.get("merges", []), valid))
@@ -601,7 +682,7 @@ class KnowledgeGraphBuilder:
                 response = inference.generate(
                     model=config.KG_CLEAN_DROP_MODEL, prompt=prompt, think=True
                 ).response
-                raw = self._parse_object(response, f"[drop {idx}/{len(batches)}] ")
+                raw = self._parse_object(response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA)
                 if raw is None:
                     continue
 
@@ -708,7 +789,7 @@ class KnowledgeGraphBuilder:
         response = inference.generate(
             model=config.KG_DOMAINS_MODEL, prompt=prompt, think=True
         ).response
-        raw = self._parse_object(response, "[domains] ") or {}
+        raw = self._parse_object(response, "[domains] ", DOMAINS_SCHEMA) or {}
         by_domain = self._reconcile_domains(concepts, raw.get("domains", {}) or {})
         return self._place_leftovers(by_domain, relations)
 
@@ -763,9 +844,14 @@ class KnowledgeGraphBuilder:
                 self._domains_block(placed), self._nodes_block(batch, relations, {})
             )
             response = inference.generate(
-                model=config.KG_DOMAINS_LEFTOVERS_MODEL, prompt=prompt, think=False
+                model=config.KG_DOMAINS_LEFTOVERS_MODEL,
+                prompt=prompt,
+                think=False,
+                format=DOMAINS_SCHEMA,
             ).response
-            raw = self._parse_object(response, f"[domains · leftovers {idx}/{len(batches)}] ") or {}
+            raw = self._parse_object(
+                response, f"[domains · leftovers {idx}/{len(batches)}] ", DOMAINS_SCHEMA
+            ) or {}
             for domain, members in (raw.get("domains") or {}).items():
                 if domain not in placed or not isinstance(members, list):
                     continue
@@ -822,7 +908,7 @@ class KnowledgeGraphBuilder:
         response = inference.generate(
             model=config.KG_LINK_DOMAIN_MODEL, prompt=prompt, think=True
         ).response
-        raw = self._parse_object(response, f"[link · {domain}] ")
+        raw = self._parse_object(response, f"[link · {domain}] ", LINK_SCHEMA)
         if raw is None:
             return []
         return self._valid_relations(raw.get("relations", []), allowed=set(members))
@@ -836,7 +922,7 @@ class KnowledgeGraphBuilder:
         response = inference.generate(
             model=config.KG_LINK_CROSS_DOMAIN_MODEL, prompt=prompt, think=True
         ).response
-        raw = self._parse_object(response, "[link · global] ")
+        raw = self._parse_object(response, "[link · global] ", LINK_SCHEMA)
         if raw is None:
             return []
 
@@ -918,7 +1004,7 @@ class KnowledgeGraphBuilder:
         response = inference.generate(
             model=config.KG_TAGGABLE_MODEL, prompt=prompt, think=True
         ).response
-        raw = self._parse_object(response, f"[taggable · {domain}] ") or {}
+        raw = self._parse_object(response, f"[taggable · {domain}] ", TAGGABLE_SCHEMA) or {}
         verdicts = raw.get("non_taggable") or {}
         if isinstance(verdicts, list):
             verdicts = {c: "" for c in verdicts if isinstance(c, str)}

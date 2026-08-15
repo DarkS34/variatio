@@ -71,12 +71,23 @@ export function truncate(text: string, limit: number): string {
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
 
-/** Stable, readable hue per domain — same colour in the graph, the table and the legend.
- *  A cool arc (teal → blue → violet) rather than the whole wheel: still one colour per
- *  domain, but they belong to the same palette as the rest of the app. */
+/**
+ * Stable, readable hue per domain — same colour in the graph, the table and the legend.
+ *
+ * A cool arc (teal → blue → violet → magenta) rather than the whole wheel, so the nodes
+ * still belong to the same palette as the rest of the app and stay clear of the warm
+ * hues the edges use. But the arc has to be WIDE and the domains have to differ on more
+ * than hue: seven domains over the old 120° landed 17° apart at one fixed lightness,
+ * which on a canvas full of 5px discs is one colour. 155° plus an alternating
+ * lightness/chroma pair separates neighbours on two axes at once, so consecutive
+ * domains — the ones that sit next to each other in the legend — are the easiest pairs
+ * to tell apart rather than the hardest.
+ */
 export function domainColour(index: number, total: number): string {
-  const hue = 185 + Math.round((index / Math.max(1, total)) * 120);
-  return `oklch(0.66 0.1 ${hue})`;
+  const count = Math.max(1, total);
+  const hue = 175 + Math.round((index / Math.max(1, count - 1 || 1)) * 155);
+  const dark = index % 2 === 1;
+  return `oklch(${dark ? 0.58 : 0.73} ${dark ? 0.15 : 0.11} ${hue})`;
 }
 
 /** Colour of a relation TYPE, for the edges. Domains colour the nodes out of the cool

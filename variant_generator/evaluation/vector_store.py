@@ -5,7 +5,7 @@ descriptions fused into weighted centroids, a kNN leg restricted to `primary_con
 so reusing it would measure the system against itself.
 
 What this one is allowed to know: the statement of each item and which modality it is.
-Both come from the content profile, not from the knowledge graph. What it must not touch:
+Both come from the exemplars profile, not from the knowledge graph. What it must not touch:
 `concepts` and `primary_concept`, which sit in the very same JSON and are the tagger's
 output, i.e. the graph's.
 

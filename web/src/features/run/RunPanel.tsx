@@ -5,7 +5,7 @@ import { TokenStream } from "@/components/TokenStream";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/misc";
-import type { ContentProfile } from "@/lib/types";
+import type { ExemplarsProfile } from "@/lib/types";
 import type { RunView } from "@/state/runStore";
 
 import { FewShotPanel } from "./FewShotPanel";
@@ -17,7 +17,7 @@ export function RunPanel({
 }: {
   run: RunView;
   running: boolean;
-  profile: ContentProfile | null;
+  profile: ExemplarsProfile | null;
 }) {
   return (
     <Card>

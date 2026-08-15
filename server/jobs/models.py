@@ -17,7 +17,7 @@ JobKind = Literal[
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 
 JOB_LABELS: dict[str, str] = {
-    "build_profile": "Construir el perfil de contenido",
+    "build_profile": "Construir el perfil de ejemplares",
     "build_kg": "Construir el grafo de conocimiento",
     "build_bank": "Extraer el banco de ejemplos",
     "describe_concepts": "Generar descripciones de conceptos",
@@ -34,7 +34,7 @@ SUBPROCESS_KINDS: frozenset[str] = frozenset({"build_profile", "build_kg", "buil
 
 # Artifact each job kind produces, for the "building" state of the chain.
 JOB_ARTIFACT: dict[str, str] = {
-    "build_profile": "content_profile",
+    "build_profile": "exemplars_profile",
     "build_kg": "knowledge_graph",
     "build_bank": "exemplars_bank",
     "tag": "exemplars_bank",

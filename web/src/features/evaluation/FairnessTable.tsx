@@ -17,6 +17,7 @@ const ROWS: { field: string; naive: boolean | string; rag: boolean | string; sys
   { field: "Decisiones de campo", naive: "como texto", rag: true, system: true },
   { field: "Contexto docente del perfil", naive: true, rag: true, system: true },
   { field: "Claves de salida", naive: "una línea", rag: "schema", system: "schema + guía" },
+  { field: "Prohibición de saludos y meta-texto", naive: true, rag: true, system: true },
   { field: "Reglas de redacción de la asignatura", naive: false, rag: true, system: true },
   { field: "Ejemplos del banco", naive: false, rag: "coseno plano", system: "por etiqueta" },
   { field: "Prerrequisitos y posteriores", naive: false, rag: false, system: true },

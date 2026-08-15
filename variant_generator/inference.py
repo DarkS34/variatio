@@ -134,6 +134,17 @@ class OllamaEngine:
             return {}
         return {"think": think}
 
+    # Constrained decoding: `"json"` guarantees the syntax, a JSON Schema guarantees the
+    # keys and their types. It is NOT compatible with reasoning on this stack — measured on
+    # Ollama 0.32.13 + qwen3.8:27b: the grammar applies from the first token, so the model
+    # can never emit the `</think>` that closes the reasoning channel, Ollama attributes the
+    # whole (perfectly valid) JSON to `thinking` and `response` comes back EMPTY. It also
+    # means there is no deliberation left to attribute — the answer starts at `{`. So a call
+    # site either thinks or constrains, never both.
+    @staticmethod
+    def _format_option(format: dict | str | None) -> dict:
+        return {} if format is None else {"format": format}
+
     # Left to itself Ollama allocates the KV cache for the model's declared context,
     # which is where most of this box's VRAM was going. `config.LLM_CONTEXT` is the
     # single place that decides it, so no call site has to know.
@@ -158,6 +169,7 @@ class OllamaEngine:
         system: str | None = None,
         images: list[str] | None = None,
         temperature: float | None = None,
+        format: dict | str | None = None,
     ) -> GenerationResponse:
         system_option = {} if system is None else {"system": system}
         # Base64 PNGs, as Ollama expects them. Refusing up front beats the empty answer a
@@ -177,6 +189,7 @@ class OllamaEngine:
                 **system_option,
                 **image_option,
                 **self._think_option(model, think),
+                **self._format_option(format),
                 **self._context_option(model, temperature),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
@@ -330,6 +343,7 @@ def generate(
     system: str | None = None,
     images: list[str] | None = None,
     temperature: float | None = None,
+    format: dict | str | None = None,
 ) -> GenerationResponse:
     return engine().generate(
         model=model,
@@ -338,6 +352,7 @@ def generate(
         system=system,
         images=images,
         temperature=temperature,
+        format=format,
     )
 
 
