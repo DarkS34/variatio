@@ -13,10 +13,10 @@ from variant_generator import config
 from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
 from variant_generator.evaluation import external
 
-from .. import evaluation_store, runtime
+from .. import auth, evaluation_store, runtime
 from .jobs import gate_error
 
-router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
+router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
 
 
 class EvaluationBody(BaseModel):
@@ -46,7 +46,7 @@ class RatingBody(BaseModel):
 # LAUNCH ----------------------------------------------------------------------------------------
 
 
-@router.post("")
+@router.post("", dependencies=[auth.EDIT])
 def launch(body: EvaluationBody) -> dict:
     if not body.concepts:
         raise HTTPException(422, "Hay que elegir al menos un concepto objetivo.")
@@ -109,7 +109,7 @@ def detail(session_id: str) -> dict:
     return _payload(_require(session_id))
 
 
-@router.post("/{session_id}/choice")
+@router.post("/{session_id}/choice", dependencies=[auth.EDIT])
 def choose(session_id: str, body: ChoiceBody) -> dict:
     _require(session_id)
     try:
@@ -125,7 +125,7 @@ def choose(session_id: str, body: ChoiceBody) -> dict:
     return _payload(session)
 
 
-@router.post("/{session_id}/rating")
+@router.post("/{session_id}/rating", dependencies=[auth.EDIT])
 def rate(session_id: str, body: RatingBody) -> dict:
     _require(session_id)
     try:

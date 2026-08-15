@@ -3,6 +3,7 @@ import { Hammer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
 import type { StageState } from "@/lib/types";
+import { useCanEdit } from "@/state/auth";
 import { useHealth, usePipeline, useRawMissingFor, useSubmitJob } from "@/state/queries";
 
 /** What the two halves of the action are called on a given screen, when the generic
@@ -44,20 +45,25 @@ export function BuildButton({
   const pipeline = usePipeline();
   const health = useHealth();
   const rawMissing = useRawMissingFor(stage.artifact);
+  const canEdit = useCanEdit();
 
   const missing = stage.status === "missing";
   const busy = Boolean(pipeline.data?.current_job) || submit.isPending;
   const offline = health.data ? !health.data.available : false;
 
-  const reason = stage.blocked_reason
-    ? stage.blocked_reason
-    : rawMissing
-      ? `Faltan documentos en «${rawMissing}»: impórtalos en el panel antes de construir.`
-      : offline
-        ? "El motor de inferencia no responde."
-        : busy
-          ? `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
-          : null;
+  // The permission goes first: a viewer being told that a raw slot is empty would be
+  // reading advice about a button they could not press even after fixing it.
+  const reason = !canEdit
+    ? "Tu permiso sobre esta instancia es de solo lectura."
+    : stage.blocked_reason
+      ? stage.blocked_reason
+      : rawMissing
+        ? `Faltan documentos en «${rawMissing}»: impórtalos en el panel antes de construir.`
+        : offline
+          ? "El motor de inferencia no responde."
+          : busy
+            ? `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
+            : null;
 
   const launch = () => {
     if (!missing && labels?.confirmRedo && !window.confirm(labels.confirmRedo)) return;

@@ -78,6 +78,10 @@ class Event:
     job_id: str | None
     kind: str
     payload: dict
+    # Who the event belongs to. One process serves one workspace today, so the bus stamps
+    # it rather than every publisher passing it; what matters is that the socket has
+    # something to filter on that the browser cannot choose for itself.
+    workspace: str | None = None
 
     def to_dict(self) -> dict:
         return {

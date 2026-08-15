@@ -8,14 +8,19 @@ import type {
   EvaluationRating,
   GraphView,
   Health,
+  InvitePreview,
+  InviteRow,
   Job,
   KgSummary,
+  MemberRow,
   Pipeline,
   ProfilePayload,
   RawKind,
   RawListing,
   RawSlot,
   RawUpload,
+  Role,
+  Session,
   VgEvent,
 } from "./types";
 
@@ -32,6 +37,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
+    // The session is an httpOnly cookie, so nothing here ever reads or sends a token by
+    // hand. Stated rather than left to the default because it is the whole auth scheme.
+    credentials: "same-origin",
     headers: init?.body ? { "Content-Type": "application/json", ...init?.headers } : init?.headers,
   });
 
@@ -90,6 +98,34 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
 }
 
 export const api = {
+  me: () => request<Session>("/api/auth/me"),
+  login: (email: string, password: string) =>
+    post<Session>("/api/auth/login", { email, password }),
+  logout: () => post<{ ok: boolean }>("/api/auth/logout"),
+  logoutAll: () => post<{ ok: boolean; revoked: number }>("/api/auth/logout-all"),
+  changePassword: (current: string, next: string) =>
+    post<{ ok: boolean }>("/api/auth/password", { current, new: next }),
+  forgotPassword: (email: string) => post<{ sent: boolean }>("/api/auth/forgot", { email }),
+  resetPassword: (token: string, password: string) =>
+    post<Session>("/api/auth/reset", { token, password }),
+
+  invitePreview: (token: string) =>
+    request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
+  acceptInvite: (body: { token: string; name: string; email?: string; password: string }) =>
+    post<Session & { created: boolean }>("/api/auth/accept", body),
+
+  invites: () => request<{ invites: InviteRow[] }>("/api/auth/invites"),
+  createInvite: (body: { email?: string | null; role: Role }) =>
+    post<{ invite: InviteRow; link: string; mailed: boolean }>("/api/auth/invites", body),
+  revokeInvite: (id: number) =>
+    request<{ revoked: boolean }>(`/api/auth/invites/${id}`, { method: "DELETE" }),
+
+  members: () => request<{ members: MemberRow[]; role: Role }>("/api/auth/members"),
+  setMemberRole: (userId: number, role: Role) =>
+    patch<{ ok: boolean }>(`/api/auth/members/${userId}`, { role }),
+  removeMember: (userId: number) =>
+    request<{ ok: boolean }>(`/api/auth/members/${userId}`, { method: "DELETE" }),
+
   health: () => request<Health>("/api/health"),
 
   pipeline: () => request<Pipeline>("/api/pipeline"),

@@ -30,8 +30,30 @@ def _guarded(func):
     return run
 
 
+# `serve` used to start with no database on purpose, because nothing on the request path
+# read from it. Since phase 2 every request resolves a session and a membership, so
+# starting without Postgres would only produce a 503 per request: it is better to say so
+# once, here, than to look like the app is broken.
 def _serve(args) -> int:
     import uvicorn
+
+    from .db import is_available, session_scope
+    from .db.identity import count_users
+
+    if not is_available():
+        from .db import database_url
+
+        print(f"No hay conexión con la base de datos en {database_url().split('@')[-1]}.")
+        print(DB_HINT)
+        return 1
+
+    try:
+        with session_scope() as session:
+            if count_users(session) == 0:
+                print("Todavía no hay ninguna cuenta: nadie podrá entrar.")
+                print("Crea la primera con `variant-generator-server create-user --admin`.\n")
+    except Exception:  # noqa: BLE001 - an un-migrated database is reported by the request path
+        print("La base de datos responde pero no tiene el esquema. Aplica `uv run alembic upgrade head`.\n")
 
     uvicorn.run(
         "server.app:app",
@@ -87,6 +109,144 @@ def _list_workspaces(_args) -> int:
     return 0
 
 
+# IDENTITY ------------------------------------------------------------------------------
+
+
+# The first account is created here and not on the web, so that there is no moment in the
+# system's life when it accepts a registration without credentials. Every later account
+# arrives through a single-use invitation.
+def _create_user(args) -> int:
+    from .auth import passwords
+    from .db import session_scope
+    from .db.identity import create_user, get_user, grant, normalise_email
+    from .db.repository import ensure_workspace
+
+    password = _ask_password(args)
+    if password is None:
+        return 1
+
+    email = normalise_email(args.email)
+    error = passwords.policy_error(password, email=email, name=args.name or "")
+    if error:
+        print(error)
+        return 1
+
+    with session_scope() as session:
+        if get_user(session, email) is not None:
+            print(f"Ya existe una cuenta con el correo {email}.")
+            return 1
+        user = create_user(
+            session,
+            email=email,
+            name=args.name or email.split("@")[0],
+            password_hash=passwords.hash_password(password),
+            is_admin=args.admin,
+            email_verified=True,
+        )
+        workspace = ensure_workspace(session, args.workspace)
+        grant(session, workspace.id, user.id, args.role)
+        print(
+            f"Cuenta creada: {user.email} ({'administrador' if user.is_admin else 'usuario'}), "
+            f"{args.role} de '{workspace.slug}'."
+        )
+    return 0
+
+
+def _list_users(_args) -> int:
+    from .db import session_scope
+    from .db.identity import list_users, memberships_for
+
+    with session_scope() as session:
+        users = list_users(session)
+        if not users:
+            print("No hay cuentas. Crea la primera con `create-user --admin`.")
+            return 0
+        for user in users:
+            roles = ", ".join(f"{w.slug}:{m.role}" for m, w in memberships_for(session, user.id))
+            flags = " [admin]" if user.is_admin else ""
+            flags += " [desactivada]" if not user.active else ""
+            print(f"{user.id:>4}  {user.email:<32} {roles or '(sin workspaces)'}{flags}")
+    return 0
+
+
+def _grant(args) -> int:
+    from .db import session_scope
+    from .db.identity import get_user, grant
+    from .db.repository import get_workspace
+
+    with session_scope() as session:
+        user = get_user(session, args.email)
+        if user is None:
+            print(f"No existe ninguna cuenta con el correo {args.email}.")
+            return 1
+        workspace = get_workspace(session, args.workspace)
+        if workspace is None:
+            print(f"No existe el workspace '{args.workspace}'. Créalo con `import-instance`.")
+            return 1
+        grant(session, workspace.id, user.id, args.role)
+        print(f"{user.email} es ahora {args.role} de '{workspace.slug}'.")
+    return 0
+
+
+def _invite(args) -> int:
+    from .auth import mail, tokens
+    from .db import session_scope
+    from .db.identity import create_invite
+    from .db.repository import get_workspace
+    from .settings import INVITE_TTL, public_base_url
+
+    with session_scope() as session:
+        workspace_id = None
+        if args.workspace:
+            workspace = get_workspace(session, args.workspace)
+            if workspace is None:
+                print(f"No existe el workspace '{args.workspace}'.")
+                return 1
+            workspace_id = workspace.id
+
+        token = tokens.new_token()
+        create_invite(
+            session,
+            token_hash=tokens.digest(token),
+            ttl=INVITE_TTL,
+            email=args.email,
+            workspace_id=workspace_id,
+            role=args.role,
+        )
+
+    base = public_base_url() or "http://localhost:8000"
+    link = f"{base}/invitacion?token={token}"
+    if args.email and mail.send(
+        args.email,
+        "Te han invitado al generador de variantes",
+        f"Crea tu cuenta con este enlace, válido {INVITE_TTL.days} días:\n{link}\n",
+    ):
+        print(f"Invitación enviada a {args.email}.")
+    print(link)
+    return 0
+
+
+def _ask_password(args) -> str | None:
+    import getpass
+    import os
+
+    if args.password:
+        return args.password
+    from_env = os.environ.get("VG_PASSWORD")
+    if from_env:
+        return from_env
+    try:
+        first = getpass.getpass("Contraseña: ")
+        second = getpass.getpass("Repítela: ")
+    except (EOFError, KeyboardInterrupt):
+        print("\nCancelado.")
+        return None
+    if first != second:
+        print("Las dos contraseñas no coinciden.")
+        return None
+    return first
+
+
 def _db_check(_args) -> int:
     from .db import database_url, is_available
 
@@ -140,6 +300,38 @@ def main(argv: list[str] | None = None) -> int:
 
     listing = subparsers.add_parser("workspaces", help="lista los workspaces de la base de datos")
     listing.set_defaults(func=_guarded(_list_workspaces))
+
+    creator = subparsers.add_parser(
+        "create-user", help="crea una cuenta (la primera, o cualquier otra sin invitación)"
+    )
+    creator.add_argument("--email", required=True)
+    creator.add_argument("--name", default="", help="nombre visible; por defecto, el del correo")
+    creator.add_argument("--admin", action="store_true", help="administra la instalación")
+    creator.add_argument("--workspace", default="default", help="workspace del que será miembro")
+    creator.add_argument(
+        "--role", default="owner", choices=("viewer", "editor", "owner"), help="rol en ese workspace"
+    )
+    creator.add_argument(
+        "--password",
+        default="",
+        help="contraseña; si se omite se pregunta (o se lee de VG_PASSWORD)",
+    )
+    creator.set_defaults(func=_guarded(_create_user))
+
+    users = subparsers.add_parser("users", help="lista las cuentas y sus roles")
+    users.set_defaults(func=_guarded(_list_users))
+
+    granter = subparsers.add_parser("grant", help="da o cambia el rol de una cuenta en un workspace")
+    granter.add_argument("--email", required=True)
+    granter.add_argument("--workspace", default="default")
+    granter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
+    granter.set_defaults(func=_guarded(_grant))
+
+    inviter = subparsers.add_parser("invite", help="crea una invitación de un solo uso")
+    inviter.add_argument("--email", default=None, help="dirección a la que va dirigida")
+    inviter.add_argument("--workspace", default="default", help="workspace al que suma; '' para ninguno")
+    inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
+    inviter.set_defaults(func=_guarded(_invite))
 
     check = subparsers.add_parser("db-check", help="comprueba la conexión con la base de datos")
     check.set_defaults(func=_db_check)

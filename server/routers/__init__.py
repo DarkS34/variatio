@@ -1,6 +1,7 @@
-from . import bank, evaluation, health, jobs, kg, pipeline, profile, raw, ws
+from . import auth, bank, evaluation, health, jobs, kg, pipeline, profile, raw, ws
 
 ROUTERS = [
+    auth.router,
     health.router,
     pipeline.router,
     profile.router,

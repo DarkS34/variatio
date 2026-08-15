@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from .. import auth
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
 from .pipeline import get_pipeline
 
-router = APIRouter(prefix="/api/bank", tags=["bank"])
+router = APIRouter(prefix="/api/bank", tags=["bank"], dependencies=[auth.VIEW])
 
 
 class PatchBody(BaseModel):
@@ -51,7 +52,7 @@ def coverage() -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
-@router.patch("/{item_id}")
+@router.patch("/{item_id}", dependencies=[auth.EDIT])
 def patch(item_id: str, body: PatchBody) -> dict:
     try:
         result = bank_edit.patch_item(item_id, body.fields)
@@ -60,7 +61,7 @@ def patch(item_id: str, body: PatchBody) -> dict:
     return {**result, "pipeline": get_pipeline()}
 
 
-@router.put("/{item_id}/concepts")
+@router.put("/{item_id}/concepts", dependencies=[auth.EDIT])
 def set_concepts(item_id: str, body: ConceptsBody) -> dict:
     try:
         result = bank_edit.set_concepts(item_id, body.concepts, body.primary_concept)
@@ -69,7 +70,7 @@ def set_concepts(item_id: str, body: ConceptsBody) -> dict:
     return {**result, "pipeline": get_pipeline()}
 
 
-@router.delete("/{item_id}")
+@router.delete("/{item_id}", dependencies=[auth.EDIT])
 def delete(item_id: str) -> dict:
     try:
         result = bank_edit.delete_item(item_id)

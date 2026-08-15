@@ -2,9 +2,9 @@ from fastapi import APIRouter
 
 from variant_generator import config, inference
 
-from .. import deps, runtime, settings
+from .. import auth, deps, runtime, settings
 
-router = APIRouter(prefix="/api", tags=["health"])
+router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
 
 @router.get("/health")

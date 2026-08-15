@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import review, runtime, storage
+from .. import auth, review, runtime, storage
 
-router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
+router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
 # The job that moves each stage forward, so the UI never has to hardcode it.
 NEXT_JOB = {
@@ -36,7 +36,7 @@ def get_pipeline() -> dict:
     }
 
 
-@router.post("/{artifact}/approve")
+@router.post("/{artifact}/approve", dependencies=[auth.EDIT])
 def approve(artifact: str) -> dict:
     _check(artifact)
     try:
@@ -47,7 +47,7 @@ def approve(artifact: str) -> dict:
     return get_pipeline()
 
 
-@router.post("/{artifact}/reopen")
+@router.post("/{artifact}/reopen", dependencies=[auth.EDIT])
 def reopen(artifact: str) -> dict:
     _check(artifact)
     runtime.review_state.reopen(artifact)
@@ -61,7 +61,7 @@ def history(artifact: str) -> dict:
     return {"artifact": artifact, "snapshots": storage.history(artifact)}
 
 
-@router.post("/{artifact}/restore")
+@router.post("/{artifact}/restore", dependencies=[auth.EDIT])
 def restore(artifact: str, body: RestoreBody) -> dict:
     _check(artifact)
     target = review.canonical_path(artifact)

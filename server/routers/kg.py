@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import kg_view
+from .. import auth, kg_view
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 from .pipeline import get_pipeline
 
-router = APIRouter(prefix="/api/kg", tags=["kg"])
+router = APIRouter(prefix="/api/kg", tags=["kg"], dependencies=[auth.VIEW])
 
 
 # Concept and domain names are free Spanish text; keeping them in the body instead of
@@ -71,7 +71,7 @@ def read_raw() -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
-@router.put("/raw")
+@router.put("/raw", dependencies=[auth.EDIT])
 def replace(body: GraphBody) -> dict:
     return _handle(lambda: kg_edit.replace(body.graph))
 
@@ -95,7 +95,7 @@ def read_descriptions() -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
-@router.put("/descriptions")
+@router.put("/descriptions", dependencies=[auth.EDIT])
 def write_description(body: DescriptionBody) -> dict:
     try:
         return kg_edit.set_description(body.concept, body.description)
@@ -106,19 +106,19 @@ def write_description(body: DescriptionBody) -> dict:
 # DOMAINS -------------------------------------------------------------------------------------
 
 
-@router.post("/domains")
+@router.post("/domains", dependencies=[auth.EDIT])
 def add_domain(body: DomainBody) -> dict:
     return _handle(lambda: kg_edit.add_domain(body.name))
 
 
-@router.patch("/domains")
+@router.patch("/domains", dependencies=[auth.EDIT])
 def patch_domain(body: DomainBody) -> dict:
     if not body.new_name:
         raise HTTPException(422, "Falta 'new_name'")
     return _handle(lambda: kg_edit.rename_domain(body.name, body.new_name))
 
 
-@router.post("/domains/delete")
+@router.post("/domains/delete", dependencies=[auth.EDIT])
 def delete_domain(body: DomainBody) -> dict:
     return _handle(lambda: kg_edit.delete_domain(body.name, body.move_to))
 
@@ -126,7 +126,7 @@ def delete_domain(body: DomainBody) -> dict:
 # CONCEPTS ------------------------------------------------------------------------------------
 
 
-@router.post("/concepts")
+@router.post("/concepts", dependencies=[auth.EDIT])
 def add_concept(body: ConceptBody) -> dict:
     if not body.domain:
         raise HTTPException(422, "Falta el dominio del concepto")
@@ -137,7 +137,7 @@ def add_concept(body: ConceptBody) -> dict:
     )
 
 
-@router.patch("/concepts")
+@router.patch("/concepts", dependencies=[auth.EDIT])
 def patch_concept(body: ConceptBody) -> dict:
     return _handle(
         lambda: kg_edit.update_concept(
@@ -146,7 +146,7 @@ def patch_concept(body: ConceptBody) -> dict:
     )
 
 
-@router.post("/concepts/delete")
+@router.post("/concepts/delete", dependencies=[auth.EDIT])
 def delete_concept(body: ConceptBody) -> dict:
     return _handle(lambda: kg_edit.delete_concept(body.name))
 
@@ -154,11 +154,11 @@ def delete_concept(body: ConceptBody) -> dict:
 # RELATIONS -----------------------------------------------------------------------------------
 
 
-@router.post("/relations/edges")
+@router.post("/relations/edges", dependencies=[auth.EDIT])
 def add_edge(body: EdgeBody) -> dict:
     return _handle(lambda: kg_edit.add_edge(body.relation, body.source, body.target))
 
 
-@router.post("/relations/edges/delete")
+@router.post("/relations/edges/delete", dependencies=[auth.EDIT])
 def remove_edge(body: EdgeBody) -> dict:
     return _handle(lambda: kg_edit.remove_edge(body.relation, body.source, body.target))

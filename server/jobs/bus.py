@@ -23,6 +23,7 @@ from .models import Event
 
 class EventBus:
     def __init__(self, run_dir: Path | None = None, buffer_size: int | None = None):
+        self.workspace = settings.workspace().slug
         self.run_dir = Path(run_dir or settings.workspace().runs_dir)
         self._buffer: deque[Event] = deque(maxlen=buffer_size or settings.EVENT_BUFFER_SIZE)
         self._lock = threading.Lock()
@@ -43,7 +44,14 @@ class EventBus:
     def publish(self, job_id: str | None, kind: str, payload: dict | None = None) -> Event:
         with self._lock:
             self._seq += 1
-            event = Event(seq=self._seq, ts=time.time(), job_id=job_id, kind=kind, payload=payload or {})
+            event = Event(
+                seq=self._seq,
+                ts=time.time(),
+                job_id=job_id,
+                kind=kind,
+                payload=payload or {},
+                workspace=self.workspace,
+            )
             self._buffer.append(event)
 
         if job_id:
@@ -76,14 +84,23 @@ class EventBus:
 
     # REPLAY --------------------------------------------------------------------------------
 
-    def replay(self, since: int = 0) -> tuple[list[dict], bool]:
+    def replay(self, since: int = 0, workspace: str | None = None) -> tuple[list[dict], bool]:
         """Buffered events after `since`, plus whether anything was lost to the buffer."""
         with self._lock:
             buffered = list(self._buffer)
         if not buffered:
             return [], False
         gap = since > 0 and buffered[0].seq > since + 1
-        return [e.to_dict() for e in buffered if e.seq > since], gap
+        return [
+            e.to_dict() for e in buffered if e.seq > since and self.visible(e, workspace)
+        ], gap
+
+    # The one rule the socket enforces: an event is only delivered to a subscriber whose
+    # workspace it belongs to. `workspace=None` means the caller has already established
+    # the right to see everything (the CLI, a test), never "the browser asked nicely".
+    @staticmethod
+    def visible(event: Event, workspace: str | None) -> bool:
+        return workspace is None or event.workspace is None or event.workspace == workspace
 
     def job_events(self, job_id: str, since: int = 0, limit: int = 5000) -> list[dict]:
         """The full on-disk record for one job — the forensic view, not the live one."""

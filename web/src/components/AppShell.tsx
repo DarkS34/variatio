@@ -14,6 +14,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
+import { AccountMenu } from "@/features/auth/AccountMenu";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -194,6 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="tabular-nums text-muted-foreground">{stream.logs.length}</span>
               ) : null}
             </Button>
+            <AccountMenu />
           </div>
         </div>
 

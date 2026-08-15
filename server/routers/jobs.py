@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from .. import review, runtime
+from .. import auth, review, runtime
 from ..jobs.models import JOB_LABELS
 
-router = APIRouter(prefix="/api", tags=["jobs"])
+router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 
 # What the chain requires before a job kind is allowed to run. Gates are enforced
 # here, not just drawn in the UI, so a stale artifact cannot be silently consumed.
@@ -49,7 +49,7 @@ def gate_error(kind: str) -> str | None:
     return None
 
 
-@router.post("/jobs")
+@router.post("/jobs", dependencies=[auth.EDIT])
 def submit(body: JobBody) -> dict:
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
@@ -92,14 +92,17 @@ def job_events(job_id: str, since: int = 0, limit: int = Query(5000, ge=1, le=50
     return {"events": runtime.bus.job_events(job_id, since=since, limit=limit)}
 
 
-@router.delete("/jobs/{job_id}")
+@router.delete("/jobs/{job_id}", dependencies=[auth.EDIT])
 def cancel(job_id: str) -> dict:
     if runtime.runner.get(job_id) is None:
         raise HTTPException(404, f"No existe el trabajo '{job_id}'")
     return {"cancelled": runtime.runner.cancel(job_id)}
 
 
+# The router-level dependency already guarantees membership of the workspace the bus
+# serves, but the filter is passed explicitly anyway: "you may only replay your own
+# events" should be visible where the replay happens, not inferred two files away.
 @router.get("/events")
-def events(since: int = 0) -> dict:
-    replayed, gap = runtime.bus.replay(since)
+def events(since: int = 0, access: auth.Access = Depends(auth.require_member())) -> dict:
+    replayed, gap = runtime.bus.replay(since, workspace=access.workspace.slug)
     return {"events": replayed, "gap": gap, "last_seq": runtime.bus.last_seq}

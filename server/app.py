@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import runtime, settings
+from . import middleware, runtime, settings
 from .routers import ROUTERS
 
 
@@ -28,13 +28,23 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.DEV_ORIGINS,
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    app.add_middleware(middleware.SecurityHeaders)
+    app.add_middleware(middleware.OriginCheck)
+
+    # Gone from the default configuration: with a session cookie, a permissive CORS policy
+    # is what turns another origin's page into a logged-in client. Vite proxies `/api` and
+    # `/ws`, so development is same-origin too and needs nothing here; VG_DEV_CORS=1 is for
+    # the rare case of pointing the SPA straight at the API, and never applies in
+    # production.
+    origins = settings.dev_cors_origins()
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     for router in ROUTERS:
         app.include_router(router)

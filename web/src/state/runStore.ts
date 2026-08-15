@@ -84,8 +84,13 @@ const MAX_SESSION_LOGS = 8_000;
 const MAX_ACTIVITY = 600;
 const MAX_RUNS = 12;
 
+/** The close code `server/routers/ws.py` uses when the handshake carries no session. */
+const UNAUTHORISED = 4401;
+
 export interface StreamState {
   connected: boolean;
+  /** The server refused the handshake: the cookie is gone, revoked or expired. */
+  unauthorised: boolean;
   lastSeq: number;
   currentJobId: string | null;
   runs: Record<string, RunView>;
@@ -135,6 +140,7 @@ function toLogLine(event: VgEvent): LogLine {
 class RunStore {
   private state: StreamState = {
     connected: false,
+    unauthorised: false,
     lastSeq: 0,
     currentJobId: null,
     runs: {},
@@ -173,6 +179,7 @@ class RunStore {
 
   connect() {
     if (this.socket && this.socket.readyState <= WebSocket.OPEN) return;
+    if (this.state.unauthorised) this.commit({ unauthorised: false });
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const url = `${protocol}//${window.location.host}/ws?since=${this.state.lastSeq}`;
@@ -198,7 +205,14 @@ class RunStore {
       this.apply(payload);
     };
 
-    socket.onclose = () => {
+    // 4401 is not a network hiccup: reconnecting on a loop would hammer the server with
+    // a cookie it has already rejected. Stop, and let the gate re-ask who we are.
+    socket.onclose = (event) => {
+      if (event.code === UNAUTHORISED) {
+        this.socket = null;
+        this.commit({ connected: false, unauthorised: true });
+        return;
+      }
       this.commit({ connected: false });
       this.scheduleReconnect();
     };
@@ -214,6 +228,18 @@ class RunStore {
       this.timer = null;
       this.connect();
     }, delay);
+  }
+
+  /** Drop the socket on the way out, so a logout does not leave it retrying. */
+  disconnect() {
+    if (this.timer !== null) {
+      window.clearTimeout(this.timer);
+      this.timer = null;
+    }
+    const socket = this.socket;
+    this.socket = null;
+    socket?.close();
+    this.commit({ connected: false });
   }
 
   /** Seed the store from REST when a job is discovered outside the socket. */

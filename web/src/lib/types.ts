@@ -378,6 +378,56 @@ export interface EvaluationParams {
   instructions?: string;
 }
 
+/* Identity ------------------------------------------------------------------------- */
+
+export type Role = "viewer" | "editor" | "owner";
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  name: string;
+  is_admin: boolean;
+  email_verified: boolean;
+}
+
+export interface WorkspaceMembership {
+  slug: string;
+  name: string;
+  role: Role;
+  active: boolean;
+}
+
+export interface Session {
+  user: CurrentUser;
+  workspaces: WorkspaceMembership[];
+  /** Role in the workspace this server is serving; null when not a member of it. */
+  role: Role | null;
+}
+
+export interface InvitePreview {
+  email: string | null;
+  role: Role;
+  workspace: string | null;
+  expires_at: string;
+}
+
+export interface InviteRow {
+  id: number;
+  email: string | null;
+  role: Role;
+  workspace: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface MemberRow {
+  id: number;
+  email: string;
+  name: string;
+  role: Role;
+  disabled: boolean;
+}
+
 /* Events --------------------------------------------------------------------------- */
 
 export interface VgEvent {
