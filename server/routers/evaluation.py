@@ -9,7 +9,6 @@ evaluator has committed to a choice.
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
 
-from variant_generator import config
 from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
 from variant_generator.evaluation import external
 
@@ -85,6 +84,9 @@ def listing(
     limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ) -> dict:
     sessions, total = evaluation_store.listing(limit=limit, offset=offset)
+    # The head of the chain, not the whole of it: this block is the "is the commercial arm
+    # usable at all" banner, and which provider ends up answering is recorded per session.
+    provider, model = external.primary()
     return {
         "sessions": [_summary(header) for header in sessions],
         "total": total,
@@ -93,8 +95,8 @@ def listing(
         "aggregates": evaluation_store.aggregates(),
         "arms": [{"key": arm, "label": ARM_LABELS[arm]} for arm in ARMS],
         "external": {
-            "provider": config.EVAL_EXTERNAL_PROVIDER,
-            "model": config.EVAL_EXTERNAL_MODEL_ID,
+            "provider": provider,
+            "model": model,
             "configured": external.is_configured(),
             "reason": external.unavailable_reason(),
         },
@@ -166,6 +168,8 @@ def _summary(header: dict) -> dict:
         "choice_arm": header.get("choice_arm"),
         "chosen_at": header.get("chosen_at"),
         "rated": bool(header.get("rating")),
+        # Like `arm_status`: history of a judged session, withheld while it is pending.
+        "think": bool(header.get("think", True)) if decided else None,
         # Per-arm outcomes are history, and history only exists once the session has been
         # judged: a pending session that admits "the commercial one was unavailable" hands
         # over the identity of whichever card shows no exercise.
@@ -192,8 +196,12 @@ def _payload(session: EvaluationSession) -> dict:
             "chosen_at": session.chosen_at,
             "evaluator_note": session.evaluator_note,
             "rating": session.rating,
-            # Only after the reveal: the seed is the shuffle.
+            # Only after the reveal: the seed is the shuffle, and the reasoning mode is
+            # the same for the three cards, so telling it beforehand identifies none of
+            # them — but it does colour the reading of what is on screen, and the point of
+            # drawing it was to measure it, not to have it judged with that in mind.
             "seed": session.seed if revealed else None,
+            "think": session.think if revealed else None,
         },
         "positions": [_position(session, index + 1, revealed) for index in range(len(ARMS))],
     }

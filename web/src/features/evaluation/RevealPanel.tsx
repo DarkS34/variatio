@@ -1,4 +1,4 @@
-import { ChevronRight, Trophy } from "lucide-react";
+import { Brain, ChevronRight, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
@@ -108,10 +108,23 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
             ? "No elegiste ninguna."
             : `Elegiste ${letterFor(session.choice)} — ${chosenMeta?.label ?? ""}.`}
         </p>
-        <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-          semilla {session.seed}
+        <span className="ml-auto flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Brain className="size-3" />
+            {session.think ? "con razonamiento" : "sin razonamiento"}
+          </span>
+          <span>semilla {session.seed}</span>
         </span>
       </header>
+
+      {/* Se dice después de elegir, nunca antes: es idéntico para las tres propuestas, así
+          que no delata ninguna, pero sabiéndolo de antemano se lee distinto lo que hay en
+          pantalla — y el sorteo existía justo para medirlo sin ese sesgo. */}
+      <p className="text-xs text-muted-foreground">
+        {session.think
+          ? "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir."
+          : "Esta sesión salió sorteada sin razonamiento previo: las dos propuestas locales respondieron directamente."}
+      </p>
 
       <div className="space-y-2">
         {positions.map((position) => (

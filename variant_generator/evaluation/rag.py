@@ -5,9 +5,10 @@ bank and none of this TFM. The `naive → rag` step measures what having a bank 
 the `rag → system` step measures what the GRAPH is worth, and that second one is the
 contribution being defended.
 
-Same local model as the system arm (`CONTENT_GENERATION_LLM`) and the same number of
-examples (`EVAL_RAG_TOP_K`), so neither the model nor the prompt budget is a loose
-variable between them.
+Same local model as the system arm (`CONTENT_GENERATION_LLM`), the same number of examples
+(`EVAL_RAG_TOP_K`) and the same reasoning mode (`commission.think`, drawn per session), so
+neither the model, nor the prompt budget, nor whether it deliberated is a loose variable
+between them.
 """
 
 import time
@@ -72,7 +73,7 @@ def run(commission: Commission, context) -> ArmResult:
     resp = inference.generate_stream(
         model=config.CONTENT_GENERATION_LLM,
         prompt=prompt,
-        think=True,
+        think=commission.think,
         on_token=progress.token_sink("eval"),
     )
     raw = resp.response or (resp.thinking or "")

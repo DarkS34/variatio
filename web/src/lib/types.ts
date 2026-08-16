@@ -141,6 +141,8 @@ export interface GenerateParams {
   fixed?: Record<string, unknown>;
   curriculum?: string[];
   instructions?: string;
+  /** Whether the model deliberates before writing. Absent means yes, as it always did. */
+  think?: boolean;
 }
 
 export interface ProfilePayload {
@@ -325,6 +327,8 @@ export interface EvaluationSessionHead {
   evaluator_note: string | null;
   rating: EvaluationRating | null;
   seed: number | null;
+  /** Drawn from the seed, never chosen; null until the session is revealed. */
+  think: boolean | null;
 }
 
 export interface EvaluationDetail {
@@ -345,6 +349,22 @@ export interface EvaluationSummary {
   /** Empty until the session is judged: before that it would name the blind cards. */
   arm_status: Partial<Record<EvaluationArm, ArmStatus>>;
   without_item: number;
+  /** Withheld (null) while the session is pending, like `arm_status`. */
+  think: boolean | null;
+}
+
+export interface EvaluationRubricSummary {
+  n: number;
+  usability?: Record<Usability, number>;
+  [dimension: string]: any;
+}
+
+/** One side of the reasoning draw: the sessions that ran with it on, or with it off. */
+export interface ThinkSlice {
+  decided: number;
+  preferences: Record<string, number>;
+  elapsed_ms: Partial<Record<EvaluationArm, number>>;
+  rubric: EvaluationRubricSummary;
 }
 
 export interface EvaluationAggregates {
@@ -353,11 +373,8 @@ export interface EvaluationAggregates {
   rated: number;
   preferences: Record<string, number>;
   arm_status: Record<string, Record<string, number>>;
-  rubric: {
-    n: number;
-    usability?: Record<Usability, number>;
-    [dimension: string]: any;
-  };
+  rubric: EvaluationRubricSummary;
+  think: { on: ThinkSlice; off: ThinkSlice };
 }
 
 export interface EvaluationListing {

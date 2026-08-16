@@ -207,16 +207,60 @@ GUARDRAIL_CRITERIA = ("harm", "jailbreak")
 # Evaluation ----------------------------------------------
 # Only the Evaluation mode reads this block; the pipeline never imports `evaluation/`.
 #
-# `EVAL_EXTERNAL_MODEL_ID` deliberately does NOT end in `_MODEL`: `inference.required_models()`
+# The `*_MODEL_ID` names deliberately do NOT end in `_MODEL`: `inference.required_models()`
 # collects those by introspection and `/api/health` demands them from Ollama, so the name
 # would surface in the UI as a model that is never installed. Ending in `_LLM` would be
 # worse — `prepare_models()` would try to pull it.
 #
-# The key comes from the environment (or the gitignored `.env`) and defaults to empty:
-# with no key the naive arm records itself `unavailable` and the session runs with two.
-EVAL_EXTERNAL_PROVIDER = os.environ.get("EVAL_EXTERNAL_PROVIDER", "gemini")
-EVAL_EXTERNAL_MODEL_ID = os.environ.get("EVAL_EXTERNAL_MODEL_ID", "gemini-3.6-flash")
-EVAL_EXTERNAL_API_KEY = os.environ.get("EVAL_EXTERNAL_API_KEY", "")
+# `EVAL_EXTERNAL_PROVIDER` is a CHAIN in preference order, not a single name. The free tiers
+# this arm runs on answer 429 halfway through a data-collection session, and a provider that
+# stops answering hands over to the next one instead of costing the session its commercial
+# proposal. Each provider brings its own key and its own model id, so the two can never be
+# crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible. `none` (or an
+# empty value) disables the arm.
+#
+# The keys come from the environment (or the gitignored `.env`) and default to empty: with
+# no key at all the naive arm records itself `unavailable` and the session runs with two.
+EVAL_EXTERNAL_PROVIDER = os.environ.get("EVAL_EXTERNAL_PROVIDER", "gemini,groq")
+
+
+def _provider_chain(declared: str) -> list[str]:
+    chain: list[str] = []
+    for name in declared.split(","):
+        name = name.strip().lower()
+        if name and name != "none" and name not in chain:
+            chain.append(name)
+    return chain
+
+
+EVAL_EXTERNAL_PROVIDERS = _provider_chain(EVAL_EXTERNAL_PROVIDER)
+
+
+def _provider_settings() -> tuple[dict[str, str], dict[str, str]]:
+    models = {
+        "gemini": os.environ.get("EVAL_GEMINI_MODEL_ID", "gemini-3.6-flash"),
+        "groq": os.environ.get("EVAL_GROQ_MODEL_ID", "llama-3.3-70b-versatile"),
+    }
+    keys = {
+        "gemini": os.environ.get("EVAL_GEMINI_API_KEY", ""),
+        "groq": os.environ.get("EVAL_GROQ_API_KEY", ""),
+    }
+    # An environment still exporting the old single-provider pair keeps working. The pair
+    # moves TOGETHER onto whichever provider the chain leads with — the one that variable
+    # used to select — because a key and a model id from different providers is precisely
+    # the mix-up that would send Gemini's key to Groq's endpoint.
+    legacy_key = os.environ.get("EVAL_EXTERNAL_API_KEY", "")
+    first = EVAL_EXTERNAL_PROVIDERS[0] if EVAL_EXTERNAL_PROVIDERS else ""
+    if legacy_key and first in keys and not keys[first]:
+        keys[first] = legacy_key
+        models[first] = os.environ.get("EVAL_EXTERNAL_MODEL_ID", "") or models[first]
+    return models, keys
+
+
+EVAL_PROVIDER_MODELS, EVAL_PROVIDER_KEYS = _provider_settings()
+
+# Per attempt, so a chain of two waits for this twice in the worst case. The arm runs on a
+# thread alongside the two local ones, which take minutes, so it is not the wall clock.
 EVAL_EXTERNAL_TIMEOUT = 60.0
 
 # Same k as the pipeline's few-shot, so the number of examples is not a loose variable

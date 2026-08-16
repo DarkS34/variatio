@@ -2,8 +2,8 @@ import { Download } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/misc";
-import { when } from "@/lib/format";
-import type { EvaluationAggregates, EvaluationSummary } from "@/lib/types";
+import { duration, when } from "@/lib/format";
+import type { EvaluationAggregates, EvaluationSummary, ThinkSlice } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
@@ -182,6 +182,101 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
   );
 }
 
+/**
+ * ¿Sirve de algo el razonamiento previo?
+ *
+ * La otra pregunta del estudio, y la única que estas sesiones pueden responder porque el
+ * modo se sortea en vez de elegirse: si lo decidiera quien evalúa, cada bloque de sesiones
+ * llevaría dentro su estado de ánimo y su prisa, y la comparación no mediría el modo.
+ *
+ * Se cuenta sobre sesiones ya juzgadas —como todo lo demás aquí— y se muestra el tiempo
+ * al lado de los aciertos: deliberar no es gratis, y el precio es parte de la respuesta.
+ */
+function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const think = aggregates.think;
+  if (!think) return null;
+
+  const total = think.on.decided + think.off.decided;
+  const wins = (slice: ThinkSlice) => slice.preferences?.system ?? 0;
+  const share = (slice: ThinkSlice) =>
+    slice.decided ? `${Math.round((wins(slice) / slice.decided) * 100)} %` : "—";
+  const mean = (slice: ThinkSlice, key: string) => {
+    const entry = slice.rubric?.[key];
+    return entry?.mean !== undefined ? entry.mean.toFixed(1) : "—";
+  };
+
+  const rows: { label: string; on: string; off: string }[] = [
+    {
+      label: "Sesiones decididas",
+      on: String(think.on.decided),
+      off: String(think.off.decided),
+    },
+    {
+      label: "Ganó el sistema",
+      on: `${wins(think.on)} · ${share(think.on)}`,
+      off: `${wins(think.off)} · ${share(think.off)}`,
+    },
+    {
+      label: "Tiempo medio del sistema",
+      on: think.on.elapsed_ms?.system ? duration(think.on.elapsed_ms.system) : "—",
+      off: think.off.elapsed_ms?.system ? duration(think.off.elapsed_ms.system) : "—",
+    },
+    ...Object.entries(RUBRIC_LABELS)
+      .map(([key, label]) => ({
+        label,
+        on: mean(think.on, key),
+        off: mean(think.off, key),
+      }))
+      .filter((row) => row.on !== "—" || row.off !== "—"),
+  ];
+
+  return (
+    <div className="space-y-2 border-t border-border pt-3 lg:col-span-2">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="text-xs font-medium">¿Aporta algo el razonamiento previo?</h3>
+        <span className="text-[11px] text-muted-foreground">
+          se sortea al empezar cada sesión, igual para las dos propuestas locales
+        </span>
+      </div>
+
+      {total === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Todavía no hay sesiones juzgadas de las que sacar la comparación.
+        </p>
+      ) : (
+        <>
+          <div className="thin-scroll overflow-x-auto">
+            <table className="w-full min-w-[22rem] text-xs">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="py-1.5 pr-3 text-left font-medium" />
+                  <th className="px-3 py-1.5 text-right font-medium">Con razonamiento</th>
+                  <th className="py-1.5 pl-3 text-right font-medium">Sin razonamiento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.label} className="border-b border-border/50 last:border-0">
+                    <td className="py-1.5 pr-3 text-muted-foreground">{row.label}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{row.on}</td>
+                    <td className="py-1.5 pl-3 text-right tabular-nums">{row.off}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {think.on.decided === 0 || think.off.decided === 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              Falta uno de los dos lados: hasta que el sorteo llene ambas columnas no hay
+              comparación posible.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function SessionsTable({
   sessions,
   aggregates,
@@ -199,6 +294,7 @@ export function SessionsTable({
           <Reliability aggregates={aggregates} />
           <Rubric aggregates={aggregates} />
         </div>
+        <ThinkEffect aggregates={aggregates} />
       </div>
 
       <div className="space-y-2">
@@ -231,6 +327,7 @@ export function SessionsTable({
                   <th className="px-3 py-2 text-left font-medium">Cuándo</th>
                   <th className="px-3 py-2 text-left font-medium">Conceptos</th>
                   <th className="px-3 py-2 text-left font-medium">Elección</th>
+                  <th className="px-3 py-2 text-left font-medium">Razonó</th>
                   <th className="px-3 py-2 text-left font-medium">Rúbrica</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -265,6 +362,9 @@ export function SessionsTable({
                             {meta?.short}
                           </span>
                         )}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {session.think === null ? "—" : session.think ? "sí" : "no"}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {session.rated ? "sí" : "—"}

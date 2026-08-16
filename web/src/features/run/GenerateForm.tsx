@@ -1,4 +1,4 @@
-import { Ban, Check, Minus, Play, Plus, Scale, TriangleAlert } from "lucide-react";
+import { Ban, Brain, Check, Minus, Play, Plus, Scale, TriangleAlert } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ConceptPicker, hasExemplars } from "@/components/ConceptPicker";
@@ -26,6 +26,8 @@ export interface FormState {
   curriculum: string[];
   decisions: Record<string, unknown>;
   instructions: string;
+  /** Only the "generate" variant reads it: an evaluation draws its own, at random. */
+  think: boolean;
 }
 
 export const EMPTY_FORM: FormState = {
@@ -35,6 +37,7 @@ export const EMPTY_FORM: FormState = {
   curriculum: [],
   decisions: {},
   instructions: "",
+  think: true,
 };
 
 /** The modality actually in force: what the form shows and what the run will produce. */
@@ -56,7 +59,7 @@ export function activeTypeSpec(
 }
 
 export function toParams(state: FormState): GenerateParams {
-  const params: GenerateParams = { n: state.n, concepts: state.concepts };
+  const params: GenerateParams = { n: state.n, concepts: state.concepts, think: state.think };
   if (state.itemType) params.item_type = state.itemType;
   const fixed: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(state.decisions)) {
@@ -81,6 +84,7 @@ export function summarize(state: FormState, profile: ExemplarsProfile | null): s
   }
   if (state.curriculum.length > 0) parts.push(`currículo de ${state.curriculum.length}`);
   if (state.instructions.trim()) parts.push("con instrucciones");
+  if (!state.think) parts.push("sin razonamiento previo");
   return parts.join(" · ");
 }
 
@@ -490,6 +494,41 @@ export function GenerateForm({
               ) : null}
             </div>
           ) : null}
+
+          {/* En comparación no hay interruptor a propósito: el modo de razonamiento es lo
+              que allí se mide, así que lo sortea la sesión. Decirlo aquí evita que la
+              ausencia del control se lea como una casilla que falta. */}
+          {variant === "generate" ? (
+            <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Switch
+                  checked={state.think}
+                  onCheckedChange={(think) => patch({ think })}
+                  label="Razonamiento previo del modelo"
+                />
+                <span className="flex items-center gap-1.5 text-sm font-medium">
+                  <Brain className="size-3.5" />
+                  Razonamiento previo
+                </span>
+                <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                  {state.think ? "activado" : "desactivado"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {state.think
+                  ? "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Por eso tarda bastante más —hasta varios minutos por ítem— y ese razonamiento queda visible junto al resultado."
+                  : "El modelo responde directamente, sin deliberar. Va mucho más rápido, pero suele ajustarse peor al concepto objetivo y respetar peor lo que el grafo marca como todavía no impartido."}
+              </p>
+            </div>
+          ) : (
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Brain className="mt-0.5 size-3.5 shrink-0" />
+              El razonamiento previo no se elige aquí: cada comparación lo enciende o lo apaga
+              al azar, igual para las dos propuestas locales —la comercial delibera según
+              decida su proveedor—. Así, sesión a sesión, los datos dicen si deliberar antes de
+              escribir sirve de algo.
+            </p>
+          )}
 
           {footnote}
 

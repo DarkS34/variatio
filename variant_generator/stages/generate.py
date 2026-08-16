@@ -10,6 +10,7 @@ def generate(
     fixed: dict[str, object] | None = None,
     curriculum: list[str] | None = None,
     instructions: str | None = None,
+    think: bool = True,
 ) -> list[GeneratedContent]:
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
     if not targets:
@@ -23,6 +24,7 @@ def generate(
         fixed=fixed,
         curriculum=curriculum,
         instructions=instructions,
+        think=think,
     )
 
 

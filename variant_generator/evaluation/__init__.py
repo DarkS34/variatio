@@ -29,13 +29,20 @@ class ArmUnavailable(RuntimeError):
 
 @dataclass(frozen=True)
 class Commission:
-    """What the evaluator asked for. Identical for the three arms, by construction."""
+    """What the evaluator asked for. Identical for the three arms, by construction.
+
+    `think` is the one field the evaluator does NOT get to set: the session draws it at
+    random from its own seed, so across enough sessions the reasoning mode is a measured
+    condition instead of a habit. It is identical for the three arms within a session,
+    which is what keeps it out of the comparison between them.
+    """
 
     concepts: list[str]
     item_type: str
     fixed: dict[str, object] = field(default_factory=dict)
     curriculum: list[str] = field(default_factory=list)
     instructions: str = ""
+    think: bool = True
 
 
 @dataclass
@@ -71,7 +78,9 @@ class EvaluationSession:
     """One comparison: the statistical unit of the study.
 
     `shuffle` is the arm shown at each position, so the reveal is a lookup and the
-    blinding is auditable after the fact from `seed` alone.
+    blinding is auditable after the fact from `seed` alone. `think` comes out of that same
+    seed and is recorded next to it because it is the second condition of the experiment:
+    whether the local arms reasoned before answering.
     """
 
     id: str
@@ -84,6 +93,7 @@ class EvaluationSession:
     seed: int
     shuffle: list[str]
     arms: dict[str, ArmResult]
+    think: bool = True
     job_id: str | None = None
     choice: int | None = None
     choice_arm: str | None = None
@@ -113,6 +123,7 @@ class EvaluationSession:
             "instructions": self.instructions,
             "seed": self.seed,
             "shuffle": list(self.shuffle),
+            "think": self.think,
             "arms": {name: result.to_dict() for name, result in self.arms.items()},
             "choice": self.choice,
             "choice_arm": self.choice_arm,
@@ -133,6 +144,8 @@ class EvaluationSession:
             instructions=data.get("instructions") or "",
             seed=int(data.get("seed") or 0),
             shuffle=list(data.get("shuffle") or []),
+            # Sessions recorded before the reasoning became a condition all ran with it on.
+            think=bool(data.get("think", True)),
             arms={
                 name: ArmResult(**payload) for name, payload in (data.get("arms") or {}).items()
             },

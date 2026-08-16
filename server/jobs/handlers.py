@@ -111,6 +111,8 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     fixed = params.get("fixed") or None
     curriculum = params.get("curriculum") or None
     instructions = params.get("instructions") or None
+    # Absent means "as it always was": every caller that predates the switch reasons.
+    think = bool(params.get("think", True))
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     logger.info(
@@ -126,6 +128,11 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         )
     if instructions:
         logger.info(f"Instrucciones adicionales: «{instructions}»")
+    logger.info(
+        "El modelo razonará antes de escribir cada ítem: tarda más, pero delibera sobre el objetivo"
+        if think
+        else "Sin razonamiento previo: el modelo responde directamente y va más rápido"
+    )
 
     results = stages.generate(
         context,
@@ -135,6 +142,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         fixed=fixed,
         curriculum=curriculum,
         instructions=instructions,
+        think=think,
     )
     if len(results) < n:
         logger.warning(

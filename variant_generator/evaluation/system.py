@@ -1,8 +1,9 @@
 """Arm 3 — this pipeline, exactly as it ships.
 
-One call to `context.generator.generate(...)`: no new parameter, no `if` inside
-`ContentGenerator`. If the evaluation needed to modify the generator, it would already
-be measuring something other than the system.
+One call to `context.generator.generate(...)`: no `if` inside `ContentGenerator`. If the
+evaluation needed to modify the generator, it would already be measuring something other
+than the system. `think` is not an exception to that — it is a parameter the Generate
+screen offers to every user, and this arm merely forwards the value the session drew.
 
 The prompt, the exemplars it chose and the raw answer are not returned by `generate()`,
 so they are read off the event stream it already emits — observing, not adapting.
@@ -60,6 +61,7 @@ def run(commission: Commission, context) -> ArmResult:
                 fixed=commission.fixed or None,
                 curriculum=commission.curriculum or None,
                 instructions=commission.instructions or None,
+                think=commission.think,
             )
         except progress.Cancelled:
             raise

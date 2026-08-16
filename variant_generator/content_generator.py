@@ -209,6 +209,7 @@ class ContentGenerator:
         fixed: dict[str, object] | None = None,
         curriculum: list[str] | None = None,
         instructions: str | None = None,
+        think: bool = True,
     ) -> list[GeneratedContent]:
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
@@ -267,7 +268,7 @@ class ContentGenerator:
                 logger.info(f"[{i + 1}/{n}] generating '{target_type.key}' item")
                 reporter.tick(i + 1)
                 progress.emit("prompt", index=i + 1, text=prompt)
-                result = self._generate_one(prompt, fixed, target_type)
+                result = self._generate_one(prompt, fixed, target_type, think)
                 if result is None:
                     logger.warning(f"[{i + 1}/{n}] generation failed; skipping")
                     progress.emit("item.rejected", index=i + 1)
@@ -500,12 +501,12 @@ class ContentGenerator:
         return "\n".join(lines)
 
     def _generate_one(
-        self, prompt: str, fixed: dict[str, object], item_type: ItemType
+        self, prompt: str, fixed: dict[str, object], item_type: ItemType, think: bool = True
     ) -> GeneratedContent | None:
         resp = inference.generate_stream(
             model=self.generator_model,
             prompt=prompt,
-            think=True,
+            think=think,
             on_token=progress.token_sink("item"),
         )
         thinking = resp.thinking
@@ -516,10 +517,13 @@ class ContentGenerator:
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
             return parse_item(inference.split_thinking(text).response, fixed, item_type)
 
-        # The generating call above stays unconstrained because it THINKS, and a grammar
-        # would silence that. The repair does not need to think — it is reformatting text
-        # that already carries the whole item — so it is the natural place to put the
-        # schema, and it is where the key drift that this loop could never fix gets fixed.
+        # The generating call above stays unconstrained EITHER WAY. With `think=True` a
+        # grammar would silence the reasoning; with `think=False` it would be tempting to
+        # add one, and that is precisely what must not happen: turning the reasoning off
+        # has to be the only thing that changes, or a run with it off measures the grammar.
+        # The repair does not need to think — it is reformatting text that already carries
+        # the whole item — so it is the natural place to put the schema, and it is where
+        # the key drift that this loop could never fix gets fixed.
         item, _ = parse_with_repair(
             body,
             parse,

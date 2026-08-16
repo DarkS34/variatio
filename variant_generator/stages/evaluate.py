@@ -29,24 +29,36 @@ def evaluate(
     job_id: str | None = None,
 ) -> EvaluationSession:
     target_type = context.exemplars_profile.item_type(item_type)
+
+    # Both draws come from the same seed and happen before anything runs, so the session
+    # is reproducible from `seed` alone months later, when the memoria is being written.
+    #
+    # THE REASONING MODE IS DRAWN, NOT CHOSEN. The Generate screen offers it as a switch
+    # because there the user is asking for an item; here it is the thing being measured,
+    # and an evaluator who decides it decides it in correlation with their own mood, the
+    # time they have and what they expect to see. Sorted at random it becomes a condition
+    # whose effect can be read off the sessions afterwards. It is identical for the local
+    # arms within a session, so it never enters the comparison BETWEEN architectures.
+    seed = random.randrange(2**31) if seed is None else int(seed)
+    draw = random.Random(seed)
+    order = list(ARMS)
+    draw.shuffle(order)
+    think = draw.random() < 0.5
+    logger.info(f"Seed {seed}: reasoning {'on' if think else 'off'} for the local arms")
+
     commission = Commission(
         concepts=list(concepts),
         item_type=target_type.key,
         fixed=clean_fixed(fixed),
         curriculum=list(curriculum or []),
         instructions=(instructions or "").strip(),
+        think=think,
     )
     _validate(context, target_type, commission)
 
     # Once, before the commission is handed out: it judges the user's text, not the arm.
     # If it blocks, the session never comes into existence.
     _screen(commission.instructions)
-
-    # Decided before anything runs and stored with the session, so the blinding can be
-    # reproduced from `seed` alone months later, when the memoria is being written.
-    seed = random.randrange(2**31) if seed is None else int(seed)
-    order = list(ARMS)
-    random.Random(seed).shuffle(order)
 
     results: dict[str, ArmResult] = {}
     # The external arm is network, not GPU: it overlaps with the local ones for free,
@@ -84,6 +96,7 @@ def evaluate(
         instructions=commission.instructions,
         seed=seed,
         shuffle=order,
+        think=commission.think,
         arms=results,
         job_id=job_id,
     )

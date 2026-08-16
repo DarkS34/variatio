@@ -31,9 +31,16 @@ import { letterFor } from "./arms";
 
 const GUARDRAIL_ERROR = "no han pasado la revisión";
 
-/** The commission, minus `n`: one item per arm is what makes the session the unit. */
+/**
+ * The commission, minus `n` and minus `think`.
+ *
+ * `n` goes because one item per arm is what makes the session the statistical unit, and
+ * `think` goes because the session draws it: sending the form's value would hand the
+ * evaluator control of the very condition being measured. The server ignores the field
+ * too — this is the second lock, not the only one.
+ */
 function toEvaluationParams(form: FormState): EvaluationParams {
-  const { n: _n, ...rest } = toParams(form);
+  const { n: _n, think: _think, ...rest } = toParams(form);
   return rest;
 }
 

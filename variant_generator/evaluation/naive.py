@@ -40,17 +40,20 @@ def run(commission: Commission, context) -> ArmResult:
         return round((time.perf_counter() - started) * 1000)
 
     try:
-        raw = external.generate(prompt, item_type.stripped_schema())
+        answer = external.generate(prompt, item_type.stripped_schema())
     except ArmUnavailable as e:
         logger.warning(f"External arm unavailable: {e}")
+        # Nobody answered, so there is no answering provider to name: the record keeps the
+        # head of the chain, which is who the arm would have asked.
+        provider, model = external.primary()
         return ArmResult(
             arm="naive",
             status=UNAVAILABLE,
             item=None,
             raw_response="",
             prompt=prompt,
-            model=config.EVAL_EXTERNAL_MODEL_ID,
-            provider=config.EVAL_EXTERNAL_PROVIDER,
+            model=model,
+            provider=provider,
             exemplar_ids=[],
             elapsed_ms=elapsed(),
             error=str(e),
@@ -59,7 +62,7 @@ def run(commission: Commission, context) -> ArmResult:
     # Same parser and the same repair budget as the other two arms: this arm must not
     # lose over a crooked JSON that the system's would have had repaired.
     item, error = parse_with_repair(
-        raw,
+        answer.text,
         lambda text: parse_item(text, commission.fixed, item_type),
         repair_model=config.REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
@@ -67,14 +70,16 @@ def run(commission: Commission, context) -> ArmResult:
         format=item_type.stripped_schema(),
     )
 
+    # From the ANSWER, not from config: the provider chain may have fallen back, and a
+    # session filed under Gemini that Groq actually produced is a corrupted measurement.
     return ArmResult(
         arm="naive",
         status=OK if item is not None else FAILED,
         item=item.model_dump(mode="json") if item is not None else None,
-        raw_response=raw,
+        raw_response=answer.text,
         prompt=prompt,
-        model=config.EVAL_EXTERNAL_MODEL_ID,
-        provider=config.EVAL_EXTERNAL_PROVIDER,
+        model=answer.model,
+        provider=answer.provider,
         exemplar_ids=[],
         elapsed_ms=elapsed(),
         error=None if item is not None else str(error),

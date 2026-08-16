@@ -142,7 +142,37 @@ def aggregates() -> dict:
         "preferences": preferences,
         "arm_status": status_counts,
         "rubric": _rubric_summary([h["rating"] for h in headers if h.get("rating")]),
+        "think": _think_breakdown(decided),
     }
+
+
+# The reasoning mode is drawn per session, so the answer to "does it buy anything?" is
+# this split and nothing else. Over DECIDED sessions only, like every other per-arm count
+# here: a pending session must not move a number that its own evaluator can see.
+#
+# The two local arms are the only ones the flag reaches — the commercial one deliberates
+# or not according to its provider — so only their timings are averaged.
+def _think_breakdown(decided: list[dict]) -> dict:
+    breakdown = {}
+    for key, wanted in (("on", True), ("off", False)):
+        rows = [h for h in decided if bool(h.get("think", True)) is wanted]
+        preferences = {arm: 0 for arm in ARMS}
+        preferences["none"] = 0
+        for header in rows:
+            preferences[header.get("choice_arm") or "none"] += 1
+        elapsed = {}
+        for arm in ("rag", "system"):
+            timings = [(h.get("arm_elapsed_ms") or {}).get(arm) for h in rows]
+            values = [ms for ms in timings if isinstance(ms, (int, float)) and ms > 0]
+            if values:
+                elapsed[arm] = round(sum(values) / len(values))
+        breakdown[key] = {
+            "decided": len(rows),
+            "preferences": preferences,
+            "elapsed_ms": elapsed,
+            "rubric": _rubric_summary([h["rating"] for h in rows if h.get("rating")]),
+        }
+    return breakdown
 
 
 # `complexity` is NOT "more is better": a 5 is as wrong as a 1 and the target is 3, so
@@ -180,6 +210,7 @@ def export_csv() -> str:
         "fixed",
         "instructions",
         "seed",
+        "think",
         "position_1",
         "position_2",
         "position_3",
@@ -210,6 +241,7 @@ def export_csv() -> str:
             "fixed": json.dumps(header.get("fixed") or {}, ensure_ascii=False),
             "instructions": header.get("instructions") or "",
             "seed": header.get("seed"),
+            "think": int(bool(header.get("think", True))),
             "choice": header.get("choice") if header.get("choice") is not None else "",
             "choice_arm": header.get("choice_arm") or "",
             "chosen_at": _iso(header.get("chosen_at")),
@@ -251,6 +283,7 @@ def _header(session: EvaluationSession) -> dict:
         "instructions": session.instructions,
         "seed": session.seed,
         "shuffle": list(session.shuffle),
+        "think": session.think,
         "choice": session.choice,
         "choice_arm": session.choice_arm,
         "chosen_at": session.chosen_at,

@@ -23,6 +23,12 @@ const ROWS: { field: string; naive: boolean | string; rag: boolean | string; sys
   { field: "Prerrequisitos y posteriores", naive: false, rag: false, system: true },
   { field: "Currículo cubierto", naive: false, rag: false, system: true },
   { field: "Revisión de las instrucciones", naive: true, rag: true, system: true },
+  {
+    field: "Razonamiento previo",
+    naive: "el del proveedor",
+    rag: "sorteado por sesión",
+    system: "sorteado por sesión",
+  },
 ];
 
 function Cell({ value }: { value: boolean | string }) {
@@ -77,6 +83,9 @@ export function FairnessTable({ className }: { className?: string }) {
             Las tres reciben el mismo encargo y devuelven un ítem. Las dos locales usan el
             mismo modelo, así que lo que se compara son arquitecturas y no modelos. Las
             propuestas que fallan se registran como tales: no se reintenta solo la que falla.
+            El razonamiento previo se sortea al empezar cada sesión y se aplica igual a las
+            dos locales, de modo que nunca separa a una de la otra: queda registrado con la
+            sesión para poder medir aparte si aporta algo.
           </p>
         </div>
       ) : null}
