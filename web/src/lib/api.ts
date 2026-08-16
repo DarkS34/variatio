@@ -1,4 +1,7 @@
+import { workspaceHeader } from "@/state/workspace";
 import type {
+  AdminEvaluations,
+  AdminOverview,
   BankListing,
   BuildEstimates,
   ExemplarsProfile,
@@ -7,6 +10,8 @@ import type {
   EvaluationListing,
   EvaluationParams,
   EvaluationRating,
+  GenerationDetail,
+  GenerationListing,
   GraphView,
   Health,
   InvitePreview,
@@ -23,6 +28,9 @@ import type {
   Role,
   Session,
   VgEvent,
+  WorkspaceListing,
+  WorkspaceRow,
+  WorkspaceSummary,
 } from "./types";
 
 export class ApiError extends Error {
@@ -41,7 +49,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     // The session is an httpOnly cookie, so nothing here ever reads or sends a token by
     // hand. Stated rather than left to the default because it is the whole auth scheme.
     credentials: "same-origin",
-    headers: init?.body ? { "Content-Type": "application/json", ...init?.headers } : init?.headers,
+    // `X-Workspace` on EVERY call, in one place: a request that forgot it would silently
+    // read whichever instance the account last activated, which is the bug this header
+    // exists to prevent. It is a request, not a permission — the server checks membership
+    // whatever the header says.
+    headers: {
+      ...workspaceHeader(),
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {
@@ -80,6 +96,9 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
   return new Promise<RawUpload>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", path);
+    for (const [name, value] of Object.entries(workspaceHeader())) {
+      xhr.setRequestHeader(name, value);
+    }
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress?.(event.loaded / event.total);
     };
@@ -100,24 +119,24 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
 
 export const api = {
   me: () => request<Session>("/api/auth/me"),
-  login: (email: string, password: string) =>
-    post<Session>("/api/auth/login", { email, password }),
+  login: (username: string, password: string) =>
+    post<Session>("/api/auth/login", { username, password }),
   logout: () => post<{ ok: boolean }>("/api/auth/logout"),
   logoutAll: () => post<{ ok: boolean; revoked: number }>("/api/auth/logout-all"),
   changePassword: (current: string, next: string) =>
     post<{ ok: boolean }>("/api/auth/password", { current, new: next }),
-  forgotPassword: (email: string) => post<{ sent: boolean }>("/api/auth/forgot", { email }),
+  forgotPassword: (username: string) => post<{ sent: boolean }>("/api/auth/forgot", { username }),
   resetPassword: (token: string, password: string) =>
     post<Session>("/api/auth/reset", { token, password }),
 
   invitePreview: (token: string) =>
     request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
-  acceptInvite: (body: { token: string; name: string; email?: string; password: string }) =>
-    post<Session & { created: boolean }>("/api/auth/accept", body),
+  acceptInvite: (body: { token: string; username: string; name: string; password: string }) =>
+    post<Session>("/api/auth/accept", body),
 
   invites: () => request<{ invites: InviteRow[] }>("/api/auth/invites"),
-  createInvite: (body: { email?: string | null; role: Role }) =>
-    post<{ invite: InviteRow; link: string; mailed: boolean }>("/api/auth/invites", body),
+  createInvite: (body: { role: Role }) =>
+    post<{ invite: InviteRow; link: string }>("/api/auth/invites", body),
   revokeInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/auth/invites/${id}`, { method: "DELETE" }),
 
@@ -126,6 +145,20 @@ export const api = {
     patch<{ ok: boolean }>(`/api/auth/members/${userId}`, { role }),
   removeMember: (userId: number) =>
     request<{ ok: boolean }>(`/api/auth/members/${userId}`, { method: "DELETE" }),
+
+  workspaces: () => request<WorkspaceListing>("/api/workspaces"),
+  createWorkspace: (slug: string, name: string) =>
+    post<{ workspace: WorkspaceRow }>("/api/workspaces", { slug, name }),
+  activateWorkspace: (slug: string) =>
+    post<{ workspace: WorkspaceRow }>(`/api/workspaces/${encodeURIComponent(slug)}/activate`),
+  renameWorkspace: (slug: string, name: string) =>
+    patch<{ workspace: WorkspaceRow }>(`/api/workspaces/${encodeURIComponent(slug)}`, { name }),
+  deleteWorkspace: (slug: string) =>
+    request<{ deleted: string; path: string }>(`/api/workspaces/${encodeURIComponent(slug)}`, {
+      method: "DELETE",
+    }),
+  workspaceSummary: (slug: string) =>
+    request<WorkspaceSummary>(`/api/workspaces/${encodeURIComponent(slug)}/summary`),
 
   health: () => request<Health>("/api/health"),
 
@@ -218,6 +251,44 @@ export const api = {
     request<{ events: VgEvent[] }>(`/api/jobs/${id}/events?since=${since}`),
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
+
+  generations: (params: {
+    scope?: "mine" | "workspace";
+    concept?: string;
+    item_type?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "" && value !== null) search.set(key, String(value));
+    }
+    return request<GenerationListing>(`/api/generations?${search.toString()}`);
+  },
+  generation: (id: number) => request<GenerationDetail>(`/api/generations/${id}`),
+  deleteGeneration: (id: number) =>
+    request<{ deleted: number }>(`/api/generations/${id}`, { method: "DELETE" }),
+
+  adminOverview: () => request<AdminOverview>("/api/admin/overview"),
+  adminEvaluations: (filters: { workspace?: string | null; account?: number | null }) => {
+    const search = new URLSearchParams();
+    if (filters.workspace) search.set("workspace", filters.workspace);
+    if (filters.account != null) search.set("account", String(filters.account));
+    const query = search.toString();
+    return request<AdminEvaluations>(`/api/admin/evaluations${query ? `?${query}` : ""}`);
+  },
+  adminEvaluationCsvUrl: (filters: { workspace?: string | null; account?: number | null }) => {
+    const search = new URLSearchParams();
+    if (filters.workspace) search.set("workspace", filters.workspace);
+    if (filters.account != null) search.set("account", String(filters.account));
+    const query = search.toString();
+    return `/api/admin/evaluations/export.csv${query ? `?${query}` : ""}`;
+  },
+  setAccountEnabled: (userId: number, enabled: boolean) =>
+    post<{ disabled?: number; enabled?: number }>(
+      `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
+    ),
 
   // No `n` anywhere in here: one item per arm per session is what makes the session the
   // statistical unit of the study.

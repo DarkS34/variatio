@@ -1,10 +1,10 @@
-import { Check, Copy, Mail, Trash2 } from "lucide-react";
+import { Check, Copy, Link as LinkIcon, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Label, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import type { Role } from "@/lib/types";
 import {
@@ -54,7 +54,7 @@ export function PeopleDialog({ open, onClose }: { open: boolean; onClose: () => 
               <MemberRowView
                 key={member.id}
                 id={member.id}
-                email={member.email}
+                username={member.username}
                 name={member.name}
                 role={member.role}
                 self={member.id === session.data?.user.id}
@@ -73,8 +73,8 @@ export function PeopleDialog({ open, onClose }: { open: boolean; onClose: () => 
                 <InviteRowView
                   key={invite.id}
                   id={invite.id}
-                  email={invite.email}
                   role={invite.role}
+                  createdAt={invite.created_at}
                   expiresAt={invite.expires_at}
                 />
               ))}
@@ -87,7 +87,6 @@ export function PeopleDialog({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 function InviteForm() {
-  const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const create = useCreateInvite();
 
@@ -99,16 +98,6 @@ function InviteForm() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-1 flex-col gap-1.5">
-          <Label htmlFor="invite-to">Correo (opcional)</Label>
-          <Input
-            id="invite-to"
-            type="email"
-            placeholder="colega@universidad.es"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-role">Permiso</Label>
           <Select
             id="invite-role"
@@ -122,32 +111,32 @@ function InviteForm() {
             ))}
           </Select>
         </div>
-        <Button
-          onClick={() => create.mutate({ email: email.trim() || null, role })}
-          disabled={create.isPending}
-        >
-          {create.isPending ? <Spinner /> : <Mail />}
-          Crear invitación
+        <Button onClick={() => create.mutate({ role })} disabled={create.isPending}>
+          {create.isPending ? <Spinner /> : <LinkIcon />}
+          Crear enlace
         </Button>
       </div>
 
       <p className="text-xs text-muted-foreground">{ROLE_HINTS[role]}</p>
       <FormError error={create.error} />
 
-      {create.isSuccess ? <InviteLink link={create.data.link} mailed={create.data.mailed} /> : null}
+      {create.isSuccess ? <InviteLink link={create.data.link} /> : null}
     </section>
   );
 }
 
-/** The link is shown whether or not the mail went out — with no SMTP it is the delivery. */
-function InviteLink({ link, mailed }: { link: string; mailed: boolean }) {
+/**
+ * The link IS the invitation: nothing is sent anywhere, and whoever it reaches is who gets
+ * the account. It is single-use and it expires, but until then it is a credential — so the
+ * copy says that out loud rather than presenting it as a convenience.
+ */
+function InviteLink({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3">
       <p className="text-sm">
-        {mailed
-          ? "Invitación enviada. Este es el mismo enlace, por si hace falta."
-          : "Sin correo configurado: pásale tú este enlace. Solo sirve una vez."}
+        Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio
+        usuario, así que no lo dejes en un sitio compartido.
       </p>
       <div className="flex items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-xs">
@@ -172,13 +161,13 @@ function InviteLink({ link, mailed }: { link: string; mailed: boolean }) {
 
 function MemberRowView({
   id,
-  email,
+  username,
   name,
   role,
   self,
 }: {
   id: number;
-  email: string;
+  username: string;
   name: string;
   role: Role;
   self: boolean;
@@ -191,7 +180,7 @@ function MemberRowView({
           {name}
           {self ? <span className="ml-2 text-xs text-muted-foreground">(tú)</span> : null}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{email}</p>
+        <p className="truncate font-mono text-xs text-muted-foreground">{username}</p>
       </div>
 
       {/* An owner cannot demote or remove themselves: the workspace would be left with
@@ -227,20 +216,24 @@ function MemberRowView({
 
 function InviteRowView({
   id,
-  email,
   role,
+  createdAt,
   expiresAt,
 }: {
   id: number;
-  email: string | null;
   role: Role;
+  createdAt: string;
   expiresAt: string;
 }) {
   const revoke = useRevokeInvite();
   return (
     <li className="flex items-center gap-3 p-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{email ?? "Enlace sin destinatario"}</p>
+        {/* There is no addressee to name any more, so the row is identified by when it was
+            issued — which is what tells two pending links apart. */}
+        <p className="truncate text-sm">
+          Enlace del {new Date(createdAt).toLocaleDateString("es-ES")}
+        </p>
         <p className="text-xs text-muted-foreground">
           Caduca el {new Date(expiresAt).toLocaleDateString("es-ES")}
         </p>

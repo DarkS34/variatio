@@ -51,7 +51,10 @@ def _serve(args) -> int:
         with session_scope() as session:
             if count_users(session) == 0:
                 print("Todavía no hay ninguna cuenta: nadie podrá entrar.")
-                print("Crea la primera con `variant-generator-server create-user --admin`.\n")
+                print(
+                    "Crea la primera con `variant-generator-server create-user "
+                    "--username NOMBRE --admin`.\n"
+                )
     except Exception:  # noqa: BLE001 - an un-migrated database is reported by the request path
         print("La base de datos responde pero no tiene el esquema. Aplica `uv run alembic upgrade head`.\n")
 
@@ -98,6 +101,7 @@ def _export_instance(args) -> int:
 def _list_workspaces(_args) -> int:
     from .db import session_scope
     from .db.repository import list_workspaces
+    from .settings import workspace_for
 
     with session_scope() as session:
         rows = list_workspaces(session)
@@ -105,7 +109,45 @@ def _list_workspaces(_args) -> int:
         print("No hay workspaces en la base de datos.")
         return 0
     for row in rows:
-        print(f"{row.id:>4}  {row.slug:<24} {row.name}")
+        print(f"{row.id:>4}  {row.slug:<24} {row.name:<32} {workspace_for(row.slug).root}")
+    return 0
+
+
+# The web can create workspaces too — any account may, since «tener varios grafos» is
+# «tener varios workspaces» — but the command line is what an operator uses to prepare one
+# before there is anybody to hand it to.
+def _create_workspace(args) -> int:
+    from .db import session_scope
+    from .db.identity import get_user, grant
+    from .db.repository import create_workspace, get_workspace
+    from .db.models import OWNER
+    from .settings import provision, slug_error, workspace_for
+
+    error = slug_error(args.slug)
+    if error:
+        print(error)
+        return 1
+
+    with session_scope() as session:
+        if get_workspace(session, args.slug) is not None:
+            print(f"Ya existe el workspace '{args.slug}'.")
+            return 1
+
+        workspace = create_workspace(session, args.slug, args.name or args.slug)
+        if args.owner:
+            user = get_user(session, args.owner)
+            if user is None:
+                print(f"No existe ninguna cuenta con el usuario {args.owner}.")
+                return 1
+            grant(session, workspace.id, user.id, OWNER)
+
+        ws = workspace_for(args.slug)
+        provision(ws)
+        print(f"Workspace '{workspace.slug}' creado en {ws.root}")
+        if args.owner:
+            print(f"{args.owner} es su propietario.")
+        else:
+            print("Sin miembros todavía: dáselos con `grant --workspace " f"{args.slug}`.")
     return 0
 
 
@@ -118,35 +160,42 @@ def _list_workspaces(_args) -> int:
 def _create_user(args) -> int:
     from .auth import passwords
     from .db import session_scope
-    from .db.identity import create_user, get_user, grant, normalise_email
+    from .db.identity import create_user, get_user, grant, normalise_username, username_error
     from .db.repository import ensure_workspace
+
+    username = normalise_username(args.username)
+    error = username_error(username)
+    if error:
+        print(error)
+        return 1
 
     password = _ask_password(args)
     if password is None:
         return 1
 
-    email = normalise_email(args.email)
-    error = passwords.policy_error(password, email=email, name=args.name or "")
+    error = passwords.policy_error(password, account=username, name=args.name or "")
     if error:
         print(error)
         return 1
 
     with session_scope() as session:
-        if get_user(session, email) is not None:
-            print(f"Ya existe una cuenta con el correo {email}.")
+        if get_user(session, username) is not None:
+            print(f"Ya existe una cuenta con el usuario {username}.")
             return 1
         user = create_user(
             session,
-            email=email,
-            name=args.name or email.split("@")[0],
+            username=username,
+            name=args.name or username,
             password_hash=passwords.hash_password(password),
+            email=args.email or None,
             is_admin=args.admin,
-            email_verified=True,
+            email_verified=bool(args.email),
         )
         workspace = ensure_workspace(session, args.workspace)
         grant(session, workspace.id, user.id, args.role)
         print(
-            f"Cuenta creada: {user.email} ({'administrador' if user.is_admin else 'usuario'}), "
+            f"Cuenta creada: {user.username} "
+            f"({'administrador' if user.is_admin else 'usuario'}), "
             f"{args.role} de '{workspace.slug}'."
         )
     return 0
@@ -159,13 +208,13 @@ def _list_users(_args) -> int:
     with session_scope() as session:
         users = list_users(session)
         if not users:
-            print("No hay cuentas. Crea la primera con `create-user --admin`.")
+            print("No hay cuentas. Crea la primera con `create-user --username NOMBRE --admin`.")
             return 0
         for user in users:
             roles = ", ".join(f"{w.slug}:{m.role}" for m, w in memberships_for(session, user.id))
             flags = " [admin]" if user.is_admin else ""
             flags += " [desactivada]" if not user.active else ""
-            print(f"{user.id:>4}  {user.email:<32} {roles or '(sin workspaces)'}{flags}")
+            print(f"{user.id:>4}  {user.username:<24} {roles or '(sin workspaces)'}{flags}")
     return 0
 
 
@@ -175,21 +224,21 @@ def _grant(args) -> int:
     from .db.repository import get_workspace
 
     with session_scope() as session:
-        user = get_user(session, args.email)
+        user = get_user(session, args.user)
         if user is None:
-            print(f"No existe ninguna cuenta con el correo {args.email}.")
+            print(f"No existe ninguna cuenta con el usuario {args.user}.")
             return 1
         workspace = get_workspace(session, args.workspace)
         if workspace is None:
             print(f"No existe el workspace '{args.workspace}'. Créalo con `import-instance`.")
             return 1
         grant(session, workspace.id, user.id, args.role)
-        print(f"{user.email} es ahora {args.role} de '{workspace.slug}'.")
+        print(f"{user.username} es ahora {args.role} de '{workspace.slug}'.")
     return 0
 
 
 def _invite(args) -> int:
-    from .auth import mail, tokens
+    from .auth import tokens
     from .db import session_scope
     from .db.identity import create_invite
     from .db.repository import get_workspace
@@ -209,20 +258,12 @@ def _invite(args) -> int:
             session,
             token_hash=tokens.digest(token),
             ttl=INVITE_TTL,
-            email=args.email,
             workspace_id=workspace_id,
             role=args.role,
         )
 
     base = public_base_url() or "http://localhost:8000"
-    link = f"{base}/invitacion?token={token}"
-    if args.email and mail.send(
-        args.email,
-        "Te han invitado al generador de variantes",
-        f"Crea tu cuenta con este enlace, válido {INVITE_TTL.days} días:\n{link}\n",
-    ):
-        print(f"Invitación enviada a {args.email}.")
-    print(link)
+    print(f"{base}/invitacion?token={token}")
     return 0
 
 
@@ -301,11 +342,20 @@ def main(argv: list[str] | None = None) -> int:
     listing = subparsers.add_parser("workspaces", help="lista los workspaces de la base de datos")
     listing.set_defaults(func=_guarded(_list_workspaces))
 
+    maker = subparsers.add_parser("create-workspace", help="crea un workspace vacío")
+    maker.add_argument("slug", help="identificador en minúsculas, cifras y guiones")
+    maker.add_argument("--name", default="", help="nombre legible; por defecto, el slug")
+    maker.add_argument("--owner", default=None, metavar="USUARIO", help="cuenta que lo poseerá")
+    maker.set_defaults(func=_guarded(_create_workspace))
+
     creator = subparsers.add_parser(
         "create-user", help="crea una cuenta (la primera, o cualquier otra sin invitación)"
     )
-    creator.add_argument("--email", required=True)
-    creator.add_argument("--name", default="", help="nombre visible; por defecto, el del correo")
+    creator.add_argument("--username", required=True, help="con lo que entra: minúsculas y cifras")
+    creator.add_argument(
+        "--email", default="", help="opcional; solo sirve para entregarle enlaces por correo"
+    )
+    creator.add_argument("--name", default="", help="nombre visible; por defecto, el usuario")
     creator.add_argument("--admin", action="store_true", help="administra la instalación")
     creator.add_argument("--workspace", default="default", help="workspace del que será miembro")
     creator.add_argument(
@@ -322,13 +372,12 @@ def main(argv: list[str] | None = None) -> int:
     users.set_defaults(func=_guarded(_list_users))
 
     granter = subparsers.add_parser("grant", help="da o cambia el rol de una cuenta en un workspace")
-    granter.add_argument("--email", required=True)
+    granter.add_argument("--user", required=True, help="nombre de usuario de la cuenta")
     granter.add_argument("--workspace", default="default")
     granter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
     granter.set_defaults(func=_guarded(_grant))
 
     inviter = subparsers.add_parser("invite", help="crea una invitación de un solo uso")
-    inviter.add_argument("--email", default=None, help="dirección a la que va dirigida")
     inviter.add_argument("--workspace", default="default", help="workspace al que suma; '' para ninguno")
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
     inviter.set_defaults(func=_guarded(_invite))

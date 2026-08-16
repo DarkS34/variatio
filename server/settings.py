@@ -1,18 +1,53 @@
 """Where the server keeps its own state, next to the instance it manages."""
 
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 
 from variant_generator import config
-from variant_generator.workspace import Workspace
+from variant_generator.workspace import DEFAULT_SLUG, Workspace
+
+# One process now serves MANY workspaces, so there is no `workspace()` any more: a
+# function with no argument is exactly the process-global that made two users overwrite
+# each other's graph. Every server entry point resolves a slug — `require_member` does it
+# once per request from the header or the account's active workspace — and passes the
+# resulting `Workspace` down. A module that needs a path takes it as an argument.
+#
+# The default slug keeps resolving to the single-user layout byte for byte (root
+# PROJECT_ROOT, raw dir `raw_data_1`), which is what makes the existing instance, its
+# `.npz` fingerprints and the CLI keep working untouched.
+SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 
 
-# One process, one workspace — for now. Every server module asks for it through this
-# function rather than reading a path constant, so making it per-request later is a
-# change here and nowhere else.
-def workspace() -> Workspace:
-    return config.default_workspace()
+def workspace_for(slug: str | None) -> Workspace:
+    if not slug or slug == DEFAULT_SLUG:
+        return config.default_workspace()
+    return config.workspace(slug)
+
+
+def slug_error(slug: str) -> str | None:
+    if slug == DEFAULT_SLUG:
+        return f"'{DEFAULT_SLUG}' es el nombre reservado del workspace inicial."
+    if not SLUG_PATTERN.match(slug):
+        return (
+            "El identificador admite minúsculas, cifras y guiones, entre 3 y 64 "
+            "caracteres, y no puede empezar ni acabar en guión."
+        )
+    return None
+
+
+# A workspace is a directory tree before it is a database row: the builders write files
+# and the readers read them, so creating the row without the tree would leave every
+# screen reporting a missing artifact for a reason nobody could act on.
+def provision(ws: Workspace) -> None:
+    for directory in (
+        ws.instance_dir,
+        ws.cache_dir,
+        ws.raw_corpus_dir,
+        ws.raw_exemplars_dir,
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
 
 
 def _flag(name: str, default: bool = False) -> bool:

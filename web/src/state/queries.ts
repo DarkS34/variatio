@@ -10,6 +10,7 @@ import type {
   EvaluationRating,
 } from "@/lib/types";
 import { runStore, type RunView } from "./runStore";
+import { workspaceStore } from "./workspace";
 
 export const keys = {
   health: ["health"] as const,
@@ -28,7 +29,22 @@ export const keys = {
   estimates: ["pipeline", "estimates"] as const,
   evaluations: ["evaluations"] as const,
   evaluation: (id: string) => ["evaluations", id] as const,
+  generations: (params: Record<string, unknown>) => ["generations", params] as const,
+  generation: (id: number) => ["generations", "one", id] as const,
+  workspaces: ["workspaces"] as const,
+  adminOverview: ["admin", "overview"] as const,
+  adminEvaluations: (filters: Record<string, unknown>) =>
+    ["admin", "evaluations", filters] as const,
 };
+
+/** The slug this tab is looking at, as a React value. */
+export function useActiveWorkspace() {
+  return useSyncExternalStore(
+    workspaceStore.subscribe,
+    workspaceStore.getSnapshot,
+    workspaceStore.getSnapshot,
+  );
+}
 
 export function useStream() {
   return useSyncExternalStore(runStore.subscribe, runStore.getSnapshot, runStore.getSnapshot);
@@ -154,7 +170,117 @@ export function useInvalidateChain() {
     client.invalidateQueries({ queryKey: keys.descriptions });
     client.invalidateQueries({ queryKey: ["bank"] });
     client.invalidateQueries({ queryKey: keys.profile });
+    client.invalidateQueries({ queryKey: ["generations"] });
   };
+}
+
+/* Workspaces ----------------------------------------------------------------------- */
+
+export function useWorkspaces() {
+  return useQuery({ queryKey: keys.workspaces, queryFn: api.workspaces });
+}
+
+/**
+ * Move this tab to another instance.
+ *
+ * Three things have to happen together and in this order: the server records the
+ * preference, the tab starts sending the new header, and everything cached under the old
+ * one is dropped. Doing the last one first would refetch with the old header; skipping it
+ * would leave the previous graph on screen under the new name.
+ */
+export function useSwitchWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => api.activateWorkspace(slug),
+    onSuccess: ({ workspace }) => {
+      workspaceStore.set(workspace.slug);
+      client.clear();
+      runStore.reset();
+    },
+  });
+}
+
+export function useCreateWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
+      api.createWorkspace(slug, name),
+    onSuccess: ({ workspace }) => {
+      workspaceStore.set(workspace.slug);
+      client.clear();
+      runStore.reset();
+    },
+  });
+}
+
+export function useDeleteWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => api.deleteWorkspace(slug),
+    onSuccess: () => {
+      workspaceStore.set(null);
+      client.clear();
+      runStore.reset();
+    },
+  });
+}
+
+/* Saved variants -------------------------------------------------------------------- */
+
+export function useGenerations(params: {
+  scope?: "mine" | "workspace";
+  concept?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery({
+    queryKey: keys.generations(params),
+    queryFn: () => api.generations(params),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useGeneration(id: number | null) {
+  return useQuery({
+    queryKey: keys.generation(id ?? 0),
+    queryFn: () => api.generation(id!),
+    enabled: id !== null,
+  });
+}
+
+export function useDeleteGeneration() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteGeneration(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["generations"] }),
+  });
+}
+
+/* Administration -------------------------------------------------------------------- */
+
+export function useAdminOverview() {
+  return useQuery({ queryKey: keys.adminOverview, queryFn: api.adminOverview });
+}
+
+export function useAdminEvaluations(filters: {
+  workspace?: string | null;
+  account?: number | null;
+}) {
+  return useQuery({
+    queryKey: keys.adminEvaluations(filters),
+    queryFn: () => api.adminEvaluations(filters),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useSetAccountEnabled() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
+      api.setAccountEnabled(id, enabled),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminOverview }),
+  });
 }
 
 export function useSubmitJob() {
@@ -175,6 +301,8 @@ export function useSubmitJob() {
     },
   });
 }
+
+/** A generation writes a row, so the saved-variants list is part of the chain now. */
 
 export function useCancelJob() {
   return useMutation({ mutationFn: (id: string) => api.cancelJob(id) });

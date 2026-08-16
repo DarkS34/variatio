@@ -2,10 +2,11 @@
 
 Kept apart from `repository.py` — which is about the instance's artifacts — because
 these are the only queries on the request path of *every* endpoint, and because the
-normalising boundary for an address has to be exactly one place: `normalise_email` is
-it, so a duplicate differing in case cannot enter through a second door.
+normalising boundary for an identifier has to be exactly one place: `normalise_username`
+is it, so a duplicate differing in case cannot enter through a second door.
 """
 
+import re
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
@@ -26,14 +27,38 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+USERNAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]$")
+
+
+def normalise_username(username: str) -> str:
+    return username.strip().lower()
+
+
 def normalise_email(email: str) -> str:
     return email.strip().lower()
+
+
+# The one place that says what a username may be, so the web form, the invitation and the
+# command line cannot disagree about it. No spaces and no `@`: the first would make two
+# accounts indistinguishable on screen, the second would let a username be mistaken for
+# an address in every message that prints one.
+def username_error(username: str) -> str | None:
+    if not USERNAME_PATTERN.fullmatch(normalise_username(username)):
+        return (
+            "El usuario tiene entre 3 y 64 caracteres: minúsculas, cifras, punto, guion "
+            "o guion bajo, y ni empieza ni acaba por un signo."
+        )
+    return None
 
 
 # USERS ---------------------------------------------------------------------------------
 
 
-def get_user(session: Session, email: str) -> User | None:
+def get_user(session: Session, username: str) -> User | None:
+    return session.scalar(select(User).where(User.username == normalise_username(username)))
+
+
+def get_user_by_email(session: Session, email: str) -> User | None:
     return session.scalar(select(User).where(User.email == normalise_email(email)))
 
 
@@ -42,7 +67,7 @@ def get_user_by_id(session: Session, user_id: int) -> User | None:
 
 
 def list_users(session: Session) -> list[User]:
-    return list(session.scalars(select(User).order_by(User.email)))
+    return list(session.scalars(select(User).order_by(User.username)))
 
 
 def count_users(session: Session) -> int:
@@ -51,18 +76,21 @@ def count_users(session: Session) -> int:
 
 def create_user(
     session: Session,
-    email: str,
+    username: str,
     name: str,
     password_hash: str,
+    email: str | None = None,
     is_admin: bool = False,
     email_verified: bool = False,
 ) -> User:
+    username = normalise_username(username)
     user = User(
-        email=normalise_email(email),
-        name=name or normalise_email(email),
+        username=username,
+        email=normalise_email(email) if email else None,
+        name=name or username,
         password_hash=password_hash,
         is_admin=is_admin,
-        email_verified_at=now() if email_verified else None,
+        email_verified_at=now() if email_verified and email else None,
     )
     session.add(user)
     session.flush()
@@ -117,7 +145,7 @@ def members_of(session: Session, workspace_id: int) -> list[tuple[Membership, Us
         select(Membership, User)
         .join(User, User.id == Membership.user_id)
         .where(Membership.workspace_id == workspace_id)
-        .order_by(User.email)
+        .order_by(User.username)
     )
     return [(m, u) for m, u in rows]
 
@@ -221,14 +249,12 @@ def create_invite(
     session: Session,
     token_hash: str,
     ttl: timedelta,
-    email: str | None = None,
     workspace_id: int | None = None,
     role: str = EDITOR,
     created_by: int | None = None,
 ) -> Invite:
     invite = Invite(
         token_hash=token_hash,
-        email=normalise_email(email) if email else None,
         workspace_id=workspace_id,
         role=role,
         created_by=created_by,

@@ -1,11 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { FolderPlus } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { useRouter } from "@/lib/router";
 import { authKeys, useIsUnauthenticated, useLogout, useSession } from "@/state/auth";
-import { useStream } from "@/state/queries";
+import { useCreateWorkspace, useStream } from "@/state/queries";
 
 import { AcceptInvite } from "./AcceptInvite";
 import { AuthLayout } from "./AuthLayout";
@@ -72,31 +74,72 @@ function Guarded({ children }: { children: ReactNode }) {
     );
   }
 
-  // Authenticated, but with no membership on the workspace this server is serving. It is
-  // a real state — an account can exist before anyone grants it access — and it is not
-  // the same as being logged out, so it does not send them back to the login form.
-  if (session.data && session.data.role === null) return <NoAccess />;
+  // Authenticated, but a member of nothing at all. A real state — an account can exist
+  // before anyone grants it access — and not the same as being logged out, so it does not
+  // send them back to the login form. Since a workspace is just an instance and any
+  // account may open one, the honest offer here is «créate el tuyo», not «espera».
+  if (session.data && session.data.role === null) return <NoWorkspace />;
 
   return <>{children}</>;
 }
 
-function NoAccess() {
+function NoWorkspace() {
   const session = useSession();
   const logout = useLogout();
+  const create = useCreateWorkspace();
+  const [name, setName] = useState("");
+  const slug = slugify(name);
+  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug) && slug !== "default";
+
   return (
     <AuthLayout
-      title="Todavía no tienes acceso"
-      description="Tu cuenta existe, pero nadie te ha dado permiso sobre esta instancia."
+      title="Todavía no tienes ningún workspace"
+      description="Un workspace es una instancia entera: su corpus, su grafo, su perfil y su banco."
     >
       <p className="text-sm text-muted-foreground">
-        Pídeselo a quien la administra. Entraste como{" "}
-        <span className="font-medium text-foreground">{session.data?.user.email}</span>.
+        Puedes esperar a que te inviten a uno existente, o empezar el tuyo ahora mismo.
+        Entraste como{" "}
+        <span className="font-medium text-foreground">{session.data?.user.username}</span>.
       </p>
-      <Button variant="outline" className="mt-4 w-full" onClick={() => logout.mutate()}>
+
+      <form
+        className="mt-4 space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (valid) create.mutate({ slug, name: name.trim() });
+        }}
+      >
+        <Input
+          placeholder="Nombre de la asignatura"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        {create.isError ? (
+          <p className="text-xs text-destructive">{(create.error as Error).message}</p>
+        ) : slug ? (
+          <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
+        ) : null}
+        <Button type="submit" className="w-full" disabled={!valid || create.isPending}>
+          <FolderPlus />
+          Crear mi workspace
+        </Button>
+      </form>
+
+      <Button variant="outline" className="mt-2 w-full" onClick={() => logout.mutate()}>
         Salir
       </Button>
     </AuthLayout>
   );
+}
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
 }
 
 function MissingToken({ kind }: { kind: string }) {

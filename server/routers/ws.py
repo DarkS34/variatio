@@ -10,6 +10,11 @@ endpoint took any connection and replayed the whole bus — logs, prompts and th
 stream included — which with two users meant one person's generated statements appearing
 in the other's browser. The filter is now the server's, by workspace; the client still
 narrows by `job_id`, but only within what it is entitled to see.
+
+Which workspace a socket subscribes to arrives as `?workspace=`, because a browser cannot
+set a header on a WebSocket handshake. It goes through the same membership check as the
+`X-Workspace` header does over HTTP — asking for a workspace has never been the same as
+being allowed into it.
 """
 
 import asyncio

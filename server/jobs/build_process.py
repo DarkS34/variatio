@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 from variant_generator import config, progress
+from variant_generator.workspace import DEFAULT_SLUG
 
 from .protocol import MARKER
 from .runner import JobControl
@@ -14,6 +15,11 @@ MAX_LOG_CHARS = 500
 
 def run_build(artifact: str, control: JobControl) -> dict:
     command = [sys.executable, "-u", "-m", "server.jobs.build_worker", artifact]
+    # The child resolves its own paths from the slug, exactly as the CLI's `--workspace`
+    # does. Omitted for the default workspace so the command line stays the one this has
+    # always run, which is what keeps `raw_data_1` and the existing caches in play.
+    if control.job.workspace and control.job.workspace != DEFAULT_SLUG:
+        command += ["--workspace", control.job.workspace]
     process = subprocess.Popen(
         command,
         cwd=str(config.PROJECT_ROOT),

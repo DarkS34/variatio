@@ -37,8 +37,12 @@ export interface StageState {
 export interface Pipeline {
   stages: StageState[];
   generation_unlocked: boolean;
+  /** The running job **of this workspace**; null when the GPU is busy with someone else's. */
   current_job: Job | null;
   queued: number;
+  /** Somebody, anybody, is holding the one GPU. The honest reason a job has not started. */
+  engine_busy: boolean;
+  engine_busy_elsewhere: boolean;
 }
 
 /** One phase of a build: what it is called, what share of the bar it owns, what it costs. */
@@ -70,6 +74,9 @@ export interface BuildEstimates {
 export interface Job {
   id: string;
   kind: JobKind;
+  workspace: string;
+  user_id: number | null;
+  user_name: string | null;
   params: Record<string, unknown>;
   status: JobStatus;
   created_at: number;
@@ -80,6 +87,8 @@ export interface Job {
   label: string;
   artifact: ArtifactName | null;
   elapsed_ms: number | null;
+  /** 1-based place in the shared queue; 0 or absent means "not waiting". */
+  queue_position?: number;
 }
 
 export interface Health {
@@ -401,14 +410,21 @@ export interface EvaluationAggregates {
   arm_status: Record<string, Record<string, number>>;
   rubric: EvaluationRubricSummary;
   think: { on: ThinkSlice; off: ThinkSlice };
+  elapsed_ms: Partial<Record<EvaluationArm, number>>;
 }
 
+/**
+ * The evaluator's own sessions and nothing else.
+ *
+ * `aggregates` is deliberately gone from this payload: showing somebody the running score
+ * of the thing they are about to judge invites them to even it out. The study's numbers
+ * live in the administration panel, over `AdminEvaluations`.
+ */
 export interface EvaluationListing {
   sessions: EvaluationSummary[];
   total: number;
   limit: number;
   offset: number;
-  aggregates: EvaluationAggregates;
   arms: { key: EvaluationArm; label: string }[];
   external: { provider: string; model: string; configured: boolean; reason: string | null };
 }
@@ -427,10 +443,12 @@ export type Role = "viewer" | "editor" | "owner";
 
 export interface CurrentUser {
   id: number;
-  email: string;
+  /** What you type to enter, and how you are named everywhere in the app. */
+  username: string;
+  /** Optional: a delivery address for a link, never an identity. */
+  email: string | null;
   name: string;
   is_admin: boolean;
-  email_verified: boolean;
 }
 
 export interface WorkspaceMembership {
@@ -443,12 +461,157 @@ export interface WorkspaceMembership {
 export interface Session {
   user: CurrentUser;
   workspaces: WorkspaceMembership[];
-  /** Role in the workspace this server is serving; null when not a member of it. */
+  /** Where this account lands when a tab has no preference of its own. */
+  active_workspace: string | null;
+  /** Role in that workspace; null when the account is a member of nothing at all. */
   role: Role | null;
 }
 
+/* Workspaces ----------------------------------------------------------------------- */
+
+export interface WorkspaceRow {
+  slug: string;
+  name: string;
+  role: Role | null;
+  active: boolean;
+  /** Listed only because the account administers the installation, not by membership. */
+  as_admin: boolean;
+}
+
+export interface WorkspaceListing {
+  workspaces: WorkspaceRow[];
+  active: string | null;
+  can_create: boolean;
+}
+
+export interface WorkspaceSummary {
+  slug: string;
+  name: string;
+  role: Role;
+  stages: { artifact: ArtifactName; label: string; status: ArtifactStatus }[];
+  ready: boolean;
+  generations: number;
+}
+
+/* Saved variants -------------------------------------------------------------------- */
+
+export interface GenerationAuthor {
+  id: number | null;
+  name: string | null;
+  username: string | null;
+}
+
+export interface GenerationRow {
+  id: number;
+  created_at: number;
+  job_id: string | null;
+  item_type: string;
+  concepts: string[];
+  curriculum: string[];
+  fixed: Record<string, unknown>;
+  instructions: string;
+  think: boolean;
+  author: GenerationAuthor;
+  item: Record<string, unknown>;
+}
+
+export interface GenerationListing {
+  generations: GenerationRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  scope: "mine" | "workspace";
+}
+
+export interface GenerationDetail {
+  generation: GenerationRow & { thinking: string | null };
+}
+
+/* Administration -------------------------------------------------------------------- */
+
+export interface AdminAccount {
+  id: number;
+  username: string;
+  name: string;
+  is_admin: boolean;
+  disabled: boolean;
+  created_at: string | null;
+  workspaces: { slug: string; role: Role }[];
+  generations: number;
+  evaluations: number;
+  decided: number;
+}
+
+export interface AdminWorkspace {
+  id: number;
+  slug: string;
+  name: string;
+  created_at: string | null;
+  members: number;
+  generations: number;
+  /** Its pipeline context is in memory right now: what the LRU registry is holding. */
+  warm: boolean;
+}
+
+export interface AdminOverview {
+  totals: {
+    users: number;
+    workspaces: number;
+    generations: number;
+    evaluations: number;
+    decided: number;
+  };
+  accounts: AdminAccount[];
+  workspaces: AdminWorkspace[];
+  engine: {
+    busy: boolean;
+    job: Job | null;
+    queued: number;
+    warm_contexts: string[];
+  };
+}
+
+/** One row of the study grouped by something — an account, a workspace. */
+export interface AdminGroup extends EvaluationAggregates {
+  key: string | number;
+  label: string;
+  name: string | null;
+  last_at: number;
+}
+
+export interface AdminSessionRow {
+  id: string;
+  created_at: number;
+  workspace: string | null;
+  account: string | null;
+  account_id: number | null;
+  concepts: string[];
+  item_type: string;
+  choice: number | null;
+  choice_arm: EvaluationArm | null;
+  chosen_at: number | null;
+  think: boolean;
+  rating: EvaluationRating | null;
+  arm_status: Partial<Record<EvaluationArm, ArmStatus>>;
+  arm_elapsed_ms: Partial<Record<EvaluationArm, number>>;
+  evaluator_note: string | null;
+}
+
+export interface AdminEvaluations {
+  aggregates: EvaluationAggregates;
+  by_account: AdminGroup[];
+  by_workspace: AdminGroup[];
+  per_day: { day: string; sessions: number; decided: number }[];
+  arms: { key: EvaluationArm; label: string }[];
+  filters: {
+    workspace: string | null;
+    account: number | null;
+    workspaces: string[];
+  };
+  sessions: AdminSessionRow[];
+}
+
 export interface InvitePreview {
-  email: string | null;
   role: Role;
   workspace: string | null;
   expires_at: string;
@@ -456,7 +619,6 @@ export interface InvitePreview {
 
 export interface InviteRow {
   id: number;
-  email: string | null;
   role: Role;
   workspace: string | null;
   created_at: string;
@@ -465,7 +627,7 @@ export interface InviteRow {
 
 export interface MemberRow {
   id: number;
-  email: string;
+  username: string;
   name: string;
   role: Role;
   disabled: boolean;

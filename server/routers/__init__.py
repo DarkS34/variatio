@@ -1,7 +1,22 @@
-from . import auth, bank, evaluation, health, jobs, kg, pipeline, profile, raw, ws
+from . import (
+    admin,
+    auth,
+    bank,
+    evaluation,
+    generations,
+    health,
+    jobs,
+    kg,
+    pipeline,
+    profile,
+    raw,
+    workspaces,
+    ws,
+)
 
 ROUTERS = [
     auth.router,
+    workspaces.router,
     health.router,
     pipeline.router,
     profile.router,
@@ -9,7 +24,9 @@ ROUTERS = [
     bank.router,
     raw.router,
     jobs.router,
+    generations.router,
     evaluation.router,
+    admin.router,
     ws.router,
 ]
 

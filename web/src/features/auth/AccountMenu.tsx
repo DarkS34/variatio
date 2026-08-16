@@ -1,8 +1,9 @@
-import { KeyRound, LogOut, Users } from "lucide-react";
+import { KeyRound, LogOut, Sparkles, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
+import { useRouter } from "@/lib/router";
 import { ROLE_LABELS, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
 import { cn } from "@/lib/utils";
@@ -10,10 +11,18 @@ import { cn } from "@/lib/utils";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { PeopleDialog } from "./PeopleDialog";
 
-/** Who is logged in, what they may do here, and the three things they can do about it. */
+/**
+ * Who is logged in, what they may do here, and everything they can do about it.
+ *
+ * Two blocks, kept apart by a rule. The first is a place to go — the variants this account
+ * has saved, which is a screen and not a setting; the second is what you do to the account
+ * itself. They are one list because they are all reached from the same avatar, and they
+ * are separated because clicking one navigates and clicking the others opens a dialog.
+ */
 export function AccountMenu() {
   const session = useSession();
   const logout = useLogout();
+  const { navigate } = useRouter();
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<"password" | "people" | null>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -35,7 +44,7 @@ export function AccountMenu() {
     <div className="relative" ref={holder}>
       <button
         onClick={() => setOpen((was) => !was)}
-        title={user.email}
+        title={user.username}
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
@@ -43,7 +52,7 @@ export function AccountMenu() {
           open && "ring-2 ring-ring",
         )}
       >
-        {initials(user.name || user.email)}
+        {initials(user.name || user.username)}
       </button>
 
       {open ? (
@@ -53,11 +62,24 @@ export function AccountMenu() {
         >
           <div className="p-3">
             <p className="truncate text-sm font-medium">{user.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">{user.username}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {role ? <Badge variant="outline">{ROLE_LABELS[role]}</Badge> : null}
               {user.is_admin ? <Badge variant="secondary">Administrador</Badge> : null}
             </div>
+          </div>
+
+          <Separator />
+
+          <div className="p-1">
+            <MenuItem
+              icon={<Sparkles className="size-4" />}
+              label="Variantes guardadas"
+              onClick={() => {
+                setOpen(false);
+                navigate("/variantes");
+              }}
+            />
           </div>
 
           <Separator />

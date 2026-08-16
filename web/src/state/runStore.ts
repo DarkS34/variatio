@@ -1,5 +1,6 @@
 import { describeEvent, type ActivityLine } from "@/lib/explain";
 import type { FewShotExemplar, Job, VgEvent } from "@/lib/types";
+import { activeWorkspace } from "./workspace";
 
 /**
  * One live view of what the system is doing, fed by a single WebSocket.
@@ -154,6 +155,8 @@ class RunStore {
   private retry = 0;
   private timer: number | null = null;
   private notifyScheduled = false;
+  /** Which workspace the open socket is subscribed to, so a switch can be noticed. */
+  private subscribedTo: string | null = null;
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -180,13 +183,21 @@ class RunStore {
   /* CONNECTION ------------------------------------------------------------------- */
 
   connect() {
-    if (this.socket && this.socket.readyState <= WebSocket.OPEN) return;
+    const workspace = activeWorkspace();
+    if (this.socket && this.socket.readyState <= WebSocket.OPEN) {
+      if (this.subscribedTo === workspace) return;
+      // The socket is subscribed to the instance we have just left. Everything it would
+      // deliver from here on belongs to somebody else's screen.
+      this.disconnect();
+    }
     if (this.state.unauthorised) this.commit({ unauthorised: false });
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const url = `${protocol}//${window.location.host}/ws?since=${this.state.lastSeq}`;
-    const socket = new WebSocket(url);
+    const query = new URLSearchParams({ since: String(this.state.lastSeq) });
+    if (workspace) query.set("workspace", workspace);
+    const socket = new WebSocket(`${protocol}//${window.location.host}/ws?${query}`);
     this.socket = socket;
+    this.subscribedTo = workspace;
 
     socket.onopen = () => {
       this.retry = 0;
@@ -212,6 +223,7 @@ class RunStore {
     socket.onclose = (event) => {
       if (event.code === UNAUTHORISED) {
         this.socket = null;
+        this.subscribedTo = null;
         this.commit({ connected: false, unauthorised: true });
         return;
       }
@@ -240,8 +252,38 @@ class RunStore {
     }
     const socket = this.socket;
     this.socket = null;
+    this.subscribedTo = null;
     socket?.close();
     this.commit({ connected: false });
+  }
+
+  /**
+   * Forget everything the previous workspace put here and resubscribe.
+   *
+   * Not a nicety: `runs`, `logs` and `currentJobId` are all that workspace's, and leaving
+   * them on screen after a switch would show one instance's generated statements under
+   * another instance's header. `lastSeq` goes back to 0 because the sequence is the bus's
+   * and replaying from it would only ask for events this workspace is not entitled to.
+   */
+  reset() {
+    this.forget();
+    this.connect();
+  }
+
+  /** The same wipe without the resubscription: what a logout wants, since there is no
+   *  longer anything this browser is entitled to hear. */
+  forget() {
+    this.disconnect();
+    this.state = {
+      connected: false,
+      unauthorised: false,
+      lastSeq: 0,
+      currentJobId: null,
+      runs: {},
+      logs: [],
+      gap: false,
+    };
+    this.commit({});
   }
 
   /** Seed the store from REST when a job is discovered outside the socket. */

@@ -349,7 +349,19 @@ function ActivityCard() {
         )}
 
         {!run?.job ? (
-          <p className="text-muted-foreground">Nada en ejecución.</p>
+          // «Nada en ejecución» would be a lie when the one GPU is busy with another
+          // workspace: your own screen is idle and the next job you launch will wait,
+          // and nothing else on the page would say why.
+          pipeline.data?.engine_busy_elsewhere ? (
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Hourglass className="mt-0.5 size-3.5 shrink-0" />
+              Nada tuyo en ejecución. La GPU está ocupada con un trabajo de otro
+              workspace: solo se ejecuta uno cada vez, así que lo que lances ahora
+              esperará su turno.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">Nada en ejecución.</p>
+          )
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

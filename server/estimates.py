@@ -29,8 +29,9 @@ from pathlib import Path
 
 from variant_generator import config, stages
 from variant_generator.builders import _source_docs
+from variant_generator.workspace import Workspace
 
-from . import raw_data, review, settings
+from . import raw_data, review
 
 # Seconds per unit on the deployment box (one A40, 46 GB) with the models `config.py`
 # names. These are timings, not intuitions, and RE-MEASURING IS THE ONLY WAY TO CHANGE
@@ -152,19 +153,18 @@ def _cached_chars(paths: list[Path]) -> int:
     return sum(path.stat().st_size for path in paths if path.is_file())
 
 
-def _sources(kind: str) -> list[Path]:
+def _sources(ws: Workspace, kind: str) -> list[Path]:
     # `raw_base_data/` is the user's own data and nothing in the pipeline creates it, so on
     # a fresh install the directory is simply not there. That is "no documents", not an
     # error the panel should show instead of the chain.
-    directory = raw_data.directory(kind)
+    directory = raw_data.directory(ws, kind)
     return _source_docs.list_source_files(directory) if directory.is_dir() else []
 
 
-def _corpus_load() -> Load:
+def _corpus_load(ws: Workspace) -> Load:
     """The corpus, which the KG builder reads through Docling and caches as one markdown."""
-    ws = settings.workspace()
     load = Load()
-    for path in _sources(raw_data.CORPUS):
+    for path in _sources(ws, raw_data.CORPUS):
         is_pdf = path.suffix.lower() == ".pdf"
         pages = _pdf_pages(path) if is_pdf else 1
         cached = _source_docs.markdown_cached(path, ws.markdown_cache_dir)
@@ -180,11 +180,10 @@ def _corpus_load() -> Load:
     return load
 
 
-def _exemplars_load() -> Load:
+def _exemplars_load(ws: Workspace) -> Load:
     """The exemplars, which both builders read page by page — a PDF page is a model call."""
-    ws = settings.workspace()
     load = Load()
-    for path in _sources(raw_data.EXEMPLARS):
+    for path in _sources(ws, raw_data.EXEMPLARS):
         is_pdf = path.suffix.lower() == ".pdf"
         transcribed = _source_docs.pages_cached(path, cache_dir=ws.markdown_cache_dir)
         pages = transcribed or (_pdf_pages(path) if is_pdf else 1)
@@ -291,9 +290,9 @@ def artifact(name: str, load: Load) -> dict:
     }
 
 
-def snapshot() -> dict:
+def snapshot(ws: Workspace) -> dict:
     """Every build's estimate, from whatever is in the raw slots right now."""
-    loads = {raw_data.CORPUS: _corpus_load(), raw_data.EXEMPLARS: _exemplars_load()}
+    loads = {raw_data.CORPUS: _corpus_load(ws), raw_data.EXEMPLARS: _exemplars_load(ws)}
     return {
         "artifacts": {
             name: artifact(name, loads[slot]) for name, (_, slot) in _MODELS.items()

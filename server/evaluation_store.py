@@ -1,81 +1,77 @@
-"""Where evaluation sessions live.
+"""Where evaluation sessions live, and the arithmetic of the study over them.
 
-Two files per the plan: `sessions.jsonl` carries one header line per session and is read
-whole for the aggregates, while `<id>.json` carries the full trace — the three prompts,
-the three raw answers, the exemplars and the timings. Splitting them is what keeps the
-listing from loading megabytes of prompt every time it paints a table.
+Two files per workspace until phase 3 — `sessions.jsonl` for the headers, `<id>.json` for
+the trace — and one table since, for a reason that is not tidiness: a session recorded on
+disk has no evaluator, and «cómo van las evaluaciones por cuenta» is a question that
+cannot be asked of a row that does not know whose it is. The header/trace split survives
+as columns versus `trace`, so listing a hundred sessions still does not load a hundred
+prompts.
 
-The header fields ARE the columns of the future Postgres block, so migrating is a `for`
-over the JSONL, not a redesign.
+The aggregate functions below are the only implementation of the study's arithmetic in
+the codebase. They used to feed the evaluator's own screen as well; since phase 3 that
+screen shows a person their sessions and nothing else, and these numbers are read only by
+the administration panel — but they are computed here, next to the definitions of what
+counts, rather than inside a router.
 """
 
 import csv
 import io
 import json
-import threading
 import time
-from pathlib import Path
+from datetime import datetime
+
+from sqlalchemy.orm import Session as DbSession
 
 from variant_generator.evaluation import ARMS, EvaluationSession
 
-from . import settings
+from .db import study
+from .db.models import EvalSession
 
 RATING_SCALES = ("originality", "complexity", "concept_fit", "soundness")
 USABILITY_VALUES = ("as_is", "with_edits", "no")
-
-_lock = threading.RLock()
-
-
-def sessions_path() -> Path:
-    return settings.workspace().eval_sessions_dir / "sessions.jsonl"
-
-
-def trace_path(session_id: str) -> Path:
-    return settings.workspace().eval_sessions_dir / f"{session_id}.json"
 
 
 # WRITE -----------------------------------------------------------------------------------------
 
 
-def save(session: EvaluationSession) -> None:
-    with _lock:
-        _write_json(trace_path(session.id), session.to_dict())
-        headers = [h for h in _read_headers() if h["id"] != session.id]
-        headers.append(_header(session))
-        _write_headers(headers)
+def save(
+    db: DbSession, workspace_id: int, user_id: int | None, session: EvaluationSession
+) -> EvalSession:
+    return study.upsert_evaluation(db, session.id, workspace_id, user_id, session.to_dict())
+
+
+def load(db: DbSession, session_id: str) -> EvaluationSession | None:
+    row = study.get_evaluation(db, session_id)
+    if row is None:
+        return None
+    return EvaluationSession.from_dict(row.trace)
 
 
 def record_choice(
-    session_id: str, choice: int | None, note: str | None = None
+    db: DbSession, row: EvalSession, choice: int | None, note: str | None = None
 ) -> EvaluationSession:
-    with _lock:
-        session = load(session_id)
-        if session is None:
-            raise KeyError(session_id)
-        if session.decided:
-            raise ValueError("already-chosen")
-        if choice is not None and choice not in (1, 2, 3):
-            raise ValueError("choice must be 1, 2, 3 or null")
+    session = EvaluationSession.from_dict(row.trace)
+    if session.decided:
+        raise ValueError("already-chosen")
+    if choice is not None and choice not in (1, 2, 3):
+        raise ValueError("choice must be 1, 2, 3 or null")
 
-        session.choice = choice
-        session.choice_arm = session.arm_at(choice) if choice is not None else None
-        session.chosen_at = time.time()
-        session.evaluator_note = (note or "").strip() or None
-        save(session)
-        return session
+    session.choice = choice
+    session.choice_arm = session.arm_at(choice) if choice is not None else None
+    session.chosen_at = time.time()
+    session.evaluator_note = (note or "").strip() or None
+    study.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
+    return session
 
 
-def record_rating(session_id: str, rating: dict) -> EvaluationSession:
-    with _lock:
-        session = load(session_id)
-        if session is None:
-            raise KeyError(session_id)
-        if not session.decided:
-            raise ValueError("not-chosen-yet")
+def record_rating(db: DbSession, row: EvalSession, rating: dict) -> EvaluationSession:
+    session = EvaluationSession.from_dict(row.trace)
+    if not session.decided:
+        raise ValueError("not-chosen-yet")
 
-        session.rating = _clean_rating(rating)
-        save(session)
-        return session
+    session.rating = _clean_rating(rating)
+    study.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
+    return session
 
 
 # The rubric is validated here and not only in the browser: a value out of range poisons
@@ -104,34 +100,66 @@ def _clean_rating(rating: dict) -> dict:
 # READ ------------------------------------------------------------------------------------------
 
 
-def load(session_id: str) -> EvaluationSession | None:
-    path = trace_path(session_id)
-    if not path.is_file():
-        return None
-    with path.open(encoding="utf-8") as f:
-        return EvaluationSession.from_dict(json.load(f))
+# The shape the aggregates below are written against, kept identical to the JSONL header
+# it replaces so that arithmetic verified on the old records still applies to the new
+# rows. `account` and `workspace` are the two fields the file never had.
+def header(row: EvalSession, user=None, workspace_slug: str | None = None) -> dict:
+    return {
+        "id": row.id,
+        "created_at": row.created_at.timestamp() if row.created_at else 0.0,
+        "job_id": row.job_id,
+        "concepts": list(row.concepts or []),
+        "item_type": row.item_type or "",
+        "fixed": dict(row.fixed or {}),
+        "curriculum": list(row.curriculum or []),
+        "instructions": row.instructions or "",
+        "seed": row.seed,
+        "shuffle": list(row.shuffle or []),
+        "think": bool(row.think),
+        "choice": row.choice,
+        "choice_arm": row.choice_arm,
+        "chosen_at": row.chosen_at,
+        "evaluator_note": row.evaluator_note,
+        "rating": row.rating,
+        "arm_status": dict(row.arm_status or {}),
+        "arm_elapsed_ms": dict(row.arm_elapsed_ms or {}),
+        "account_id": row.user_id,
+        "account": (user.username if user is not None else None),
+        "account_name": (user.name if user is not None else None),
+        "workspace": workspace_slug,
+    }
 
 
-def listing(limit: int = 50, offset: int = 0) -> tuple[list[dict], int]:
-    headers = sorted(_read_headers(), key=lambda h: h.get("created_at") or 0, reverse=True)
-    return headers[offset : offset + limit], len(headers)
+def listing(
+    db: DbSession,
+    workspace_id: int,
+    author: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    rows, total = study.list_evaluations(
+        db, workspace_id=workspace_id, author=author, limit=limit, offset=offset
+    )
+    return [header(row) for row in rows], total
+
+
+# AGGREGATES ------------------------------------------------------------------------------------
 
 
 # Everything per-arm is counted over DECIDED sessions only, and that is a blinding
 # requirement, not a statistical preference: with a session still waiting to be judged,
 # "naive: unavailable 1" next to a card that shows no exercise names the card.
-def aggregates() -> dict:
-    headers = _read_headers()
+def aggregates(headers: list[dict]) -> dict:
     decided = [h for h in headers if h.get("chosen_at")]
 
     preferences = {arm: 0 for arm in ARMS}
     preferences["none"] = 0
-    for header in decided:
-        preferences[header.get("choice_arm") or "none"] += 1
+    for row in decided:
+        preferences[row.get("choice_arm") or "none"] += 1
 
     status_counts = {arm: {} for arm in ARMS}
-    for header in decided:
-        for arm, status in (header.get("arm_status") or {}).items():
+    for row in decided:
+        for arm, status in (row.get("arm_status") or {}).items():
             status_counts.setdefault(arm, {})
             status_counts[arm][status] = status_counts[arm].get(status, 0) + 1
 
@@ -143,6 +171,7 @@ def aggregates() -> dict:
         "arm_status": status_counts,
         "rubric": _rubric_summary([h["rating"] for h in headers if h.get("rating")]),
         "think": _think_breakdown(decided),
+        "elapsed_ms": _mean_elapsed(decided),
     }
 
 
@@ -158,8 +187,8 @@ def _think_breakdown(decided: list[dict]) -> dict:
         rows = [h for h in decided if bool(h.get("think", True)) is wanted]
         preferences = {arm: 0 for arm in ARMS}
         preferences["none"] = 0
-        for header in rows:
-            preferences[header.get("choice_arm") or "none"] += 1
+        for row in rows:
+            preferences[row.get("choice_arm") or "none"] += 1
         elapsed = {}
         for arm in ("rag", "system"):
             timings = [(h.get("arm_elapsed_ms") or {}).get(arm) for h in rows]
@@ -173,6 +202,19 @@ def _think_breakdown(decided: list[dict]) -> dict:
             "rubric": _rubric_summary([h["rating"] for h in rows if h.get("rating")]),
         }
     return breakdown
+
+
+def _mean_elapsed(rows: list[dict]) -> dict:
+    means = {}
+    for arm in ARMS:
+        values = [
+            ms
+            for ms in ((h.get("arm_elapsed_ms") or {}).get(arm) for h in rows)
+            if isinstance(ms, (int, float)) and ms > 0
+        ]
+        if values:
+            means[arm] = round(sum(values) / len(values))
+    return means
 
 
 # `complexity` is NOT "more is better": a 5 is as wrong as a 1 and the target is 3, so
@@ -199,10 +241,71 @@ def _rubric_summary(ratings: list[dict]) -> dict:
     return summary
 
 
-def export_csv() -> str:
+# One row per account, which is the grouping the study is actually read by. `sessions` and
+# `decided` are separate on purpose: a person who launched twenty comparisons and judged
+# three has contributed three data points, and a table that showed only the first number
+# would say the opposite.
+def by_account(headers: list[dict]) -> list[dict]:
+    return _grouped(headers, key="account_id", label_of=_account_label)
+
+
+def by_workspace(headers: list[dict]) -> list[dict]:
+    return _grouped(headers, key="workspace", label_of=lambda h: h.get("workspace") or "—")
+
+
+def _account_label(row: dict) -> str:
+    return row.get("account") or row.get("account_name") or "cuenta borrada"
+
+
+def _grouped(headers: list[dict], key: str, label_of) -> list[dict]:
+    buckets: dict[object, list[dict]] = {}
+    for row in headers:
+        buckets.setdefault(row.get(key), []).append(row)
+
+    groups = []
+    for value, rows in buckets.items():
+        summary = aggregates(rows)
+        groups.append(
+            {
+                "key": value if value is not None else "",
+                "label": label_of(rows[0]),
+                "name": rows[0].get("account_name"),
+                "last_at": max(r.get("created_at") or 0 for r in rows),
+                **summary,
+            }
+        )
+    return sorted(groups, key=lambda g: (-g["sessions"], g["label"]))
+
+
+# One point per day, so the panel can say whether the study is still collecting data or
+# stopped three weeks ago — which no mean can answer.
+def per_day(headers: list[dict]) -> list[dict]:
+    counts: dict[str, dict] = {}
+    for row in headers:
+        stamp = row.get("created_at") or 0
+        if not stamp:
+            continue
+        day = datetime.fromtimestamp(stamp).date().isoformat()
+        bucket = counts.setdefault(day, {"day": day, "sessions": 0, "decided": 0})
+        bucket["sessions"] += 1
+        if row.get("chosen_at"):
+            bucket["decided"] += 1
+    return [counts[day] for day in sorted(counts)]
+
+
+# EXPORT ----------------------------------------------------------------------------------------
+
+
+# One row per session, every column the analysis needs, and the two the file version could
+# never carry: who evaluated and in which instance. Restricted to the installation's
+# administrator, because a per-session export of everybody's judgements is the study's
+# raw data and not a feature of the evaluation screen.
+def export_csv(headers: list[dict]) -> str:
     columns = [
         "session_id",
         "created_at",
+        "workspace",
+        "account",
         "job_id",
         "item_type",
         "concepts",
@@ -228,100 +331,41 @@ def export_csv() -> str:
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
     writer.writeheader()
-    for header in sorted(_read_headers(), key=lambda h: h.get("created_at") or 0):
-        shuffle = header.get("shuffle") or []
-        rating = header.get("rating") or {}
-        row = {
-            "session_id": header["id"],
-            "created_at": _iso(header.get("created_at")),
-            "job_id": header.get("job_id") or "",
-            "item_type": header.get("item_type") or "",
-            "concepts": "|".join(header.get("concepts") or []),
-            "curriculum": "|".join(header.get("curriculum") or []),
-            "fixed": json.dumps(header.get("fixed") or {}, ensure_ascii=False),
-            "instructions": header.get("instructions") or "",
-            "seed": header.get("seed"),
-            "think": int(bool(header.get("think", True))),
-            "choice": header.get("choice") if header.get("choice") is not None else "",
-            "choice_arm": header.get("choice_arm") or "",
-            "chosen_at": _iso(header.get("chosen_at")),
-            "evaluator_note": header.get("evaluator_note") or "",
+    for row in sorted(headers, key=lambda h: h.get("created_at") or 0):
+        shuffle = row.get("shuffle") or []
+        rating = row.get("rating") or {}
+        line = {
+            "session_id": row["id"],
+            "created_at": _iso(row.get("created_at")),
+            "workspace": row.get("workspace") or "",
+            "account": row.get("account") or "",
+            "job_id": row.get("job_id") or "",
+            "item_type": row.get("item_type") or "",
+            "concepts": "|".join(row.get("concepts") or []),
+            "curriculum": "|".join(row.get("curriculum") or []),
+            "fixed": json.dumps(row.get("fixed") or {}, ensure_ascii=False),
+            "instructions": row.get("instructions") or "",
+            "seed": row.get("seed"),
+            "think": int(bool(row.get("think", True))),
+            "choice": row.get("choice") if row.get("choice") is not None else "",
+            "choice_arm": row.get("choice_arm") or "",
+            "chosen_at": _iso(row.get("chosen_at")),
+            "evaluator_note": row.get("evaluator_note") or "",
             "usability": rating.get("usability", ""),
             "rating_comment": rating.get("comment", ""),
         }
         for index in range(3):
-            row[f"position_{index + 1}"] = shuffle[index] if index < len(shuffle) else ""
+            line[f"position_{index + 1}"] = shuffle[index] if index < len(shuffle) else ""
         for arm in ARMS:
-            row[f"{arm}_status"] = (header.get("arm_status") or {}).get(arm, "")
-            row[f"{arm}_ms"] = (header.get("arm_elapsed_ms") or {}).get(arm, "")
+            line[f"{arm}_status"] = (row.get("arm_status") or {}).get(arm, "")
+            line[f"{arm}_ms"] = (row.get("arm_elapsed_ms") or {}).get(arm, "")
         for name in RATING_SCALES:
-            row[name] = rating.get(name, "")
-        writer.writerow(row)
+            line[name] = rating.get(name, "")
+        writer.writerow(line)
     return buffer.getvalue()
 
 
 def _iso(timestamp: float | None) -> str:
     if not timestamp:
         return ""
-    from datetime import datetime
-
     return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
-
-
-# INTERNALS -------------------------------------------------------------------------------------
-
-
-def _header(session: EvaluationSession) -> dict:
-    return {
-        "id": session.id,
-        "created_at": session.created_at,
-        "job_id": session.job_id,
-        "concepts": list(session.concepts),
-        "item_type": session.item_type,
-        "fixed": dict(session.fixed),
-        "curriculum": list(session.curriculum),
-        "instructions": session.instructions,
-        "seed": session.seed,
-        "shuffle": list(session.shuffle),
-        "think": session.think,
-        "choice": session.choice,
-        "choice_arm": session.choice_arm,
-        "chosen_at": session.chosen_at,
-        "evaluator_note": session.evaluator_note,
-        "rating": session.rating,
-        "arm_status": {arm: result.status for arm, result in session.arms.items()},
-        "arm_elapsed_ms": {arm: result.elapsed_ms for arm, result in session.arms.items()},
-    }
-
-
-def _read_headers() -> list[dict]:
-    path = sessions_path()
-    if not path.is_file():
-        return []
-    headers = []
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                headers.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    return headers
-
-
-def _write_headers(headers: list[dict]) -> None:
-    payload = "\n".join(json.dumps(h, ensure_ascii=False) for h in headers)
-    _write_text(sessions_path(), payload + "\n" if payload else "")
-
-
-def _write_json(path: Path, data: dict) -> None:
-    _write_text(path, json.dumps(data, ensure_ascii=False, indent=2))
-
-
-def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(f"{path.suffix}.tmp")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.replace(path)

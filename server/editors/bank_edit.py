@@ -10,8 +10,9 @@ from variant_generator import config
 from variant_generator.concept_tagger import TRACE_KEY
 from variant_generator.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variant_generator.knowledge_graph import KnowledgeGraph
+from variant_generator.workspace import Workspace
 
-from .. import deps, review, settings, storage
+from .. import deps, review, storage
 
 ARTIFACT = review.EXEMPLARS_BANK
 
@@ -32,22 +33,22 @@ class BankError(ValueError):
     pass
 
 
-def _load_bank() -> dict:
-    bank = storage.read_json(settings.workspace().exemplars_bank_path)
+def _load_bank(ws: Workspace) -> dict:
+    bank = storage.read_json(ws.exemplars_bank_path)
     if bank is None:
         raise BankError("Todavía no hay banco de ejemplos")
     return bank
 
 
-def _profile() -> ExemplarsProfile:
-    path = review.current_path(review.EXEMPLARS_PROFILE)
+def _profile(ws: Workspace) -> ExemplarsProfile:
+    path = review.current_path(ws, review.EXEMPLARS_PROFILE)
     if path is None:
         raise BankError("Falta el perfil de ejemplares")
     return ExemplarsProfile(path)
 
 
-def _graph() -> KnowledgeGraph:
-    path = review.current_path(review.KNOWLEDGE_GRAPH)
+def _graph(ws: Workspace) -> KnowledgeGraph:
+    path = review.current_path(ws, review.KNOWLEDGE_GRAPH)
     if path is None:
         raise BankError("Falta el grafo de conocimiento")
     return KnowledgeGraph(str(path))
@@ -70,6 +71,7 @@ def _suspicion(item: dict) -> tuple[int, float]:
 
 
 def listing(
+    ws: Workspace,
     concept: str | None = None,
     untagged: bool | None = None,
     query: str | None = None,
@@ -79,8 +81,8 @@ def listing(
     page: int = 1,
     page_size: int = 50,
 ) -> dict:
-    bank = _load_bank()
-    profile = _profile()
+    bank = _load_bank(ws)
+    profile = _profile(ws)
 
     rows = [{"id": item_id, **item} for item_id, item in bank.items()]
 
@@ -146,10 +148,10 @@ def listing(
     }
 
 
-def coverage() -> dict:
+def coverage(ws: Workspace) -> dict:
     """Which KG concepts have at least one exemplar — i.e. which ones generate zero-shot."""
-    bank = _load_bank()
-    graph = _graph()
+    bank = _load_bank(ws)
+    graph = _graph(ws)
     counts: dict[str, int] = dict.fromkeys(graph.taggable_concepts, 0)
     for item in bank.values():
         for concept in item.get("concepts") or []:
@@ -164,19 +166,19 @@ def coverage() -> dict:
     }
 
 
-def _persist(bank: dict, note: str) -> dict:
-    storage.write_json(settings.workspace().exemplars_bank_path, bank, artifact=ARTIFACT)
-    review.ReviewState().invalidate(ARTIFACT)
-    deps.invalidate(note)
-    return {"hash": storage.sha256_of(settings.workspace().exemplars_bank_path)}
+def _persist(ws: Workspace, bank: dict, note: str) -> dict:
+    storage.write_json(ws.exemplars_bank_path, bank, ws=ws, artifact=ARTIFACT)
+    review.ReviewState(ws).invalidate(ARTIFACT)
+    deps.invalidate(ws.slug, note)
+    return {"hash": storage.sha256_of(ws.exemplars_bank_path)}
 
 
-def patch_item(item_id: str, fields: dict) -> dict:
-    bank = _load_bank()
+def patch_item(ws: Workspace, item_id: str, fields: dict) -> dict:
+    bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")
 
-    profile = _profile()
+    profile = _profile(ws)
     merged = {**bank[item_id], **fields}
     try:
         item_type = profile.item_type_of(merged)
@@ -204,17 +206,19 @@ def patch_item(item_id: str, fields: dict) -> dict:
     updated = {ITEM_TYPE_KEY: item_type.key, **candidate, **meta}
 
     bank[item_id] = updated
-    result = _persist(bank, f"ítem '{item_id}' editado")
+    result = _persist(ws, bank, f"ítem '{item_id}' editado")
     result["item"] = {"id": item_id, **updated}
     return result
 
 
-def set_concepts(item_id: str, concepts: list[str], primary_concept: str | None) -> dict:
-    bank = _load_bank()
+def set_concepts(
+    ws: Workspace, item_id: str, concepts: list[str], primary_concept: str | None
+) -> dict:
+    bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")
 
-    taggable = set(_graph().taggable_concepts)
+    taggable = set(_graph(ws).taggable_concepts)
     invalid = [c for c in concepts if c not in taggable]
     if invalid:
         raise BankError(f"Conceptos que no están en el grafo: {invalid}")
@@ -231,14 +235,14 @@ def set_concepts(item_id: str, concepts: list[str], primary_concept: str | None)
     item[TRACE_KEY] = trace
     bank[item_id] = item
 
-    result = _persist(bank, f"conceptos de '{item_id}' editados")
+    result = _persist(ws, bank, f"conceptos de '{item_id}' editados")
     result["item"] = {"id": item_id, **item}
     return result
 
 
-def delete_item(item_id: str) -> dict:
-    bank = _load_bank()
+def delete_item(ws: Workspace, item_id: str) -> dict:
+    bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")
     bank.pop(item_id)
-    return _persist(bank, f"ítem '{item_id}' eliminado")
+    return _persist(ws, bank, f"ítem '{item_id}' eliminado")

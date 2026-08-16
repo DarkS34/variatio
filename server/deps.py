@@ -1,21 +1,31 @@
-"""The warm pipeline context, built once and reused.
+"""The warm pipeline contexts, built once per workspace and reused.
 
-Building it embeds ~150 concept descriptions and the whole bank; doing that per
-request would make the app unusable. It is deliberately *only* touched from the job
-worker — REST handlers read artifacts straight off disk, so a slow context never
-blocks the UI. Any write to an artifact invalidates it, and the next job rebuilds.
+Building one embeds ~150 concept descriptions and the whole bank; doing that per request
+would make the app unusable. They are deliberately *only* touched from the job worker —
+REST handlers read artifacts straight off disk, so a slow context never blocks the UI.
+Any write to an artifact invalidates that workspace's context, and the next job rebuilds.
+
+Since phase 3 this is a registry keyed by slug rather than one global, because with two
+instances in one process a single slot meant one workspace's concept index answering the
+other's queries. What bounds it is not memory — the two `.npz` of a real instance add up
+to 3.3 MB and the vectors are already float32 — but the fact that rebuilding one costs
+minutes, so keeping a handful warm is free and evicting eagerly is not.
 """
 
 import threading
+from collections import OrderedDict
 
 from loguru import logger
 
 from variant_generator import inference, stages
 from variant_generator.stages import PipelineContext
+from variant_generator.workspace import Workspace
 
-_context: PipelineContext | None = None
+MAX_CONTEXTS = 8
+
+_contexts: "OrderedDict[str, PipelineContext]" = OrderedDict()
+_invalid_reasons: dict[str, str] = {}
 _lock = threading.RLock()
-_invalid_reason: str | None = None
 
 
 def require_inference() -> None:
@@ -26,36 +36,53 @@ def require_inference() -> None:
         )
 
 
-def get_context() -> PipelineContext:
-    global _context, _invalid_reason
+def get_context(ws: Workspace) -> PipelineContext:
     with _lock:
-        if _context is None:
-            require_inference()
-            if _invalid_reason:
-                logger.info(f"Rebuilding pipeline context ({_invalid_reason})")
-            _context = stages.initialize(tag=False)
-            _invalid_reason = None
-        return _context
+        existing = _contexts.get(ws.slug)
+        if existing is not None:
+            _contexts.move_to_end(ws.slug)
+            return existing
+
+        require_inference()
+        reason = _invalid_reasons.pop(ws.slug, None)
+        if reason:
+            logger.info(f"Rebuilding pipeline context for '{ws.slug}' ({reason})")
+
+        context = stages.initialize(tag=False, ws=ws)
+        _contexts[ws.slug] = context
+        _evict()
+        return context
 
 
-def reload_context() -> PipelineContext:
-    invalidate("reindexado solicitado")
-    return get_context()
+def reload_context(ws: Workspace) -> PipelineContext:
+    invalidate(ws.slug, "reindexado solicitado")
+    return get_context(ws)
 
 
-def invalidate(reason: str) -> None:
-    global _context, _invalid_reason
+def invalidate(slug: str, reason: str) -> None:
     with _lock:
-        if _context is not None:
-            logger.info(f"Pipeline context invalidated: {reason}")
-        _context = None
-        _invalid_reason = reason
+        if _contexts.pop(slug, None) is not None:
+            logger.info(f"Pipeline context for '{slug}' invalidated: {reason}")
+        _invalid_reasons[slug] = reason
 
 
-def peek() -> PipelineContext | None:
+def peek(slug: str) -> PipelineContext | None:
     with _lock:
-        return _context
+        return _contexts.get(slug)
 
 
-def is_ready() -> bool:
-    return peek() is not None
+def is_ready(slug: str) -> bool:
+    return peek(slug) is not None
+
+
+def warm_slugs() -> list[str]:
+    with _lock:
+        return list(_contexts)
+
+
+# Least recently *used*, not least recently built: a workspace somebody is working in
+# keeps its turn on every job it runs.
+def _evict() -> None:
+    while len(_contexts) > MAX_CONTEXTS:
+        slug, _ = _contexts.popitem(last=False)
+        logger.info(f"Pipeline context for '{slug}' evicted (registry full)")

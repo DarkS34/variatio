@@ -1,10 +1,21 @@
 """The dependencies every route hangs from.
 
-Two questions, deliberately separate. `current_user` answers *who is this*, and needs
-only a session cookie. `require_member` answers *may they touch this workspace, at this
-level*, and is a membership row — there is no bypass for administrators, because the
-classic hole here is not the login, it is a read of somebody else's instance that nobody
-checked. An admin flag governs running the installation, not access to its data.
+Three questions, deliberately separate. `current_user` answers *who is this*, and needs
+only a session cookie. `resolve_workspace` answers *which instance is this request about*,
+which since phase 3 is a per-request question and not a process constant. `require_member`
+answers *may they touch it, at this level*, and is a membership row.
+
+Which workspace a request means comes from, in order: the `X-Workspace` header (so two
+browser tabs can sit in two different instances), then the account's `active_workspace`,
+then its first membership. The header is a *request* for a workspace, never a permission
+to enter one — the membership lookup below is what decides, and it runs identically
+whichever way the slug arrived.
+
+The one exception is the installation's administrator, who since phase 3 passes through
+`require_member` for any workspace. That is a deliberate departure from phase 2's «no
+admin bypass», taken by explicit user request so that one account can operate the whole
+installation and read the study's data across accounts. It is written here, in one place,
+so the exception is one `if` in a diff and not a habit spread over forty routes.
 """
 
 from collections.abc import Iterator
@@ -14,14 +25,23 @@ from fastapi import Depends, HTTPException, Request, WebSocket
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import Session as DbSession
 
+from variant_generator.workspace import Workspace as PathWorkspace
+
 from .. import settings
 from ..db import identity, repository, session_scope
-from ..db.models import ROLE_RANK, VIEWER, User, UserSession, Workspace
+from ..db.models import OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
 
 DB_UNREACHABLE = (
     "La base de datos no responde. Arráncala con `docker compose up -d postgres` "
     "y aplica las migraciones con `uv run alembic upgrade head`."
+)
+
+WORKSPACE_HEADER = "x-workspace"
+
+NO_WORKSPACE = (
+    "Tu cuenta no es miembro de ningún workspace. Pide acceso a quien administra la "
+    "instalación, o crea uno nuevo."
 )
 
 
@@ -30,6 +50,13 @@ class Access:
     user: User
     workspace: Workspace
     role: str
+    # The same workspace as a set of paths. Resolved here so no route has to know that a
+    # slug maps to a directory, and so the mapping happens exactly once per request.
+    ws: PathWorkspace
+    # True when this request only got through because the account administers the
+    # installation. Routes do not branch on it; it is what the UI is told, so an admin
+    # can see that they are looking at somebody else's instance.
+    as_admin: bool = False
 
 
 # Only the connection-level failures become "the database is not responding". Catching
@@ -53,6 +80,15 @@ def client_ip(request: Request | WebSocket) -> str:
         if forwarded:
             return forwarded.split(",")[0].strip()
     return request.client.host if request.client else ""
+
+
+# The socket carries no headers a browser can set, so it asks with a query parameter.
+# Same string either way, and it goes through the same membership check.
+def requested_slug(request: Request | WebSocket) -> str | None:
+    header = request.headers.get(WORKSPACE_HEADER, "").strip()
+    if header:
+        return header
+    return (request.query_params.get("workspace") or "").strip() or None
 
 
 # Resolving a cookie to a user is the same work over HTTP and over the WebSocket
@@ -95,34 +131,73 @@ def require_admin(user: User = Depends(current_user)) -> User:
     return user
 
 
-# The workspace the process serves. One per process today, so this is a lookup and not a
-# path parameter; when `settings.workspace()` becomes per-request, this is the only place
-# that has to learn about it.
-def active_workspace(session: DbSession) -> Workspace:
-    slug = settings.workspace().slug
-    workspace = repository.get_workspace(session, slug)
+# WORKSPACE -----------------------------------------------------------------------------
+
+
+def default_workspace_for(session: DbSession, user: User) -> Workspace | None:
+    if user.active_workspace_id is not None:
+        workspace = session.get(Workspace, user.active_workspace_id)
+        if workspace is not None and workspace.deleted_at is None:
+            return workspace
+    rows = identity.memberships_for(session, user.id)
+    if rows:
+        return rows[0][1]
+    # An administrator with no membership anywhere still has to be able to enter and fix
+    # that. Anyone else is told plainly that they have no workspace, which is a real
+    # state and not an error.
+    if user.is_admin:
+        workspaces = repository.list_workspaces(session)
+        return workspaces[0] if workspaces else None
+    return None
+
+
+def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Workspace:
+    if slug:
+        workspace = repository.get_workspace(session, slug)
+        if workspace is None:
+            raise HTTPException(404, f"No existe el workspace '{slug}'.")
+        return workspace
+
+    workspace = default_workspace_for(session, user)
     if workspace is None:
-        raise HTTPException(
-            503,
-            f"El workspace '{slug}' no está en la base de datos. "
-            "Cárgalo con `uv run variant-generator-server import-instance`.",
-        )
+        raise HTTPException(403, NO_WORKSPACE)
     return workspace
+
+
+def access_for(session: DbSession, user: User, workspace: Workspace, minimum: str) -> Access:
+    row = identity.membership(session, workspace.id, user.id)
+    as_admin = False
+
+    if row is None:
+        if not user.is_admin:
+            raise HTTPException(403, f"No tienes acceso al workspace '{workspace.slug}'.")
+        as_admin, role = True, OWNER
+    else:
+        role = row.role
+        if ROLE_RANK[role] < ROLE_RANK[minimum]:
+            if not user.is_admin:
+                raise HTTPException(
+                    403, f"Tu rol ({role}) no permite esta acción; hace falta {minimum}."
+                )
+            as_admin, role = True, OWNER
+
+    return Access(
+        user=user,
+        workspace=workspace,
+        role=role,
+        ws=settings.workspace_for(workspace.slug),
+        as_admin=as_admin,
+    )
 
 
 def require_member(minimum: str = VIEWER):
     def dependency(
-        user: User = Depends(current_user), session: DbSession = Depends(db)
+        request: Request,
+        user: User = Depends(current_user),
+        session: DbSession = Depends(db),
     ) -> Access:
-        workspace = active_workspace(session)
-        membership = identity.membership(session, workspace.id, user.id)
-        if membership is None:
-            raise HTTPException(403, f"No tienes acceso al workspace '{workspace.slug}'.")
-        if ROLE_RANK[membership.role] < ROLE_RANK[minimum]:
-            raise HTTPException(
-                403, f"Tu rol ({membership.role}) no permite esta acción; hace falta {minimum}."
-            )
-        return Access(user=user, workspace=workspace, role=membership.role)
+        workspace = resolve_workspace(session, user, requested_slug(request))
+        return access_for(session, user, workspace, minimum)
 
     return dependency
 
@@ -139,13 +214,18 @@ def authenticate_socket(websocket: WebSocket) -> Access | None:
             if found is None:
                 return None
             _, user = found
-            workspace = repository.get_workspace(session, settings.workspace().slug)
+            slug = requested_slug(websocket)
+            workspace = (
+                repository.get_workspace(session, slug)
+                if slug
+                else default_workspace_for(session, user)
+            )
             if workspace is None:
                 return None
-            membership = identity.membership(session, workspace.id, user.id)
-            if membership is None:
+            try:
+                return access_for(session, user, workspace, VIEWER)
+            except HTTPException:
                 return None
-            return Access(user=user, workspace=workspace, role=membership.role)
     except (OperationalError, InterfaceError):
         # No database means no way to prove the socket belongs to anyone, and the only
         # safe answer to that is the same as an invalid cookie.

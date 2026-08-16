@@ -278,7 +278,7 @@ export function EvaluationScreen() {
       {!running && listing.data ? (
         <SessionsTable
           sessions={listing.data.sessions}
-          aggregates={listing.data.aggregates}
+          total={listing.data.total}
           onOpen={(id) => {
             setSessionId(id);
             setComposing(false);

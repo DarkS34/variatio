@@ -2,14 +2,14 @@ from fastapi import APIRouter
 
 from variant_generator import config, inference
 
-from .. import auth, deps, runtime, settings
+from .. import auth, deps, runtime
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
 
 @router.get("/health")
-def health() -> dict:
-    ws = settings.workspace()
+def health(access: auth.Access = auth.VIEW) -> dict:
+    ws = access.ws
     available = inference.is_available()
     required = inference.required_models()
 
@@ -40,7 +40,9 @@ def health() -> dict:
             "installed": installed,
             "missing": missing,
         },
-        "context_ready": deps.is_ready(),
+        # Whether *this* workspace's indices are warm, not whether any are: with a registry
+        # of contexts the old process-wide answer would have been true for somebody else.
+        "context_ready": deps.is_ready(ws.slug),
         "workspace": ws.slug,
         "paths": {
             "instance": str(ws.instance_dir),

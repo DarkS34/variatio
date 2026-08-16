@@ -12,8 +12,9 @@ from pathlib import Path
 
 from variant_generator import stages
 from variant_generator.knowledge_graph import KnowledgeGraph
+from variant_generator.workspace import Workspace
 
-from .. import deps, review, settings, storage
+from .. import deps, review, storage
 
 ARTIFACT = review.KNOWLEDGE_GRAPH
 
@@ -25,24 +26,24 @@ class KGError(ValueError):
 # READ ---------------------------------------------------------------------------------------
 
 
-def raw() -> dict:
-    path = review.current_path(ARTIFACT)
+def raw(ws: Workspace) -> dict:
+    path = review.current_path(ws, ARTIFACT)
     if path is None:
         raise KGError("Todavía no hay grafo de conocimiento")
     return storage.read_json(path)
 
 
-def _bank() -> dict:
-    return storage.read_json(settings.workspace().exemplars_bank_path) or {}
+def _bank(ws: Workspace) -> dict:
+    return storage.read_json(ws.exemplars_bank_path) or {}
 
 
-def summary() -> dict:
-    graph_raw = raw()
+def summary(ws: Workspace) -> dict:
+    graph_raw = raw(ws)
     graph = _load(graph_raw)
-    descriptions = stages.load_concept_descriptions()
+    descriptions = stages.load_concept_descriptions(ws)
 
     exemplars: dict[str, int] = {}
-    for item in _bank().values():
+    for item in _bank(ws).values():
         for concept in item.get("concepts") or []:
             exemplars[concept] = exemplars.get(concept, 0) + 1
 
@@ -65,7 +66,7 @@ def summary() -> dict:
     ]
 
     return {
-        "path": str(review.current_path(ARTIFACT)),
+        "path": str(review.current_path(ws, ARTIFACT)),
         "domains": [
             {"name": domain, "concepts": list(names)}
             for domain, names in graph.concepts_by_domains.items()
@@ -89,25 +90,25 @@ def summary() -> dict:
     }
 
 
-def descriptions() -> dict:
-    graph = _load(raw())
-    stored = stages.load_concept_descriptions()
+def descriptions(ws: Workspace) -> dict:
+    graph = _load(raw(ws))
+    stored = stages.load_concept_descriptions(ws)
     return {
         "descriptions": {c: stored.get(c) for c in graph.taggable_concepts},
         "missing": [c for c in graph.taggable_concepts if not stored.get(c)],
     }
 
 
-def set_description(concept: str, text: str) -> dict:
-    graph = _load(raw())
+def set_description(ws: Workspace, concept: str, text: str) -> dict:
+    graph = _load(raw(ws))
     if concept not in graph.all_concepts:
         raise KGError(f"'{concept}' no existe en el grafo")
-    stored = stages.load_concept_descriptions()
+    stored = stages.load_concept_descriptions(ws)
     stored[concept] = text
-    stages.save_concept_descriptions(stored)
+    stages.save_concept_descriptions(stored, ws)
     # The concepts embedding cache fingerprints the descriptions, so it invalidates
     # itself; the in-memory context does not, hence the explicit drop.
-    deps.invalidate(f"descripción de '{concept}' editada")
+    deps.invalidate(ws.slug, f"descripción de '{concept}' editada")
     return {"concept": concept, "description": text}
 
 
@@ -126,46 +127,46 @@ def _load(graph_raw: dict) -> KnowledgeGraph:
         probe.unlink(missing_ok=True)
 
 
-def load_graph(graph_raw: dict | None = None) -> KnowledgeGraph:
-    return _load(graph_raw if graph_raw is not None else raw())
+def load_graph(ws: Workspace, graph_raw: dict | None = None) -> KnowledgeGraph:
+    return _load(graph_raw if graph_raw is not None else raw(ws))
 
 
-def _save(graph_raw: dict, note: str) -> dict:
+def _save(ws: Workspace, graph_raw: dict, note: str) -> dict:
     _load(graph_raw)
-    target = review.canonical_path(ARTIFACT)
-    storage.write_json(target, graph_raw, artifact=ARTIFACT)
-    review.ReviewState().invalidate(ARTIFACT)
-    deps.invalidate(note)
+    target = review.canonical_path(ws, ARTIFACT)
+    storage.write_json(target, graph_raw, ws=ws, artifact=ARTIFACT)
+    review.ReviewState(ws).invalidate(ARTIFACT)
+    deps.invalidate(ws.slug, note)
     return {"path": str(target), "hash": storage.sha256_of(target)}
 
 
-def replace(graph_raw: dict) -> dict:
-    return _save(graph_raw, "grafo de conocimiento reemplazado")
+def replace(ws: Workspace, graph_raw: dict) -> dict:
+    return _save(ws, graph_raw, "grafo de conocimiento reemplazado")
 
 
 def _all_concepts(graph_raw: dict) -> set[str]:
     return {c for names in graph_raw["concepts_by_domains"].values() for c in names}
 
 
-def _bank_references(concept: str) -> int:
+def _bank_references(ws: Workspace, concept: str) -> int:
     return sum(
-        1 for item in _bank().values() if concept in (item.get("concepts") or [])
+        1 for item in _bank(ws).values() if concept in (item.get("concepts") or [])
     )
 
 
 # Domains -------------------------------------------------------------------------------------
 
 
-def add_domain(name: str) -> dict:
-    graph_raw = raw()
+def add_domain(ws: Workspace, name: str) -> dict:
+    graph_raw = raw(ws)
     if name in graph_raw["concepts_by_domains"]:
         raise KGError(f"El dominio '{name}' ya existe")
     graph_raw["concepts_by_domains"][name] = []
-    return _save(graph_raw, f"dominio '{name}' añadido")
+    return _save(ws, graph_raw, f"dominio '{name}' añadido")
 
 
-def rename_domain(name: str, new_name: str) -> dict:
-    graph_raw = raw()
+def rename_domain(ws: Workspace, name: str, new_name: str) -> dict:
+    graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if name not in domains:
         raise KGError(f"El dominio '{name}' no existe")
@@ -174,11 +175,11 @@ def rename_domain(name: str, new_name: str) -> dict:
     graph_raw["concepts_by_domains"] = {
         (new_name if key == name else key): value for key, value in domains.items()
     }
-    return _save(graph_raw, f"dominio '{name}' renombrado")
+    return _save(ws, graph_raw, f"dominio '{name}' renombrado")
 
 
-def delete_domain(name: str, move_to: str | None = None) -> dict:
-    graph_raw = raw()
+def delete_domain(ws: Workspace, name: str, move_to: str | None = None) -> dict:
+    graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if name not in domains:
         raise KGError(f"El dominio '{name}' no existe")
@@ -186,20 +187,20 @@ def delete_domain(name: str, move_to: str | None = None) -> dict:
     orphans = list(domains.pop(name))
     if orphans and move_to is None:
         for concept in orphans:
-            _purge_concept(graph_raw, concept)
+            _purge_concept(ws, graph_raw, concept)
     elif orphans:
         if move_to not in domains:
             raise KGError(f"El dominio destino '{move_to}' no existe")
         domains[move_to].extend(c for c in orphans if c not in domains[move_to])
 
-    return _save(graph_raw, f"dominio '{name}' eliminado")
+    return _save(ws, graph_raw, f"dominio '{name}' eliminado")
 
 
 # Concepts ------------------------------------------------------------------------------------
 
 
-def add_concept(name: str, domain: str, taggable: bool = True) -> dict:
-    graph_raw = raw()
+def add_concept(ws: Workspace, name: str, domain: str, taggable: bool = True) -> dict:
+    graph_raw = raw(ws)
     if name in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' ya existe")
     if domain not in graph_raw["concepts_by_domains"]:
@@ -207,16 +208,17 @@ def add_concept(name: str, domain: str, taggable: bool = True) -> dict:
     graph_raw["concepts_by_domains"][domain].append(name)
     if not taggable:
         graph_raw.setdefault("generic_non_taggable_concepts", []).append(name)
-    return _save(graph_raw, f"concepto '{name}' añadido")
+    return _save(ws, graph_raw, f"concepto '{name}' añadido")
 
 
 def update_concept(
+    ws: Workspace,
     name: str,
     new_name: str | None = None,
     domain: str | None = None,
     taggable: bool | None = None,
 ) -> dict:
-    graph_raw = raw()
+    graph_raw = raw(ws)
     if name not in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' no existe")
 
@@ -235,7 +237,7 @@ def update_concept(
         domains[destination].append(target)
 
     if new_name and new_name != name:
-        _rename_everywhere(graph_raw, name, new_name)
+        _rename_everywhere(ws, graph_raw, name, new_name)
 
     non_taggable = set(graph_raw.get("generic_non_taggable_concepts", []))
     if taggable is True:
@@ -244,24 +246,24 @@ def update_concept(
         non_taggable.add(target)
     graph_raw["generic_non_taggable_concepts"] = sorted(non_taggable)
 
-    references = _bank_references(name) if new_name and new_name != name else 0
-    result = _save(graph_raw, f"concepto '{name}' modificado")
+    references = _bank_references(ws, name) if new_name and new_name != name else 0
+    result = _save(ws, graph_raw, f"concepto '{name}' modificado")
     result["bank_references"] = references
     return result
 
 
-def delete_concept(name: str) -> dict:
-    graph_raw = raw()
+def delete_concept(ws: Workspace, name: str) -> dict:
+    graph_raw = raw(ws)
     if name not in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' no existe")
-    references = _bank_references(name)
-    _purge_concept(graph_raw, name)
-    result = _save(graph_raw, f"concepto '{name}' eliminado")
+    references = _bank_references(ws, name)
+    _purge_concept(ws, graph_raw, name)
+    result = _save(ws, graph_raw, f"concepto '{name}' eliminado")
     result["bank_references"] = references
     return result
 
 
-def _purge_concept(graph_raw: dict, name: str) -> None:
+def _purge_concept(ws: Workspace, graph_raw: dict, name: str) -> None:
     graph_raw["concepts_by_domains"] = {
         domain: [c for c in names if c != name]
         for domain, names in graph_raw["concepts_by_domains"].items()
@@ -274,10 +276,10 @@ def _purge_concept(graph_raw: dict, name: str) -> None:
         data.pop(name, None)
         for source, targets in list(data.items()):
             data[source] = [t for t in targets if t != name]
-    _forget_description(name)
+    _forget_description(ws, name)
 
 
-def _rename_everywhere(graph_raw: dict, name: str, new_name: str) -> None:
+def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str) -> None:
     graph_raw["generic_non_taggable_concepts"] = [
         new_name if c == name else c
         for c in graph_raw.get("generic_non_taggable_concepts", [])
@@ -288,22 +290,22 @@ def _rename_everywhere(graph_raw: dict, name: str, new_name: str) -> None:
             data[new_name] = data.pop(name)
         for source, targets in data.items():
             data[source] = [new_name if t == name else t for t in targets]
-    _move_description(name, new_name)
+    _move_description(ws, name, new_name)
 
 
 # The description cache is keyed by concept name and nothing else invalidates it:
 # a rename would otherwise leave the text stranded under the old key forever.
-def _move_description(name: str, new_name: str) -> None:
-    stored = stages.load_concept_descriptions()
+def _move_description(ws: Workspace, name: str, new_name: str) -> None:
+    stored = stages.load_concept_descriptions(ws)
     if name in stored:
         stored[new_name] = stored.pop(name)
-        stages.save_concept_descriptions(stored)
+        stages.save_concept_descriptions(stored, ws)
 
 
-def _forget_description(name: str) -> None:
-    stored = stages.load_concept_descriptions()
+def _forget_description(ws: Workspace, name: str) -> None:
+    stored = stages.load_concept_descriptions(ws)
     if stored.pop(name, None) is not None:
-        stages.save_concept_descriptions(stored)
+        stages.save_concept_descriptions(stored, ws)
 
 
 # Relations -----------------------------------------------------------------------------------
@@ -316,8 +318,8 @@ def _relation(graph_raw: dict, verb: str) -> dict:
     raise KGError(f"La relación '{verb}' no existe")
 
 
-def add_edge(verb: str, source: str, target: str) -> dict:
-    graph_raw = raw()
+def add_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
+    graph_raw = raw(ws)
     concepts = _all_concepts(graph_raw)
     for concept in (source, target):
         if concept not in concepts:
@@ -330,11 +332,11 @@ def add_edge(verb: str, source: str, target: str) -> dict:
     if target in targets:
         raise KGError(f"'{source} {verb} {target}' ya existe")
     targets.append(target)
-    return _save(graph_raw, f"relación '{source} {verb} {target}' añadida")
+    return _save(ws, graph_raw, f"relación '{source} {verb} {target}' añadida")
 
 
-def remove_edge(verb: str, source: str, target: str) -> dict:
-    graph_raw = raw()
+def remove_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
+    graph_raw = raw(ws)
     data = _relation(graph_raw, verb).get("relations_data", {})
     changed = False
     for src, tgt in ((source, target), (target, source)):
@@ -343,11 +345,11 @@ def remove_edge(verb: str, source: str, target: str) -> dict:
             changed = True
     if not changed:
         raise KGError(f"No existe '{source} {verb} {target}'")
-    return _save(graph_raw, f"relación '{source} {verb} {target}' eliminada")
+    return _save(ws, graph_raw, f"relación '{source} {verb} {target}' eliminada")
 
 
-def neighbours(concept: str) -> dict:
-    graph = _load(raw())
+def neighbours(ws: Workspace, concept: str) -> dict:
+    graph = _load(raw(ws))
     if concept not in graph.all_concepts:
         raise KGError(f"El concepto '{concept}' no existe")
     out: dict[str, dict] = {}

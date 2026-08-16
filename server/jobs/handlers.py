@@ -1,4 +1,9 @@
-"""What each job kind actually does. One place, so the runner stays generic."""
+"""What each job kind actually does. One place, so the runner stays generic.
+
+Every handler resolves its paths from `job.workspace` and nothing else. That is the rule
+phase 3 rests on: the runner is one queue for the whole installation, so a handler that
+read a process-wide workspace would write one person's build into another's directory.
+"""
 
 from loguru import logger
 
@@ -6,11 +11,17 @@ from variant_generator import config, progress, stages
 from variant_generator.concept_tagger import ConceptTagger
 from variant_generator.evaluation import ARMS
 from variant_generator.evaluation import rag as rag_arm
+from variant_generator.workspace import Workspace
 
-from .. import deps, evaluation_store, review
+from .. import deps, evaluation_store, review, settings
+from ..db import repository, session_scope, study
 from .build_process import run_build
 from .models import Job
 from .runner import JobControl
+
+
+def _workspace(job: Job) -> Workspace:
+    return settings.workspace_for(job.workspace)
 
 
 def _build(artifact: str):
@@ -22,10 +33,11 @@ def _build(artifact: str):
 
 # Building the context embeds every concept description and the whole bank. It is
 # minutes of silence the first time, so it gets its own step and says what it costs.
-def _context(reload: bool = False):
-    if deps.is_ready() and not reload:
+def _context(job: Job, reload: bool = False):
+    ws = _workspace(job)
+    if deps.is_ready(ws.slug) and not reload:
         logger.info("Índices ya calientes en memoria: se reutilizan")
-        return deps.get_context()
+        return deps.get_context(ws)
 
     label = (
         "Reconstruyendo el contexto: instancia + índices"
@@ -35,9 +47,9 @@ def _context(reload: bool = False):
     with progress.step("context", label):
         logger.info(
             "Cargando perfil, grafo y banco, y calculando los embeddings que falten "
-            f"con '{config.EMBEDDING_LLM}' (se reutiliza la caché de cache/embeddings/)"
+            f"con '{config.EMBEDDING_LLM}' (se reutiliza la caché de {ws.cache_dir.name}/embeddings/)"
         )
-        context = deps.reload_context() if reload else deps.get_context()
+        context = deps.reload_context(ws) if reload else deps.get_context(ws)
     logger.success(
         f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s) "
         f"y {len(context.exemplars_bank)} ítem(s) del banco"
@@ -47,6 +59,7 @@ def _context(reload: bool = False):
 
 def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     deps.require_inference()
+    ws = _workspace(job)
     concepts = job.params.get("concepts")
     overwrite = bool(job.params.get("overwrite"))
     logger.info(
@@ -58,9 +71,9 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
         )
         + (" (se reescriben las existentes)" if overwrite else " (solo los que no la tienen)")
     )
-    descriptions = stages.describe_concepts(concepts=concepts, overwrite=overwrite)
+    descriptions = stages.describe_concepts(concepts=concepts, overwrite=overwrite, ws=ws)
     # New prose means new embeddings; the cached context would keep matching the old.
-    deps.invalidate("descripciones de conceptos regeneradas")
+    deps.invalidate(ws.slug, "descripciones de conceptos regeneradas")
     logger.success(
         f"{len(descriptions)} descripción(es) disponibles. El índice se recalculará en el "
         "próximo trabajo que lo necesite."
@@ -70,7 +83,7 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
 
 def handle_index(job: Job, control: JobControl) -> dict:
     deps.require_inference()
-    context = _context(reload=True)
+    context = _context(job, reload=True)
     return {
         "concepts": len(context.embedder.concepts_index),
         "items": len(context.exemplars_bank),
@@ -79,7 +92,7 @@ def handle_index(job: Job, control: JobControl) -> dict:
 
 def handle_tag(job: Job, control: JobControl) -> dict:
     deps.require_inference()
-    context = _context()
+    context = _context(job)
     ids = job.params.get("ids") or None
     pending = ids if ids is not None else ConceptTagger.pending_ids(context.exemplars_bank)
     logger.info(
@@ -103,7 +116,7 @@ def handle_tag(job: Job, control: JobControl) -> dict:
 
 def handle_generate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
-    context = _context()
+    context = _context(job)
     params = job.params
     n = int(params.get("n") or 1)
     concepts = params.get("concepts") or None
@@ -150,19 +163,57 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         )
     else:
         logger.success(f"{len(results)} ítem(s) generados y validados contra el perfil")
+
+    items = [
+        {
+            "item": r.item.model_dump(mode="json"),
+            "item_type": r.item_type,
+            "thinking": r.thinking,
+        }
+        for r in results
+    ]
+    saved = _remember(job, items, resolved_type.key)
     return {
         "requested": n,
         "produced": len(results),
         "item_type": resolved_type.key,
-        "items": [
-            {
-                "item": r.item.model_dump(mode="json"),
-                "item_type": r.item_type,
-                "thinking": r.thinking,
-            }
-            for r in results
-        ],
+        "saved": saved,
+        "items": items,
     }
+
+
+# Persisting the variants is deliberately best-effort: a database that is briefly away
+# must not turn a minute of GPU into a failed job, because the items are already in the
+# job result and on screen. What is lost is the history, and the log says so.
+def _remember(job: Job, items: list[dict], item_type: str) -> int:
+    if not items:
+        return 0
+    params = job.params
+    try:
+        with session_scope() as session:
+            workspace = repository.get_workspace(session, job.workspace)
+            if workspace is None:
+                return 0
+            for entry in items:
+                study.save_generation(
+                    session,
+                    workspace_id=workspace.id,
+                    user_id=job.user_id,
+                    job_id=job.id,
+                    item_type=entry.get("item_type") or item_type,
+                    item=entry["item"],
+                    concepts=params.get("concepts") or [],
+                    curriculum=params.get("curriculum") or [],
+                    fixed=params.get("fixed") or {},
+                    instructions=params.get("instructions"),
+                    think=bool(params.get("think", True)),
+                    thinking=entry.get("thinking"),
+                )
+    except Exception as exc:  # noqa: BLE001 - the run succeeded; only its record did not
+        logger.warning(f"No se pudieron guardar las variantes en la base de datos: {exc}")
+        return 0
+    logger.info(f"{len(items)} variante(s) guardadas en el historial")
+    return len(items)
 
 
 # WHAT THE EVALUATION IS ALLOWED TO SAY WHILE IT RUNS -------------------------------------------
@@ -192,7 +243,7 @@ class _BlindEmitter:
 
 def handle_evaluate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
-    context = _context()
+    context = _context(job)
     params = job.params
     concepts = params.get("concepts") or []
     fixed = params.get("fixed") or None
@@ -225,7 +276,15 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
             seed=params.get("seed"),
             job_id=job.id,
         )
-    evaluation_store.save(session)
+
+    with session_scope() as db_session:
+        workspace = repository.get_workspace(db_session, job.workspace)
+        if workspace is None:
+            raise RuntimeError(
+                f"El workspace '{job.workspace}' ya no está en la base de datos: "
+                "la sesión de evaluación no se puede guardar."
+            )
+        evaluation_store.save(db_session, workspace.id, job.user_id, session)
 
     produced = sum(1 for result in session.arms.values() if result.status == "ok")
     logger.success(

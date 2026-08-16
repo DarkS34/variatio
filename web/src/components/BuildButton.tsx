@@ -56,7 +56,13 @@ export function BuildButton({
   const estimate = useBuildEstimate(stage.artifact);
 
   const missing = stage.status === "missing";
-  const busy = Boolean(pipeline.data?.current_job) || submit.isPending;
+  // The GPU is one machine for the whole installation, so «ocupado» means ocupado by
+  // anyone — not only by this workspace. `current_job` is now scoped to what you may see,
+  // so the global flag beside it is what this button has to read; using the scoped one
+  // would offer a build that then sat in a queue with nothing on screen explaining why.
+  const engineBusy = Boolean(pipeline.data?.engine_busy);
+  const elsewhere = Boolean(pipeline.data?.engine_busy_elsewhere);
+  const busy = engineBusy || submit.isPending;
   const offline = health.data ? !health.data.available : false;
 
   // The permission goes first: a viewer being told that a raw slot is empty would be
@@ -70,7 +76,9 @@ export function BuildButton({
         : offline
           ? "El motor de inferencia no responde."
           : busy
-            ? `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
+            ? elsewhere
+              ? "La GPU está ocupada con un trabajo de otro workspace. Solo se ejecuta uno cada vez."
+              : `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
             : null;
 
   // The wait is part of the decision, so it belongs on the control that starts it and

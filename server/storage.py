@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from . import settings
+from variant_generator.workspace import Workspace
 
 
 def read_json(path: Path) -> dict | list | None:
@@ -26,12 +26,12 @@ def sha256_of(path: Path | None) -> str | None:
     return digest.hexdigest()
 
 
-def backup(path: Path, artifact: str) -> Path | None:
+def backup(ws: Workspace, path: Path, artifact: str) -> Path | None:
     """Snapshot the current file before overwriting it, so an edit is undoable."""
     path = Path(path)
     if not path.is_file():
         return None
-    target_dir = settings.workspace().history_dir / artifact
+    target_dir = ws.history_dir / artifact
     target_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     target = target_dir / f"{stamp}{path.suffix}"
@@ -46,10 +46,10 @@ def _prune(directory: Path, keep: int) -> None:
         stale.unlink(missing_ok=True)
 
 
-def write_json(path: Path, data, artifact: str | None = None) -> Path:
+def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | None = None) -> Path:
     path = Path(path)
-    if artifact:
-        backup(path, artifact)
+    if artifact and ws is not None:
+        backup(ws, path, artifact)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(f"{path.suffix}.tmp")
     with tmp.open("w", encoding="utf-8") as f:
@@ -58,8 +58,8 @@ def write_json(path: Path, data, artifact: str | None = None) -> Path:
     return path
 
 
-def history(artifact: str) -> list[dict]:
-    directory = settings.workspace().history_dir / artifact
+def history(ws: Workspace, artifact: str) -> list[dict]:
+    directory = ws.history_dir / artifact
     if not directory.is_dir():
         return []
     return [
@@ -72,8 +72,8 @@ def history(artifact: str) -> list[dict]:
     ]
 
 
-def restore(artifact: str, snapshot_id: str, target: Path) -> Path:
-    source = settings.workspace().history_dir / artifact / snapshot_id
+def restore(ws: Workspace, artifact: str, snapshot_id: str, target: Path) -> Path:
+    source = ws.history_dir / artifact / snapshot_id
     if not source.is_file():
         raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")
-    return write_json(Path(target), read_json(source), artifact=artifact)
+    return write_json(Path(target), read_json(source), ws=ws, artifact=artifact)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import auth, estimates, review, runtime, storage
+from .. import auth, deps, estimates, review, runtime, storage
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -22,63 +22,80 @@ def _check(artifact: str) -> None:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'")
 
 
-@router.get("")
-def get_pipeline() -> dict:
-    stages = runtime.pipeline_snapshot()
+# The chain of one workspace. `current_job` is deliberately the *global* one: there is a
+# single GPU, so "somebody is building something" is true for everyone and hiding it would
+# leave a queued job looking stuck. Which artifacts are marked as building is scoped,
+# because that is a statement about this instance's files.
+def pipeline_payload(access: auth.Access) -> dict:
+    stages = runtime.pipeline_snapshot(access.ws)
     for stage in stages:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
     current = runtime.runner.current()
+    mine = current is not None and current.workspace == access.ws.slug
     return {
         "stages": stages,
         "generation_unlocked": all(s["status"] == "approved" for s in stages),
-        "current_job": current.to_dict() if current else None,
-        "queued": len(runtime.runner.pending()),
+        "current_job": current.to_dict() if mine else None,
+        "queued": len(runtime.runner.pending(access.ws.slug)),
+        # Somebody else is holding the one GPU: the honest reason a job of yours has not
+        # started, and something no per-workspace number can express.
+        "engine_busy": current is not None,
+        "engine_busy_elsewhere": current is not None and not mine,
     }
+
+
+@router.get("")
+def get_pipeline(access: auth.Access = auth.VIEW) -> dict:
+    return pipeline_payload(access)
 
 
 # Declared before `/{artifact}/…` so «estimates» is read as itself and not as an artifact.
 @router.get("/estimates")
-def build_estimates() -> dict:
-    return estimates.snapshot()
+def build_estimates(access: auth.Access = auth.VIEW) -> dict:
+    return estimates.snapshot(access.ws)
 
 
 @router.post("/{artifact}/approve", dependencies=[auth.EDIT])
-def approve(artifact: str) -> dict:
+def approve(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     _check(artifact)
     try:
-        runtime.review_state.approve(artifact)
+        runtime.review_state(access.ws).approve(artifact)
     except FileNotFoundError as exc:
         raise HTTPException(409, str(exc)) from exc
-    runtime.bus.publish(None, "pipeline.changed", {"artifact": artifact, "action": "approve"})
-    return get_pipeline()
+    runtime.bus.publish(
+        access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "approve"}
+    )
+    return pipeline_payload(access)
 
 
 @router.post("/{artifact}/reopen", dependencies=[auth.EDIT])
-def reopen(artifact: str) -> dict:
+def reopen(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     _check(artifact)
-    runtime.review_state.reopen(artifact)
-    runtime.bus.publish(None, "pipeline.changed", {"artifact": artifact, "action": "reopen"})
-    return get_pipeline()
+    runtime.review_state(access.ws).reopen(artifact)
+    runtime.bus.publish(
+        access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "reopen"}
+    )
+    return pipeline_payload(access)
 
 
 @router.get("/{artifact}/history")
-def history(artifact: str) -> dict:
+def history(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     _check(artifact)
-    return {"artifact": artifact, "snapshots": storage.history(artifact)}
+    return {"artifact": artifact, "snapshots": storage.history(access.ws, artifact)}
 
 
 @router.post("/{artifact}/restore", dependencies=[auth.EDIT])
-def restore(artifact: str, body: RestoreBody) -> dict:
+def restore(artifact: str, body: RestoreBody, access: auth.Access = auth.VIEW) -> dict:
     _check(artifact)
-    target = review.canonical_path(artifact)
+    target = review.canonical_path(access.ws, artifact)
     try:
-        storage.restore(artifact, body.snapshot_id, target)
+        storage.restore(access.ws, artifact, body.snapshot_id, target)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
 
-    from .. import deps
-
-    runtime.review_state.invalidate(artifact)
-    deps.invalidate(f"'{artifact}' restaurado desde una copia")
-    runtime.bus.publish(None, "pipeline.changed", {"artifact": artifact, "action": "restore"})
-    return get_pipeline()
+    runtime.review_state(access.ws).invalidate(artifact)
+    deps.invalidate(access.ws.slug, f"'{artifact}' restaurado desde una copia")
+    runtime.bus.publish(
+        access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "restore"}
+    )
+    return pipeline_payload(access)

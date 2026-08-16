@@ -7,7 +7,8 @@ surface a web login has, and with it the captcha and the anti-spam quotas.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr, Field
+from loguru import logger
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from .. import settings
@@ -20,25 +21,24 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Deliberately the same sentence for "no such account" and "wrong password", and the
 # failing path pays for a decoy hash so that the two also take the same time. Either
-# half alone still answers "does this address have an account here?".
-BAD_CREDENTIALS = "Correo o contraseña incorrectos."
+# half alone still answers "does this name have an account here?".
+BAD_CREDENTIALS = "Usuario o contraseña incorrectos."
 
 
 class Credentials(BaseModel):
-    email: EmailStr
+    username: str
     password: str
 
 
 class InviteBody(BaseModel):
-    email: EmailStr | None = None
     role: str = EDITOR
     workspace: bool = True
 
 
 class AcceptBody(BaseModel):
     token: str
+    username: str
     name: str = ""
-    email: EmailStr | None = None
     password: str
 
 
@@ -50,7 +50,7 @@ class PasswordBody(BaseModel):
 
 
 class ForgotBody(BaseModel):
-    email: EmailStr
+    username: str
 
 
 class ResetBody(BaseModel):
@@ -72,10 +72,10 @@ def login(
     response: Response,
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    email = identity.normalise_email(body.email)
-    _throttle("login", request, email)
+    username = identity.normalise_username(body.username)
+    _throttle("login", request, username)
 
-    user = identity.get_user(session, email)
+    user = identity.get_user(session, username)
     if user is None or not user.active:
         passwords.waste_time()
         raise HTTPException(401, BAD_CREDENTIALS)
@@ -87,7 +87,7 @@ def login(
     if passwords.needs_rehash(user.password_hash):
         identity.set_password(session, user, passwords.hash_password(body.password))
 
-    limiter.clear("login", email)
+    limiter.clear("login", username)
     limiter.clear("login", deps.client_ip(request))
     _issue_session(session, user, request, response)
     return _me(session, user)
@@ -152,11 +152,11 @@ def change_password(
     user: User = Depends(deps.current_user),
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    _throttle("password", request, user.email)
+    _throttle("password", request, user.username)
     if not passwords.verify_password(user.password_hash, body.current):
         raise HTTPException(403, "La contraseña actual no es correcta.")
 
-    error = passwords.policy_error(body.next, email=user.email, name=user.name)
+    error = passwords.policy_error(body.next, account=user.username, name=user.name)
     if error:
         raise HTTPException(422, error)
 
@@ -170,24 +170,33 @@ def change_password(
 
 @router.post("/forgot", status_code=202)
 def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps.db)) -> dict:
-    email = identity.normalise_email(body.email)
-    _throttle("forgot", request, email)
+    username = identity.normalise_username(body.username)
+    _throttle("forgot", request, username)
 
-    user = identity.get_user(session, email)
+    user = identity.get_user(session, username)
     if user is not None and user.active:
         token = tokens.new_token()
         identity.create_reset(session, user.id, tokens.digest(token), settings.RESET_TTL)
         link = f"{_base_url(request)}/restablecer?token={token}"
-        mail.send(
-            user.email,
-            "Restablece tu contraseña",
-            "Has pedido restablecer la contraseña del generador de variantes.\n\n"
-            f"Abre este enlace en menos de {int(settings.RESET_TTL.total_seconds() // 60)} "
-            f"minutos:\n{link}\n\n"
-            "Si no has sido tú, ignora este mensaje: la contraseña actual sigue valiendo.",
-        )
+        minutes = int(settings.RESET_TTL.total_seconds() // 60)
+        if user.email:
+            mail.send(
+                user.email,
+                "Restablece tu contraseña",
+                "Has pedido restablecer la contraseña del generador de variantes.\n\n"
+                f"Abre este enlace en menos de {minutes} minutos:\n{link}\n\n"
+                "Si no has sido tú, ignora este mensaje: la contraseña actual sigue valiendo.",
+            )
+        else:
+            # No address on the account, which is the normal case here. The link still
+            # exists and still expires; the only route to its owner is by hand, so it goes
+            # where whoever administers the installation is already looking.
+            logger.info(
+                f"Restablecimiento pedido por «{user.username}», sin correo en la cuenta. "
+                f"Enlace válido {minutes} min: {link}"
+            )
 
-    # Always the same answer, whether or not the address exists: this endpoint is the
+    # Always the same answer, whether or not the account exists: this endpoint is the
     # easiest place to enumerate accounts and it must not answer that question.
     return {"sent": True}
 
@@ -208,16 +217,16 @@ def reset(
     if user is None or not user.active:
         raise HTTPException(404, "Ese enlace ya no vale. Pide otro.")
 
-    error = passwords.policy_error(body.password, email=user.email, name=user.name)
+    error = passwords.policy_error(body.password, account=user.username, name=user.name)
     if error:
         raise HTTPException(422, error)
 
     identity.set_password(session, user, passwords.hash_password(body.password))
     identity.consume_reset(session, row)
     identity.revoke_all_sessions(session, user.id)
-    # Following the link proved control of the mailbox, which is the same evidence the
-    # invitation flow accepts, so the reset also verifies the address.
-    if user.email_verified_at is None:
+    # A link that arrived by mail proves control of that mailbox; one handed over by the
+    # administrator proves nothing about an address, so only the first case verifies one.
+    if user.email and user.email_verified_at is None:
         user.email_verified_at = identity.now()
     _issue_session(session, user, request, response)
     return _me(session, user)
@@ -233,7 +242,6 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
         raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
     workspace = invite.workspace
     return {
-        "email": invite.email,
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
         "expires_at": invite.expires_at.isoformat(),
@@ -251,41 +259,31 @@ def accept_invite(
     if invite is None:
         raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
 
-    # A bound invitation fixes the address: the token was mailed there, so redeeming it is
-    # the proof of control that replaces a separate verification round.
-    email = identity.normalise_email(invite.email or (body.email or ""))
-    if not email:
-        raise HTTPException(422, "Falta el correo.")
-    if invite.email and body.email and identity.normalise_email(body.email) != invite.email:
-        raise HTTPException(422, "Esta invitación es para otra dirección de correo.")
+    username = identity.normalise_username(body.username)
+    error = identity.username_error(username)
+    if error:
+        raise HTTPException(422, error)
 
-    existing = identity.get_user(session, email)
-    if existing is not None:
-        if not invite.email:
-            raise HTTPException(
-                409, "Ese correo ya tiene cuenta. Pide una invitación dirigida a esa dirección."
-            )
-        # The account is already there and the password stays untouched — an invitation is
-        # not a way to set somebody else's credentials. It only adds the membership.
-        _apply_membership(session, invite, existing)
-        identity.consume_invite(session, invite, existing.id)
-        return {"created": False, "email": existing.email}
+    # An invitation is not a way to set somebody else's credentials, so a name that is
+    # already taken is refused outright rather than quietly granting the membership to
+    # whoever happens to be holding the link.
+    if identity.get_user(session, username) is not None:
+        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
 
-    error = passwords.policy_error(body.password, email=email, name=body.name)
+    error = passwords.policy_error(body.password, account=username, name=body.name)
     if error:
         raise HTTPException(422, error)
 
     user = identity.create_user(
         session,
-        email=email,
-        name=body.name.strip() or email.split("@")[0],
+        username=username,
+        name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
-        email_verified=bool(invite.email),
     )
     _apply_membership(session, invite, user)
     identity.consume_invite(session, invite, user.id)
     _issue_session(session, user, request, response)
-    return {"created": True, **_me(session, user)}
+    return _me(session, user)
 
 
 @router.get("/invites")
@@ -308,7 +306,7 @@ def create_invite(
     access: deps.Access = Depends(deps.require_member(OWNER)),
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    _throttle("invite", request, access.user.email)
+    _throttle("invite", request, access.user.username)
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
 
@@ -317,26 +315,16 @@ def create_invite(
         session,
         token_hash=tokens.digest(token),
         ttl=settings.INVITE_TTL,
-        email=body.email,
         workspace_id=access.workspace.id if body.workspace else None,
         role=body.role,
         created_by=access.user.id,
     )
 
-    link = f"{_base_url(request)}/invitacion?token={token}"
-    delivered = False
-    if body.email:
-        delivered = mail.send(
-            str(body.email),
-            "Te han invitado al generador de variantes",
-            f"{access.user.name} te invita a «{access.workspace.name}» como {body.role}.\n\n"
-            f"Crea tu cuenta con este enlace, válido {settings.INVITE_TTL.days} días:\n{link}\n",
-        )
-
-    # The link comes back in the response whether or not the mail went out: with no SMTP
-    # configured, handing it to whoever issued it is the honest behaviour, and it is also
-    # how a closed group of colleagues actually passes an invitation around.
-    return {"invite": _invite_view(invite, session), "link": link, "mailed": delivered}
+    # The link IS the invitation: it is single-use, it expires, and whoever issued it hands
+    # it over themselves. There is no address to bind it to any more, so the person
+    # redeeming it chooses their own username — which is why the link must not be posted
+    # anywhere its holder was not meant to be.
+    return {"invite": _invite_view(invite, session), "link": f"{_base_url(request)}/invitacion?token={token}"}
 
 
 @router.delete("/invites/{invite_id}")
@@ -363,7 +351,7 @@ def members(
         "members": [
             {
                 "id": user.id,
-                "email": user.email,
+                "username": user.username,
                 "name": user.name,
                 "role": membership.role,
                 "disabled": not user.active,
@@ -406,23 +394,48 @@ def remove_member(
 # HELPERS ---------------------------------------------------------------------------
 
 
+# `active` is no longer "the workspace this process serves" — there is no such thing since
+# phase 3 — but the one this account lands in, which the browser then repeats back on every
+# request as `X-Workspace`. `role` is the role *there*, so the UI knows what to offer
+# before it has asked for anything.
 def _me(session: DbSession, user: User) -> dict:
     rows = identity.memberships_for(session, user.id)
-    active = settings.workspace().slug
+    current = deps.default_workspace_for(session, user)
+    active = current.slug if current else None
+    mine = {w.id: m.role for m, w in rows}
+
+    workspaces = [
+        {"slug": w.slug, "name": w.name, "role": m.role, "active": w.slug == active}
+        for m, w in rows
+    ]
+    if current is not None and current.id not in mine:
+        # An administrator with no membership still lands somewhere, and the switcher has
+        # to list it or the app would open on a workspace it does not show.
+        workspaces.append(
+            {"slug": current.slug, "name": current.name, "role": OWNER, "active": True}
+        )
+
     return {
         "user": {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "name": user.name,
             "is_admin": user.is_admin,
-            "email_verified": user.email_verified_at is not None,
         },
-        "workspaces": [
-            {"slug": w.slug, "name": w.name, "role": m.role, "active": w.slug == active}
-            for m, w in rows
-        ],
-        "role": next((m.role for m, w in rows if w.slug == active), None),
+        "workspaces": workspaces,
+        "active_workspace": active,
+        # Matches what `access_for` will decide on the next request, administrator bypass
+        # included: a `null` here makes the gate show «todavía no tienes acceso», so it
+        # must not say that to someone every route is about to let through.
+        "role": _role_here(user, current, mine),
     }
+
+
+def _role_here(user: User, current: Workspace | None, mine: dict[int, str]) -> str | None:
+    if current is None:
+        return None
+    return mine.get(current.id) or (OWNER if user.is_admin else None)
 
 
 def _issue_session(session: DbSession, user: User, request: Request, response: Response) -> None:
@@ -475,7 +488,6 @@ def _invite_view(invite: Invite, session: DbSession) -> dict:
     workspace = session.get(Workspace, invite.workspace_id) if invite.workspace_id else None
     return {
         "id": invite.id,
-        "email": invite.email,
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
         "created_at": invite.created_at.isoformat(),

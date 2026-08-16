@@ -23,7 +23,7 @@ export function AcceptInvite({ token }: { token: string }) {
   });
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const accept = useAcceptInvite();
 
@@ -52,36 +52,10 @@ export function AcceptInvite({ token }: { token: string }) {
   }
 
   const invite = preview.data!;
-  const bound = Boolean(invite.email);
-
-  // Redeeming an invitation aimed at an existing address only adds the membership: it is
-  // not a way to set somebody else's password, so the screen says what actually happened.
-  if (accept.isSuccess && !accept.data.created) {
-    return (
-      <AuthLayout
-        title="Ya tienes cuenta"
-        description={`Te hemos añadido a «${invite.workspace}». Entra con tu contraseña de siempre.`}
-        footer={
-          <a href="/" className="text-muted-foreground hover:underline">
-            Ir a la pantalla de entrada
-          </a>
-        }
-      >
-        <Button className="w-full" onClick={() => window.location.assign("/")}>
-          Entrar
-        </Button>
-      </AuthLayout>
-    );
-  }
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    accept.mutate({
-      token,
-      name: name.trim(),
-      email: bound ? undefined : email.trim(),
-      password,
-    });
+    accept.mutate({ token, username: username.trim(), name: name.trim(), password });
   };
 
   return (
@@ -95,27 +69,29 @@ export function AcceptInvite({ token }: { token: string }) {
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-name">Nombre</Label>
+          <Label htmlFor="invite-username">Usuario</Label>
           <Input
-            id="invite-name"
+            id="invite-username"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
             required
             autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            Con esto entrarás. Minúsculas, cifras, punto, guion o guion bajo.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-email">Correo</Label>
+          <Label htmlFor="invite-name">Nombre visible</Label>
           <Input
-            id="invite-email"
-            type="email"
-            autoComplete="username"
+            id="invite-name"
             required
-            readOnly={bound}
-            value={bound ? invite.email! : email}
-            onChange={(event) => setEmail(event.target.value)}
-            className={bound ? "text-muted-foreground" : undefined}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
           />
         </div>
 

@@ -79,7 +79,7 @@ def waste_time() -> None:
         pass
 
 
-def policy_error(password: str, *, email: str = "", name: str = "") -> str | None:
+def policy_error(password: str, *, account: str = "", name: str = "") -> str | None:
     """The reason this password is not acceptable, in the user's language, or None."""
     password = _normalise(password)
     if len(password) < MIN_LENGTH:
@@ -95,10 +95,12 @@ def policy_error(password: str, *, email: str = "", name: str = "") -> str | Non
     if _is_sequence(lowered):
         return "Esa contraseña es una secuencia del teclado. Elige otra."
 
-    local = email.split("@")[0].lower() if email else ""
+    # `account` is the username; splitting on "@" costs nothing and keeps this right if it
+    # is ever handed an address instead.
+    local = account.split("@")[0].lower() if account else ""
     for personal in (local, name.lower()):
         if len(personal) >= 4 and personal in lowered:
-            return "La contraseña no puede contener tu nombre ni tu correo."
+            return "La contraseña no puede contener tu nombre ni tu usuario."
     return None
 
 

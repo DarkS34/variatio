@@ -3,9 +3,14 @@ import type { EvaluationArm } from "@/lib/types";
 /**
  * What each arm is, in the evaluator's words, and the colour it wears once revealed.
  *
- * The colours are the app's own state tokens, not a new palette: the system arm gets the
- * app's colour because it IS the app, the RAG baseline gets the "settled" teal, and the
- * commercial model gets a plain neutral — an outsider with no stake in the palette.
+ * The colours are `--arm-*`, the app's only categorical scale, and they are measured
+ * rather than chosen — see the note beside them in `index.css`. They used to borrow the
+ * state tokens (muted-foreground, success, primary), which told a nice story — the system
+ * wearing the app's own colour, the commercial model a neutral outsider — and failed as an
+ * encoding: gray against teal is ΔE 7.5 in normal vision, half the readable floor.
+ *
+ * `ARMS` order is also the order the palette was validated on, so anything that draws the
+ * three arms side by side draws them in it.
  *
  * They appear ONLY after the reveal. Before it the three cards are deliberately
  * colourless, because a card wearing a colour is a card carrying information.
@@ -17,21 +22,21 @@ export const ARM_META: Record<
   naive: {
     label: "Modelo comercial",
     short: "Comercial",
-    colour: "var(--muted-foreground)",
+    colour: "var(--arm-naive)",
     description:
       "Un modelo comercial generalista de gama gratuita, con el prompt que escribiría cualquiera con prisa: el tema, el contexto docente y las claves de salida. Ni banco ni grafo.",
   },
   rag: {
     label: "Solo RAG sobre el banco",
     short: "Solo RAG",
-    colour: "var(--success)",
+    colour: "var(--arm-rag)",
     description:
       "Búsqueda por similitud sobre los enunciados del banco, con los más parecidos como ejemplos. Mismo modelo local que el sistema, pero sin grafo: sin descripciones de concepto, sin prerrequisitos y sin currículo.",
   },
   system: {
     label: "Este sistema",
     short: "Sistema",
-    colour: "var(--primary)",
+    colour: "var(--arm-system)",
     description:
       "El pipeline completo: ejemplos elegidos por concepto principal, prerrequisitos como andamiaje, conceptos posteriores prohibidos y el currículo como restricción dura.",
   },

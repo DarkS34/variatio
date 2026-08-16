@@ -41,10 +41,17 @@ JOB_ARTIFACT: dict[str, str] = {
 }
 
 
+# The queue is one deep because there is one GPU, but the jobs in it now belong to
+# different instances and different people. `workspace` is what every handler resolves its
+# paths from — a handler that read a process-wide workspace would write one user's build
+# into another's directory — and `user_id` is what attributes the variants a run produces.
 @dataclass
 class Job:
     kind: str
     params: dict = field(default_factory=dict)
+    workspace: str = ""
+    user_id: int | None = None
+    user_name: str | None = None
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     status: str = "queued"
     created_at: float = field(default_factory=time.time)

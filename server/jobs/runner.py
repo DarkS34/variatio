@@ -35,7 +35,7 @@ class JobControl:
 
     # progress.Emitter protocol
     def emit(self, kind: str, payload: dict) -> None:
-        self._bus.publish(self.job.id, kind, payload)
+        self._bus.publish(self.job.workspace, self.job.id, kind, payload)
 
     def should_cancel(self) -> bool:
         return self.cancel_event.is_set()
@@ -111,15 +111,28 @@ class JobRunner:
 
     # API -----------------------------------------------------------------------------------
 
-    def submit(self, kind: str, params: dict | None = None) -> Job:
+    def submit(
+        self,
+        kind: str,
+        params: dict | None = None,
+        workspace: str = "",
+        user_id: int | None = None,
+        user_name: str | None = None,
+    ) -> Job:
         if kind not in self.handlers:
             raise ValueError(f"Unknown job kind '{kind}'")
-        job = Job(kind=kind, params=params or {})
+        job = Job(
+            kind=kind,
+            params=params or {},
+            workspace=workspace,
+            user_id=user_id,
+            user_name=user_name,
+        )
         with self._lock:
             self._jobs[job.id] = job
             self._controls[job.id] = JobControl(self.bus, job)
             self._order.append(job.id)
-        self.bus.publish(job.id, "job.queued", {"job": job.to_dict()})
+        self.bus.publish(job.workspace, job.id, "job.queued", {"job": job.to_dict()})
         self._queue.put(job.id)
         return job
 
@@ -132,37 +145,62 @@ class JobRunner:
             if job.status == "queued":
                 job.status = "cancelled"
                 job.finished_at = time.time()
-                self.bus.publish(job_id, "job.cancelled", {"job": job.to_dict()})
+                self.bus.publish(
+                    job.workspace, job_id, "job.cancelled", {"job": job.to_dict()}
+                )
                 return True
             if job.status != "running" or control is None:
                 return False
         control.request_cancel()
-        self.bus.publish(job_id, "job.cancelling", {})
+        self.bus.publish(job.workspace, job_id, "job.cancelling", {})
         return True
 
     def get(self, job_id: str) -> Job | None:
         with self._lock:
             return self._jobs.get(job_id)
 
-    def all(self, limit: int = 50) -> list[Job]:
+    # Every listing narrows by workspace, and `None` means "the whole queue" — used only
+    # where the caller has already established the right to see it. The GPU is shared, so
+    # "something is running" is legitimately global; *what* is running is not.
+    def all(self, limit: int = 50, workspace: str | None = None) -> list[Job]:
         with self._lock:
-            return [self._jobs[i] for i in self._order[-limit:]][::-1]
+            jobs = [self._jobs[i] for i in self._order]
+        if workspace is not None:
+            jobs = [j for j in jobs if j.workspace == workspace]
+        return jobs[-limit:][::-1]
 
     def current(self) -> Job | None:
         with self._lock:
             return self._jobs.get(self._current) if self._current else None
 
-    def pending(self) -> list[Job]:
+    def pending(self, workspace: str | None = None) -> list[Job]:
         with self._lock:
-            return [j for j in (self._jobs[i] for i in self._order) if j.status == "queued"]
+            jobs = [self._jobs[i] for i in self._order]
+        return [
+            j
+            for j in jobs
+            if j.status == "queued" and (workspace is None or j.workspace == workspace)
+        ]
 
-    def building_artifacts(self) -> set[str]:
-        """Artifacts a running or queued job is about to (re)write."""
+    # Where in the shared queue a job is, counting from 1, or 0 when it is already
+    # running. One GPU means the wait is everyone's jobs ahead of yours, not just yours.
+    def queue_position(self, job_id: str) -> int:
         with self._lock:
-            active = [
-                j for j in self._jobs.values() if j.status in ("running", "queued")
-            ]
-        return {j.artifact for j in active if j.artifact}
+            queued = [self._jobs[i] for i in self._order if self._jobs[i].status == "queued"]
+        for index, job in enumerate(queued, start=1):
+            if job.id == job_id:
+                return index
+        return 0
+
+    def building_artifacts(self, workspace: str | None = None) -> set[str]:
+        """Artifacts a running or queued job is about to (re)write, in this workspace."""
+        with self._lock:
+            active = [j for j in self._jobs.values() if j.status in ("running", "queued")]
+        return {
+            j.artifact
+            for j in active
+            if j.artifact and (workspace is None or j.workspace == workspace)
+        }
 
     def is_busy(self) -> bool:
         with self._lock:
@@ -188,7 +226,7 @@ class JobRunner:
             job.status = "running"
             job.started_at = time.time()
 
-        self.bus.publish(job.id, "job.started", {"job": job.to_dict()})
+        self.bus.publish(job.workspace, job.id, "job.started", {"job": job.to_dict()})
         sink_id = self._attach_log_sink(control)
         token = progress.set_emitter(control)
         try:
@@ -218,7 +256,7 @@ class JobRunner:
             "failed": "job.failed",
             "cancelled": "job.cancelled",
         }[status]
-        self.bus.publish(job.id, kind, {"job": job.to_dict()})
+        self.bus.publish(job.workspace, job.id, kind, {"job": job.to_dict()})
 
     # The core logs with loguru and knows nothing about us. Mirroring its output into
     # the stream gives the UI a raw console for free — no changes to the pipeline.

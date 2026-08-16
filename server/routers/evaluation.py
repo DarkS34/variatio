@@ -4,15 +4,24 @@ The blinding is imposed HERE and not in the browser. Any filtering done in React
 in the bundle and, worse, the JSON has already reached the client: the only way for the
 comparison to actually be blind is for the server never to send the mapping until the
 evaluator has committed to a choice.
+
+What this router deliberately no longer serves, as of phase 3: the study's aggregates and
+its CSV. Both moved to `/api/admin/evaluations`. Handing an evaluator the running score of
+the thing they are judging invites them to even it out, and a per-session export of
+everybody's judgements is research data, not a feature of the screen where you compare
+three cards.
 """
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.orm import Session as DbSession
 
 from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
 from variant_generator.evaluation import external
 
 from .. import auth, evaluation_store, runtime
+from ..db import study
+from ..db.models import EvalSession
 from .jobs import gate_error
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
@@ -46,11 +55,11 @@ class RatingBody(BaseModel):
 
 
 @router.post("", dependencies=[auth.EDIT])
-def launch(body: EvaluationBody) -> dict:
+def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
     if not body.concepts:
         raise HTTPException(422, "Hay que elegir al menos un concepto objetivo.")
     if not body.force:
-        error = gate_error("evaluate")
+        error = gate_error(access.ws, "evaluate")
         if error:
             raise HTTPException(409, error)
 
@@ -63,27 +72,32 @@ def launch(body: EvaluationBody) -> dict:
         "instructions": body.instructions,
         "seed": body.seed,
     }
-    job = runtime.runner.submit("evaluate", params)
+    job = runtime.runner.submit(
+        "evaluate",
+        params,
+        workspace=access.ws.slug,
+        user_id=access.user.id,
+        user_name=access.user.name,
+    )
     return {"job": job.to_dict(), "since": runtime.bus.last_seq}
 
 
 # LISTING ---------------------------------------------------------------------------------------
 
 
-@router.get("/export.csv")
-def export() -> Response:
-    return Response(
-        content=evaluation_store.export_csv(),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="evaluation_sessions.csv"'},
-    )
-
-
+# Your own sessions, so you can reopen one you left undecided. Not the workspace's: a
+# session is a judgement, and reading a colleague's before making your own is the one way
+# a blind comparison stops being blind after the fact.
 @router.get("")
 def listing(
-    limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
 ) -> dict:
-    sessions, total = evaluation_store.listing(limit=limit, offset=offset)
+    sessions, total = evaluation_store.listing(
+        db, access.workspace.id, author=access.user.id, limit=limit, offset=offset
+    )
     # The head of the chain, not the whole of it: this block is the "is the commercial arm
     # usable at all" banner, and which provider ends up answering is recorded per session.
     provider, model = external.primary()
@@ -92,7 +106,6 @@ def listing(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "aggregates": evaluation_store.aggregates(),
         "arms": [{"key": arm, "label": ARM_LABELS[arm]} for arm in ARMS],
         "external": {
             "provider": provider,
@@ -107,17 +120,23 @@ def listing(
 
 
 @router.get("/{session_id}")
-def detail(session_id: str) -> dict:
-    return _payload(_require(session_id))
+def detail(
+    session_id: str, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
+    row = _require(db, session_id, access)
+    return _payload(EvaluationSession.from_dict(row.trace))
 
 
 @router.post("/{session_id}/choice", dependencies=[auth.EDIT])
-def choose(session_id: str, body: ChoiceBody) -> dict:
-    _require(session_id)
+def choose(
+    session_id: str,
+    body: ChoiceBody,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    row = _require(db, session_id, access)
     try:
-        session = evaluation_store.record_choice(session_id, body.choice, body.comment)
-    except KeyError:
-        raise HTTPException(404, f"No existe la sesión '{session_id}'") from None
+        session = evaluation_store.record_choice(db, row, body.choice, body.comment)
     except ValueError as e:
         # A session is judged once: letting it be re-chosen after the reveal would make
         # the datum something other than blind.
@@ -128,14 +147,17 @@ def choose(session_id: str, body: ChoiceBody) -> dict:
 
 
 @router.post("/{session_id}/rating", dependencies=[auth.EDIT])
-def rate(session_id: str, body: RatingBody) -> dict:
-    _require(session_id)
+def rate(
+    session_id: str,
+    body: RatingBody,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    row = _require(db, session_id, access)
     try:
         session = evaluation_store.record_rating(
-            session_id, {**body.model_dump(exclude_none=True), "arm": "system"}
+            db, row, {**body.model_dump(exclude_none=True), "arm": "system"}
         )
-    except KeyError:
-        raise HTTPException(404, f"No existe la sesión '{session_id}'") from None
     except ValueError as e:
         if str(e) == "not-chosen-yet":
             raise HTTPException(
@@ -148,11 +170,16 @@ def rate(session_id: str, body: RatingBody) -> dict:
 # SHAPING ---------------------------------------------------------------------------------------
 
 
-def _require(session_id: str) -> EvaluationSession:
-    session = evaluation_store.load(session_id)
-    if session is None:
+# Two conditions, not one: the session has to belong to this workspace *and* to whoever is
+# asking. The workspace check alone would let a colleague open a comparison they never ran
+# and read its reveal.
+def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession:
+    row = study.get_evaluation(db, session_id)
+    if row is None or row.workspace_id != access.workspace.id:
         raise HTTPException(404, f"No existe la sesión '{session_id}'")
-    return session
+    if row.user_id is not None and row.user_id != access.user.id and not access.user.is_admin:
+        raise HTTPException(404, f"No existe la sesión '{session_id}'")
+    return row
 
 
 def _summary(header: dict) -> dict:

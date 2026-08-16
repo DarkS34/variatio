@@ -13,8 +13,9 @@ from pathlib import Path
 from fastapi import UploadFile
 
 from variant_generator.builders._source_docs import SUPPORTED_EXTS
+from variant_generator.workspace import Workspace
 
-from . import review, settings
+from . import review
 
 CHUNK = 1024 * 1024
 MAX_BYTES = 512 * 1024 * 1024
@@ -50,24 +51,23 @@ class RawError(Exception):
     pass
 
 
-def directory(kind: str) -> Path:
-    ws = settings.workspace()
+def directory(ws: Workspace, kind: str) -> Path:
     dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
     if kind not in dirs:
         raise RawError(f"Origen desconocido: '{kind}'")
     return dirs[kind]
 
 
-def listing() -> dict:
+def listing(ws: Workspace) -> dict:
     return {
         "supported_extensions": list(SUPPORTED_EXTS),
         "max_bytes": MAX_BYTES,
-        "slots": [slot(kind) for kind in SLOTS],
+        "slots": [slot(ws, kind) for kind in SLOTS],
     }
 
 
-def slot(kind: str) -> dict:
-    path = directory(kind)
+def slot(ws: Workspace, kind: str) -> dict:
+    path = directory(ws, kind)
     files = _files(path)
     return {
         **SLOTS[kind],
@@ -97,8 +97,8 @@ def _files(path: Path) -> list[dict]:
     return out
 
 
-def save(kind: str, uploads: list[UploadFile]) -> dict:
-    path = directory(kind)
+def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
+    path = directory(ws, kind)
     path.mkdir(parents=True, exist_ok=True)
 
     added: list[dict] = []
@@ -144,8 +144,8 @@ def _write(upload: UploadFile, target: Path) -> int:
     return written
 
 
-def delete(kind: str, name: str) -> dict:
-    path = directory(kind)
+def delete(ws: Workspace, kind: str, name: str) -> dict:
+    path = directory(ws, kind)
     safe = _safe_name(name)
     target = path / safe
     if not safe or not target.is_file():

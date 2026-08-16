@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from .. import auth, kg_view
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
-from .pipeline import get_pipeline
+from .pipeline import pipeline_payload
 
 router = APIRouter(prefix="/api/kg", tags=["kg"], dependencies=[auth.VIEW])
 
@@ -39,47 +39,47 @@ class GraphBody(BaseModel):
     graph: dict
 
 
-def _handle(action):
+def _handle(access: auth.Access, action):
     try:
-        return {**action(), "pipeline": get_pipeline()}
+        return {**action(), "pipeline": pipeline_payload(access)}
     except KGError as exc:
         raise HTTPException(422, str(exc)) from exc
 
 
 @router.get("")
-def read() -> dict:
+def read(access: auth.Access = auth.VIEW) -> dict:
     try:
-        return kg_edit.summary()
+        return kg_edit.summary(access.ws)
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
 
 @router.get("/graph")
-def graph() -> dict:
+def graph(access: auth.Access = auth.VIEW) -> dict:
     try:
-        graph_raw = kg_edit.raw()
-        return kg_view.build(graph_raw, kg_edit.load_graph(graph_raw))
+        graph_raw = kg_edit.raw(access.ws)
+        return kg_view.build(graph_raw, kg_edit.load_graph(access.ws, graph_raw))
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
 
 @router.get("/raw")
-def read_raw() -> dict:
+def read_raw(access: auth.Access = auth.VIEW) -> dict:
     try:
-        return {"graph": kg_edit.raw()}
+        return {"graph": kg_edit.raw(access.ws)}
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
 
 @router.put("/raw", dependencies=[auth.EDIT])
-def replace(body: GraphBody) -> dict:
-    return _handle(lambda: kg_edit.replace(body.graph))
+def replace(body: GraphBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(access, lambda: kg_edit.replace(access.ws, body.graph))
 
 
 @router.get("/neighbours")
-def neighbours(concept: str) -> dict:
+def neighbours(concept: str, access: auth.Access = auth.VIEW) -> dict:
     try:
-        return {"concept": concept, "relations": kg_edit.neighbours(concept)}
+        return {"concept": concept, "relations": kg_edit.neighbours(access.ws, concept)}
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
@@ -88,17 +88,17 @@ def neighbours(concept: str) -> dict:
 
 
 @router.get("/descriptions")
-def read_descriptions() -> dict:
+def read_descriptions(access: auth.Access = auth.VIEW) -> dict:
     try:
-        return kg_edit.descriptions()
+        return kg_edit.descriptions(access.ws)
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
 
 @router.put("/descriptions", dependencies=[auth.EDIT])
-def write_description(body: DescriptionBody) -> dict:
+def write_description(body: DescriptionBody, access: auth.Access = auth.VIEW) -> dict:
     try:
-        return kg_edit.set_description(body.concept, body.description)
+        return kg_edit.set_description(access.ws, body.concept, body.description)
     except KGError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -107,58 +107,71 @@ def write_description(body: DescriptionBody) -> dict:
 
 
 @router.post("/domains", dependencies=[auth.EDIT])
-def add_domain(body: DomainBody) -> dict:
-    return _handle(lambda: kg_edit.add_domain(body.name))
+def add_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(access, lambda: kg_edit.add_domain(access.ws, body.name))
 
 
 @router.patch("/domains", dependencies=[auth.EDIT])
-def patch_domain(body: DomainBody) -> dict:
+def patch_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
     if not body.new_name:
         raise HTTPException(422, "Falta 'new_name'")
-    return _handle(lambda: kg_edit.rename_domain(body.name, body.new_name))
+    return _handle(access, lambda: kg_edit.rename_domain(access.ws, body.name, body.new_name))
 
 
 @router.post("/domains/delete", dependencies=[auth.EDIT])
-def delete_domain(body: DomainBody) -> dict:
-    return _handle(lambda: kg_edit.delete_domain(body.name, body.move_to))
+def delete_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(access, lambda: kg_edit.delete_domain(access.ws, body.name, body.move_to))
 
 
 # CONCEPTS ------------------------------------------------------------------------------------
 
 
 @router.post("/concepts", dependencies=[auth.EDIT])
-def add_concept(body: ConceptBody) -> dict:
+def add_concept(body: ConceptBody, access: auth.Access = auth.VIEW) -> dict:
     if not body.domain:
         raise HTTPException(422, "Falta el dominio del concepto")
     return _handle(
+        access,
         lambda: kg_edit.add_concept(
-            body.name, body.domain, taggable=True if body.taggable is None else body.taggable
-        )
+            access.ws,
+            body.name,
+            body.domain,
+            taggable=True if body.taggable is None else body.taggable,
+        ),
     )
 
 
 @router.patch("/concepts", dependencies=[auth.EDIT])
-def patch_concept(body: ConceptBody) -> dict:
+def patch_concept(body: ConceptBody, access: auth.Access = auth.VIEW) -> dict:
     return _handle(
+        access,
         lambda: kg_edit.update_concept(
-            body.name, new_name=body.new_name, domain=body.domain, taggable=body.taggable
-        )
+            access.ws,
+            body.name,
+            new_name=body.new_name,
+            domain=body.domain,
+            taggable=body.taggable,
+        ),
     )
 
 
 @router.post("/concepts/delete", dependencies=[auth.EDIT])
-def delete_concept(body: ConceptBody) -> dict:
-    return _handle(lambda: kg_edit.delete_concept(body.name))
+def delete_concept(body: ConceptBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(access, lambda: kg_edit.delete_concept(access.ws, body.name))
 
 
 # RELATIONS -----------------------------------------------------------------------------------
 
 
 @router.post("/relations/edges", dependencies=[auth.EDIT])
-def add_edge(body: EdgeBody) -> dict:
-    return _handle(lambda: kg_edit.add_edge(body.relation, body.source, body.target))
+def add_edge(body: EdgeBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(
+        access, lambda: kg_edit.add_edge(access.ws, body.relation, body.source, body.target)
+    )
 
 
 @router.post("/relations/edges/delete", dependencies=[auth.EDIT])
-def remove_edge(body: EdgeBody) -> dict:
-    return _handle(lambda: kg_edit.remove_edge(body.relation, body.source, body.target))
+def remove_edge(body: EdgeBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(
+        access, lambda: kg_edit.remove_edge(access.ws, body.relation, body.source, body.target)
+    )
