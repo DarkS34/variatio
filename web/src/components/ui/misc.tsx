@@ -55,6 +55,87 @@ export function Progress({
   );
 }
 
+/**
+ * The same 0-100 as `Progress`, cut into the phases that produce it.
+ *
+ * A single bar answers «how much is left» and nothing else; a build is seven very
+ * different jobs in a row, and which one it is stuck on is half of what you want to
+ * know. Each segment is as wide as that phase's share of the plan — the builders'
+ * measured weights — so the bar keeps being an honest picture of the time, not a row
+ * of equal boxes that suggests seven equal stages.
+ *
+ * Three states, one colour each: done, running (which pulses, because that is the only
+ * part still moving) and pending. The fill inside the running segment is the same
+ * percentage the plain bar would have shown.
+ */
+export function PhaseBar({
+  phases,
+  percent,
+  activeKey,
+  live = true,
+  className,
+}: {
+  phases: { key: string; label: string; weight: number; seconds?: number }[];
+  percent: number;
+  activeKey?: string | null;
+  live?: boolean;
+  className?: string;
+}) {
+  const total = phases.reduce((sum, phase) => sum + phase.weight, 0) || 1;
+  let cumulative = 0;
+
+  return (
+    <div
+      className={cn("flex w-full items-center gap-[3px]", className)}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(percent)}
+    >
+      {phases.map((phase) => {
+        const start = (cumulative / total) * 100;
+        const span = (phase.weight / total) * 100;
+        cumulative += phase.weight;
+
+        const fill = Math.min(1, Math.max(0, (percent - start) / span));
+        // The event says which phase is running; the percentage only decides it when no
+        // event has arrived yet, and it gets the boundaries wrong exactly when a phase
+        // costs nothing and is skipped in the same millisecond it starts.
+        const running =
+          live && (activeKey ? phase.key === activeKey : fill > 0 && fill < 1);
+
+        return (
+          <div
+            key={phase.key}
+            title={phase.label}
+            // A phase worth 1 % of the plan is 2 px wide in a sidebar card, which reads as
+            // a rendering glitch rather than as a cheap phase. The floor costs the wide
+            // segments a pixel each and keeps every section of the plan visible.
+            style={{ flexGrow: phase.weight, minWidth: 5 }}
+            className={cn(
+              "relative h-1.5 overflow-hidden rounded-full",
+              running ? "bg-primary/20" : "bg-muted",
+              running && "animate-pulse-soft",
+            )}
+          >
+            <div
+              className={cn(
+                "relative h-full overflow-hidden rounded-full transition-[width] duration-500 ease-out",
+                fill >= 1 ? "bg-[var(--success)]" : "bg-primary",
+              )}
+              style={{ width: `${fill * 100}%` }}
+            >
+              {running && fill > 0 ? (
+                <span className="absolute inset-y-0 w-1/3 animate-progress-sweep bg-[color-mix(in_oklch,var(--card)_55%,transparent)]" />
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Switch({
   checked,
   onCheckedChange,

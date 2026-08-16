@@ -41,6 +41,32 @@ export interface Pipeline {
   queued: number;
 }
 
+/** One phase of a build: what it is called, what share of the bar it owns, what it costs. */
+export interface BuildPhase {
+  key: string;
+  label: string;
+  weight: number;
+  seconds: number;
+}
+
+export interface BuildEstimate {
+  artifact: ArtifactName;
+  seconds: number;
+  phases: BuildPhase[];
+  basis: {
+    documents: number;
+    pages: number;
+    chunks: number;
+    /** Pages and documents still to convert: what a first build pays and a redo does not. */
+    pending_pages: number;
+    pending_documents: number;
+  };
+}
+
+export interface BuildEstimates {
+  artifacts: Record<ArtifactName, BuildEstimate>;
+}
+
 export interface Job {
   id: string;
   kind: JobKind;

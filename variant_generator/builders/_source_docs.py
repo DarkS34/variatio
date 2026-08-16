@@ -87,6 +87,19 @@ def markdown_cache_path(source: str | Path, cache_dir: str | Path | None = None)
     return root / source.parent.name / f"{source.name}.md"
 
 
+def markdown_cached(input_path: str | Path, cache_dir: str | Path | None = None) -> bool:
+    """Whether `to_markdown` would answer from the cache instead of running Docling.
+
+    Same make-style rule the reader applies, stated once: anything that wants to know
+    what a conversion will COST has to ask the same question the conversion asks.
+    """
+    input_path = Path(input_path)
+    if input_path.suffix.lower() in PLAIN_TEXT_EXTS:
+        return True
+    cached = markdown_cache_path(input_path, cache_dir)
+    return cached.exists() and cached.stat().st_mtime >= input_path.stat().st_mtime
+
+
 def to_markdown(
     converter,
     input_path: Path,
@@ -341,6 +354,50 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     }
 
 
+def _fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
+    is_pdf = source.suffix.lower() == ".pdf"
+    return _page_fingerprint(
+        source,
+        mode="vlm" if is_pdf else "docling",
+        model=model if is_pdf else "",
+        dpi=dpi if is_pdf else 0,
+        ocr=False if is_pdf else ocr,
+    )
+
+
+def pages_cached(
+    source: str | Path,
+    model: str = "",
+    dpi: int = 0,
+    ocr: bool = False,
+    cache_dir: str | Path | None = None,
+) -> int:
+    """How many pages `document_pages` would reuse, 0 when it would convert from scratch.
+
+    The counterpart of `markdown_cached` for the page route: transcription is one model
+    call per page, so what is already on disk is the difference between a build of
+    minutes and one of hours, and a caller estimating that cost must not guess it.
+    """
+    source = Path(source)
+    fingerprint = _fingerprint_for(
+        source, model or config.EXEMPLARS_TRANSCRIBE_MODEL, dpi or config.TRANSCRIBE_DPI, ocr
+    )
+    directory = document_cache_dir(source, cache_dir)
+    meta_path = directory / META_NAME
+    if not meta_path.exists():
+        return 0
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return 0
+    if {k: v for k, v in meta.items() if k != "pages"} != fingerprint:
+        return 0
+    count = meta.get("pages")
+    if not isinstance(count, int) or count < 1:
+        return 0
+    return count if all(_page_path(directory, i).exists() for i in range(1, count + 1)) else 0
+
+
 def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
     meta_path = cache_dir / META_NAME
     if not meta_path.exists():
@@ -477,13 +534,7 @@ def document_pages(
     is_pdf = suffix == ".pdf"
     model = model or config.EXEMPLARS_TRANSCRIBE_MODEL
     dpi = dpi or config.TRANSCRIBE_DPI
-    fingerprint = _page_fingerprint(
-        source,
-        mode="vlm" if is_pdf else "docling",
-        model=model if is_pdf else "",
-        dpi=dpi if is_pdf else 0,
-        ocr=False if is_pdf else ocr,
-    )
+    fingerprint = _fingerprint_for(source, model, dpi, ocr)
 
     document_dir = document_cache_dir(source, cache_dir)
     if use_cache:

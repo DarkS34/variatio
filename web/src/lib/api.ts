@@ -1,5 +1,6 @@
 import type {
   BankListing,
+  BuildEstimates,
   ExemplarsProfile,
   Coverage,
   EvaluationDetail,
@@ -129,6 +130,7 @@ export const api = {
   health: () => request<Health>("/api/health"),
 
   pipeline: () => request<Pipeline>("/api/pipeline"),
+  estimates: () => request<BuildEstimates>("/api/pipeline/estimates"),
   approve: (artifact: string) => post<Pipeline>(`/api/pipeline/${artifact}/approve`),
   reopen: (artifact: string) => post<Pipeline>(`/api/pipeline/${artifact}/reopen`),
   history: (artifact: string) =>

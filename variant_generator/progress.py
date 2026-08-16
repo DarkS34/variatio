@@ -171,15 +171,19 @@ class _Overall:
             return
         base, weight = self._spans[self._key]
         done = base + weight * min(max(fraction, 0.0), 1.0)
+        # The key travels with the percentage because a host that draws the plan as
+        # segments has to know which one is running, and reading that back from the
+        # percentage guesses wrong exactly at the boundaries.
         emit(
             "build.progress",
             percent=round(done * 100 / self._total),
+            key=self._key,
             label=self._labels[self._key],
             detail=detail,
         )
 
     def finish(self) -> None:
-        emit("build.progress", percent=100, label=None, detail=None)
+        emit("build.progress", percent=100, key=None, label=None, detail=None)
 
 
 _overall: contextvars.ContextVar["_Overall | None"] = contextvars.ContextVar(

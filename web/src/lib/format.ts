@@ -12,6 +12,25 @@ export function duration(ms: number | null | undefined): string {
   return `${hours} h ${(minutes % 60).toString().padStart(2, "0")} min`;
 }
 
+/**
+ * A duration as an estimate, not as a measurement.
+ *
+ * `duration` is right for what already happened, down to the second. What is *going* to
+ * happen is known to within a good fraction of itself, so it is rounded to five minutes
+ * past the first half hour: «1 h 22 min» claims a precision the estimate does not have,
+ * and the reader would hold it against the clock.
+ */
+export function approx(ms: number | null | undefined): string {
+  if (ms === null || ms === undefined) return "—";
+  const minutes = ms / 60_000;
+  if (minutes < 1) return "menos de 1 min";
+  const rounded = minutes < 10 ? Math.round(minutes) : Math.round(minutes / 5) * 5;
+  if (rounded < 60) return `${rounded} min`;
+  const hours = Math.floor(rounded / 60);
+  const rest = rounded % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest.toString().padStart(2, "0")} min`;
+}
+
 export function bytes(value: number): string {
   if (value < 1024) return `${value} B`;
   const kb = value / 1024;

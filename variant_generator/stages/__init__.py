@@ -13,6 +13,7 @@ from .build import (
     build_exemplars_bank,
     build_knowledge_graph,
     build_missing,
+    build_phases,
 )
 from .evaluate import evaluate
 from .generate import generate
@@ -35,6 +36,7 @@ __all__ = [
     "build_exemplars_bank",
     "build_knowledge_graph",
     "build_missing",
+    "build_phases",
     "exemplars_profile_path",
     "describe_concepts",
     "evaluate",

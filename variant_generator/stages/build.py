@@ -69,6 +69,13 @@ _PHASES = {
 }
 
 
+def build_phases(artifact: str) -> tuple[tuple[str, str, int], ...]:
+    """The `(key, label, weight)` plan a build of this artifact will run through."""
+    if artifact not in _PHASES:
+        raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_PHASES)}")
+    return _PHASES[artifact]
+
+
 def build_artifact(artifact: str, ws: Workspace | None = None) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")

@@ -2,9 +2,16 @@ import { Hammer, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
+import { approx } from "@/lib/format";
 import type { StageState } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
-import { useHealth, usePipeline, useRawMissingFor, useSubmitJob } from "@/state/queries";
+import {
+  useBuildEstimate,
+  useHealth,
+  usePipeline,
+  useRawMissingFor,
+  useSubmitJob,
+} from "@/state/queries";
 
 /** What the two halves of the action are called on a given screen, when the generic
  *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
@@ -46,6 +53,7 @@ export function BuildButton({
   const health = useHealth();
   const rawMissing = useRawMissingFor(stage.artifact);
   const canEdit = useCanEdit();
+  const estimate = useBuildEstimate(stage.artifact);
 
   const missing = stage.status === "missing";
   const busy = Boolean(pipeline.data?.current_job) || submit.isPending;
@@ -65,6 +73,10 @@ export function BuildButton({
             ? `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
             : null;
 
+  // The wait is part of the decision, so it belongs on the control that starts it and
+  // not only on the bar that appears afterwards.
+  const cost = estimate ? ` Tardará ≈ ${approx(estimate.seconds * 1000)}.` : "";
+
   const launch = () => {
     if (!missing && labels?.confirmRedo && !window.confirm(labels.confirmRedo)) return;
     submit.mutate({ kind: stage.build_job });
@@ -79,8 +91,8 @@ export function BuildButton({
       title={
         reason ??
         (missing
-          ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto`
-          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}`)
+          ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto.${cost}`
+          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}.${cost}`)
       }
       onClick={launch}
     >

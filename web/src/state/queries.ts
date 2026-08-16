@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import type {
   ArtifactName,
+  BuildEstimate,
   EvaluationDetail,
   EvaluationParams,
   EvaluationRating,
@@ -21,6 +22,10 @@ export const keys = {
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
   raw: ["raw"] as const,
+  // Under the pipeline's key on purpose: react-query matches by prefix, so the chain-wide
+  // invalidation a finished job already does refreshes the estimate too — and it has to,
+  // because a build leaves its documents converted and makes the next one much cheaper.
+  estimates: ["pipeline", "estimates"] as const,
   evaluations: ["evaluations"] as const,
   evaluation: (id: string) => ["evaluations", id] as const,
 };
@@ -82,6 +87,46 @@ export function useCoverage() {
 
 export function useRaw() {
   return useQuery({ queryKey: keys.raw, queryFn: api.raw });
+}
+
+export function useEstimates() {
+  return useQuery({ queryKey: keys.estimates, queryFn: api.estimates });
+}
+
+/** What building this artifact is expected to cost, from the documents now in its slot.
+ *  Null when there is nothing to build: an empty slot is quoted as zero, not as a wait. */
+export function useBuildEstimate(artifact: ArtifactName | undefined): BuildEstimate | null {
+  const estimates = useEstimates();
+  if (!artifact) return null;
+  const estimate = estimates.data?.artifacts?.[artifact];
+  return estimate && estimate.seconds > 0 ? estimate : null;
+}
+
+/**
+ * How much of a running build is left, in milliseconds.
+ *
+ * The estimate is what the documents predict; the elapsed time is what this machine is
+ * actually doing. Neither alone is right — the first knows nothing about a busy GPU, the
+ * second means nothing at 2 % — so the projection takes over from the prediction as the
+ * bar advances, and the reading self-corrects instead of drifting for an hour.
+ */
+export function projectRemaining(
+  estimate: BuildEstimate | null,
+  percent: number | null | undefined,
+  elapsedMs: number | null,
+): number | null {
+  const total = estimate ? estimate.seconds * 1000 : null;
+  if (elapsedMs === null) return total;
+  if (percent === null || percent === undefined || percent <= 0) {
+    return total === null ? null : Math.max(0, total - elapsedMs);
+  }
+
+  const done = Math.min(1, percent / 100);
+  const projected = elapsedMs / done;
+  if (total === null) return Math.max(0, projected - elapsedMs);
+
+  const trust = Math.min(1, done / 0.3);
+  return Math.max(0, (1 - trust) * total + trust * projected - elapsedMs);
 }
 
 /**

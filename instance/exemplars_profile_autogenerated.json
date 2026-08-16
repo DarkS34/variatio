@@ -1,52 +1,207 @@
 {
   "content_context": {
-    "subject": "Programación I / Fundamentos de Programación",
-    "educational_level": "Primer curso de grado universitario",
+    "subject": "Programación en Python",
     "language_of_instruction": "Español",
     "programming_language": "Python"
   },
-  "general_generation_rules": [
-    "Utilizar nombres descriptivos y significativos para variables, parámetros y funciones.",
-    "Incluir docstrings en cada subprograma siguiendo el formato canónico: signatura (parámetros -> retorno), OBJ (objetivo) y PRE (precondiciones).",
-    "Añadir un bloque de prueba explícito tras la definición de funciones, precedido por comentarios como '#Probador' o '# Prueba', que contenga llamadas con valores representativos y sentencias print para validar la salida.",
-    "Mantener una indentación estricta de 4 espacios y evitar construcciones redundantes cuando se solicite explícitamente restringir el uso de bibliotecas o estructuras específicas."
-  ],
-  "primary_field": "statement",
-  "fields": {
-    "statement": {
-      "schema": {
-        "type": "string"
-      },
-      "description": "Texto que describe la situación, el problema o la tarea a resolver mediante código Python.",
-      "guidance": {
-        "extraction": "Copia literalmente el texto descriptivo que precede a cualquier bloque de código. Incluye todas las instrucciones específicas, restricciones numéricas o de implementación mencionadas en el enunciado. Descarta los números de enumeración (1., 2., etc.) y los encabezados de sección. Si el documento presenta una lista de ejercicios con un prefijo global, intégralo al final del enunciado o consérvalo en las reglas generales.",
-        "generation": "Redacta un problema concreto y autocontenido que requiera escribir un programa o función en Python. Describe claramente las entradas (si las hay), el proceso esperado y las salidas. Utiliza un tono directo e imperativo típico de los manuales docentes. Incluye restricciones explícitas si es pertinente para la dificultad o el objetivo pedagógico."
+  "item_types": {
+    "escritura_codigo": {
+      "label": "Escritura de código",
+      "description": "Ejercicios donde se solicita implementar una función, subprograma o programa completo desde cero para resolver un problema lógico, matemático o de gestión de datos. Se reconoce por verbos como 'Implementa', 'Escribe', 'Programa' o 'Elabora'.",
+      "primary_field": "enunciado",
+      "embed_fields": [
+        "enunciado"
+      ],
+      "general_generation_rules": [
+        "Sigue las convenciones de estilo PEP8.",
+        "Incluye siempre un bloque de prueba (probador) que valide la función con casos de ejemplo.",
+        "Cuando se soliciten funciones, especifica claramente los tipos de datos de entrada y salida."
+      ],
+      "fields": {
+        "titulo": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "Nombre corto o identificador del ejercicio.",
+          "guidance": {
+            "extraction": "Extraer el título si aparece explícitamente antes del enunciado o en la cabecera del ejercicio; si no existe, poner null.",
+            "generation": "Crear un título conciso que resuma la funcionalidad a implementar."
+          }
+        },
+        "enunciado": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "Descripción detallada de la tarea de programación, los requisitos de entrada/salida y el comportamiento esperado.",
+          "guidance": {
+            "extraction": "Copiar el texto íntegro que plantea la tarea, desde la instrucción inicial hasta la descripción del problema, excluyendo numeraciones y etiquetas de sección.",
+            "generation": "Redactar una instrucción clara y directa, definiendo los parámetros que debe recibir la función y el valor que debe retornar."
+          }
+        },
+        "solucion": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "Implementación correcta del código en Python que resuelve el problema.",
+          "guidance": {
+            "extraction": "Extraer el código contenido bajo etiquetas como 'SOLUCION PROPUESTA:' o bloques de código Python inmediatamente posteriores al enunciado.",
+            "generation": "Escribir el código fuente optimizado, incluyendo comentarios breves y el bloque de prueba necesario para su ejecución."
+          }
+        },
+        "nivel_dificultad": {
+          "schema": {
+            "enum": [
+              "básico",
+              "intermedio",
+              "avanzado"
+            ]
+          },
+          "description": "Grado de complejidad: 'básico' (operaciones simples, tipos básicos), 'intermedio' (estructuras de control, funciones, listas), 'avanzado' (diccionarios complejos, recursividad, algoritmos de ordenación, memoization).",
+          "guidance": {
+            "extraction": "Usar la etiqueta explícita si aparece (ej. 'Nivel básico'); si no, clasificar según la complejidad técnica: básico si es sintaxis simple, intermedio si implica lógica de control, avanzado si requiere estructuras de datos complejas o algoritmos."
+          }
+        }
       }
     },
-    "solution": {
-      "schema": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "description": "Código Python que resuelve correctamente el ejercicio, incluyendo docstrings con tipo de parámetros y retorno, objetivos, precondiciones y un bloque de prueba o probador.",
-      "guidance": {
-        "extraction": "Localiza el bloque de código bajo la etiqueta 'SOLUCION PROPUESTA:' o similar en ejercicios marcados como resueltos. Copia literalmente el código Python, manteniendo indentación, docstrings y comentarios de prueba. Si no existe dicha sección o corresponde a un ejercicio propuesto, asigna null.",
-        "generation": "Genera una implementación completa en Python que cumpla el enunciado. Incluye obligatoriamente un docstring al inicio de cada función/procedimiento con la signatura, objetivo y precondiciones. Añade un bloque de comentarios precedido por '#Probador' o '# Prueba' con llamadas de ejemplo e impresiones que demuestren su funcionamiento. Respeta la nomenclatura clara y el estilo del material."
+    "analisis_codigo": {
+      "label": "Análisis de código",
+      "description": "Ejercicios que proporcionan un fragmento de código ya escrito y piden al alumno predecir su salida, comentar su funcionamiento, corregirlo o compararlo con otras versiones.",
+      "primary_field": "enunciado",
+      "embed_fields": [
+        "enunciado",
+        "material_base"
+      ],
+      "general_generation_rules": [
+        "El código proporcionado debe ser sintácticamente correcto a menos que el objetivo sea explícitamente encontrar el error.",
+        "Las preguntas deben obligar al alumno a ejecutar mentalmente el código paso a paso."
+      ],
+      "fields": {
+        "enunciado": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "Instrucción que indica qué hacer con el código proporcionado (ej. 'Comenta los resultados', 'Analiza la variante').",
+          "guidance": {
+            "extraction": "Copiar la instrucción textual que precede al bloque de código o que pide la reflexión posterior.",
+            "generation": "Redactar una pregunta o instrucción clara sobre el comportamiento del código en el material_base."
+          }
+        },
+        "material_base": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "El fragmento de código Python que el alumno debe analizar.",
+          "guidance": {
+            "extraction": "Extraer el bloque de código literal que se presenta para ser analizado, manteniendo la indentación original.",
+            "generation": "Redactar un fragmento de código que ejemplifique el concepto a analizar, evitando redundancias."
+          }
+        },
+        "solucion": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "La respuesta correcta o el resultado esperado de la ejecución del código.",
+          "guidance": {
+            "extraction": "Extraer la respuesta si aparece explícitamente; si es un ejercicio de reflexión sin respuesta cerrada, poner null.",
+            "generation": "Proporcionar la salida exacta que imprimiría el intérprete de Python o la respuesta técnica correcta."
+          }
+        },
+        "explicacion": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "Justificación didáctica de por qué el código se comporta de esa manera.",
+          "guidance": {
+            "extraction": "Extraer los comentarios explicativos que acompañan a la solución en el material docente.",
+            "generation": "Redactar el razonamiento paso a paso que lleva a la solución, detallando el flujo de ejecución."
+          }
+        }
       }
     },
-    "difficulty_level": {
-      "schema": {
-        "enum": [
-          "básico",
-          "intermedio",
-          "avanzado"
-        ]
-      },
-      "description": "Nivel de exigencia cognitiva y técnica del ejercicio. Criterio de clasificación: 'básico' para sintaxis directa o estructuras elementales sin anidaciones complejas; 'intermedio' para combinación de múltiples conceptos, estructuras de control anidadas, listas/diccionarios, funciones con validación o algoritmos clásicos no triviales; 'avanzado' para recursión profunda, adaptación de algoritmos a criterios personalizados, diseño de estructuras de datos complejas o integración multimódulo.",
-      "guidance": {
-        "extraction": "Busca primero encabezados explícitos como '## Ejercicios nivel básico' o '## Ejercicio avanzado'. Si el documento los omite, analiza la complejidad sintáctica y conceptual del enunciado aplicando estrictamente el criterio definido en description: estructura simple -> básico; combinación de conceptos/funciones con validación -> intermedio; recursión avanzada/adaptación de algoritmos/diseño complejo -> avanzado. NUNCA asignes null."
+    "completar_codigo": {
+      "label": "Completar código",
+      "description": "Ejercicios donde se entrega una estructura de código parcial, un entorno o una plantilla, pero falta implementar una función específica o un fragmento interno.",
+      "primary_field": "enunciado",
+      "embed_fields": [
+        "enunciado",
+        "material_base"
+      ],
+      "general_generation_rules": [
+        "El material_base debe dejar claro dónde comienza y termina la parte a completar (ej. usando comentarios como # IMPLEMENTAR AQUÍ).",
+        "El código base debe ser suficiente para que el alumno entienda el contexto sin tener que escribir el resto del programa."
+      ],
+      "fields": {
+        "titulo": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "Nombre del reto o ejercicio.",
+          "guidance": {
+            "extraction": "Extraer el título si aparece (ej. 'Reto de ordenación'); si no, null.",
+            "generation": "Crear un título que identifique la función a completar."
+          }
+        },
+        "enunciado": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "Instrucción que especifica exactamente qué parte del código falta y qué debe hacer dicha parte.",
+          "guidance": {
+            "extraction": "Copiar el texto que define la tarea de completado, especialmente las frases que indican 'solo queda implementar la función X'.",
+            "generation": "Redactar la instrucción centrándose en el objetivo de la función faltante y los datos que recibe del entorno proporcionado."
+          }
+        },
+        "material_base": {
+          "schema": {
+            "type": "string"
+          },
+          "description": "El código fuente parcial o la plantilla que se le entrega al alumno.",
+          "guidance": {
+            "extraction": "Extraer todo el bloque de código que sirve de contexto, excluyendo la solución si esta aparece inmediatamente después.",
+            "generation": "Redactar el código base funcional, omitiendo únicamente la lógica de la función objetivo."
+          }
+        },
+        "solucion": {
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "El fragmento de código que completa correctamente el material_base.",
+          "guidance": {
+            "extraction": "Extraer la parte del código que resuelve el hueco dejado en el material_base.",
+            "generation": "Redactar la implementación exacta de la función faltante."
+          }
+        },
+        "nivel_dificultad": {
+          "schema": {
+            "enum": [
+              "básico",
+              "intermedio",
+              "avanzado"
+            ]
+          },
+          "description": "Grado de complejidad según la lógica requerida para completar el hueco.",
+          "guidance": {
+            "extraction": "Usar la etiqueta si existe; si no, clasificar: básico si es un hueco de sintaxis simple, intermedio si es una función estándar, avanzado si es un algoritmo complejo."
+          }
+        }
       }
     }
   }

@@ -52,6 +52,8 @@ export type StreamPhase = "idle" | "thinking" | "answering";
  */
 export interface OverallProgress {
   percent: number;
+  /** Which phase of the plan is running: what tells the segmented bar where it is. */
+  key: string | null;
   label: string | null;
   detail: string | null;
 }
@@ -336,6 +338,7 @@ class RunStore {
           ...run,
           overall: {
             percent: event.percent ?? 0,
+            key: event.key ?? run.overall?.key ?? null,
             label: event.label ?? run.overall?.label ?? null,
             detail: event.detail ?? null,
           },

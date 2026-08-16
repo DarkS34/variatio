@@ -53,8 +53,18 @@ OLLAMA_HOST = (
     _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 )
 
-LLM_HEAVY = "qwen3.8:27b-q8_0"
-LLM_MEDIUM = "qwen3.8:27b-q8_0"
+# Reverted to this pair on 2026-08-16 after timing every build call twice. Under the
+# single `qwen3.8:27b-q8_0` both tiers pointed at, the curation calls — which reason with
+# thinking ON over the whole inventory — went from minutes to quarters of an hour: one
+# `link_domain_relations_prompt` over 55 concepts spent 948 s emitting 51 466 characters
+# of deliberation for 1 854 of answer, and `curate_graph_domains_prompt` spent 496 s and
+# came back EMPTY, which is what a 26 000-character prompt plus unbounded reasoning looks
+# like against `LLM_CONTEXT`. A KG build over the reference corpus went from ~55 min to an
+# estimated 5 h 33 m, and `LLM_MEDIUM` owned 85 % of it. The taggability probe already
+# preferred gemma4:31b anyway (75 exclusions against a reference of 73, versus 66 for the
+# 35b MoE), so the medium tier loses nothing by going back.
+LLM_HEAVY = "qwen3.6:35b-a3b-q8_0"
+LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
 LLM_SMALL = "gemma4:e4b-it-q8_0"
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 

@@ -46,6 +46,8 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
   const refresh = () => {
     client.invalidateQueries({ queryKey: keys.raw });
     client.invalidateQueries({ queryKey: keys.health });
+    // What is in the slots is exactly what the build estimate is computed from.
+    client.invalidateQueries({ queryKey: keys.estimates });
   };
 
   const send = async (list: FileList | File[] | null) => {

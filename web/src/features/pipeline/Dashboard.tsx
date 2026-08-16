@@ -11,6 +11,7 @@ import {
   Lock,
   Pencil,
   Server,
+  Timer,
   UploadCloud,
   WifiOff,
 } from "lucide-react";
@@ -26,14 +27,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
-import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
+import { ENGINE_LABEL, JOB_STATUS, approx, bytes, duration, when } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { Health, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  projectRemaining,
+  useBuildEstimate,
   useCancelJob,
   useElapsed,
   useHealth,
@@ -320,6 +323,9 @@ function ActivityCard() {
   const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
   const overall = run?.overall ?? null;
   const queued = pipeline.data?.queued ?? 0;
+  // Only a build has a phase plan and an estimate; everything else keeps the plain bar.
+  const estimate = useBuildEstimate(run?.job?.artifact ?? undefined);
+  const remaining = projectRemaining(estimate, overall?.percent ?? null, elapsed);
 
   return (
     <Card>
@@ -384,6 +390,12 @@ function ActivityCard() {
                 <Hourglass className="size-3" />
                 {duration(active ? elapsed : run.job.elapsed_ms)}
               </span>
+              {active && estimate ? (
+                <span className="flex items-center gap-1 tabular-nums text-muted-foreground">
+                  <Timer className="size-3" />
+                  faltan ≈ {approx(remaining)}
+                </span>
+              ) : null}
               {queued > 0 ? (
                 <span className="text-muted-foreground">{queued} en cola</span>
               ) : null}
@@ -405,10 +417,18 @@ function ActivityCard() {
                         : "—"}
                   </span>
                 </div>
-                <Progress
-                  value={overall ? overall.percent : (step?.current ?? 0)}
-                  max={overall ? 100 : (step?.total ?? null)}
-                />
+                {overall && estimate ? (
+                  <PhaseBar
+                    phases={estimate.phases}
+                    percent={overall.percent}
+                    activeKey={overall.key}
+                  />
+                ) : (
+                  <Progress
+                    value={overall ? overall.percent : (step?.current ?? 0)}
+                    max={overall ? 100 : (step?.total ?? null)}
+                  />
+                )}
                 {overall?.detail ? (
                   <p className="truncate text-xs text-muted-foreground">{overall.detail}</p>
                 ) : null}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import auth, review, runtime, storage
+from .. import auth, estimates, review, runtime, storage
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -34,6 +34,12 @@ def get_pipeline() -> dict:
         "current_job": current.to_dict() if current else None,
         "queued": len(runtime.runner.pending()),
     }
+
+
+# Declared before `/{artifact}/…` so «estimates» is read as itself and not as an artifact.
+@router.get("/estimates")
+def build_estimates() -> dict:
+    return estimates.snapshot()
 
 
 @router.post("/{artifact}/approve", dependencies=[auth.EDIT])
