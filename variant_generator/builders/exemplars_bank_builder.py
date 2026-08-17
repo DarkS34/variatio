@@ -86,7 +86,7 @@ class ExemplarsBankBuilder:
     def bootstrap(self) -> None:
         ensure_models(
             [config.EXEMPLARS_TRANSCRIBE_MODEL, config.EB_EXTRACT_MODEL, config.REPAIR_LLM],
-            "exemplars bank",
+            "del banco de ejemplares",
         )
 
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
@@ -96,12 +96,12 @@ class ExemplarsBankBuilder:
 
         files = _source_docs.list_source_files(input_dir)
         if not files:
-            logger.error(f"No supported files found in: {input_dir}")
+            logger.error(f"Ningún documento admitido en {input_dir}")
             return {}
 
         bank = self._load_existing(output_file_path)
         self._id_counter = self._max_id(bank)
-        logger.info(f"Found {len(files)} file(s) - Starting from C{self._id_counter + 1:03d}")
+        logger.info(f"{len(files)} documento(s); se empieza en C{self._id_counter + 1:03d}")
 
         pages_by_file = self._convert(files)
 
@@ -122,20 +122,20 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"{tag} skipped: {e}")
+                    logger.exception(f"{tag} omitido: {e}")
                     continue
 
                 if not new_items:
-                    logger.warning(f"{tag} produced 0 items")
+                    logger.warning(f"{tag} no produjo ningún ítem")
                     continue
 
                 bank.update(new_items)
                 _source_docs.save_json(bank, output_file_path)
-                logger.success(f"{tag} +{len(new_items)} → checkpoint saved ({len(bank)} total)")
+                logger.success(f"{tag} +{len(new_items)} ítem(s); {len(bank)} en total")
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
         progress.advance(1.0, f"{len(bank)} ítem(s)")
-        logger.success(f"Directory done — {len(bank)} item(s) in {output_file_path}")
+        logger.success(f"Banco terminado: {len(bank)} ítem(s) en {Path(output_file_path).name}")
         return bank
 
     # PIPELINE ------------------------------------------------------------------------------------
@@ -164,21 +164,19 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"[{file_path.name}] conversion skipped: {e}")
+                    logger.exception(f"[{file_path.name}] conversión omitida: {e}")
         progress.advance(1.0, f"{sum(len(p) for p in pages_by_file.values())} página(s)")
         return pages_by_file
 
     def _process_file(self, file_path: Path, pages: list[str], tag: str) -> dict[str, dict]:
         content = _source_docs.join_pages(pages)
         if not content.strip():
-            logger.warning(f"{tag} no usable content after transcription")
+            logger.warning(f"{tag} sin contenido aprovechable tras la transcripción")
             return {}
-        logger.info(f"{tag} markdown ready ({len(content):,} chars, {len(pages)} page(s))")
 
         batches = self._build_batches(content)
         if not batches:
             return {}
-        logger.info(f"{tag} split into {len(batches)} batch(es)")
 
         items: dict[str, dict] = {}
         with progress.step(
@@ -193,11 +191,11 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.error(f"{b_tag} failed: {e}")
+                    logger.error(f"{b_tag} falló: {e}")
                     continue
                 for raw in extracted:
                     items[self._next_id()] = {**raw, "source": file_path.stem}
-                logger.info(f"{b_tag} extracted {len(extracted)} item(s)")
+                logger.debug(f"{b_tag} extrajo {len(extracted)} ítem(s)")
         return items
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
@@ -307,6 +305,6 @@ class ExemplarsBankBuilder:
         try:
             return json.loads(p.read_text(encoding="utf-8"))
         except Exception as e:
-            logger.warning(f"Could not read existing {path} ({e}) — starting fresh")
+            logger.warning(f"No se pudo leer el banco existente {path} ({e}); se empieza de cero")
             return {}
 

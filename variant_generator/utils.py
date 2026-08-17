@@ -11,23 +11,22 @@ def prepare_models() -> None:
         {value for name, value in vars(config).items() if name.endswith("_LLM")}
     )
 
-    logger.info(f"Initializing models on '{inference.engine_name()}' engine")
-    ensure_models(all_models, "runtime")
+    ensure_models(all_models, "del pipeline")
 
 
 def ensure_models(models: list[str], label: str) -> None:
     unique = list(dict.fromkeys(models))
-    logger.info(f"Preparing {label} model(s): {', '.join(unique)}")
+    logger.info(f"Preparando los modelos {label}: {', '.join(unique)}")
 
     failed = [m for m in unique if not inference.ensure_model(m)]
     if failed:
-        raise RuntimeError(f"Failed to install model(s): {', '.join(failed)}")
+        raise RuntimeError(f"No se pudieron instalar los modelos: {', '.join(failed)}")
 
     for m in unique:
         progress.checkpoint()
         inference.warmup(m, is_embedding=(m in config.EMBEDDING_MODELS))
 
-    logger.success(f"{label} models ready")
+    logger.success(f"Modelos {label} listos")
 
 
 # `format` is required for the same reason `shape` is: a silent default is what let the
@@ -52,7 +51,8 @@ def parse_with_repair(
             return result, None
 
         logger.warning(
-            f"{log_prefix}repair {attempt}/{max_attempts}: {str(error).replace(chr(10), ' | ')}"
+            f"{log_prefix}reparación {attempt}/{max_attempts}: "
+            f"{str(error).replace(chr(10), ' | ')}"
         )
         progress.emit(
             "repair",

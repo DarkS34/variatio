@@ -70,12 +70,11 @@ class ConceptTagger:
             return {"concepts": [], "primary_concept": None, **self._trace(candidates, method)}
 
         if not candidates:
-            logger.warning(f"No embedder candidates for statement: {statement[:80]}...")
+            logger.warning(f"Ningún candidato del índice para: {statement[:60]}…")
             return empty("no_candidates")
 
         if len(candidates) == 1:
-            concept, score = candidates[0]
-            logger.info(f"Single dominant candidate '{concept}' ({score:.3f}) — skipping LLM verification")
+            concept, _ = candidates[0]
             return {
                 "concepts": [concept],
                 "primary_concept": concept,
@@ -91,23 +90,19 @@ class ConceptTagger:
         if self._is_inconclusive(result) and self.fallback_top_k > len(candidates):
             wide = self.embedder.top_k_concepts(statement, self.fallback_top_k)
             if len(wide) > len(candidates):
-                logger.info(
-                    f"No candidate accepted — retrying with {len(wide)} candidates: {statement[:40]}..."
+                logger.debug(
+                    f"Ningún candidato aceptado; se reintenta con {len(wide)}: {statement[:40]}…"
                 )
                 escalated, escalated_method = self._resolve(statement, wide, "llm_wide")
                 if not self._is_inconclusive(escalated):
                     result, method, candidates = escalated, escalated_method, wide
 
         if result is None:
-            logger.error("Failed to tag statement after repairs, returning empty annotation")
+            logger.error(f"Sin etiquetar tras las reparaciones: {statement[:60]}…")
             return empty("failed")
 
         if result["primary_concept"] is None:
-            candidates_log = ", ".join(f"{c} ({s:.3f})" for c, s in candidates)
-            logger.warning(
-                f"LLM rejected all candidates for statement: {statement[:40]}...\n"
-                f"  Candidates were: {candidates_log}"
-            )
+            logger.warning(f"El modelo rechazó todos los candidatos: {statement[:60]}…")
             return empty("rejected")
 
         return {**result, **self._trace(candidates, method)}
@@ -125,7 +120,7 @@ class ConceptTagger:
 
         result = self._verify(prompt, candidate_names, think=False)
         if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
-            logger.info(f"Inconclusive tagging — retrying with thinking: {statement[:40]}...")
+            logger.debug(f"Etiquetado no concluyente; se reintenta razonando: {statement[:40]}…")
             escalated = self._verify(prompt, candidate_names, think=True)
             if not self._is_inconclusive(escalated):
                 return escalated, f"{method}_thinking"
@@ -224,8 +219,7 @@ class ConceptTagger:
 
             return {"concepts": valid_concepts or [primary], "primary_concept": primary}
 
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.error(f"Parse error: {e}")
+        except (json.JSONDecodeError, KeyError, TypeError):
             return None
 
     @staticmethod
@@ -246,10 +240,6 @@ class ConceptTagger:
         annotated = dict(exemplars_bank)
         total = len(pending)
 
-        already_tagged = len(exemplars_bank) - total
-        if already_tagged:
-            logger.info(f"Reusing {already_tagged} existing annotation(s)")
-
         self.embedder.prefetch_queries(
             [self.embed_text(exemplars_bank[c_id]) for c_id in pending]
         )
@@ -257,7 +247,6 @@ class ConceptTagger:
         with progress.step("tagging", "Etiquetando el banco con conceptos del grafo", total) as reporter:
             for idx, c_id in enumerate(pending, 1):
                 progress.checkpoint()
-                logger.info(f"[{idx}/{total}] Tagging content {c_id}")
                 content = exemplars_bank[c_id]
                 reporter.tick(idx, detail=c_id)
                 annotation = self.tag(self.embed_text(content))
@@ -271,7 +260,5 @@ class ConceptTagger:
                 )
                 if on_item is not None:
                     on_item(c_id, annotated[c_id])
-
-        logger.success(f"Tagged {total} item(s)")
 
         return annotated

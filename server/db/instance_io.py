@@ -46,7 +46,7 @@ def _read_json(path: Path):
         with path.open(encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError) as exc:
-        logger.warning(f"Skipping unreadable {path}: {exc}")
+        logger.warning(f"No se pudo leer {path.name}; se omite: {exc}")
         return None
 
 
@@ -108,7 +108,7 @@ def import_instance(
         if not isinstance(record, dict) or record.get("status") != "approved":
             continue
         if not _approval_is_current(ws, kind, record):
-            logger.info(f"Approval for '{kind}' was already stale on disk; not importing it")
+            logger.info(f"[{kind}] la aprobación en disco ya estaba caducada; no se importa")
             continue
 
         artifact = repo.current_artifact(session, workspace.id, kind)
@@ -157,8 +157,8 @@ def import_instance(
         "raw_documents": documents,
     }
     logger.success(
-        f"Imported '{workspace.slug}': {len(imported)} artifact version(s), "
-        f"{approvals} approval(s), {documents} raw document(s)"
+        f"«{workspace.slug}» importado: {len(imported)} versión(es) de artefacto, "
+        f"{approvals} aprobación(es), {documents} documento(s) fuente"
     )
     return summary
 
@@ -200,5 +200,5 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
         with ws.review_state_path.open("w", encoding="utf-8") as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
 
-    logger.success(f"Exported '{slug}' to {ws.root}: {len(written)} artifact(s)")
+    logger.success(f"«{slug}» exportado a {ws.root}: {len(written)} artefacto(s)")
     return {"workspace": slug, "root": str(ws.root), "artifacts": written, "approvals": len(state)}

@@ -130,7 +130,7 @@ class OllamaEngine:
         if think is None:
             return {}
         if not self.supports_thinking(model):
-            logger.debug(f"Model '{model}' has no thinking mode; ignoring think={think}")
+            logger.debug(f"'{model}' no tiene modo de razonamiento; se ignora think={think}")
             return {}
         return {"think": think}
 
@@ -246,7 +246,7 @@ class OllamaEngine:
             try:
                 capabilities = list(self._client.show(model).capabilities or [])
             except (ollama.ResponseError, httpx.RequestError) as e:
-                logger.warning(f"Could not read capabilities of '{model}': {e}")
+                logger.warning(f"No se pudieron leer las capacidades de '{model}': {e}")
                 capabilities = []
             self._capabilities[model] = capabilities
         return self._capabilities[model]
@@ -292,7 +292,7 @@ class OllamaEngine:
 
     def _pull(self, model: str) -> bool:
         try:
-            logger.info(f"Downloading model '{model}'...")
+            logger.info(f"Descargando el modelo '{model}'")
             download_progress = self._client.pull(model, stream=True)
 
             pbar = None
@@ -308,10 +308,10 @@ class OllamaEngine:
             if pbar is not None:
                 pbar.close()
 
-            logger.success(f"Successfully downloaded model '{model}'")
+            logger.success(f"Modelo '{model}' descargado")
             return True
         except (ollama.ResponseError, httpx.RequestError) as e:
-            logger.error(f"Download failed: {e}")
+            logger.error(f"Falló la descarga de '{model}': {e}")
             return False
 
 

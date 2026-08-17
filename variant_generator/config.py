@@ -281,3 +281,8 @@ EVAL_RAG_TOP_K = MAX_FEW_SHOT_EXAMPLES
 # Logging ----------------------------------------------
 NOISY_LOGGERS = ("docling", "docling_core", "docling_ibm_models", "PIL")
 NOISY_WARNING_MODULES = (r"docling.*", r"PIL.*")
+
+# El detalle por elemento (un concepto, un ítem, un fragmento) se registra en DEBUG y
+# queda fuera del registro: la barra de progreso ya lo dibuja, y un banco de 150 ítems
+# o un grafo de 350 conceptos lo desbordarían. VG_LOG_LEVEL=DEBUG lo devuelve.
+LOG_LEVEL = os.environ.get("VG_LOG_LEVEL", "INFO").upper()

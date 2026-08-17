@@ -36,7 +36,7 @@ def _build(artifact: str):
 def _context(job: Job, reload: bool = False):
     ws = _workspace(job)
     if deps.is_ready(ws.slug) and not reload:
-        logger.info("Índices ya calientes en memoria: se reutilizan")
+        logger.info("Índices ya calientes en memoria; se reutilizan")
         return deps.get_context(ws)
 
     label = (
@@ -45,14 +45,11 @@ def _context(job: Job, reload: bool = False):
         else "Preparando el contexto: cargando la instancia e indexando"
     )
     with progress.step("context", label):
-        logger.info(
-            "Cargando perfil, grafo y banco, y calculando los embeddings que falten "
-            f"con '{config.EMBEDDING_LLM}' (se reutiliza la caché de {ws.cache_dir.name}/embeddings/)"
-        )
+        logger.info(f"Cargando la instancia e indexando con '{config.EMBEDDING_LLM}'")
         context = deps.reload_context(ws) if reload else deps.get_context(ws)
     logger.success(
-        f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s) "
-        f"y {len(context.exemplars_bank)} ítem(s) del banco"
+        f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s), "
+        f"{len(context.exemplars_bank)} ítem(s) del banco"
     )
     return context
 
@@ -69,15 +66,11 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
             if concepts
             else "todos los conceptos etiquetables"
         )
-        + (" (se reescriben las existentes)" if overwrite else " (solo los que no la tienen)")
+        + (", reescribiendo las existentes" if overwrite else ", solo las que faltan")
     )
     descriptions = stages.describe_concepts(concepts=concepts, overwrite=overwrite, ws=ws)
     # New prose means new embeddings; the cached context would keep matching the old.
     deps.invalidate(ws.slug, "descripciones de conceptos regeneradas")
-    logger.success(
-        f"{len(descriptions)} descripción(es) disponibles. El índice se recalculará en el "
-        "próximo trabajo que lo necesite."
-    )
     return {"described": len(descriptions)}
 
 
@@ -96,16 +89,13 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     ids = job.params.get("ids") or None
     pending = ids if ids is not None else ConceptTagger.pending_ids(context.exemplars_bank)
     logger.info(
-        f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s). "
-        f"Cada uno recupera candidatos del índice y los verifica con '{config.CONCEPT_TAGGER_LLM}' "
-        f"(umbral {config.EMBEDDER_SIMILARITY_THRESHOLD}, "
-        f"{config.TAGGER_TOP_K_CANDIDATES} candidatos como máximo)."
+        f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s), "
+        f"verificados con '{config.CONCEPT_TAGGER_LLM}'"
     )
     bank = stages.tag_bank(context, ids=ids)
     untagged = [i for i, item in bank.items() if not item.get("concepts")]
     logger.success(
-        f"Banco etiquetado: {len(bank) - len(untagged)} con conceptos, {len(untagged)} sin ellos "
-        "(los que quedan sin etiquetar se reintentan en la próxima pasada)."
+        f"Banco etiquetado: {len(bank) - len(untagged)} con conceptos, {len(untagged)} sin ellos"
     )
     return {
         "items": len(bank),
@@ -128,23 +118,20 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     think = bool(params.get("think", True))
 
     resolved_type = context.exemplars_profile.item_type(item_type)
+    detail = []
+    if fixed:
+        detail.append("campos fijados " + ", ".join(f"{k}={v}" for k, v in fixed.items()))
+    if curriculum:
+        detail.append(f"currículo de {len(curriculum)} concepto(s)")
+    if instructions:
+        detail.append(f"instrucciones «{instructions}»")
+    detail.append("con razonamiento" if think else "sin razonamiento")
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
         f"'{config.CONTENT_GENERATION_LLM}' sobre "
         + (", ".join(concepts) if concepts else "los conceptos más frecuentes del banco")
-    )
-    if fixed:
-        logger.info("Campos fijados: " + ", ".join(f"{k}={v}" for k, v in fixed.items()))
-    if curriculum:
-        logger.info(
-            f"Currículo activo con {len(curriculum)} concepto(s): el ítem no podrá exigir nada fuera de ahí"
-        )
-    if instructions:
-        logger.info(f"Instrucciones adicionales: «{instructions}»")
-    logger.info(
-        "El modelo razonará antes de escribir cada ítem: tarda más, pero delibera sobre el objetivo"
-        if think
-        else "Sin razonamiento previo: el modelo responde directamente y va más rápido"
+        + " — "
+        + "; ".join(detail)
     )
 
     results = stages.generate(
@@ -158,11 +145,9 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         think=think,
     )
     if len(results) < n:
-        logger.warning(
-            f"Se pidieron {n} ítem(s) y se validaron {len(results)}: el resto no pasó el esquema"
-        )
+        logger.warning(f"{len(results)}/{n} ítem(s) validados; el resto no pasó el esquema")
     else:
-        logger.success(f"{len(results)} ítem(s) generados y validados contra el perfil")
+        logger.success(f"{len(results)}/{n} ítem(s) generados y validados")
 
     items = [
         {
@@ -212,7 +197,6 @@ def _remember(job: Job, items: list[dict], item_type: str) -> int:
     except Exception as exc:  # noqa: BLE001 - the run succeeded; only its record did not
         logger.warning(f"No se pudieron guardar las variantes en la base de datos: {exc}")
         return 0
-    logger.info(f"{len(items)} variante(s) guardadas en el historial")
     return len(items)
 
 
@@ -254,10 +238,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     logger.info(
         f"Comparación ciega de {len(ARMS)} propuestas de tipo «{resolved_type.label}» sobre "
         + (", ".join(concepts) if concepts else "ningún concepto")
-    )
-    logger.info(
-        "Durante la comparación el registro y el progreso interno quedan ocultos: "
-        "revelarían qué propuesta ha salido de qué arquitectura."
+        + " — el registro interno queda oculto para no revelar el origen de cada una"
     )
 
     # Warmed BEFORE the blind section on purpose. Built inside the arm it would land in
@@ -288,8 +269,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
 
     produced = sum(1 for result in session.arms.values() if result.status == "ok")
     logger.success(
-        f"Sesión {session.id}: {produced} de {len(ARMS)} propuestas con ítem válido. "
-        "Los orígenes se revelan al elegir."
+        f"Sesión {session.id}: {produced}/{len(ARMS)} propuestas con ítem válido"
     )
     # Deliberately WITHOUT the items: `job.result` travels over the WebSocket to every
     # client and stays in the event buffer. The items are read from

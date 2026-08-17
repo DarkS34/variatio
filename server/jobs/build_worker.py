@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
             module=message.record["module"],
             message=message.record["message"],
         ),
-        level="DEBUG",
+        level=config.LOG_LEVEL,
         format="{message}",
     )
 
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         send("worker.cancelled")
         return 2
     except Exception as exc:  # noqa: BLE001 - reported upstream as a job failure
-        logger.exception("Build failed")
+        logger.exception("La construcción falló")
         send("worker.failed", error=f"{type(exc).__name__}: {exc}")
         return 1
 

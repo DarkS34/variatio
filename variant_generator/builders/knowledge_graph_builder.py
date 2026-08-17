@@ -161,7 +161,7 @@ class KnowledgeGraphBuilder:
     # PUBLIC API ----------------------------------------------------------------------------------
 
     def bootstrap(self) -> None:
-        ensure_models(BUILD_MODELS, "knowledge graph")
+        ensure_models(BUILD_MODELS, "del grafo de conocimiento")
 
     def build(self, input_dir: str | Path) -> dict:
         self.bootstrap()
@@ -189,13 +189,13 @@ class KnowledgeGraphBuilder:
 
         origins, relations = self._extract_documents(documents)
         if not origins:
-            logger.error("No concepts extracted from any file")
+            logger.error("Ningún concepto extraído del corpus")
             return {}
 
         staging = self._assemble(origins, relations, documents)
         logger.success(
-            f"Extraction done — {len(staging['entities'])} entity(ies), "
-            f"{len(staging['relations'])} relation(s)"
+            f"Extracción terminada: {len(staging['entities'])} concepto(s), "
+            f"{len(staging['relations'])} relación(es)"
         )
         return staging
 
@@ -207,10 +207,10 @@ class KnowledgeGraphBuilder:
     ) -> list[tuple[str, list[str], list[tuple[str, str]]]]:
         files = _source_docs.list_source_files(input_dir, recursive=recursive)
         if not files:
-            logger.error(f"No supported files found in: {input_dir}")
+            logger.error(f"Ningún documento admitido en {input_dir}")
             return []
 
-        logger.info(f"Found {len(files)} file(s) - converting the corpus to markdown")
+        logger.info(f"{len(files)} documento(s) en el corpus; convirtiendo a markdown")
         progress.phase("convert", f"0/{len(files)} documento(s)")
 
         converted: list[tuple[str, dict[int, list[str]], list[tuple[str, str]]]] = []
@@ -230,17 +230,16 @@ class KnowledgeGraphBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"[{file_path.name}] skipped: {e}")
+                    logger.exception(f"[{file_path.name}] omitido: {e}")
                     continue
 
                 chunks = _source_docs.chunk_markdown(text, self.chunk_size)
                 if not chunks:
-                    logger.warning(f"[{file_path.name}] produced no text")
+                    logger.warning(f"[{file_path.name}] no produjo texto")
                     continue
                 converted.append(
                     (file_path.name, _source_docs.headings_by_level(text), chunks)
                 )
-                logger.info(f"[{idx}/{len(files)} {file_path.name}] {len(chunks)} chunk(s)")
 
         titles = self._select_titles([levels for _, levels, _ in converted])
         documents = [
@@ -248,7 +247,7 @@ class KnowledgeGraphBuilder:
             for idx, (name, _, chunks) in enumerate(converted)
         ]
         for name, doc_titles, _ in documents:
-            logger.info(f"[{name}] title(s): {' · '.join(doc_titles) or '—'}")
+            logger.debug(f"[{name}] título(s): {' · '.join(doc_titles) or '—'}")
 
         progress.advance(1.0, f"{len(documents)} documento(s) listos")
         return documents
@@ -280,7 +279,7 @@ class KnowledgeGraphBuilder:
         self, documents: list[tuple[str, list[str], list[tuple[str, str]]]]
     ) -> tuple[dict[str, set[int]], set[tuple[str, str, str]]]:
         total = sum(len(chunks) for _, _, chunks in documents)
-        logger.info(f"Extracting from {total} chunk(s) across {len(documents)} document(s)")
+        logger.info(f"Extrayendo de {total} fragmento(s) de {len(documents)} documento(s)")
         progress.phase("extract", f"0/{total} fragmento(s)")
 
         origins: dict[str, set[int]] = defaultdict(set)
@@ -352,7 +351,7 @@ class KnowledgeGraphBuilder:
             log_prefix=log_prefix,
         )
         if result is None:
-            logger.warning(f"{log_prefix}unrecoverable JSON: {error}")
+            logger.warning(f"{log_prefix}JSON irrecuperable: {error}")
         return result
 
     def _valid_relations(self, raw: list, allowed: set[str] | None) -> list[list[str]]:
@@ -405,18 +404,15 @@ class KnowledgeGraphBuilder:
     def clean(self, staging: dict) -> dict:
         progress.phase("clean")
         nodes = self._node_universe(staging)
-        logger.info(
-            f"Cleaning staging KG — {len(staging['entities'])} entity(ies), "
-            f"{len(staging['relations'])} relation(s), {len(nodes)} node(s) in universe"
-        )
+        logger.info(f"Limpiando el grafo en bruto: {len(nodes)} nodo(s) en el universo")
 
         det_map, representatives = self._deterministic_merge(nodes)
-        logger.info(f"Deterministic merge — {len(nodes)} → {len(representatives)} node(s)")
+        logger.info(f"Fusión mecánica: {len(nodes)} → {len(representatives)} nodo(s)")
         progress.advance(0.1, f"{len(nodes)} → {len(representatives)} nodo(s) por fusión mecánica")
 
         llm_map = self._propose_merges(representatives, staging["relations"], det_map)
         canonicals = sorted({llm_map.get(n, n) for n in representatives})
-        logger.info(f"Semantic merge — {len(representatives)} → {len(canonicals)} node(s)")
+        logger.info(f"Fusión semántica: {len(representatives)} → {len(canonicals)} nodo(s)")
         progress.advance(0.6, f"{len(canonicals)} nodo(s) tras la fusión semántica")
 
         surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
@@ -426,8 +422,8 @@ class KnowledgeGraphBuilder:
         node_map = self._compose_node_map(nodes, det_map, llm_map, drop)
         cleaned = self._apply_node_map(staging, node_map)
         logger.success(
-            f"Cleaned — entities {len(staging['entities'])}→{len(cleaned['entities'])}, "
-            f"relations {len(staging['relations'])}→{len(cleaned['relations'])}"
+            f"Grafo limpio: {len(staging['entities'])}→{len(cleaned['entities'])} concepto(s), "
+            f"{len(staging['relations'])}→{len(cleaned['relations'])} relación(es)"
         )
         progress.advance(1.0)
         return cleaned
@@ -527,14 +523,14 @@ class KnowledgeGraphBuilder:
     def _propose_merges(self, nodes: list[str], relations: list[list], det_map: dict) -> dict:
         groups = self._merge_candidates(nodes)
         if not groups:
-            logger.info("No merge candidates found — keeping the deterministic merge only")
+            logger.info("Sin candidatos a fusión; se queda la fusión mecánica")
             return {}
 
         per_call = config.KG_BUILDER_MERGE_GROUPS_PER_CALL
         batches = [groups[i : i + per_call] for i in range(0, len(groups), per_call)]
         logger.info(
-            f"{len(groups)} merge candidate group(s) covering "
-            f"{sum(len(g) for g in groups)} name(s), in {len(batches)} call(s)"
+            f"{len(groups)} grupo(s) candidatos a fusión sobre "
+            f"{sum(len(g) for g in groups)} nombre(s), en {len(batches)} llamada(s)"
         )
 
         valid = set(nodes)
@@ -623,7 +619,7 @@ class KnowledgeGraphBuilder:
         except progress.Cancelled:
             raise
         except Exception as e:
-            logger.warning(f"Could not embed node names ({e}) — skipping the semantic merge")
+            logger.warning(f"No se pudieron vectorizar los nombres ({e}); sin fusión semántica")
             return None
 
         matrix = np.array(vectors, dtype=np.float32)
@@ -703,9 +699,9 @@ class KnowledgeGraphBuilder:
                 for name, reason in verdicts.items():
                     if name in valid:
                         drop.add(name)
-                        logger.info(f"drop '{name}': {reason}")
+                        logger.debug(f"[{name}] descartado: {reason}")
 
-        logger.info(f"Node filter — {len(drop)} node(s) dropped of {len(nodes)}")
+        logger.info(f"Descartes: {len(drop)} de {len(nodes)} nodo(s)")
         return drop
 
     # Compose deterministic merge -> semantic merge -> drops into one node->canonical map;
@@ -748,7 +744,7 @@ class KnowledgeGraphBuilder:
         output_path = output_path or self.workspace.kg_autogenerated_path
         concepts = cleaned["entities"]
         relations = cleaned["relations"]
-        logger.info(f"Curating — {len(concepts)} concept(s), {len(relations)} relation(s)")
+        logger.info(f"Curando {len(concepts)} concepto(s) y {len(relations)} relación(es)")
 
         progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
         with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
@@ -756,7 +752,7 @@ class KnowledgeGraphBuilder:
             concepts_by_domains = self._curate_domains(
                 concepts, relations, cleaned.get("documents") or [], cleaned.get("origins") or {}
             )
-            logger.info(f"Domains — {len(concepts_by_domains)} domain(s)")
+            logger.info(f"Dominios: {len(concepts_by_domains)}")
         progress.advance(1.0, f"{len(concepts_by_domains)} dominio(s)")
 
         relations = self._link_relations(concepts_by_domains, relations)
@@ -765,7 +761,7 @@ class KnowledgeGraphBuilder:
         with progress.step("kg_curate", "Tipando las relaciones y rompiendo ciclos"):
             universe = {c for cs in concepts_by_domains.values() for c in cs}
             typed = self._break_cycles(self._build_typed_relations(relations, universe))
-            logger.info(f"Relations — {len(typed)} typed group(s) over {len(universe)} concept(s)")
+            logger.info(f"Relaciones: {len(typed)} grupo(s) tipados sobre {len(universe)} concepto(s)")
         progress.advance(1.0)
 
         non_taggable = self._review_taggability(concepts_by_domains, relations)
@@ -777,9 +773,9 @@ class KnowledgeGraphBuilder:
         }
         _source_docs.save_json(curated, output_path)
         logger.success(
-            f"Curated draft → {output_path} — {len(universe)} concept(s), "
-            f"{len(universe) - len(non_taggable)} taggable, "
-            f"{len(typed)} typed relation group(s)"
+            f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
+            f"{len(universe) - len(non_taggable)} etiquetables, "
+            f"{len(typed)} grupo(s) de relación"
         )
         return curated
 
@@ -816,7 +812,7 @@ class KnowledgeGraphBuilder:
         if not placed:
             return by_domain
 
-        logger.info(f"Placing {len(leftovers)} leftover concept(s) into {len(placed)} domain(s)")
+        logger.info(f"Colocando {len(leftovers)} concepto(s) sueltos en {len(placed)} dominio(s)")
         remaining = list(leftovers)
         # Small batches and repeated rounds, because the failure being repaired here is
         # "forgot to answer", not "could not decide": at 60 names a call the model placed 24
@@ -834,7 +830,8 @@ class KnowledgeGraphBuilder:
         if remaining:
             placed[unclassified] = sorted(remaining)
         logger.info(
-            f"Leftovers — {len(leftovers) - len(remaining)} placed, {len(remaining)} still unclassified"
+            f"Sueltos: {len(leftovers) - len(remaining)} colocados, "
+            f"{len(remaining)} sin clasificar"
         )
         return placed
 
@@ -903,7 +900,7 @@ class KnowledgeGraphBuilder:
             progress.advance((total - 1) / total, "relaciones entre dominios")
             known.update(tuple(r) for r in self._link_cross_domain(concepts_by_domains))
 
-        logger.info(f"Linking added {len(known) - before} relation(s)")
+        logger.info(f"El enlazado añadió {len(known) - before} relación(es)")
         progress.advance(1.0, f"{len(known) - before} relación(es) nuevas")
         return sorted(list(r) for r in known)
 
@@ -938,9 +935,9 @@ class KnowledgeGraphBuilder:
         proposed = self._valid_relations(raw.get("relations", []), allowed=set(domain_of))
         crossing = [r for r in proposed if domain_of[r[0]] != domain_of[r[2]]]
         if len(crossing) < len(proposed):
-            logger.info(
-                f"Cross-domain pass — dropped {len(proposed) - len(crossing)} relation(s) "
-                f"that stayed inside one domain"
+            logger.debug(
+                f"Entre dominios: descartadas {len(proposed) - len(crossing)} relación(es) "
+                "que no cruzaban ningún dominio"
             )
         return crossing
 
@@ -995,8 +992,8 @@ class KnowledgeGraphBuilder:
                 non_taggable.update(self._judge_domain(domain, members, domains, relations))
 
         logger.info(
-            f"Taggability — {len(non_taggable)} concept(s) excluded from labelling "
-            f"across {len(domains)} domain(s)"
+            f"Etiquetabilidad: {len(non_taggable)} concepto(s) excluidos "
+            f"en {len(domains)} dominio(s)"
         )
         progress.advance(1.0, f"{len(non_taggable)} concepto(s) no etiquetables")
         return sorted(non_taggable)
@@ -1024,7 +1021,7 @@ class KnowledgeGraphBuilder:
         for concept, reason in verdicts.items():
             if concept in valid:
                 excluded.append(concept)
-                logger.info(f"[{domain}] non-taggable '{concept}': {reason}")
+                logger.debug(f"[{domain}] «{concept}» no sirve como etiqueta: {reason}")
         return excluded
 
     def _build_typed_relations(self, relations: list[list], universe: set) -> list[dict]:
@@ -1069,7 +1066,7 @@ class KnowledgeGraphBuilder:
                 rebuilt[source].append(target)
             group["relations_data"] = {s: sorted(rebuilt[s]) for s in sorted(rebuilt)}
             logger.warning(
-                f"Broke {len(removed)} back-edge(s) in acyclic '{details['verbose']}': {removed}"
+                f"Rotas {len(removed)} arista(s) de retroceso en «{details['verbose']}»: {removed}"
             )
         return typed
 

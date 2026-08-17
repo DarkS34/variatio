@@ -71,7 +71,7 @@ def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     }
     dropped = sorted(set(fixed or {}) - set(kept))
     if dropped:
-        logger.warning(f"Ignoring fixed fields with no value: {', '.join(dropped)}")
+        logger.warning(f"Campos fijados sin valor, se ignoran: {', '.join(dropped)}")
     return kept
 
 
@@ -220,8 +220,7 @@ class ContentGenerator:
         few_shot = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
             logger.warning(
-                f"No few-shot examples found for type='{target_type.key}', concepts={concepts}, "
-                f"fixed={fixed} — falling back to zero-shot"
+                f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot"
             )
         progress.emit(
             "few_shot",
@@ -265,16 +264,14 @@ class ContentGenerator:
                     instructions=instructions,
                 )
 
-                logger.info(f"[{i + 1}/{n}] generating '{target_type.key}' item")
                 reporter.tick(i + 1)
                 progress.emit("prompt", index=i + 1, text=prompt)
                 result = self._generate_one(prompt, fixed, target_type, think)
                 if result is None:
-                    logger.warning(f"[{i + 1}/{n}] generation failed; skipping")
+                    logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
                     progress.emit("item.rejected", index=i + 1)
                     continue
                 accepted.append(result)
-                logger.success(f"[{i + 1}/{n}] item accepted")
                 progress.emit(
                     "item.produced",
                     index=i + 1,
@@ -282,11 +279,6 @@ class ContentGenerator:
                     item_type=target_type.key,
                     thinking=result.thinking,
                 )
-
-        if len(accepted) < n:
-            logger.warning(f"Generated {len(accepted)}/{n} items")
-        else:
-            logger.success(f"Generated {len(accepted)}/{n} items")
 
         return accepted
 

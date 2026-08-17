@@ -34,7 +34,7 @@ def describe_concepts(
     """
     describer = _describer(ws)
     descriptions = describer.ensure(concepts=concepts, overwrite=overwrite)
-    logger.success(f"{len(descriptions)} concept description(s) available")
+    logger.success(f"{len(descriptions)} descripción(es) de concepto disponibles")
     return descriptions
 
 

@@ -5,7 +5,7 @@ import warnings
 from loguru import logger
 
 from . import inference
-from .config import NOISY_LOGGERS, NOISY_WARNING_MODULES
+from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES
 
 # from .utils import prepare_models
 
@@ -28,7 +28,7 @@ logger.level("ERROR",   color="<bold><red>")
 
 logger.add(
     sys.stdout,
-    level="DEBUG",
+    level=LOG_LEVEL,
     format="[{time:HH:mm:ss}] <level>{level: <8}</level> | <cyan>{module}</cyan> >> {message}",
     colorize=True,
 )

@@ -22,7 +22,7 @@ def upload(
 
     if result["added"]:
         names = ", ".join(f["name"] for f in result["added"])
-        logger.info(f"Imported {len(result['added'])} raw file(s) into '{kind}': {names}")
+        logger.info(f"[{kind}] {len(result['added'])} documento(s) añadidos: {names}")
         runtime.bus.publish(
             access.ws.slug, None, "raw.changed", {"kind": kind, "added": len(result["added"])}
         )
@@ -37,7 +37,7 @@ def delete(kind: str, name: str, access: auth.Access = auth.VIEW) -> dict:
     except raw_data.RawError as exc:
         raise HTTPException(404, str(exc)) from exc
 
-    logger.info(f"Removed raw file '{result['deleted']}' from '{kind}'")
+    logger.info(f"[{kind}] documento eliminado: {result['deleted']}")
     runtime.bus.publish(
         access.ws.slug, None, "raw.changed", {"kind": kind, "deleted": result["deleted"]}
     )

@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-from loguru import logger
-
 from . import config
 
 
@@ -14,6 +12,4 @@ class ExemplarsBank:
     @staticmethod
     def _load(path: str | Path) -> dict:
         with open(path, encoding="utf-8") as f:
-            bank = json.load(f)
-        logger.info(f"Exemplars bank loaded ({len(bank)} item(s))")
-        return bank
+            return json.load(f)

@@ -58,7 +58,7 @@ def run(commission: Commission, context) -> ArmResult:
     retrieved = index_for(context).search(query, config.EVAL_RAG_TOP_K, item_type.key)
     exemplar_ids = [item_id for item_id, _ in retrieved]
     logger.info(
-        f"Flat RAG retrieved {len(exemplar_ids)} exemplar(s) by plain cosine: "
+        f"RAG plano: {len(exemplar_ids)} ejemplar(es) por coseno — "
         + ", ".join(f"{item_id} ({score:.3f})" for item_id, score in retrieved)
     )
 

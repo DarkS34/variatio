@@ -67,7 +67,7 @@ def run(commission: Commission, context) -> ArmResult:
             raise
         except Exception as e:  # noqa: BLE001 - a failed arm is a datum, not a crash
             error = f"{type(e).__name__}: {e}"
-            logger.warning(f"System arm failed: {error}")
+            logger.warning(f"Falló la propuesta del sistema: {error}")
 
     item = results[0].item.model_dump(mode="json") if results else None
     if item is None and error is None:

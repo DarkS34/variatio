@@ -119,9 +119,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "build":
             built = stages.build_missing(ws)
             if built:
-                logger.success(f"Built artifact(s): {', '.join(built)}")
+                logger.success(f"Artefactos construidos: {', '.join(built)}")
             else:
-                logger.info("All instance artifacts already present")
+                logger.info("Todos los artefactos de la instancia ya existen")
         elif args.command == "init":
             stages.initialize(tag=True, ws=ws)
         elif args.command == "generate":
@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
             stages.build_missing(ws)
             _generate_and_report(args, ws)
     except stages.MissingArtifactError as e:
-        logger.error(f"{e} — run `variant-generator build` first")
+        logger.error(f"{e}; ejecuta antes `variant-generator build`")
         return 1
     except (RuntimeError, ImportError, OSError, ValueError) as e:
         logger.error(str(e))

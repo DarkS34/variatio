@@ -51,11 +51,11 @@ class FlatBankIndex:
         if self.ids:
             return
         if self._load_cache():
-            logger.info(f"Loaded the evaluation RAG index from cache ({len(self.ids)} items)")
+            logger.info(f"Índice RAG reutilizado de la caché ({len(self.ids)} ítem(s))")
             return
         self._build()
         self._save_cache()
-        logger.info(f"Built and cached the evaluation RAG index ({len(self.ids)} items)")
+        logger.info(f"Índice RAG construido y guardado ({len(self.ids)} ítem(s))")
 
     def search(self, query: str, k: int, item_type: str | None = None) -> list[tuple[str, float]]:
         """Plain cosine, top-k. No threshold, no relative band, no query prefix."""

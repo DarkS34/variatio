@@ -14,7 +14,7 @@ from contextlib import contextmanager
 
 from loguru import logger
 
-from variant_generator import progress
+from variant_generator import config, progress
 
 from .bus import EventBus
 from .models import SUBPROCESS_KINDS, Job
@@ -239,7 +239,7 @@ class JobRunner:
         except progress.Cancelled:
             self._settle(job, "cancelled")
         except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
-            logger.exception(f"Job {job.kind} failed")
+            logger.exception(f"El trabajo «{job.kind}» falló")
             job.error = f"{type(exc).__name__}: {exc}"
             self._settle(job, "failed")
         finally:
@@ -278,7 +278,7 @@ class JobRunner:
 
         return logger.add(
             sink,
-            level="DEBUG",
+            level=config.LOG_LEVEL,
             format="{message}",
             filter=lambda r: r["thread"].id == worker_id,
         )

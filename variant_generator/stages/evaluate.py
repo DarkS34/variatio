@@ -44,7 +44,7 @@ def evaluate(
     order = list(ARMS)
     draw.shuffle(order)
     think = draw.random() < 0.5
-    logger.info(f"Seed {seed}: reasoning {'on' if think else 'off'} for the local arms")
+    logger.info(f"Semilla {seed}: razonamiento {'activado' if think else 'desactivado'}")
 
     commission = Commission(
         concepts=list(concepts),
@@ -79,12 +79,10 @@ def evaluate(
             results["naive"] = external.result()
             reporter.tick(3)
 
-    for arm in ARMS:
-        result = results[arm]
-        logger.info(
-            f"Arm '{arm}' → {result.status} in {result.elapsed_ms} ms"
-            + (f" ({result.error})" if result.error else "")
-        )
+    logger.info(
+        "Propuestas: "
+        + ", ".join(f"{arm} {results[arm].status} en {results[arm].elapsed_ms} ms" for arm in ARMS)
+    )
 
     return EvaluationSession(
         id=uuid.uuid4().hex[:12],
@@ -110,7 +108,7 @@ def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
     except progress.Cancelled:
         raise
     except Exception as e:  # noqa: BLE001 - reported as a failed arm, never swallowed
-        logger.warning(f"Arm '{arm}' raised: {type(e).__name__}: {e}")
+        logger.warning(f"La propuesta «{arm}» falló: {type(e).__name__}: {e}")
         return ArmResult(
             arm=arm,
             status=FAILED,

@@ -25,7 +25,7 @@ def _embed_normalized(texts: list[str], what: str):
     except progress.Cancelled:
         raise
     except Exception as e:
-        logger.warning(f"Could not embed {what} ({e}) — continuing without that signal")
+        logger.warning(f"No se pudo vectorizar {what} ({e}); se sigue sin esa señal")
         return None
 
     matrix = np.array(vectors, dtype=np.float32)
@@ -118,9 +118,8 @@ class ConceptDescriber:
         ]
         if stale:
             logger.info(
-                f"{len(stale)} description(s) describe a concept whose graph neighbourhood "
-                f"changed; rewriting them: {', '.join(stale[:8])}"
-                + (" …" if len(stale) > 8 else "")
+                f"{len(stale)} descripción(es) quedaron obsoletas al cambiar el grafo; "
+                "se reescriben"
             )
         return missing + stale
 
@@ -137,10 +136,10 @@ class ConceptDescriber:
         current = {c: self._fingerprint(c) for c in targets}
         pending = list(targets) if overwrite else self._pending(targets, descriptions, current)
         if pending:
-            logger.info(f"Generating {len(pending)} concept description(s)...")
+            logger.info(f"Escribiendo {len(pending)} descripción(es) de concepto")
             self._write(self._by_domain(pending), descriptions)
         else:
-            logger.info(f"Loaded {len(targets)} taggable concept description(s) from cache")
+            logger.info(f"{len(targets)} descripción(es) de concepto reutilizadas de la caché")
 
         # The second pass is NOT run over everything that has siblings. It was, and it
         # doubled the calls to fix a problem most concepts do not have — while the ones that
@@ -156,14 +155,14 @@ class ConceptDescriber:
         if refine:
             collisions = self._collisions(descriptions, list(targets))
             if collisions:
-                logger.info(f"Rewriting {len(collisions)} description(s) that collide with a peer")
+                logger.info(f"Reescribiendo {len(collisions)} descripción(es) que chocan con otra")
                 self._write(list(collisions), descriptions, against=collisions)
                 written += len(collisions)
 
         self._save_fingerprints(current)
         if written:
             logger.success(
-                f"Wrote {written} description(s); {len(descriptions)} in cache"
+                f"{written} descripción(es) escritas; {len(descriptions)} en la caché"
             )
         return descriptions
 
@@ -178,7 +177,6 @@ class ConceptDescriber:
         ) as reporter:
             for i, concept in enumerate(plan, 1):
                 progress.checkpoint()
-                logger.info(f"[{i}/{len(plan)}] Generating description: {concept}")
                 reporter.tick(i, detail=concept)
                 try:
                     descriptions[concept] = self.describe(
@@ -187,7 +185,7 @@ class ConceptDescriber:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.warning(f"Falling back to legacy describe for '{concept}': {e}")
+                    logger.warning(f"[{concept}] descripción de reserva, sin modelo: {e}")
                     descriptions[concept] = self.simple_describe(concept)
                 # Checkpoint after every concept: a cancelled run keeps what it wrote.
                 self.save(descriptions)
@@ -277,9 +275,8 @@ class ConceptDescriber:
             ]
             if peers:
                 collisions[concept] = peers
-                logger.info(
-                    f"'{concept}' collides with {', '.join(peers)} "
-                    f"(max {similarity[i].max():.3f})"
+                logger.debug(
+                    f"[{concept}] choca con {', '.join(peers)} (máx {similarity[i].max():.3f})"
                 )
         return collisions
 
@@ -371,26 +368,21 @@ class Embedder:
     def _ensure_concepts_index(self) -> None:
         if self._is_concept_cache_valid():
             self._load_concept_cache()
-            logger.info(f"Loaded concepts index from cache ({len(self.concepts_index)} concepts)")
+            logger.info(
+                f"Índice de conceptos reutilizado de la caché ({len(self.concepts_index)} concepto(s))"
+            )
             return
-        logger.info("Building concepts index...")
+        logger.info("Construyendo el índice de conceptos")
         self.init_index_with_concepts()
         self._save_concept_cache()
-        logger.info(f"Saved concepts index cache ({len(self.concepts_index)} concepts)")
 
     # The bank index persisted by the previous run is a warm start for this run's tagging:
     # enrich_index_with_content re-embeds and re-merges it once the current bank is known.
     def _load_previous_bank_index(self) -> None:
         if not self.exemplars_bank_cache_path.exists():
-            logger.warning(
-                "Exemplars bank embeddings cache not found - call enrich_index_with_content to generate it."
-            )
             return
         self._load_exemplars_bank_cache()
         self._merge_into_index()
-        logger.info(
-            f"Loaded exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)"
-        )
 
     # FINGERPRINTS --------------------------------------------------------------------------------
 
@@ -521,7 +513,7 @@ class Embedder:
         new_fingerprint = self._exemplars_bank_fingerprint()
 
         if self._cached_exemplars_bank_fingerprint == new_fingerprint and cached_vectors:
-            logger.info("Exemplars bank index already up to date; skipping re-embedding.")
+            logger.info("Índice del banco al día; no hay nada que vectorizar")
             return
 
         reusable = {
@@ -534,8 +526,8 @@ class Embedder:
 
         if pending:
             logger.info(
-                f"Embedding {len(pending)} exemplars bank example(s) "
-                f"({len(reusable)} reused from cache)..."
+                f"Vectorizando {len(pending)} ítem(s) del banco "
+                f"({len(reusable)} reutilizados de la caché)"
             )
             with progress.step(
                 "embed_bank", "Indexando el banco de ejemplos", total=len(pending)
@@ -556,9 +548,6 @@ class Embedder:
         self._cached_exemplars_bank_fingerprint = new_fingerprint
         self._merge_into_index()
         self._rebuild_matrices()
-        logger.info(
-            f"Saved exemplars bank cache and merged index ({len(self.exemplars_bank_index)} items)"
-        )
 
     def _merge_into_index(self) -> None:
         alpha = self.description_weight
@@ -651,7 +640,7 @@ class Embedder:
         pending = self._pending_keys([self._prefix("query") + t for t in texts])
         if not pending:
             return
-        logger.info(f"Embedding {len(pending)} query text(s) in batch...")
+        logger.info(f"Vectorizando {len(pending)} enunciado(s) para la recuperación")
         with progress.step(
             "embed_queries", "Vectorizando los enunciados", total=len(pending)
         ) as reporter:

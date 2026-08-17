@@ -42,7 +42,7 @@ def run(commission: Commission, context) -> ArmResult:
     try:
         answer = external.generate(prompt, item_type.stripped_schema())
     except ArmUnavailable as e:
-        logger.warning(f"External arm unavailable: {e}")
+        logger.warning(f"Propuesta externa no disponible: {e}")
         # Nobody answered, so there is no answering provider to name: the record keeps the
         # head of the chain, which is who the arm would have asked.
         provider, model = external.primary()

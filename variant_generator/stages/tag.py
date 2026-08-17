@@ -39,7 +39,7 @@ def tag_bank(
     )
 
     if not pending:
-        logger.info("Exemplars bank already annotated — skipping tagging")
+        logger.info("El banco ya está anotado; no hay nada que etiquetar")
         context.apply_bank(context.exemplars_bank)
         return context.exemplars_bank
 
@@ -58,6 +58,6 @@ def tag_bank(
         raise
 
     save_bank(annotated, path)
-    logger.success(f"Saved {len(annotated)} annotated item(s) to {path}")
+    logger.success(f"{len(pending)} ítem(s) etiquetados; banco guardado en {Path(path).name}")
     context.apply_bank(annotated)
     return annotated

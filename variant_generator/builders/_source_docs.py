@@ -116,25 +116,25 @@ def to_markdown(
     cached = markdown_cache_path(input_path, cache_dir) if use_cache else None
     if cached is not None and cached.exists():
         if cached.stat().st_mtime >= input_path.stat().st_mtime:
-            logger.info(f"[{input_path.name}] markdown reused from {cached}")
+            logger.debug(f"[{input_path.name}] markdown reutilizado de {cached}")
             # Re-tidied on the way out, and rewritten when that changes anything: Docling is
             # the expensive half and its output does not change, so an improvement to the
             # cleanup must not cost a reconversion of the whole corpus to take effect.
             return _refresh(cached, tidy_markdown(cached.read_text(encoding="utf-8")))
-        logger.info(f"[{input_path.name}] source is newer than its markdown; reconverting")
+        logger.info(f"[{input_path.name}] el origen es más nuevo que su markdown; reconvirtiendo")
 
     text = tidy_markdown(converter.convert(str(input_path)).document.export_to_markdown())
     if cached is not None:
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
-        logger.info(f"[{input_path.name}] markdown written to {cached}")
+        logger.debug(f"[{input_path.name}] markdown escrito en {cached}")
     return text
 
 
 def _refresh(path: Path, text: str) -> str:
     if text != path.read_text(encoding="utf-8"):
         path.write_text(text, encoding="utf-8")
-        logger.info(f"[{path.name}] cached markdown re-tidied in place")
+        logger.debug(f"[{path.name}] markdown en caché reformateado")
     return text
 
 
@@ -488,8 +488,8 @@ def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -
             return page
         except inference.InferenceError as e:
             last_error = e
-            logger.warning(f"{tag} page {index}/{count} transcription failed: {e}")
-    logger.error(f"{tag} page {index}/{count} giving up: {last_error}")
+            logger.warning(f"{tag}página {index}/{count}: falló la transcripción ({e})")
+    logger.error(f"{tag}página {index}/{count}: se abandona tras los reintentos ({last_error})")
     # A lost page is lost exercises. Leave a marker a human will trip over in the cached
     # file rather than a silent gap that looks like a page with nothing on it.
     return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
@@ -497,7 +497,7 @@ def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -
 
 def transcribe_pdf(pdf_path: Path, model: str, dpi: int, tag: str = "") -> list[str]:
     count, images = page_images(pdf_path, dpi)
-    logger.info(f"{tag}{pdf_path.name}: transcribing {count} page(s) with '{model}'")
+    logger.info(f"{tag}{pdf_path.name}: transcribiendo {count} página(s) con '{model}'")
     pages: list[str] = []
     with progress.step(
         "transcribe", f"{pdf_path.name}: transcribiendo páginas", count
@@ -507,7 +507,7 @@ def transcribe_pdf(pdf_path: Path, model: str, dpi: int, tag: str = "") -> list[
             reporter.tick(index, detail=f"página {index}/{count}")
             pages.append(_transcribe_page(image, index, count, model, tag))
     kept = sum(1 for page in pages if page.strip())
-    logger.info(f"{tag}{pdf_path.name}: {kept}/{count} page(s) with content")
+    logger.info(f"{tag}{pdf_path.name}: {kept}/{count} página(s) con contenido")
     return pages
 
 
@@ -540,7 +540,7 @@ def document_pages(
     if use_cache:
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
-            logger.info(f"{tag}{source.name}: {len(cached)} page(s) reused from {document_dir}")
+            logger.info(f"{tag}{source.name}: {len(cached)} página(s) reutilizadas de la caché")
             return cached
 
     if is_pdf:
@@ -552,11 +552,10 @@ def document_pages(
     if not pages:
         # Caching "nothing" would make the emptiness stick until the source file changes,
         # and an empty document is far more likely to be a transient failure than a fact.
-        logger.warning(f"{tag}{source.name}: produced no pages; not caching")
+        logger.warning(f"{tag}{source.name}: no produjo páginas; no se guarda en caché")
         return pages
     if use_cache:
         _write_pages(document_dir, pages, fingerprint)
-        logger.info(f"{tag}{source.name}: {len(pages)} page(s) written to {document_dir}")
     return pages
 
 

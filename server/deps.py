@@ -46,7 +46,7 @@ def get_context(ws: Workspace) -> PipelineContext:
         require_inference()
         reason = _invalid_reasons.pop(ws.slug, None)
         if reason:
-            logger.info(f"Rebuilding pipeline context for '{ws.slug}' ({reason})")
+            logger.info(f"Reconstruyendo el contexto de «{ws.slug}»: {reason}")
 
         context = stages.initialize(tag=False, ws=ws)
         _contexts[ws.slug] = context
@@ -62,7 +62,7 @@ def reload_context(ws: Workspace) -> PipelineContext:
 def invalidate(slug: str, reason: str) -> None:
     with _lock:
         if _contexts.pop(slug, None) is not None:
-            logger.info(f"Pipeline context for '{slug}' invalidated: {reason}")
+            logger.info(f"Contexto de «{slug}» invalidado: {reason}")
         _invalid_reasons[slug] = reason
 
 
@@ -85,4 +85,4 @@ def warm_slugs() -> list[str]:
 def _evict() -> None:
     while len(_contexts) > MAX_CONTEXTS:
         slug, _ = _contexts.popitem(last=False)
-        logger.info(f"Pipeline context for '{slug}' evicted (registry full)")
+        logger.info(f"Contexto de «{slug}» descargado: el registro está lleno")

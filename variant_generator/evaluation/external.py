@@ -102,12 +102,12 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
     failures: list[str] = []
     for provider in configured_providers():
         model = _model(provider)
-        logger.info(f"Calling external provider '{provider}' with model '{model}'")
+        logger.info(f"Llamando al proveedor externo '{provider}' con '{model}'")
         try:
             text = _CALLERS[provider](prompt, model, _key(provider), schema)
             if failures:
                 logger.warning(
-                    f"External arm fell back to '{provider}' after {len(failures)} failure(s)"
+                    f"Se recurrió a '{provider}' tras {len(failures)} fallo(s) de otros proveedores"
                 )
             return ExternalAnswer(text=text, provider=provider, model=model)
         except httpx.HTTPStatusError as e:
@@ -116,7 +116,7 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
             failure = f"No se pudo contactar con {provider}: {e}"
         except (KeyError, IndexError, ValueError) as e:
             failure = f"Respuesta ininteligible de {provider}: {e}"
-        logger.warning(f"External provider '{provider}' failed: {failure}")
+        logger.warning(f"Falló el proveedor externo '{provider}': {failure}")
         failures.append(failure)
 
     raise ArmUnavailable(" | ".join(failures))

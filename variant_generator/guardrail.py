@@ -53,7 +53,7 @@ def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> V
     verdict = Verdict(blocked_by=blocked_by, checked=not unreadable)
     if unreadable:
         logger.warning(
-            f"Guardrail could not judge {', '.join(unreadable)}; letting the request through"
+            f"El filtro no pudo juzgar {', '.join(unreadable)}; se deja pasar la petición"
         )
     progress.emit(
         "guardrail",
@@ -70,12 +70,12 @@ def _score(text: str, criterion: str) -> bool | None:
             model=config.GUARDRAIL_LLM, prompt=text, system=criterion, think=False
         )
     except InferenceError as e:
-        logger.warning(f"Guardrail call failed for '{criterion}': {e}")
+        logger.warning(f"Falló la llamada del filtro para «{criterion}»: {e}")
         return None
 
     answer = (response.response or "").strip()
     match = _SCORE.search(answer) or _BARE.search(answer)
     if match is None:
-        logger.warning(f"Guardrail gave no readable score for '{criterion}': {answer[:120]!r}")
+        logger.warning(f"El filtro no dio un veredicto legible para «{criterion}»: {answer[:120]!r}")
         return None
     return match.group(1).lower() == "yes"

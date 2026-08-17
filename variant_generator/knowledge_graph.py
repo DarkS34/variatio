@@ -27,8 +27,6 @@ class KnowledgeGraph:
         self._build_graphs(data.get("relations", []))
         self._report_cycles()
 
-        logger.success(f"Knowledge graph loaded ({len(self.all_concepts)} concept(s))")
-
     def _build_graphs(self, relations: list[dict]) -> None:
         node_attrs = [(c, {"domain": self.concept_domain[c]}) for c in self.all_concepts]
 
@@ -52,11 +50,11 @@ class KnowledgeGraph:
                 continue
             if not graph.is_directed():
                 logger.warning(
-                    f"'{rel_name}' is marked as 'acyclic' but not as 'directed' - skipping cycle validation."
+                    f"«{rel_name}» es acíclica pero no dirigida; no se comprueban ciclos"
                 )
                 continue
             if not nx.is_directed_acyclic_graph(graph):
-                logger.error(f"Cycle detected in '{rel_name}': {nx.find_cycle(graph)}")
+                logger.error(f"Ciclo en «{rel_name}»: {nx.find_cycle(graph)}")
 
     def __getitem__(self, relation: str) -> nx.Graph:
         return self.graphs[relation]
