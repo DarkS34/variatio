@@ -18,6 +18,7 @@ import numpy as np
 from loguru import logger
 
 from ... import config, inference, progress
+from ...embedder import embed_normalized
 from ...prompts import filter_graph_nodes_prompt, merge_candidate_groups_prompt
 from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA
@@ -151,7 +152,9 @@ def propose_merges(
 def merge_candidates(nodes: list[str]) -> list[list[str]]:
     if len(nodes) < 2:
         return []
-    vectors = embed_names(nodes)
+    vectors = embed_normalized(
+        nodes, "los nombres de los nodos", model=config.KG_CLEAN_EMBEDDING_MODEL
+    )
     if vectors is None:
         return []
 
@@ -191,26 +194,6 @@ def components(index: list[int], similarity, threshold: float) -> list[list[int]
         else:
             out.extend(components(members, similarity, threshold + 0.05))
     return out
-
-
-def embed_names(names: list[str]):
-    try:
-        vectors = []
-        for start in range(0, len(names), config.EMBEDDING_BATCH_SIZE):
-            progress.checkpoint()
-            batch = names[start : start + config.EMBEDDING_BATCH_SIZE]
-            vectors.extend(
-                inference.embed_batch(model=config.KG_CLEAN_EMBEDDING_MODEL, texts=batch)
-            )
-    except progress.Cancelled:
-        raise
-    except Exception as e:
-        logger.warning(f"No se pudieron vectorizar los nombres ({e}); sin fusión semántica")
-        return None
-
-    matrix = np.array(vectors, dtype=np.float32)
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-    return np.divide(matrix, norms, out=np.zeros_like(matrix), where=norms > 0)
 
 
 # Force every canonical to be an existing node (drops invented names).

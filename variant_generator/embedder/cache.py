@@ -1,0 +1,129 @@
+"""The two `.npz` caches and the fingerprints that decide whether they are still valid.
+
+A fingerprint answers one question — "would re-embedding produce the same vectors?" — so
+everything that changes the vectors has to be inside it, and nothing else may be. That is
+why the concept cache is fingerprinted by `embed_signature` too: change which fields are
+indexed and the merged centroids change, while the descriptions that built them do not.
+"""
+
+import hashlib
+import json
+from pathlib import Path
+
+import numpy as np
+
+
+def text_fingerprint(text: str) -> str:
+    return hashlib.md5((text or "").encode()).hexdigest()
+
+
+# Appended only when non-empty, so a profile that indexes primary fields alone produces the
+# exact string this used to produce and keeps its caches: a separator on its own is enough
+# to invalidate every vector for no change in the text they were built from.
+def embedding_fingerprint(model: str, embed_signature: str, query_prefix: str, document_prefix: str) -> str:
+    base = f"{model}::{query_prefix}::{document_prefix}"
+    return f"{base}::{embed_signature}" if embed_signature else base
+
+
+def concept_fingerprint(
+    embedding: str, taggable: list[str], descriptions: dict[str, str]
+) -> str:
+    payload = json.dumps(
+        {
+            "concepts": sorted(taggable),
+            "descriptions": {
+                c: descriptions[c] for c in sorted(taggable) if c in descriptions
+            },
+        },
+        ensure_ascii=False,
+    )
+    return hashlib.md5(f"{embedding}::{payload}".encode()).hexdigest()
+
+
+def bank_fingerprint(embedding: str, bank: dict, embed_text) -> str:
+    entries = sorted(
+        (
+            ex_id,
+            text_fingerprint(embed_text(ex)),
+            sorted(ex.get("concepts", [])),
+            ex.get("primary_concept") or "",
+        )
+        for ex_id, ex in bank.items()
+    )
+    serialized = json.dumps(entries, ensure_ascii=False)
+    return hashlib.md5(f"{embedding}::{serialized}".encode()).hexdigest()
+
+
+# CONCEPT INDEX ---------------------------------------------------------------------------
+
+
+def concept_cache_is_valid(path: Path, fingerprint: str) -> bool:
+    if not path.exists():
+        return False
+    try:
+        data = np.load(path, allow_pickle=True)
+        return str(data["fingerprint"]) == fingerprint
+    except Exception:
+        return False
+
+
+def load_concept_cache(path: Path) -> dict[str, np.ndarray]:
+    data = np.load(path, allow_pickle=True)
+    return dict(zip(data["keys"], data["vectors"]))
+
+
+def save_concept_cache(path: Path, index: dict[str, np.ndarray], fingerprint: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        path,
+        keys=list(index.keys()),
+        vectors=np.array(list(index.values())),
+        fingerprint=fingerprint,
+    )
+
+
+# BANK INDEX ------------------------------------------------------------------------------
+#
+# The bank cache stores a per-item text hash alongside the vectors, so re-tagging the bank
+# re-merges without re-embedding anything and an edited item re-embeds alone. It persists
+# `primary_concept` too, or the kNN leg would be dead exactly during tagging.
+
+
+def load_bank_cache(path: Path) -> tuple[dict[str, np.ndarray], dict[str, dict], dict[str, str], str]:
+    data = np.load(path, allow_pickle=True)
+    index = dict(zip(data["keys"], data["vectors"]))
+    assignments = json.loads(str(data["assignments"]))
+    bank = {
+        ex_id: {
+            "concepts": entry.get("concepts", []),
+            "primary_concept": entry.get("primary_concept"),
+        }
+        for ex_id, entry in assignments.items()
+    }
+    texts = {ex_id: entry.get("text", "") for ex_id, entry in assignments.items()}
+    return index, bank, texts, str(data["fingerprint"])
+
+
+def save_bank_cache(
+    path: Path,
+    index: dict[str, np.ndarray],
+    bank: dict,
+    embed_text,
+    fingerprint: str,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    assignments = {
+        ex_id: {
+            "concepts": sorted(ex.get("concepts", [])),
+            "primary_concept": ex.get("primary_concept"),
+            "text": text_fingerprint(embed_text(ex)),
+        }
+        for ex_id, ex in bank.items()
+    }
+    np.savez(
+        path,
+        keys=list(index.keys()),
+        vectors=np.array(list(index.values())),
+        assignments=json.dumps(assignments, ensure_ascii=False),
+        fingerprint=fingerprint,
+    )
