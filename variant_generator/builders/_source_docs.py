@@ -81,23 +81,21 @@ def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Pa
 # the right stage by reading the file. Freshness is make-style — the cache is used while it
 # is newer than its source — which also means a hand-fixed markdown survives until the
 # original document itself changes.
-def markdown_cache_path(source: str | Path, cache_dir: str | Path | None = None) -> Path:
+# `cache_dir` is required: it used to fall back to the default workspace, so a build of
+# instance B could read and write B's markdown under A's tree. Every caller resolves it
+# from its own `Workspace`, and a caller that has no cache says so with `use_cache=False`.
+def markdown_cache_path(source: str | Path, cache_dir: str | Path) -> Path:
     source = Path(source)
-    root = Path(cache_dir or config.default_workspace().markdown_cache_dir)
-    return root / source.parent.name / f"{source.name}.md"
+    return Path(cache_dir) / source.parent.name / f"{source.name}.md"
 
 
-def markdown_cached(input_path: str | Path, cache_dir: str | Path | None = None) -> bool:
-    """Whether `to_markdown` would answer from the cache instead of running Docling.
-
-    Same make-style rule the reader applies, stated once: anything that wants to know
-    what a conversion will COST has to ask the same question the conversion asks.
-    """
-    input_path = Path(input_path)
-    if input_path.suffix.lower() in PLAIN_TEXT_EXTS:
-        return True
-    cached = markdown_cache_path(input_path, cache_dir)
-    return cached.exists() and cached.stat().st_mtime >= input_path.stat().st_mtime
+def _required_cache_dir(cache_dir: str | Path | None, what: str) -> Path:
+    if cache_dir is None:
+        raise ValueError(
+            f"{what} needs an explicit cache_dir (a workspace's markdown_cache_dir); "
+            "pass use_cache=False if there is no cache to use."
+        )
+    return Path(cache_dir)
 
 
 def to_markdown(
@@ -113,7 +111,11 @@ def to_markdown(
     if suffix not in CONVERTED_EXTS:
         raise ValueError(f"Unsupported file extension: {suffix}")
 
-    cached = markdown_cache_path(input_path, cache_dir) if use_cache else None
+    cached = (
+        markdown_cache_path(input_path, _required_cache_dir(cache_dir, "to_markdown"))
+        if use_cache
+        else None
+    )
     if cached is not None and cached.exists():
         if cached.stat().st_mtime >= input_path.stat().st_mtime:
             logger.debug(f"[{input_path.name}] markdown reutilizado de {cached}")
@@ -327,10 +329,9 @@ META_NAME = "_meta.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 
 
-def document_cache_dir(source: str | Path, cache_dir: str | Path | None = None) -> Path:
+def document_cache_dir(source: str | Path, cache_dir: str | Path) -> Path:
     source = Path(source)
-    root = Path(cache_dir or config.default_workspace().markdown_cache_dir)
-    return root / source.parent.name / source.name
+    return Path(cache_dir) / source.parent.name / source.name
 
 
 def _page_path(cache_dir: Path, index: int) -> Path:
@@ -365,37 +366,9 @@ def _fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
     )
 
 
-def pages_cached(
-    source: str | Path,
-    model: str = "",
-    dpi: int = 0,
-    ocr: bool = False,
-    cache_dir: str | Path | None = None,
-) -> int:
-    """How many pages `document_pages` would reuse, 0 when it would convert from scratch.
-
-    The counterpart of `markdown_cached` for the page route: transcription is one model
-    call per page, so what is already on disk is the difference between a build of
-    minutes and one of hours, and a caller estimating that cost must not guess it.
-    """
-    source = Path(source)
-    fingerprint = _fingerprint_for(
-        source, model or config.EXEMPLARS_TRANSCRIBE_MODEL, dpi or config.TRANSCRIBE_DPI, ocr
-    )
-    directory = document_cache_dir(source, cache_dir)
-    meta_path = directory / META_NAME
-    if not meta_path.exists():
-        return 0
-    try:
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return 0
-    if {k: v for k, v in meta.items() if k != "pages"} != fingerprint:
-        return 0
-    count = meta.get("pages")
-    if not isinstance(count, int) or count < 1:
-        return 0
-    return count if all(_page_path(directory, i).exists() for i in range(1, count + 1)) else 0
+# `markdown_cached` and `pages_cached` used to live here, answering "how much of this
+# conversion is already on disk?". Their only caller was `server/estimates.py`, deleted with
+# the build time estimate on 2026-08-17, and they have had none since.
 
 
 def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
@@ -536,7 +509,11 @@ def document_pages(
     dpi = dpi or config.TRANSCRIBE_DPI
     fingerprint = _fingerprint_for(source, model, dpi, ocr)
 
-    document_dir = document_cache_dir(source, cache_dir)
+    document_dir = (
+        document_cache_dir(source, _required_cache_dir(cache_dir, "document_pages"))
+        if use_cache
+        else None
+    )
     if use_cache:
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:

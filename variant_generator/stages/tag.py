@@ -3,14 +3,13 @@ from pathlib import Path
 
 from loguru import logger
 
-from .. import config
 from ..concept_tagger import ConceptTagger
 from .initialize import PipelineContext
 
 
-def save_bank(bank: dict, path: str | Path | None = None) -> Path:
+def save_bank(bank: dict, path: str | Path) -> Path:
     """Atomic write: a cancelled or crashed run never leaves a half-written bank."""
-    target = Path(path or config.default_workspace().exemplars_bank_path)
+    target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(f"{target.suffix}.tmp")
     with tmp.open("w", encoding="utf-8") as f:

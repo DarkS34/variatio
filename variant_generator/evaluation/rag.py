@@ -23,19 +23,25 @@ from . import FAILED, OK, ArmResult, Commission
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatBankIndex
 
-_index: FlatBankIndex | None = None
+# Keyed by workspace, not one global: with two instances in one process a single slot meant
+# one subject's bank answering the other's queries, and its `.npz` landing in whichever
+# workspace was resolved last. The bank identity check stays inside the slot, because a bank
+# also changes while a workspace is alive (tagging, manual edits).
+_indices: dict[str, FlatBankIndex] = {}
 
 
 def index_for(context) -> FlatBankIndex:
     """One index per bank, kept warm for the life of the process, like the pipeline's."""
-    global _index
-    if _index is None or _index.bank is not context.exemplars_bank:
-        _index = FlatBankIndex(
+    slug = context.workspace.slug
+    existing = _indices.get(slug)
+    if existing is None or existing.bank is not context.exemplars_bank:
+        _indices[slug] = FlatBankIndex(
             bank=context.exemplars_bank,
             primary_text=context.exemplars_profile.primary_text,
             type_key_of=context.exemplars_profile.type_key_of_safe,
+            cache_path=context.workspace.eval_rag_bank_embeddings_path,
         )
-    return _index
+    return _indices[slug]
 
 
 def build_query(commission: Commission) -> str:

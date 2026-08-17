@@ -1,12 +1,10 @@
 import json
 from pathlib import Path
 
-from . import config
-
 
 class ExemplarsBank:
-    def __init__(self, path: str | Path | None = None):
-        self.path = Path(path or config.default_workspace().exemplars_bank_path)
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
         self.bank = self._load(self.path) if self.path.is_file() else None
 
     @staticmethod

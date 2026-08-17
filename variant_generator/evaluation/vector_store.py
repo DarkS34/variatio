@@ -23,6 +23,13 @@ from loguru import logger
 
 from .. import config, inference, progress
 
+# `cache_path` is required, and that is the point: it used to fall back to the default
+# workspace, so every instance that evaluated read and wrote ITS index under
+# `workspaces/default/cache/`. Two workspaces with different banks produce different
+# fingerprints, so each run found the other's file stale, rebuilt, and overwrote it — a
+# workspace paying for the other's re-embedding, in a directory it may not even belong to.
+# The fingerprint deliberately does not name the workspace; the PATH is what separates them.
+
 CACHE_VERSION = 1
 
 
@@ -32,16 +39,14 @@ class FlatBankIndex:
         bank: dict,
         primary_text: Callable[[dict], str],
         type_key_of: Callable[[dict], str | None],
+        cache_path: str | Path,
         model: str | None = None,
-        cache_path: str | Path | None = None,
     ):
         self.bank = bank
         self.primary_text = primary_text
         self.type_key_of = type_key_of
         self.model = model or config.EMBEDDING_LLM
-        self.cache_path = Path(
-            cache_path or config.default_workspace().eval_rag_bank_embeddings_path
-        )
+        self.cache_path = Path(cache_path)
 
         self.ids: list[str] = []
         self.types: list[str] = []

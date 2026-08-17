@@ -10,6 +10,7 @@ from .. import config, inference, progress
 from ..exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from ..prompts import format_content_prompt
 from ..utils import ensure_models, parse_with_repair
+from ..workspace import Workspace
 from . import _source_docs
 
 
@@ -27,10 +28,10 @@ class ExemplarsBankBuilder:
     def __init__(
         self,
         exemplars_profile: ExemplarsProfile,
+        workspace: Workspace,
         verbose: bool = True,
-        workspace=None,
     ):
-        self.workspace = workspace or config.default_workspace()
+        self.workspace = workspace
         self.exemplars_profile = exemplars_profile
         self.context = exemplars_profile.content_context
 

@@ -14,6 +14,7 @@ from ..prompts import (
     scan_item_types_prompt,
 )
 from ..utils import ensure_models, parse_with_repair
+from ..workspace import Workspace
 from . import _source_docs
 
 
@@ -55,12 +56,12 @@ SCAN_SCHEMA = {
 class ExemplarsProfileBuilder:
     def __init__(
         self,
+        workspace: Workspace,
         scan_model: str = config.EP_SCAN_MODEL,
         consolidate_model: str = config.EP_CONSOLIDATE_MODEL,
         verbose: bool = True,
-        workspace=None,
     ):
-        self.workspace = workspace or config.default_workspace()
+        self.workspace = workspace
         self.scan_model = scan_model
         self.consolidate_model = consolidate_model
         self.chunk_size = config.EP_CHUNK_SIZE

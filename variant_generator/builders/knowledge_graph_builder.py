@@ -21,6 +21,7 @@ from ..prompts import (
 )
 from ..relations import RelationSchema
 from ..utils import ensure_models, parse_with_repair
+from ..workspace import Workspace
 from . import _source_docs
 
 MIN_SINGULARIZE_LENGTH = 3
@@ -139,11 +140,11 @@ BUILD_MODELS = [
 class KnowledgeGraphBuilder:
     def __init__(
         self,
+        workspace: Workspace,
         schema: RelationSchema | None = None,
         verbose: bool = True,
-        workspace=None,
     ):
-        self.workspace = workspace or config.default_workspace()
+        self.workspace = workspace
         self.schema = schema or config.RELATION_SCHEMA
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE

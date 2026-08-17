@@ -1,5 +1,10 @@
 import argparse
 
+# The console script declared in pyproject. Named once, because every printed hint quotes a
+# command the reader is meant to type: the entry point was renamed to `system-run` in
+# 0f3ed81 and these strings kept naming `variant-generator-server`, which does not exist.
+PROG = "system-run"
+
 DB_HINT = (
     "Arranca la base de datos (`docker compose up -d postgres`) y aplica las migraciones "
     "(`uv run alembic upgrade head`)."
@@ -52,8 +57,7 @@ def _serve(args) -> int:
             if count_users(session) == 0:
                 print("Todavía no hay ninguna cuenta: nadie podrá entrar.")
                 print(
-                    "Crea la primera con `variant-generator-server create-user "
-                    "--username NOMBRE --admin`.\n"
+                    f"Crea la primera con `{PROG} create-user --username NOMBRE --admin`.\n"
                 )
     except Exception:  # noqa: BLE001 - an un-migrated database is reported by the request path
         print("La base de datos responde pero no tiene el esquema. Aplica `uv run alembic upgrade head`.\n")
@@ -303,7 +307,7 @@ def _db_check(_args) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="variant-generator-server",
+        prog=PROG,
         description="Arranca la API del generador de variantes y administra su base de datos.",
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -387,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Anything that is not one of the subcommands is treated as arguments to `serve`, so
     # the two forms this entry point already supported keep working verbatim:
-    # `variant-generator-server` and `variant-generator-server --port 9000 --reload`.
+    # `system-run` and `system-run --port 9000 --reload`.
     import sys
 
     argv = list(sys.argv[1:] if argv is None else argv)

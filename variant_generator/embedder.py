@@ -68,13 +68,13 @@ class ConceptDescriber:
         self,
         knowledge_graph: KnowledgeGraph,
         context: dict,
-        path: str | Path | None = None,
+        path: str | Path,
         siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
         collision_similarity: float = config.DESCRIPTION_COLLISION_SIMILARITY,
     ):
         self.knowledge_graph = knowledge_graph
         self.context = context
-        self.path = Path(path or config.default_workspace().concept_descriptions_path)
+        self.path = Path(path)
         self.siblings_top_k = siblings_top_k
         self.collision_similarity = collision_similarity
         self._name_vectors: dict[str, np.ndarray] | None = None
@@ -336,9 +336,9 @@ class Embedder:
         embed_text: Callable[[dict], str],
         embed_signature: str,
         context: dict,
-        descriptions_path: str | Path | None = None,
-        concepts_cache_path: str | Path | None = None,
-        exemplars_bank_cache_path: str | Path | None = None,
+        descriptions_path: str | Path,
+        concepts_cache_path: str | Path,
+        exemplars_bank_cache_path: str | Path,
     ):
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
@@ -346,12 +346,9 @@ class Embedder:
         self.embed_signature = embed_signature
         self.context = context
 
-        ws = config.default_workspace()
-        self.descriptions_path = Path(descriptions_path or ws.concept_descriptions_path)
-        self.concepts_cache_path = Path(concepts_cache_path or ws.concepts_embeddings_path)
-        self.exemplars_bank_cache_path = Path(
-            exemplars_bank_cache_path or ws.exemplars_bank_embeddings_path
-        )
+        self.descriptions_path = Path(descriptions_path)
+        self.concepts_cache_path = Path(concepts_cache_path)
+        self.exemplars_bank_cache_path = Path(exemplars_bank_cache_path)
 
         self.similarity_threshold = config.EMBEDDER_SIMILARITY_THRESHOLD
         self.description_weight = config.EMBEDDER_DESCRIPTION_WEIGHT
