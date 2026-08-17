@@ -2,6 +2,7 @@
 
 import os
 import re
+import shutil
 from datetime import timedelta
 from pathlib import Path
 
@@ -46,6 +47,24 @@ def provision(ws: Workspace) -> None:
         ws.raw_exemplars_dir,
     ):
         directory.mkdir(parents=True, exist_ok=True)
+
+
+# La otra mitad de `provision`, y solo la usa el panel de administración: borrar un
+# workspace de la base de datos y dejar su árbol en disco deja cientos de megas huérfanos
+# bajo un slug que ya no consta en ninguna parte.
+#
+# La comprobación de que el directorio cuelga de `WORKSPACES_DIR` no es decorativa: aquí
+# entra un slug que viene de una petición, y `shutil.rmtree` sobre una ruta mal resuelta no
+# se puede deshacer. `Workspace.__post_init__` ya la resuelve, así que basta comparar.
+def destroy(ws: Workspace) -> bool:
+    root = ws.root
+    parent = Path(config.WORKSPACES_DIR).resolve()
+    if root.parent != parent or root == parent:
+        raise ValueError(f"'{root}' no está dentro de '{parent}': no se borra nada.")
+    if not root.is_dir():
+        return False
+    shutil.rmtree(root)
+    return True
 
 
 def _flag(name: str, default: bool = False) -> bool:

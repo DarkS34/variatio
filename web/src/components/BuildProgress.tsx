@@ -3,9 +3,7 @@ import { Ban, Hourglass } from "lucide-react";
 import { RunTimeline } from "@/components/RunTimeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { InfoHint } from "@/components/ui/hint";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
-import { JOB_EXPLAIN } from "@/lib/explain";
 import { duration } from "@/lib/format";
 import type { ArtifactName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -37,7 +35,6 @@ export function BuildProgress({
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
   const elapsed = useElapsed(run?.job?.started_at ?? null, active);
-  const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
 
   if (!run || !run.job) {
     return (
@@ -69,18 +66,10 @@ export function BuildProgress({
               )}
             />
           </span>
+          {/* Sin (i): esta tarjeta sale bajo la cabecera del artefacto, que ya explica qué
+              es, y el nombre del trabajo más la fase en curso dicen qué está pasando. La
+              explicación del trabajo sigue estando una vez, en el cajón de ejecución. */}
           <p className="text-sm font-medium">{run.job.label}</p>
-          {explain ? (
-            <InfoHint label="Qué hace este trabajo">
-              <p>{explain.what}</p>
-              <p className="mt-1">
-                <span className="font-medium">Produce:</span> {explain.produces}
-              </p>
-              <p className="mt-1">
-                <span className="font-medium">Coste:</span> {explain.cost}
-              </p>
-            </InfoHint>
-          ) : null}
           <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}

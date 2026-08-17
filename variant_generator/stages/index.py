@@ -1,7 +1,7 @@
 from loguru import logger
 
 from ..exemplars_profile import ExemplarsProfile
-from ..embedder import ConceptDescriber
+from ..embedder import ConceptDescriber, load_descriptions, save_descriptions
 from ..knowledge_graph import KnowledgeGraph
 from ..workspace import Workspace
 from . import _artifacts
@@ -38,11 +38,16 @@ def describe_concepts(
     return descriptions
 
 
+# Escribir descripciones exige el grafo y el perfil, porque hay que redactarlas; LEERLAS
+# no exige ninguno de los dos, y hacerlo pasar por `_describer` ataba la pantalla del grafo
+# al perfil de ejemplares — un artefacto que el grafo no tiene como upstream (`review.UPSTREAM`).
+# El síntoma era que, con el grafo ya construido, `GET /api/kg` devolvía 404 diciendo que
+# faltaba el perfil, y la interfaz lo leía como que no había grafo en el workspace.
 def load_concept_descriptions(ws: Workspace | None = None) -> dict[str, str]:
-    return _describer(ws).load()
+    return load_descriptions(_artifacts.resolve(ws).concept_descriptions_path)
 
 
 def save_concept_descriptions(
     descriptions: dict[str, str], ws: Workspace | None = None
 ) -> None:
-    _describer(ws).save(descriptions)
+    save_descriptions(_artifacts.resolve(ws).concept_descriptions_path, descriptions)

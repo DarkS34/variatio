@@ -13,7 +13,6 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
-import { InfoHint } from "@/components/ui/hint";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
@@ -207,28 +206,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
+        {/* La consecuencia va en la propia frase: era lo único que decía la (i) que había
+            al lado, y una advertencia que hay que abrir para entenderla no es una
+            advertencia. */}
         {offline || missingModels.length > 0 ? (
           <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--warning)_12%,transparent)] px-4 py-1.5 text-xs">
             {offline ? (
-              <>
-                <span>
-                  Ollama no responde en <code className="font-mono">{health.data?.host}</code>
-                </span>
-                <InfoHint label="Qué implica">
-                  Cualquier trabajo que necesite el modelo fallará al arrancar. La interfaz sigue
-                  siendo navegable: lo ya construido se lee de disco.
-                </InfoHint>
-              </>
+              <span>
+                Ollama no responde en <code className="font-mono">{health.data?.host}</code>:
+                cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.
+              </span>
             ) : (
-              <>
-                <span>
-                  Modelos sin instalar:{" "}
-                  <code className="font-mono">{missingModels.join(", ")}</code>
-                </span>
-                <InfoHint label="Qué implica">
-                  Los trabajos que usen esos modelos fallarán. El resto de la cadena funciona.
-                </InfoHint>
-              </>
+              <span>
+                Modelos sin instalar{" "}
+                <code className="font-mono">{missingModels.join(", ")}</code>: los trabajos que
+                los usen fallarán, el resto de la cadena funciona.
+              </span>
             )}
           </div>
         ) : null}

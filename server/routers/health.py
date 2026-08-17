@@ -14,11 +14,16 @@ def health(access: auth.Access = auth.VIEW) -> dict:
     required = inference.required_models()
 
     installed: list[str] = []
+    running: list[dict] = []
     if available:
         try:
             installed = inference.installed_models()
         except Exception:  # noqa: BLE001 - a listing failure is not a fatal condition
             installed = []
+        try:
+            running = inference.running_models()
+        except Exception:  # noqa: BLE001 - idem: no residency reading, not a broken engine
+            running = []
 
     # Ollama reports "name:tag"; config asks for the same form, but be lenient about
     # a missing tag so a manually pulled model is not reported as absent.
@@ -39,6 +44,10 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             "required": required,
             "installed": installed,
             "missing": missing,
+            # Lo que el motor tiene residente ahora mismo, con su VRAM y hasta cuándo. Es
+            # la única medida real de qué está usando la máquina: `required` solo dice qué
+            # nombra `config.py`, y una constante nombrada no es un modelo cargado.
+            "running": running,
         },
         # Whether *this* workspace's indices are warm, not whether any are: with a registry
         # of contexts the old process-wide answer would have been true for somebody else.

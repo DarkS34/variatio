@@ -11,7 +11,7 @@ import type {
   Role,
 } from "@/lib/types";
 import { runStore, type RunView } from "./runStore";
-import { workspaceStore } from "./workspace";
+import { activeWorkspace, workspaceStore } from "./workspace";
 
 export const keys = {
   health: ["health"] as const,
@@ -322,6 +322,53 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: (id: number) => api.deleteAccount(id),
     onSuccess: () => client.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+/**
+ * Vaciar una etapa desde el panel de administración.
+ *
+ * Invalida `["admin"]` y también la cadena: el workspace afectado puede ser el que esta
+ * pestaña tiene abierto, y entonces lo que hay en pantalla — el grafo, el perfil, el
+ * banco — acaba de dejar de existir en disco.
+ */
+export function useDeleteArtifact() {
+  const client = useQueryClient();
+  const invalidate = useInvalidateChain();
+  return useMutation({
+    mutationFn: ({ slug, artifact }: { slug: string; artifact: ArtifactName }) =>
+      api.adminDeleteArtifact(slug, artifact),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["admin"] });
+      invalidate();
+    },
+  });
+}
+
+/**
+ * Quitar un workspace entero desde el panel, que es cualquiera y no el activo.
+ *
+ * Es la versión del administrador de `useDeleteWorkspace`, y no puede ser la misma: aquella
+ * borra la instancia en la que estás y por eso vacía la caché entera y suelta el selector.
+ * Aquí eso solo procede cuando la que se ha ido resulta ser la de esta pestaña; en el caso
+ * normal el borrado es de otra instancia y tirar la caché sería recargar la pantalla sin
+ * motivo.
+ */
+export function useAdminDeleteWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => api.adminDeleteWorkspace(slug),
+    onSuccess: ({ deleted }) => {
+      if (deleted === activeWorkspace()) {
+        workspaceStore.set(null);
+        client.clear();
+        runStore.reset();
+        return;
+      }
+      client.invalidateQueries({ queryKey: ["admin"] });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
   });
 }
 

@@ -279,6 +279,26 @@ class OllamaEngine:
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Could not list Ollama models: {e}") from e
 
+    # Qué está cargado AHORA, que es lo único que se puede medir de verdad desde aquí: la
+    # sesión no corre en la máquina de la GPU, así que `nvidia-smi` contesta sobre otra
+    # tarjeta y `/api/ps` es la única lectura honesta de residencia y de VRAM. `expires_at`
+    # dice hasta cuándo, así que una expulsión se distingue de un vencimiento del temporizador.
+    def running_models(self) -> list[dict]:
+        try:
+            response = self._client.ps()
+        except (ollama.ResponseError, httpx.RequestError) as e:
+            raise InferenceError(f"Could not read the resident Ollama models: {e}") from e
+        return [
+            {
+                "model": info.model or info.name or "",
+                "size": int(info.size) if info.size else None,
+                "size_vram": int(info.size_vram) if info.size_vram else None,
+                "context_length": info.context_length,
+                "expires_at": info.expires_at.isoformat() if info.expires_at else None,
+            }
+            for info in response.models
+        ]
+
     def ensure_model(self, model: str) -> bool:
         if model in self.installed_models():
             return True
@@ -393,6 +413,10 @@ def ensure_model(model: str) -> bool:
 
 def installed_models() -> list[str]:
     return engine().installed_models()
+
+
+def running_models() -> list[dict]:
+    return engine().running_models()
 
 
 def required_models() -> dict[str, str]:

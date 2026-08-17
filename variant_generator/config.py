@@ -83,6 +83,7 @@ OLLAMA_HOST = (
 # back EMPTY. Quantising it makes each of those tokens cheaper, not fewer.
 LLM_MAIN = "qwen3.6:35b-a3b-q8_0"
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
+EMBEDDING_LLM = "qwen3-embedding:4b"
 
 # Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
 # so there is one constant and not two that could drift and produce two different
@@ -112,7 +113,7 @@ EB_EXTRACT_MODEL = LLM_MAIN
 
 # Knowledge graph builder
 KG_EXTRACT_MODEL = LLM_MAIN
-KG_CLEAN_EMBEDDING_MODEL = "qwen3-embedding:4b"
+KG_CLEAN_EMBEDDING_MODEL = EMBEDDING_LLM
 KG_CLEAN_MERGE_MODEL = LLM_MAIN
 KG_CLEAN_DROP_MODEL = LLM_MAIN
 KG_DOMAINS_MODEL = LLM_MAIN
@@ -122,7 +123,7 @@ KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
 KG_TAGGABLE_MODEL = LLM_MAIN
 
 # Runtime pipeline
-EMBEDDING_LLM = "qwen3-embedding:4b"
+
 DESCRIPTION_GENERATION_LLM = LLM_MAIN
 CONCEPT_TAGGER_LLM = LLM_MAIN
 CONTENT_GENERATION_LLM = LLM_MAIN

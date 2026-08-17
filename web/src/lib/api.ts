@@ -2,6 +2,7 @@ import { workspaceHeader } from "@/state/workspace";
 import type {
   AdminEvaluations,
   AdminOverview,
+  ArtifactName,
   BankListing,
   BuildPlans,
   ExemplarsProfile,
@@ -292,6 +293,20 @@ export const api = {
     post<{ invite: InviteRow; link: string }>("/api/admin/invites", body),
   adminRevokeInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
+  // Lo único que el panel escribe sobre las instancias, y es borrado. Va por `/api/admin`
+  // y no por `/api/workspaces` porque aquello exige ser miembro del workspace activo, que
+  // obligaría a entrar en cada instancia para poder quitarla.
+  adminDeleteWorkspace: (slug: string) =>
+    request<{ deleted: string; path: string; files_removed: boolean }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}`,
+      { method: "DELETE" },
+    ),
+  adminDeleteArtifact: (slug: string, artifact: ArtifactName) =>
+    request<{ workspace: string; artifact: string; removed: string[]; derived: string[] }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/artifacts/${artifact}`,
+      { method: "DELETE" },
+    ),
+
   adminGrantMembership: (userId: number, workspace: string, role: Role) =>
     post<{ user_id: number; workspace: string; role: Role }>(
       `/api/admin/accounts/${userId}/memberships`,

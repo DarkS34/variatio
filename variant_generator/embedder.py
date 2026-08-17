@@ -11,6 +11,28 @@ from .knowledge_graph import KnowledgeGraph
 from .prompts import concept_description_prompt
 
 
+# El fichero de descripciones es una caché {concepto: texto} y nada más: leerlo o
+# escribirlo no necesita ni el grafo ni el perfil de ejemplares. Vive fuera de
+# `ConceptDescriber` porque exigir el describer completo para tocarlo acoplaba la lectura
+# del grafo a un artefacto del que el grafo no depende — y esa es exactamente la razón por
+# la que la pantalla del grafo respondía 404 mientras faltaba el perfil.
+def load_descriptions(path: str | Path) -> dict[str, str]:
+    path = Path(path)
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(f"{path.suffix}.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(descriptions, f, ensure_ascii=False, indent=2)
+    tmp.replace(path)
+
+
 def _embed_normalized(texts: list[str], what: str):
     try:
         vectors: list[list[float]] = []
@@ -58,17 +80,10 @@ class ConceptDescriber:
         self._name_vectors: dict[str, np.ndarray] | None = None
 
     def load(self) -> dict[str, str]:
-        if not self.path.exists():
-            return {}
-        with self.path.open(encoding="utf-8") as f:
-            return json.load(f)
+        return load_descriptions(self.path)
 
     def save(self, descriptions: dict[str, str]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(f"{self.path.suffix}.tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(descriptions, f, ensure_ascii=False, indent=2)
-        tmp.replace(self.path)
+        save_descriptions(self.path, descriptions)
 
     # A description is written from a concept's domain and relations, so it goes stale when
     # those change — and nothing noticed: a graph rebuilt twice kept describing `Caso base`

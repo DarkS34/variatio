@@ -13,17 +13,19 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Label, Select } from "@/components/ui/input";
-import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
+import { Input, Label, Select } from "@/components/ui/input";
+import { EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { ARM_META } from "@/features/evaluation/arms";
 import { FormError } from "@/features/auth/AuthLayout";
-import { duration, when } from "@/lib/format";
+import { ARTIFACT_STATUS, duration, when } from "@/lib/format";
 import type {
   AdminAccount,
   AdminGroup,
   AdminOverview,
+  AdminWorkspace,
   EvaluationAggregates,
   EvaluationArm,
   Role,
@@ -32,11 +34,13 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { ROLE_HINTS, ROLE_LABELS, useSession } from "@/state/auth";
 import {
+  useAdminDeleteWorkspace,
   useAdminEvaluations,
   useAdminInvites,
   useAdminOverview,
   useCreateInvite,
   useDeleteAccount,
+  useDeleteArtifact,
   useMembershipActions,
   useRevokeInvite,
   useSetAccountEnabled,
@@ -1100,29 +1104,31 @@ function InviteLink({ link }: { link: string }) {
   );
 }
 
-function WorkspacesTab({
-  overview,
-}: {
-  overview: NonNullable<ReturnType<typeof useAdminOverview>["data"]>;
-}) {
+/**
+ * Las instancias de la instalación, y lo único que este panel escribe sobre ellas: quitarlas.
+ *
+ * Vaciar una etapa y borrar el workspace son la misma decisión con dos alcances, así que
+ * viven en la misma fila: la etapa se vacía desde su distintivo, el workspace desde el
+ * botón del final. Ninguna de las dos construye ni aprueba nada — para eso hay que entrar
+ * en la instancia, que es donde se ve lo que se está tocando.
+ */
+function WorkspacesTab({ overview }: { overview: AdminOverview }) {
+  const remove = useAdminDeleteWorkspace();
+  const [target, setTarget] = useState<AdminWorkspace | null>(null);
+  const only = overview.workspaces.length === 1;
+
   return (
     <div className="space-y-3">
-      <Alert tone="info" title="Los workspaces son de sus miembros">
-        <p>
-          Esta tabla los cuenta; para entrar en uno, cámbiate a él con el selector de
-          arriba. Como administrador puedes hacerlo aunque no seas miembro.
-        </p>
-      </Alert>
-
       <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[40rem] text-sm">
+        <table className="w-full min-w-[52rem] text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground">
               <th className="px-3 py-2 text-left font-medium">Workspace</th>
+              <th className="px-3 py-2 text-left font-medium">Cadena</th>
               <th className="px-3 py-2 text-right font-medium">Miembros</th>
               <th className="px-3 py-2 text-right font-medium">Variantes</th>
-              <th className="px-3 py-2 text-left font-medium">Índices</th>
               <th className="px-3 py-2 text-left font-medium">Creado</th>
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -1133,20 +1139,183 @@ function WorkspacesTab({
                   <span className="ml-2 font-mono text-[11px] text-muted-foreground">
                     {workspace.slug}
                   </span>
+                  {workspace.warm ? (
+                    <span className="ml-2 text-[11px] text-muted-foreground">· en memoria</span>
+                  ) : null}
+                </td>
+                <td className="px-3 py-2">
+                  <ChainCell workspace={workspace} />
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{workspace.members}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{workspace.generations}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {workspace.warm ? "en memoria" : "fríos"}
-                </td>
                 <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
                   {workspace.created_at ? when(workspace.created_at) : "—"}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={only || remove.isPending}
+                    title={
+                      only
+                        ? "Es el único workspace de la instalación"
+                        : "Eliminar el workspace y sus ficheros"
+                    }
+                    onClick={() => setTarget(workspace)}
+                  >
+                    <Trash2 />
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <FormError error={remove.error} />
+
+      {target ? (
+        <DeleteWorkspaceDialog
+          workspace={target}
+          busy={remove.isPending}
+          onClose={() => setTarget(null)}
+          onConfirm={() =>
+            remove.mutate(target.slug, { onSuccess: () => setTarget(null) })
+          }
+        />
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * La cadena de una instancia, y el sitio desde el que se vacía una etapa.
+ *
+ * Vaciar deja el artefacto en «missing» y su workspace en pie: se borra el fichero curado,
+ * el borrador y las derivaciones de la caché que hablaban de él. Las copias de `.history/`
+ * no se tocan, así que un borrado equivocado se deshace desde «Restaurar» en la pantalla
+ * del artefacto — y eso es justo lo que hace que ofrecerlo aquí no sea temerario.
+ */
+function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
+  const discard = useDeleteArtifact();
+
+  const confirm = (artifact: AdminWorkspace["stages"][number]) => {
+    const message =
+      `¿Vaciar «${artifact.label}» de ${workspace.slug}?\n\n` +
+      "Se borran el fichero del artefacto y las derivaciones de la caché que dependían " +
+      "de él; la etapa vuelve a «sin construir» y habrá que reconstruirla.\n\n" +
+      "Las copias del historial no se tocan: si te equivocas, se restaura desde la " +
+      "pantalla del artefacto.";
+    if (window.confirm(message)) {
+      discard.mutate({ slug: workspace.slug, artifact: artifact.artifact });
+    }
+  };
+
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {workspace.stages.map((stage) => {
+        const meta = ARTIFACT_STATUS[stage.status];
+        const empty = stage.status === "missing";
+        return (
+          <button
+            key={stage.artifact}
+            type="button"
+            disabled={empty || discard.isPending}
+            title={
+              empty
+                ? `${stage.label}: sin construir`
+                : `Vaciar «${stage.label}» de ${workspace.slug}`
+            }
+            onClick={() => confirm(stage)}
+            className={cn(
+              "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              empty ? "cursor-default" : "hover:opacity-75",
+            )}
+          >
+            <Badge variant={meta.tone as never}>
+              {stage.label.split(" ")[0]} · {meta.label.toLowerCase()}
+            </Badge>
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+/**
+ * Borrar un workspace es irreversible y se lleva los ficheros, así que se escribe el slug.
+ *
+ * No es ceremonia: la fila de al lado se parece a esta, el botón es un icono, y lo que
+ * desaparece incluye los documentos que alguien subió — que son lo único aquí que no se
+ * puede reconstruir con una GPU y un rato.
+ */
+function DeleteWorkspaceDialog({
+  workspace,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  workspace: AdminWorkspace;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [typed, setTyped] = useState("");
+  const built = workspace.stages.filter((stage) => stage.status !== "missing");
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Eliminar «${workspace.name}»`}
+      description="No se puede deshacer."
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={typed !== workspace.slug || busy}
+            onClick={onConfirm}
+          >
+            {busy ? <Spinner /> : <Trash2 />}
+            Eliminar
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-sm">
+        <p>Desaparecen de la instalación y del disco:</p>
+        <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+          <li>
+            {built.length > 0
+              ? `sus artefactos construidos (${built.map((s) => s.label.toLowerCase()).join(", ")})`
+              : "sus artefactos, que están todos sin construir"}
+          </li>
+          <li>los documentos en bruto que se subieron a esta instancia</li>
+          <li>sus cachés, sus accesos y sus aprobaciones</li>
+          <li>
+            {workspace.generations > 0
+              ? `sus ${workspace.generations} variante(s) guardada(s) y sus comparaciones`
+              : "sus comparaciones de evaluación, si las hubiera"}
+          </li>
+        </ul>
+        <div className="space-y-1">
+          <Label htmlFor="confirm-slug">
+            Escribe <span className="font-mono normal-case">{workspace.slug}</span> para
+            confirmar
+          </Label>
+          <Input
+            id="confirm-slug"
+            value={typed}
+            autoFocus
+            autoComplete="off"
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        </div>
+      </div>
+    </Dialog>
   );
 }

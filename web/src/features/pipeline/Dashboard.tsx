@@ -63,7 +63,6 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
   const building = stage.status === "building";
-  const build = JOB_EXPLAIN[stage.build_job];
 
   return (
     <Card
@@ -132,17 +131,6 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
           {building ? null : (
             <BuildButton stage={stage} variant={missing ? "default" : "ghost"} />
           )}
-          {build ? (
-            <InfoHint label="Qué ocurre al construir" className="self-center">
-              <p>{build.what}</p>
-              <p className="mt-1">
-                <span className="font-medium">Produce:</span> {build.produces}
-              </p>
-              <p className="mt-1">
-                <span className="font-medium">Coste:</span> {build.cost}
-              </p>
-            </InfoHint>
-          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -174,11 +162,6 @@ function RawSection() {
           )}
           Datos en bruto
         </button>
-        <InfoHint label="Qué son los datos en bruto">
-          Los documentos de partida. No forman parte del programa: se copian a{" "}
-          <span className="font-mono">raw_data</span> y cada construcción los vuelve a leer de
-          disco. Sin ellos no hay nada que construir.
-        </InfoHint>
         {total > 0 ? (
           <span className="text-xs text-muted-foreground">
             {total} archivo(s) · {bytes(size)}
@@ -210,18 +193,28 @@ function settingLabel(name: string): string {
 }
 
 /**
- * How many DISTINCT models the instance needs — not how many settings name one.
+ * Qué modelos tiene el motor cargados AHORA, no cuántas constantes los nombran.
  *
- * `config.py` has a constant per model call so any phase can be retuned on its own, and
- * there are nineteen of them pointing at five actual models. Counting the constants said
- * "19 disponibles", which is neither true (nothing has nineteen models) nor useful (it
- * measures the config file, not the machine). What is worth knowing is what has to be
- * pulled and what each one is for, so the count opens the list.
+ * Esta fila contaba antes los modelos distintos que aparecen en `config.py`, y eso mide el
+ * fichero de configuración, no la máquina: una constante nombrada no es un modelo cargado,
+ * y con todas apuntando al mismo valor el número era casi siempre el mismo dijera lo que
+ * dijera la GPU. Lo que sí responde a «qué está usando esto» es `/api/ps`: qué está
+ * residente, cuánta VRAM ocupa y hasta cuándo — la única lectura honesta de residencia
+ * desde aquí, porque el servidor no corre en la máquina de la GPU.
+ *
+ * Los que la instancia *pide* siguen accesibles al abrir la lista, porque es donde se ve
+ * si uno está sin instalar y qué fase se quedaría sin él.
  */
 function ModelsRow({ models }: { models: Health["models"] }) {
   const [open, setOpen] = useState(false);
 
-  const grouped = useMemo(() => {
+  const resident = useMemo(
+    () => [...models.running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0)),
+    [models.running],
+  );
+  const vram = resident.reduce((sum, entry) => sum + (entry.size_vram ?? 0), 0);
+
+  const required = useMemo(() => {
     const byModel = new Map<string, string[]>();
     for (const [setting, model] of Object.entries(models.required)) {
       if (!byModel.has(model)) byModel.set(model, []);
@@ -232,34 +225,32 @@ function ModelsRow({ models }: { models: Health["models"] }) {
         model,
         settings: settings.sort(),
         missing: models.missing.includes(model),
+        loaded: resident.some((entry) => entry.model === model),
       }))
       .sort((a, b) => b.settings.length - a.settings.length || a.model.localeCompare(b.model));
-  }, [models]);
+  }, [models, resident]);
 
   return (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-muted-foreground">
-          Modelos distintos
-          <InfoHint label="Qué se cuenta aquí">
-            Los modelos que la instancia necesita de verdad, no las constantes que los
-            nombran: hay una por cada llamada del pipeline para poder reajustarla sola, y
-            muchas apuntan al mismo modelo. Púlsalo para ver cuáles son y qué usa cada uno.
-          </InfoHint>
-        </span>
+        <span className="text-muted-foreground">Modelos cargados</span>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          title="Ver qué modelos son y qué fase usa cada uno"
+          title="Ver qué hay cargado y qué modelos pide la instancia"
           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {models.missing.length === 0 ? (
-            <Badge variant="success" className="cursor-pointer hover:opacity-85">
-              {grouped.length} instalados
+          {models.missing.length > 0 ? (
+            <Badge variant="danger" className="cursor-pointer hover:opacity-85">
+              {models.missing.length} sin instalar
+            </Badge>
+          ) : resident.length === 0 ? (
+            <Badge variant="outline" className="cursor-pointer hover:opacity-85">
+              ninguno en memoria
             </Badge>
           ) : (
-            <Badge variant="danger" className="cursor-pointer hover:opacity-85">
-              {models.missing.length} de {grouped.length} sin instalar
+            <Badge variant="success" className="cursor-pointer hover:opacity-85">
+              {resident.length} · {bytes(vram)}
             </Badge>
           )}
         </button>
@@ -268,34 +259,81 @@ function ModelsRow({ models }: { models: Health["models"] }) {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title={`Modelos de la instancia (${grouped.length})`}
-        description="Cada uno con las fases que lo piden. Un modelo lo usan varias fases a la vez, por eso hay muchas más constantes que modelos."
+        title="Modelos"
+        description="Arriba, lo que el motor tiene residente en este momento; abajo, lo que la instancia pide en su configuración."
         className="max-w-2xl"
       >
-        <ul className="space-y-2">
-          {grouped.map(({ model, settings, missing }) => (
-            <li key={model} className="rounded-lg border border-border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="font-mono text-sm">{model}</code>
-                {missing ? (
-                  <Badge variant="danger">sin instalar</Badge>
-                ) : (
-                  <Badge variant="success">instalado</Badge>
-                )}
-                <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                  {settings.length} fase(s)
-                </span>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {settings.map((setting) => (
-                  <Badge key={setting} variant="secondary" title={setting}>
-                    {settingLabel(setting)}
-                  </Badge>
+        <div className="space-y-4">
+          <section className="space-y-2">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              En memoria ahora ({resident.length})
+            </h3>
+            {resident.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                El motor no tiene ningún modelo cargado. El primer trabajo que necesite uno
+                paga su carga.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {resident.map((entry) => (
+                  <li key={entry.model} className="rounded-lg border border-border p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="font-mono text-sm">{entry.model}</code>
+                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                        {entry.size_vram ? `${bytes(entry.size_vram)} en VRAM` : "sin VRAM"}
+                      </span>
+                    </div>
+                    <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                      {entry.context_length ? (
+                        <span className="tabular-nums">
+                          contexto {entry.context_length.toLocaleString("es-ES")}
+                        </span>
+                      ) : null}
+                      {entry.expires_at ? <span>reside hasta {when(entry.expires_at)}</span> : null}
+                    </p>
+                  </li>
                 ))}
-              </div>
-            </li>
-          ))}
-        </ul>
+              </ul>
+            )}
+            {vram > 0 ? (
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {bytes(vram)} de VRAM ocupados en total.
+              </p>
+            ) : null}
+          </section>
+
+          <section className="space-y-2 border-t border-border pt-3">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Los que pide la instancia ({required.length})
+            </h3>
+            <ul className="space-y-2">
+              {required.map(({ model, settings, missing, loaded }) => (
+                <li key={model} className="rounded-lg border border-border p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="font-mono text-sm">{model}</code>
+                    {missing ? (
+                      <Badge variant="danger">sin instalar</Badge>
+                    ) : loaded ? (
+                      <Badge variant="success">cargado</Badge>
+                    ) : (
+                      <Badge variant="outline">en disco</Badge>
+                    )}
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      {settings.length} fase(s)
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {settings.map((setting) => (
+                      <Badge key={setting} variant="secondary" title={setting}>
+                        {settingLabel(setting)}
+                      </Badge>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </Dialog>
     </>
   );
@@ -376,19 +414,10 @@ function ActivityCard() {
                 />
               </span>
               <span className="font-medium">{run.job.label}</span>
-              {explain ? (
-                <InfoHint label="Qué hace este trabajo">
-                  <p>{explain.what}</p>
-                  <p className="mt-1">
-                    <span className="font-medium">Produce:</span> {explain.produces}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-medium">Coste:</span> {explain.cost}
-                  </p>
-                </InfoHint>
-              ) : null}
             </div>
 
+            {/* La explicación va como texto y no detrás de una (i): estaba en las dos
+                partes a la vez, y de las dos la que se lee es la que ya está en pantalla. */}
             <p className="text-xs text-muted-foreground">
               {explain?.what ?? "Trabajo en curso."}
             </p>
@@ -496,15 +525,8 @@ function SystemCard() {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            Motor de inferencia
-            <InfoHint label="Dónde responde el motor">
-              Todo el tráfico de modelos pasa por aquí. Atiende en{" "}
-              <span className="font-mono">{host}</span>; si deja de responder, los trabajos
-              fallan al arrancar pero la interfaz sigue navegable.
-            </InfoHint>
-          </span>
-          <span className="flex items-center gap-1.5" title={host}>
+          <span className="text-muted-foreground">Motor de inferencia</span>
+          <span className="flex items-center gap-1.5">
             <span
               className={cn(
                 "size-1.5 rounded-full",
@@ -512,6 +534,7 @@ function SystemCard() {
               )}
             />
             <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
+            <span className="font-mono text-xs text-muted-foreground">{host}</span>
             {available ? null : (
               <span className="text-xs text-destructive">sin conexión</span>
             )}
@@ -583,7 +606,6 @@ export function Dashboard() {
   }
 
   const stages = pipeline.data?.stages ?? [];
-  const unlocked = pipeline.data?.generation_unlocked ?? false;
   const next = stages.find((s) => s.status !== "approved");
 
   return (
@@ -639,23 +661,6 @@ export function Dashboard() {
         <div className="space-y-4">
           <ActivityCard />
           <SystemCard />
-          <Card className={cn(!unlocked && "opacity-70")}>
-            <CardHeader className="pb-2">
-              <CardTitle>Generación</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {unlocked ? null : (
-                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Lock className="size-3.5" />
-                  Requiere las tres etapas aprobadas.
-                </p>
-              )}
-              <Button className="w-full" disabled={!unlocked} onClick={() => navigate("/generar")}>
-                <ArrowRight />
-                Ir a generar
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
