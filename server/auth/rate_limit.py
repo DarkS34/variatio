@@ -12,6 +12,8 @@ import threading
 import time
 from collections import defaultdict, deque
 
+from fastapi import HTTPException, Request
+
 
 class RateLimiter:
     def __init__(self) -> None:
@@ -47,3 +49,24 @@ class RateLimiter:
 
 
 limiter = RateLimiter()
+
+
+# The two-key check as a route reads it. It lives here, and not in the router that first
+# needed it, because there is now more than one: invitations moved to the administration
+# panel and would otherwise have arrived there without a limit, or with a second copy of
+# this. Importing `settings` inside keeps this module free of the import cycle its callers
+# are on either side of.
+def throttle(bucket: str, request: Request, account: str) -> None:
+    from .. import settings
+    from .deps import client_ip
+
+    limit, window = settings.RATE_LIMITS[bucket]
+    limiter.sweep()
+    for key in (client_ip(request), account):
+        wait = limiter.check(bucket, key, limit, window)
+        if wait > 0:
+            raise HTTPException(
+                429,
+                f"Demasiados intentos. Vuelve a probar en {int(wait) + 1} segundos.",
+                headers={"Retry-After": str(int(wait) + 1)},
+            )

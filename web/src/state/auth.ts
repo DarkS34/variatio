@@ -7,8 +7,7 @@ import { workspaceStore } from "./workspace";
 
 export const authKeys = {
   me: ["auth", "me"] as const,
-  invites: ["auth", "invites"] as const,
-  members: ["auth", "members"] as const,
+  sessions: ["auth", "sessions"] as const,
 };
 
 /**
@@ -106,47 +105,37 @@ export function useResetPassword() {
   });
 }
 
+/** A password change rotates this tab's own session and revokes every other one, so the
+ *  list of open sessions on the same screen is stale the moment it succeeds. */
 export function useChangePassword() {
+  const client = useQueryClient();
   return useMutation({
     mutationFn: ({ current, next }: { current: string; next: string }) =>
       api.changePassword(current, next),
+    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.sessions }),
   });
 }
 
-export function useInvites(enabled: boolean) {
-  return useQuery({ queryKey: authKeys.invites, queryFn: api.invites, enabled });
-}
-
-export function useMembers(enabled: boolean) {
-  return useQuery({ queryKey: authKeys.members, queryFn: api.members, enabled });
-}
-
-export function useCreateInvite() {
+/** The account's own data. The response IS the new session payload, so it is written
+ *  straight into the query the whole app reads instead of being refetched. */
+export function useUpdateProfile() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: api.createInvite,
-    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.invites }),
+    mutationFn: (body: { name: string; email: string | null }) => api.updateMe(body),
+    onSuccess: (session) => client.setQueryData(authKeys.me, session),
   });
 }
 
-export function useRevokeInvite() {
+export function useSessions() {
+  return useQuery({ queryKey: authKeys.sessions, queryFn: api.sessions });
+}
+
+export function useRevokeOtherSessions() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: api.revokeInvite,
-    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.invites }),
+    mutationFn: api.revokeOtherSessions,
+    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.sessions }),
   });
-}
-
-export function useMemberActions() {
-  const client = useQueryClient();
-  const refresh = () => client.invalidateQueries({ queryKey: authKeys.members });
-  return {
-    setRole: useMutation({
-      mutationFn: ({ id, role }: { id: number; role: Role }) => api.setMemberRole(id, role),
-      onSuccess: refresh,
-    }),
-    remove: useMutation({ mutationFn: api.removeMember, onSuccess: refresh }),
-  };
 }
 
 /**
@@ -171,8 +160,10 @@ export const ROLE_LABELS: Record<Role, string> = {
   owner: "Propietario",
 };
 
+// «Invitar» left this list when invitations became the administrator's alone: a role that
+// still advertised it would be describing a button nobody with that role can press.
 export const ROLE_HINTS: Record<Role, string> = {
   viewer: "Ve la instancia y el historial; no construye, no edita, no genera.",
   editor: "Todo lo anterior, más construir, editar, aprobar y generar.",
-  owner: "Todo lo anterior, más invitar personas y cambiar sus roles.",
+  owner: "Todo lo anterior, más renombrar o borrar el workspace.",
 };

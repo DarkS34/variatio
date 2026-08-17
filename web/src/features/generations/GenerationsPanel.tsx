@@ -35,8 +35,11 @@ import { useDeleteGeneration, useGenerations, useProfile } from "@/state/queries
  *
  * Two scopes, and «mías» is the default: someone looking for the exercise they wrote
  * yesterday means their own, and a shared subject is the other question, not the same one.
+ *
+ * A panel and not a screen: it is a tab of «Mi perfil», which already carries the page's
+ * title, so this one heads its own section and does not claim to be the page.
  */
-export function GenerationsScreen() {
+export function GenerationsPanel() {
   const session = useSession();
   const profileQuery = useProfile();
   const [scope, setScope] = useState<"mine" | "workspace">("mine");
@@ -69,7 +72,7 @@ export function GenerationsScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Variantes guardadas</h1>
+        <h2 className="text-base font-semibold tracking-tight">Variantes guardadas</h2>
         <InfoHint label="Qué hay aquí">
           Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
           solas: no hay nada que pulsar al generar.

@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import type {
   ArtifactName,
-  BuildEstimate,
+  BuildPhase,
   EvaluationDetail,
   EvaluationParams,
   EvaluationRating,
+  Role,
 } from "@/lib/types";
 import { runStore, type RunView } from "./runStore";
 import { workspaceStore } from "./workspace";
@@ -23,16 +24,16 @@ export const keys = {
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
   raw: ["raw"] as const,
-  // Under the pipeline's key on purpose: react-query matches by prefix, so the chain-wide
-  // invalidation a finished job already does refreshes the estimate too — and it has to,
-  // because a build leaves its documents converted and makes the next one much cheaper.
-  estimates: ["pipeline", "estimates"] as const,
+  // The phase plan of each builder. It is a property of the code, not of the instance, so
+  // it is fetched once and never invalidated — nothing a user does can change it.
+  phases: ["pipeline", "phases"] as const,
   evaluations: ["evaluations"] as const,
   evaluation: (id: string) => ["evaluations", id] as const,
   generations: (params: Record<string, unknown>) => ["generations", params] as const,
   generation: (id: number) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
+  adminInvites: ["admin", "invites"] as const,
   adminEvaluations: (filters: Record<string, unknown>) =>
     ["admin", "evaluations", filters] as const,
 };
@@ -105,44 +106,21 @@ export function useRaw() {
   return useQuery({ queryKey: keys.raw, queryFn: api.raw });
 }
 
-export function useEstimates() {
-  return useQuery({ queryKey: keys.estimates, queryFn: api.estimates });
+/** The phase plan of every builder: what the segmented bar is a drawing of. */
+export function useBuildPlans() {
+  return useQuery({
+    queryKey: keys.phases,
+    queryFn: api.buildPhases,
+    staleTime: Infinity,
+  });
 }
 
-/** What building this artifact is expected to cost, from the documents now in its slot.
- *  Null when there is nothing to build: an empty slot is quoted as zero, not as a wait. */
-export function useBuildEstimate(artifact: ArtifactName | undefined): BuildEstimate | null {
-  const estimates = useEstimates();
-  if (!artifact) return null;
-  const estimate = estimates.data?.artifacts?.[artifact];
-  return estimate && estimate.seconds > 0 ? estimate : null;
-}
-
-/**
- * How much of a running build is left, in milliseconds.
- *
- * The estimate is what the documents predict; the elapsed time is what this machine is
- * actually doing. Neither alone is right — the first knows nothing about a busy GPU, the
- * second means nothing at 2 % — so the projection takes over from the prediction as the
- * bar advances, and the reading self-corrects instead of drifting for an hour.
- */
-export function projectRemaining(
-  estimate: BuildEstimate | null,
-  percent: number | null | undefined,
-  elapsedMs: number | null,
-): number | null {
-  const total = estimate ? estimate.seconds * 1000 : null;
-  if (elapsedMs === null) return total;
-  if (percent === null || percent === undefined || percent <= 0) {
-    return total === null ? null : Math.max(0, total - elapsedMs);
-  }
-
-  const done = Math.min(1, percent / 100);
-  const projected = elapsedMs / done;
-  if (total === null) return Math.max(0, projected - elapsedMs);
-
-  const trust = Math.min(1, done / 0.3);
-  return Math.max(0, (1 - trust) * total + trust * projected - elapsedMs);
+/** The phases of one build, in order. Empty until the plan has arrived, which is what
+ *  makes the bar fall back to the plain one instead of drawing a single wrong segment. */
+export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[] {
+  const plans = useBuildPlans();
+  if (!artifact) return [];
+  return plans.data?.artifacts?.[artifact] ?? [];
 }
 
 /**
@@ -281,6 +259,55 @@ export function useSetAccountEnabled() {
       api.setAccountEnabled(id, enabled),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.adminOverview }),
   });
+}
+
+export function useAdminInvites() {
+  return useQuery({ queryKey: keys.adminInvites, queryFn: api.adminInvites });
+}
+
+export function useCreateInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { workspace: string | null; role: Role }) =>
+      api.adminCreateInvite(body),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminInvites }),
+  });
+}
+
+export function useRevokeInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.adminRevokeInvite(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminInvites }),
+  });
+}
+
+/**
+ * Granting and revoking access, from the one screen that does it.
+ *
+ * Both refresh the overview — which is where the roles are read from — and also the
+ * session, because the account being moved may be the administrator's own and the
+ * workspace switcher would otherwise keep offering an instance they just left.
+ */
+export function useMembershipActions() {
+  const client = useQueryClient();
+  const refresh = () => {
+    client.invalidateQueries({ queryKey: keys.adminOverview });
+    client.invalidateQueries({ queryKey: ["auth", "me"] });
+    client.invalidateQueries({ queryKey: keys.workspaces });
+  };
+  return {
+    grant: useMutation({
+      mutationFn: ({ id, workspace, role }: { id: number; workspace: string; role: Role }) =>
+        api.adminGrantMembership(id, workspace, role),
+      onSuccess: refresh,
+    }),
+    revoke: useMutation({
+      mutationFn: ({ id, workspace }: { id: number; workspace: string }) =>
+        api.adminRevokeMembership(id, workspace),
+      onSuccess: refresh,
+    }),
+  };
 }
 
 export function useSubmitJob() {

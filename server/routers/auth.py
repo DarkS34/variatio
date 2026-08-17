@@ -1,10 +1,19 @@
-"""Login, invitations, membership and password recovery.
+"""Login, your own account, and password recovery.
 
 There is no open registration endpoint anywhere in here on purpose: an account exists
 because someone issued a single-use invitation, or because the installation's first
 account was created from the command line. That is what removes the largest attack
 surface a web login has, and with it the captcha and the anti-spam quotas.
+
+What this router does NOT do any more is hand out invitations or move people between
+workspaces. Both were owner-scoped and both now live in `routers/admin.py`, behind
+`require_admin`: managing who exists and who gets in is one job, and it was being done
+from two screens at once. What is left here is what an account does to *itself* — enter,
+leave, look at its own sessions, change its own name or password — plus the two public
+halves of an invitation, which are reached without an account and cannot live behind one.
 """
+
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from loguru import logger
@@ -13,9 +22,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from .. import settings
 from ..auth import deps, mail, passwords, tokens
-from ..auth.rate_limit import limiter
+from ..auth.rate_limit import limiter, throttle
 from ..db import identity
-from ..db.models import EDITOR, OWNER, ROLES, VIEWER, Invite, User, Workspace
+from ..db.models import OWNER, Invite, User, Workspace
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -25,14 +34,19 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 BAD_CREDENTIALS = "Usuario o contraseña incorrectos."
 
 
+# Deliberately not `EmailStr`: an address here is a delivery detail, never an identity and
+# never a login, so the only thing worth refusing is something that cannot be a mailbox.
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+\.[^@\s]+$")
+
+
 class Credentials(BaseModel):
     username: str
     password: str
 
 
-class InviteBody(BaseModel):
-    role: str = EDITOR
-    workspace: bool = True
+class ProfileBody(BaseModel):
+    name: str = Field(max_length=200)
+    email: str | None = None
 
 
 class AcceptBody(BaseModel):
@@ -58,10 +72,6 @@ class ResetBody(BaseModel):
     password: str
 
 
-class RoleBody(BaseModel):
-    role: str
-
-
 # SESSION ---------------------------------------------------------------------------
 
 
@@ -73,7 +83,7 @@ def login(
     session: DbSession = Depends(deps.db),
 ) -> dict:
     username = identity.normalise_username(body.username)
-    _throttle("login", request, username)
+    throttle("login", request, username)
 
     user = identity.get_user(session, username)
     if user is None or not user.active:
@@ -119,6 +129,36 @@ def me(user: User = Depends(deps.current_user), session: DbSession = Depends(dep
     return _me(session, user)
 
 
+# The two things about an account that are its own to change. The username is not one of
+# them: it is the identity every other row points at by id and every message prints, and
+# renaming it would silently rewrite who wrote what. Changing the address un-verifies it,
+# because what was proven was control of the previous mailbox and of nothing else.
+@router.patch("/me")
+def update_me(
+    body: ProfileBody,
+    user: User = Depends(deps.current_user),
+    session: DbSession = Depends(deps.db),
+) -> dict:
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(422, "El nombre no puede quedar vacío.")
+
+    email = identity.normalise_email(body.email) if body.email else None
+    if email:
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise HTTPException(422, "Eso no parece una dirección de correo.")
+        other = identity.get_user_by_email(session, email)
+        if other is not None and other.id != user.id:
+            raise HTTPException(409, "Ese correo ya está en otra cuenta.")
+
+    if email != user.email:
+        user.email_verified_at = None
+    user.name = name
+    user.email = email
+    session.flush()
+    return _me(session, user)
+
+
 @router.get("/sessions")
 def sessions(
     request: Request,
@@ -141,6 +181,22 @@ def sessions(
     }
 
 
+# «Cerrar las demás», which is what somebody looking at that list actually wants: the one
+# session they are reading it from is the one they do not mean. `logout-all` stays as the
+# blunter instrument — it takes this one too and clears the cookie.
+@router.post("/sessions/revoke-others")
+def revoke_other_sessions(
+    request: Request,
+    user: User = Depends(deps.current_user),
+    session: DbSession = Depends(deps.db),
+) -> dict:
+    current = getattr(request.state, "session_row", None)
+    revoked = identity.revoke_all_sessions(
+        session, user.id, keep=current.id if current is not None else None
+    )
+    return {"revoked": revoked}
+
+
 # PASSWORD --------------------------------------------------------------------------
 
 
@@ -152,7 +208,7 @@ def change_password(
     user: User = Depends(deps.current_user),
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    _throttle("password", request, user.username)
+    throttle("password", request, user.username)
     if not passwords.verify_password(user.password_hash, body.current):
         raise HTTPException(403, "La contraseña actual no es correcta.")
 
@@ -171,13 +227,13 @@ def change_password(
 @router.post("/forgot", status_code=202)
 def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps.db)) -> dict:
     username = identity.normalise_username(body.username)
-    _throttle("forgot", request, username)
+    throttle("forgot", request, username)
 
     user = identity.get_user(session, username)
     if user is not None and user.active:
         token = tokens.new_token()
         identity.create_reset(session, user.id, tokens.digest(token), settings.RESET_TTL)
-        link = f"{_base_url(request)}/restablecer?token={token}"
+        link = f"{deps.base_url(request)}/restablecer?token={token}"
         minutes = int(settings.RESET_TTL.total_seconds() // 60)
         if user.email:
             mail.send(
@@ -208,7 +264,7 @@ def reset(
     response: Response,
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    _throttle("reset", request, "")
+    throttle("reset", request, "")
     row = identity.live_reset(session, tokens.digest(body.token))
     if row is None:
         raise HTTPException(404, "Ese enlace ya no vale. Pide otro.")
@@ -286,111 +342,6 @@ def accept_invite(
     return _me(session, user)
 
 
-@router.get("/invites")
-def list_invites(
-    access: deps.Access = Depends(deps.require_member(OWNER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    return {
-        "invites": [
-            _invite_view(invite, session)
-            for invite in identity.pending_invites(session, access.workspace.id)
-        ]
-    }
-
-
-@router.post("/invites", status_code=201)
-def create_invite(
-    body: InviteBody,
-    request: Request,
-    access: deps.Access = Depends(deps.require_member(OWNER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    _throttle("invite", request, access.user.username)
-    if body.role not in ROLES:
-        raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
-
-    token = tokens.new_token()
-    invite = identity.create_invite(
-        session,
-        token_hash=tokens.digest(token),
-        ttl=settings.INVITE_TTL,
-        workspace_id=access.workspace.id if body.workspace else None,
-        role=body.role,
-        created_by=access.user.id,
-    )
-
-    # The link IS the invitation: it is single-use, it expires, and whoever issued it hands
-    # it over themselves. There is no address to bind it to any more, so the person
-    # redeeming it chooses their own username — which is why the link must not be posted
-    # anywhere its holder was not meant to be.
-    return {"invite": _invite_view(invite, session), "link": f"{_base_url(request)}/invitacion?token={token}"}
-
-
-@router.delete("/invites/{invite_id}")
-def delete_invite(
-    invite_id: int,
-    access: deps.Access = Depends(deps.require_member(OWNER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    invite = session.get(Invite, invite_id)
-    if invite is None or invite.workspace_id != access.workspace.id:
-        raise HTTPException(404, "Esa invitación no existe.")
-    return {"revoked": identity.revoke_invite(session, invite_id)}
-
-
-# MEMBERS ---------------------------------------------------------------------------
-
-
-@router.get("/members")
-def members(
-    access: deps.Access = Depends(deps.require_member(VIEWER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    return {
-        "members": [
-            {
-                "id": user.id,
-                "username": user.username,
-                "name": user.name,
-                "role": membership.role,
-                "disabled": not user.active,
-            }
-            for membership, user in identity.members_of(session, access.workspace.id)
-        ],
-        "role": access.role,
-    }
-
-
-@router.patch("/members/{user_id}")
-def set_role(
-    user_id: int,
-    body: RoleBody,
-    access: deps.Access = Depends(deps.require_member(OWNER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    if body.role not in ROLES:
-        raise HTTPException(422, f"Rol desconocido: '{body.role}'.")
-    if user_id == access.user.id:
-        raise HTTPException(409, "No puedes cambiar tu propio rol.")
-    if identity.membership(session, access.workspace.id, user_id) is None:
-        raise HTTPException(404, "Esa persona no es miembro de este workspace.")
-    identity.grant(session, access.workspace.id, user_id, body.role)
-    return {"ok": True}
-
-
-@router.delete("/members/{user_id}")
-def remove_member(
-    user_id: int,
-    access: deps.Access = Depends(deps.require_member(OWNER)),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    if user_id == access.user.id:
-        raise HTTPException(409, "No puedes quitarte a ti mismo del workspace.")
-    identity.revoke_membership(session, access.workspace.id, user_id)
-    return {"ok": True}
-
-
 # HELPERS ---------------------------------------------------------------------------
 
 
@@ -464,45 +415,9 @@ def _clear_cookie(response: Response) -> None:
     response.delete_cookie(settings.SESSION_COOKIE, path="/")
 
 
-# Where the links in an invitation or a reset mail point. `PUBLIC_BASE_URL` wins; failing
-# that the caller's own `Origin`, which is right for development, where the browser is on
-# Vite's port and the API's `base_url` would send it to the wrong one. Reading `Origin` is
-# safe because a state-changing request only gets here after `OriginCheck` accepted it.
-def _base_url(request: Request) -> str:
-    configured = settings.public_base_url()
-    if configured:
-        return configured
-    origin = request.headers.get("origin")
-    if origin:
-        return origin.rstrip("/")
-    return str(request.base_url).rstrip("/")
-
-
 def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
     if invite.workspace_id is None:
         return
     identity.grant(session, invite.workspace_id, user.id, invite.role)
 
 
-def _invite_view(invite: Invite, session: DbSession) -> dict:
-    workspace = session.get(Workspace, invite.workspace_id) if invite.workspace_id else None
-    return {
-        "id": invite.id,
-        "role": invite.role,
-        "workspace": workspace.name if workspace else None,
-        "created_at": invite.created_at.isoformat(),
-        "expires_at": invite.expires_at.isoformat(),
-    }
-
-
-def _throttle(bucket: str, request: Request, account: str) -> None:
-    limit, window = settings.RATE_LIMITS[bucket]
-    limiter.sweep()
-    for key in (deps.client_ip(request), account):
-        wait = limiter.check(bucket, key, limit, window)
-        if wait > 0:
-            raise HTTPException(
-                429,
-                f"Demasiados intentos. Vuelve a probar en {int(wait) + 1} segundos.",
-                headers={"Retry-After": str(int(wait) + 1)},
-            )

@@ -1,4 +1,4 @@
-"""The installation's own panel: how the study is going, across accounts and workspaces.
+"""The installation's own panel: the accounts, the workspaces and how the study is going.
 
 This router is the documented exception to phase 2's «an administrator runs the
 installation, they do not read other people's instances». Taken by explicit user request
@@ -8,21 +8,44 @@ answered from inside one account. The bypass lives in `auth.deps.access_for`, on
 and every route here is behind `require_admin`.
 
 What it is NOT: a second way into the pipeline. Nothing here builds, edits or approves
-anything. It reads what the installation has recorded and hands back a CSV.
+anything. It reads what the installation has recorded, hands out access, and exports a CSV.
+
+Handing out access is new: issuing invitations and moving people between workspaces used
+to be an owner's job, done from a dialog in the account menu, while this panel listed the
+same accounts and could only enable or disable them. Two screens for one question is how
+you end up with two answers, so they are one — this one — and only the installation's
+administrator gets it, by explicit user request. An owner still owns their workspace's
+content; they no longer decide who else exists.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from variant_generator.evaluation import ARM_LABELS, ARMS
 
-from .. import auth, deps, evaluation_store, runtime
+from .. import auth, deps, evaluation_store, runtime, settings
+from ..auth.rate_limit import throttle
 from ..db import identity, repository, study
-from ..db.models import User
+from ..db.models import EDITOR, ROLES, Invite, User
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
 )
+
+
+class InviteBody(BaseModel):
+    """`workspace` is a slug, or nothing: an invitation that grants no membership creates
+    an account and no access, which is the honest way to add someone who will be given a
+    workspace later."""
+
+    workspace: str | None = None
+    role: str = EDITOR
+
+
+class MembershipBody(BaseModel):
+    workspace: str
+    role: str = EDITOR
 
 
 # WHO AND WHAT ----------------------------------------------------------------------------
@@ -149,6 +172,88 @@ def session_detail(session_id: str, db: DbSession = Depends(auth.db)) -> dict:
     }
 
 
+# ACCESS ----------------------------------------------------------------------------------
+#
+# The only way an account comes into existence, and the only way one enters a workspace.
+
+
+@router.get("/invites")
+def invites(db: DbSession = Depends(auth.db)) -> dict:
+    return {"invites": [_invite(db, row) for row in identity.pending_invites(db)]}
+
+
+@router.post("/invites", status_code=201)
+def create_invite(
+    body: InviteBody,
+    request: Request,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    # An administrator session is not a licence to mint credentials without limit, and the
+    # bucket already existed for the owner-scoped route this replaces.
+    throttle("invite", request, admin.username)
+    if body.role not in ROLES:
+        raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
+
+    workspace = None
+    if body.workspace:
+        workspace = repository.get_workspace(db, body.workspace)
+        if workspace is None:
+            raise HTTPException(404, f"No existe el workspace '{body.workspace}'.")
+
+    token = auth.new_token()
+    invite = identity.create_invite(
+        db,
+        token_hash=auth.digest(token),
+        ttl=settings.INVITE_TTL,
+        workspace_id=workspace.id if workspace else None,
+        role=body.role,
+        created_by=admin.id,
+    )
+
+    # The link IS the invitation: single-use, expiring, and handed over by whoever issued
+    # it. There is no address bound to it, so the person redeeming it chooses their own
+    # username — which is why it must not be left anywhere its holder was not meant to be.
+    return {
+        "invite": _invite(db, invite),
+        "link": f"{auth.base_url(request)}/invitacion?token={token}",
+    }
+
+
+@router.delete("/invites/{invite_id}")
+def revoke_invite(invite_id: int, db: DbSession = Depends(auth.db)) -> dict:
+    invite = db.get(Invite, invite_id)
+    if invite is None:
+        raise HTTPException(404, "Esa invitación no existe.")
+    return {"revoked": identity.revoke_invite(db, invite_id)}
+
+
+@router.post("/accounts/{user_id}/memberships")
+def grant_membership(
+    user_id: int, body: MembershipBody, db: DbSession = Depends(auth.db)
+) -> dict:
+    if body.role not in ROLES:
+        raise HTTPException(422, f"Rol desconocido: '{body.role}'.")
+    user = identity.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(404, "Esa cuenta no existe.")
+    workspace = repository.get_workspace(db, body.workspace)
+    if workspace is None:
+        raise HTTPException(404, f"No existe el workspace '{body.workspace}'.")
+
+    identity.grant(db, workspace.id, user.id, body.role)
+    return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
+
+
+@router.delete("/accounts/{user_id}/memberships/{slug}")
+def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db)) -> dict:
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe el workspace '{slug}'.")
+    identity.revoke_membership(db, workspace.id, user_id)
+    return {"user_id": user_id, "workspace": slug}
+
+
 # ACCOUNTS --------------------------------------------------------------------------------
 
 
@@ -176,6 +281,20 @@ def enable(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
 
 
 # HELPERS ---------------------------------------------------------------------------------
+
+
+def _invite(db: DbSession, invite: Invite) -> dict:
+    workspace = invite.workspace
+    author = identity.get_user_by_id(db, invite.created_by) if invite.created_by else None
+    return {
+        "id": invite.id,
+        "role": invite.role,
+        "workspace": workspace.name if workspace else None,
+        "workspace_slug": workspace.slug if workspace else None,
+        "created_at": invite.created_at.isoformat(),
+        "expires_at": invite.expires_at.isoformat(),
+        "created_by": author.username if author else None,
+    }
 
 
 def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:

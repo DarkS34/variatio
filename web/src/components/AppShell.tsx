@@ -7,7 +7,6 @@ import {
   Scale,
   ScrollText,
   Share2,
-  ShieldCheck,
 } from "lucide-react";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 
@@ -20,7 +19,6 @@ import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/state/auth";
 import { useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
@@ -32,8 +30,10 @@ import { runStore } from "@/state/runStore";
  * are the whole point — without them six tabs read as one flat list and nothing says
  * that the middle block has to be finished before the right one does anything.
  *
- * «Variantes guardadas» is deliberately NOT here: it is a personal archive, not a step of
- * the chain, and it lives in the account menu next to the other things that are yours.
+ * Two things are deliberately NOT here, and for the same reason — the navbar is the chain
+ * and nothing else. «Variantes guardadas» is a personal archive, and «Administración» is
+ * the installation seen from outside, which is not about the instance in front of you and
+ * appears for one account in the whole installation. Both live in the account menu.
  *
  * `qualifier` is the half of the name that only fits on a wide screen. It is dropped,
  * never abbreviated: «Grafo» and «Perfil» are already what these are called out loud.
@@ -67,19 +67,6 @@ const NAV = [
   { path: "/generar", label: "Generar", qualifier: null, icon: Play, artifact: null, group: "use" },
   { path: "/evaluar", label: "Evaluar", qualifier: null, icon: Scale, artifact: null, group: "use" },
 ] as const;
-
-// The installation's own screen, and the only tab that is not about the instance in
-// front of you. It is appended rather than declared in NAV because it appears for one
-// account in the whole installation, and a nav item that is usually absent has no
-// business being a hole in a constant everything else reads.
-const ADMIN_ITEM = {
-  path: "/administracion",
-  label: "Admin",
-  qualifier: null,
-  icon: ShieldCheck,
-  artifact: null,
-  group: "admin",
-} as const;
 
 function NavItem({
   path,
@@ -141,7 +128,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>("progress");
-  const session = useSession();
   const pipeline = usePipeline();
   const health = useHealth();
   const stream = useStream();
@@ -166,7 +152,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const stages = pipeline.data?.stages ?? [];
   const stageFor = (artifact: string | null) => stages.find((s) => s.artifact === artifact);
-  const items = session.data?.user.is_admin ? [...NAV, ADMIN_ITEM] : [...NAV];
 
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
@@ -187,9 +172,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               hasta hacer aparecer un scroll horizontal sobre las pestañas. Si aun así no
               cabe, se desplaza sin pintar la barra de scroll. */}
           <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {items.map((item, index) => (
+            {NAV.map((item, index) => (
               <Fragment key={item.path}>
-                {index > 0 && items[index - 1].group !== item.group ? (
+                {index > 0 && NAV[index - 1].group !== item.group ? (
                   <span aria-hidden className="mx-1.5 h-5 w-px shrink-0 bg-border" />
                 ) : null}
                 <NavItem

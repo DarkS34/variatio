@@ -1,11 +1,13 @@
+import { useEffect } from "react";
+
 import { AppShell } from "@/components/AppShell";
 import { EmptyState } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
+import { AccountScreen } from "@/features/account/AccountScreen";
 import { AdminScreen } from "@/features/admin/AdminScreen";
 import { BankScreen } from "@/features/bank/BankScreen";
 import { Dashboard } from "@/features/pipeline/Dashboard";
 import { EvaluationScreen } from "@/features/evaluation/EvaluationScreen";
-import { GenerationsScreen } from "@/features/generations/GenerationsScreen";
 import { KgScreen } from "@/features/kg/KgScreen";
 import { ProfileScreen } from "@/features/profile/ProfileEditor";
 import { GenerateScreen } from "@/features/run/GenerateScreen";
@@ -28,10 +30,20 @@ export function App() {
         return <BankScreen stage={stage("exemplars_bank")} />;
       case "/generar":
         return <GenerateScreen />;
-      case "/variantes":
-        return <GenerationsScreen />;
       case "/evaluar":
         return <EvaluationScreen />;
+      // La cuenta de quien mira: sus datos, sus variantes y sus accesos. Cada pestaña es
+      // una ruta para que «mis variantes» siga siendo un enlace que se puede guardar.
+      case "/perfil":
+        return <AccountScreen tab="cuenta" />;
+      case "/perfil/variantes":
+        return <AccountScreen tab="variantes" />;
+      case "/perfil/accesos":
+        return <AccountScreen tab="accesos" />;
+      // Donde vivían las variantes cuando eran pantalla propia. Se redirige en vez de
+      // duplicar la pantalla: los enlaces antiguos siguen llevando a donde están ahora.
+      case "/variantes":
+        return <Redirect to="/perfil/variantes" />;
       // Guarded on the server by `require_admin`; the route exists for everyone because
       // hiding it in the client is not a permission, and the panel says so itself if a
       // non-administrator reaches it by typing the URL.
@@ -49,4 +61,10 @@ export function App() {
   };
 
   return <AppShell>{screen()}</AppShell>;
+}
+
+function Redirect({ to }: { to: string }) {
+  const { navigate } = useRouter();
+  useEffect(() => navigate(to, { replace: true }), [navigate, to]);
+  return null;
 }

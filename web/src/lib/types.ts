@@ -45,30 +45,22 @@ export interface Pipeline {
   engine_busy_elsewhere: boolean;
 }
 
-/** One phase of a build: what it is called, what share of the bar it owns, what it costs. */
+/**
+ * One phase of a build: what it is called and what share of the bar it owns.
+ *
+ * A weight is a share of the WORK, not of the clock. There is no time estimate anywhere
+ * any more: what a phase costs depends on which models the instance is pointed at, and
+ * those change — a figure measured against one set of models is a claim about that set,
+ * so it goes stale silently the moment the config does.
+ */
 export interface BuildPhase {
   key: string;
   label: string;
   weight: number;
-  seconds: number;
 }
 
-export interface BuildEstimate {
-  artifact: ArtifactName;
-  seconds: number;
-  phases: BuildPhase[];
-  basis: {
-    documents: number;
-    pages: number;
-    chunks: number;
-    /** Pages and documents still to convert: what a first build pays and a redo does not. */
-    pending_pages: number;
-    pending_documents: number;
-  };
-}
-
-export interface BuildEstimates {
-  artifacts: Record<ArtifactName, BuildEstimate>;
+export interface BuildPlans {
+  artifacts: Record<ArtifactName, BuildPhase[]>;
 }
 
 export interface Job {
@@ -458,6 +450,17 @@ export interface WorkspaceMembership {
   active: boolean;
 }
 
+/** A live login of this account: what the profile screen lists so you can spot one you
+ *  do not recognise. Never another account's — this is only ever your own. */
+export interface AccountSession {
+  id: number;
+  created_at: string;
+  last_seen_at: string;
+  ip: string | null;
+  user_agent: string | null;
+  current: boolean;
+}
+
 export interface Session {
   user: CurrentUser;
   workspaces: WorkspaceMembership[];
@@ -621,16 +624,10 @@ export interface InviteRow {
   id: number;
   role: Role;
   workspace: string | null;
+  workspace_slug: string | null;
   created_at: string;
   expires_at: string;
-}
-
-export interface MemberRow {
-  id: number;
-  username: string;
-  name: string;
-  role: Role;
-  disabled: boolean;
+  created_by: string | null;
 }
 
 /* Events --------------------------------------------------------------------------- */

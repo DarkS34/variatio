@@ -1,20 +1,43 @@
-import { Download, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  Download,
+  Link as LinkIcon,
+  ShieldCheck,
+  Trash2,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, EmptyState, Skeleton } from "@/components/ui/misc";
+import { Label, Select } from "@/components/ui/input";
+import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { ARM_META } from "@/features/evaluation/arms";
+import { FormError } from "@/features/auth/AuthLayout";
 import { duration, when } from "@/lib/format";
-import type { AdminGroup, EvaluationAggregates, EvaluationArm } from "@/lib/types";
+import type {
+  AdminAccount,
+  AdminGroup,
+  AdminOverview,
+  EvaluationAggregates,
+  EvaluationArm,
+  Role,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { useSession } from "@/state/auth";
+import { ROLE_HINTS, ROLE_LABELS, useSession } from "@/state/auth";
 import {
   useAdminEvaluations,
+  useAdminInvites,
   useAdminOverview,
+  useCreateInvite,
+  useMembershipActions,
+  useRevokeInvite,
   useSetAccountEnabled,
 } from "@/state/queries";
 
@@ -27,6 +50,8 @@ const CHANCE = 1 / 3;
 /** The order the arm palette was validated on. Anything that draws the three side by
  *  side draws them in it — the CVD check is over ADJACENT pairs. */
 const ARMS: EvaluationArm[] = ["naive", "rag", "system"];
+
+const ROLES: Role[] = ["viewer", "editor", "owner"];
 
 const RUBRIC_LABELS: Record<string, string> = {
   originality: "Originalidad",
@@ -59,8 +84,9 @@ export function AdminScreen() {
       <header className="flex flex-wrap items-center gap-2">
         <h1 className="text-xl font-semibold tracking-tight">Administración</h1>
         <InfoHint label="Qué es esto">
-          La instalación entera vista desde fuera: quién la usa, cuántos workspaces hay y
-          cómo va el estudio de evaluación. Es la única pantalla que cruza cuentas.
+          La instalación entera vista desde fuera: quién la usa, quién puede entrar y en
+          qué, cuántos workspaces hay y cómo va el estudio de evaluación. Es la única
+          pantalla que cruza cuentas, y el único sitio desde el que se dan accesos.
         </InfoHint>
       </header>
 
@@ -69,7 +95,7 @@ export function AdminScreen() {
       <Tabs
         items={[
           { value: "estudio", label: "Evaluaciones" },
-          { value: "cuentas", label: "Cuentas" },
+          { value: "cuentas", label: "Cuentas y accesos" },
           { value: "workspaces", label: "Workspaces" },
         ]}
         value={tab}
@@ -591,88 +617,418 @@ function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminE
 
 /* Accounts and workspaces --------------------------------------------------------------- */
 
+/**
+ * The one screen that decides who exists and who gets in.
+ *
+ * It used to be two: an owner's «Personas e invitaciones» dialog, which handed out access
+ * to one workspace, and this table, which listed the same accounts and could only switch
+ * them off. Two places to answer one question is how the two answers drift apart, so the
+ * dialog is gone and this is the whole of it — issuing invitations, moving people between
+ * workspaces and disabling an account, in that order, which is the order they happen in.
+ *
+ * Access is per workspace and this panel crosses them all, so a row's memberships open
+ * where the row is rather than obliging the administrator to change workspace to grant one.
+ */
 function AccountsTab({
   overview,
   onInspect,
 }: {
-  overview: NonNullable<ReturnType<typeof useAdminOverview>["data"]>;
+  overview: AdminOverview;
   onInspect: (id: number) => void;
 }) {
   const toggle = useSetAccountEnabled();
   const session = useSession();
+  const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[52rem] text-sm">
-        <thead>
-          <tr className="border-b border-border text-xs text-muted-foreground">
-            <th className="px-3 py-2 text-left font-medium">Cuenta</th>
-            <th className="px-3 py-2 text-left font-medium">Workspaces</th>
-            <th className="px-3 py-2 text-right font-medium">Variantes</th>
-            <th className="px-3 py-2 text-right font-medium">Comparaciones</th>
-            <th className="px-3 py-2 text-left font-medium">Alta</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {overview.accounts.map((account) => (
-            <tr key={account.id} className="border-b border-border/50 last:border-0">
-              <td className="px-3 py-2">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "truncate font-mono",
-                      account.disabled && "line-through opacity-60",
-                    )}
-                  >
-                    {account.username}
-                  </span>
-                  {account.is_admin ? <Badge variant="secondary">admin</Badge> : null}
-                  {account.disabled ? <Badge variant="outline">desactivada</Badge> : null}
-                </span>
-                <span className="block text-xs text-muted-foreground">{account.name}</span>
-              </td>
-              <td className="px-3 py-2 text-xs">
-                {account.workspaces.length === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  account.workspaces.map((w) => `${w.slug}:${w.role}`).join(", ")
-                )}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">{account.generations}</td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {account.evaluations}
-                <span className="ml-1 text-xs text-muted-foreground">
-                  ({account.decided} dec.)
-                </span>
-              </td>
-              <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                {account.created_at ? when(account.created_at) : "—"}
-              </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
-                {account.evaluations > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => onInspect(account.id)}>
-                    Ver sus sesiones
-                  </Button>
-                ) : null}
-                {account.id !== session.data?.user.id ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={toggle.isPending}
-                    onClick={() =>
-                      toggle.mutate({ id: account.id, enabled: account.disabled })
-                    }
-                  >
-                    {account.disabled ? <UserCheck /> : <UserX />}
-                    {account.disabled ? "Reactivar" : "Desactivar"}
-                  </Button>
-                ) : null}
-              </td>
-            </tr>
+    <div className="space-y-5">
+      <InviteSection overview={overview} />
+
+      <section className="space-y-2">
+        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Cuentas ({overview.accounts.length})
+        </h2>
+        <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[52rem] text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-muted-foreground">
+                <th className="px-3 py-2 text-left font-medium">Cuenta</th>
+                <th className="px-3 py-2 text-left font-medium">Accesos</th>
+                <th className="px-3 py-2 text-right font-medium">Variantes</th>
+                <th className="px-3 py-2 text-right font-medium">Comparaciones</th>
+                <th className="px-3 py-2 text-left font-medium">Alta</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {overview.accounts.map((account) => (
+                <AccountRows
+                  key={account.id}
+                  account={account}
+                  overview={overview}
+                  self={account.id === session.data?.user.id}
+                  expanded={open === account.id}
+                  onToggle={() => setOpen(open === account.id ? null : account.id)}
+                  onInspect={() => onInspect(account.id)}
+                  onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
+                  busy={toggle.isPending}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AccountRows({
+  account,
+  overview,
+  self,
+  expanded,
+  onToggle,
+  onInspect,
+  onEnabled,
+  busy,
+}: {
+  account: AdminAccount;
+  overview: AdminOverview;
+  self: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  onInspect: () => void;
+  onEnabled: (enabled: boolean) => void;
+  busy: boolean;
+}) {
+  return (
+    <>
+      <tr className="border-b border-border/50 last:border-0">
+        <td className="px-3 py-2">
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn("truncate font-mono", account.disabled && "line-through opacity-60")}
+            >
+              {account.username}
+            </span>
+            {account.is_admin ? <Badge variant="secondary">admin</Badge> : null}
+            {self ? <Badge variant="outline">tú</Badge> : null}
+            {account.disabled ? <Badge variant="outline">desactivada</Badge> : null}
+          </span>
+          <span className="block text-xs text-muted-foreground">{account.name}</span>
+        </td>
+        <td className="px-3 py-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex items-center gap-1.5 text-left text-xs hover:text-foreground"
+          >
+            <ChevronRight
+              className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
+            />
+            {account.workspaces.length === 0 ? (
+              <span className="text-muted-foreground">sin acceso a ninguno</span>
+            ) : (
+              <span className="flex flex-wrap gap-1">
+                {account.workspaces.map((w) => (
+                  <Badge key={w.slug} variant="outline">
+                    {w.slug} · {ROLE_LABELS[w.role].toLowerCase()}
+                  </Badge>
+                ))}
+              </span>
+            )}
+          </button>
+        </td>
+        <td className="px-3 py-2 text-right tabular-nums">{account.generations}</td>
+        <td className="px-3 py-2 text-right tabular-nums">
+          {account.evaluations}
+          <span className="ml-1 text-xs text-muted-foreground">({account.decided} dec.)</span>
+        </td>
+        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+          {account.created_at ? when(account.created_at) : "—"}
+        </td>
+        <td className="whitespace-nowrap px-3 py-2 text-right">
+          {account.evaluations > 0 ? (
+            <Button variant="ghost" size="sm" onClick={onInspect}>
+              Ver sus sesiones
+            </Button>
+          ) : null}
+          {/* Desactivar la propia cuenta deja la instalación sin quien la administre, y el
+              servidor lo rechaza igualmente; no ofrecerlo evita el 409 por sorpresa. */}
+          {self ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => onEnabled(account.disabled)}
+            >
+              {account.disabled ? <UserCheck /> : <UserX />}
+              {account.disabled ? "Reactivar" : "Desactivar"}
+            </Button>
+          )}
+        </td>
+      </tr>
+
+      {expanded ? (
+        <tr className="border-b border-border/50 bg-muted/30 last:border-0">
+          <td colSpan={6} className="px-3 py-3">
+            <MembershipEditor account={account} overview={overview} />
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
+
+/** The memberships of one account, editable where they are read. */
+function MembershipEditor({
+  account,
+  overview,
+}: {
+  account: AdminAccount;
+  overview: AdminOverview;
+}) {
+  const { grant, revoke } = useMembershipActions();
+  const missing = overview.workspaces.filter(
+    (workspace) => !account.workspaces.some((w) => w.slug === workspace.slug),
+  );
+  const [slug, setSlug] = useState(missing[0]?.slug ?? "");
+  const [role, setRole] = useState<Role>("editor");
+
+  return (
+    <div className="space-y-3">
+      {account.workspaces.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Esta cuenta no es miembro de ningún workspace: puede entrar, pero no verá nada
+          hasta que le des acceso a alguno.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border rounded-lg border border-border bg-background">
+          {account.workspaces.map((membership) => (
+            <li key={membership.slug} className="flex flex-wrap items-center gap-2 p-2">
+              <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                {membership.slug}
+              </span>
+              <Select
+                value={membership.role}
+                className="h-8 w-36"
+                disabled={grant.isPending}
+                onChange={(event) =>
+                  grant.mutate({
+                    id: account.id,
+                    workspace: membership.slug,
+                    role: event.target.value as Role,
+                  })
+                }
+              >
+                {ROLES.map((option) => (
+                  <option key={option} value={option}>
+                    {ROLE_LABELS[option]}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Quitar el acceso a este workspace"
+                disabled={revoke.isPending}
+                onClick={() => revoke.mutate({ id: account.id, workspace: membership.slug })}
+              >
+                <Trash2 />
+              </Button>
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      )}
+
+      {missing.length > 0 ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label htmlFor={`add-${account.id}`}>Dar acceso a</Label>
+            <Select
+              id={`add-${account.id}`}
+              value={slug}
+              className="h-8 w-56"
+              onChange={(event) => setSlug(event.target.value)}
+            >
+              {missing.map((workspace) => (
+                <option key={workspace.slug} value={workspace.slug}>
+                  {workspace.name} ({workspace.slug})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Select
+            value={role}
+            className="h-8 w-36"
+            onChange={(event) => setRole(event.target.value as Role)}
+          >
+            {ROLES.map((option) => (
+              <option key={option} value={option}>
+                {ROLE_LABELS[option]}
+              </option>
+            ))}
+          </Select>
+          <Button
+            size="sm"
+            disabled={!slug || grant.isPending}
+            onClick={() => grant.mutate({ id: account.id, workspace: slug, role })}
+          >
+            {grant.isPending ? <Spinner /> : null}
+            Conceder
+          </Button>
+          <span className="text-xs text-muted-foreground">{ROLE_HINTS[role]}</span>
+        </div>
+      ) : null}
+
+      <FormError error={grant.error ?? revoke.error} />
+    </div>
+  );
+}
+
+/**
+ * Invitations, which are the only way an account comes into existence.
+ *
+ * The link IS the invitation: nothing is sent anywhere, it works once, it expires, and
+ * whoever opens it chooses their own username. That is why the copy says not to leave it
+ * in a shared place — until it is redeemed it is a credential.
+ */
+function InviteSection({ overview }: { overview: AdminOverview }) {
+  const invites = useAdminInvites();
+  const create = useCreateInvite();
+  const revoke = useRevokeInvite();
+  const [workspace, setWorkspace] = useState<string>(overview.workspaces[0]?.slug ?? "");
+  const [role, setRole] = useState<Role>("editor");
+
+  const pending = invites.data?.invites ?? [];
+
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Invitar a alguien
+        </h2>
+        <InfoHint label="Cómo se entra aquí">
+          No hay registro abierto: una cuenta existe porque alguien abrió una invitación de
+          un solo uso, o porque se creó desde la línea de órdenes. Quitar el registro
+          público es lo que quita de en medio el mayor blanco de un login web.
+        </InfoHint>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="invite-workspace">Workspace</Label>
+          <Select
+            id="invite-workspace"
+            value={workspace}
+            className="h-9 w-64"
+            onChange={(event) => setWorkspace(event.target.value)}
+          >
+            <option value="">Ninguno (solo crear la cuenta)</option>
+            {overview.workspaces.map((row) => (
+              <option key={row.slug} value={row.slug}>
+                {row.name} ({row.slug})
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="invite-role">Permiso</Label>
+          <Select
+            id="invite-role"
+            value={role}
+            className="h-9 w-40"
+            disabled={!workspace}
+            onChange={(event) => setRole(event.target.value as Role)}
+          >
+            {ROLES.map((option) => (
+              <option key={option} value={option}>
+                {ROLE_LABELS[option]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Button
+          onClick={() => create.mutate({ workspace: workspace || null, role })}
+          disabled={create.isPending}
+        >
+          {create.isPending ? <Spinner /> : <LinkIcon />}
+          Crear enlace
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {workspace
+            ? ROLE_HINTS[role]
+            : "Entrará sin acceso a ninguna instancia; se lo das después desde la tabla."}
+        </span>
+      </div>
+
+      <FormError error={create.error} />
+      {create.isSuccess ? <InviteLink link={create.data.link} /> : null}
+
+      {pending.length > 0 ? (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {pending.map((invite) => (
+            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-sm">
+              <div className="min-w-0 flex-1">
+                {/* No hay destinatario que nombrar: lo que distingue dos enlaces pendientes
+                    es cuándo se emitieron y para qué instancia. */}
+                <p className="truncate">
+                  Enlace del {new Date(invite.created_at).toLocaleDateString("es-ES")}
+                  {invite.created_by ? (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      · lo creó {invite.created_by}
+                    </span>
+                  ) : null}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {invite.workspace_slug
+                    ? `${invite.workspace_slug} · ${ROLE_LABELS[invite.role]}`
+                    : "sin workspace"}{" "}
+                  · caduca el {new Date(invite.expires_at).toLocaleDateString("es-ES")}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Anular"
+                disabled={revoke.isPending}
+                onClick={() => revoke.mutate(invite.id)}
+              >
+                <Trash2 />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+function InviteLink({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <p className="text-sm">
+        Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio
+        usuario, así que no lo dejes en un sitio compartido.
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-xs">
+          {link}
+        </code>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            navigator.clipboard.writeText(link);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? <Check /> : <Copy />}
+          {copied ? "Copiado" : "Copiar"}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, Sparkles, Users } from "lucide-react";
+import { LogOut, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,23 +8,19 @@ import { ROLE_LABELS, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
 import { cn } from "@/lib/utils";
 
-import { ChangePasswordDialog } from "./ChangePasswordDialog";
-import { PeopleDialog } from "./PeopleDialog";
-
 /**
- * Who is logged in, what they may do here, and everything they can do about it.
+ * Who is logged in, what they may do here, and where the rest of it lives.
  *
- * Two blocks, kept apart by a rule. The first is a place to go — the variants this account
- * has saved, which is a screen and not a setting; the second is what you do to the account
- * itself. They are one list because they are all reached from the same avatar, and they
- * are separated because clicking one navigates and clicking the others opens a dialog.
+ * Everything the menu used to *do* is now a page: the password and the saved variants are
+ * tabs of «Mi perfil», and administering the installation is its own screen, moved out of
+ * the navbar so that the tabs up there stay the chain and nothing else. What is left is a
+ * list of destinations plus the one action that belongs nowhere else — leaving.
  */
 export function AccountMenu() {
   const session = useSession();
   const logout = useLogout();
   const { navigate } = useRouter();
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<"password" | "people" | null>(null);
   const holder = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +35,11 @@ export function AccountMenu() {
   const user = session.data?.user;
   if (!user) return null;
   const role = session.data?.role ?? null;
+
+  const go = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
 
   return (
     <div className="relative" ref={holder}>
@@ -73,36 +74,30 @@ export function AccountMenu() {
 
           <div className="p-1">
             <MenuItem
+              icon={<UserRound className="size-4" />}
+              label="Perfil"
+              onClick={() => go("/perfil")}
+            />
+            <MenuItem
               icon={<Sparkles className="size-4" />}
               label="Variantes guardadas"
-              onClick={() => {
-                setOpen(false);
-                navigate("/variantes");
-              }}
+              onClick={() => go("/perfil/variantes")}
             />
+            {/* La instalación entera: cuentas, invitaciones, workspaces y el estudio. Vive
+                aquí y no en la barra porque aparece para una cuenta de toda la instalación
+                y la barra es la cadena de artefactos. */}
+            {user.is_admin ? (
+              <MenuItem
+                icon={<ShieldCheck className="size-4" />}
+                label="Administración"
+                onClick={() => go("/administracion")}
+              />
+            ) : null}
           </div>
 
           <Separator />
 
           <div className="p-1">
-            {role === "owner" ? (
-              <MenuItem
-                icon={<Users className="size-4" />}
-                label="Personas e invitaciones"
-                onClick={() => {
-                  setOpen(false);
-                  setDialog("people");
-                }}
-              />
-            ) : null}
-            <MenuItem
-              icon={<KeyRound className="size-4" />}
-              label="Cambiar la contraseña"
-              onClick={() => {
-                setOpen(false);
-                setDialog("password");
-              }}
-            />
             <MenuItem
               icon={<LogOut className="size-4" />}
               label="Salir"
@@ -117,9 +112,6 @@ export function AccountMenu() {
           </div>
         </div>
       ) : null}
-
-      <ChangePasswordDialog open={dialog === "password"} onClose={() => setDialog(null)} />
-      <PeopleDialog open={dialog === "people"} onClose={() => setDialog(null)} />
     </div>
   );
 }

@@ -74,6 +74,20 @@ def session_token(request: Request | WebSocket) -> str | None:
     return request.cookies.get(settings.SESSION_COOKIE)
 
 
+# Where the links in an invitation or a reset mail point. `PUBLIC_BASE_URL` wins; failing
+# that the caller's own `Origin`, which is right for development, where the browser is on
+# Vite's port and the API's `base_url` would send it to the wrong one. Reading `Origin` is
+# safe because a state-changing request only gets here after `OriginCheck` accepted it.
+def base_url(request: Request) -> str:
+    configured = settings.public_base_url()
+    if configured:
+        return configured
+    origin = request.headers.get("origin")
+    if origin:
+        return origin.rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
 def client_ip(request: Request | WebSocket) -> str:
     if settings.trust_proxy():
         forwarded = request.headers.get("x-forwarded-for", "")
@@ -137,8 +151,13 @@ def require_admin(user: User = Depends(current_user)) -> User:
 def default_workspace_for(session: DbSession, user: User) -> Workspace | None:
     if user.active_workspace_id is not None:
         workspace = session.get(Workspace, user.active_workspace_id)
+        # The preference only counts while the access behind it does. Since the
+        # administrator can revoke a membership from the panel, the workspace an account
+        # last used may be one it can no longer open — and landing there means a 403 on
+        # every route with no way back, even for someone who is a member of two others.
         if workspace is not None and workspace.deleted_at is None:
-            return workspace
+            if user.is_admin or identity.membership(session, workspace.id, user.id):
+                return workspace
     rows = identity.memberships_for(session, user.id)
     if rows:
         return rows[0][1]

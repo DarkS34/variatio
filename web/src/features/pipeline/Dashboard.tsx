@@ -11,7 +11,6 @@ import {
   Lock,
   Pencil,
   Server,
-  Timer,
   UploadCloud,
   WifiOff,
 } from "lucide-react";
@@ -30,13 +29,12 @@ import { InfoHint } from "@/components/ui/hint";
 import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
-import { ENGINE_LABEL, JOB_STATUS, approx, bytes, duration, when } from "@/lib/format";
+import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { Health, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  projectRemaining,
-  useBuildEstimate,
+  useBuildPhases,
   useCancelJob,
   useElapsed,
   useHealth,
@@ -121,7 +119,9 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
         {building ? <BuildProgress artifact={stage.artifact} /> : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          {missing ? null : (
+          {/* Mientras se construye no hay nada que revisar: la pantalla del artefacto
+              oculta el que hay hasta que termine, y esta tarjeta ya muestra el progreso. */}
+          {missing || building ? null : (
             <Link to={SCREEN[stage.artifact]}>
               <Button size="sm" variant={stage.status === "approved" ? "outline" : "default"} disabled={blocked}>
                 <Pencil />
@@ -323,9 +323,8 @@ function ActivityCard() {
   const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
   const overall = run?.overall ?? null;
   const queued = pipeline.data?.queued ?? 0;
-  // Only a build has a phase plan and an estimate; everything else keeps the plain bar.
-  const estimate = useBuildEstimate(run?.job?.artifact ?? undefined);
-  const remaining = projectRemaining(estimate, overall?.percent ?? null, elapsed);
+  // Only a build has a phase plan; everything else keeps the plain bar.
+  const phases = useBuildPhases(run?.job?.artifact ?? undefined);
 
   return (
     <Card>
@@ -402,12 +401,6 @@ function ActivityCard() {
                 <Hourglass className="size-3" />
                 {duration(active ? elapsed : run.job.elapsed_ms)}
               </span>
-              {active && estimate ? (
-                <span className="flex items-center gap-1 tabular-nums text-muted-foreground">
-                  <Timer className="size-3" />
-                  faltan ≈ {approx(remaining)}
-                </span>
-              ) : null}
               {queued > 0 ? (
                 <span className="text-muted-foreground">{queued} en cola</span>
               ) : null}
@@ -429,9 +422,9 @@ function ActivityCard() {
                         : "—"}
                   </span>
                 </div>
-                {overall && estimate ? (
+                {overall && phases.length > 0 ? (
                   <PhaseBar
-                    phases={estimate.phases}
+                    phases={phases}
                     percent={overall.percent}
                     activeKey={overall.key}
                   />

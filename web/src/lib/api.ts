@@ -1,9 +1,10 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
+  AccountSession,
   AdminEvaluations,
   AdminOverview,
   BankListing,
-  BuildEstimates,
+  BuildPlans,
   ExemplarsProfile,
   Coverage,
   EvaluationDetail,
@@ -18,7 +19,6 @@ import type {
   InviteRow,
   Job,
   KgSummary,
-  MemberRow,
   Pipeline,
   ProfilePayload,
   RawKind,
@@ -119,10 +119,15 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
 
 export const api = {
   me: () => request<Session>("/api/auth/me"),
+  updateMe: (body: { name: string; email: string | null }) =>
+    patch<Session>("/api/auth/me", body),
   login: (username: string, password: string) =>
     post<Session>("/api/auth/login", { username, password }),
   logout: () => post<{ ok: boolean }>("/api/auth/logout"),
   logoutAll: () => post<{ ok: boolean; revoked: number }>("/api/auth/logout-all"),
+  sessions: () => request<{ sessions: AccountSession[] }>("/api/auth/sessions"),
+  revokeOtherSessions: () =>
+    post<{ revoked: number }>("/api/auth/sessions/revoke-others"),
   changePassword: (current: string, next: string) =>
     post<{ ok: boolean }>("/api/auth/password", { current, new: next }),
   forgotPassword: (username: string) => post<{ sent: boolean }>("/api/auth/forgot", { username }),
@@ -133,18 +138,6 @@ export const api = {
     request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
   acceptInvite: (body: { token: string; username: string; name: string; password: string }) =>
     post<Session>("/api/auth/accept", body),
-
-  invites: () => request<{ invites: InviteRow[] }>("/api/auth/invites"),
-  createInvite: (body: { role: Role }) =>
-    post<{ invite: InviteRow; link: string }>("/api/auth/invites", body),
-  revokeInvite: (id: number) =>
-    request<{ revoked: boolean }>(`/api/auth/invites/${id}`, { method: "DELETE" }),
-
-  members: () => request<{ members: MemberRow[]; role: Role }>("/api/auth/members"),
-  setMemberRole: (userId: number, role: Role) =>
-    patch<{ ok: boolean }>(`/api/auth/members/${userId}`, { role }),
-  removeMember: (userId: number) =>
-    request<{ ok: boolean }>(`/api/auth/members/${userId}`, { method: "DELETE" }),
 
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
   createWorkspace: (slug: string, name: string) =>
@@ -163,7 +156,7 @@ export const api = {
   health: () => request<Health>("/api/health"),
 
   pipeline: () => request<Pipeline>("/api/pipeline"),
-  estimates: () => request<BuildEstimates>("/api/pipeline/estimates"),
+  buildPhases: () => request<BuildPlans>("/api/pipeline/phases"),
   approve: (artifact: string) => post<Pipeline>(`/api/pipeline/${artifact}/approve`),
   reopen: (artifact: string) => post<Pipeline>(`/api/pipeline/${artifact}/reopen`),
   history: (artifact: string) =>
@@ -288,6 +281,24 @@ export const api = {
   setAccountEnabled: (userId: number, enabled: boolean) =>
     post<{ disabled?: number; enabled?: number }>(
       `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
+    ),
+
+  // Invitations and memberships are the installation administrator's, and only theirs:
+  // there is one screen that hands out access and these are its calls.
+  adminInvites: () => request<{ invites: InviteRow[] }>("/api/admin/invites"),
+  adminCreateInvite: (body: { workspace: string | null; role: Role }) =>
+    post<{ invite: InviteRow; link: string }>("/api/admin/invites", body),
+  adminRevokeInvite: (id: number) =>
+    request<{ revoked: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
+  adminGrantMembership: (userId: number, workspace: string, role: Role) =>
+    post<{ user_id: number; workspace: string; role: Role }>(
+      `/api/admin/accounts/${userId}/memberships`,
+      { workspace, role },
+    ),
+  adminRevokeMembership: (userId: number, workspace: string) =>
+    request<{ user_id: number; workspace: string }>(
+      `/api/admin/accounts/${userId}/memberships/${encodeURIComponent(workspace)}`,
+      { method: "DELETE" },
     ),
 
   // No `n` anywhere in here: one item per arm per session is what makes the session the

@@ -163,11 +163,27 @@ export function StageGate({
         )
       ) : null}
 
-      {building ? <BuildProgress artifact={stage.artifact} /> : null}
-
-      <div className={blocked ? "pointer-events-none select-none opacity-45" : undefined}>
-        {children}
-      </div>
+      {/* Mientras se reconstruye, el artefacto anterior desaparece de la pantalla: lo que
+          hay en ella dejaría de ser lo que se está mirando en cuanto termine, y editarlo
+          sería trabajar sobre algo a punto de ser sobrescrito. No se borra nada — el
+          fichero sigue en disco hasta que el constructor lo reemplace — así que cancelar
+          lo devuelve tal cual estaba, y por eso se dice aquí en vez de dejarlo suponer. */}
+      {building ? (
+        <>
+          <Alert tone="info" title="Construyendo una versión nueva">
+            <p>
+              {stage.label} deja de mostrarse mientras dura la construcción. El que hay
+              ahora sigue guardado: si cancelas, vuelve tal cual. Solo se reemplaza cuando
+              el nuevo termina.
+            </p>
+          </Alert>
+          <BuildProgress artifact={stage.artifact} />
+        </>
+      ) : (
+        <div className={blocked ? "pointer-events-none select-none opacity-45" : undefined}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
