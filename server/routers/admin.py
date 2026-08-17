@@ -280,6 +280,29 @@ def enable(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
     return {"enabled": user_id}
 
 
+# The other half of `disable`, and deliberately not the same thing: disabling keeps the
+# account and shuts the door, this removes the account and leaves standing what it made.
+# Both exist because they answer different questions — «esta persona ya no entra» and «esta
+# cuenta no debería haber existido» — and having only the first left the panel unable to
+# clean up after a mistyped invitation.
+#
+# Deleting yourself is refused, which is also what keeps the installation from losing its
+# last administrator: whoever is calling this is an active one, and stays.
+@router.delete("/accounts/{user_id}")
+def delete_account(
+    user_id: int, admin: User = Depends(auth.require_admin), db: DbSession = Depends(auth.db)
+) -> dict:
+    user = identity.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(404, "Esa cuenta no existe.")
+    if user.id == admin.id:
+        raise HTTPException(409, "No puedes borrar tu propia cuenta.")
+
+    username = user.username
+    identity.delete_user(db, user)
+    return {"deleted": user_id, "username": username}
+
+
 # HELPERS ---------------------------------------------------------------------------------
 
 

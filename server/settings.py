@@ -14,15 +14,13 @@ from variant_generator.workspace import DEFAULT_SLUG, Workspace
 # once per request from the header or the account's active workspace — and passes the
 # resulting `Workspace` down. A module that needs a path takes it as an argument.
 #
-# The default slug keeps resolving to the single-user layout byte for byte (root
-# PROJECT_ROOT, raw dir `raw_data_1`), which is what makes the existing instance, its
-# `.npz` fingerprints and the CLI keep working untouched.
+# `default` is no longer a special case: now that its tree lives in `workspaces/default/`,
+# resolution is the same for every instance, and all this function still contributes is
+# that the server translates "no header" into the initial instance and into nothing else.
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 
 
 def workspace_for(slug: str | None) -> Workspace:
-    if not slug or slug == DEFAULT_SLUG:
-        return config.default_workspace()
     return config.workspace(slug)
 
 

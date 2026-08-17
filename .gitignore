@@ -3,12 +3,19 @@
 __pycache__
 .env
 /raw*
-cache/markdown
-instance/.history/
-instance/.runs/
-instance/.review_state.json
-instance/.evaluations/
 web/node_modules
 web/dist
-workspaces/
 *.md
+
+# A workspace holds the data of whoever created it and is not versioned. `default` is the
+# deliberate exception: it is the project's reference instance, and its curated artifacts
+# and its vectors travel with the repository as they did when they lived in instance/ and
+# cache/.
+workspaces/*
+!workspaces/default/
+workspaces/default/raw/
+workspaces/default/cache/markdown/
+workspaces/default/instance/.history/
+workspaces/default/instance/.runs/
+workspaces/default/instance/.review_state.json
+workspaces/default/instance/.evaluations/

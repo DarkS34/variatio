@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Check, KeyRound, Laptop, UserRound } from "lucide-react";
+import { ArrowRight, Check, KeyRound, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,11 @@ import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
 import { GenerationsPanel } from "@/features/generations/GenerationsPanel";
-import { when } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import {
   ROLE_HINTS,
   ROLE_LABELS,
   useChangePassword,
-  useRevokeOtherSessions,
-  useSessions,
   useSession,
   useUpdateProfile,
 } from "@/state/auth";
@@ -31,6 +28,11 @@ import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/q
  * account may enter was nowhere at all. None of them is a step of the chain — the navbar
  * is the chain — so none of them belongs in the navbar, and a menu of four destinations
  * is a menu, not an answer. This is the answer: one page, one tab per question.
+ *
+ * The list of open sessions used to be a fourth card and is gone (2026-08-17, explicit
+ * user request). It answered a question nobody here was asking — this is a closed group
+ * with accounts handed out by hand — and «cerrar las demás» is already covered by changing
+ * the password, which revokes every other session as part of the same transaction.
  *
  * The tab lives in the URL rather than in state so that «mis variantes» stays a link that
  * can be sent, bookmarked and reloaded.
@@ -86,7 +88,6 @@ function AccountTabView() {
     <div className="grid items-start gap-4 lg:grid-cols-2">
       <IdentityCard />
       <PasswordCard />
-      <SessionsCard />
     </div>
   );
 }
@@ -276,71 +277,6 @@ function PasswordCard() {
             ) : null}
           </div>
         </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Every live login of this account. It is here so that a session you do not recognise is
- *  something you can see and end, which is the only use a list like this has. */
-function SessionsCard() {
-  const sessions = useSessions();
-  const revoke = useRevokeOtherSessions();
-  const rows = sessions.data?.sessions ?? [];
-  const others = rows.filter((row) => !row.current).length;
-
-  return (
-    <Card className="lg:col-span-2">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Laptop className="size-4 text-muted-foreground" />
-          Sesiones abiertas
-          <span className="text-sm font-normal tabular-nums text-muted-foreground">
-            {rows.length}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {sessions.isLoading ? (
-          <Spinner />
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {rows.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate">
-                    {row.user_agent ?? "Cliente sin identificar"}
-                    {row.current ? (
-                      <span className="ml-2 text-xs text-muted-foreground">(esta)</span>
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.ip ?? "sin IP"} · vista por última vez el {when(row.last_seen_at)}
-                  </p>
-                </div>
-                {row.current ? <Badge variant="outline">actual</Badge> : null}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={others === 0 || revoke.isPending}
-            onClick={() => revoke.mutate()}
-          >
-            {revoke.isPending ? <Spinner /> : null}
-            Cerrar las demás
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {others === 0
-              ? "No hay ninguna otra sesión abierta."
-              : `${others} sesión(es) además de esta.`}
-          </span>
-        </div>
-        <FormError error={revoke.error} />
       </CardContent>
     </Card>
   );

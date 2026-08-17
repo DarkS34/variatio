@@ -7,7 +7,6 @@ import { workspaceStore } from "./workspace";
 
 export const authKeys = {
   me: ["auth", "me"] as const,
-  sessions: ["auth", "sessions"] as const,
 };
 
 /**
@@ -105,14 +104,13 @@ export function useResetPassword() {
   });
 }
 
-/** A password change rotates this tab's own session and revokes every other one, so the
- *  list of open sessions on the same screen is stale the moment it succeeds. */
+/** A password change rotates this tab's own session and revokes every other one. Nothing
+ *  on screen depends on that, so there is nothing to invalidate: the cookie the server
+ *  just set is the whole of the state that changed. */
 export function useChangePassword() {
-  const client = useQueryClient();
   return useMutation({
     mutationFn: ({ current, next }: { current: string; next: string }) =>
       api.changePassword(current, next),
-    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.sessions }),
   });
 }
 
@@ -123,18 +121,6 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (body: { name: string; email: string | null }) => api.updateMe(body),
     onSuccess: (session) => client.setQueryData(authKeys.me, session),
-  });
-}
-
-export function useSessions() {
-  return useQuery({ queryKey: authKeys.sessions, queryFn: api.sessions });
-}
-
-export function useRevokeOtherSessions() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: api.revokeOtherSessions,
-    onSuccess: () => client.invalidateQueries({ queryKey: authKeys.sessions }),
   });
 }
 

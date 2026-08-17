@@ -452,15 +452,6 @@ export interface WorkspaceMembership {
 
 /** A live login of this account: what the profile screen lists so you can spot one you
  *  do not recognise. Never another account's — this is only ever your own. */
-export interface AccountSession {
-  id: number;
-  created_at: string;
-  last_seen_at: string;
-  ip: string | null;
-  user_agent: string | null;
-  current: boolean;
-}
-
 export interface Session {
   user: CurrentUser;
   workspaces: WorkspaceMembership[];

@@ -1,6 +1,5 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
-  AccountSession,
   AdminEvaluations,
   AdminOverview,
   BankListing,
@@ -125,9 +124,6 @@ export const api = {
     post<Session>("/api/auth/login", { username, password }),
   logout: () => post<{ ok: boolean }>("/api/auth/logout"),
   logoutAll: () => post<{ ok: boolean; revoked: number }>("/api/auth/logout-all"),
-  sessions: () => request<{ sessions: AccountSession[] }>("/api/auth/sessions"),
-  revokeOtherSessions: () =>
-    post<{ revoked: number }>("/api/auth/sessions/revoke-others"),
   changePassword: (current: string, next: string) =>
     post<{ ok: boolean }>("/api/auth/password", { current, new: next }),
   forgotPassword: (username: string) => post<{ sent: boolean }>("/api/auth/forgot", { username }),
@@ -282,6 +278,12 @@ export const api = {
     post<{ disabled?: number; enabled?: number }>(
       `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
     ),
+  // Not the same as disabling: this removes the account and leaves what it produced, whose
+  // author becomes nobody. The panel is the only caller and says so before asking.
+  deleteAccount: (userId: number) =>
+    request<{ deleted: number; username: string }>(`/api/admin/accounts/${userId}`, {
+      method: "DELETE",
+    }),
 
   // Invitations and memberships are the installation administrator's, and only theirs:
   // there is one screen that hands out access and these are its calls.

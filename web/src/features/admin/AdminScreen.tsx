@@ -36,6 +36,7 @@ import {
   useAdminInvites,
   useAdminOverview,
   useCreateInvite,
+  useDeleteAccount,
   useMembershipActions,
   useRevokeInvite,
   useSetAccountEnabled,
@@ -186,10 +187,10 @@ function StudyTab({
       {/* Filters in one row above the charts, so what is being looked at is stated
           before the numbers rather than inferred from them. */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
+        <Select
           value={workspace ?? ""}
           onChange={(event) => onWorkspace(event.target.value || null)}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          className="w-56"
         >
           <option value="">Todos los workspaces</option>
           {data.filters.workspaces.map((slug) => (
@@ -197,7 +198,7 @@ function StudyTab({
               {slug}
             </option>
           ))}
-        </select>
+        </Select>
 
         {account !== null ? (
           <Button variant="outline" size="sm" onClick={() => onAccount(null)}>
@@ -637,8 +638,27 @@ function AccountsTab({
   onInspect: (id: number) => void;
 }) {
   const toggle = useSetAccountEnabled();
+  const remove = useDeleteAccount();
   const session = useSession();
   const [open, setOpen] = useState<number | null>(null);
+
+  // Irreversible, so it is spelled out before it happens — and what it spells out is the
+  // half people get wrong: the account goes, the material it produced does not.
+  const confirmDelete = (account: AdminAccount) => {
+    const kept = [
+      account.generations ? `${account.generations} variante(s) guardada(s)` : "",
+      account.evaluations ? `${account.evaluations} comparación(es)` : "",
+    ].filter(Boolean);
+    const message =
+      `¿Eliminar la cuenta «${account.username}» por completo?\n\n` +
+      "Pierde sus accesos y sus sesiones abiertas, y el usuario queda libre para otra " +
+      "cuenta.\n" +
+      (kept.length
+        ? `Lo que generó se queda pero sin autor: ${kept.join(" y ")}.\n`
+        : "") +
+      "\nNo se puede deshacer. Para cerrarle la puerta sin borrar nada, desactívala.";
+    if (window.confirm(message)) remove.mutate(account.id);
+  };
 
   return (
     <div className="space-y-5">
@@ -671,12 +691,14 @@ function AccountsTab({
                   onToggle={() => setOpen(open === account.id ? null : account.id)}
                   onInspect={() => onInspect(account.id)}
                   onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
-                  busy={toggle.isPending}
+                  onDelete={() => confirmDelete(account)}
+                  busy={toggle.isPending || remove.isPending}
                 />
               ))}
             </tbody>
           </table>
         </div>
+        <FormError error={remove.error} />
       </section>
     </div>
   );
@@ -690,6 +712,7 @@ function AccountRows({
   onToggle,
   onInspect,
   onEnabled,
+  onDelete,
   busy,
 }: {
   account: AdminAccount;
@@ -699,6 +722,7 @@ function AccountRows({
   onToggle: () => void;
   onInspect: () => void;
   onEnabled: (enabled: boolean) => void;
+  onDelete: () => void;
   busy: boolean;
 }) {
   return (
@@ -726,7 +750,11 @@ function AccountRows({
             <ChevronRight
               className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
             />
-            {account.workspaces.length === 0 ? (
+            {/* Para una cuenta de administración la lista de membresías no describe a qué
+                entra: entra a todo. Decir «sin acceso a ninguno» ahí sería falso. */}
+            {account.is_admin ? (
+              <span className="text-muted-foreground">acceso total (administración)</span>
+            ) : account.workspaces.length === 0 ? (
               <span className="text-muted-foreground">sin acceso a ninguno</span>
             ) : (
               <span className="flex flex-wrap gap-1">
@@ -753,18 +781,31 @@ function AccountRows({
               Ver sus sesiones
             </Button>
           ) : null}
-          {/* Desactivar la propia cuenta deja la instalación sin quien la administre, y el
-              servidor lo rechaza igualmente; no ofrecerlo evita el 409 por sorpresa. */}
+          {/* Desactivar o borrar la propia cuenta deja la instalación sin quien la
+              administre, y el servidor rechaza las dos igualmente; no ofrecerlas evita el
+              409 por sorpresa. Van juntas y en este orden porque son la misma decisión con
+              dos intensidades: cerrar la puerta, o quitar la cuenta. */}
           {self ? null : (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={busy}
-              onClick={() => onEnabled(account.disabled)}
-            >
-              {account.disabled ? <UserCheck /> : <UserX />}
-              {account.disabled ? "Reactivar" : "Desactivar"}
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => onEnabled(account.disabled)}
+              >
+                {account.disabled ? <UserCheck /> : <UserX />}
+                {account.disabled ? "Reactivar" : "Desactivar"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Eliminar la cuenta por completo"
+                disabled={busy}
+                onClick={onDelete}
+              >
+                <Trash2 />
+              </Button>
+            </>
           )}
         </td>
       </tr>
@@ -795,6 +836,32 @@ function MembershipEditor({
   const [slug, setSlug] = useState(missing[0]?.slug ?? "");
   const [role, setRole] = useState<Role>("editor");
 
+  // An administrator already reaches every workspace — that is the one `if` in
+  // `access_for` — so granting them a membership changes nothing they could not already
+  // do, and a role selector here would be a control with no effect. The memberships they
+  // do have are still worth reading, because that is where the owner's own powers over a
+  // workspace come from, but they are not something this screen hands out.
+  if (account.is_admin) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Esta cuenta administra la instalación: entra en todos los workspaces sin ser
+          miembro de ninguno, así que no hay accesos que darle.
+        </p>
+        {account.workspaces.length > 0 ? (
+          <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            Consta además como miembro de
+            {account.workspaces.map((membership) => (
+              <Badge key={membership.slug} variant="outline">
+                {membership.slug} · {ROLE_LABELS[membership.role].toLowerCase()}
+              </Badge>
+            ))}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {account.workspaces.length === 0 ? (
@@ -811,7 +878,7 @@ function MembershipEditor({
               </span>
               <Select
                 value={membership.role}
-                className="h-8 w-36"
+                className="w-36"
                 disabled={grant.isPending}
                 onChange={(event) =>
                   grant.mutate({
@@ -848,7 +915,7 @@ function MembershipEditor({
             <Select
               id={`add-${account.id}`}
               value={slug}
-              className="h-8 w-56"
+              className="w-56"
               onChange={(event) => setSlug(event.target.value)}
             >
               {missing.map((workspace) => (
@@ -860,7 +927,7 @@ function MembershipEditor({
           </div>
           <Select
             value={role}
-            className="h-8 w-36"
+            className="w-36"
             onChange={(event) => setRole(event.target.value as Role)}
           >
             {ROLES.map((option) => (
@@ -921,7 +988,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           <Select
             id="invite-workspace"
             value={workspace}
-            className="h-9 w-64"
+            className="w-64"
             onChange={(event) => setWorkspace(event.target.value)}
           >
             <option value="">Ninguno (solo crear la cuenta)</option>
@@ -937,7 +1004,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           <Select
             id="invite-role"
             value={role}
-            className="h-9 w-40"
+            className="w-40"
             disabled={!workspace}
             onChange={(event) => setRole(event.target.value as Role)}
           >

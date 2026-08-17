@@ -102,6 +102,17 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
     session.flush()
 
 
+# A real deletion, and the row is the only thing that goes. What the account *did* is not
+# the account: `generations.user_id` and `evaluation_sessions.user_id` are `SET NULL`, so a
+# course built on somebody's variants survives their leaving and the study keeps the
+# sessions it counted. What cascades is what only means anything while the account exists —
+# its memberships, its open sessions and its pending reset links. Disabling stays as the
+# reversible answer; this one is for an account that should not have existed.
+def delete_user(session: Session, user: User) -> None:
+    session.delete(user)
+    session.flush()
+
+
 # MEMBERSHIPS ---------------------------------------------------------------------------
 
 
@@ -210,7 +221,12 @@ def revoke_session(session: Session, row: UserSession) -> None:
     session.flush()
 
 
-def revoke_all_sessions(session: Session, user_id: int, keep: int | None = None) -> int:
+# All of them, with no exception for the caller's own: the `keep=` argument and the
+# `active_sessions` listing next to it both existed for «Sesiones abiertas», the profile
+# card removed on 2026-08-17. Every remaining caller — logging out everywhere, changing the
+# password, disabling an account — means all of them, and the one that keeps working
+# afterwards does so because it is handed a brand-new session, not because it was spared.
+def revoke_all_sessions(session: Session, user_id: int) -> int:
     rows = list(
         session.scalars(
             select(UserSession).where(
@@ -219,27 +235,10 @@ def revoke_all_sessions(session: Session, user_id: int, keep: int | None = None)
         )
     )
     moment = now()
-    revoked = 0
     for row in rows:
-        if keep is not None and row.id == keep:
-            continue
         row.revoked_at = moment
-        revoked += 1
     session.flush()
-    return revoked
-
-
-def active_sessions(session: Session, user_id: int) -> list[UserSession]:
-    moment = now()
-    return [
-        row
-        for row in session.scalars(
-            select(UserSession)
-            .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
-            .order_by(UserSession.last_seen_at.desc())
-        )
-        if row.expires_at > moment and row.absolute_expires_at > moment
-    ]
+    return len(rows)
 
 
 # INVITES -------------------------------------------------------------------------------

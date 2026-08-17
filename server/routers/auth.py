@@ -159,42 +159,11 @@ def update_me(
     return _me(session, user)
 
 
-@router.get("/sessions")
-def sessions(
-    request: Request,
-    user: User = Depends(deps.current_user),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    current = getattr(request.state, "session_row", None)
-    return {
-        "sessions": [
-            {
-                "id": row.id,
-                "created_at": row.created_at.isoformat(),
-                "last_seen_at": row.last_seen_at.isoformat(),
-                "ip": row.ip,
-                "user_agent": row.user_agent,
-                "current": current is not None and row.id == current.id,
-            }
-            for row in identity.active_sessions(session, user.id)
-        ]
-    }
-
-
-# «Cerrar las demás», which is what somebody looking at that list actually wants: the one
-# session they are reading it from is the one they do not mean. `logout-all` stays as the
-# blunter instrument — it takes this one too and clears the cookie.
-@router.post("/sessions/revoke-others")
-def revoke_other_sessions(
-    request: Request,
-    user: User = Depends(deps.current_user),
-    session: DbSession = Depends(deps.db),
-) -> dict:
-    current = getattr(request.state, "session_row", None)
-    revoked = identity.revoke_all_sessions(
-        session, user.id, keep=current.id if current is not None else None
-    )
-    return {"revoked": revoked}
+# There is no route listing this account's open sessions, and no «cerrar las demás»: both
+# existed for one card in «Mi perfil» that was removed on 2026-08-17 by explicit user
+# request, and a route whose only reader is gone is a surface with no user. What survives is
+# what never needed the list — `logout-all`, and the password change, which revokes every
+# other session in the same transaction.
 
 
 # PASSWORD --------------------------------------------------------------------------

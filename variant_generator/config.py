@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from .relations import BUILTIN_SCHEMAS
-from .workspace import Workspace
+from .workspace import DEFAULT_SLUG, Workspace
 
 
 # A real environment variable always wins: the file is the convenience, the export is
@@ -29,19 +29,21 @@ _load_dotenv(PROJECT_ROOT / ".env")
 # this module is what is genuinely global — models, thresholds, the Ollama host.
 WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
 
-# The single-user layout this repo has always had, kept as the default so the CLI and a
-# plain checkout keep working with no arguments.
-DEFAULT_WORKSPACE_ROOT = Path(os.environ.get("WORKSPACE_ROOT", PROJECT_ROOT))
-DEFAULT_WORKSPACE_RAW_DIRNAME = os.environ.get("WORKSPACE_RAW_DIRNAME", "raw_data_1")
+# `default` is a workspace like any other and lives where the others live. It used to be
+# the single-user layout this repo always had — root PROJECT_ROOT, with `instance/`,
+# `cache/` and `raw_data_1/` hanging off it — which made the first instance a special case
+# in every listing and put it somewhere no other instance could be. Moved into the tree on
+# 2026-08-17 by explicit user request: one shape for every instance, and `workspaces/` as
+# the only directory holding user data. The move is byte for byte — the `.npz` and the
+# markdown cache are fingerprinted by content and not by path, so nothing was re-embedded.
 
 
 def default_workspace() -> Workspace:
-    return Workspace(DEFAULT_WORKSPACE_ROOT, raw_dirname=DEFAULT_WORKSPACE_RAW_DIRNAME)
+    return workspace(DEFAULT_SLUG)
 
 
 def workspace(slug: str | None = None) -> Workspace:
-    if slug is None:
-        return default_workspace()
+    slug = slug or DEFAULT_SLUG
     return Workspace(WORKSPACES_DIR / slug, slug=slug)
 
 
@@ -53,19 +55,33 @@ OLLAMA_HOST = (
     _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 )
 
-# Reverted to this pair on 2026-08-16 after timing every build call twice. Under the
-# single `qwen3.8:27b-q8_0` both tiers pointed at, the curation calls — which reason with
-# thinking ON over the whole inventory — went from minutes to quarters of an hour: one
-# `link_domain_relations_prompt` over 55 concepts spent 948 s emitting 51 466 characters
-# of deliberation for 1 854 of answer, and `curate_graph_domains_prompt` spent 496 s and
-# came back EMPTY, which is what a 26 000-character prompt plus unbounded reasoning looks
-# like against `LLM_CONTEXT`. A KG build over the reference corpus went from ~55 min to an
-# estimated 5 h 33 m, and `LLM_MEDIUM` owned 85 % of it. The taggability probe already
-# preferred gemma4:31b anyway (75 exclusions against a reference of 73, versus 66 for the
-# 35b MoE), so the medium tier loses nothing by going back.
-LLM_HEAVY = "qwen3.6:35b-a3b-q8_0"
-LLM_MEDIUM = "gemma4:31b-it-q4_K_M"
-LLM_SMALL = "gemma4:e4b-it-q8_0"
+# ONE generative model, since 2026-08-17. The three tiers did not fit together on the A40
+# (~45 GiB) and were evicting each other all day: measured resident, this one takes
+# 34.88 GiB and `gemma4:31b-it-q4_K_M` 19.49, so loading either dropped the other whole —
+# and `gemma4:e4b-it-q8_0` (10.1 GiB) did not fit alongside this one either, which made
+# every JSON repair inside the extraction loop cost TWO ~10 s loads.
+#
+# Consolidating is not about saving those 10 s. Timed on the A40 with one 7 448-character
+# Spanish prompt: this MoE decodes at 99.6 tok/s against gemma4:31b's 25.2, and prefills at
+# 1 709-2 277 tok/s against 1 060. The slow tier was the one owning the whole curation half
+# of a build and the whole runtime (descriptions over every concept, tagging over every bank
+# item), so what consolidating buys is that factor of four on those calls.
+#
+# What stays resident is three models that DO fit at once — 41.5 GiB of ~45, measured — so
+# nothing evicts anything any more: this one, the guardrail and the embedder.
+#
+# The one measurement against it is taggability: over the reference draft's largest domain
+# (73 non-taggables) gemma4:31b returned 75 and this one 66, i.e. it under-excludes a
+# little, the direction `review_taggable_concepts_prompt` legislates against. If a re-run
+# does not hold, the cheap way out is to give `KG_TAGGABLE_MODEL` alone back to
+# gemma4:31b: one call per domain, one model switch per build, ~10 s.
+#
+# `qwen3.8:27b` in any quantisation must NOT come back: it is a reasoning model and the
+# curation calls run with thinking on over the whole inventory — one
+# `link_domain_relations_prompt` over 55 concepts spent 948 s emitting 51 466 characters of
+# deliberation for 1 854 of answer, and `curate_graph_domains_prompt` spent 496 s to come
+# back EMPTY. Quantising it makes each of those tokens cheaper, not fewer.
+LLM_MAIN = "qwen3.6:35b-a3b-q8_0"
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 
 # Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
@@ -81,42 +97,54 @@ GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 #
 # Between the two, the q8 kept the accent in «aquí» and the docstring's line break where
 # gemma4 lost both, and it is faster (20s vs 31s a page), so it takes the job.
-EXEMPLARS_TRANSCRIBE_MODEL = LLM_HEAVY
+EXEMPLARS_TRANSCRIBE_MODEL = LLM_MAIN
+
+# One constant per model call is still the unit of retuning, and that is the whole reason
+# they survive a consolidation: pointing them all at `LLM_MAIN` is a decision, not a
+# collapse, and any single phase can be moved off it without touching the other twelve.
 
 # Exemplars profile builder
-EP_SCAN_MODEL = LLM_HEAVY
-EP_CONSOLIDATE_MODEL = LLM_MEDIUM
+EP_SCAN_MODEL = LLM_MAIN
+EP_CONSOLIDATE_MODEL = LLM_MAIN
 
 # Exemplars bank builder
-EB_EXTRACT_MODEL = LLM_HEAVY
+EB_EXTRACT_MODEL = LLM_MAIN
 
 # Knowledge graph builder
-KG_EXTRACT_MODEL = LLM_HEAVY
+KG_EXTRACT_MODEL = LLM_MAIN
 KG_CLEAN_EMBEDDING_MODEL = "qwen3-embedding:4b"
-KG_CLEAN_MERGE_MODEL = LLM_HEAVY
-KG_CLEAN_DROP_MODEL = LLM_HEAVY
-KG_DOMAINS_MODEL = LLM_MEDIUM
-KG_DOMAINS_LEFTOVERS_MODEL = LLM_SMALL
-KG_LINK_DOMAIN_MODEL = LLM_MEDIUM
-KG_LINK_CROSS_DOMAIN_MODEL = LLM_MEDIUM
-KG_TAGGABLE_MODEL = LLM_MEDIUM
+KG_CLEAN_MERGE_MODEL = LLM_MAIN
+KG_CLEAN_DROP_MODEL = LLM_MAIN
+KG_DOMAINS_MODEL = LLM_MAIN
+KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
+KG_LINK_DOMAIN_MODEL = LLM_MAIN
+KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
+KG_TAGGABLE_MODEL = LLM_MAIN
 
 # Runtime pipeline
 EMBEDDING_LLM = "qwen3-embedding:4b"
-DESCRIPTION_GENERATION_LLM = LLM_MEDIUM
-CONCEPT_TAGGER_LLM = LLM_MEDIUM
-CONTENT_GENERATION_LLM = LLM_HEAVY
+DESCRIPTION_GENERATION_LLM = LLM_MAIN
+CONCEPT_TAGGER_LLM = LLM_MAIN
+CONTENT_GENERATION_LLM = LLM_MAIN
 
 
-REPAIR_LLM = LLM_SMALL
+# Repair is the one call that fires from INSIDE a per-element loop, so it is also the one
+# that must never be a model of its own: a separate small model does not fit next to
+# `LLM_MAIN` on this box, and each repair would evict it and pay two ~10 s loads in the
+# middle of a corpus. Whatever else moves off `LLM_MAIN`, this follows it.
+REPAIR_LLM = LLM_MAIN
 
 EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
 
+# These are what make the three models co-resident, so they are not free to grow: measured
+# on the A40, `LLM_MAIN` + guardrail + embedder come to 41.5 GiB of ~45. The guardrail's
+# used to be 8192, which cost 1 GiB of KV cache and pushed the total to 45.17 — just over,
+# and the symptom was that screening one commission evicted the embedder. It only ever
+# reads `GENERATION_INSTRUCTIONS_MAX_CHARS` (600 characters, ~200 tokens), so 4096 is still
+# a tenfold margin. Lowering `LLM_MAIN`'s truncates silently, as always.
 LLM_CONTEXT = {
-    LLM_HEAVY: 32768,
-    LLM_MEDIUM: 32768,
-    LLM_SMALL: 16384,
-    GUARDRAIL_LLM: 8192,
+    LLM_MAIN: 32768,
+    GUARDRAIL_LLM: 4096,
     EMBEDDING_LLM: 4096,
     KG_CLEAN_EMBEDDING_MODEL: 4096,
 }

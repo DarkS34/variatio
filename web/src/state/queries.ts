@@ -310,6 +310,21 @@ export function useMembershipActions() {
   };
 }
 
+/**
+ * Removing an account for good.
+ *
+ * The whole `["admin", …]` prefix goes, not just the overview: the deleted account was a
+ * row in the accounts table, a group in «por cuenta» and possibly the current filter of
+ * the study tab, and leaving any of those cached shows a name that no longer exists.
+ */
+export function useDeleteAccount() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteAccount(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
 export function useSubmitJob() {
   const invalidate = useInvalidateChain();
   return useMutation({

@@ -8,11 +8,14 @@ RAW_DIRNAME = "raw"
 DEFAULT_SLUG = "default"
 
 
+# `raw_dirname` was a constructor field until 2026-08-17, and it existed for exactly one
+# value: the `raw_data_1` of the repo's old single-user layout. With `default` moved into
+# `workspaces/`, every instance names that directory `raw`, so what looked like
+# configurability is one more way for two workspaces to disagree about where a corpus lives.
 @dataclass(frozen=True)
 class Workspace:
     root: Path
     slug: str = DEFAULT_SLUG
-    raw_dirname: str = RAW_DIRNAME
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root", Path(self.root).resolve())
@@ -29,7 +32,7 @@ class Workspace:
 
     @property
     def raw_dir(self) -> Path:
-        return self.root / self.raw_dirname
+        return self.root / RAW_DIRNAME
 
     @property
     def raw_corpus_dir(self) -> Path:
