@@ -9,7 +9,7 @@ DEFAULT_SLUG = "default"
 
 
 # `raw_dirname` was a constructor field until 2026-08-17, and it existed for exactly one
-# value: the `raw_data_1` of the repo's old single-user layout. With `default` moved into
+# value: the raw directory of the repo's old single-user layout. With `default` moved into
 # `workspaces/`, every instance names that directory `raw`, so what looked like
 # configurability is one more way for two workspaces to disagree about where a corpus lives.
 @dataclass(frozen=True)

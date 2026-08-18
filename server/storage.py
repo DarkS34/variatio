@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from variant_generator import json_io
 from variant_generator.workspace import Workspace
 
 
@@ -50,12 +51,7 @@ def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | No
     path = Path(path)
     if artifact and ws is not None:
         backup(ws, path, artifact)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(f"{path.suffix}.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    tmp.replace(path)
-    return path
+    return json_io.write_json(path, data)
 
 
 def history(ws: Workspace, artifact: str) -> list[dict]:

@@ -13,7 +13,7 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from variant_generator import stages
+from variant_generator import json_io, stages
 from variant_generator.workspace import Workspace as FsWorkspace
 
 from . import repository as repo
@@ -177,11 +177,7 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
             artifact = repo.latest_artifact(session, workspace.id, kind, stage)
             if artifact is None:
                 continue
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(f"{path.suffix}.tmp")
-            with tmp.open("w", encoding="utf-8") as f:
-                json.dump(artifact.content, f, ensure_ascii=False, indent=2)
-            tmp.replace(path)
+            json_io.write_json(path, artifact.content)
             written.append(f"{kind}/{stage} v{artifact.version}")
 
     state = {}
@@ -196,9 +192,7 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
             "at": approval.approved_at.isoformat(timespec="seconds"),
         }
     if state:
-        ws.review_state_path.parent.mkdir(parents=True, exist_ok=True)
-        with ws.review_state_path.open("w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False, indent=2)
+        json_io.write_json(ws.review_state_path, state)
 
     logger.success(f"«{slug}» exportado a {ws.root}: {len(written)} artefacto(s)")
     return {"workspace": slug, "root": str(ws.root), "artifacts": written, "approvals": len(state)}

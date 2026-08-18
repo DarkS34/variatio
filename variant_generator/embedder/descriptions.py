@@ -14,6 +14,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config, inference, progress
+from ..json_io import write_json
 from ..knowledge_graph import KnowledgeGraph
 from ..prompts import concept_description_prompt
 from .vectors import embed_normalized
@@ -33,12 +34,7 @@ def load_descriptions(path: str | Path) -> dict[str, str]:
 
 
 def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(f"{path.suffix}.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(descriptions, f, ensure_ascii=False, indent=2)
-    tmp.replace(path)
+    write_json(path, descriptions)
 
 
 class ConceptDescriber:
@@ -97,9 +93,7 @@ class ConceptDescriber:
     # that subset's fingerprints would mark every other concept as never-seen.
     def _save_fingerprints(self, fingerprints: dict[str, str]) -> None:
         merged = {**self._load_fingerprints(), **fingerprints}
-        self.fingerprints_path.parent.mkdir(parents=True, exist_ok=True)
-        with self.fingerprints_path.open("w", encoding="utf-8") as f:
-            json.dump(merged, f, ensure_ascii=False, indent=2, sort_keys=True)
+        write_json(self.fingerprints_path, merged, sort_keys=True)
 
     def _pending(
         self, targets: list[str], descriptions: dict[str, str], current: dict[str, str]

@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from variant_generator import stages
+from variant_generator import json_io, stages
 from variant_generator.workspace import Workspace
 
 from . import storage
@@ -132,11 +132,7 @@ class ReviewState:
             return {}
 
     def _save(self, data: dict) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".json.tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        tmp.replace(self.path)
+        json_io.write_json(self.path, data)
 
     # TRANSITIONS ---------------------------------------------------------------------------
 

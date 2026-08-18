@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from .. import config, inference, progress
 from ..exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from ..json_io import write_json
 from ..prompts import format_content_prompt
 from ..utils import ensure_models, parse_with_repair
 from ..workspace import Workspace
@@ -131,7 +132,7 @@ class ExemplarsBankBuilder:
                     continue
 
                 bank.update(new_items)
-                _source_docs.save_json(bank, output_file_path)
+                write_json(output_file_path, bank)
                 logger.success(f"{tag} +{len(new_items)} ítem(s); {len(bank)} en total")
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 

@@ -18,7 +18,7 @@ from ...prompts import (
     link_domain_relations_prompt,
     review_taggable_concepts_prompt,
 )
-from .. import _source_docs
+from ...json_io import write_json
 from . import blocks, parsing
 from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
 
@@ -63,7 +63,7 @@ def run(cleaned: dict, output_path: str | Path, *, schema, max_attempts: int) ->
         "generic_non_taggable_concepts": non_taggable,
         "relations": typed,
     }
-    _source_docs.save_json(curated, output_path)
+    write_json(output_path, curated)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
         f"{len(universe) - len(non_taggable)} etiquetables, "

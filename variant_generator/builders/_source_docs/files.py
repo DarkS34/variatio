@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
@@ -52,10 +51,3 @@ def required_cache_dir(cache_dir: str | Path | None, what: str) -> Path:
             "pass use_cache=False if there is no cache to use."
         )
     return Path(cache_dir)
-
-
-def save_json(data: dict, output_file_path: str | Path) -> None:
-    output_path = Path(output_file_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)

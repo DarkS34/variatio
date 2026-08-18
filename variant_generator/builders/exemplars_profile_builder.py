@@ -7,6 +7,7 @@ from loguru import logger
 
 from .. import config, inference, progress
 from ..exemplars_profile import ExemplarsProfile
+from ..json_io import write_json
 from ..prompts import (
     consolidate_exemplars_profile_prompt,
     json_repair_prompt,
@@ -110,7 +111,7 @@ class ExemplarsProfileBuilder:
             logger.error("No se pudo redactar el borrador del perfil")
             return {}
 
-        _source_docs.save_json(profile, output_file_path)
+        write_json(output_file_path, profile)
         try:
             loaded = ExemplarsProfile(output_file_path)
             logger.success(

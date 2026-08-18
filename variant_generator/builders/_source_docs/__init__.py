@@ -6,7 +6,6 @@ from .files import (
     SUPPORTED_EXTS,
     default_converter,
     list_source_files,
-    save_json,
 )
 from .markdown import (
     headings_by_level,
@@ -41,7 +40,6 @@ __all__ = [
     "markdown_cache_path",
     "page_images",
     "pages",
-    "save_json",
     "split_blocks",
     "tidy_markdown",
     "to_markdown",

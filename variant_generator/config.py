@@ -30,12 +30,12 @@ _load_dotenv(PROJECT_ROOT / ".env")
 WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
 
 # `default` is a workspace like any other and lives where the others live. It used to be
-# the single-user layout this repo always had — root PROJECT_ROOT, with `instance/`,
-# `cache/` and `raw_data_1/` hanging off it — which made the first instance a special case
-# in every listing and put it somewhere no other instance could be. Moved into the tree on
-# 2026-08-17 by explicit user request: one shape for every instance, and `workspaces/` as
-# the only directory holding user data. The move is byte for byte — the `.npz` and the
-# markdown cache are fingerprinted by content and not by path, so nothing was re-embedded.
+# the single-user layout this repo always had, hanging off PROJECT_ROOT, which made the
+# first instance a special case in every listing and put it somewhere no other instance
+# could be. Moved into the tree on 2026-08-17 by explicit user request: one shape for every
+# instance, and `workspaces/` as the only directory holding user data. The move is byte for
+# byte — the `.npz` and the markdown cache are fingerprinted by content and not by path, so
+# nothing was re-embedded.
 
 
 def default_workspace() -> Workspace:

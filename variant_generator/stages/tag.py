@@ -1,21 +1,14 @@
-import json
 from pathlib import Path
 
 from loguru import logger
 
 from ..concept_tagger import ConceptTagger
+from ..json_io import write_json
 from .initialize import PipelineContext
 
 
 def save_bank(bank: dict, path: str | Path) -> Path:
-    """Atomic write: a cancelled or crashed run never leaves a half-written bank."""
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_suffix(f"{target.suffix}.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(bank, f, ensure_ascii=False, indent=2)
-    tmp.replace(target)
-    return target
+    return write_json(path, bank)
 
 
 def tag_bank(
