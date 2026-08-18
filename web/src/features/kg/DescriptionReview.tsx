@@ -45,8 +45,6 @@ function WritingProgress() {
   if (!run || !active) return null;
 
   const step = run.steps.filter((s) => s.status === "running").at(-1);
-  const total = step?.total ?? null;
-  const current = step?.current ?? 0;
 
   return (
     <Card>
@@ -58,11 +56,6 @@ function WritingProgress() {
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
-          {total ? (
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {current}/{total}
-            </span>
-          ) : null}
           <Button
             size="sm"
             variant="outline"
@@ -74,7 +67,8 @@ function WritingProgress() {
             Cancelar
           </Button>
         </div>
-        <Progress value={current} max={total} />
+        {/* Sin barra: la del encabezado ya es la de este trabajo mientras corre. Dos
+            barras apiladas contando lo mismo se leían como dos cosas distintas. */}
         {/* Se guarda tras cada concepto, así que cancelar conserva lo escrito. Decirlo
             aquí es lo que hace que el botón de arriba no dé miedo. */}
         <p className="truncate text-xs text-muted-foreground">
@@ -177,21 +171,34 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
   const namedDocuments = Boolean(query.data?.many_documents);
   const described = kg.totals.taggable - missing.length;
 
+  /* Una sola barra: mientras se escribe cuenta el trabajo, y el resto del tiempo la
+     cobertura. Eran dos, apiladas y avanzando a la vez, que es como se lee que son dos
+     medidas distintas cuando durante una generación son la misma. */
+  const step = writing ? run?.steps.filter((s) => s.status === "running").at(-1) : undefined;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-56 flex-1">
           <div className="mb-1 flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Conceptos con descripción</span>
+            <span className="text-muted-foreground">
+              {writing ? "Escribiendo descripciones" : "Conceptos con descripción"}
+            </span>
             <span className="tabular-nums">
-              {described}/{kg.totals.taggable}
+              {writing
+                ? `${step?.current ?? 0}/${step?.total ?? kg.totals.taggable}`
+                : `${described}/${kg.totals.taggable}`}
             </span>
           </div>
-          <Progress
-            value={described}
-            max={kg.totals.taggable}
-            tone={missing.length === 0 ? "success" : "warning"}
-          />
+          {writing ? (
+            <Progress value={step?.current ?? 0} max={step?.total ?? null} />
+          ) : (
+            <Progress
+              value={described}
+              max={kg.totals.taggable}
+              tone={missing.length === 0 ? "success" : "warning"}
+            />
+          )}
         </div>
 
         {/* El botón se quedaba igual al pulsarlo: `submit.isPending` solo dura lo que
