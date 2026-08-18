@@ -76,3 +76,15 @@ TAGGABLE_SCHEMA = {
     },
     "required": ["non_taggable"],
 }
+
+# Dos mapas planos y no un mapa de objetos, por lo mismo que los de arriba: lo que este
+# convertidor acepta con seguridad es un `additionalProperties` de tipo escalar. Anidar un
+# objeto por concepto sería más bonito de leer y una apuesta sobre el motor.
+DIFFICULTY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "levels": {"type": "object", "additionalProperties": {"type": "integer"}},
+        "thresholds": {"type": "object", "additionalProperties": {"type": "string"}},
+    },
+    "required": ["levels", "thresholds"],
+}

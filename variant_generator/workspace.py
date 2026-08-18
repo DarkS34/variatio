@@ -83,6 +83,15 @@ class Workspace:
     def concept_sources_path(self) -> Path:
         return self.cache_dir / "concept_sources.json"
 
+    # Cuánto exige cada concepto, y el umbral observable que demuestra haberlo alcanzado.
+    # Vive aquí y no en el artefacto por lo mismo que las descripciones y el anclaje: se
+    # deriva del grafo, se regenera con una construcción y el grafo curado se edita a mano.
+    # Es además lo que impide que el grafo dependa de nada: el nivel se calcula con la
+    # estructura del propio grafo y un juicio del modelo, sin mirar el perfil ni el banco.
+    @property
+    def concept_difficulty_path(self) -> Path:
+        return self.cache_dir / "concept_difficulty.json"
+
     @property
     def concepts_embeddings_path(self) -> Path:
         return self.cache_dir / "embeddings" / "concepts_embeddings.npz"

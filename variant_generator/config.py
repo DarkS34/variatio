@@ -191,6 +191,7 @@ KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
 KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
 KG_TAGGABLE_MODEL = LLM_MAIN
+KG_DIFFICULTY_MODEL = LLM_MAIN
 
 # Runtime pipeline
 
@@ -327,6 +328,56 @@ DESCRIPTION_COLLISION_SIMILARITY = 0.85
 # de notarlo: el texto seguía ahí y el concepto seguía existiendo. La 2 es la que prohíbe
 # la voz del alumno y exige la salida bajo gramática.
 DESCRIPTION_PROMPT_VERSION = 2
+
+
+# Dificultad por concepto ----------------------------------------------
+# CUÁNTO EXIGE CADA CONCEPTO, en tres niveles, mezclando dos señales: lo que juzga el modelo
+# y lo que dice la estructura del grafo. Sustituye a un criterio de dificultad global y ciego
+# al concepto — el del perfil dice «básico si son una o dos operaciones aritméticas» para toda
+# la asignatura — por uno definido concepto a concepto, que es como lo define la evaluación
+# por competencias: un umbral escrito por destreza, no una escala común a todas.
+#
+# NINGUNO DE ESTOS PESOS ESTÁ MEDIDO. Son el punto de partida, y hay una verdad-terreno
+# gratis para calibrarlos: los ítems del banco ya traen un nivel puesto a mano en el material
+# docente. `difficulty.bank_report(bank, data, field=...)` compara lo derivado con lo escrito
+# y es lo primero que hay que mirar antes de apoyar nada más en estos números.
+#
+# Tocar el número de niveles NO basta con tocarlo aquí: `concept_difficulty_prompt` nombra los
+# tres y los describe, y `generate_content_prompt` explica qué se pide en cada uno.
+DIFFICULTY_LEVELS = 3
+
+# El 50/50 que da nombre a la idea, como VALOR POR DEFECTO y no como verdad. Precedente
+# exacto: `EMBEDDER_DESCRIPTION_WEIGHT`, que también reparte dos señales que miden cosas
+# distintas de lo mismo. 1.0 deja solo el juicio del modelo; 0.0 solo la estructura, que es
+# la configuración con la que conviene medir primero, porque es la mitad que no cuesta GPU.
+DIFFICULTY_LLM_WEIGHT = 0.5
+
+# La mitad estructural, y el reparto interno importa más que el 50/50 de arriba.
+#
+# LA PROFUNDIDAD MANDA, no el grado. Un nodo muy conectado del grafo es CENTRAL, no difícil:
+# `Variable` o `Función` tienen decenas de relaciones y son lo primero que se enseña, mientras
+# que `Recursividad` tiene pocas y es dura. Lo que sí ordena una asignatura es cuántos
+# conceptos hay que dominar ANTES, que es la profundidad en el DAG de prerrequisitos — y es
+# exactamente la estratificación que la evaluación por competencias hace a mano cuando reparte
+# las destrezas en fundamentales, nucleares y avanzadas.
+#
+# Los otros tres términos son correcciones sobre esa base, y cada uno tiene su signo:
+#   · NEEDS   = prerrequisitos directos hacia fuera — cuánto hay que traer para empezar. Sube.
+#   · ENABLES = de cuántos conceptos es prerrequisito — troncal, se enseña pronto. BAJA.
+#   · SPECIFICITY = ser el lado específico de «es un tipo de» / «es parte de» — un refinamiento
+#     de algo más general. Sube, poco.
+#
+# La relación de reserva («se relaciona con») NO entra en ninguno, y esa exclusión es
+# deliberada: es el cajón de sastre del extractor, así que contarla mide lo hablador que
+# estuvo el modelo en ese fragmento del corpus, no la materia.
+DIFFICULTY_DEPTH_WEIGHT = 0.60
+DIFFICULTY_NEEDS_WEIGHT = 0.25
+DIFFICULTY_ENABLES_WEIGHT = 0.15
+DIFFICULTY_SPECIFICITY_WEIGHT = 0.10
+
+# Los cortes del [0,1] final en los tres niveles. Tercios, porque no hay ninguna razón
+# medida para poner otra cosa todavía.
+DIFFICULTY_TIER_BOUNDARIES = (0.34, 0.67)
 
 
 # Tagging & Generation ----------------------------------------------

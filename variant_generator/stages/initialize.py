@@ -7,6 +7,7 @@ from loguru import logger
 from .. import config, progress
 from ..concept_tagger import ConceptTagger
 from ..content_generator import ContentGenerator
+from ..difficulty import load_difficulty
 from ..exemplars_profile import ExemplarsProfile
 from ..embedder import Embedder
 from ..exemplars_bank import ExemplarsBank
@@ -125,12 +126,23 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
         embed_text=embed_text,
         context=exemplars_profile.content_context,
     )
+    concept_difficulty = load_difficulty(ws.concept_difficulty_path)
+    calibrated = len(concept_difficulty["concepts"])
+    if calibrated:
+        logger.info(f"Dificultad calibrada para {calibrated} concepto(s)")
+    else:
+        logger.warning(
+            "Sin calibración de dificultad; los encargos saldrán sin nivel por concepto "
+            f"(la escribe una construcción del grafo, en {ws.concept_difficulty_path.name})"
+        )
+
     generator = ContentGenerator(
         knowledge_graph=knowledge_graph,
         exemplars_bank=bank,
         embedder=embedder,
         exemplars_profile=exemplars_profile,
         generator_model=config.CONTENT_GENERATION_LLM,
+        concept_difficulty=concept_difficulty,
     )
 
     context = PipelineContext(

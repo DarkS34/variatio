@@ -1,5 +1,6 @@
 from loguru import logger
 
+from ..difficulty import load_difficulty, save_difficulty
 from ..exemplars_profile import ExemplarsProfile
 from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
 from ..knowledge_graph import KnowledgeGraph
@@ -60,3 +61,13 @@ def save_concept_descriptions(
 # motivo que las descripciones y con la misma regla: solo el fichero, sin grafo ni perfil.
 def load_concept_sources(ws: Workspace | None = None) -> dict:
     return load_sources(_artifacts.resolve(ws).concept_sources_path)
+
+
+# La calibración de dificultad, tal cual la dejó la construcción del grafo, y con la misma
+# regla que las dos de arriba: solo el fichero. Un workspace sin ella genera sin calibrar.
+def load_concept_difficulty(ws: Workspace | None = None) -> dict:
+    return load_difficulty(_artifacts.resolve(ws).concept_difficulty_path)
+
+
+def save_concept_difficulty(data: dict, ws: Workspace | None = None) -> None:
+    save_difficulty(_artifacts.resolve(ws).concept_difficulty_path, data)

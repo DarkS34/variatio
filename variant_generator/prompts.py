@@ -305,6 +305,7 @@ def generate_content_prompt(
     fixed_values_block: str,
     schema: str,
     instructions: str = "",
+    demand_block: str = "",
 ) -> str:
     context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
 
@@ -319,6 +320,26 @@ def generate_content_prompt(
         already_block = (
             "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
             f"{existing_lines}\n"
+        )
+
+    # La dificultad, definida CONCEPTO A CONCEPTO y no con una escala común a toda la
+    # asignatura. Un criterio global —«básico si son una o dos operaciones aritméticas»— dice
+    # lo mismo de un bucle que de una recursión, así que en cuanto hay un nivel calculado sobre
+    # el grafo, manda ese. Sin calibración la sección no existe y el schema decide, como antes.
+    demand_section = ""
+    if demand_block.strip():
+        demand_section = (
+            "\n# EXIGENCIA DEL OBJETIVO\n"
+            "El nivel de cada concepto objetivo dentro de este temario, calculado sobre el grafo del currículo. "
+            "Es lo que fija cuánto debe pedir el ejercicio, y PREVALECE sobre cualquier otro criterio de "
+            "dificultad general —el del schema, el de los ejemplos de referencia—: lo que hace difícil un "
+            "ejercicio depende del concepto que practica, no de una escala común a toda la asignatura.\n"
+            "Nivel 1: el ejercicio se resuelve con el objetivo y poco más, sin dificultades añadidas alrededor. "
+            "Nivel 2: el objetivo se combina con conocimiento previo ya dominado, y esa combinación es el reto. "
+            "Nivel 3: hay que coordinar varias decisiones no triviales alrededor del objetivo.\n"
+            f"{demand_block}\n"
+            "Con varios objetivos manda el más alto. Subir de nivel es pedir más del objetivo, nunca alargar el "
+            "enunciado ni añadir requisitos ajenos a él.\n"
         )
 
     prerequisites_section = ""
@@ -387,7 +408,7 @@ El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del curríc
 {target_concepts_block}
 
 PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el currículo SALVO estos conceptos no debe poder resolver el ejercicio. Si podría, el ejercicio no los practica — los menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo.
-{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
+{demand_section}{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
 # REGLAS DE GENERACIÓN
 {rules_block}
 
@@ -1112,6 +1133,68 @@ A single JSON object with exactly this shape:
 }}
 - The keys are EXACT names from the list below. Do not invent, rename, translate or fix spelling.
 - Judge only the concepts of this domain. If all of them discriminate, return {{"non_taggable": {{}}}}.
+- No text before or after, no backticks, no comments.
+
+# DOMAINS OF THE SUBJECT (context: this is the whole syllabus)
+{domains_block}
+
+# CONCEPTS OF THE DOMAIN «{domain}» (with their outgoing relations as evidence)
+{nodes_block}
+
+JSON:"""
+
+
+# La otra mitad del cálculo de dificultad; la estructural está en `difficulty.py` y no
+# pregunta a nadie. Dos decisiones de forma que no son adorno:
+#
+#   · SE PREGUNTA POR DOMINIO Y EN RELATIVO. Una nota absoluta —«del 1 al 3, ¿cuánto cuesta
+#     esto?»— no es comparable entre dominios ni entre ejecuciones, porque la escala se la
+#     inventa el modelo cada vez. Repartir los conceptos de un dominio ENTRE SÍ es una
+#     pregunta que sí tiene respuesta estable, y es la misma razón por la que la
+#     etiquetabilidad se separó por dominios.
+#   · EL UMBRAL NO ES LA NOTA. El nivel dice cuánto exige el concepto dentro del temario; el
+#     umbral dice qué hay que ver hecho para dar por demostrado el concepto, y no depende del
+#     nivel. Separarlos es lo que evita que la mezcla con la señal estructural deje un umbral
+#     escrito para un nivel que ya no es el suyo.
+#
+# El umbral se escribe en INFINITIVO IMPERSONAL por la misma decisión que las descripciones:
+# «Describe QUÉ HACE EL ALUMNO» fue lo que llenó la caché de «El alumno evalúa si…», y esos
+# textos se imitan entre sí en cuanto uno entra en el prompt del siguiente.
+def concept_difficulty_prompt(domain: str, domains_block: str, nodes_block: str) -> str:
+    return f"""\
+You are calibrating ONE thematic domain of a knowledge graph built from a corpus of teaching material on a single subject. The graph exists to commission learning items, and what is missing is HOW MUCH each concept demands and WHAT COUNTS as having demonstrated it.
+
+Two answers per concept, and they are independent of each other.
+
+# 1. LEVEL — how much this concept demands, RELATIVE TO THIS SUBJECT
+Not an absolute scale: place the concepts of this domain against each other and against the rest of the syllabus shown below.
+- 1 — FOUNDATIONAL: can be practised with little or nothing else of the syllabus behind it. It is where a course starts.
+- 2 — CORE: presupposes several earlier concepts and consists of combining them, or of a mechanism that has to be understood rather than applied.
+- 3 — ADVANCED: presupposes a good part of the syllabus, or combines several non-trivial ideas at once, or is where the course ends.
+
+Rules for the level:
+- ELEMENTARY IS NOT THE SAME AS FREQUENT. A concept used in every exercise of the course is not level 1 for that reason; what counts is what has to be in place before it can be practised at all.
+- A CONCEPT IS NEVER EASIER THAN ITS PREREQUISITES. If the evidence shows it needs another one, it is at least as demanding as that one.
+- Use the outgoing relations listed as evidence, not your own idea of the subject: `tiene como prerrequisito` is what orders the syllabus here.
+- Do not flatten the domain. A domain whose concepts are all at one level is almost always a domain that was not read.
+
+# 2. THRESHOLD — what has to be seen done to consider the concept demonstrated
+ONE sentence, observable and checkable, naming the performance a task would have to elicit. It is the criterion an item is written against, so:
+- Name what is PRODUCED or DECIDED, not what is known: something a reader could tick as done or not done.
+- It has to DISCRIMINATE: if the same sentence would fit an item that practises a neighbouring concept, it is worthless. Write what only this concept requires.
+- IMPERSONAL INFINITIVE, no subject and no second person: "Escribir un bucle cuya condición…", never "El alumno escribe…" nor "Serás capaz de…".
+- No definitions, no "consiste en", no explaining what the concept IS. That is what the concept's description already does.
+- Write it in the SAME LANGUAGE as the concept names below, which is the language of the course.
+
+# OUTPUT
+A single JSON object with exactly this shape:
+{{
+  "levels": {{"<concept>": 1}},
+  "thresholds": {{"<concept>": "<one observable sentence, 25 words max>"}}
+}}
+- The keys are EXACT names from the list below, in both maps. Do not invent, rename, translate or fix spelling.
+- EVERY concept of this domain appears in both maps. Do not skip any.
+- `levels` are the integers 1, 2 or 3 and nothing else.
 - No text before or after, no backticks, no comments.
 
 # DOMAINS OF THE SUBJECT (context: this is the whole syllabus)

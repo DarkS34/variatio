@@ -5,7 +5,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import config, guardrail, inference, progress
+from . import config, difficulty, guardrail, inference, progress
 from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .embedder import Embedder
 from .knowledge_graph import KnowledgeGraph
@@ -188,12 +188,16 @@ class ContentGenerator:
         exemplars_profile: ExemplarsProfile,
         generator_model: str,
         repair_model: str = config.REPAIR_LLM,
+        concept_difficulty: dict | None = None,
     ):
         self.knowledge_graph = knowledge_graph
         self.exemplars_bank = exemplars_bank
         self.embedder = embedder
         self.exemplars_profile = exemplars_profile
         self.context = exemplars_profile.content_context
+        # Vacía cuando el grafo llegó importado o se construyó antes de que esto existiera,
+        # y no es un error: el encargo sale sin calibrar, que es como salía antes.
+        self.concept_difficulty = concept_difficulty or dict(difficulty.EMPTY)
         self.generator_model = generator_model
         self.repair_model = repair_model
 
@@ -231,6 +235,7 @@ class ContentGenerator:
         )
 
         target_block = self._format_target_concepts(concepts)
+        demand_block = self._build_demand_block(concepts)
         prerequisites_block = self._format_concept_list(self._prerequisites(concepts))
         excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
         curriculum_block = self._format_concept_list(curriculum or [])
@@ -251,6 +256,7 @@ class ContentGenerator:
                     context=self.context,
                     item_type_block=item_type_block,
                     target_concepts_block=target_block,
+                    demand_block=demand_block,
                     prerequisites_block=prerequisites_block,
                     excluded_concepts_block=excluded_block,
                     curriculum_block=curriculum_block,
@@ -397,15 +403,26 @@ class ContentGenerator:
         fill = self.max_few_shot - len(primary)
         return primary + [(ex_id, by_id[ex_id]) for ex_id in ranked[:fill]]
 
+    # El umbral va pegado al concepto y no en una sección aparte porque es la condición de
+    # validez de ESE objetivo: lo que el ejercicio tiene que obligar a hacer para que se pueda
+    # dar por demostrado. Suelto, a diez líneas de distancia, se lee como una recomendación.
     def _format_target_concepts(self, concepts: list[str]) -> str:
         descriptions = self.embedder.concept_descriptions
         lines = []
         for c in concepts:
             desc = (descriptions.get(c) or "").strip()
-            if desc:
-                lines.append(f"- **{c}**: {desc}")
-            else:
-                lines.append(f"- **{c}**")
+            lines.append(f"- **{c}**: {desc}" if desc else f"- **{c}**")
+            threshold = difficulty.threshold_of(c, self.concept_difficulty)
+            if threshold:
+                lines.append(f"  Se da por demostrado cuando el ejercicio obliga a: {threshold}")
+        return "\n".join(lines)
+
+    def _build_demand_block(self, concepts: list[str]) -> str:
+        lines = []
+        for c in concepts:
+            tier = difficulty.tier_of(c, self.concept_difficulty)
+            if tier is not None:
+                lines.append(f"- **{c}**: nivel {tier} de {config.DIFFICULTY_LEVELS}")
         return "\n".join(lines)
 
     def _neighbors(self, concepts: list[str], direction: str) -> list[str]:
