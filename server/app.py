@@ -14,9 +14,11 @@ from .routers import ROUTERS
 async def lifespan(app: FastAPI):
     runtime.bus.attach_loop(asyncio.get_running_loop())
     runtime.runner.start()
+    runtime.idle_unloader.start()
     try:
         yield
     finally:
+        runtime.idle_unloader.stop()
         runtime.runner.shutdown()
 
 

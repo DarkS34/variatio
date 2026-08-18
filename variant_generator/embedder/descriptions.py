@@ -17,7 +17,20 @@ from .. import config, inference, progress
 from ..json_io import write_json
 from ..knowledge_graph import KnowledgeGraph
 from ..prompts import concept_description_prompt
+from ..utils import parse_with_repair
 from .vectors import embed_normalized
+
+# Decodificación con gramática, y no `think=False` a secas. `DESCRIPTION_GENERATION_LLM` es
+# un modelo que razona, y con el canal de razonamiento cerrado razona DENTRO de la
+# respuesta: en la instancia de referencia, la descripción de «Error de compilación» son
+# 9 000 caracteres de deliberación en inglés —«The user is asking for…», «Let's re-read the
+# relations carefully»— que se guardaron tal cual y se indexaron como si fueran prosa. Bajo
+# la gramática el primer token ya tiene que ser `{`, así que ese fallo no cabe.
+DESCRIPTION_SCHEMA = {
+    "type": "object",
+    "properties": {"description": {"type": "string"}},
+    "required": ["description"],
+}
 
 
 # The descriptions file is a `{concepto: texto}` cache and nothing else: reading or writing
@@ -37,21 +50,61 @@ def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
     write_json(path, descriptions)
 
 
+# El anclaje al corpus que escribe la construcción del grafo: `{"documents": [...],
+# "concepts": {concepto: [{document, location, text}]}}`. Se lee como se leen las
+# descripciones — solo el fichero — porque un workspace cuyo grafo llegó importado no lo
+# tiene, y eso no es un error: se describe con las relaciones, como antes de que existiera.
+def load_sources(path: str | Path) -> dict:
+    path = Path(path)
+    if not path.exists():
+        return {"documents": [], "concepts": {}}
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {"documents": [], "concepts": {}}
+    return {
+        "documents": data.get("documents") or [],
+        "concepts": data.get("concepts") or {},
+    }
+
+
+def _parse_description(response: str) -> tuple[str | None, str | None]:
+    try:
+        data = json.loads(response)
+    except json.JSONDecodeError as e:
+        return None, str(e)
+    if not isinstance(data, dict):
+        return None, "expected an object with a 'description' key"
+    text = " ".join(str(data.get("description") or "").split())
+    if not text:
+        return None, "'description' is empty"
+    return text, None
+
+
 class ConceptDescriber:
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
         context: dict,
         path: str | Path,
+        sources_path: str | Path,
         siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
         collision_similarity: float = config.DESCRIPTION_COLLISION_SIMILARITY,
     ):
         self.knowledge_graph = knowledge_graph
         self.context = context
         self.path = Path(path)
+        self.sources_path = Path(sources_path)
         self.siblings_top_k = siblings_top_k
         self.collision_similarity = collision_similarity
         self._name_vectors: dict[str, np.ndarray] | None = None
+
+        sources = load_sources(self.sources_path)
+        self.passages: dict[str, list[dict]] = sources["concepts"]
+        # Nombrar el documento solo aporta cuando hay varios; con uno solo repite la misma
+        # línea en cada pasaje de cada concepto y no distingue nada.
+        self.name_documents = len(sources["documents"]) > 1
 
     def load(self) -> dict[str, str]:
         return load_descriptions(self.path)
@@ -74,8 +127,13 @@ class ConceptDescriber:
 
     def _fingerprint(self, concept: str) -> str:
         payload = {
+            "prompt": config.DESCRIPTION_PROMPT_VERSION,
             "domain": self.knowledge_graph.concept_domain[concept],
             "relations": {v: sorted(ns) for v, ns in self.collect_relations(concept).items()},
+            # El anclaje entra en la huella porque entra en el prompt: reconstruir el grafo
+            # sobre otro corpus cambia lo que el concepto significa aquí, y una descripción
+            # escrita contra los párrafos anteriores ya no describe lo mismo.
+            "passages": [p.get("text", "") for p in self.passages.get(concept, [])],
         }
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:12]
@@ -198,11 +256,27 @@ class ConceptDescriber:
             relations=relations,
             siblings=siblings,
             context=self.context,
+            passages=self.passages.get(concept),
+            name_documents=self.name_documents,
         )
         response = inference.generate(
-            model=config.DESCRIPTION_GENERATION_LLM, think=False, prompt=prompt
+            model=config.DESCRIPTION_GENERATION_LLM,
+            think=False,
+            prompt=prompt,
+            format=DESCRIPTION_SCHEMA,
         ).response
-        return response.strip()
+        parsed, error = parse_with_repair(
+            response,
+            _parse_description,
+            config.REPAIR_LLM,
+            config.MAX_JSON_REPAIR_TRIES,
+            shape='{"description": "…"}',
+            format=DESCRIPTION_SCHEMA,
+            log_prefix=f"[{concept}] ",
+        )
+        if parsed is None:
+            raise ValueError(f"descripción ilegible: {error}")
+        return parsed
 
     def simple_describe(self, concept: str) -> str:
         """The offline fallback. It delegates to `collect_relations` so the two can never

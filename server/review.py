@@ -74,7 +74,11 @@ def current_path(ws: Workspace, artifact: str) -> Path | None:
 # descripciones se vuelven a redactar. Borrarlas es lo que impide que la siguiente
 # construcción arranque con la caché de un grafo que ya no existe.
 DERIVED: dict[str, tuple[str, ...]] = {
-    KNOWLEDGE_GRAPH: ("concept_descriptions_path", "concepts_embeddings_path"),
+    KNOWLEDGE_GRAPH: (
+        "concept_descriptions_path",
+        "concept_sources_path",
+        "concepts_embeddings_path",
+    ),
     EXEMPLARS_PROFILE: (),
     EXEMPLARS_BANK: ("exemplars_bank_embeddings_path", "eval_rag_bank_embeddings_path"),
 }

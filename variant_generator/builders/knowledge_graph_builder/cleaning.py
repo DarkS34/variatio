@@ -313,4 +313,24 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
         "relations": sorted(list(r) for r in relations),
         "documents": graph.get("documents") or [],
         "origins": {name: sorted(origins[name]) for name in sorted(origins)},
+        "passages": merge_passages(graph.get("passages") or {}, node_map, ents),
     }
+
+
+# Al fusionar dos nombres se fusionan sus pruebas: el pasaje que justificaba «Listas
+# anidadas» sigue justificando «Listas», y tirarlo dejaría al superviviente sin nada que
+# enseñar. El tope se vuelve a aplicar aquí, porque cinco alias aportan cinco listas.
+def merge_passages(passages: dict, node_map: dict, surviving: set) -> dict:
+    merged: dict[str, list[dict]] = defaultdict(list)
+    for name, entries in passages.items():
+        canonical = node_map.get(name)
+        if canonical not in surviving:
+            continue
+        for entry in entries:
+            kept = merged[canonical]
+            if len(kept) >= config.KG_MAX_SOURCE_PASSAGES:
+                break
+            if any(other["text"] == entry["text"] for other in kept):
+                continue
+            kept.append(entry)
+    return {name: merged[name] for name in sorted(merged)}

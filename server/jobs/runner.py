@@ -90,6 +90,7 @@ class JobRunner:
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._stopping = threading.Event()
+        self._last_activity = time.time()
 
     # LIFECYCLE -----------------------------------------------------------------------------
 
@@ -132,6 +133,7 @@ class JobRunner:
             self._jobs[job.id] = job
             self._controls[job.id] = JobControl(self.bus, job)
             self._order.append(job.id)
+            self._last_activity = time.time()
         self.bus.publish(job.workspace, job.id, "job.queued", {"job": job.to_dict()})
         self._queue.put(job.id)
         return job
@@ -206,6 +208,16 @@ class JobRunner:
         with self._lock:
             return self._current is not None or bool(self.pending())
 
+    # Segundos desde el último trabajo encolado o terminado. Es la única medida de
+    # inactividad que existe aquí, y basta: en este servidor todo lo que habla con Ollama
+    # pasa por la cola, así que «nadie ha pedido nada» y «la GPU no hace falta» son lo
+    # mismo. Devuelve 0 mientras algo corre, para que nada la lea como inactividad.
+    def idle_seconds(self) -> float:
+        with self._lock:
+            if self._current is not None or bool(self.pending()):
+                return 0.0
+            return max(0.0, time.time() - self._last_activity)
+
     # WORKER --------------------------------------------------------------------------------
 
     def _run(self) -> None:
@@ -251,6 +263,8 @@ class JobRunner:
     def _settle(self, job: Job, status: str) -> None:
         job.status = status
         job.finished_at = time.time()
+        with self._lock:
+            self._last_activity = job.finished_at
         kind = {
             "succeeded": "job.finished",
             "failed": "job.failed",

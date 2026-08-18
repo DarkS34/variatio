@@ -224,6 +224,19 @@ export interface KgSummary {
   };
 }
 
+/**
+ * De dónde salió un concepto: el trozo literal del corpus de teoría en el que aparece.
+ *
+ * Lo escribe la construcción del grafo y lo lee el prompt que redacta la descripción, así
+ * que también es lo que hay que mirar para juzgarla: si el texto describe el material o
+ * describe lo que el modelo ya sabía del tema.
+ */
+export interface ConceptSource {
+  document: string;
+  location: string;
+  text: string;
+}
+
 export interface GraphRelation {
   /** The verbose label, which is also the name the edit endpoints speak. */
   key: string;

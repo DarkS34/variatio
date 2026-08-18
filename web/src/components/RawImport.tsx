@@ -4,7 +4,6 @@ import { useRef, useState, type DragEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
@@ -122,10 +121,6 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
               {FEEDS[artifact] ?? artifact}
             </Badge>
           ))}
-          <InfoHint label="Dónde se guarda">
-            Los archivos se copian en <span className="font-mono">{slot.path}</span>. Se leen en
-            cada construcción: cambiarlos aquí no reconstruye nada por sí solo.
-          </InfoHint>
         </div>
       </CardHeader>
 

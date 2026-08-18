@@ -20,6 +20,7 @@ from .generate import generate
 from .index import (
     describe_concepts,
     load_concept_descriptions,
+    load_concept_sources,
     save_concept_descriptions,
 )
 from .initialize import PipelineContext, initialize
@@ -44,6 +45,7 @@ __all__ = [
     "initialize",
     "knowledge_graph_path",
     "load_concept_descriptions",
+    "load_concept_sources",
     "missing_artifacts",
     "save_bank",
     "save_concept_descriptions",

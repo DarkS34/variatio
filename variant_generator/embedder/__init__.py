@@ -10,7 +10,12 @@ load_descriptions, save_descriptions` resolves exactly as it did when this was o
 """
 
 from . import cache, descriptions, index, vectors
-from .descriptions import ConceptDescriber, load_descriptions, save_descriptions
+from .descriptions import (
+    ConceptDescriber,
+    load_descriptions,
+    load_sources,
+    save_descriptions,
+)
 from .index import Embedder
 from .vectors import embed_normalized, l2_normalize
 
@@ -18,6 +23,7 @@ __all__ = [
     "ConceptDescriber",
     "Embedder",
     "load_descriptions",
+    "load_sources",
     "save_descriptions",
     "embed_normalized",
     "l2_normalize",

@@ -1,7 +1,7 @@
 from loguru import logger
 
 from ..exemplars_profile import ExemplarsProfile
-from ..embedder import ConceptDescriber, load_descriptions, save_descriptions
+from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
 from ..knowledge_graph import KnowledgeGraph
 from ..workspace import Workspace
 from . import _artifacts
@@ -18,7 +18,10 @@ def _describer(ws: Workspace | None = None) -> ConceptDescriber:
 
     profile = ExemplarsProfile(profile_path)
     return ConceptDescriber(
-        KnowledgeGraph(kg_path), profile.content_context, path=ws.concept_descriptions_path
+        KnowledgeGraph(kg_path),
+        profile.content_context,
+        path=ws.concept_descriptions_path,
+        sources_path=ws.concept_sources_path,
     )
 
 
@@ -51,3 +54,9 @@ def save_concept_descriptions(
     descriptions: dict[str, str], ws: Workspace | None = None
 ) -> None:
     save_descriptions(_artifacts.resolve(ws).concept_descriptions_path, descriptions)
+
+
+# El anclaje al corpus, tal cual lo dejó la construcción del grafo. Se lee por el mismo
+# motivo que las descripciones y con la misma regla: solo el fichero, sin grafo ni perfil.
+def load_concept_sources(ws: Workspace | None = None) -> dict:
+    return load_sources(_artifacts.resolve(ws).concept_sources_path)

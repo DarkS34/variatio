@@ -55,35 +55,95 @@ OLLAMA_HOST = (
     _OLLAMA_HOST if _OLLAMA_HOST.startswith(("http://", "https://")) else f"http://{_OLLAMA_HOST}"
 )
 
-# ONE generative model, since 2026-08-17. The three tiers did not fit together on the A40
-# (~45 GiB) and were evicting each other all day: measured resident, this one takes
-# 34.88 GiB and `gemma4:31b-it-q4_K_M` 19.49, so loading either dropped the other whole —
-# and `gemma4:e4b-it-q8_0` (10.1 GiB) did not fit alongside this one either, which made
-# every JSON repair inside the extraction loop cost TWO ~10 s loads.
+# Cuánto puede estar el servidor sin ejecutar un solo trabajo antes de soltar la GPU
+# (`inference.unload_all()`, que es `ollama stop` de cada modelo residente).
 #
-# Consolidating is not about saving those 10 s. Timed on the A40 with one 7 448-character
-# Spanish prompt: this MoE decodes at 99.6 tok/s against gemma4:31b's 25.2, and prefills at
-# 1 709-2 277 tok/s against 1 060. The slow tier was the one owning the whole curation half
-# of a build and the whole runtime (descriptions over every concept, tagging over every bank
-# item), so what consolidating buys is that factor of four on those calls.
+# `OLLAMA_KEEP_ALIVE=24h` es lo que mantiene los tres modelos calientes durante una sesión
+# de trabajo, y eso es lo que se quiere mientras se está trabajando: los 29 GiB residentes
+# no se pagan dos veces. Lo que no tiene sentido es que sigan ahí toda la noche porque
+# alguien dejó la pestaña abierta, en una tarjeta que es de todos.
 #
-# What stays resident is three models that DO fit at once — 41.5 GiB of ~45, measured — so
-# nothing evicts anything any more: this one, the guardrail and the embedder.
+# 30 minutos porque es la escala de la pausa que NO es una pausa de trabajo: entre dos
+# etapas de la cadena pasan minutos, no media hora, así que a este umbral no se llega
+# revisando un grafo — se llega habiéndose ido. Recargar los tres modelos cuesta ~30 s, que
+# es ruido al lado de cualquier construcción y de sobra tolerable en una generación suelta.
+# 0 lo desactiva.
+IDLE_UNLOAD_SECONDS = int(os.environ.get("VG_IDLE_UNLOAD_SECONDS", 1800))
+IDLE_UNLOAD_POLL_SECONDS = 60
+
+# ONE generative model, since 2026-08-17: the three tiers did not fit together on the A40
+# (~45 GiB) and were evicting each other all day, and `gemma4:e4b-it-q8_0` (10.1 GiB) did not
+# fit alongside a 30B-class one either, which made every JSON repair inside the extraction
+# loop cost TWO ~10 s loads. That decision stands; only WHICH model changed.
 #
-# The one measurement against it is taggability: over the reference draft's largest domain
-# (73 non-taggables) gemma4:31b returned 75 and this one 66, i.e. it under-excludes a
-# little, the direction `review_taggable_concepts_prompt` legislates against. If a re-run
-# does not hold, the cheap way out is to give `KG_TAGGABLE_MODEL` alone back to
-# gemma4:31b: one call per domain, one model switch per build, ~10 s.
+# What stays resident is three models that DO fit at once — measured at 29.05 GiB of ~45 with
+# the context sizes below — so nothing evicts anything: this one, the guardrail and the
+# embedder. There is 16 GiB of headroom now, where the previous MoE left 3.5.
 #
-# `qwen3.8:27b` in any quantisation must NOT come back: it is a reasoning model and the
-# curation calls run with thinking on over the whole inventory — one
-# `link_domain_relations_prompt` over 55 concepts spent 948 s emitting 51 466 characters of
-# deliberation for 1 854 of answer, and `curate_graph_domains_prompt` spent 496 s to come
-# back EMPTY. Quantising it makes each of those tokens cheaper, not fewer.
-LLM_MAIN = "qwen3.6:35b-a3b-q8_0"
+# The standing measurement against a 30B-class MoE was taggability: over the reference
+# draft's largest domain (73 non-taggables) `gemma4:31b` returned 75 and `qwen3.6:35b-a3b`
+# 66, i.e. the MoE under-excludes, the direction `review_taggable_concepts_prompt` legislates
+# against. `qwen3.8:27b` is dense and reasons, so it is expected to do better here — but that
+# is a PREDICTION, not a measurement, and it is the first thing to re-check on a real build.
+#
+# `qwen3.8:27b-q4_K_M` since 2026-08-18, replacing `qwen3.6:35b-a3b-q8_0` and reversing the
+# 2026-08-16 revert, by explicit user request. What reopened the question is that Ollama can
+# now cap how much a reasoning model deliberates: `think` takes an EFFORT LEVEL, not just a
+# boolean, and `THINK_EFFORT` below pins every reasoning call to the cheapest one.
+#
+# The revert's reasons were real and are only PARTLY answered, so the numbers are here in
+# full. All of them on the A40, on the same call — `link_domain_relations_prompt` over the
+# reference draft's largest domain, 43 concepts, 5 441 characters, temperature 0:
+#
+#   qwen3.6:35b-a3b-q8_0  think=true    128 s   37 264 car. de razonamiento   92.0 tok/s
+#   qwen3.8:27b-q4_K_M    think="low"   443 s   40 894                        29.1 tok/s
+#   qwen3.8:27b-q8_0      think="low"   649 s   38 796                        19.0 tok/s
+#   qwen3.8:27b-q8_0      think="high"  777 s   58 953        RESPUESTA VACÍA 19.2 tok/s
+#
+# Three things to read off that table before touching any of this:
+#
+# 1. THE EFFORT LEVEL DOES NOT REDUCE THE DELIBERATION MUCH. `low` still emits ~41 000
+#    characters, i.e. about what the old MoE emitted with a plain `think=true`. What the
+#    level moves is the CEILING (58 953 at `high`), not the floor. Anyone hoping to make
+#    this model cheap by lowering the effort further will find there is nothing below `low`
+#    except `think=False`, which turns reasoning off altogether.
+# 2. THE COST IS THE DENSE DECODE, and it is the price of this decision: 29.1 tok/s against
+#    the MoE's 92.0, so a curation call goes 128 s → 443 s and a build lengthens ~3.5x.
+#    Accepted knowingly on 2026-08-18.
+# 3. THE QUANTISATION IS NOT INTERCHANGEABLE HERE. The q4_K_M is 53 % faster than the q8_0
+#    (29.1 vs 19.0 tok/s) and 16.5 GB against 27.9, and it obeys the effort level exactly
+#    the same — measured, not assumed, in the token table under `THINK_EFFORT`. Unlike
+#    `qwen3.6:35b-a3b-q4_K_M`, which is broken on this box above ~4 490 characters, this q4
+#    answered the 5 441-character prompt with valid JSON. Do not "upgrade" it to the q8.
+LLM_MAIN = "qwen3.8:27b-q4_K_M"
 GUARDRAIL_LLM = "granite4.1-guardian:8b-q4_K_M"
 EMBEDDING_LLM = "qwen3-embedding:4b"
+
+# HOW HARD A REASONING CALL THINKS. `think` stays a BOOLEAN everywhere above this line —
+# at the call sites, in the study's `Commission`, in the `generations.think` column and in
+# the UI switch — and `inference` translates the `True` into this level at the very last
+# hop. That split is the decision of 2026-08-18: the effort is a property of the engine, not
+# a second axis for a call site or an evaluator to choose, and making it one would have
+# meant a migration plus a study whose older sessions sat on a different scale.
+#
+# `low` and not something higher, measured on the A40 with `/api/generate`:
+#
+#     modelo                prompt_eval_count con think = true / low / medium / high
+#     qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57
+#     qwen3.8:27b-q8_0                            15 /  45 /  15 /  57
+#     qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15
+#
+# Read it in three parts. `medium` IS the default — same token count as `true`, so it is not
+# a rung, it is the absence of one. `high` costs 58 953 characters of deliberation on the
+# real curation prompt and came back with an EMPTY response, which is the failure this
+# model was reverted for in the first place. And the old MoE ignored the parameter outright:
+# all four values produced a byte-identical answer, so the level is implemented per model by
+# Ollama's renderer and CANNOT be assumed to exist — which is exactly why it is one constant
+# here and not thirteen strings spread over the call sites.
+#
+# Ollama 0.32.13 accepts `high`, `medium`, `low`, `max`, `true`, `false` and 400s on anything
+# else. `xhigh` does NOT exist. `max` is deliberately unused: it over-reasons.
+THINK_EFFORT = "low"
 
 # Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
 # so there is one constant and not two that could drift and produce two different
@@ -96,8 +156,13 @@ EMBEDDING_LLM = "qwen3-embedding:4b"
 # transcribed. With the clause, both 30B-class models come back faithful. Weakening that
 # instruction silently reintroduces corrupt code into the bank.
 #
-# Between the two, the q8 kept the accent in «aquí» and the docstring's line break where
-# gemma4 lost both, and it is faster (20s vs 31s a page), so it takes the job.
+# The fidelity comparison behind that (accents and a docstring's line break kept where
+# gemma4:31b lost both, 20s against 31s a page) was measured on `qwen3.6:35b-a3b-q8_0`,
+# which no longer holds this job — it followed `LLM_MAIN` into `qwen3.8:27b-q4_K_M` on
+# 2026-08-18. The new model has the `vision` capability, checked, so the call works; whether
+# it transcribes as faithfully is NOT measured yet. This is the cheapest thing in the
+# pipeline to re-check (one page) and the most damaging to get wrong, since a corrupted
+# transcription lands in the bank as an exercise whose answer has changed.
 EXEMPLARS_TRANSCRIBE_MODEL = LLM_MAIN
 
 # One constant per model call is still the unit of retuning, and that is the whole reason
@@ -116,6 +181,11 @@ KG_EXTRACT_MODEL = LLM_MAIN
 KG_CLEAN_EMBEDDING_MODEL = EMBEDDING_LLM
 KG_CLEAN_MERGE_MODEL = LLM_MAIN
 KG_CLEAN_DROP_MODEL = LLM_MAIN
+# The one phase whose call had to give up reasoning outright when `LLM_MAIN` became a
+# reasoning model: asked to partition the whole inventory it answers inside the reasoning
+# channel and returns nothing. The measurement and the reason are at the call site, in
+# `knowledge_graph_builder/curation.py:curate_domains`. It is not the model that is wrong
+# here, so this still points at `LLM_MAIN`; it is the thinking.
 KG_DOMAINS_MODEL = LLM_MAIN
 KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
@@ -138,13 +208,27 @@ REPAIR_LLM = LLM_MAIN
 EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
 
 # These are what make the three models co-resident, so they are not free to grow: measured
-# on the A40, `LLM_MAIN` + guardrail + embedder come to 41.5 GiB of ~45. The guardrail's
-# used to be 8192, which cost 1 GiB of KV cache and pushed the total to 45.17 — just over,
-# and the symptom was that screening one commission evicted the embedder. It only ever
-# reads `GENERATION_INSTRUCTIONS_MAX_CHARS` (600 characters, ~200 tokens), so 4096 is still
-# a tenfold margin. Lowering `LLM_MAIN`'s truncates silently, as always.
+# on the A40 through `/api/ps`, `LLM_MAIN` at 65536 + guardrail + embedder come to 29.05 GiB
+# of ~45 (19.49 + 5.49 + 4.07). The guardrail's used to be 8192, which cost 1 GiB of KV cache
+# and pushed the old total to 45.17 — just over, and the symptom was that screening one
+# commission evicted the embedder. It only ever reads `GENERATION_INSTRUCTIONS_MAX_CHARS`
+# (600 characters, ~200 tokens), so 4096 is still a tenfold margin.
+#
+# `LLM_MAIN`'s doubled from 32768 on 2026-08-18, with the move to a reasoning model. The rule
+# changed underneath it: with `think` on, the window is no longer sized by the PROMPT but by
+# prompt + deliberation, and the deliberation is the big half — the largest prompt in the
+# pipeline is ~8 000 tokens while one `low` curation call spends ~13 000 on reasoning alone.
+# The headroom freed by the lighter q4 is what pays for it, so it costs nothing to hold.
+#
+# What it does NOT fix, measured, is the empty answer on `curate_graph_domains_prompt`: over
+# 203 concepts that call returns `response == ""` at 32768 AND at 65536, byte for byte the
+# same (36 929 characters of reasoning, 11 611 tokens — about 13 200 in total, a fifth of the
+# smaller window). The window was never the constraint there; see `KG_DOMAINS_MODEL`.
+#
+# Lowering this truncates silently, as always — and now it truncates the reasoning first, so
+# the symptom is an empty or half-written answer rather than a missing tail of prompt.
 LLM_CONTEXT = {
-    LLM_MAIN: 32768,
+    LLM_MAIN: 65536,
     GUARDRAIL_LLM: 4096,
     EMBEDDING_LLM: 4096,
     KG_CLEAN_EMBEDDING_MODEL: 4096,
@@ -176,6 +260,17 @@ EB_CHUNK_SIZE = 12_000
 
 KG_BUILDER_CHUNK_SIZE = 12_000
 KG_MAX_EVIDENCE_RELATIONS = 6
+
+# El anclaje de cada concepto al corpus: de qué párrafos del material de teoría salió.
+# Es lo que permite enseñar que un concepto del grafo viene de algo real, y es lo que
+# `concept_description_prompt` lee para no describir de memoria.
+#
+# Tres pasajes y no todos: un concepto troncal aparece en veinte fragmentos y los veinte
+# dicen lo mismo; lo que aporta el tercero ya es repetición, y el fichero pasa de cientos
+# de KB a unas decenas. 900 caracteres es un párrafo largo con su vecino — lo bastante
+# para que se lea como material y no como un recorte.
+KG_MAX_SOURCE_PASSAGES = 3
+KG_SOURCE_PASSAGE_CHARS = 900
 KG_BUILDER_PLURAL_SUFFIXES = ("s",)
 KG_BUILDER_MERGE_QUALIFIER_PATTERN = r"\s+en (python|java)\b"
 KG_BUILDER_UNCLASSIFIED_DOMAIN = "Sin clasificar"
@@ -224,6 +319,14 @@ EMBEDDER_DESCRIPTION_WEIGHT = 0.5
 
 DESCRIPTION_SIBLINGS_TOP_K = 8
 DESCRIPTION_COLLISION_SIMILARITY = 0.85
+
+# Súbelo al cambiar `concept_description_prompt`, igual que `TRANSCRIBE_PROMPT_VERSION` con
+# la transcripción de páginas. La huella de una descripción mira el grafo y el anclaje al
+# corpus, que es lo que el prompt interpola — pero no el prompt, así que cambiar las reglas
+# de redacción dejaba en caché descripciones escritas con las anteriores y no había forma
+# de notarlo: el texto seguía ahí y el concepto seguía existiendo. La 2 es la que prohíbe
+# la voz del alumno y exige la salida bajo gramática.
+DESCRIPTION_PROMPT_VERSION = 2
 
 
 # Tagging & Generation ----------------------------------------------

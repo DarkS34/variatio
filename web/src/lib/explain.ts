@@ -33,7 +33,7 @@ export const JOB_EXPLAIN: Record<string, JobExplain> = {
     cost: "Decenas de minutos según cuántos documentos haya.",
   },
   describe_concepts: {
-    what: "Escribe la prosa que describe cada concepto del grafo. Es el texto contra el que se compara después, no el nombre.",
+    what: "Escribe la prosa que describe cada concepto del grafo, a partir de los párrafos del corpus de teoría de los que salió. Es el texto contra el que se compara después, no el nombre. Indexar ya lo hace: esto solo lo adelanta o lo rehace.",
     produces: "cache/concept_descriptions.json.",
     cost: "Una llamada al modelo por concepto sin descripción.",
   },
@@ -64,7 +64,7 @@ export const STEP_EXPLAIN: Record<string, string> = {
     "Carga el perfil, el grafo y el banco, y calcula los embeddings que falten. La primera vez es lenta; después se reutiliza la caché.",
   load_instance: "Lee de disco los tres artefactos y valida que el perfil y el grafo cargan.",
   descriptions:
-    "Escribe con el modelo la descripción de cada concepto, contrastándola con los conceptos con los que se podría confundir. Después mide cuáles han salido casi idénticas y solo reescribe esas. Se guarda tras cada una, así que cancelar no pierde lo hecho.",
+    "Escribe con el modelo la descripción de cada concepto contra los párrafos del corpus de teoría en los que aparece, y contrastándola con los conceptos con los que se podría confundir. Después mide cuáles han salido casi idénticas y solo reescribe esas. Se guarda tras cada una, así que cancelar no pierde lo hecho.",
   index_concepts: "Convierte cada descripción en un vector: es el lado del índice contra el que se busca.",
   embed_bank:
     "Convierte cada ítem del banco en un vector y lo funde con el de su concepto. Solo se re-embeben los ítems que han cambiado.",

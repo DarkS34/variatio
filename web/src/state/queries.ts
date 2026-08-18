@@ -8,6 +8,7 @@ import type {
   EvaluationDetail,
   EvaluationParams,
   EvaluationRating,
+  JobKind,
   Role,
 } from "@/lib/types";
 import { runStore, type RunView } from "./runStore";
@@ -62,6 +63,29 @@ export function useArtifactRun(artifact: ArtifactName | undefined): RunView | nu
   }, [stream, artifact]);
 }
 
+/**
+ * The most recent run of a job of this kind, running or not.
+ *
+ * `useArtifactRun` cannot answer this: it keys on the artifact a build writes, and the
+ * jobs that have no artifact — describing concepts, indexing, tagging — are exactly the
+ * ones whose screen has nowhere else to show that something is happening.
+ */
+export function useJobRun(kind: JobKind): RunView | null {
+  const stream = useStream();
+  return useMemo(() => {
+    const runs = Object.values(stream.runs).filter((run) => run.job?.kind === kind);
+    if (runs.length === 0) return null;
+    return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
+  }, [stream, kind]);
+}
+
+/** True while a job of this kind is queued or running, whoever launched it. */
+export function useJobRunning(kind: JobKind): boolean {
+  const run = useJobRun(kind);
+  const status = run?.job?.status;
+  return status === "running" || status === "queued";
+}
+
 /** A wall clock that only ticks while something is running. */
 export function useElapsed(startedAt: number | null | undefined, live: boolean) {
   const [now, setNow] = useState(() => Date.now() / 1000);
@@ -94,8 +118,21 @@ export function useKgGraph() {
   return useQuery({ queryKey: keys.kgGraph, queryFn: api.kgGraph });
 }
 
+/**
+ * Las descripciones, y mientras se están escribiendo, refrescadas solas.
+ *
+ * El escritor guarda tras cada concepto — cancelar no pierde lo hecho — pero la pantalla
+ * solo volvía a preguntar cuando el trabajo terminaba o cuando la pestaña recuperaba el
+ * foco, así que la lista se llenaba a saltos y por sorpresa. Con el trabajo en curso se
+ * pregunta cada pocos segundos, que es el ritmo al que se escriben.
+ */
 export function useDescriptions() {
-  return useQuery({ queryKey: keys.descriptions, queryFn: api.descriptions });
+  const live = useJobRunning("describe_concepts");
+  return useQuery({
+    queryKey: keys.descriptions,
+    queryFn: api.descriptions,
+    refetchInterval: live ? 4_000 : false,
+  });
 }
 
 export function useCoverage() {

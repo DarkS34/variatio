@@ -93,9 +93,17 @@ def summary(ws: Workspace) -> dict:
 def descriptions(ws: Workspace) -> dict:
     graph = _load(raw(ws))
     stored = stages.load_concept_descriptions(ws)
+    # El anclaje viaja con las descripciones porque es de lo que se responde por ellas: es
+    # el trozo de temario del que salió el concepto, y es lo que permite juzgar si lo que
+    # el modelo escribió describe el material o describe lo que el modelo ya sabía.
+    sources = stages.load_concept_sources(ws)
+    anchored = sources["concepts"]
     return {
         "descriptions": {c: stored.get(c) for c in graph.taggable_concepts},
         "missing": [c for c in graph.taggable_concepts if not stored.get(c)],
+        "sources": {c: anchored[c] for c in graph.taggable_concepts if anchored.get(c)},
+        "many_documents": len(sources["documents"]) > 1,
+        "unanchored": [c for c in graph.taggable_concepts if not anchored.get(c)],
     }
 
 
@@ -294,18 +302,32 @@ def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str)
 
 
 # The description cache is keyed by concept name and nothing else invalidates it:
-# a rename would otherwise leave the text stranded under the old key forever.
+# a rename would otherwise leave the text stranded under the old key forever. El anclaje
+# al corpus se mueve con ella, por lo mismo: renombrar un concepto no cambia de qué párrafo
+# del temario salió, y dejarlo bajo el nombre viejo lo pierde igual que perdería el texto.
 def _move_description(ws: Workspace, name: str, new_name: str) -> None:
     stored = stages.load_concept_descriptions(ws)
     if name in stored:
         stored[new_name] = stored.pop(name)
         stages.save_concept_descriptions(stored, ws)
+    _rekey_sources(ws, name, new_name)
 
 
 def _forget_description(ws: Workspace, name: str) -> None:
     stored = stages.load_concept_descriptions(ws)
     if stored.pop(name, None) is not None:
         stages.save_concept_descriptions(stored, ws)
+    _rekey_sources(ws, name, None)
+
+
+def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
+    sources = stages.load_concept_sources(ws)
+    entries = sources["concepts"].pop(name, None)
+    if entries is None:
+        return
+    if new_name is not None:
+        sources["concepts"][new_name] = entries
+    storage.write_json(ws.concept_sources_path, sources)
 
 
 # Relations -----------------------------------------------------------------------------------

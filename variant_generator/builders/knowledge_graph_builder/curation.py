@@ -23,7 +23,14 @@ from . import blocks, parsing
 from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
 
 
-def run(cleaned: dict, output_path: str | Path, *, schema, max_attempts: int) -> dict:
+def run(
+    cleaned: dict,
+    output_path: str | Path,
+    sources_path: str | Path,
+    *,
+    schema,
+    max_attempts: int,
+) -> dict:
     concepts = cleaned["entities"]
     relations = cleaned["relations"]
     logger.info(f"Curando {len(concepts)} concepto(s) y {len(relations)} relación(es)")
@@ -64,12 +71,39 @@ def run(cleaned: dict, output_path: str | Path, *, schema, max_attempts: int) ->
         "relations": typed,
     }
     write_json(output_path, curated)
+    write_sources(sources_path, cleaned, universe)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
         f"{len(universe) - len(non_taggable)} etiquetables, "
         f"{len(typed)} grupo(s) de relación"
     )
     return curated
+
+
+# ANCLAJE AL CORPUS -----------------------------------------------------------------------
+
+
+# El segundo — y último — fichero que escribe una construcción del grafo, y no es una etapa
+# intermedia de las que se quitaron: es el anclaje de cada concepto al corpus, en `cache/`,
+# junto a las descripciones que lo leen. Va aparte del artefacto a propósito. El grafo
+# curado se edita a mano y son cientos de KB de citas; y esto se regenera con una
+# construcción, igual que el markdown de al lado, así que no es dato del usuario.
+#
+# `documents` guarda la lista entera del corpus porque de ahí sale una decisión del prompt:
+# nombrar el documento de cada pasaje solo tiene sentido cuando hay más de uno.
+def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
+    passages = cleaned.get("passages") or {}
+    documents = [d.get("name", "") for d in (cleaned.get("documents") or [])]
+    anchored = {c: passages[c] for c in sorted(universe) if passages.get(c)}
+    write_json(path, {"documents": documents, "concepts": anchored})
+
+    orphans = len(universe) - len(anchored)
+    if orphans:
+        logger.warning(f"{orphans} concepto(s) sin pasaje del corpus que los respalde")
+    logger.info(
+        f"Anclaje al corpus: {len(anchored)} de {len(universe)} concepto(s) con cita "
+        f"en {Path(path).name}"
+    )
 
 
 # DOMAINS ---------------------------------------------------------------------------------
@@ -87,8 +121,21 @@ def curate_domains(
         blocks.nodes_block(concepts, relations, {}, origins),
         blocks.documents_block(documents),
     )
+    # NOT `think=True`, and this is the one call where that is load-bearing. Asked to
+    # partition the whole inventory, a reasoning model turns the reasoning channel into the
+    # answer: measured over 203 concepts with `qwen3.8:27b-q4_K_M` at `low`, it enumerated
+    # «24. Colecciones → Domain 5 ✓» for 36 929 characters, hit its stop token at concept 60
+    # and returned `response == ""` — with no JSON anywhere in the deliberation to salvage,
+    # and `done_reason: "stop"`, so nothing upstream could tell it apart from a real answer.
+    # Every concept would have landed in `Sin clasificar`, which is silent: the graph builds,
+    # it is just worthless, because neither the per-domain linking nor the taggability pass
+    # can reason about that bucket.
+    #
+    # Off, with the grammar, the same call takes 56 s instead of 400 and places 202 of the
+    # 203. It is also what `assign_round` below has always done, for the same reason: this is
+    # a partition, not a judgement, and a partition is exactly what a grammar can pin down.
     response = inference.generate(
-        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=True
+        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAINS_SCHEMA
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAINS_SCHEMA, max_attempts) or {}
     by_domain = reconcile_domains(concepts, raw.get("domains", {}) or {})

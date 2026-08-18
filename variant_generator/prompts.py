@@ -132,6 +132,8 @@ def concept_description_prompt(
     relations: dict[str, list[str]],
     siblings: dict[str, str],
     context: dict,
+    passages: list[dict] | None = None,
+    name_documents: bool = False,
 ) -> str:
     context_block = ""
     if context:
@@ -157,17 +159,42 @@ def concept_description_prompt(
             "\n# OTROS CONCEPTOS DEL MISMO BLOQUE TEMÁTICO\n"
             "Tu descripción compite con estas: se comparan todas contra el mismo ejercicio y solo una debe encajar. "
             "Las que ya están escritas se muestran con su texto.\n"
+            "Están aquí SOLO para que no te solapes con ellas. No copies su estructura, su voz ni sus fórmulas: "
+            "si alguna incumple las reglas de forma de abajo, no la imites — las reglas mandan sobre el ejemplo.\n"
             + "\n".join(sibling_lines)
+            + "\n"
+        )
+
+    # El anclaje al corpus: los párrafos del material de teoría de donde salió este
+    # concepto. Sin ellos el modelo describe de memoria y arrastra el vocabulario de su
+    # propio entrenamiento — así es como «Recursividad» acabó hablando de automorfismos en
+    # un curso de primero. El nombre del documento solo se dice cuando el corpus tiene más
+    # de uno: con un único documento no distingue nada y solo gasta contexto.
+    passages_block = ""
+    if passages:
+        cited = []
+        for entry in passages:
+            place = entry.get("location") or ""
+            if name_documents:
+                place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+            cited.append((f"[{place}]\n" if place else "") + (entry.get("text") or "").strip())
+        passages_block = (
+            "\n# DE DÓNDE SALE ESTE CONCEPTO (MATERIAL DE TEORÍA, LITERAL)\n"
+            "Los fragmentos del temario en los que aparece. Son la única prueba de qué significa este concepto EN ESTA ASIGNATURA:\n"
+            "- Toma de aquí el vocabulario, la notación y el nivel; lo que no esté aquí ni se deduzca del contexto docente, no lo inventes.\n"
+            "- Si tu idea del concepto no coincide con lo que dice el material, manda el material.\n"
+            "- No los cites ni los resumas: describe la TAREA que se practica con esto.\n\n"
+            + "\n\n---\n\n".join(cited)
             + "\n"
         )
 
     return f"""\
 Estás generando la descripción del concepto del currículo «{concept}», del bloque temático «{domain}».
-{context_block}{relations_block}{siblings_block}
+{context_block}{passages_block}{relations_block}{siblings_block}
 # OBJETIVO
 Esta descripción es la superficie con la que se decidirá, para cada ejercicio del material docente, QUÉ CONCEPTO DEL CURRÍCULO PRACTICA ese ejercicio. Se compara semánticamente contra el enunciado de los ejercicios, así que debe LEER COMO el enunciado de un ejercicio de este concepto, o como su primera frase — no como la definición de manual del concepto.
 
-Describe QUÉ HACE EL ALUMNO cuando practica esto: la tarea observable que se le pide, no la teoría que hay detrás.
+Describe LA TAREA que se practica: lo observable que hay que hacer, no la teoría que hay detrás.
 
 # OBJETIVO DE APRENDIZAJE, NO HERRAMIENTA (CRÍTICO)
 Un ejercicio USA muchos conceptos y PRACTICA solo uno o dos. La descripción debe encajar con los ejercicios cuyo OBJETIVO es este concepto — aquellos que un alumno no podría resolver sin dominarlo — y NO con los que simplemente lo emplean de paso como vehículo para practicar otra cosa.
@@ -183,14 +210,23 @@ Un ejercicio USA muchos conceptos y PRACTICA solo uno o dos. La descripción deb
 - Si lo que has escrito también describiría a un concepto hermano, REESCRÍBELO o RECÓRTALO hasta que no.
 - Lee las descripciones ya escritas de los hermanos antes de responder. Si la tuya se solapa con alguna, el solapamiento es el error: quédate solo con lo que este concepto tiene y aquel no. Cuando dos hermanos son facetas de una misma tarea (la parte y el todo, el mecanismo y su uso), describe EXACTAMENTE tu faceta y da por supuesta la otra.
 
+# VOZ (CRÍTICO)
+La descripción enuncia la tarea EN IMPERSONAL, empezando por un verbo en infinitivo: «Ordenar…», «Calcular…», «Reescribir…».
+- PROHIBIDO nombrar a nadie: ni «el alumno», ni «el estudiante», ni «quien lo resuelve», ni «tú», ni «se te pide», ni «el ejercicio pide».
+- PROHIBIDO hablar de ti o de este encargo: nada de «esta descripción», «el concepto que se describe», «en este caso».
+- Ni una palabra de deliberación, ni alternativas, ni justificación de lo que escribes: solo la descripción, ya decidida.
+
 # REGLAS DE FORMA
 - 1-4 frases, según haga falta para ser específico sin caer en lo genérico.
-- Estilo "tarea que se le plantea al alumno para practicar este concepto", no definición formal.
-- Apóyate en el contexto docente y en las relaciones para inferir el registro, el nivel y el vocabulario de superficie de la materia — términos, símbolos, sintaxis, fórmulas, identificadores o construcciones propias que aparecerían de verdad en ejercicios de esa asignatura y ese nivel. Lo que no aplique a esta materia, no lo uses.
+- Enunciado de tarea, no definición formal.
+- Apóyate en el material de teoría, en el contexto docente y en las relaciones para inferir el registro, el nivel y el vocabulario de superficie de la materia — términos, símbolos, sintaxis, fórmulas, identificadores o construcciones propias que aparecerían de verdad en ejercicios de esa asignatura y ese nivel. Lo que no aplique a esta materia, no lo uses.
 - Idioma: el de instrucción que indique el contexto docente. Si no se desprende con claridad, usa el mismo idioma de los nombres de los conceptos.
 - Texto plano sin ningún tipo de marcado: ni markdown, ni etiquetas estructuradas, ni cercos (backticks, fences, comillas envolventes).
 
-Descripción:"""
+# SALIDA
+Un único objeto JSON: {{"description": "…"}}. Nada antes, nada después.
+
+JSON:"""
 
 
 # ── ETIQUETADO DE CONCEPTOS ──────────────────────────────────────────────────

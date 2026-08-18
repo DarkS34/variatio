@@ -115,6 +115,7 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
         embed_signature=exemplars_profile.embed_signature,
         context=exemplars_profile.content_context,
         descriptions_path=ws.concept_descriptions_path,
+        concept_sources_path=ws.concept_sources_path,
         concepts_cache_path=ws.concepts_embeddings_path,
         exemplars_bank_cache_path=ws.exemplars_bank_embeddings_path,
     )

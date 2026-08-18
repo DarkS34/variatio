@@ -126,13 +126,24 @@ class OllamaEngine:
 
     # Asking a model that has no reasoning mode to think is a hard error in Ollama, so
     # the request is only made of models that advertise the capability.
+    #
+    # THIS IS THE ONE PLACE THAT KNOWS ABOUT EFFORT LEVELS. Callers pass a boolean — and so
+    # do the study's `Commission`, the `generations.think` column and the UI switch — because
+    # how hard the model thinks is a property of the engine, not a second axis for a call
+    # site to pick. `True` becomes `config.THINK_EFFORT`; `False` stays `False`, which is a
+    # different thing entirely (no reasoning at all) and is what the constrained-decoding
+    # call sites depend on.
+    #
+    # A model whose renderer does not implement levels silently ignores the string and
+    # reasons as it always did, so this is safe to send at any model that thinks: measured,
+    # `qwen3.6:35b-a3b-q8_0` returns a byte-identical answer for `true`, `low` and `high`.
     def _think_option(self, model: str, think: bool | None) -> dict:
         if think is None:
             return {}
         if not self.supports_thinking(model):
             logger.debug(f"'{model}' no tiene modo de razonamiento; se ignora think={think}")
             return {}
-        return {"think": think}
+        return {"think": config.THINK_EFFORT if think is True else think}
 
     # Constrained decoding: `"json"` guarantees the syntax, a JSON Schema guarantees the
     # keys and their types. It is NOT compatible with reasoning on this stack — measured on
@@ -299,6 +310,41 @@ class OllamaEngine:
             for info in response.models
         ]
 
+    # `ollama stop <modelo>`, que por debajo no es un endpoint propio: es una llamada
+    # cualquiera con `keep_alive=0`, y el servidor descarga los pesos al terminarla. Se
+    # manda por el endpoint que corresponde al modelo — un embedder no sabe generar y
+    # contestaría 400 — y con el prompt vacío, que es lo mismo que hace `warmup`.
+    def unload(self, model: str, is_embedding: bool = False) -> bool:
+        try:
+            if is_embedding:
+                self._client.embed(model=model, input="", keep_alive=0)
+            else:
+                self._client.generate(model=model, prompt="", keep_alive=0)
+            return True
+        except (ollama.ResponseError, httpx.RequestError) as e:
+            logger.warning(f"No se pudo descargar '{model}' de la GPU: {e}")
+            return False
+
+    def unload_all(self) -> list[str]:
+        try:
+            resident = [info["model"] for info in self.running_models() if info["model"]]
+        except InferenceError as e:
+            logger.warning(f"No se pudo leer qué modelos están cargados: {e}")
+            return []
+        return [
+            model
+            for model in resident
+            if self.unload(model, is_embedding=self._looks_like_embedding(model))
+        ]
+
+    # `config.EMBEDDING_MODELS` nombra los que esta instancia usa; `/api/ps` puede devolver
+    # además cualquier otro que el servidor tenga cargado por su cuenta, y para esos la
+    # capacidad declarada es la única fuente fiable.
+    def _looks_like_embedding(self, model: str) -> bool:
+        if model in config.EMBEDDING_MODELS:
+            return True
+        return "embedding" in self.capabilities(model)
+
     def ensure_model(self, model: str) -> bool:
         if model in self.installed_models():
             return True
@@ -417,6 +463,14 @@ def installed_models() -> list[str]:
 
 def running_models() -> list[dict]:
     return engine().running_models()
+
+
+def unload(model: str, is_embedding: bool = False) -> bool:
+    return engine().unload(model, is_embedding=is_embedding)
+
+
+def unload_all() -> list[str]:
+    return engine().unload_all()
 
 
 def required_models() -> dict[str, str]:

@@ -9,11 +9,14 @@ instance happened to be read last.
 
 from variant_generator.workspace import Workspace
 
-from .jobs import HANDLERS, EventBus, JobRunner
+from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner
 from .review import ReviewState
 
 bus = EventBus()
 runner = JobRunner(bus, HANDLERS)
+# Ni bus ni cola: solo mira el reloj de la cola y suelta la GPU cuando lleva media hora
+# sin nada que hacer. Vive aquí porque lo que vigila es el proceso, no una petición.
+idle_unloader = IdleUnloader(runner)
 
 
 def review_state(ws: Workspace) -> ReviewState:

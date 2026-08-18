@@ -74,6 +74,15 @@ class Workspace:
     def concept_descriptions_path(self) -> Path:
         return self.cache_dir / "concept_descriptions.json"
 
+    # De qué trozo del corpus de teoría salió cada concepto. Es una derivación del corpus,
+    # como el markdown de al lado, y no parte del artefacto: el grafo curado se edita a
+    # mano y no debe engordar con cientos de KB de citas. Se reescribe entero en cada
+    # construcción del grafo; sin él las descripciones se redactan solo con las relaciones,
+    # que es como se redactaban antes.
+    @property
+    def concept_sources_path(self) -> Path:
+        return self.cache_dir / "concept_sources.json"
+
     @property
     def concepts_embeddings_path(self) -> Path:
         return self.cache_dir / "embeddings" / "concepts_embeddings.npz"

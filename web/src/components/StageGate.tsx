@@ -62,7 +62,8 @@ export function StageGate({
 
   const blocked = Boolean(stage.blocked_reason);
   const building = stage.status === "building";
-  const ready = !building && stage.status !== "missing";
+  const missing = stage.status === "missing";
+  const ready = !building && !missing;
 
   return (
     <div className="space-y-5">
@@ -135,7 +136,7 @@ export function StageGate({
           construir, con el distintivo y el botón de la cabecera a un palmo — dos bloques
           para una acción que es una. El botón de la cabecera se explica solo: cuando falta
           el corpus se deshabilita y su tooltip dice exactamente eso. */}
-      {stage.status === "missing" && !building && rawMissing ? (
+      {missing && rawMissing ? (
         <Alert
           tone="warning"
           title="Faltan los datos de partida"
@@ -155,7 +156,13 @@ export function StageGate({
         </Alert>
       ) : null}
 
-      {/* Mientras se reconstruye, el artefacto anterior desaparece de la pantalla: lo que
+      {/* Una etapa sin construir no tiene contenido, y pedírselo a la pantalla es pedirle
+          que lea un fichero que no existe: el banco contestaba con un 404 y lo pintaba como
+          un error rojo, con los esqueletos latiendo detrás, mientras el grafo y el perfil
+          simplemente no pintaban nada. Aquí no hay nada roto — falta un paso — así que la
+          cabecera, con su distintivo «Sin construir» y su botón, es todo lo que se ve.
+
+          Mientras se reconstruye, el artefacto anterior desaparece de la pantalla: lo que
           hay en ella dejaría de ser lo que se está mirando en cuanto termine, y editarlo
           sería trabajar sobre algo a punto de ser sobrescrito. No se borra nada — el
           fichero sigue en disco hasta que el constructor lo reemplace — así que cancelar
@@ -171,7 +178,7 @@ export function StageGate({
           </Alert>
           <BuildProgress artifact={stage.artifact} />
         </>
-      ) : (
+      ) : missing ? null : (
         <div className={blocked ? "pointer-events-none select-none opacity-45" : undefined}>
           {children}
         </div>

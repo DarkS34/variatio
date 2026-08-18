@@ -6,6 +6,8 @@ dropped was thrown away by `apply_node_map`. It runs in `curation` now, once the
 canonical and the domains exist to break the question into pieces.
 """
 
+import re
+import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -38,14 +40,14 @@ def run(
     if not documents:
         return {}
 
-    origins, relations = extract_documents(
+    origins, passages, relations = extract_documents(
         documents, schema=schema, max_attempts=max_attempts
     )
     if not origins:
         logger.error("Ningún concepto extraído del corpus")
         return {}
 
-    staging = assemble(origins, relations, documents)
+    staging = assemble(origins, passages, relations, documents)
     logger.success(
         f"Extracción terminada: {len(staging['entities'])} concepto(s), "
         f"{len(staging['relations'])} relación(es)"
@@ -135,12 +137,13 @@ def extract_documents(
     *,
     schema,
     max_attempts: int,
-) -> tuple[dict[str, set[int]], set[tuple[str, str, str]]]:
+) -> tuple[dict[str, set[int]], dict[str, list[dict]], set[tuple[str, str, str]]]:
     total = sum(len(chunks) for _, _, chunks in documents)
     logger.info(f"Extrayendo de {total} fragmento(s) de {len(documents)} documento(s)")
     progress.phase("extract", f"0/{total} fragmento(s)")
 
     origins: dict[str, set[int]] = defaultdict(set)
+    passages: dict[str, list[dict]] = defaultdict(list)
     relations: set[tuple[str, str, str]] = set()
     done = 0
 
@@ -164,11 +167,12 @@ def extract_documents(
                 chunk_concepts, chunk_relations = extract_from_chunk(
                     chunk, tag, location, schema=schema, max_attempts=max_attempts
                 )
-                for concept in chunk_concepts:
-                    origins[concept].add(di)
+                seen_here = set(chunk_concepts)
                 for source, _key, target in chunk_relations:
-                    origins[source].add(di)
-                    origins[target].add(di)
+                    seen_here.update((source, target))
+                for concept in sorted(seen_here):
+                    origins[concept].add(di)
+                    remember_passage(passages[concept], concept, chunk, name, location)
                 relations.update(tuple(r) for r in chunk_relations)
                 progress.emit(
                     "artifact.progress",
@@ -178,7 +182,64 @@ def extract_documents(
                 )
 
     progress.advance(1.0, f"{len(origins)} concepto(s), {len(relations)} relación(es)")
-    return dict(origins), relations
+    return dict(origins), dict(passages), relations
+
+
+# ANCLAJE AL CORPUS -----------------------------------------------------------------------
+#
+# Un concepto del grafo es lo que un modelo dijo haber leído; el pasaje es lo que se leyó
+# de verdad. Guardarlos juntos es lo que permite enseñar de dónde sale cada nodo, y es lo
+# que `concept_description_prompt` usa para describir con el vocabulario del temario en vez
+# de con el que el modelo tenga a mano.
+
+
+def remember_passage(
+    stored: list[dict], concept: str, chunk: str, document: str, location: str
+) -> None:
+    if len(stored) >= config.KG_MAX_SOURCE_PASSAGES:
+        return
+    text = excerpt(chunk, concept, config.KG_SOURCE_PASSAGE_CHARS)
+    if not text or any(entry["text"] == text for entry in stored):
+        return
+    stored.append({"document": document, "location": location, "text": text})
+
+
+# Se recorta por párrafos y no por caracteres: media frase citada como prueba de que un
+# concepto existe en el material no prueba nada, y el modelo que la lee tiene que poder
+# entenderla. Se parte del párrafo donde el término aparece de verdad y se crece hacia los
+# vecinos hasta el presupuesto; cuando el nombre no aparece literalmente — el extractor
+# normaliza, así que pasa — se cita la cabeza del fragmento, que es de donde salió igual.
+def excerpt(chunk: str, concept: str, max_chars: int) -> str:
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", chunk) if p.strip()]
+    if not paragraphs:
+        return ""
+
+    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), 0)
+    text = paragraphs[hit][:max_chars]
+    before, after = hit - 1, hit + 1
+    while before >= 0 or after < len(paragraphs):
+        grown = False
+        if after < len(paragraphs) and len(text) + len(paragraphs[after]) + 2 <= max_chars:
+            text = f"{text}\n\n{paragraphs[after]}"
+            after += 1
+            grown = True
+        if before >= 0 and len(text) + len(paragraphs[before]) + 2 <= max_chars:
+            text = f"{paragraphs[before]}\n\n{text}"
+            before -= 1
+            grown = True
+        if not grown:
+            break
+    return text.strip()
+
+
+def mentions(text: str, concept: str) -> bool:
+    return _fold(concept) in _fold(text)
+
+
+def _fold(text: str) -> str:
+    lowered = unicodedata.normalize("NFD", text.lower())
+    stripped = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", stripped)
 
 
 # The only per-chunk call of the build, so the only one that stays without reasoning:
@@ -208,6 +269,7 @@ def extract_from_chunk(
 # of noise here — `cleaning` is told explicitly not to drop a term for being infrequent.
 def assemble(
     origins: dict[str, set[int]],
+    passages: dict[str, list[dict]],
     relations: set[tuple[str, str, str]],
     documents: list[tuple[str, list[str], list[tuple[str, str]]]],
 ) -> dict:
@@ -218,4 +280,5 @@ def assemble(
         "relations": rels,
         "documents": [{"name": name, "titles": titles} for name, titles, _ in documents],
         "origins": {name: sorted(origins[name]) for name in sorted(origins)},
+        "passages": {name: passages.get(name, []) for name in sorted(origins)},
     }

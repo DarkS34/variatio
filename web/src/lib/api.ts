@@ -5,6 +5,7 @@ import type {
   ArtifactName,
   BankListing,
   BuildPlans,
+  ConceptSource,
   ExemplarsProfile,
   Coverage,
   EvaluationDetail,
@@ -185,9 +186,13 @@ export const api = {
       `/api/kg/neighbours?concept=${encodeURIComponent(concept)}`,
     ),
   descriptions: () =>
-    request<{ descriptions: Record<string, string | null>; missing: string[] }>(
-      "/api/kg/descriptions",
-    ),
+    request<{
+      descriptions: Record<string, string | null>;
+      missing: string[];
+      sources: Record<string, ConceptSource[]>;
+      many_documents: boolean;
+      unanchored: string[];
+    }>("/api/kg/descriptions"),
   saveDescription: (concept: string, description: string) =>
     put<{ concept: string }>("/api/kg/descriptions", { concept, description }),
 

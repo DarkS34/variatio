@@ -22,6 +22,7 @@ class Embedder:
         embed_signature: str,
         context: dict,
         descriptions_path: str | Path,
+        concept_sources_path: str | Path,
         concepts_cache_path: str | Path,
         exemplars_bank_cache_path: str | Path,
     ):
@@ -32,6 +33,7 @@ class Embedder:
         self.context = context
 
         self.descriptions_path = Path(descriptions_path)
+        self.concept_sources_path = Path(concept_sources_path)
         self.concepts_cache_path = Path(concepts_cache_path)
         self.exemplars_bank_cache_path = Path(exemplars_bank_cache_path)
 
@@ -52,7 +54,9 @@ class Embedder:
         self._exemplar_matrix: np.ndarray = np.zeros((0, 0))
         self._exemplar_rows_by_concept: dict[str, list[int]] = {}
 
-        self.describer = ConceptDescriber(knowledge_graph, context, self.descriptions_path)
+        self.describer = ConceptDescriber(
+            knowledge_graph, context, self.descriptions_path, self.concept_sources_path
+        )
         self.concept_descriptions = self.describer.ensure()
         self._ensure_concepts_index()
 

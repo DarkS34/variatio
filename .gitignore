@@ -6,6 +6,7 @@ __pycache__
 web/node_modules
 web/dist
 *.md
+*.pdf
 
 # A workspace holds the data of whoever created it and is not versioned. `default` is the
 # deliberate exception: it is the project's reference instance, and its curated artifacts
