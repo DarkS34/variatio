@@ -322,10 +322,11 @@ def generate_content_prompt(
             f"{existing_lines}\n"
         )
 
-    # La dificultad, definida CONCEPTO A CONCEPTO y no con una escala común a toda la
-    # asignatura. Un criterio global —«básico si son una o dos operaciones aritméticas»— dice
-    # lo mismo de un bucle que de una recursión, así que en cuanto hay un nivel calculado sobre
-    # el grafo, manda ese. Sin calibración la sección no existe y el schema decide, como antes.
+    # Difficulty, defined CONCEPT BY CONCEPT rather than on one scale shared by the whole
+    # subject. A global criterion — "basic if it is one or two arithmetic operations" — says
+    # the same about a loop as about a recursion, so as soon as there is a level computed over
+    # the graph, that one wins. With no calibration the section does not exist and the schema
+    # decides, as before.
     demand_section = ""
     if demand_block.strip():
         demand_section = (
@@ -1144,63 +1145,64 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-# La otra mitad del cálculo de dificultad; la estructural está en `difficulty.py` y no
-# pregunta a nadie. Dos decisiones de forma que no son adorno:
+# The other half of the difficulty calculation; the structural one lives in `difficulty.py`
+# and asks nobody. Two decisions about its shape that are not decoration:
 #
-#   · SE PREGUNTA POR DOMINIO Y EN RELATIVO. Una nota absoluta —«del 1 al 3, ¿cuánto cuesta
-#     esto?»— no es comparable entre dominios ni entre ejecuciones, porque la escala se la
-#     inventa el modelo cada vez. Repartir los conceptos de un dominio ENTRE SÍ es una
-#     pregunta que sí tiene respuesta estable, y es la misma razón por la que la
-#     etiquetabilidad se separó por dominios.
-#   · EL UMBRAL NO ES LA NOTA. El nivel dice cuánto exige el concepto dentro del temario; el
-#     umbral dice qué hay que ver hecho para dar por demostrado el concepto, y no depende del
-#     nivel. Separarlos es lo que evita que la mezcla con la señal estructural deje un umbral
-#     escrito para un nivel que ya no es el suyo.
+#   · IT ASKS PER DOMAIN AND IN RELATIVE TERMS. An absolute score — "from 1 to 3, how hard is
+#     this?" — is not comparable across domains nor across runs, because the model invents the
+#     scale every time. Ranking the concepts of one domain AGAINST EACH OTHER is a question
+#     that does have a stable answer, and it is the same reason taggability was split per
+#     domain.
+#   · THE THRESHOLD IS NOT THE SCORE. The level says how much the concept demands within the
+#     syllabus; the threshold says what has to be seen done to consider the concept
+#     demonstrated, and it does not depend on the level. Keeping them apart is what stops the
+#     blend with the structural signal from leaving a threshold written for a tier that is no
+#     longer the concept's.
 #
-# El umbral se escribe en INFINITIVO IMPERSONAL por la misma decisión que las descripciones:
-# «Describe QUÉ HACE EL ALUMNO» fue lo que llenó la caché de «El alumno evalúa si…», y esos
-# textos se imitan entre sí en cuanto uno entra en el prompt del siguiente.
+# The threshold is written in the IMPERSONAL INFINITIVE by the same decision as the
+# descriptions: "Describe QUÉ HACE EL ALUMNO" is what filled the cache with "El alumno evalúa
+# si…", and those texts imitate each other as soon as one enters the next one's prompt.
 def concept_difficulty_prompt(domain: str, domains_block: str, nodes_block: str) -> str:
     return f"""\
-You are calibrating ONE thematic domain of a knowledge graph built from a corpus of teaching material on a single subject. The graph exists to commission learning items, and what is missing is HOW MUCH each concept demands and WHAT COUNTS as having demonstrated it.
+Estás calibrando UN dominio temático de un grafo de conocimiento construido a partir de un corpus de material docente de una sola asignatura. El grafo existe para encargar ítems de aprendizaje, y lo que falta es CUÁNTO exige cada concepto y QUÉ CUENTA como haberlo demostrado.
 
-Two answers per concept, and they are independent of each other.
+Dos respuestas por concepto, independientes entre sí.
 
-# 1. LEVEL — how much this concept demands, RELATIVE TO THIS SUBJECT
-Not an absolute scale: place the concepts of this domain against each other and against the rest of the syllabus shown below.
-- 1 — FOUNDATIONAL: can be practised with little or nothing else of the syllabus behind it. It is where a course starts.
-- 2 — CORE: presupposes several earlier concepts and consists of combining them, or of a mechanism that has to be understood rather than applied.
-- 3 — ADVANCED: presupposes a good part of the syllabus, or combines several non-trivial ideas at once, or is where the course ends.
+# 1. NIVEL — cuánto exige este concepto, RELATIVO A ESTA ASIGNATURA
+No es una escala absoluta: sitúa los conceptos de este dominio unos frente a otros y frente al resto del temario que se muestra abajo.
+- 1 — FUNDAMENTAL: se puede practicar con poco o nada más del temario por detrás. Es por donde empieza un curso.
+- 2 — NUCLEAR: presupone varios conceptos anteriores y consiste en combinarlos, o en un mecanismo que hay que entender más que aplicar.
+- 3 — AVANZADO: presupone buena parte del temario, o combina varias ideas no triviales a la vez, o es por donde termina el curso.
 
-Rules for the level:
-- ELEMENTARY IS NOT THE SAME AS FREQUENT. A concept used in every exercise of the course is not level 1 for that reason; what counts is what has to be in place before it can be practised at all.
-- A CONCEPT IS NEVER EASIER THAN ITS PREREQUISITES. If the evidence shows it needs another one, it is at least as demanding as that one.
-- Use the outgoing relations listed as evidence, not your own idea of the subject: `tiene como prerrequisito` is what orders the syllabus here.
-- Do not flatten the domain. A domain whose concepts are all at one level is almost always a domain that was not read.
+Reglas del nivel:
+- ELEMENTAL NO ES LO MISMO QUE FRECUENTE. Un concepto que se usa en todos los ejercicios del curso no es nivel 1 por eso; lo que cuenta es qué tiene que estar ya en su sitio para poder practicarlo siquiera.
+- UN CONCEPTO NUNCA ES MÁS FÁCIL QUE SUS PRERREQUISITOS. Si la evidencia muestra que necesita otro, exige al menos tanto como ese.
+- Usa las relaciones salientes que se listan como evidencia, no tu propia idea de la asignatura: `tiene como prerrequisito` es lo que ordena el temario aquí.
+- No aplanes el dominio. Un dominio cuyos conceptos están todos en el mismo nivel es casi siempre un dominio que no se ha leído.
 
-# 2. THRESHOLD — what has to be seen done to consider the concept demonstrated
-ONE sentence, observable and checkable, naming the performance a task would have to elicit. It is the criterion an item is written against, so:
-- Name what is PRODUCED or DECIDED, not what is known: something a reader could tick as done or not done.
-- It has to DISCRIMINATE: if the same sentence would fit an item that practises a neighbouring concept, it is worthless. Write what only this concept requires.
-- IMPERSONAL INFINITIVE, no subject and no second person: "Escribir un bucle cuya condición…", never "El alumno escribe…" nor "Serás capaz de…".
-- No definitions, no "consiste en", no explaining what the concept IS. That is what the concept's description already does.
-- Write it in the SAME LANGUAGE as the concept names below, which is the language of the course.
+# 2. UMBRAL — qué hay que ver hecho para dar el concepto por demostrado
+UNA frase, observable y comprobable, que nombre el desempeño que una tarea tendría que provocar. Es el criterio contra el que se escribe un ítem, así que:
+- Nombra lo que se PRODUCE o se DECIDE, no lo que se sabe: algo que un lector pueda marcar como hecho o no hecho.
+- Tiene que DISCRIMINAR: si la misma frase le encajaría a un ítem que practica un concepto vecino, no sirve. Escribe lo que solo este concepto exige.
+- INFINITIVO IMPERSONAL, sin sujeto y sin segunda persona: «Escribir un bucle cuya condición…», nunca «El alumno escribe…» ni «Serás capaz de…».
+- Sin definiciones, sin «consiste en», sin explicar qué ES el concepto. De eso ya se ocupa la descripción del concepto.
+- Escríbelo en el MISMO IDIOMA que los nombres de concepto de abajo, que es el idioma del curso.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "levels": {{"<concept>": 1}},
-  "thresholds": {{"<concept>": "<one observable sentence, 25 words max>"}}
+  "levels": {{"<concepto>": 1}},
+  "thresholds": {{"<concepto>": "<una frase observable, 25 palabras como máximo>"}}
 }}
-- The keys are EXACT names from the list below, in both maps. Do not invent, rename, translate or fix spelling.
-- EVERY concept of this domain appears in both maps. Do not skip any.
-- `levels` are the integers 1, 2 or 3 and nothing else.
-- No text before or after, no backticks, no comments.
+- Las claves son nombres EXACTOS de la lista de abajo, en los dos mapas. No inventes, renombres, traduzcas ni corrijas la ortografía.
+- TODOS los conceptos de este dominio aparecen en los dos mapas. No te saltes ninguno.
+- Los `levels` son los enteros 1, 2 o 3 y nada más.
+- Sin texto antes ni después, sin comillas invertidas, sin comentarios.
 
-# DOMAINS OF THE SUBJECT (context: this is the whole syllabus)
+# DOMINIOS DE LA ASIGNATURA (contexto: esto es el temario entero)
 {domains_block}
 
-# CONCEPTS OF THE DOMAIN «{domain}» (with their outgoing relations as evidence)
+# CONCEPTOS DEL DOMINIO «{domain}» (con sus relaciones salientes como evidencia)
 {nodes_block}
 
 JSON:"""

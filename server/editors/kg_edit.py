@@ -335,10 +335,10 @@ def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
     storage.write_json(ws.concept_sources_path, sources)
 
 
-# La calibración se mueve y se borra con el concepto por lo mismo que la descripción: está
-# indexada por nombre y nada más la invalida, así que un renombrado la dejaría varada bajo el
-# nombre viejo. Lo que NO se recalcula aquí es el nivel — cambiar un prerrequisito a mano
-# desactualiza la calibración entera, y eso lo arregla una construcción, no una edición.
+# The calibration moves and is deleted with the concept for the same reason as the
+# description: it is keyed by name and nothing else invalidates it, so a rename would leave it
+# stranded under the old name. What is NOT recomputed here is the tier — changing a
+# prerequisite by hand outdates the whole calibration, and a build fixes that, not an edit.
 def _rekey_difficulty(ws: Workspace, name: str, new_name: str | None) -> None:
     data = stages.load_concept_difficulty(ws)
     entry = data["concepts"].pop(name, None)

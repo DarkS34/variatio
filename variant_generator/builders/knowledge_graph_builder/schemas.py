@@ -77,9 +77,9 @@ TAGGABLE_SCHEMA = {
     "required": ["non_taggable"],
 }
 
-# Dos mapas planos y no un mapa de objetos, por lo mismo que los de arriba: lo que este
-# convertidor acepta con seguridad es un `additionalProperties` de tipo escalar. Anidar un
-# objeto por concepto sería más bonito de leer y una apuesta sobre el motor.
+# Two flat maps and not a map of objects, for the same reason as the ones above: what this
+# converter safely accepts is an `additionalProperties` of a scalar type. Nesting one object
+# per concept would read better and be a bet on the engine.
 DIFFICULTY_SCHEMA = {
     "type": "object",
     "properties": {

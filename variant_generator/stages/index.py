@@ -63,8 +63,8 @@ def load_concept_sources(ws: Workspace | None = None) -> dict:
     return load_sources(_artifacts.resolve(ws).concept_sources_path)
 
 
-# La calibración de dificultad, tal cual la dejó la construcción del grafo, y con la misma
-# regla que las dos de arriba: solo el fichero. Un workspace sin ella genera sin calibrar.
+# The difficulty calibration, exactly as the graph build left it, and under the same rule as
+# the two above: the file only. A workspace without it generates uncalibrated.
 def load_concept_difficulty(ws: Workspace | None = None) -> dict:
     return load_difficulty(_artifacts.resolve(ws).concept_difficulty_path)
 

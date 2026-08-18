@@ -195,8 +195,8 @@ class ContentGenerator:
         self.embedder = embedder
         self.exemplars_profile = exemplars_profile
         self.context = exemplars_profile.content_context
-        # Vacía cuando el grafo llegó importado o se construyó antes de que esto existiera,
-        # y no es un error: el encargo sale sin calibrar, que es como salía antes.
+        # Empty when the graph arrived by import or was built before this existed, and that is
+        # not an error: the commission goes out uncalibrated, which is how it went out before.
         self.concept_difficulty = concept_difficulty or dict(difficulty.EMPTY)
         self.generator_model = generator_model
         self.repair_model = repair_model
@@ -403,9 +403,9 @@ class ContentGenerator:
         fill = self.max_few_shot - len(primary)
         return primary + [(ex_id, by_id[ex_id]) for ex_id in ranked[:fill]]
 
-    # El umbral va pegado al concepto y no en una sección aparte porque es la condición de
-    # validez de ESE objetivo: lo que el ejercicio tiene que obligar a hacer para que se pueda
-    # dar por demostrado. Suelto, a diez líneas de distancia, se lee como una recomendación.
+    # The threshold sits next to its concept rather than in a section of its own because it is
+    # the validity condition of THAT objective: what the exercise has to force the student to
+    # do for it to count as demonstrated. Ten lines away, it reads as a recommendation.
     def _format_target_concepts(self, concepts: list[str]) -> str:
         descriptions = self.embedder.concept_descriptions
         lines = []

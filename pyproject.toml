@@ -58,7 +58,7 @@ dev = [
 
 [project.scripts]
 variant-generator = "variant_generator.cli:main"
-system-run = "server.cli:main"
+system = "server.cli:main"
 
 [build-system]
 requires = ["hatchling"]

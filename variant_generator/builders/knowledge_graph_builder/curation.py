@@ -419,11 +419,11 @@ def judge_domain(
 # DIFFICULTY ------------------------------------------------------------------------------------
 
 
-# Se pregunta SOLO por los conceptos etiquetables, y el orden de las dos fases es lo que lo
-# permite: un concepto que no sirve como etiqueta no va a ser nunca el objetivo de un ejercicio,
-# así que ni tiene umbral que escribir ni merece una llamada. Lo que sí entra en el cálculo es
-# el grafo ENTERO — `difficulty.calibrate` recibe todos los conceptos —, porque un prerrequisito
-# no etiquetable sigue ordenando el temario y sigue teniendo que quedar por debajo.
+# It asks ONLY about the taggable concepts, and the order of the two phases is what allows
+# that: a concept that is useless as a label will never be the objective of an exercise, so it
+# has no threshold to write and does not deserve a call. What does enter the computation is the
+# WHOLE graph — `difficulty.calibrate` receives every concept — because a non-taggable
+# prerequisite still orders the syllabus and still has to stay below.
 def calibrate_difficulty(
     concepts_by_domains: dict,
     relations: list[list],
@@ -466,15 +466,15 @@ def calibrate_difficulty(
     return difficulty.calibrate(concepts, relations, schema, levels, thresholds)
 
 
-# `think=False` con gramática, y no es la elección cómoda: juzgar cuánto exige un concepto ES
-# un juicio, y la etiquetabilidad de al lado sí razona. Lo que lo decide es la FORMA DE LA
-# SALIDA — una línea por concepto sobre todo el dominio, que es exactamente el molde con el que
-# `curate_graph_domains_prompt` convirtió el canal de razonamiento en la respuesta y devolvió
-# vacío — y el precio: una llamada por dominio razonando son ~450 s medidos, media hora larga
-# añadida a cada construcción.
+# `think=False` under grammar, and it is not the comfortable choice: judging how much a concept
+# demands IS a judgement, and the taggability call next to it does reason. What decides it is
+# the SHAPE OF THE OUTPUT — one line per concept over a whole domain, which is exactly the mould
+# in which `curate_graph_domains_prompt` turned the reasoning channel into the answer and came
+# back empty — and the price: one reasoning call per domain is ~450 s measured, a good half hour
+# added to every build.
 #
-# Es lo primero que hay que volver a mirar si los niveles salen planos. La salida está bajo
-# gramática, así que el fallo de esa vez no cabe; lo que se pierde es deliberación.
+# It is the first thing to look at again if the tiers come out flat. The output is under
+# grammar, so that failure cannot happen here; what is lost is deliberation.
 def judge_domain_difficulty(
     domain: str,
     members: list[str],
