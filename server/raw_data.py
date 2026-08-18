@@ -1,7 +1,7 @@
 """The raw materials the builders read, listed and written from the browser.
 
-`raw_base_data/` is the user's own data and lives outside the package, so nothing
-in the pipeline creates it. A first-time user therefore has an empty chain and no
+A workspace's `raw/` is the user's own data and lives outside the package, so nothing
+in the pipeline creates its contents. A first-time user therefore has an empty chain and no
 way to start from the UI; this module is that way in — the two slots, what each one
 feeds, and a guarded write into them.
 """

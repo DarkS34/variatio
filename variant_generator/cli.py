@@ -16,13 +16,13 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument(
         "--workspace",
         metavar="SLUG",
-        help="operate on WORKSPACES_DIR/SLUG instead of the default single-user layout",
+        help="operate on WORKSPACES_DIR/SLUG instead of WORKSPACES_DIR/default",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser(
-        "build", parents=[common], help="build the missing instance artifacts from raw_base_data/"
+        "build", parents=[common], help="build the missing instance artifacts from the workspace's raw/"
     )
     subparsers.add_parser(
         "init", parents=[common], help="load the instance, tag the exemplars bank and warm the indices"
