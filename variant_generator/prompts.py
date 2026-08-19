@@ -305,7 +305,6 @@ def generate_content_prompt(
     fixed_values_block: str,
     schema: str,
     instructions: str = "",
-    demand_block: str = "",
 ) -> str:
     context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
 
@@ -320,27 +319,6 @@ def generate_content_prompt(
         already_block = (
             "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
             f"{existing_lines}\n"
-        )
-
-    # Difficulty, defined CONCEPT BY CONCEPT rather than on one scale shared by the whole
-    # subject. A global criterion — "basic if it is one or two arithmetic operations" — says
-    # the same about a loop as about a recursion, so as soon as there is a level computed over
-    # the graph, that one wins. With no calibration the section does not exist and the schema
-    # decides, as before.
-    demand_section = ""
-    if demand_block.strip():
-        demand_section = (
-            "\n# EXIGENCIA DEL OBJETIVO\n"
-            "El nivel de cada concepto objetivo dentro de este temario, calculado sobre el grafo del currículo. "
-            "Es lo que fija cuánto debe pedir el ejercicio, y PREVALECE sobre cualquier otro criterio de "
-            "dificultad general —el del schema, el de los ejemplos de referencia—: lo que hace difícil un "
-            "ejercicio depende del concepto que practica, no de una escala común a toda la asignatura.\n"
-            "Nivel 1: el ejercicio se resuelve con el objetivo y poco más, sin dificultades añadidas alrededor. "
-            "Nivel 2: el objetivo se combina con conocimiento previo ya dominado, y esa combinación es el reto. "
-            "Nivel 3: hay que coordinar varias decisiones no triviales alrededor del objetivo.\n"
-            f"{demand_block}\n"
-            "Con varios objetivos manda el más alto. Subir de nivel es pedir más del objetivo, nunca alargar el "
-            "enunciado ni añadir requisitos ajenos a él.\n"
         )
 
     prerequisites_section = ""
@@ -409,7 +387,7 @@ El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del curríc
 {target_concepts_block}
 
 PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el currículo SALVO estos conceptos no debe poder resolver el ejercicio. Si podría, el ejercicio no los practica — los menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo.
-{demand_section}{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
+{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
 # REGLAS DE GENERACIÓN
 {rules_block}
 
