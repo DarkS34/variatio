@@ -86,7 +86,7 @@ def summary(ws: Workspace) -> dict:
             "taggable": len(graph.taggable_concepts),
             "described": sum(1 for c in graph.taggable_concepts if descriptions.get(c)),
             "with_exemplars": sum(1 for c in graph.taggable_concepts if exemplars.get(c)),
-            "taggability_reviewed": bool(graph.generic_non_taggable_concepts),
+            "taggability_reviewed": bool(graph_raw.get("taggability_reviewed", False)),
         },
     }
 
@@ -155,9 +155,9 @@ def replace(ws: Workspace, graph_raw: dict) -> dict:
 
 def set_non_taggable(ws: Workspace, concepts: list[str]) -> dict:
     graph_raw = raw(ws)
-    universe = {c for cs in graph_raw["concepts_by_domains"].values() for c in cs}
-    kept = sorted(set(concepts) & universe)
+    kept = sorted(set(concepts) & _all_concepts(graph_raw))
     graph_raw["generic_non_taggable_concepts"] = kept
+    graph_raw["taggability_reviewed"] = True
     _save(ws, graph_raw, "etiquetabilidad revisada")
     return {"non_taggable": len(kept)}
 

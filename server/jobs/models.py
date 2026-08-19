@@ -34,13 +34,16 @@ JOB_LABELS: dict[str, str] = {
 # (between items, between stream tokens) for cooperative cancellation to be instant.
 SUBPROCESS_KINDS: frozenset[str] = frozenset({"build_profile", "build_kg", "build_bank"})
 
-# Artifact each job kind produces, for the "building" state of the chain.
+# Artifact each job kind produces, for the "building" state of the chain. A taggability
+# review is deliberately absent: it patches the graph's non-taggable list in place and
+# leaves everything else untouched, so it must not put the knowledge graph into the
+# "building" state — that would hide the whole screen behind rebuild copy that does not
+# apply and would hide the very button that launched it.
 JOB_ARTIFACT: dict[str, str] = {
     "build_profile": "exemplars_profile",
     "build_kg": "knowledge_graph",
     "build_bank": "exemplars_bank",
     "tag": "exemplars_bank",
-    "review_taggability": "knowledge_graph",
 }
 
 

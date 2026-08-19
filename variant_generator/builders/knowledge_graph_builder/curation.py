@@ -63,6 +63,7 @@ def run(
     curated = {
         "concepts_by_domains": concepts_by_domains,
         "generic_non_taggable_concepts": [],
+        "taggability_reviewed": False,
         "relations": typed,
     }
     write_json(output_path, curated)
