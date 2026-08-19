@@ -209,6 +209,28 @@ def remember_passage(
 # entenderla. Se parte del párrafo donde el término aparece de verdad y se crece hacia los
 # vecinos hasta el presupuesto; cuando el nombre no aparece literalmente — el extractor
 # normaliza, así que pasa — se cita la cabeza del fragmento, que es de donde salió igual.
+_LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
+_SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
+
+
+def is_navigation(paragraph: str) -> bool:
+    lines = [line.strip() for line in paragraph.splitlines() if line.strip()]
+    if not lines:
+        return True
+    return sum(1 for line in lines if _LEADER.search(line)) * 2 >= len(lines)
+
+
+def clip_to_sentence(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    window = text[:max_chars]
+    ends = [m.end() for m in _SENTENCE_END.finditer(window)]
+    if ends:
+        return window[: ends[-1]].strip()
+    cut = window.rfind(" ")
+    return window[:cut].strip() if cut > 0 else ""
+
+
 def excerpt(chunk: str, concept: str, max_chars: int) -> str:
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", chunk) if p.strip()]
     if not paragraphs:
