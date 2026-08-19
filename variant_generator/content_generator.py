@@ -6,8 +6,8 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config, guardrail, inference, progress
-from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .embedder import Embedder
+from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .knowledge_graph import KnowledgeGraph
 from .prompts import generate_content_prompt
 from .utils import parse_with_repair
@@ -75,9 +75,7 @@ def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     return kept
 
 
-def parse_item(
-    response: str, fixed: dict[str, object], item_type: ItemType
-) -> tuple[BaseModel | None, str | None]:
+def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> tuple[BaseModel | None, str | None]:
     """The best schema-conforming object in the reply, not merely the first one.
 
     Candidates are scored by how much of the schema they cover and, on a tie, the
@@ -104,7 +102,7 @@ def parse_item(
         try:
             item = item_type.content_item(**{**raw, **fixed})
         except (ValidationError, ValueError, TypeError) as e:
-            error = f"{type(e).__name__}: {str(e)}"
+            error = f"{type(e).__name__}: {e!s}"
             continue
         best, best_score = item, score
 
@@ -219,9 +217,8 @@ class ContentGenerator:
 
         few_shot = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
-            logger.warning(
-                f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot"
-            )
+            logger.warning(f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot")
+        
         progress.emit(
             "few_shot",
             ids=[ex_id for ex_id, _ in few_shot],
@@ -271,6 +268,7 @@ class ContentGenerator:
                     logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
                     progress.emit("item.rejected", index=i + 1)
                     continue
+                
                 accepted.append(result)
                 progress.emit(
                     "item.produced",
@@ -498,6 +496,7 @@ class ContentGenerator:
             think=think,
             on_token=progress.token_sink("item"),
         )
+        
         thinking = resp.thinking
         # A model that forgets to close `<think>` leaves the whole reply on the reasoning
         # side; the answer is still in there, at the end.

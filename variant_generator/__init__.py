@@ -7,8 +7,6 @@ from loguru import logger
 from . import inference
 from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES
 
-# from .utils import prepare_models
-
 for name in NOISY_LOGGERS:
     logging.getLogger(name).setLevel(logging.ERROR)
 for pattern in NOISY_WARNING_MODULES:
@@ -38,4 +36,3 @@ def bootstrap() -> None:
         msg = f"Cannot connect to inference engine '{inference.engine_name()}'. Make sure it is running before initializing the agent."
         logger.critical(msg)
         raise RuntimeError(msg)
-    # prepare_models()

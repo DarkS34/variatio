@@ -4,7 +4,7 @@ import operator
 import re
 from functools import reduce
 from pathlib import Path
-from typing import Literal, ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field, create_model
 
@@ -70,17 +70,6 @@ class ItemType:
             )
         return str(item[self.primary_field] or "")
 
-    # The text an item is indexed and retrieved by. Measured on this corpus: with the
-    # enunciado alone, three unrelated questions came back with the SAME top-3
-    # (Función / Lenguaje funcional / Bucle while) because a `analisis_codigo` enunciado
-    # is boilerplate — «¿qué imprime el siguiente código?» — and the concept lives in the
-    # code it hands the student. Adding that code separated them and raised the score
-    # (0.609 → 0.728). Adding the SOLUTION instead cost accuracy (12/12 → 11/12 top-1 on
-    # the reference bank), so this is a curated list per modality, not «todos los campos».
-    #
-    # With the default `[primary_field]` the result is byte-identical to `primary_text`:
-    # a profile that declares nothing new must not re-embed, and must keep the threshold
-    # `EMBEDDER_SIMILARITY_THRESHOLD` was calibrated on.
     def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
         primary = self.primary_text(item)
         if self.embed_fields == [self.primary_field]:
@@ -256,7 +245,7 @@ class ExemplarsProfile:
     @classmethod
     def _validate(cls, raw: dict) -> None:
         if not isinstance(raw, dict):
-            raise ValueError("ExemplarsProfile root must be an object")
+            raise TypeError("ExemplarsProfile root must be an object")
 
         missing = [k for k in cls._REQUIRED_KEYS if k not in raw]
         if missing:
@@ -278,7 +267,7 @@ class ExemplarsProfile:
                 f"(lowercase ASCII, snake_case, no accents)"
             )
         if not isinstance(spec, dict):
-            raise ValueError(f"Item type '{key}' must be an object")
+            raise TypeError(f"Item type '{key}' must be an object")
 
         missing = [k for k in cls._TYPE_REQUIRED_KEYS if k not in spec]
         if missing:
@@ -287,7 +276,7 @@ class ExemplarsProfile:
         if not isinstance(spec["fields"], dict) or not spec["fields"]:
             raise ValueError(f"Item type '{key}': 'fields' must be a non-empty object")
         if not isinstance(spec["primary_field"], str):
-            raise ValueError(f"Item type '{key}': 'primary_field' must be a string")
+            raise TypeError(f"Item type '{key}': 'primary_field' must be a string")
         if spec["primary_field"] not in spec["fields"]:
             raise ValueError(
                 f"Item type '{key}': 'primary_field' = '{spec['primary_field']}' "
@@ -346,7 +335,7 @@ class ExemplarsProfile:
     @classmethod
     def _validate_field_spec(cls, name: str, spec: dict, is_primary: bool = False) -> None:
         if not isinstance(spec, dict):
-            raise ValueError(f"Field '{name}' spec must be an object")
+            raise TypeError(f"Field '{name}' spec must be an object")
 
         schema = spec.get("schema")
         if not isinstance(schema, dict) or not schema:

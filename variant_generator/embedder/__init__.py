@@ -22,13 +22,13 @@ from .vectors import embed_normalized, l2_normalize
 __all__ = [
     "ConceptDescriber",
     "Embedder",
+    "cache",
+    "descriptions",
+    "embed_normalized",
+    "index",
+    "l2_normalize",
     "load_descriptions",
     "load_sources",
     "save_descriptions",
-    "embed_normalized",
-    "l2_normalize",
-    "cache",
-    "descriptions",
-    "index",
     "vectors",
 ]
