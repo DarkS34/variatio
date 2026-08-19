@@ -151,11 +151,33 @@ def test_excerpt_grows_into_neighbouring_paragraphs():
     assert "una vez por elemento" in text
 
 
-def test_excerpt_does_not_cut_a_paragraph_mid_word():
-    long_chunk = "Recursividad " + ("palabra " * 400)
-    text = extraction.excerpt(long_chunk, "Recursividad", 120)
-    assert not text.endswith("palab")
-    assert len(text) <= 120
+SENTENCES = (
+    "Recursividad es una tecnica donde una funcion se llama a si misma. "
+    "El caso base detiene la cadena de llamadas y devuelve un valor concreto. "
+    "Sin caso base la recursion no termina y agota la pila de llamadas."
+)
+
+
+def test_excerpt_ends_at_a_sentence_boundary():
+    text = extraction.excerpt(SENTENCES, "Recursividad", 150)
+    assert text.endswith(".")
+    assert len(text) <= 150
+    assert "El caso base" in text
+
+
+def test_excerpt_growth_stops_before_the_neighbour_exceeds_the_budget():
+    hit_paragraph = "Un bucle for recorre una secuencia de valores."
+    neighbour = "El cuerpo del bucle se ejecuta una vez por elemento recorrido."
+    chunk = f"""## Bucles
+
+{hit_paragraph}
+
+{neighbour}
+"""
+    budget = len(hit_paragraph) + 2 + len(neighbour) - 1
+    text = extraction.excerpt(chunk, "Bucle for", budget)
+    assert neighbour not in text
+    assert len(text) <= budget
 
 
 def test_excerpt_never_chooses_a_navigation_paragraph_even_if_it_mentions_the_concept():
