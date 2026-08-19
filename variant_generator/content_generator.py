@@ -245,7 +245,7 @@ class ContentGenerator:
         )
 
         target_block = self._format_target_concepts(concepts)
-        prerequisites_block = self._format_concept_list(
+        prerequisites_block = self._format_prerequisites(
             self._prerequisites(concepts, curriculum)
         )
         excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
@@ -437,6 +437,17 @@ class ContentGenerator:
     @staticmethod
     def _format_concept_list(concepts: list[str]) -> str:
         return "\n".join(f"- {c}" for c in concepts)
+
+    def _format_prerequisites(self, concepts: list[str]) -> str:
+        descriptions = self.embedder.concept_descriptions
+        describer = self.embedder.describer
+        lines = []
+        for c in concepts:
+            text = " ".join((descriptions.get(c) or "").split())
+            if not text:
+                text = " ".join(describer.simple_describe(c).split())
+            lines.append(f"- **{c}**: {text}" if text else f"- {c}")
+        return "\n".join(lines)
 
     def _build_item_type_block(self, item_type: ItemType) -> str:
         lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
