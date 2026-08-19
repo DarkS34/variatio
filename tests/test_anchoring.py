@@ -119,3 +119,59 @@ def test_clip_never_exceeds_max_chars():
     ]
     for text, n in cases:
         assert len(extraction.clip_to_sentence(text, n)) <= n
+
+
+CHUNK = f"""{TOC_LINE}
+
+## Bucles
+
+Un bucle for recorre una secuencia de valores conocidos de antemano.
+
+El cuerpo del bucle se ejecuta una vez por elemento.
+"""
+
+
+def test_excerpt_finds_the_paragraph_that_talks_about_the_concept():
+    text = extraction.excerpt(CHUNK, "Bucle for", 900)
+    assert "recorre una secuencia" in text
+
+
+def test_excerpt_never_returns_the_table_of_contents():
+    text = extraction.excerpt(CHUNK, "Bucle for", 900)
+    assert "Tema I" not in text
+    assert "......" not in text
+
+
+def test_excerpt_returns_nothing_for_an_absent_concept():
+    assert extraction.excerpt(CHUNK, "Diccionario ordenado", 900) == ""
+
+
+def test_excerpt_grows_into_neighbouring_paragraphs():
+    text = extraction.excerpt(CHUNK, "Bucle for", 900)
+    assert "una vez por elemento" in text
+
+
+def test_excerpt_does_not_cut_a_paragraph_mid_word():
+    long_chunk = "Recursividad " + ("palabra " * 400)
+    text = extraction.excerpt(long_chunk, "Recursividad", 120)
+    assert not text.endswith("palab")
+    assert len(text) <= 120
+
+
+def test_excerpt_never_chooses_a_navigation_paragraph_even_if_it_mentions_the_concept():
+    toc_mentioning_concept = (
+        "Bucle for ................ 3   Bucle while ................ 5   "
+        "Bucle for anidado ................ 7"
+    )
+    chunk = f"""{toc_mentioning_concept}
+
+## Otra sección
+
+Este párrafo no habla del tema buscado en absoluto.
+"""
+    assert extraction.excerpt(chunk, "Bucle for", 900) == ""
+
+
+def test_excerpt_returns_nothing_for_an_all_navigation_chunk():
+    chunk = f"{TOC_LINE}\n\n{TOC_LINE}"
+    assert extraction.excerpt(chunk, "Bucle for", 900) == ""
