@@ -112,3 +112,11 @@ class Workspace:
     @property
     def eval_sessions_dir(self) -> Path:
         return self.instance_dir / ".evaluations"
+
+    # The curriculum considered covered in this instance. It is host state, not an
+    # artifact: no builder produces it, it does not come from `raw/`, and it is not part
+    # of the instance definition. It is a teaching decision about the workspace, like
+    # `.review_state.json`.
+    @property
+    def curriculum_path(self) -> Path:
+        return self.instance_dir / ".curriculum.json"
