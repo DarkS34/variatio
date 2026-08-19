@@ -172,6 +172,7 @@ def extract_documents(
                     seen_here.update((source, target))
                 for concept in sorted(seen_here):
                     origins[concept].add(di)
+                for concept in sorted(set(chunk_concepts)):
                     remember_passage(passages[concept], concept, chunk, name, location)
                 relations.update(tuple(r) for r in chunk_relations)
                 progress.emit(
