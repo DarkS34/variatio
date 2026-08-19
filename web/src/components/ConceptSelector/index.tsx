@@ -8,6 +8,7 @@ import { domainColour } from "@/lib/format";
 import type { GraphView, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BoardMode } from "./BoardMode";
+import { GraphMode } from "./GraphMode";
 import { SelectionTray } from "./SelectionTray";
 
 export interface ConceptSelectorProps {
@@ -95,6 +96,11 @@ export function ConceptSelector({
     return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
   }, [offered, query]);
 
+  const offeredNames = useMemo(
+    () => new Set(offered.map((concept) => concept.name)),
+    [offered],
+  );
+
   const flat = useMemo(
     () => grouped.flatMap(([, items]) => items.map((concept) => concept.name)),
     [grouped],
@@ -155,6 +161,11 @@ export function ConceptSelector({
     }
   };
 
+  const addMany = (names: string[]) => {
+    const extra = names.filter((name) => !chosen.has(name) && !implied?.has(name));
+    if (extra.length > 0) onChange([...selected, ...extra]);
+  };
+
   const impliedList = implied
     ? offered.filter((concept) => implied.has(concept.name)).map((concept) => concept.name)
     : [];
@@ -207,7 +218,7 @@ export function ConceptSelector({
                     ? "Este espacio de trabajo no tiene grafo que mostrar"
                     : option.hint
                 }
-                disabled={option.value === "graph"}
+                disabled={option.value === "graph" && !graph}
                 onClick={() => setView(option.value)}
                 className={cn(
                   "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40",
@@ -234,16 +245,29 @@ export function ConceptSelector({
           view === "board" ? "thin-scroll overflow-y-auto" : "overflow-hidden",
         )}
       >
-        <BoardMode
-          groups={grouped}
-          chosen={chosen}
-          implied={implied}
-          colours={colours}
-          showExemplarCount={showExemplarCount}
-          activeName={flat[cursor] ?? null}
-          onToggle={toggle}
-          onToggleDomain={toggleDomain}
-        />
+        {view === "graph" && graph ? (
+          <GraphMode
+            graph={graph}
+            offered={offeredNames}
+            chosen={chosen}
+            implied={implied}
+            onToggle={(name) => {
+              if (offeredNames.has(name)) toggle(name);
+            }}
+            onAdd={addMany}
+          />
+        ) : (
+          <BoardMode
+            groups={grouped}
+            chosen={chosen}
+            implied={implied}
+            colours={colours}
+            showExemplarCount={showExemplarCount}
+            activeName={flat[cursor] ?? null}
+            onToggle={toggle}
+            onToggleDomain={toggleDomain}
+          />
+        )}
       </div>
 
       <SelectionTray

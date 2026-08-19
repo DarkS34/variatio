@@ -45,6 +45,9 @@ interface Props {
   graph: GraphView;
   selected: string | null;
   onSelect: (concept: string | null) => void;
+  picked?: Set<string>;
+  onPick?: (concept: string) => void;
+  initialMode?: LayoutMode;
   highlight?: Set<string>;
   hiddenRelations?: Set<number>;
   className?: string;
@@ -60,6 +63,9 @@ export function GraphCanvas({
   graph,
   selected,
   onSelect,
+  picked,
+  onPick,
+  initialMode,
   highlight,
   hiddenRelations,
   className,
@@ -91,18 +97,44 @@ export function GraphCanvas({
   const hoveredRef = useRef<number | null>(null);
   hoveredRef.current = hovered;
 
-  const [mode, setMode] = useState<LayoutMode>("force");
+  const [mode, setMode] = useState<LayoutMode>(initialMode ?? "force");
   const [labels, setLabels] = useState<LabelMode>("auto");
   const [arrows, setArrows] = useState(true);
 
   const model = useMemo(() => buildModel(graph), [graph]);
 
+  const pickedIndices = useMemo(() => {
+    if (!picked) return undefined;
+    const indices = new Set<number>();
+    for (const name of picked) {
+      const index = model.nameIndex.get(name);
+      if (index !== undefined) indices.add(index);
+    }
+    return indices;
+  }, [picked, model]);
+
   const modelRef = useRef(model);
   modelRef.current = model;
   const graphRef = useRef(graph);
   graphRef.current = graph;
-  const viewProps = useRef({ selected, highlight, hiddenRelations, mode, labels, arrows });
-  viewProps.current = { selected, highlight, hiddenRelations, mode, labels, arrows };
+  const viewProps = useRef({
+    selected,
+    picked: pickedIndices,
+    highlight,
+    hiddenRelations,
+    mode,
+    labels,
+    arrows,
+  });
+  viewProps.current = {
+    selected,
+    picked: pickedIndices,
+    highlight,
+    hiddenRelations,
+    mode,
+    labels,
+    arrows,
+  };
 
   const wake = useCallback(() => {
     if (frame.current === null) frame.current = requestAnimationFrame(() => loopRef.current());
@@ -212,7 +244,7 @@ export function GraphCanvas({
   // mark the canvas dirty and let the loop draw one more frame.
   useEffect(() => {
     repaint();
-  }, [selected, highlight, hiddenRelations, hovered, labels, arrows, repaint]);
+  }, [selected, pickedIndices, highlight, hiddenRelations, hovered, labels, arrows, repaint]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -251,6 +283,7 @@ export function GraphCanvas({
         arrows: props.arrows,
         hulls: true,
         selected: current,
+        picked: props.picked,
         focused: hoveredRef.current ?? -1,
         highlight: props.highlight,
         hiddenRelations: props.hiddenRelations,
@@ -467,9 +500,13 @@ export function GraphCanvas({
         onPointerUp={(event) => {
           const state = pointer.current;
           if (state.mode === "node") {
-            if (state.moved < 4) onSelect(graph.nodes[state.index][0]);
+            if (state.moved < 4) {
+              const name = graph.nodes[state.index][0];
+              if (onPick) onPick(name);
+              else onSelect(name);
+            }
           } else if (state.mode === "pan" && state.moved < 4 && pick(event) < 0) {
-            onSelect(null);
+            if (!onPick) onSelect(null);
           }
           release();
         }}
