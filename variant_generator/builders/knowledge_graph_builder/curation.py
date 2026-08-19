@@ -1,4 +1,4 @@
-"""Phase 3 — domains, the syllabus order, taggability, and the one file a build writes.
+"""Phase 3 — domains, the syllabus order, and the one file a build writes.
 
 The result is still a DRAFT. The final curation into `instance/knowledge_graph.json`
 (draining the unclassified bucket, fixing dubious directions) is manual.
@@ -16,11 +16,10 @@ from ...prompts import (
     curate_graph_domains_prompt,
     link_cross_domain_relations_prompt,
     link_domain_relations_prompt,
-    review_taggable_concepts_prompt,
 )
 from ...json_io import write_json
 from . import blocks, parsing
-from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
+from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA
 
 
 def run(
@@ -324,80 +323,6 @@ def link_cross_domain(concepts_by_domains: dict, *, schema, max_attempts: int) -
             "que no cruzaban ningún dominio"
         )
     return crossing
-
-
-# TAGGABILITY ---------------------------------------------------------------------------------
-
-
-# Domain assignment and taggability are two different judgements, and asking for both
-# in the same call gave the second one whatever attention was left after partitioning
-# a few hundred concepts: the draft came back with a handful of non-taggables and a
-# long tail of terms ("Codificación", "Diseño", "Ejecución") that label everything and
-# therefore identify nothing. One call per domain, judging only that, is the fix.
-def review_taggability(
-    concepts_by_domains: dict, relations: list[list], *, max_attempts: int
-) -> list[str]:
-    domains = list(concepts_by_domains)
-    if not domains:
-        return []
-
-    progress.phase("taggable")
-    non_taggable: set[str] = set()
-    with progress.step(
-        "kg_taggability", "Revisando qué conceptos sirven como etiqueta", len(domains)
-    ) as reporter:
-        for idx, domain in enumerate(domains, 1):
-            progress.checkpoint()
-            members = concepts_by_domains[domain]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
-            progress.advance((idx - 1) / len(domains), f"{domain} ({idx}/{len(domains)})")
-            non_taggable.update(
-                judge_domain(domain, members, domains, relations, max_attempts=max_attempts)
-            )
-
-    logger.info(
-        f"Etiquetabilidad: {len(non_taggable)} concepto(s) excluidos "
-        f"en {len(domains)} dominio(s)"
-    )
-    progress.advance(1.0, f"{len(non_taggable)} concepto(s) no etiquetables")
-    return sorted(non_taggable)
-
-
-def judge_domain(
-    domain: str,
-    members: list[str],
-    domains: list[str],
-    relations: list[list],
-    *,
-    max_attempts: int,
-) -> list[str]:
-    prompt = review_taggable_concepts_prompt(
-        domain,
-        blocks.concepts_block(domains),
-        blocks.nodes_block(members, relations, {}),
-    )
-    response = inference.generate(
-        model=config.KG_TAGGABLE_MODEL, prompt=prompt, think=True
-    ).response
-    raw = (
-        parsing.parse_object(
-            response, f"[taggable · {domain}] ", TAGGABLE_SCHEMA, max_attempts
-        )
-        or {}
-    )
-    verdicts = raw.get("non_taggable") or {}
-    if isinstance(verdicts, list):
-        verdicts = {c: "" for c in verdicts if isinstance(c, str)}
-    if not isinstance(verdicts, dict):
-        return []
-
-    valid = set(members)
-    excluded = []
-    for concept, reason in verdicts.items():
-        if concept in valid:
-            excluded.append(concept)
-            logger.debug(f"[{domain}] «{concept}» no sirve como etiqueta: {reason}")
-    return excluded
 
 
 # TYPING AND CYCLES ---------------------------------------------------------------------------

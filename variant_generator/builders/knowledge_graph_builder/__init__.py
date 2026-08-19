@@ -46,10 +46,11 @@ __all__ = [
 # Shares of a whole build, taken from a timed run rather than from how the code looks. The
 # previous numbers guessed extraction at 48 % because it is the only per-chunk phase; it
 # measured 8 %, while the handful of calls that reason over the whole inventory — linking,
-# merging, taggability — are where the build actually spends its hour. Typing the relations
-# is deterministic and takes milliseconds, so it only carries a weight to avoid a bar that
+# merging — are where the build actually spends its hour. Typing the relations is
+# deterministic and takes milliseconds, so it only carries a weight to avoid a bar that
 # jumps. Conversion keeps a real share for the first build and simply flies past on later
-# ones, where the markdown cache answers instead of Docling.
+# ones, where the markdown cache answers instead of Docling. Taggability moved out of the
+# build entirely (see `variant_generator/taggability.py`) and carries no weight here.
 BUILD_PHASES = (
     ("convert", "Convirtiendo los documentos del corpus", 11),
     ("extract", "Extrayendo conceptos y relaciones", 8),

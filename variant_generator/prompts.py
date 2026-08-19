@@ -1075,12 +1075,33 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-def review_taggable_concepts_prompt(domain: str, domains_block: str, nodes_block: str) -> str:
+def review_taggable_concepts_prompt(
+    domain: str,
+    domains_block: str,
+    nodes_block: str,
+    context: dict,
+    modalities_block: str,
+    samples_block: str = "",
+) -> str:
+    context_lines = "\n".join(f"- {k}: {v}" for k, v in (context or {}).items())
+    context_section = f"\n# TEACHING CONTEXT\n{context_lines}\n" if context_lines else ""
+    samples_section = (
+        "\n# REAL ITEMS FROM THIS SUBJECT'S MATERIAL (what an item actually looks like here)\n"
+        f"{samples_block}\n"
+        if samples_block.strip()
+        else ""
+    )
     return f"""\
 You are reviewing ONE thematic domain of a knowledge graph built from a corpus of teaching material on a single subject. The graph exists to LABEL learning items (exercises, problems, assessment tasks), and a label answers exactly one question: what does this item make the student PRACTISE?
 
 Your task: decide which of the concepts listed below are USELESS AS LABELS and must be excluded from labelling. Everything you do not list stays usable as a label.
-
+{context_section}
+# WHAT AN ITEM IS IN THIS INSTANCE
+This subject sets its tasks in these modalities, and every label you keep will be used to
+label items OF THESE SHAPES and no others. A concept that no item of these modalities could
+ever be ABOUT is useless as a label here, however respectable it is as a term.
+{modalities_block}
+{samples_section}
 # THE TEST: DOES IT DISCRIMINATE?
 For each concept, in this order:
 1. Could an item have THIS concept as its objective — one that a student who has mastered everything else except this could NOT solve? If not, exclude it.
