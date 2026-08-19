@@ -10,6 +10,7 @@ JobKind = Literal[
     "describe_concepts",
     "index",
     "tag",
+    "review_taggability",
     "generate",
     "evaluate",
 ]
@@ -23,6 +24,7 @@ JOB_LABELS: dict[str, str] = {
     "describe_concepts": "Generar descripciones de conceptos",
     "index": "Indexar conceptos y banco",
     "tag": "Etiquetar el banco",
+    "review_taggability": "Revisar la etiquetabilidad",
     "generate": "Generar ítems",
     "evaluate": "Evaluación comparativa",
 }
@@ -38,6 +40,7 @@ JOB_ARTIFACT: dict[str, str] = {
     "build_kg": "knowledge_graph",
     "build_bank": "exemplars_bank",
     "tag": "exemplars_bank",
+    "review_taggability": "knowledge_graph",
 }
 
 

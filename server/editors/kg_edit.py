@@ -152,6 +152,15 @@ def replace(ws: Workspace, graph_raw: dict) -> dict:
     return _save(ws, graph_raw, "grafo de conocimiento reemplazado")
 
 
+def set_non_taggable(ws: Workspace, concepts: list[str]) -> dict:
+    graph_raw = raw(ws)
+    universe = {c for cs in graph_raw["concepts_by_domains"].values() for c in cs}
+    kept = sorted(set(concepts) & universe)
+    graph_raw["generic_non_taggable_concepts"] = kept
+    _save(ws, graph_raw, "etiquetabilidad revisada")
+    return {"non_taggable": len(kept)}
+
+
 def _all_concepts(graph_raw: dict) -> set[str]:
     return {c for names in graph_raw["concepts_by_domains"].values() for c in names}
 

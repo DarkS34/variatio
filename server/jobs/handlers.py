@@ -11,10 +11,13 @@ from variant_generator import config, progress, stages
 from variant_generator.concept_tagger import ConceptTagger
 from variant_generator.evaluation import ARMS
 from variant_generator.evaluation import rag as rag_arm
+from variant_generator.exemplars_profile import ExemplarsProfile
+from variant_generator.knowledge_graph import KnowledgeGraph
 from variant_generator.workspace import Workspace
 
-from .. import deps, evaluation_store, review, settings
+from .. import deps, evaluation_store, review, settings, storage
 from ..db import repository, session_scope, study
+from ..editors import kg_edit
 from .build_process import run_build
 from .models import Job
 from .runner import JobControl
@@ -102,6 +105,35 @@ def handle_tag(job: Job, control: JobControl) -> dict:
         "tagged": len(bank) - len(untagged),
         "untagged": len(untagged),
     }
+
+
+def handle_review_taggability(job: Job, control: JobControl) -> dict:
+    deps.require_inference()
+    ws = _workspace(job)
+
+    profile_path = stages.exemplars_profile_path(ws)
+    if profile_path is None:
+        raise ValueError(
+            "La etiquetabilidad se decide contra el perfil de ejemplares, y este "
+            "workspace no lo tiene todavía: constrúyelo antes."
+        )
+
+    graph_path = stages.knowledge_graph_path(ws)
+    if graph_path is None:
+        raise ValueError("No hay grafo de conocimiento que revisar.")
+
+    from variant_generator import taggability
+
+    profile = ExemplarsProfile(profile_path)
+    graph = KnowledgeGraph(graph_path)
+    bank = storage.read_json(ws.exemplars_bank_path) or {}
+
+    with progress.overall(taggability.BUILD_PHASES):
+        progress.phase("taggable")
+        non_taggable = taggability.review(graph, profile, bank)
+
+    result = kg_edit.set_non_taggable(ws, non_taggable)
+    return {"non_taggable": result["non_taggable"], "concepts": len(graph.all_concepts)}
 
 
 def handle_generate(job: Job, control: JobControl) -> dict:
@@ -284,6 +316,7 @@ HANDLERS = {
     "describe_concepts": handle_describe_concepts,
     "index": handle_index,
     "tag": handle_tag,
+    "review_taggability": handle_review_taggability,
     "generate": handle_generate,
     "evaluate": handle_evaluate,
 }
