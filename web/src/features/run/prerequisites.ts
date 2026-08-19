@@ -53,10 +53,11 @@ export function adjacency(graph: GraphView | undefined): Adjacency | null {
  * reading have been closures since 2026-08-19: at one hop, a concept two steps away was
  * neither allowed nor forbidden, and the forbidden side is the safety-relevant one.
  *
- * `taggableOnly` filters the RESULT without cutting the traversal short: the graph carries
- * every concept it extracted, while a curriculum is validated against the taggable set
- * alone (`ContentGenerator._validate_input`), so stopping at a non-taggable concept would
- * drop whatever legitimately sits behind it.
+ * `taggableOnly` filters the RESULT without cutting the traversal short. `priors`/
+ * `posteriors` pass `false`: they mirror the server's prompt, which applies no such
+ * filter, so hiding a non-taggable prerequisite here would disagree with what the model
+ * is actually told. A concept selector (Task 25) is the caller that wants `true`, since a
+ * non-taggable concept is not a legitimate pick there.
  */
 function closure(
   adj: Adjacency,
@@ -87,10 +88,10 @@ function closure(
 
 /** Everything before the target: what the graph says is already mastered. */
 export function priors(adj: Adjacency, concepts: string[]): string[] {
-  return closure(adj, concepts, adj.out, true);
+  return closure(adj, concepts, adj.out, false);
 }
 
 /** Everything after the target: what has not been taught yet. */
 export function posteriors(adj: Adjacency, concepts: string[]): string[] {
-  return closure(adj, concepts, adj.in, true);
+  return closure(adj, concepts, adj.in, false);
 }
