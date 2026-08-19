@@ -211,13 +211,13 @@ def remember_passage(
 # normaliza, así que pasa — se cita la cabeza del fragmento, que es de donde salió igual.
 _LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
 _SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
+MIN_LEADER_RUNS = 3
 
 
 def is_navigation(paragraph: str) -> bool:
-    lines = [line.strip() for line in paragraph.splitlines() if line.strip()]
-    if not lines:
+    if not paragraph.strip():
         return True
-    return sum(1 for line in lines if _LEADER.search(line)) * 2 >= len(lines)
+    return len(_LEADER.findall(paragraph)) >= MIN_LEADER_RUNS
 
 
 def clip_to_sentence(text: str, max_chars: int) -> str:

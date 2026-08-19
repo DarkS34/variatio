@@ -39,7 +39,19 @@ def test_mentions_keeps_distinct_complexity_concepts_apart():
     assert not extraction.mentions("Un algoritmo O(log n) es habitual.", "O(n)")
 
 
-TOC_LINE = "| Tema I  ·  Introducción a la Programación  ................................  3"
+TOC_LINE = (
+    "Tema I · Introducción a la Programación ................ 3   "
+    "Tema II · Variables y Tipos ................ 5   "
+    "Tema III · Estructuras de Control ................ 8"
+)
+
+MULTILINE_INDEX = "\n".join(
+    [
+        "Tema I · Introducción a la Programación ................ 3",
+        "Tema II · Variables y Tipos ................ 5",
+        "Tema III · Estructuras de Control ................ 8",
+    ]
+)
 
 
 def test_navigation_detects_a_table_of_contents_line():
@@ -47,7 +59,22 @@ def test_navigation_detects_a_table_of_contents_line():
 
 
 def test_navigation_detects_a_multiline_index():
-    assert extraction.is_navigation(f"{TOC_LINE}\n| Iterables y secuencias  .......  12")
+    assert extraction.is_navigation(MULTILINE_INDEX)
+
+
+def test_navigation_detects_a_realistic_single_line_toc():
+    toc = "Tema ................ 4  " * 3
+    assert extraction.is_navigation(toc)
+
+
+def test_navigation_detects_middle_dot_leaders():
+    toc = "Tema ····· 4  " * 3
+    assert extraction.is_navigation(toc)
+
+
+def test_navigation_detects_ellipsis_character_leaders():
+    toc = "Tema …… 4  " * 3
+    assert extraction.is_navigation(toc)
 
 
 def test_navigation_keeps_real_prose():
@@ -56,6 +83,12 @@ def test_navigation_keeps_real_prose():
 
 def test_navigation_keeps_prose_with_an_ellipsis():
     assert not extraction.is_navigation("El bucle sigue... hasta agotar la secuencia.")
+
+
+def test_navigation_keeps_prose_with_a_stray_dot_run():
+    assert not extraction.is_navigation(
+        "Esto es una frase normal con .... cuatro puntos raros en medio de la explicacion."
+    )
 
 
 def test_clip_returns_short_text_untouched():
@@ -72,3 +105,17 @@ def test_clip_falls_back_to_a_word_boundary():
     clipped = extraction.clip_to_sentence(text, 30)
     assert not clipped.endswith("palab")
     assert clipped.split() == ["palabra"] * 3
+
+
+def test_clip_returns_empty_when_no_boundary_exists():
+    assert extraction.clip_to_sentence("a" * 200, 50) == ""
+
+
+def test_clip_never_exceeds_max_chars():
+    cases = [
+        ("b" * 300, 50),
+        ("Primera frase clara pero sin fin cercano " + "c" * 300 + ". Fin.", 40),
+        ("Otra frase normal de longitud media para probar límites del recorte.", 25),
+    ]
+    for text, n in cases:
+        assert len(extraction.clip_to_sentence(text, n)) <= n
