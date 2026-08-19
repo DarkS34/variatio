@@ -137,12 +137,6 @@ function ConceptDetail({
 
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>grado {concept.degree}</span>
-        <span
-          className={concept.exemplars === 0 ? "text-[var(--warning)]" : undefined}
-          title={concept.exemplars === 0 ? "Se generará en zero-shot" : undefined}
-        >
-          {concept.exemplars} ejemplo(s)
-        </span>
       </div>
 
       <Separator />
@@ -398,7 +392,6 @@ function GraphExplorer() {
         <span className={totals.described < totals.taggable ? "text-[var(--warning)]" : undefined}>
           {totals.described} con descripción
         </span>
-        <span>{totals.with_exemplars} con ejemplos</span>
       </div>
 
       {error ? (
@@ -526,7 +519,6 @@ function GraphExplorer() {
                         {!concept.description ? (
                           <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
                         ) : null}
-                        <span className="ml-2 tabular-nums">{concept.exemplars}</span>
                       </td>
                     </tr>
                   );

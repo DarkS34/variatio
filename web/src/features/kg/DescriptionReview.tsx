@@ -299,11 +299,6 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium">{concept.name}</span>
                 <Badge variant="outline">{concept.domain}</Badge>
-                {concept.exemplars > 0 ? (
-                  <Badge variant="secondary">{concept.exemplars} ejemplos</Badge>
-                ) : (
-                  <Badge variant="warning">sin ejemplos</Badge>
-                )}
                 <div className="ml-auto flex items-center gap-2">
                   {saved[concept.name] ? (
                     <span className="flex items-center gap-1 text-xs text-[var(--success)]">
