@@ -23,3 +23,17 @@ def test_mentions_rejects_an_unrelated_paragraph():
 
 def test_mentions_does_not_match_a_longer_unrelated_word():
     assert not extraction.mentions("Trabajamos en el basecamp del equipo.", "Base")
+
+
+def test_mentions_matches_a_concept_with_parentheses():
+    assert extraction.mentions(
+        "El algoritmo tiene complejidad O(n) en el peor caso.", "O(n)"
+    )
+
+
+def test_mentions_matches_a_concept_with_parentheses_before_punctuation():
+    assert extraction.mentions("La complejidad es O(n).", "O(n)")
+
+
+def test_mentions_keeps_distinct_complexity_concepts_apart():
+    assert not extraction.mentions("Un algoritmo O(log n) es habitual.", "O(n)")

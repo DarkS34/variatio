@@ -252,7 +252,7 @@ def _stems(text: str) -> set[str]:
 
 
 def mentions(text: str, concept: str) -> bool:
-    if re.search(rf"\b{re.escape(_fold(concept))}\b", _fold(text)):
+    if re.search(rf"(?<!\w){re.escape(_fold(concept))}(?!\w)", _fold(text)):
         return True
     needles = [
         _singular(w)
