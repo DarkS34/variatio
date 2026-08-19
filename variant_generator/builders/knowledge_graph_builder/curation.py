@@ -116,42 +116,25 @@ def curate_domains(
         blocks.nodes_block(concepts, relations, {}, origins),
         blocks.documents_block(documents),
     )
-    # NOT `think=True`, and this is the one call where that is load-bearing. Asked to
-    # partition the whole inventory, a reasoning model turns the reasoning channel into the
-    # answer: measured over 203 concepts with `qwen3.8:27b-q4_K_M` at `low`, it enumerated
-    # «24. Colecciones → Domain 5 ✓» for 36 929 characters, hit its stop token at concept 60
-    # and returned `response == ""` — with no JSON anywhere in the deliberation to salvage,
-    # and `done_reason: "stop"`, so nothing upstream could tell it apart from a real answer.
-    # Every concept would have landed in `Sin clasificar`, which is silent: the graph builds,
-    # it is just worthless, because neither the per-domain linking nor the taggability pass
-    # can reason about that bucket.
-    #
-    # Off, with the grammar, the same call takes 56 s instead of 400 and places 202 of the
-    # 203. It is also what `assign_round` below has always done, for the same reason: this is
-    # a partition, not a judgement, and a partition is exactly what a grammar can pin down.
     response = inference.generate(
         model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAINS_SCHEMA
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAINS_SCHEMA, max_attempts) or {}
-    by_domain = reconcile_domains(concepts, raw.get("domains", {}) or {})
+
+    named = [d for d, members in (raw.get("domains") or {}).items() if isinstance(members, list)]
+    if not named:
+        logger.warning("El modelo no nombró ningún dominio; todo queda sin clasificar")
+        return {config.KG_BUILDER_UNCLASSIFIED_DOMAIN: sorted(concepts)}
+
+    logger.info(f"{len(named)} dominio(s) nombrados; asignando {len(concepts)} concepto(s) por lotes")
+    by_domain = {domain: [] for domain in named}
+    remaining = assign_round(sorted(concepts), by_domain, relations, max_attempts=max_attempts)
+
+    for domain in by_domain:
+        by_domain[domain] = sorted(set(by_domain[domain]))
+    if remaining:
+        by_domain[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(remaining)
     return place_leftovers(by_domain, relations, max_attempts=max_attempts)
-
-
-def reconcile_domains(concepts: list[str], domains_raw: dict) -> dict:
-    valid = set(concepts)
-    placed: set[str] = set()
-    by_domain: dict[str, list[str]] = {}
-    for domain, members in domains_raw.items():
-        if not isinstance(members, list):
-            continue
-        kept = sorted({c for c in members if c in valid and c not in placed})
-        if kept:
-            placed.update(kept)
-            by_domain[domain] = kept
-    leftover = sorted(c for c in concepts if c not in placed)
-    if leftover:
-        by_domain.setdefault(config.KG_BUILDER_UNCLASSIFIED_DOMAIN, []).extend(leftover)
-    return by_domain
 
 
 # A concept parked in the unclassified bucket is not a concept the model judged hard to
