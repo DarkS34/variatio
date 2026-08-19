@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 import { DecisionField, describeDecision } from "./DecisionField";
 import { FormStep } from "./FormStep";
-import { adjacency, posteriors, priorClosure, priors } from "./prerequisites";
+import { adjacency, posteriors, priors } from "./prerequisites";
 
 const MAX_ITEMS = 20;
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
@@ -422,24 +422,13 @@ export function GenerateForm({
           }
           {...step("curriculum")}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            {graphAdjacency ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  patch({ curriculum: priorClosure(graphAdjacency, state.concepts) })
-                }
-              >
-                Todo lo anterior en el grafo
-              </Button>
-            ) : null}
-            {state.curriculum.length > 0 ? (
+          {state.curriculum.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="ghost" onClick={() => patch({ curriculum: [] })}>
                 Quitar la restricción
               </Button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <ConceptPicker
             concepts={concepts}

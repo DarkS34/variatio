@@ -1,7 +1,7 @@
 import type { GraphView } from "@/lib/types";
 
 /**
- * The same two hops the generator computes server-side, read off the graph payload.
+ * The same two closures the generator computes server-side, read off the graph payload.
  *
  * `ContentGenerator._prerequisites()` walks the prerequisite relation OUTwards (what the
  * student is assumed to master already) and `_posteriors()` INwards (not yet taught, and
@@ -48,58 +48,49 @@ export function adjacency(graph: GraphView | undefined): Adjacency | null {
   };
 }
 
-function hop(adj: Adjacency, concepts: string[], edges: Edges): string[] {
-  const targets = new Set(concepts);
-  const found = new Set<string>();
-  for (const concept of concepts) {
-    const from = adj.index.get(concept);
-    if (from === undefined) continue;
-    for (const to of edges.get(from) ?? []) {
-      const name = adj.names[to];
-      if (name && !targets.has(name)) found.add(name);
-    }
-  }
-  return [...found].sort((a, b) => a.localeCompare(b, "es"));
-}
-
-/** One hop out: what the graph says the student already masters. */
-export function priors(adj: Adjacency, concepts: string[]): string[] {
-  return hop(adj, concepts, adj.out);
-}
-
-/** One hop in: downstream of the target, so not taught yet. */
-export function posteriors(adj: Adjacency, concepts: string[]): string[] {
-  return hop(adj, concepts, adj.in);
-}
-
 /**
- * Everything reachable outwards, targets included: a curriculum proposal.
+ * The transitive closure, in whichever direction is asked for. Both sides of the graph
+ * reading have been closures since 2026-08-19: at one hop, a concept two steps away was
+ * neither allowed nor forbidden, and the forbidden side is the safety-relevant one.
  *
- * Traversal crosses non-taggable concepts but never returns them: the graph carries every
- * concept it extracted, while a curriculum is validated against the taggable set alone
- * (`ContentGenerator._validate_input`). Cutting the walk at them instead of filtering the
- * result would drop whatever legitimately sits behind one.
+ * `taggableOnly` filters the RESULT without cutting the traversal short: the graph carries
+ * every concept it extracted, while a curriculum is validated against the taggable set
+ * alone (`ContentGenerator._validate_input`), so stopping at a non-taggable concept would
+ * drop whatever legitimately sits behind it.
  */
-export function priorClosure(adj: Adjacency, concepts: string[]): string[] {
+function closure(
+  adj: Adjacency,
+  concepts: string[],
+  edges: Edges,
+  taggableOnly: boolean,
+): string[] {
+  const start = new Set(concepts);
   const seen = new Set<number>();
   const queue: number[] = [];
   for (const concept of concepts) {
-    const start = adj.index.get(concept);
-    if (start !== undefined && !seen.has(start)) {
-      seen.add(start);
-      queue.push(start);
-    }
+    const index = adj.index.get(concept);
+    if (index !== undefined) queue.push(index);
   }
   while (queue.length > 0) {
-    for (const next of adj.out.get(queue.pop()!) ?? []) {
+    for (const next of edges.get(queue.pop()!) ?? []) {
       if (seen.has(next)) continue;
       seen.add(next);
       queue.push(next);
     }
   }
   return [...seen]
-    .filter((i) => adj.taggable[i])
+    .filter((i) => !taggableOnly || adj.taggable[i])
     .map((i) => adj.names[i])
-    .filter(Boolean)
+    .filter((name) => name && !start.has(name))
     .sort((a, b) => a.localeCompare(b, "es"));
+}
+
+/** Everything before the target: what the graph says is already mastered. */
+export function priors(adj: Adjacency, concepts: string[]): string[] {
+  return closure(adj, concepts, adj.out, true);
+}
+
+/** Everything after the target: what has not been taught yet. */
+export function posteriors(adj: Adjacency, concepts: string[]): string[] {
+  return closure(adj, concepts, adj.in, true);
 }
