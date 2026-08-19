@@ -9,6 +9,7 @@ export type JobKind =
   | "describe_concepts"
   | "index"
   | "tag"
+  | "review_taggability"
   | "generate"
   | "evaluate";
 
@@ -221,6 +222,7 @@ export interface KgSummary {
     taggable: number;
     described: number;
     with_exemplars: number;
+    taggability_reviewed: boolean;
   };
 }
 

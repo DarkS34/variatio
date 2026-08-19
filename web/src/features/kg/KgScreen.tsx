@@ -25,7 +25,14 @@ import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useInvalidateChain, useKg, useKgGraph } from "@/state/queries";
+import {
+  useInvalidateChain,
+  useJobRunning,
+  useKg,
+  useKgGraph,
+  usePipeline,
+  useSubmitJob,
+} from "@/state/queries";
 import { DescriptionReview } from "./DescriptionReview";
 import { GraphCanvas } from "./GraphCanvas";
 
@@ -304,6 +311,9 @@ function GraphExplorer() {
   const kg = useKg();
   const graph = useKgGraph();
   const invalidate = useInvalidateChain();
+  const pipeline = usePipeline();
+  const submitReview = useSubmitJob();
+  const running = useJobRunning("review_taggability");
 
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -345,6 +355,9 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
+  const profileReady =
+    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
+  const launchReview = () => submitReview.mutate({ kind: "review_taggability" });
 
   return (
     <div className="space-y-4">
@@ -479,6 +492,26 @@ function GraphExplorer() {
           ))}
         </span>
       </div>
+
+      {!totals.taggability_reviewed ? (
+        <Alert
+          tone="warning"
+          title="Etiquetabilidad sin revisar"
+          action={
+            <Button size="sm" disabled={!profileReady || running} onClick={launchReview}>
+              Revisar etiquetabilidad
+            </Button>
+          }
+        >
+          <p>
+            Todos los conceptos se pueden usar como etiqueta, incluidos los que nombran una
+            parte del temario o una actividad genérica. La revisión decide cuáles descartar, y
+            necesita el perfil de ejemplares: qué sirve como etiqueta depende de qué forma
+            tienen los ejercicios de esta asignatura.
+            {!profileReady ? " Construye antes el perfil de ejemplares." : null}
+          </p>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <Card className="flex min-h-0 flex-col overflow-hidden">

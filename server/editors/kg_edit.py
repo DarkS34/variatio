@@ -86,6 +86,7 @@ def summary(ws: Workspace) -> dict:
             "taggable": len(graph.taggable_concepts),
             "described": sum(1 for c in graph.taggable_concepts if descriptions.get(c)),
             "with_exemplars": sum(1 for c in graph.taggable_concepts if exemplars.get(c)),
+            "taggability_reviewed": bool(graph.generic_non_taggable_concepts),
         },
     }
 
