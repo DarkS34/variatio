@@ -61,21 +61,16 @@ def run(
         )
     progress.advance(1.0)
 
-    non_taggable = review_taggability(
-        concepts_by_domains, relations, max_attempts=max_attempts
-    )
-
     curated = {
         "concepts_by_domains": concepts_by_domains,
-        "generic_non_taggable_concepts": non_taggable,
+        "generic_non_taggable_concepts": [],
         "relations": typed,
     }
     write_json(output_path, curated)
     write_sources(sources_path, cleaned, universe)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
-        f"{len(universe) - len(non_taggable)} etiquetables, "
-        f"{len(typed)} grupo(s) de relación"
+        f"{len(typed)} grupo(s) de relación; falta revisar la etiquetabilidad"
     )
     return curated
 

@@ -57,7 +57,6 @@ BUILD_PHASES = (
     ("domains", "Agrupando los conceptos en dominios", 9),
     ("link", "Enlazando conceptos y ordenando el temario", 26),
     ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
-    ("taggable", "Revisando qué conceptos sirven como etiqueta", 20),
 )
 
 BUILD_MODELS = [
@@ -69,7 +68,6 @@ BUILD_MODELS = [
     config.KG_DOMAINS_LEFTOVERS_MODEL,
     config.KG_LINK_DOMAIN_MODEL,
     config.KG_LINK_CROSS_DOMAIN_MODEL,
-    config.KG_TAGGABLE_MODEL,
     config.REPAIR_LLM,
 ]
 
