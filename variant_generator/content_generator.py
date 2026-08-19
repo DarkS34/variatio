@@ -155,6 +155,23 @@ def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
     return "\n".join(parts)
 
 
+# The two operations are NOT the same, and confusing them inverts the meaning:
+#   forbidden     = "it is downstream AND has NOT been covered" -> subtraction
+#   assumed known = "it is a prerequisite AND HAS been covered" -> intersection
+# Subtracting on the permissive side would mark as known exactly the prerequisites
+# the student has not seen.
+def assumed_known(closure: list[str], curriculum: list[str] | None) -> list[str]:
+    if not curriculum:
+        return sorted(closure)
+    return sorted(set(closure) & set(curriculum))
+
+
+def forbidden(closure: list[str], curriculum: list[str] | None) -> list[str]:
+    if not curriculum:
+        return sorted(closure)
+    return sorted(set(closure) - set(curriculum))
+
+
 def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
     """One repaired JSON object, picking the richest element if it came as a list."""
     try:
@@ -228,7 +245,9 @@ class ContentGenerator:
         )
 
         target_block = self._format_target_concepts(concepts)
-        prerequisites_block = self._format_concept_list(self._prerequisites(concepts))
+        prerequisites_block = self._format_concept_list(
+            self._prerequisites(concepts, curriculum)
+        )
         excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
         curriculum_block = self._format_concept_list(curriculum or [])
         rules_block = "\n".join(f"- {r}" for r in target_type.general_generation_rules)
@@ -403,23 +422,17 @@ class ContentGenerator:
             lines.append(f"- **{c}**: {desc}" if desc else f"- **{c}**")
         return "\n".join(lines)
 
-    def _neighbors(self, concepts: list[str], direction: str) -> list[str]:
+    def _closure(self, concepts: list[str], forward: bool) -> list[str]:
         relation = config.KG_PREREQUISITE_RELATION
-        if not self.knowledge_graph.has_relation(relation):
-            return []
-        found: set[str] = set()
-        for concept in concepts:
-            found.update(self.knowledge_graph.neighbors(concept, relation, direction=direction))
-        return sorted(found - set(concepts))
+        if forward:
+            return self.knowledge_graph.prerequisite_closure(concepts, relation)
+        return self.knowledge_graph.dependent_closure(concepts, relation)
 
-    def _prerequisites(self, concepts: list[str]) -> list[str]:
-        return self._neighbors(concepts, "out")
+    def _prerequisites(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
+        return assumed_known(self._closure(concepts, forward=True), curriculum)
 
     def _posteriors(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
-        posteriors = self._neighbors(concepts, "in")
-        if curriculum:
-            posteriors = [c for c in posteriors if c not in set(curriculum)]
-        return posteriors
+        return forbidden(self._closure(concepts, forward=False), curriculum)
 
     @staticmethod
     def _format_concept_list(concepts: list[str]) -> str:
