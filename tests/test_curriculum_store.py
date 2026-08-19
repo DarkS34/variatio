@@ -40,3 +40,13 @@ def test_a_concept_that_left_the_graph_is_reported_not_hidden(tmp_path):
     state = curriculum.load(ws, KnowledgeGraph(str(ws.kg_path)))
     assert state["concepts"] == ["Variable"]
     assert state["dropped"] == ["Función"]
+
+
+def test_a_non_taggable_concept_can_still_be_covered(tmp_path):
+    ws, graph = workspace(tmp_path)
+    assert "Notación asintótica" not in graph.taggable_concepts
+    assert "Notación asintótica" in graph.all_concepts
+    curriculum.save(ws, ["Variable", "Notación asintótica"], graph)
+    state = curriculum.load(ws, graph)
+    assert state["concepts"] == ["Notación asintótica", "Variable"]
+    assert state["dropped"] == []

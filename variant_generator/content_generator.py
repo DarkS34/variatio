@@ -345,7 +345,7 @@ class ContentGenerator:
                 f"Unknown fixed fields for item type '{item_type.key}': {unknown_fields} "
                 f"(it declares {list(item_type.field_specs)})"
             )
-        if curriculum is not None:
+        if curriculum:
             unknown_curriculum = [c for c in curriculum if c not in self.taggable_concepts]
             if unknown_curriculum:
                 raise ValueError(

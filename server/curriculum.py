@@ -28,15 +28,15 @@ def load(ws: Workspace, graph: KnowledgeGraph) -> dict:
     data = _read(ws)
     if not data["concepts"]:
         return dict(EMPTY)
-    taggable = set(graph.taggable_concepts)
-    kept = sorted({c for c in data["concepts"] if c in taggable})
-    dropped = sorted({c for c in data["concepts"] if c not in taggable})
+    existing = set(graph.all_concepts)
+    kept = sorted({c for c in data["concepts"] if c in existing})
+    dropped = sorted({c for c in data["concepts"] if c not in existing})
     return {"concepts": kept, "updated_at": data["updated_at"], "dropped": dropped}
 
 
 def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:
-    taggable = set(graph.taggable_concepts)
-    kept = sorted({c for c in concepts if c in taggable})
+    existing = set(graph.all_concepts)
+    kept = sorted({c for c in concepts if c in existing})
     storage.write_json(
         ws.curriculum_path,
         {"concepts": kept, "updated_at": datetime.now(timezone.utc).isoformat()},

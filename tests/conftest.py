@@ -5,9 +5,9 @@ import pytest
 CHAIN_GRAPH = {
     "concepts_by_domains": {
         "Fundamentos": ["Variable", "Función"],
-        "Avanzado": ["Recursividad", "Memoización"],
+        "Avanzado": ["Recursividad", "Memoización", "Notación asintótica"],
     },
-    "generic_non_taggable_concepts": [],
+    "generic_non_taggable_concepts": ["Notación asintótica"],
     "relations": [
         {
             "details": {
