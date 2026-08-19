@@ -192,7 +192,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         }
         for r in results
     ]
-    saved = _remember(job, items, resolved_type.key)
+    saved = _remember(job, items, resolved_type.key, curriculum)
     return {
         "requested": n,
         "produced": len(results),
@@ -205,7 +205,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
 # Persisting the variants is deliberately best-effort: a database that is briefly away
 # must not turn a minute of GPU into a failed job, because the items are already in the
 # job result and on screen. What is lost is the history, and the log says so.
-def _remember(job: Job, items: list[dict], item_type: str) -> int:
+def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str] | None) -> int:
     if not items:
         return 0
     params = job.params
@@ -223,7 +223,7 @@ def _remember(job: Job, items: list[dict], item_type: str) -> int:
                     item_type=entry.get("item_type") or item_type,
                     item=entry["item"],
                     concepts=params.get("concepts") or [],
-                    curriculum=params.get("curriculum") or [],
+                    curriculum=curriculum or [],
                     fixed=params.get("fixed") or {},
                     instructions=params.get("instructions"),
                     think=bool(params.get("think", True)),
