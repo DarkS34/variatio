@@ -15,6 +15,7 @@ from variant_generator.exemplars_profile import ExemplarsProfile
 from variant_generator.knowledge_graph import KnowledgeGraph
 from variant_generator.workspace import Workspace
 
+from .. import curriculum as curriculum_store
 from .. import deps, evaluation_store, review, settings, storage
 from ..db import repository, session_scope, study
 from ..editors import kg_edit
@@ -144,7 +145,9 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     concepts = params.get("concepts") or None
     item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None
-    curriculum = params.get("curriculum") or None
+    curriculum = curriculum_store.resolve(
+        context.workspace, context.knowledge_graph, params.get("curriculum")
+    )
     instructions = params.get("instructions") or None
     # Absent means "as it always was": every caller that predates the switch reasons.
     think = bool(params.get("think", True))
