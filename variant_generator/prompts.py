@@ -958,10 +958,17 @@ Your task: list the nodes that do NOT name a concept of the subject and must be 
 A valid node NAMES a concept of the subject: a term that could be an entry in a glossary or an index (a thing, idea, technique, category, structure, phenomenon or named entity). It is NOT a phrase that describes, explains or predicates something.
 
 # REMOVE
-- Document metadata: section titles, tables of contents, bibliography, licences, and the proper names of authors or works.
-- Incidental scenarios from the examples: the objects, characters, datasets or specific situations that merely illustrate.
-- FRAGMENTS: descriptive phrases, clauses or predicates that read as part of a sentence instead of naming a concept — they start with a verb, contain a conjugated verb, or state a condition, a property or an action.
-- Nodes clearly foreign to the subject (infer the subject from the set of nodes).
+- Document metadata: section titles, bibliography, licences, authors, page furniture.
+- Fragments that are not noun phrases: anything that starts with a verb, carries a
+  conjugated verb, or states a condition or an action.
+- Single letters, isolated symbols and bare values.
+- The objects, characters or scenarios of the illustrative examples, which belong to the
+  example and not to the subject.
+
+Judge only whether the string NAMES something. Whether the thing it names is useful as a
+LABEL for exercises is a different question, asked later and with the exemplars profile in
+hand; do not answer it here. An umbrella term, a cross-cutting quality or a generic stage of
+the work all NAME something, so they stay.
 
 # KEEP
 - Do not remove a term for being short, elementary, generic or infrequent. Rarity is not evidence of noise here, and whether a concept is useful as a LABEL is decided much later by someone else — that is not your question.
