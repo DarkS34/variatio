@@ -346,10 +346,11 @@ class ContentGenerator:
                 f"(it declares {list(item_type.field_specs)})"
             )
         if curriculum:
-            unknown_curriculum = [c for c in curriculum if c not in self.taggable_concepts]
+            known = set(self.knowledge_graph.all_concepts)
+            unknown_curriculum = [c for c in curriculum if c not in known]
             if unknown_curriculum:
                 raise ValueError(
-                    f"Unknown curriculum concepts (not in KG taggable set): {unknown_curriculum}"
+                    f"Unknown curriculum concepts (not in the knowledge graph): {unknown_curriculum}"
                 )
             outside = [c for c in concepts if c not in set(curriculum)]
             if outside:

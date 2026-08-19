@@ -20,6 +20,7 @@ def _graph(tmp_path):
 
 def _generator(graph: KnowledgeGraph) -> ContentGenerator:
     generator = object.__new__(ContentGenerator)
+    generator.knowledge_graph = graph
     generator.taggable_concepts = set(graph.taggable_concepts)
     return generator
 
@@ -33,3 +34,26 @@ def test_a_non_empty_curriculum_still_rejects_a_target_outside_it(tmp_path):
     generator = _generator(_graph(tmp_path))
     with pytest.raises(ValueError, match="Target concepts not contained in curriculum"):
         generator._validate_input(_FakeItemType(), ["Función"], {}, 1, ["Variable"], "")
+
+
+def test_a_curriculum_may_contain_a_non_taggable_concept(tmp_path):
+    graph = _graph(tmp_path)
+    assert "Notación asintótica" not in graph.taggable_concepts
+    assert "Notación asintótica" in graph.all_concepts
+    generator = _generator(graph)
+    generator._validate_input(
+        _FakeItemType(),
+        ["Recursividad"],
+        {},
+        1,
+        ["Recursividad", "Notación asintótica"],
+        "",
+    )
+
+
+def test_a_curriculum_still_rejects_a_name_absent_from_the_graph(tmp_path):
+    generator = _generator(_graph(tmp_path))
+    with pytest.raises(ValueError, match="Unknown curriculum concepts"):
+        generator._validate_input(
+            _FakeItemType(), ["Variable"], {}, 1, ["Variable", "Inexistente"], ""
+        )
