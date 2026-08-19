@@ -76,15 +76,3 @@ TAGGABLE_SCHEMA = {
     },
     "required": ["non_taggable"],
 }
-
-# Two flat maps and not a map of objects, for the same reason as the ones above: what this
-# converter safely accepts is an `additionalProperties` of a scalar type. Nesting one object
-# per concept would read better and be a bet on the engine.
-DIFFICULTY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "levels": {"type": "object", "additionalProperties": {"type": "integer"}},
-        "thresholds": {"type": "object", "additionalProperties": {"type": "string"}},
-    },
-    "required": ["levels", "thresholds"],
-}

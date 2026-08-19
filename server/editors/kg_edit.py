@@ -41,7 +41,6 @@ def summary(ws: Workspace) -> dict:
     graph_raw = raw(ws)
     graph = _load(graph_raw)
     descriptions = stages.load_concept_descriptions(ws)
-    calibration = stages.load_concept_difficulty(ws)["concepts"]
 
     exemplars: dict[str, int] = {}
     for item in _bank(ws).values():
@@ -62,7 +61,6 @@ def summary(ws: Workspace) -> dict:
             "degree": degrees.get(name, 0),
             "description": descriptions.get(name),
             "exemplars": exemplars.get(name, 0),
-            "difficulty": calibration.get(name),
         }
         for name in graph.all_concepts
     ]
@@ -88,7 +86,6 @@ def summary(ws: Workspace) -> dict:
             "taggable": len(graph.taggable_concepts),
             "described": sum(1 for c in graph.taggable_concepts if descriptions.get(c)),
             "with_exemplars": sum(1 for c in graph.taggable_concepts if exemplars.get(c)),
-            "calibrated": sum(1 for c in graph.taggable_concepts if calibration.get(c)),
         },
     }
 
@@ -288,7 +285,6 @@ def _purge_concept(ws: Workspace, graph_raw: dict, name: str) -> None:
         for source, targets in list(data.items()):
             data[source] = [t for t in targets if t != name]
     _forget_description(ws, name)
-    _rekey_difficulty(ws, name, None)
 
 
 def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str) -> None:
@@ -303,7 +299,6 @@ def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str)
         for source, targets in data.items():
             data[source] = [new_name if t == name else t for t in targets]
     _move_description(ws, name, new_name)
-    _rekey_difficulty(ws, name, new_name)
 
 
 # The description cache is keyed by concept name and nothing else invalidates it:
@@ -333,20 +328,6 @@ def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
     if new_name is not None:
         sources["concepts"][new_name] = entries
     storage.write_json(ws.concept_sources_path, sources)
-
-
-# The calibration moves and is deleted with the concept for the same reason as the
-# description: it is keyed by name and nothing else invalidates it, so a rename would leave it
-# stranded under the old name. What is NOT recomputed here is the tier — changing a
-# prerequisite by hand outdates the whole calibration, and a build fixes that, not an edit.
-def _rekey_difficulty(ws: Workspace, name: str, new_name: str | None) -> None:
-    data = stages.load_concept_difficulty(ws)
-    entry = data["concepts"].pop(name, None)
-    if entry is None:
-        return
-    if new_name is not None:
-        data["concepts"][new_name] = entry
-    stages.save_concept_difficulty(data, ws)
 
 
 # Relations -----------------------------------------------------------------------------------

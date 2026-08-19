@@ -191,7 +191,6 @@ KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
 KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
 KG_TAGGABLE_MODEL = LLM_MAIN
-KG_DIFFICULTY_MODEL = LLM_MAIN
 
 # Runtime pipeline
 
@@ -328,57 +327,6 @@ DESCRIPTION_COLLISION_SIMILARITY = 0.85
 # de notarlo: el texto seguía ahí y el concepto seguía existiendo. La 2 es la que prohíbe
 # la voz del alumno y exige la salida bajo gramática.
 DESCRIPTION_PROMPT_VERSION = 2
-
-
-# Per-concept difficulty ----------------------------------------------
-# HOW MUCH EACH CONCEPT DEMANDS, in three tiers, blending two signals: what the model judges
-# and what the structure of the graph says. It replaces a global, concept-blind difficulty
-# criterion — the profile's says «básico si son una o dos operaciones aritméticas» for the
-# whole subject — with one defined concept by concept, which is how competency-based
-# assessment defines it: a threshold written per skill, not one scale shared by all of them.
-#
-# NONE OF THESE WEIGHTS IS MEASURED. They are the starting point, and there is free ground
-# truth to calibrate them against: the bank items already carry a tier written by hand in the
-# teaching material. `difficulty.bank_report(bank, data, field=...)` compares what is derived
-# against what is written, and it is the first thing to look at before resting anything else
-# on these numbers.
-#
-# Changing the number of tiers is NOT enough here: `concept_difficulty_prompt` names the three
-# and describes them, and `generate_content_prompt` explains what each one asks for.
-DIFFICULTY_LEVELS = 3
-
-# The 50/50 the idea is named after, as a DEFAULT and not as a truth. Exact precedent:
-# `EMBEDDER_DESCRIPTION_WEIGHT`, which also splits two signals measuring different things
-# about the same object. 1.0 leaves the model's judgement alone; 0.0 the structure alone,
-# which is the setting to measure with first, because it is the half that costs no GPU.
-DIFFICULTY_LLM_WEIGHT = 0.5
-
-# The structural half, and its internal split matters more than the 50/50 above.
-#
-# DEPTH RULES, not degree. A well-connected node of the graph is CENTRAL, not hard:
-# `Variable` or `Función` have dozens of relations and are the first thing taught, while
-# `Recursividad` has few and is hard. What does order a subject is how many concepts have to
-# be mastered BEFORE, which is the depth in the prerequisite DAG — and it is exactly the
-# stratification competency-based assessment does by hand when it splits the skills into
-# foundational, core and advanced.
-#
-# The other three terms are corrections on top of that base, each with its own sign:
-#   · NEEDS   = direct outgoing prerequisites — how much has to be brought in to start. Up.
-#   · ENABLES = of how many concepts it is a prerequisite — backbone, taught early. DOWN.
-#   · SPECIFICITY = being the specific side of «es un tipo de» / «es parte de» — a refinement
-#     of something more general. Up, a little.
-#
-# The fallback relation («se relaciona con») enters NONE of them, and that exclusion is
-# deliberate: it is the extractor's catch-all, so counting it measures how talkative the model
-# was on that fragment of the corpus, not the subject matter.
-DIFFICULTY_DEPTH_WEIGHT = 0.60
-DIFFICULTY_NEEDS_WEIGHT = 0.25
-DIFFICULTY_ENABLES_WEIGHT = 0.15
-DIFFICULTY_SPECIFICITY_WEIGHT = 0.10
-
-# The cuts of the final [0,1] into the three tiers. Thirds, because there is no measured
-# reason to put them anywhere else yet.
-DIFFICULTY_TIER_BOUNDARIES = (0.34, 0.67)
 
 
 # Tagging & Generation ----------------------------------------------

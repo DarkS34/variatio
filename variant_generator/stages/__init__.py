@@ -20,10 +20,8 @@ from .generate import generate
 from .index import (
     describe_concepts,
     load_concept_descriptions,
-    load_concept_difficulty,
     load_concept_sources,
     save_concept_descriptions,
-    save_concept_difficulty,
 )
 from .initialize import PipelineContext, initialize
 from .tag import save_bank, tag_bank
@@ -47,11 +45,9 @@ __all__ = [
     "initialize",
     "knowledge_graph_path",
     "load_concept_descriptions",
-    "load_concept_difficulty",
     "load_concept_sources",
     "missing_artifacts",
     "save_bank",
     "save_concept_descriptions",
-    "save_concept_difficulty",
     "tag_bank",
 ]

@@ -77,7 +77,6 @@ DERIVED: dict[str, tuple[str, ...]] = {
     KNOWLEDGE_GRAPH: (
         "concept_descriptions_path",
         "concept_sources_path",
-        "concept_difficulty_path",
         "concepts_embeddings_path",
     ),
     EXEMPLARS_PROFILE: (),

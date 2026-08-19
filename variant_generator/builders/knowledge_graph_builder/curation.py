@@ -10,10 +10,9 @@ from pathlib import Path
 import networkx as nx
 from loguru import logger
 
-from ... import config, difficulty, inference, progress
+from ... import config, inference, progress
 from ...prompts import (
     assign_leftover_concepts_prompt,
-    concept_difficulty_prompt,
     curate_graph_domains_prompt,
     link_cross_domain_relations_prompt,
     link_domain_relations_prompt,
@@ -21,14 +20,13 @@ from ...prompts import (
 )
 from ...json_io import write_json
 from . import blocks, parsing
-from .schemas import DIFFICULTY_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
+from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
 
 
 def run(
     cleaned: dict,
     output_path: str | Path,
     sources_path: str | Path,
-    difficulty_path: str | Path,
     *,
     schema,
     max_attempts: int,
@@ -67,14 +65,6 @@ def run(
         concepts_by_domains, relations, max_attempts=max_attempts
     )
 
-    calibration = calibrate_difficulty(
-        concepts_by_domains,
-        relations,
-        set(non_taggable),
-        schema=schema,
-        max_attempts=max_attempts,
-    )
-
     curated = {
         "concepts_by_domains": concepts_by_domains,
         "generic_non_taggable_concepts": non_taggable,
@@ -82,7 +72,6 @@ def run(
     }
     write_json(output_path, curated)
     write_sources(sources_path, cleaned, universe)
-    difficulty.save_difficulty(difficulty_path, calibration)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
         f"{len(universe) - len(non_taggable)} etiquetables, "
@@ -414,112 +403,6 @@ def judge_domain(
             excluded.append(concept)
             logger.debug(f"[{domain}] «{concept}» no sirve como etiqueta: {reason}")
     return excluded
-
-
-# DIFFICULTY ------------------------------------------------------------------------------------
-
-
-# It asks ONLY about the taggable concepts, and the order of the two phases is what allows
-# that: a concept that is useless as a label will never be the objective of an exercise, so it
-# has no threshold to write and does not deserve a call. What does enter the computation is the
-# WHOLE graph — `difficulty.calibrate` receives every concept — because a non-taggable
-# prerequisite still orders the syllabus and still has to stay below.
-def calibrate_difficulty(
-    concepts_by_domains: dict,
-    relations: list[list],
-    non_taggable: set[str],
-    *,
-    schema,
-    max_attempts: int,
-) -> dict:
-    domains = list(concepts_by_domains)
-    concepts = [c for cs in concepts_by_domains.values() for c in cs]
-    if not domains:
-        return dict(difficulty.EMPTY)
-
-    progress.phase("difficulty")
-    levels: dict[str, int] = {}
-    thresholds: dict[str, str] = {}
-    with progress.step(
-        "kg_difficulty", "Calibrando cuánto exige cada concepto", len(domains)
-    ) as reporter:
-        for idx, domain in enumerate(domains, 1):
-            progress.checkpoint()
-            members = [c for c in concepts_by_domains[domain] if c not in non_taggable]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
-            progress.advance((idx - 1) / len(domains), f"{domain} ({idx}/{len(domains)})")
-            if not members:
-                continue
-            judged, written = judge_domain_difficulty(
-                domain, members, domains, relations, max_attempts=max_attempts
-            )
-            levels.update(judged)
-            thresholds.update(written)
-
-    unjudged = [c for c in concepts if c not in non_taggable and c not in levels]
-    if unjudged:
-        logger.warning(
-            f"{len(unjudged)} concepto(s) etiquetables sin nivel del modelo; "
-            "se calibran solo con la estructura del grafo"
-        )
-    progress.advance(1.0, f"{len(levels)} concepto(s) calibrados")
-    return difficulty.calibrate(concepts, relations, schema, levels, thresholds)
-
-
-# `think=False` under grammar, and it is not the comfortable choice: judging how much a concept
-# demands IS a judgement, and the taggability call next to it does reason. What decides it is
-# the SHAPE OF THE OUTPUT — one line per concept over a whole domain, which is exactly the mould
-# in which `curate_graph_domains_prompt` turned the reasoning channel into the answer and came
-# back empty — and the price: one reasoning call per domain is ~450 s measured, a good half hour
-# added to every build.
-#
-# It is the first thing to look at again if the tiers come out flat. The output is under
-# grammar, so that failure cannot happen here; what is lost is deliberation.
-def judge_domain_difficulty(
-    domain: str,
-    members: list[str],
-    domains: list[str],
-    relations: list[list],
-    *,
-    max_attempts: int,
-) -> tuple[dict[str, int], dict[str, str]]:
-    prompt = concept_difficulty_prompt(
-        domain,
-        blocks.concepts_block(domains),
-        blocks.nodes_block(members, relations, {}),
-    )
-    response = inference.generate(
-        model=config.KG_DIFFICULTY_MODEL,
-        prompt=prompt,
-        think=False,
-        format=DIFFICULTY_SCHEMA,
-    ).response
-    raw = (
-        parsing.parse_object(
-            response, f"[difficulty · {domain}] ", DIFFICULTY_SCHEMA, max_attempts
-        )
-        or {}
-    )
-
-    valid = set(members)
-    levels: dict[str, int] = {}
-    for concept, level in (raw.get("levels") or {}).items():
-        if concept not in valid:
-            continue
-        try:
-            levels[concept] = min(max(int(level), 1), config.DIFFICULTY_LEVELS)
-        except (TypeError, ValueError):
-            continue
-    thresholds = {
-        concept: " ".join(str(text).split())
-        for concept, text in (raw.get("thresholds") or {}).items()
-        if concept in valid and str(text).strip()
-    }
-
-    missing = len(valid) - len(levels)
-    if missing:
-        logger.debug(f"[{domain}] {missing} concepto(s) sin nivel en la respuesta")
-    return levels, thresholds
 
 
 # TYPING AND CYCLES ---------------------------------------------------------------------------
