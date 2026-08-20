@@ -269,6 +269,17 @@ export interface GraphView {
   links: [number, number, number][];
 }
 
+/**
+ * `dropped` is computed against the whole graph, not the taggable set: a curriculum
+ * declares coverage, so a non-taggable concept in it is legitimate and only a concept
+ * the graph no longer has at all stops counting.
+ */
+export interface CurriculumState {
+  concepts: string[];
+  updated_at: string | null;
+  dropped: string[];
+}
+
 /* Exemplars bank ------------------------------------------------------------------- */
 
 export interface TaggingTrace {

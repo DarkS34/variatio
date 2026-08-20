@@ -33,6 +33,7 @@ import {
   usePipeline,
   useSubmitJob,
 } from "@/state/queries";
+import { CurriculumTab } from "./CurriculumTab";
 import { DescriptionReview } from "./DescriptionReview";
 import { GraphCanvas } from "./GraphCanvas";
 
@@ -681,6 +682,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                   </Badge>
                 ) : undefined,
             },
+            { value: "curriculum", label: "Currículo" },
           ]}
           value={tab}
           onChange={setTab}
@@ -689,6 +691,8 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
     >
       {tab === "graph" ? (
         <GraphExplorer />
+      ) : tab === "curriculum" ? (
+        <CurriculumTab />
       ) : kg.data ? (
         <DescriptionReview kg={kg.data} />
       ) : (
