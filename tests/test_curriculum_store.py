@@ -51,6 +51,18 @@ def test_emptying_a_curriculum_is_a_save_and_not_an_absence(tmp_path):
     assert curriculum.resolve(ws, graph, None) is None
 
 
+def test_an_explicit_empty_curriculum_lifts_the_stored_one(tmp_path):
+    ws, graph = workspace(tmp_path)
+    curriculum.save(ws, ["Variable", "Función"], graph)
+    assert curriculum.resolve(ws, graph, []) == []
+
+
+def test_an_explicit_curriculum_replaces_the_stored_one(tmp_path):
+    ws, graph = workspace(tmp_path)
+    curriculum.save(ws, ["Función", "Recursividad"], graph)
+    assert curriculum.resolve(ws, graph, ["Variable"]) == ["Variable"]
+
+
 def test_a_non_taggable_concept_can_still_be_covered(tmp_path):
     ws, graph = workspace(tmp_path)
     assert "Notación asintótica" not in graph.taggable_concepts
