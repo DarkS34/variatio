@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from variant_generator import config
 from variant_generator.builders.knowledge_graph_builder import extraction
 
 SOURCES = Path("workspaces/default/cache/concept_sources.json")
@@ -45,6 +46,7 @@ def test_no_passage_is_cut_mid_sentence():
     offenders = [
         name
         for name, e in entries(load())
-        if len(e["text"]) >= 899 and not e["text"].rstrip().endswith((".", ":", ")", "!", "?"))
+        if len(e["text"]) >= config.KG_SOURCE_PASSAGE_CHARS - 1
+        and not e["text"].rstrip().endswith((".", ":", ")", "!", "?"))
     ]
     assert offenders == []
