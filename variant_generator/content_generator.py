@@ -235,7 +235,7 @@ class ContentGenerator:
         few_shot = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
             logger.warning(f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot")
-        
+
         progress.emit(
             "few_shot",
             ids=[ex_id for ex_id, _ in few_shot],
@@ -287,7 +287,7 @@ class ContentGenerator:
                     logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
                     progress.emit("item.rejected", index=i + 1)
                     continue
-                
+
                 accepted.append(result)
                 progress.emit(
                     "item.produced",
@@ -521,7 +521,7 @@ class ContentGenerator:
             think=think,
             on_token=progress.token_sink("item"),
         )
-        
+
         thinking = resp.thinking
         # A model that forgets to close `<think>` leaves the whole reply on the reasoning
         # side; the answer is still in there, at the end.
