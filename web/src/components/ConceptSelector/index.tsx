@@ -16,7 +16,14 @@ export interface ConceptSelectorProps {
   graph: GraphView | undefined;
   selected: string[];
   onChange: (next: string[]) => void;
-  /** Marked, dimmed and NOT selectable. They come in by prerequisite. */
+  /**
+   * Marked, dimmed and NOT selectable. They come in by prerequisite.
+   *
+   * It must be disjoint from `selected` — `priors()` subtracts its own seeds, which is what
+   * makes it so for both current callers — because the counts are taken over the selectable
+   * set, and a name in both would be subtracted from the total while still being counted as
+   * chosen.
+   */
   implied?: Set<string>;
   /** When given, only these are offered. It is the active curriculum. */
   restrictTo?: string[] | null;

@@ -18,6 +18,10 @@ export function SelectionTray({
   onRemove: (concept: string) => void;
   onClear: () => void;
 }) {
+  // `total` counts what is on offer, which for every current caller includes everything
+  // selected; a caller that broke that invariant would otherwise be announced as having
+  // chosen more concepts than exist.
+  const offered = Math.max(total, selected.length);
   return (
     <footer className="shrink-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-[110rem] flex-col gap-2">
@@ -26,7 +30,7 @@ export function SelectionTray({
             <span className="text-sm font-semibold tabular-nums text-foreground">
               {selected.length}
             </span>{" "}
-            de {total} concepto(s) elegidos
+            de {offered} concepto(s) elegidos
             {implied.length > 0 ? (
               <span className="text-primary"> · {implied.length} por prerrequisito</span>
             ) : null}

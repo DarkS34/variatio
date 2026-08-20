@@ -39,6 +39,9 @@ export function BoardMode({
   return (
     <div className="mx-auto grid max-w-[110rem] gap-4 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {groups.map(([domain, items]) => {
+        // Over the free chips, never over `items`: a locked prerequisite is neither pickable
+        // nor countable, so including it in the denominator made «todos» stop short of the
+        // total it had just claimed, and disagreed with the tray's own count.
         const picked = items.filter((concept) => chosen.has(concept.name)).length;
         const free = items.filter((concept) => selectable.has(concept.name));
         const allChosen = free.length > 0 && free.every((concept) => chosen.has(concept.name));
@@ -69,7 +72,7 @@ export function BoardMode({
                   picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                 )}
               >
-                {picked}/{items.length}
+                {picked}/{free.length}
               </span>
               <button
                 type="button"
