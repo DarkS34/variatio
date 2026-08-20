@@ -58,6 +58,15 @@ DROP_SCHEMA = {
     "required": ["drop"],
 }
 
+# Two shapes for one word: the naming pass answers with the domain NAMES alone and the
+# assignment pass with the map of who goes where. The decoder enforces whichever it is
+# handed, so asking for names under `DOMAINS_SCHEMA` would license the enumeration again.
+DOMAIN_NAMES_SCHEMA = {
+    "type": "object",
+    "properties": {"domains": {"type": "array", "items": {"type": "string"}}},
+    "required": ["domains"],
+}
+
 DOMAINS_SCHEMA = {
     "type": "object",
     "properties": {

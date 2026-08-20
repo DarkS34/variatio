@@ -182,10 +182,12 @@ KG_CLEAN_EMBEDDING_MODEL = EMBEDDING_LLM
 KG_CLEAN_MERGE_MODEL = LLM_MAIN
 KG_CLEAN_DROP_MODEL = LLM_MAIN
 # The one phase whose call had to give up reasoning outright when `LLM_MAIN` became a
-# reasoning model: asked to partition the whole inventory it answers inside the reasoning
-# channel and returns nothing. The measurement and the reason are at the call site, in
-# `knowledge_graph_builder/curation.py:curate_domains`. It is not the model that is wrong
-# here, so this still points at `LLM_MAIN`; it is the thinking.
+# reasoning model: asked to partition the whole inventory it answered inside the reasoning
+# channel and returned nothing. It only names the domains now — `assign_round` places the
+# concepts, batch by batch — and both calls stay constrained by a grammar and therefore
+# without thinking. The measurement is at the call site, in
+# `knowledge_graph_builder/curation.py:curate_domains`. It is not the model that was wrong
+# here, so this still points at `LLM_MAIN`; it was the thinking.
 KG_DOMAINS_MODEL = LLM_MAIN
 KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
@@ -220,10 +222,11 @@ EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
 # pipeline is ~8 000 tokens while one `low` curation call spends ~13 000 on reasoning alone.
 # The headroom freed by the lighter q4 is what pays for it, so it costs nothing to hold.
 #
-# What it does NOT fix, measured, is the empty answer on `curate_graph_domains_prompt`: over
-# 203 concepts that call returns `response == ""` at 32768 AND at 65536, byte for byte the
-# same (36 929 characters of reasoning, 11 611 tokens — about 13 200 in total, a fifth of the
-# smaller window). The window was never the constraint there; see `KG_DOMAINS_MODEL`.
+# What it does NOT fix, measured, is the empty answer `curate_graph_domains_prompt` gave
+# while it still asked for the whole partition: over 203 concepts that call returned
+# `response == ""` at 32768 AND at 65536, byte for byte the same (36 929 characters of
+# reasoning, 11 611 tokens — about 13 200 in total, a fifth of the smaller window). The
+# window was never the constraint there; see `KG_DOMAINS_MODEL`.
 #
 # Lowering this truncates silently, as always — and now it truncates the reasoning first, so
 # the symptom is an empty or half-written answer rather than a missing tail of prompt.

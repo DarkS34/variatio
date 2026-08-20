@@ -19,7 +19,7 @@ from ...prompts import (
 )
 from ...json_io import write_json
 from . import blocks, parsing
-from .schemas import DOMAINS_SCHEMA, LINK_SCHEMA
+from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA
 
 
 def run(
@@ -104,6 +104,19 @@ def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
 # DOMAINS ---------------------------------------------------------------------------------
 
 
+# This call names the blocks and places nothing, so it is shown every concept — the units
+# of a syllabus cannot be named from a sample — but NOT the relation evidence: that is what
+# justifies WHERE a concept goes, which is `assign_round`'s question and where the evidence
+# is shown. It is also most of what used to make this the largest prompt in the pipeline.
+#
+# `think=False` with the grammar, and here that is load-bearing rather than a default. Asked
+# to partition the whole inventory, this call turned the reasoning channel into the answer:
+# measured over 203 concepts with `qwen3.8:27b-q4_K_M` at `low`, it enumerated
+# «24. Colecciones → Domain 5 ✓» for 36 929 characters, hit its stop token at concept 60 and
+# returned `response == ""` with `done_reason: "stop"` — indistinguishable upstream from a
+# real answer, and every concept would have landed in `Sin clasificar`, silently. The prompt
+# no longer asks for the partition, but a handful of names is exactly what a grammar pins
+# down, and the enumeration is one prompt edit away.
 def curate_domains(
     concepts: list[str],
     relations: list[list],
@@ -113,15 +126,19 @@ def curate_domains(
     max_attempts: int,
 ) -> dict:
     prompt = curate_graph_domains_prompt(
-        blocks.nodes_block(concepts, relations, {}, origins),
+        blocks.nodes_block(concepts, [], {}, origins),
         blocks.documents_block(documents),
     )
     response = inference.generate(
-        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAINS_SCHEMA
+        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAIN_NAMES_SCHEMA
     ).response
-    raw = parsing.parse_object(response, "[domains] ", DOMAINS_SCHEMA, max_attempts) or {}
+    raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts) or {}
 
-    named = [d for d, members in (raw.get("domains") or {}).items() if isinstance(members, list)]
+    named: list[str] = []
+    for domain in raw.get("domains") or []:
+        name = domain.strip() if isinstance(domain, str) else ""
+        if name and name != config.KG_BUILDER_UNCLASSIFIED_DOMAIN and name not in named:
+            named.append(name)
     if not named:
         logger.warning("El modelo no nombró ningún dominio; todo queda sin clasificar")
         return {config.KG_BUILDER_UNCLASSIFIED_DOMAIN: sorted(concepts)}

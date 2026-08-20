@@ -1003,8 +1003,8 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
             "Each document is listed under a code with the title it gives itself; titles that "
             "nearly every document repeats (the course header, standing section names) have "
             "already been removed, so what is left is what tells one document apart from "
-            "another. Each concept below carries, in parentheses after its relations, the "
-            "codes of the documents it was extracted from.\n"
+            "another. Each concept below carries, in parentheses, the codes of the documents "
+            "it was extracted from.\n"
         )
         sources_rule = (
             "\n- START FROM THE DOCUMENT TITLES: teaching material is already organised by "
@@ -1012,34 +1012,31 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
             "concepts extracted from that document are its natural members. They are a "
             "STARTING POINT, not a constraint: merge several documents into one domain, split "
             "a document that covers several blocks, rewrite a title that describes a document "
-            "rather than a theme, and ignore any title that names no theme at all. A concept "
-            "that appears in many documents is a cross-cutting one — place it by its meaning, "
-            "not by its first document."
+            "rather than a theme, and ignore any title that names no theme at all."
         )
 
     return f"""\
-You are given the already cleaned CONCEPTS of a knowledge graph, each with its outgoing relations as evidence. They come from a single corpus of teaching material on one subject.
+You are given the already cleaned CONCEPTS of a knowledge graph. They come from a single corpus of teaching material on one subject.
 
-Your task: group ALL the concepts into coherent thematic DOMAINS.
+Your task: NAME the thematic DOMAINS the subject is made of. You are NOT placing the concepts — every one of them will be assigned to one of your domains afterwards, in small batches. Name the blocks, and nothing else.
 {sources_block}
 # DOMAINS
 - A domain is a thematic block of the subject (in the style of the main topics or units of a syllabus), not a fine-grained tag.
-- Propose FEW domains (as a guideline, between 3 and 8), each with a reasonable mass of concepts.
-- Use the relation evidence: a concept that many others point to, or that aggregates many parts, usually NAMES a domain or sits close to one.{sources_rule}
-- COMPLETE AND MANDATORY PARTITION: the output must contain EACH AND EVERY concept of the input, exactly once. Go through them one by one and place them all; do not skip any out of haste or doubt, and do not repeat any in two domains.
-- NO CATCH-ALL: if a concept does not fit clearly, assign it to the MOST RELATED domain according to its theme or its relations. It is FORBIDDEN to leave a concept without a domain, and FORBIDDEN to create a generic dumping-ground domain such as "Other", "Various", "Miscellaneous" or "Unclassified".
+- Propose FEW domains (as a guideline, between 3 and 8), each one covering a reasonable mass of the concepts below.{sources_rule}
+- BETWEEN THEM THEY MUST COVER THE WHOLE LIST: read it to the end and check that every concept would have an obvious domain to go to. A concept that none of your domains would receive means a block is missing.
+- NO CATCH-ALL: it is FORBIDDEN to create a generic dumping-ground domain such as "Other", "Various", "Miscellaneous" or "Unclassified". Every concept has a theme, and a domain that names no theme can receive none of them.
 
 # NAMES
-- Use the EXACT input names for the concepts. Do not invent, rename, translate or fix spelling.
 - The DOMAIN NAMES are yours to write: short and descriptive, in the SAME LANGUAGE as the concepts.
+- Do not repeat a name, and do not write two names for the same block.
 
 # OUTPUT
 A single JSON object with exactly this shape:
 {{
-  "domains": {{"<Domain name>": ["<concept>", "..."]}}
+  "domains": ["<Domain name>", "..."]
 }}
-- Every input concept appears exactly once inside "domains".
-- Before answering, check that the number of concepts spread across "domains" matches the number of concepts in the input: if any is missing, place it in its most related domain.
+- The domain names alone: a handful of strings, nothing else.
+- Do NOT list the concepts and do NOT write which concept belongs where. That is a later question, and anything you write about it here is discarded.
 - No text before or after, no backticks, no comments.
 
 # CONCEPTS
