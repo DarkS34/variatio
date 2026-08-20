@@ -300,15 +300,21 @@ export function GenerateForm({
   useEffect(() => {
     if (presetApplied.current || !preset) return;
     presetApplied.current = true;
-    const has = preset.concepts.length > 0;
-    const next: Partial<FormState> = {};
-    if (has && !state.useCurriculum) next.useCurriculum = true;
-    // With no preset the second switch points at nothing, and leaving it on would send a
-    // request with no curriculum field — the server would then resolve the workspace's own,
-    // which is empty — while the user is choosing one by hand right below it.
-    if (!has && state.usePresetCurriculum) next.usePresetCurriculum = false;
-    if (Object.keys(next).length > 0) patch(next);
+    if (preset.concepts.length > 0 && !state.useCurriculum) patch({ useCurriculum: true });
   }, [preset]);
+
+  // The other half of the same reconciliation, and deliberately NOT latched: with no preset
+  // the second switch is not rendered, so leaving it on is a state nobody chose and nobody
+  // can see, and it would send a request with no curriculum field — the server then resolves
+  // the workspace's own, which is empty, i.e. no restriction — while the concepts picked by
+  // hand right below it are silently dropped. The preset can be empty later as well as
+  // sooner: the form is interactive before the query answers, and a window-focus refetch
+  // reports a curriculum that was emptied elsewhere.
+  useEffect(() => {
+    if (preset && preset.concepts.length === 0 && state.usePresetCurriculum) {
+      patch({ usePresetCurriculum: false });
+    }
+  }, [preset, state.usePresetCurriculum]);
 
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
