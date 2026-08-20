@@ -100,6 +100,12 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
             f"{len(knowledge_graph.taggable_concepts)} etiquetables, "
             f"{len(knowledge_graph.relation_details)} tipo(s) de relación"
         )
+        if not knowledge_graph.taggability_reviewed:
+            logger.warning(
+                f"Grafo ({kg_path.name}): etiquetabilidad sin revisar; los "
+                f"{len(knowledge_graph.all_concepts)} concepto(s) se tratan como "
+                "etiquetables, incluidos los que no identifican nada"
+            )
         logger.info(
             f"Banco: {len(bank)} ítem(s), "
             f"{sum(1 for item in bank.values() if item.get('concepts'))} ya etiquetados"
