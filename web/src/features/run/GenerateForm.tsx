@@ -325,8 +325,9 @@ export function GenerateForm({
   // can see, and it would send a request with no curriculum field — the server then resolves
   // the workspace's own, which is empty, i.e. no restriction — while the concepts picked by
   // hand right below it are silently dropped. The preset can be empty later as well as
-  // sooner: the form is interactive before the query answers, and a window-focus refetch
-  // reports a curriculum that was emptied elsewhere.
+  // sooner: the form is interactive before the query answers, and the graph's Currículo tab
+  // writes this very cache entry when it saves, so emptying it there and coming back here
+  // remounts this form and refetches past `staleTime` onto a preset that is now empty.
   useEffect(() => {
     if (preset && preset.concepts.length === 0 && state.usePresetCurriculum) {
       patch({ usePresetCurriculum: false });
