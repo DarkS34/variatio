@@ -14,6 +14,29 @@ import { useKg, useKgGraph } from "@/state/queries";
 
 const sorted = (names: string[]) => [...names].sort((a, b) => a.localeCompare(b, "es"));
 
+// `adjacency()` returns null for two unrelated reasons — the graph declares no prerequisite
+// relation, or there is no graph payload to read — and only the first one means that what
+// is on screen is what will be saved. The server closes the prerequisites regardless, so
+// promising otherwise while the request is failing is the one way to save a curriculum
+// larger than the screen announced.
+const NOTICE = {
+  none: {
+    tone: "warning",
+    title: "El grafo no declara prerrequisitos",
+    body: "Sin una relación de prerrequisito no hay nada que cerrar: se guardará exactamente lo que hayas elegido.",
+  },
+  loading: {
+    tone: "info",
+    title: "Todavía no se sabe qué prerrequisitos entrarán",
+    body: "El grafo se está cargando. En cuanto llegue se listarán aquí, antes de guardar.",
+  },
+  error: {
+    tone: "warning",
+    title: "No se ha podido leer el grafo",
+    body: "No se puede decir cuáles entrarán, pero al guardar el servidor los añadirá igualmente: el currículo guardado puede acabar siendo mayor que el que ves aquí. Vuelve a cargar la página, o apaga el cierre por prerrequisitos para guardar solo lo elegido.",
+  },
+} as const;
+
 // Membership rather than a joined string: a concept name is free Spanish text, so any
 // separator would be a guess about what cannot appear inside one.
 const same = (a: string[], b: string[]) => {
@@ -38,6 +61,13 @@ export function CurriculumTab() {
   const selected = draft ?? stored;
 
   const adj = useMemo(() => adjacency(graph.data), [graph.data]);
+  const notice = graph.data
+    ? adj
+      ? null
+      : NOTICE.none
+    : graph.isError
+      ? NOTICE.error
+      : NOTICE.loading;
 
   // Proposed in the open, never rewritten behind the user: this is the same closure the
   // server computes on PUT, so what the alert lists is exactly what gets saved.
@@ -128,12 +158,9 @@ export function CurriculumTab() {
         </Alert>
       ) : null}
 
-      {closePrerequisites && !adj ? (
-        <Alert tone="warning" title="El grafo no declara prerrequisitos">
-          <p>
-            Sin una relación de prerrequisito no hay nada que cerrar: se guardará exactamente lo
-            que hayas elegido.
-          </p>
+      {closePrerequisites && notice ? (
+        <Alert tone={notice.tone} title={notice.title}>
+          <p>{notice.body}</p>
         </Alert>
       ) : null}
 
