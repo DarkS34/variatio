@@ -20,7 +20,23 @@ def test_a_reviewed_graph_reports_it(tmp_path):
     assert graph.taggability_reviewed is True
 
 
-def test_a_pending_review_leaves_every_concept_taggable(tmp_path):
+def test_an_explicit_pending_review_leaves_the_exclusion_list_alone(tmp_path):
+    graph = write(tmp_path, CHAIN_GRAPH | {"taggability_reviewed": False})
+    assert graph.generic_non_taggable_concepts == {"Notación asintótica"}
+    assert graph.taggable_concepts == [
+        c for c in graph.all_concepts if c != "Notación asintótica"
+    ]
+
+
+def test_a_legacy_graph_keeps_its_exclusions_with_no_flag_at_all(tmp_path):
+    assert "taggability_reviewed" not in CHAIN_GRAPH
+    graph = write(tmp_path, CHAIN_GRAPH)
+    assert graph.taggability_reviewed is False
+    assert graph.generic_non_taggable_concepts == {"Notación asintótica"}
+    assert len(graph.taggable_concepts) == len(graph.all_concepts) - 1
+
+
+def test_a_graph_nobody_judged_leaves_every_concept_taggable(tmp_path):
     graph = write(
         tmp_path,
         CHAIN_GRAPH | {"generic_non_taggable_concepts": [], "taggability_reviewed": False},

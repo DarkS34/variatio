@@ -100,7 +100,8 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
             f"{len(knowledge_graph.taggable_concepts)} etiquetables, "
             f"{len(knowledge_graph.relation_details)} tipo(s) de relación"
         )
-        if not knowledge_graph.taggability_reviewed:
+        nothing_excluded = not knowledge_graph.generic_non_taggable_concepts
+        if not knowledge_graph.taggability_reviewed and nothing_excluded:
             logger.warning(
                 f"Grafo ({kg_path.name}): etiquetabilidad sin revisar; los "
                 f"{len(knowledge_graph.all_concepts)} concepto(s) se tratan como "

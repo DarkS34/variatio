@@ -15,7 +15,7 @@ class KnowledgeGraph:
         }
         self.all_concepts: list[str] = [c for cs in self.concepts_by_domains.values() for c in cs]
 
-        # A build writes `false` here and an empty list above, so an unreviewed graph loads
+        # A build writes `false` here and an empty list below, so an unreviewed graph loads
         # with EVERY concept taggable — including the ones that label everything and
         # therefore identify nothing. Refusing to tag would leave a fresh build with nothing
         # to work with, so the loader states the flag and the caller decides what to do
