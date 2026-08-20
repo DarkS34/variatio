@@ -94,8 +94,8 @@ def build_parser():
 
 
 # Anything that is not one of the subcommands is treated as arguments to `serve`, so the two
-# forms this entry point already supported keep working verbatim: `system-run` and
-# `system-run --port 9000 --reload`.
+# forms this entry point already supported keep working verbatim: `system` and
+# `system --port 9000 --reload`.
 def _with_default_command(argv: list[str], commands) -> list[str]:
     if not argv:
         return ["serve"]

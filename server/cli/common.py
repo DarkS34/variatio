@@ -1,7 +1,8 @@
 # The console script declared in pyproject. Named once, because every printed hint quotes a
-# command the reader is meant to type: the entry point was renamed to `system-run` in
-# 0f3ed81 and these strings kept naming the old one, which does not exist.
-PROG = "system-run"
+# command the reader is meant to type. Naming it once did not keep it true: the entry point
+# has been renamed twice and both times these strings stayed on the previous name, so
+# `tests/test_cli_prog.py` now checks it against the console scripts that are installed.
+PROG = "system"
 
 DB_HINT = (
     "Arranca la base de datos (`docker compose up -d postgres`) y aplica las migraciones "
