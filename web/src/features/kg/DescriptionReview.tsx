@@ -9,6 +9,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
+import { hasExemplars } from "@/lib/concepts";
 import { duration } from "@/lib/format";
 import type { ConceptSource, KgSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -299,6 +300,9 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium">{concept.name}</span>
                 <Badge variant="outline">{concept.domain}</Badge>
+                {hasExemplars(concept) ? null : (
+                  <Badge variant="warning">sin ejemplos</Badge>
+                )}
                 <div className="ml-auto flex items-center gap-2">
                   {saved[concept.name] ? (
                     <span className="flex items-center gap-1 text-xs text-[var(--success)]">
