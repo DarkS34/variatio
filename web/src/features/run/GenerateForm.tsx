@@ -107,6 +107,24 @@ export function toParams(state: FormState): GenerateParams {
   return params;
 }
 
+// The curriculum in force, in words: the form step reads it and so does the one line that
+// replaces the whole form once it is collapsed. One derivation, because two of them drifted
+// apart exactly where it mattered — «currículo de 0» over a request that carries `[]`, which
+// is no restriction at all. `presetSize` is null when the workspace's own has not been read,
+// which is the collapsed line's case: it has the state, not the query.
+function curriculumLabel(state: FormState, presetSize: number | null): string {
+  if (!state.useCurriculum) return "Sin restricción de currículo";
+  if (state.usePresetCurriculum) {
+    if (presetSize === null) return "Currículo del workspace";
+    return presetSize > 0
+      ? `Currículo del workspace (${presetSize} conceptos)`
+      : "Sin restricción de currículo";
+  }
+  return state.curriculum.length > 0
+    ? `Currículo de ${state.curriculum.length} conceptos`
+    : "Sin conceptos elegidos todavía";
+}
+
 export function summarize(state: FormState, profile: ExemplarsProfile | null): string {
   const spec = activeTypeSpec(state, profile);
   const parts = [`${state.n} ítem${state.n === 1 ? "" : "s"}`];
@@ -116,9 +134,8 @@ export function summarize(state: FormState, profile: ExemplarsProfile | null): s
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
   }
-  if (!state.useCurriculum) parts.push("sin restricción de currículo");
-  else if (state.usePresetCurriculum) parts.push("currículo del workspace");
-  else parts.push(`currículo de ${state.curriculum.length}`);
+  const label = curriculumLabel(state, null);
+  parts.push(label.charAt(0).toLowerCase() + label.slice(1));
   if (state.instructions.trim()) parts.push("con instrucciones");
   if (!state.think) parts.push("sin razonamiento previo");
   return parts.join(" · ");
@@ -410,14 +427,7 @@ export function GenerateForm({
     .map((field) => describeDecision(field, state.decisions[field]))
     .join(" · ");
 
-  const usingPreset = state.usePresetCurriculum && (preset?.concepts.length ?? 0) > 0;
-  const curriculumSummary = !state.useCurriculum
-    ? "Sin restricción de currículo"
-    : usingPreset
-      ? `Currículo del workspace (${preset!.concepts.length} conceptos)`
-      : state.curriculum.length > 0
-        ? `Currículo de ${state.curriculum.length} conceptos`
-        : "Sin conceptos elegidos todavía";
+  const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null);
 
   let index = 0;
 
