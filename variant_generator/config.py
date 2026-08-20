@@ -352,10 +352,10 @@ GUARDRAIL_CRITERIA = ("harm", "jailbreak")
 # Evaluation ----------------------------------------------
 # Only the Evaluation mode reads this block; the pipeline never imports `evaluation/`.
 #
-# The `*_MODEL_ID` names deliberately do NOT end in `_MODEL`: `inference.required_models()`
-# collects those by introspection and `/api/health` demands them from Ollama, so the name
-# would surface in the UI as a model that is never installed. Ending in `_LLM` would be
-# worse — `prepare_models()` would try to pull it.
+# The `*_MODEL_ID` names deliberately end in neither `_MODEL` nor `_LLM`:
+# `inference.required_models()` collects both suffixes by introspection and `/api/health`
+# demands them from Ollama, so either name would surface in the UI as a model that is
+# never installed — these are served by an external provider and never pulled.
 #
 # `EVAL_EXTERNAL_PROVIDER` is a CHAIN in preference order, not a single name. The free tiers
 # this arm runs on answer 429 halfway through a data-collection session, and a provider that

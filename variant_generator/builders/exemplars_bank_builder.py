@@ -92,7 +92,7 @@ class ExemplarsBankBuilder:
         )
 
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
-    # llamador pueda usarlo sin releerlo (el loader ExemplarsBank sigue siendo la vía de carga).
+    # llamador pueda usarlo sin releerlo.
     def build(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
         self.bootstrap()
 
