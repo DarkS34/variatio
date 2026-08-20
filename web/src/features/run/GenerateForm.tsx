@@ -1,13 +1,35 @@
-import { Ban, Brain, Check, Minus, Play, Plus, Scale, TriangleAlert } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Ban,
+  Brain,
+  Check,
+  ListChecks,
+  Minus,
+  Play,
+  Plus,
+  Scale,
+  TriangleAlert,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { ConceptPicker, hasExemplars } from "@/components/ConceptPicker";
+import { hasExemplars } from "@/components/ConceptPicker";
+import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
+import { getCurriculum } from "@/lib/api";
+import { domainColours } from "@/lib/domains";
 import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
-import type { ExemplarsProfile, GenerateParams, GraphView, ItemTypeSpec, KgConcept } from "@/lib/types";
+import type {
+  CurriculumState,
+  ExemplarsProfile,
+  GenerateParams,
+  GraphView,
+  ItemTypeSpec,
+  KgConcept,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { DecisionField, describeDecision } from "./DecisionField";
@@ -23,6 +45,11 @@ export interface FormState {
   concepts: string[];
   /** null means "the profile's first modality"; resolved against the profile on render. */
   itemType: string | null;
+  /** Off = no restriction. */
+  useCurriculum: boolean;
+  /** Only counts with `useCurriculum`. On = the workspace's own. */
+  usePresetCurriculum: boolean;
+  /** The ad-hoc one; only counts with `useCurriculum` on and `usePresetCurriculum` off. */
   curriculum: string[];
   decisions: Record<string, unknown>;
   instructions: string;
@@ -34,6 +61,8 @@ export const EMPTY_FORM: FormState = {
   n: 2,
   concepts: [],
   itemType: null,
+  useCurriculum: false,
+  usePresetCurriculum: true,
   curriculum: [],
   decisions: {},
   instructions: "",
@@ -68,7 +97,12 @@ export function toParams(state: FormState): GenerateParams {
     fixed[field] = value;
   }
   if (Object.keys(fixed).length > 0) params.fixed = fixed;
-  if (state.curriculum.length > 0) params.curriculum = state.curriculum;
+  // Absent and `[]` are NOT the same request: `server/curriculum.resolve` returns the
+  // parameter unchanged whenever it is given — the empty list included, which is how one
+  // says "no restriction" — and only falls back to the workspace's stored curriculum when
+  // nothing arrives at all. So the preset case sends no field, not an empty one.
+  if (!state.useCurriculum) params.curriculum = [];
+  else if (!state.usePresetCurriculum) params.curriculum = state.curriculum;
   if (state.instructions.trim()) params.instructions = state.instructions.trim();
   return params;
 }
@@ -82,10 +116,31 @@ export function summarize(state: FormState, profile: ExemplarsProfile | null): s
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
   }
-  if (state.curriculum.length > 0) parts.push(`currículo de ${state.curriculum.length}`);
+  if (!state.useCurriculum) parts.push("sin restricción de currículo");
+  else if (state.usePresetCurriculum) parts.push("currículo del workspace");
+  else parts.push(`currículo de ${state.curriculum.length}`);
   if (state.instructions.trim()) parts.push("con instrucciones");
   if (!state.think) parts.push("sin razonamiento previo");
   return parts.join(" · ");
+}
+
+// Mirrors `content_generator.assumed_known` / `forbidden`. The server narrows both closures
+// by the curriculum in force BEFORE writing them into the prompt, so a panel that drew the
+// bare closures would name one set of prerequisites while the prompt named another. The two
+// operations are not interchangeable — intersection on the permissive side, subtraction on
+// the restrictive one — and swapping them would mark as known exactly the prerequisites the
+// student has not seen. An empty or absent curriculum narrows nothing, as `if curriculum:`
+// does on the other side.
+function assumedKnown(closure: string[], curriculum: string[] | null): string[] {
+  if (!curriculum || curriculum.length === 0) return closure;
+  const covered = new Set(curriculum);
+  return closure.filter((name) => covered.has(name));
+}
+
+function notYetTaught(closure: string[], curriculum: string[] | null): string[] {
+  if (!curriculum || curriculum.length === 0) return closure;
+  const covered = new Set(curriculum);
+  return closure.filter((name) => !covered.has(name));
 }
 
 // The two lists the graph derives are read as a contrast, not as prose: one is what the
@@ -125,6 +180,43 @@ function ConceptTrack({
         >
           {name}
         </span>
+      ))}
+    </div>
+  );
+}
+
+// What the full-screen selector left behind, read on the form itself: the overlay closes and
+// its tray goes with it, so without this the answer to the question would be a number.
+function ChosenConcepts({
+  names,
+  colourFor,
+  onRemove,
+  empty,
+}: {
+  names: string[];
+  colourFor: (name: string) => string | undefined;
+  onRemove: (name: string) => void;
+  empty: string;
+}) {
+  if (names.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {names.map((name) => (
+        <Badge key={name} variant="secondary" className="pr-1">
+          <span
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ background: colourFor(name) }}
+          />
+          <span className="max-w-56 truncate">{name}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(name)}
+            aria-label={`Quitar ${name}`}
+            className="rounded-full p-0.5 hover:bg-background/60"
+          >
+            <X className="size-3" />
+          </button>
+        </Badge>
       ))}
     </div>
   );
@@ -188,7 +280,35 @@ export function GenerateForm({
 }) {
   const [open, setOpen] = useState<string | null>("concepts");
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
+  // What the full-screen selector is choosing: the targets, the ad-hoc curriculum, or
+  // nothing. One state, because only one overlay can be open.
+  const [picking, setPicking] = useState<"concepts" | "curriculum" | null>(null);
   const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
+
+  // The workspace's preset curriculum. `undefined` while it loads, and its absence is what
+  // decides whether the second switch is offered at all.
+  const { data: preset } = useQuery<CurriculumState>({
+    queryKey: ["kg", "curriculum"],
+    queryFn: getCurriculum,
+  });
+
+  // With a preset curriculum the restriction starts on, because that is what the workspace
+  // says has been taught; without one it stays off, so that generating anything does not
+  // first require building a whole selection by hand. Once only: after the user has touched
+  // the switch, a refetch must not undo their answer.
+  const presetApplied = useRef(false);
+  useEffect(() => {
+    if (presetApplied.current || !preset) return;
+    presetApplied.current = true;
+    const has = preset.concepts.length > 0;
+    const next: Partial<FormState> = {};
+    if (has && !state.useCurriculum) next.useCurriculum = true;
+    // With no preset the second switch points at nothing, and leaving it on would send a
+    // request with no curriculum field — the server would then resolve the workspace's own,
+    // which is empty — while the user is choosing one by hand right below it.
+    if (!has && state.usePresetCurriculum) next.usePresetCurriculum = false;
+    if (Object.keys(next).length > 0) patch(next);
+  }, [preset]);
 
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
@@ -197,19 +317,44 @@ export function GenerateForm({
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
-  const given = useMemo(
+  // The curriculum that will actually be in force, resolved exactly as the server resolves
+  // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
+  // so it is collapsed to null now rather than at each of the three places that read it.
+  const activeCurriculum = useMemo(() => {
+    if (!state.useCurriculum) return null;
+    const list = state.usePresetCurriculum ? (preset?.concepts ?? []) : state.curriculum;
+    return list.length > 0 ? list : null;
+  }, [state.useCurriculum, state.usePresetCurriculum, state.curriculum, preset]);
+
+  const priorClosure = useMemo(
     () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
     [graphAdjacency, state.concepts, chosen],
   );
-  const forbidden = useMemo(
+  const posteriorClosure = useMemo(
     () => (graphAdjacency && chosen ? posteriors(graphAdjacency, state.concepts) : []),
     [graphAdjacency, state.concepts, chosen],
+  );
+
+  // The lock is the bare closure on purpose, and independent of both switches: it says a
+  // prerequisite of a target cannot itself be a target, which is a statement about targets
+  // and not about coverage.
+  const implied = useMemo(() => new Set(priorClosure), [priorClosure]);
+
+  const given = useMemo(
+    () => assumedKnown(priorClosure, activeCurriculum),
+    [priorClosure, activeCurriculum],
+  );
+  const forbidden = useMemo(
+    () => notYetTaught(posteriorClosure, activeCurriculum),
+    [posteriorClosure, activeCurriculum],
   );
 
   const byName = useMemo(
     () => new Map(concepts.map((concept) => [concept.name, concept])),
     [concepts],
   );
+  const colours = useMemo(() => domainColours(concepts), [concepts]);
+  const colourFor = (name: string) => colours.get(byName.get(name)?.domain ?? "");
 
   const zeroShot = useMemo(
     () => state.concepts.filter((name) => !byName.has(name) || !hasExemplars(byName.get(name)!)),
@@ -239,24 +384,16 @@ export function GenerateForm({
   const problems = useMemo(() => {
     const found: string[] = [];
     if (state.concepts.length === 0) found.push("Elige al menos un concepto objetivo.");
-    if (state.curriculum.length > 0) {
-      const inside = new Set(state.curriculum);
+    if (activeCurriculum) {
+      const inside = new Set(activeCurriculum);
       const outside = state.concepts.filter((c) => !inside.has(c));
       if (outside.length > 0)
         found.push(`Estos conceptos objetivo no están en el currículo: ${outside.join(", ")}.`);
-
-      // The graph carries every concept it extracted; only the taggable ones can be
-      // named in a curriculum. The picker filters them out and so does the closure, so
-      // this only fires if some other path ever puts one here.
-      const taggable = new Set(concepts.filter((c) => c.taggable).map((c) => c.name));
-      const unusable = state.curriculum.filter((c) => !taggable.has(c));
-      if (unusable.length > 0)
-        found.push(`Estos conceptos del currículo no son etiquetables: ${unusable.join(", ")}.`);
     }
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
       found.push(`Las instrucciones no pueden pasar de ${MAX_INSTRUCTIONS} caracteres.`);
     return found;
-  }, [state.concepts, state.curriculum, state.instructions, concepts]);
+  }, [state.concepts, activeCurriculum, state.instructions]);
 
   const step = (id: string) => ({
     open: open === id,
@@ -266,6 +403,15 @@ export function GenerateForm({
   const decisionSummary = decided
     .map((field) => describeDecision(field, state.decisions[field]))
     .join(" · ");
+
+  const usingPreset = state.usePresetCurriculum && (preset?.concepts.length ?? 0) > 0;
+  const curriculumSummary = !state.useCurriculum
+    ? "Sin restricción de currículo"
+    : usingPreset
+      ? `Currículo del workspace (${preset!.concepts.length} conceptos)`
+      : state.curriculum.length > 0
+        ? `Currículo de ${state.curriculum.length} conceptos`
+        : "Sin conceptos elegidos todavía";
 
   let index = 0;
 
@@ -317,6 +463,56 @@ export function GenerateForm({
 
       <FormStep
         index={++index}
+        title="¿Qué se ha visto ya?"
+        hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista, y solo se ofrecerán como objetivo los conceptos que estén dentro."
+        optional
+        answered={state.useCurriculum ? Boolean(activeCurriculum) : true}
+        summary={curriculumSummary}
+        {...step("curriculum")}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Switch
+            checked={state.useCurriculum}
+            onCheckedChange={(useCurriculum) => {
+              presetApplied.current = true;
+              patch({ useCurriculum });
+            }}
+            label="Restringir a un currículo"
+          />
+          <span className="text-sm font-medium">Restringir a un currículo</span>
+        </div>
+
+        {state.useCurriculum ? (
+          <div className="ml-6 space-y-2">
+            {preset && preset.concepts.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Switch
+                  checked={state.usePresetCurriculum}
+                  onCheckedChange={(usePresetCurriculum) => patch({ usePresetCurriculum })}
+                  label={`Usar el currículo preestablecido (${preset.concepts.length} conceptos)`}
+                />
+                <span className="text-sm">
+                  Usar el currículo preestablecido ({preset.concepts.length} conceptos)
+                </span>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Este workspace no tiene currículo preestablecido. Puedes definir uno en la
+                pestaña Currículo del grafo, o elegir aquí los conceptos para este lote.
+              </p>
+            )}
+            {!state.usePresetCurriculum || !preset?.concepts.length ? (
+              <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
+                <ListChecks />
+                Elegir los conceptos cubiertos ({state.curriculum.length})
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </FormStep>
+
+      <FormStep
+        index={++index}
         title="¿Qué hay que practicar?"
         hint="Lo que el ítem debe hacer practicar, no lo que menciona. Sale del grafo, y los ejemplos few-shot se eligen entre los ítems del banco etiquetados con estos conceptos."
         answered={chosen}
@@ -339,12 +535,25 @@ export function GenerateForm({
           </div>
         ) : null}
 
-        <ConceptPicker
-          concepts={concepts}
-          selected={state.concepts}
-          onChange={(next) => patch({ concepts: next })}
-          onlyWithExemplars={onlyWithExemplars}
-          emptyHint="Elige los conceptos que deben practicarse"
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPicking("concepts")}>
+            <ListChecks />
+            Elegir conceptos ({state.concepts.length})
+          </Button>
+          {state.concepts.length > 1 ? (
+            <Button size="sm" variant="ghost" onClick={() => patch({ concepts: [] })}>
+              Limpiar
+            </Button>
+          ) : null}
+        </div>
+
+        <ChosenConcepts
+          names={state.concepts}
+          colourFor={colourFor}
+          onRemove={(name) =>
+            patch({ concepts: state.concepts.filter((c) => c !== name) })
+          }
+          empty="Elige los conceptos que deben practicarse"
         />
 
         {!onlyWithExemplars && withoutExemplars > 0 ? (
@@ -408,38 +617,6 @@ export function GenerateForm({
         </FormStep>
       ) : null}
 
-      {chosen ? (
-        <FormStep
-          index={++index}
-          title="¿Qué se ha visto ya?"
-          hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista. Los conceptos objetivo deben estar dentro."
-          optional
-          answered={state.curriculum.length > 0}
-          summary={
-            state.curriculum.length > 0
-              ? `${state.curriculum.length} conceptos`
-              : "Sin restricción de currículo"
-          }
-          {...step("curriculum")}
-        >
-          {state.curriculum.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={() => patch({ curriculum: [] })}>
-                Quitar la restricción
-              </Button>
-            </div>
-          ) : null}
-
-          <ConceptPicker
-            concepts={concepts}
-            selected={state.curriculum}
-            onChange={(next) => patch({ curriculum: next })}
-            emptyHint="Sin restricción: el modelo se guía solo por el grafo"
-            showExemplarCount={false}
-            maxHeight="12rem"
-          />
-        </FormStep>
-      ) : null}
 
       {chosen ? (
         <FormStep
@@ -550,6 +727,35 @@ export function GenerateForm({
           )}
         </div>
       ) : null}
+
+      <ConceptSelector
+        title="¿Qué hay que practicar?"
+        concepts={concepts}
+        graph={graph}
+        selected={state.concepts}
+        onChange={(next) => patch({ concepts: next })}
+        implied={implied}
+        restrictTo={activeCurriculum}
+        onlyWithExemplars={onlyWithExemplars}
+        open={picking === "concepts"}
+        onClose={() => setPicking(null)}
+      />
+
+      {/* Neither `implied` nor `restrictTo`: a curriculum is declared whole and nothing
+          narrows it. `allowNonTaggable` because a non-taggable concept can perfectly well
+          have been taught, which is what a curriculum states — a target, being what an item
+          is ABOUT, is the one that must stay taggable. */}
+      <ConceptSelector
+        title="¿Qué se ha visto ya?"
+        concepts={concepts}
+        graph={graph}
+        selected={state.curriculum}
+        onChange={(next) => patch({ curriculum: next })}
+        allowNonTaggable
+        showExemplarCount={false}
+        open={picking === "curriculum"}
+        onClose={() => setPicking(null)}
+      />
     </div>
   );
 }
