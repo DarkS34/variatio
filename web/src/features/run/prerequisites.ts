@@ -16,7 +16,6 @@ interface Adjacency {
   in: Edges;
   index: Map<string, number>;
   names: string[];
-  taggable: boolean[];
 }
 
 export function adjacency(graph: GraphView | undefined): Adjacency | null {
@@ -38,13 +37,11 @@ export function adjacency(graph: GraphView | undefined): Adjacency | null {
   }
 
   const names = graph.nodes.map(([name]) => name);
-  const taggable = graph.nodes.map(([, , nonTaggable]) => !nonTaggable);
   return {
     out,
     in: incoming,
     index: new Map(names.map((name, i) => [name, i])),
     names,
-    taggable,
   };
 }
 
@@ -53,18 +50,11 @@ export function adjacency(graph: GraphView | undefined): Adjacency | null {
  * reading have been closures since 2026-08-19: at one hop, a concept two steps away was
  * neither allowed nor forbidden, and the forbidden side is the safety-relevant one.
  *
- * `taggableOnly` filters the RESULT without cutting the traversal short. `priors`/
- * `posteriors` pass `false`: they mirror the server's prompt, which applies no such
- * filter, so hiding a non-taggable prerequisite here would disagree with what the model
- * is actually told. A concept selector (Task 25) is the caller that wants `true`, since a
- * non-taggable concept is not a legitimate pick there.
+ * The result is never narrowed to the taggable concepts: it mirrors the server's prompt,
+ * which applies no such filter, so hiding a non-taggable prerequisite here would disagree
+ * with what the model is actually told.
  */
-function closure(
-  adj: Adjacency,
-  concepts: string[],
-  edges: Edges,
-  taggableOnly: boolean,
-): string[] {
+function closure(adj: Adjacency, concepts: string[], edges: Edges): string[] {
   const start = new Set(concepts);
   const seen = new Set<number>();
   const queue: number[] = [];
@@ -80,7 +70,6 @@ function closure(
     }
   }
   return [...seen]
-    .filter((i) => !taggableOnly || adj.taggable[i])
     .map((i) => adj.names[i])
     .filter((name) => name && !start.has(name))
     .sort((a, b) => a.localeCompare(b, "es"));
@@ -88,10 +77,10 @@ function closure(
 
 /** Everything before the target: what the graph says is already mastered. */
 export function priors(adj: Adjacency, concepts: string[]): string[] {
-  return closure(adj, concepts, adj.out, false);
+  return closure(adj, concepts, adj.out);
 }
 
 /** Everything after the target: what has not been taught yet. */
 export function posteriors(adj: Adjacency, concepts: string[]): string[] {
-  return closure(adj, concepts, adj.in, false);
+  return closure(adj, concepts, adj.in);
 }
