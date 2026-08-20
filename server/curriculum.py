@@ -6,8 +6,6 @@ from variant_generator.workspace import Workspace
 
 from . import storage
 
-EMPTY = {"concepts": [], "updated_at": None, "dropped": []}
-
 
 def _read(ws: Workspace) -> dict:
     if not ws.curriculum_path.exists():
@@ -26,8 +24,6 @@ def _read(ws: Workspace) -> dict:
 
 def load(ws: Workspace, graph: KnowledgeGraph) -> dict:
     data = _read(ws)
-    if not data["concepts"]:
-        return dict(EMPTY)
     existing = set(graph.all_concepts)
     kept = sorted({c for c in data["concepts"] if c in existing})
     dropped = sorted({c for c in data["concepts"] if c not in existing})

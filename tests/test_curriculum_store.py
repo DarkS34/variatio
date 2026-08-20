@@ -42,6 +42,15 @@ def test_a_concept_that_left_the_graph_is_reported_not_hidden(tmp_path):
     assert state["dropped"] == ["Función"]
 
 
+def test_emptying_a_curriculum_is_a_save_and_not_an_absence(tmp_path):
+    ws, graph = workspace(tmp_path)
+    curriculum.save(ws, ["Variable", "Función"], graph)
+    state = curriculum.save(ws, [], graph)
+    assert state["concepts"] == []
+    assert state["updated_at"] is not None
+    assert curriculum.resolve(ws, graph, None) is None
+
+
 def test_a_non_taggable_concept_can_still_be_covered(tmp_path):
     ws, graph = workspace(tmp_path)
     assert "Notación asintótica" not in graph.taggable_concepts
