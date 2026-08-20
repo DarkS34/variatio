@@ -494,7 +494,10 @@ function GraphExplorer() {
         </span>
       </div>
 
-      {!totals.taggability_reviewed ? (
+      {/* The flag is absent from every graph written before it existed, so it reads `false`
+          even on one whose exclusion list proves the old in-build pass ran. The second half
+          is what tells those apart, and it mirrors `stages/initialize.py`. */}
+      {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
         <Alert
           tone="warning"
           title="Etiquetabilidad sin revisar"
@@ -505,10 +508,10 @@ function GraphExplorer() {
           }
         >
           <p>
-            Todos los conceptos se pueden usar como etiqueta, incluidos los que nombran una
-            parte del temario o una actividad genérica. La revisión decide cuáles descartar, y
-            necesita el perfil de ejemplares: qué sirve como etiqueta depende de qué forma
-            tienen los ejercicios de esta asignatura.
+            Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
+            identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
+            ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios de
+            esta asignatura.
             {!profileReady ? " Construye antes el perfil de ejemplares." : null}
           </p>
         </Alert>
