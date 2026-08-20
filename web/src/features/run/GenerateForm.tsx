@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { hasExemplars } from "@/components/ConceptPicker";
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
 import { getCurriculum } from "@/lib/api";
+import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
 import type {

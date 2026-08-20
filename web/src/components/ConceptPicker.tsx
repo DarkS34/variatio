@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * The only way to put a concept on anything.
+ * The embedded picker: it puts concepts on ONE item, and marks which of them is the
+ * primary — the thing the item makes the student practise. `ConceptSelector` is a
+ * full-screen overlay for choosing a set and has no notion of a primary, so it does not
+ * replace this.
  *
  * It is fed exclusively from the knowledge graph and has no free-text input, so a
  * concept that is not in the graph cannot be invented by hand either — the same rule
@@ -22,11 +26,6 @@ import { cn } from "@/lib/utils";
  */
 
 const MAX_VISIBLE_CHIPS = 14;
-
-/** Same rule `ContentGenerator._select_few_shot` applies: any tag counts, not just the primary. */
-export function hasExemplars(concept: KgConcept): boolean {
-  return concept.exemplars > 0;
-}
 
 export function ConceptPicker({
   concepts,
