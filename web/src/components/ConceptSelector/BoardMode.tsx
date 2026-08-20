@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export function BoardMode({
   groups,
   chosen,
-  implied,
+  selectable,
   colours,
   showExemplarCount,
   activeName,
@@ -16,7 +16,8 @@ export function BoardMode({
 }: {
   groups: [string, KgConcept[]][];
   chosen: Set<string>;
-  implied?: Set<string>;
+  /** Everything the selector is showing minus what came in by prerequisite. */
+  selectable: Set<string>;
   colours: Map<string, string>;
   showExemplarCount: boolean;
   activeName: string | null;
@@ -39,9 +40,8 @@ export function BoardMode({
     <div className="mx-auto grid max-w-[110rem] gap-4 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {groups.map(([domain, items]) => {
         const picked = items.filter((concept) => chosen.has(concept.name)).length;
-        const selectable = items.filter((concept) => !implied?.has(concept.name));
-        const allChosen =
-          selectable.length > 0 && selectable.every((concept) => chosen.has(concept.name));
+        const free = items.filter((concept) => selectable.has(concept.name));
+        const allChosen = free.length > 0 && free.every((concept) => chosen.has(concept.name));
         const colour = colours.get(domain);
         return (
           <section
@@ -73,8 +73,8 @@ export function BoardMode({
               </span>
               <button
                 type="button"
-                disabled={selectable.length === 0}
-                onClick={() => onToggleDomain(selectable, allChosen)}
+                disabled={free.length === 0}
+                onClick={() => onToggleDomain(free, allChosen)}
                 className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {allChosen ? "ninguno" : "todos"}
@@ -83,7 +83,7 @@ export function BoardMode({
 
             <div className="flex flex-wrap content-start gap-1.5 p-3">
               {items.map((concept) => {
-                const state = implied?.has(concept.name)
+                const state = !selectable.has(concept.name)
                   ? "implied"
                   : chosen.has(concept.name)
                     ? "selected"

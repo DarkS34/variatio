@@ -354,10 +354,14 @@ export function GraphCanvas({
     known = { ...size.current };
     if (bodies.current.length === 0) {
       bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
-    } else {
+    } else if (viewProps.current.mode === "force") {
       // The layout effects above ran before the element had ever been measured, so they
       // sized the isolated lane against a 0x0 frame and put it through the middle of the
       // cloud. This is the first moment the real frame is known.
+      //
+      // Only in the force view, which is the only one that draws the lane: parking in the
+      // layered one would drag every isolated body into an undrawn column AND move it out
+      // of its band, which `drawLevels` measures from the bodies themselves.
       applyParking(bodies.current, modelRef.current, size.current);
     }
 

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { domainColour } from "@/lib/format";
+import { domainColours } from "@/lib/domains";
 import type { GraphView, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BoardMode } from "./BoardMode";
@@ -21,6 +21,12 @@ export interface ConceptSelectorProps {
   /** When given, only these are offered. It is the active curriculum. */
   restrictTo?: string[] | null;
   onlyWithExemplars?: boolean;
+  /**
+   * Choosing TARGETS keeps this false: a target is what an item is about, and only a
+   * taggable concept can be that. Declaring COVERAGE passes it, because a curriculum may
+   * legitimately contain non-taggable concepts.
+   */
+  allowNonTaggable?: boolean;
   showExemplarCount?: boolean;
   title: string;
   open: boolean;
@@ -28,17 +34,6 @@ export interface ConceptSelectorProps {
 }
 
 type ViewMode = "board" | "graph";
-
-function domainColours(concepts: KgConcept[]): Map<string, string> {
-  const sizes = new Map<string, number>();
-  for (const concept of concepts) {
-    sizes.set(concept.domain, (sizes.get(concept.domain) ?? 0) + 1);
-  }
-  const ordered = [...sizes.entries()].sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"),
-  );
-  return new Map(ordered.map(([name], index) => [name, domainColour(index, ordered.length)]));
-}
 
 export function ConceptSelector({
   concepts,
@@ -48,6 +43,7 @@ export function ConceptSelector({
   implied,
   restrictTo,
   onlyWithExemplars = false,
+  allowNonTaggable = false,
   showExemplarCount = true,
   title,
   open,
@@ -64,29 +60,43 @@ export function ConceptSelector({
     [concepts],
   );
 
-  const offered = useMemo(() => {
+  // The one place that decides what state a concept is in. `implied` is shown always,
+  // `selected` is shown always, and every filter only decides what ELSE is offered —
+  // otherwise a prerequisite pulled in from outside the curriculum, or a concept a filter
+  // stopped matching after it was chosen, silently disappears from the screen while still
+  // counting. Neither mode nor the tray may re-derive any part of this.
+  const state = useMemo(() => {
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
-    return concepts.filter((concept) => {
-      if (allowed && !allowed.has(concept.name)) return false;
-      const kept =
-        (allowed?.has(concept.name) ?? false) ||
-        chosen.has(concept.name) ||
-        (implied?.has(concept.name) ?? false);
-      if (!concept.taggable && !kept) return false;
-      if (onlyWithExemplars && concept.exemplars === 0 && !kept) return false;
-      return true;
-    });
-  }, [concepts, restrictTo, onlyWithExemplars, chosen, implied]);
+    const visible: KgConcept[] = [];
+    const selectable = new Set<string>();
+    const impliedNames: string[] = [];
+    for (const concept of concepts) {
+      const name = concept.name;
+      if (implied?.has(name)) {
+        visible.push(concept);
+        impliedNames.push(name);
+        continue;
+      }
+      if (!chosen.has(name)) {
+        if (allowed && !allowed.has(name)) continue;
+        if (!concept.taggable && !allowNonTaggable) continue;
+        if (onlyWithExemplars && concept.exemplars === 0) continue;
+      }
+      visible.push(concept);
+      selectable.add(name);
+    }
+    return { visible, selectable, impliedNames };
+  }, [concepts, restrictTo, onlyWithExemplars, allowNonTaggable, chosen, implied]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const matching = needle
-      ? offered.filter(
+      ? state.visible.filter(
           (concept) =>
             concept.name.toLowerCase().includes(needle) ||
             concept.domain.toLowerCase().includes(needle),
         )
-      : offered;
+      : state.visible;
     const byDomain = new Map<string, KgConcept[]>();
     for (const concept of matching) {
       const bucket = byDomain.get(concept.domain) ?? [];
@@ -94,12 +104,7 @@ export function ConceptSelector({
       byDomain.set(concept.domain, bucket);
     }
     return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
-  }, [offered, query]);
-
-  const offeredNames = useMemo(
-    () => new Set(offered.map((concept) => concept.name)),
-    [offered],
-  );
+  }, [state, query]);
 
   const flat = useMemo(
     () => grouped.flatMap(([, items]) => items.map((concept) => concept.name)),
@@ -122,12 +127,12 @@ export function ConceptSelector({
   if (!open) return null;
 
   const toggle = (name: string) => {
-    if (implied?.has(name)) return;
+    if (!state.selectable.has(name)) return;
     onChange(chosen.has(name) ? selected.filter((c) => c !== name) : [...selected, name]);
   };
 
   const toggleDomain = (items: KgConcept[], allChosen: boolean) => {
-    const names = items.filter((item) => !implied?.has(item.name)).map((item) => item.name);
+    const names = items.filter((item) => state.selectable.has(item.name)).map((item) => item.name);
     if (allChosen) {
       const drop = new Set(names);
       onChange(selected.filter((c) => !drop.has(c)));
@@ -162,13 +167,9 @@ export function ConceptSelector({
   };
 
   const addMany = (names: string[]) => {
-    const extra = names.filter((name) => !chosen.has(name) && !implied?.has(name));
+    const extra = names.filter((name) => !chosen.has(name) && state.selectable.has(name));
     if (extra.length > 0) onChange([...selected, ...extra]);
   };
-
-  const impliedList = implied
-    ? offered.filter((concept) => implied.has(concept.name)).map((concept) => concept.name)
-    : [];
 
   return createPortal(
     <div
@@ -182,16 +183,20 @@ export function ConceptSelector({
         <div className="mx-auto flex max-w-[110rem] flex-wrap items-center gap-3">
           <h2 className="mr-auto min-w-0 truncate text-sm font-semibold">{title}</h2>
 
-          <div className="relative min-w-56 flex-1 sm:max-w-md">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar concepto o dominio…"
-              className="pl-8"
-            />
-          </div>
+          {/* Only the board is searchable. A graph whose nodes vanish as you type is not
+              a graph any more, and this is a selector, not a search tool. */}
+          {view === "board" ? (
+            <div className="relative min-w-56 flex-1 sm:max-w-md">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar concepto o dominio…"
+                className="pl-8"
+              />
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5">
             {(
@@ -248,19 +253,17 @@ export function ConceptSelector({
         {view === "graph" && graph ? (
           <GraphMode
             graph={graph}
-            offered={offeredNames}
+            selectable={state.selectable}
             chosen={chosen}
             implied={implied}
-            onToggle={(name) => {
-              if (offeredNames.has(name)) toggle(name);
-            }}
+            onToggle={toggle}
             onAdd={addMany}
           />
         ) : (
           <BoardMode
             groups={grouped}
             chosen={chosen}
-            implied={implied}
+            selectable={state.selectable}
             colours={colours}
             showExemplarCount={showExemplarCount}
             activeName={flat[cursor] ?? null}
@@ -272,8 +275,8 @@ export function ConceptSelector({
 
       <SelectionTray
         selected={selected}
-        implied={impliedList}
-        total={offered.length}
+        implied={state.impliedNames}
+        total={state.selectable.size}
         colourFor={(name) => colours.get(domainOf.get(name) ?? "")}
         onRemove={toggle}
         onClear={() => onChange([])}

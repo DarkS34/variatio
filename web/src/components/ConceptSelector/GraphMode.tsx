@@ -7,14 +7,16 @@ import { cn } from "@/lib/utils";
 
 export function GraphMode({
   graph,
-  offered,
+  selectable,
   chosen,
   implied,
   onToggle,
   onAdd,
 }: {
   graph: GraphView;
-  offered: Set<string>;
+  /** Decided once by `ConceptSelector`; this mode adds no filter of its own, or the
+   *  bands would count concepts the board does not offer. */
+  selectable: Set<string>;
   chosen: Set<string>;
   implied?: Set<string>;
   onToggle: (concept: string) => void;
@@ -29,8 +31,8 @@ export function GraphMode({
       chosen: 0,
       upTo: [] as string[],
     }));
-    graph.nodes.forEach(([name, , nonTaggable], index) => {
-      if (nonTaggable || !offered.has(name)) return;
+    graph.nodes.forEach(([name], index) => {
+      if (!selectable.has(name)) return;
       const level = model.levels[index] ?? 0;
       const row = rows[level];
       if (!row) return;
@@ -39,15 +41,13 @@ export function GraphMode({
       for (let above = level; above < rows.length; above += 1) rows[above].upTo.push(name);
     });
     return rows;
-  }, [graph, model, offered, chosen]);
+  }, [graph, model, selectable, chosen]);
 
   const picked = useMemo(() => {
     const names = new Set(chosen);
     if (implied) for (const name of implied) names.add(name);
     return names;
   }, [chosen, implied]);
-
-  const shallow = model.levelCount < 3;
 
   return (
     <div className="flex h-full flex-col">
@@ -82,13 +82,6 @@ export function GraphMode({
             </div>
           ))}
         </div>
-        {shallow ? (
-          <p className="mx-auto mt-2 max-w-[110rem] text-xs text-[var(--warning)]">
-            El grafo declara {model.curriculumEdges} relación(es) de prerrequisito para{" "}
-            {graph.nodes.length} conceptos, así que casi todo cae en el nivel 0 y las bandas
-            distinguen poco.
-          </p>
-        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 p-4 sm:px-6">
@@ -99,7 +92,7 @@ export function GraphMode({
           picked={picked}
           onPick={onToggle}
           initialMode={model.curriculumEdges > 0 ? "curriculum" : "force"}
-          highlight={offered}
+          highlight={selectable}
         />
       </div>
     </div>
