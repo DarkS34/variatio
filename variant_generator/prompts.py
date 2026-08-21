@@ -259,10 +259,11 @@ Ordenados de mayor a menor relevancia semántica respecto al enunciado. Bajo cad
 {candidates}
 {relations_block}
 # DISTINCIÓN CENTRAL: PRACTICAR NO ES USAR
-Todo ejercicio USA muchos conceptos y PRACTICA solo uno o dos. Aquí se etiqueta lo que PRACTICA.
-- Un concepto se PRACTICA si el ejercicio existe para ponerlo a prueba: es lo que el alumno aprende o demuestra al resolverlo.
-- Un concepto se USA cuando aparece como vehículo, soporte o notación de la tarea, pero se da por dominado y el ejercicio no lo evalúa.
-- PRUEBA DECISIVA: imagina un alumno que domina todo lo demás salvo ese concepto. ¿Resolvería el ejercicio igualmente? Si la respuesta es sí, el concepto se usa, no se practica: queda FUERA.
+Todo ejercicio USA muchos conceptos y PRACTICA unos pocos. Aquí se etiqueta lo que PRACTICA.
+- Un concepto se PRACTICA si el ejercicio pone a prueba lo que el alumno sabe hacer con él.
+- Un concepto se USA cuando aparece como vehículo, soporte o notación de la tarea, pero se da por dominado y el ejercicio no lo ejercita en absoluto.
+- PRUEBA DECISIVA, Y ES LA DEL PRIMARIO: imagina un alumno que domina todo lo demás salvo ese concepto. ¿Resolvería el ejercicio igualmente? Si la respuesta es sí, ese concepto no es el OBJETIVO del ejercicio.
+- Los dos campos de salida se deciden con preguntas DISTINTAS: la de arriba fija `primary_concept`; `concepts` responde a otra más amplia, descrita en las reglas.
 
 # ESQUEMA DE SALIDA
 {{
@@ -272,12 +273,15 @@ Todo ejercicio USA muchos conceptos y PRACTICA solo uno o dos. Aquí se etiqueta
 
 # REGLAS
 - Usa ÚNICAMENTE conceptos de la lista de candidatos. No inventes ni parafrasees nombres.
-- `primary_concept`: el OBJETIVO DE APRENDIZAJE del ejercicio — aquello que el ejercicio existe para poner a prueba, lo que se evaluaría con él. Debe aparecer también en `concepts`.
-- `concepts`: el primario más los demás conceptos que el ejercicio ponga a prueba de verdad. Rara vez pasan de tres; una lista larga casi siempre significa que has colado herramientas.
-- ESPECIFICIDAD: entre dos candidatos donde uno es un tipo de otro, o parte de otro, el primario es el MÁS ESPECÍFICO que el ejercicio practique de verdad. El general entra en `concepts` solo si el ejercicio lo evalúa además por sí mismo.
-- SECUENCIA DE APRENDIZAJE: si un candidato es prerrequisito de otro y ambos aparecen, lo normal es que el ejercicio practique el POSTERIOR y se apoye en el prerrequisito como base ya sabida. Etiqueta el prerrequisito solo si el enunciado lo pone a prueba de forma explícita.
+- ORDEN DE DECISIÓN: fija PRIMERO el primario, aplicando solo la prueba decisiva y sin pensar todavía en la lista. Solo después amplía a `concepts`. Ampliar la lista no puede cambiar el primario que ya fijaste.
+- `primary_concept`: UNO SOLO, el OBJETIVO DE APRENDIZAJE del ejercicio — aquello que el ejercicio existe para poner a prueba, lo que se evaluaría con él. Aquí aplica la prueba decisiva sin concesiones. Debe aparecer también en `concepts`.
+- `concepts`: el primario MÁS todo concepto que este ejercicio sirva para practicar, aunque no sea su objetivo central. La pregunta aquí es más amplia y es ésta: un docente que buscase ejercicios para trabajar ese concepto, ¿se alegraría de encontrar éste? Si la respuesta es sí, va en la lista.
+- Lo que sigue quedando FUERA de `concepts`: lo que el enunciado solo menciona, lo que usa como pura notación y lo que da por sabido sin ejercitarlo en absoluto. Amplio no es indiscriminado.
+- CUÁNTOS: dos o tres es lo normal, cuatro el máximo. Si pasas de cuatro has colado herramientas.
+- ESPECIFICIDAD: entre dos candidatos donde uno es un tipo de otro, o parte de otro, el primario es el MÁS ESPECÍFICO que el ejercicio practique de verdad. El general puede acompañarlo en `concepts`.
+- SECUENCIA DE APRENDIZAJE: si un candidato es prerrequisito de otro y ambos aparecen, el PRIMARIO es normalmente el posterior. El prerrequisito va en `concepts` si el ejercicio lo ejercita, no si solo se apoya en él.
 - El orden de los candidatos es una pista, no una respuesta: el primero no tiene por qué ser el primario.
-- Si el ejercicio practica claramente un solo concepto, `concepts` tendrá un único elemento.
+- Un solo elemento en `concepts` solo si el ejercicio de verdad no practica nada más.
 - Si NINGÚN candidato es aquello que el ejercicio practica de forma central, devuelve {{"concepts": [], "primary_concept": null}}. Usa esta opción con criterio: solo cuando ningún candidato describa el objetivo real del ejercicio, no ante mera incertidumbre.
 - Responde SOLO con el JSON. Sin texto antes ni después, sin backticks, sin comentarios.
 
