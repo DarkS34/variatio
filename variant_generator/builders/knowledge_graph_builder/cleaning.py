@@ -133,7 +133,10 @@ def propose_merges(
                 blocks.groups_block(batch, relations, det_map)
             )
             response = inference.generate(
-                model=config.KG_CLEAN_MERGE_MODEL, prompt=prompt, think=True
+                model=config.KG_CLEAN_MERGE_MODEL,
+                prompt=prompt,
+                think=True,
+                temperature=config.TEMPERATURE_REASONING,
             ).response
             raw = parsing.parse_object(
                 response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA, max_attempts
@@ -259,7 +262,10 @@ def propose_drops(
             # compilación` with it. The deliberation is what keeps this pass timid, and a
             # concept dropped here is gone from the graph for good.
             response = inference.generate(
-                model=config.KG_CLEAN_DROP_MODEL, prompt=prompt, think=True
+                model=config.KG_CLEAN_DROP_MODEL,
+                prompt=prompt,
+                think=True,
+                temperature=config.TEMPERATURE_REASONING,
             ).response
             raw = parsing.parse_object(
                 response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA, max_attempts

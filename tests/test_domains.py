@@ -11,7 +11,7 @@ RELATIONS = [["Función", "tiene como prerrequisito", "Variable"]]
 def answer(monkeypatch, response: str) -> list[str]:
     prompts: list[str] = []
 
-    def fake_generate(*, model, prompt, think, format):
+    def fake_generate(*, model, prompt, think, format, temperature):
         prompts.append(prompt)
         return SimpleNamespace(response=response)
 

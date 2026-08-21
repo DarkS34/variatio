@@ -130,7 +130,11 @@ def curate_domains(
         blocks.documents_block(documents),
     )
     response = inference.generate(
-        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAIN_NAMES_SCHEMA
+        model=config.KG_DOMAINS_MODEL,
+        prompt=prompt,
+        think=False,
+        format=DOMAIN_NAMES_SCHEMA,
+        temperature=config.TEMPERATURE_DETERMINISTIC,
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts) or {}
 
@@ -213,6 +217,7 @@ def assign_round(
             prompt=prompt,
             think=False,
             format=DOMAINS_SCHEMA,
+            temperature=config.TEMPERATURE_DETERMINISTIC,
         ).response
         raw = (
             parsing.parse_object(
@@ -292,7 +297,10 @@ def link_domain(
         domain, blocks.nodes_block(members, relations, {}), schema
     )
     response = inference.generate(
-        model=config.KG_LINK_DOMAIN_MODEL, prompt=prompt, think=True
+        model=config.KG_LINK_DOMAIN_MODEL,
+        prompt=prompt,
+        think=True,
+        temperature=config.TEMPERATURE_REASONING,
     ).response
     raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts)
     if raw is None:
@@ -307,7 +315,10 @@ def link_cross_domain(concepts_by_domains: dict, *, schema, max_attempts: int) -
         blocks.domains_block(concepts_by_domains), schema
     )
     response = inference.generate(
-        model=config.KG_LINK_CROSS_DOMAIN_MODEL, prompt=prompt, think=True
+        model=config.KG_LINK_CROSS_DOMAIN_MODEL,
+        prompt=prompt,
+        think=True,
+        temperature=config.TEMPERATURE_REASONING,
     ).response
     raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts)
     if raw is None:

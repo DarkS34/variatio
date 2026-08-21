@@ -264,6 +264,7 @@ class ConceptDescriber:
             think=False,
             prompt=prompt,
             format=DESCRIPTION_SCHEMA,
+            temperature=config.TEMPERATURE_DETERMINISTIC,
         ).response
         parsed, error = parse_with_repair(
             response,

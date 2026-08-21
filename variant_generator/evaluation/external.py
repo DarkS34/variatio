@@ -128,21 +128,25 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
 # Writing one anyway was actively worse: it dropped `minLength`/`maximum`, which
 # `_spec_to_field` does support, so this arm would have decoded under a WEAKER schema than
 # the local two. Parity of parsing is the one thing the comparison must not lose.
+#
+# The temperature goes out explicitly for the same reason `EVAL_RAG_TOP_K` is the pipeline's
+# own few-shot k: what the comparison isolates is the graph, so a knob that is not the graph
+# must not be a loose variable between the arms. It is the SAME NUMBER as the local two and
+# not the same sampler — Gemini and Groq scale temperature to 0-2 where Ollama stops at 1 —
+# but every alternative is worse: each vendor's default is a different unknown, and letting
+# the naive arm run hot would hand the system arm a win it did not earn.
 def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
-    generation_config = (
-        {}
-        if schema is None
-        else {
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "responseSchema": schema,
-            }
-        }
-    )
+    generation_config = {"temperature": config.TEMPERATURE_GENERATION}
+    if schema is not None:
+        generation_config["responseMimeType"] = "application/json"
+        generation_config["responseSchema"] = schema
     response = httpx.post(
         GEMINI_URL.format(model=model),
         headers={"x-goog-api-key": key},
-        json={"contents": [{"parts": [{"text": prompt}]}], **generation_config},
+        json={
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": generation_config,
+        },
         timeout=config.EVAL_EXTERNAL_TIMEOUT,
     )
     response.raise_for_status()
@@ -189,6 +193,7 @@ def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
+            "temperature": config.TEMPERATURE_GENERATION,
             **response_format,
         },
         timeout=config.EVAL_EXTERNAL_TIMEOUT,

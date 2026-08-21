@@ -67,7 +67,11 @@ def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> V
 def _score(text: str, criterion: str) -> bool | None:
     try:
         response = inference.generate(
-            model=config.GUARDRAIL_LLM, prompt=text, system=criterion, think=False
+            model=config.GUARDRAIL_LLM,
+            prompt=text,
+            system=criterion,
+            think=False,
+            temperature=config.TEMPERATURE_DETERMINISTIC,
         )
     except InferenceError as e:
         logger.warning(f"Falló la llamada del filtro para «{criterion}»: {e}")

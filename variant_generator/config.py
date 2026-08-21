@@ -145,6 +145,53 @@ EMBEDDING_LLM = "qwen3-embedding:4b"
 # else. `xhigh` does NOT exist. `max` is deliberately unused: it over-reasons.
 THINK_EFFORT = "low"
 
+# HOW FAR THE SAMPLER MAY WANDER. Ollama's own default is 0.8, and a handful of Modelfiles
+# declare 1.0 — a WRITING temperature, applied indiscriminately to calls that are not writing
+# anything: reading the concepts out of a chunk, deciding whether two names are the same
+# concept, answering yes/no. Left at that default those calls redraw a different graph from
+# the same corpus on every build, and the difference between two runs is not evidence of
+# anything. Every generative call in the project now names one of these three.
+#
+# 1. DETERMINISTIC — the answer is a reading of the input and there is one right one:
+#    extraction, the domain names and their assignment, the bank and profile scans, the
+#    guardrail's verdict, the concept descriptions that get embedded and cached. Greedy, so a
+#    rebuild is a rebuild and not a redraw. What makes 0 safe at every one of these sites and
+#    not at the ones below is that they are all `think=False` AND grammar-constrained: the
+#    answer starts at `{` and the schema bounds how long it can go on for.
+# 2. REASONING — the `think=True` judgements over an inventory that is already fixed: merging
+#    aliases, dropping what does not name a concept, ordering prerequisites, taggability.
+#    Deliberately NOT 0, and it is the one value here chosen against determinism. Greedy
+#    decoding inside a reasoning channel is where deliberation degenerates into a repetition
+#    loop, and it degenerates SILENTLY on this stack — `KG_DOMAINS_MODEL` records one call
+#    that reasoned for 36 929 characters, hit its stop token and returned an empty response
+#    that nothing upstream could tell from a real answer. This is enough entropy to leave
+#    such a loop and far below the 0.6 the model card suggests for open-ended thinking,
+#    because none of these calls is open-ended: the inventory they judge is closed.
+# 3. GENERATION — the end of the pipeline, and the only call in the project that is genuinely
+#    writing. It stays low all the same, because what makes a variant worth keeping is that
+#    it obeys its commission — the target concepts, the pinned fields, the curriculum, the
+#    instructions — and temperature is exactly what buys drift away from all four. The
+#    variety between the `n` items of one run is paid for in the PROMPT, which shows the
+#    model the statements it has already written, and in the random few-shot sample; it is
+#    not the sampler's job here.
+TEMPERATURE_DETERMINISTIC = 0.0
+TEMPERATURE_REASONING = 0.2
+TEMPERATURE_GENERATION = 0.3
+
+# Its own constant although it happens to equal the reasoning one, because it is not there
+# for the same reason and would not move with it: repair is a RETRY loop, and a retry at 0 is
+# not a retry. Attempt N+1's prompt is attempt N's output, so a model that hands back what it
+# was given rebuilds the identical prompt and, greedy, writes the identical answer — the
+# whole budget spent on one byte-identical reply, which is the failure `parse_with_repair`
+# already documents having paid for once.
+TEMPERATURE_REPAIR = 0.2
+
+# The floor. A call site that names no temperature must never inherit the engine's 0.8: this
+# is what `inference.generate` falls back to, so the worst a forgotten argument can do is
+# make a call deterministic. It is a safety net and not a policy — every call site in the
+# pipeline still says which of the three regimes it is in, because that is the readable part.
+TEMPERATURE_DEFAULT = TEMPERATURE_DETERMINISTIC
+
 # Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
 # so there is one constant and not two that could drift and produce two different
 # markdowns for the same file.
@@ -247,6 +294,12 @@ TRANSCRIBE_DPI = 200
 # Transcription is copying, not writing: at Ollama's default temperature the same page
 # came back with `a = 99` and `if a < 0 : break` dedented out of their `while True:`,
 # which silently changes what the exercise asks. Pinned to 0 for that reason.
+#
+# It stays a constant of its own rather than becoming `TEMPERATURE_DETERMINISTIC`, although
+# it holds the same number and for the same reason: this one is part of the page cache's
+# fingerprint (`_source_docs/pages.py`), so changing it re-transcribes every page of every
+# corpus. Aliasing it would make that consequence follow from an edit made about something
+# else entirely.
 TRANSCRIBE_TEMPERATURE = 0.0
 TRANSCRIBE_MAX_RETRIES = 1
 # Bump when transcribe_page_prompt changes: it is part of the page cache fingerprint.

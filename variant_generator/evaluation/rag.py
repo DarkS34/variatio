@@ -81,6 +81,7 @@ def run(commission: Commission, context) -> ArmResult:
         prompt=prompt,
         think=commission.think,
         on_token=progress.token_sink("eval"),
+        temperature=config.TEMPERATURE_GENERATION,
     )
     raw = resp.response or (resp.thinking or "")
 

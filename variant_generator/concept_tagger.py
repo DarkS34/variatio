@@ -139,6 +139,9 @@ class ConceptTagger:
             prompt=prompt,
             think=think,
             format=None if think else schema,
+            temperature=(
+                config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+            ),
         ).response
 
         def parse(text: str) -> tuple[dict | None, str | None]:

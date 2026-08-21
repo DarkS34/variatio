@@ -57,7 +57,11 @@ def parse_with_repair(
             broken_output=response, error_msg=error or "invalid JSON", shape=shape
         )
         response = inference.generate(
-            model=repair_model, prompt=prompt, think=False, format=format
+            model=repair_model,
+            prompt=prompt,
+            think=False,
+            format=format,
+            temperature=config.TEMPERATURE_REPAIR,
         ).response
         result, error = parse(response)
 

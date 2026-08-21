@@ -194,7 +194,11 @@ class ExemplarsProfileBuilder:
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
         prompt = scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
-            model=self.scan_model, think=False, prompt=prompt, format=SCAN_SCHEMA
+            model=self.scan_model,
+            think=False,
+            prompt=prompt,
+            format=SCAN_SCHEMA,
+            temperature=config.TEMPERATURE_DETERMINISTIC,
         ).response
 
         entries, err = parse_with_repair(
@@ -291,7 +295,12 @@ class ExemplarsProfileBuilder:
             f"(razonamiento {'activado' if think else 'desactivado'})"
         )
         response = inference.generate(
-            model=self.consolidate_model, think=think, prompt=prompt
+            model=self.consolidate_model,
+            think=think,
+            prompt=prompt,
+            temperature=(
+                config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+            ),
         ).response
         profile = self._parse(response)
         err = self._validate(profile)
@@ -311,7 +320,11 @@ class ExemplarsProfileBuilder:
                     profile=json.dumps(profile, ensure_ascii=False, indent=2), error_msg=err
                 )
             response = inference.generate(
-                model=repair_model, prompt=repair_prompt, think=False, format="json"
+                model=repair_model,
+                prompt=repair_prompt,
+                think=False,
+                format="json",
+                temperature=config.TEMPERATURE_REPAIR,
             ).response
             candidate = self._parse(response)
             if candidate is not None:

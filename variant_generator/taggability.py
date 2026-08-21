@@ -114,7 +114,10 @@ def _judge_domain(
         samples_block(exemplars_profile, exemplars_bank, members),
     )
     response = inference.generate(
-        model=config.KG_TAGGABLE_MODEL, prompt=prompt, think=True
+        model=config.KG_TAGGABLE_MODEL,
+        prompt=prompt,
+        think=True,
+        temperature=config.TEMPERATURE_REASONING,
     ).response
     raw = (
         parsing.parse_object(

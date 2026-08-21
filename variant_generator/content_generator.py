@@ -520,6 +520,7 @@ class ContentGenerator:
             prompt=prompt,
             think=think,
             on_token=progress.token_sink("item"),
+            temperature=config.TEMPERATURE_GENERATION,
         )
 
         thinking = resp.thinking

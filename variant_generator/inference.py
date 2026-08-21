@@ -165,6 +165,12 @@ class OllamaEngine:
     #
     # `temperature` shares the same options dict, so both are built here: assembling them
     # separately is how one of them ends up overwriting the other.
+    #
+    # It is resolved rather than merely forwarded: a generative call that names none gets
+    # `config.TEMPERATURE_DEFAULT` and never the engine's own 0.8, so the worst a forgotten
+    # argument can do is make a call deterministic. Only the two generative paths resolve it
+    # — `embed`/`embed_batch` call this with nothing and must keep sending no temperature at
+    # all, since an embedding has no sampler to steer.
     @staticmethod
     def _context_option(model: str, temperature: float | None = None) -> dict:
         options: dict = {}
@@ -174,6 +180,10 @@ class OllamaEngine:
         if temperature is not None:
             options["temperature"] = temperature
         return {"options": options} if options else {}
+
+    @staticmethod
+    def _temperature(temperature: float | None) -> float:
+        return config.TEMPERATURE_DEFAULT if temperature is None else temperature
 
     def generate(
         self,
@@ -204,7 +214,7 @@ class OllamaEngine:
                 **image_option,
                 **self._think_option(model, think),
                 **self._format_option(format),
-                **self._context_option(model, temperature),
+                **self._context_option(model, self._temperature(temperature)),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
@@ -216,9 +226,12 @@ class OllamaEngine:
         prompt: str,
         think: bool | None = None,
         on_token: TokenSink | None = None,
+        temperature: float | None = None,
     ) -> GenerationResponse:
         if on_token is None:
-            return self.generate(model=model, prompt=prompt, think=think)
+            return self.generate(
+                model=model, prompt=prompt, think=think, temperature=temperature
+            )
 
         splitter = ThinkingSplitter()
         answer: list[str] = []
@@ -235,7 +248,7 @@ class OllamaEngine:
                 prompt=prompt,
                 stream=True,
                 **self._think_option(model, think),
-                **self._context_option(model),
+                **self._context_option(model, self._temperature(temperature)),
             ):
                 thought = getattr(chunk, "thinking", None)
                 if thought:
@@ -430,9 +443,14 @@ def generate_stream(
     prompt: str,
     think: bool | None = None,
     on_token: TokenSink | None = None,
+    temperature: float | None = None,
 ) -> GenerationResponse:
     return engine().generate_stream(
-        model=model, prompt=prompt, think=think, on_token=on_token
+        model=model,
+        prompt=prompt,
+        think=think,
+        on_token=on_token,
+        temperature=temperature,
     )
 
 

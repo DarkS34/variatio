@@ -212,6 +212,7 @@ class ExemplarsBankBuilder:
             think=False,
             prompt=prompt,
             format=self._extraction_schema,
+            temperature=config.TEMPERATURE_DETERMINISTIC,
         ).response
 
         items, err = parse_with_repair(
