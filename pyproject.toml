@@ -54,6 +54,7 @@ dev = [
     "psycopg[binary]>=3.2.0",
     "argon2-cffi>=23.1.0",
     "email-validator>=2.2.0",
+    "pytest>=8.3.0",
 ]
 
 [project.scripts]
@@ -66,3 +67,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["variant_generator", "server"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not corpus'"
+markers = [
+    "corpus: measures the built corpus cache; run with -m corpus after rebuilding the graph",
+]

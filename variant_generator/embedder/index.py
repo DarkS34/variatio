@@ -298,8 +298,8 @@ class Embedder:
         return [ex_id for _, ex_id in scored]
 
     # `EMBEDDER_SIMILARITY_THRESHOLD` gates ONLY the top-1 score — it answers "is this item
-    # about anything in the KG at all?". Which candidates survive is then decided by
-    # `EMBEDDER_RELATIVE_MARGIN`, in the tagger, relative to that top-1.
+    # about anything in the KG at all?". Below it the item matches nothing in the graph and
+    # no candidate is returned at all.
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
         scores = self._score_concepts(self._embed(text, "query"))
         if not scores:

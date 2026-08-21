@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { domainColour } from "@/lib/format";
+import { hasExemplars } from "@/lib/concepts";
+import { domainColours } from "@/lib/domains";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * The only way to put a concept on anything.
+ * The embedded picker: it puts concepts on ONE item, and marks which of them is the
+ * primary — the thing the item makes the student practise. `ConceptSelector` is a
+ * full-screen overlay for choosing a set and has no notion of a primary, so it does not
+ * replace this.
  *
  * It is fed exclusively from the knowledge graph and has no free-text input, so a
  * concept that is not in the graph cannot be invented by hand either — the same rule
@@ -22,23 +26,6 @@ import { cn } from "@/lib/utils";
  */
 
 const MAX_VISIBLE_CHIPS = 14;
-
-/** Same rule `ContentGenerator._select_few_shot` applies: any tag counts, not just the primary. */
-export function hasExemplars(concept: KgConcept): boolean {
-  return concept.exemplars > 0;
-}
-
-/** Reproduces `server/kg_view.build`'s group order (-size, name), which fixes the colours. */
-function domainColours(concepts: KgConcept[]): Map<string, string> {
-  const sizes = new Map<string, number>();
-  for (const concept of concepts) {
-    sizes.set(concept.domain, (sizes.get(concept.domain) ?? 0) + 1);
-  }
-  const ordered = [...sizes.entries()].sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"),
-  );
-  return new Map(ordered.map(([name], index) => [name, domainColour(index, ordered.length)]));
-}
 
 export function ConceptPicker({
   concepts,

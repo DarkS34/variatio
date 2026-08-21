@@ -19,9 +19,12 @@ from sqlalchemy.orm import Session as DbSession
 from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
 from variant_generator.evaluation import external
 
-from .. import auth, evaluation_store, runtime
+from .. import auth
+from .. import curriculum as curriculum_store
+from .. import evaluation_store, runtime
 from ..db import study
 from ..db.models import EvalSession
+from ..editors import kg_edit
 from .jobs import gate_error
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
@@ -31,7 +34,7 @@ class EvaluationBody(BaseModel):
     concepts: list[str] = []
     item_type: str | None = None
     fixed: dict = {}
-    curriculum: list[str] = []
+    curriculum: list[str] | None = None
     instructions: str | None = None
     seed: int | None = None
     force: bool = False
@@ -63,12 +66,15 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         if error:
             raise HTTPException(409, error)
 
+    graph = kg_edit.load_graph(access.ws)
+    curriculum = curriculum_store.resolve(access.ws, graph, body.curriculum)
+
     # No `n`: one item per arm per session is what makes the session the statistical unit.
     params = {
         "concepts": body.concepts,
         "item_type": body.item_type,
         "fixed": body.fixed,
-        "curriculum": body.curriculum,
+        "curriculum": curriculum or [],
         "instructions": body.instructions,
         "seed": body.seed,
     }

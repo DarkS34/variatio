@@ -94,7 +94,7 @@ def checkpoint() -> None:
 
 
 class _StepHandle:
-    __slots__ = ("id", "total", "current")
+    __slots__ = ("current", "id", "total")
 
     def __init__(self, step_id: str, total: int | None):
         self.id = step_id
@@ -121,7 +121,7 @@ def step(step_id: str, label: str, total: int | None = None):
     except Cancelled:
         _finish(step_id, "cancelled", started)
         raise
-    except BaseException as exc:  # noqa: BLE001 - re-raised right after reporting
+    except BaseException as exc:
         _finish(step_id, "failed", started, error=f"{type(exc).__name__}: {exc}")
         raise
     else:
@@ -150,7 +150,7 @@ def tick(step_id: str, current: int, total: int | None = None, detail: str | Non
 
 
 class _Overall:
-    __slots__ = ("_labels", "_spans", "_total", "_key")
+    __slots__ = ("_key", "_labels", "_spans", "_total")
 
     def __init__(self, plan: tuple[tuple[str, str, int], ...]):
         self._labels = {key: label for key, label, _ in plan}

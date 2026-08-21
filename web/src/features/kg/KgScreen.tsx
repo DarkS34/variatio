@@ -25,7 +25,15 @@ import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useInvalidateChain, useKg, useKgGraph } from "@/state/queries";
+import {
+  useInvalidateChain,
+  useJobRunning,
+  useKg,
+  useKgGraph,
+  usePipeline,
+  useSubmitJob,
+} from "@/state/queries";
+import { CurriculumTab } from "./CurriculumTab";
 import { DescriptionReview } from "./DescriptionReview";
 import { GraphCanvas } from "./GraphCanvas";
 
@@ -137,12 +145,6 @@ function ConceptDetail({
 
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>grado {concept.degree}</span>
-        <span
-          className={concept.exemplars === 0 ? "text-[var(--warning)]" : undefined}
-          title={concept.exemplars === 0 ? "Se generará en zero-shot" : undefined}
-        >
-          {concept.exemplars} ejemplo(s)
-        </span>
       </div>
 
       <Separator />
@@ -310,6 +312,9 @@ function GraphExplorer() {
   const kg = useKg();
   const graph = useKgGraph();
   const invalidate = useInvalidateChain();
+  const pipeline = usePipeline();
+  const submitReview = useSubmitJob();
+  const running = useJobRunning("review_taggability");
 
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -351,6 +356,9 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
+  const profileReady =
+    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
+  const launchReview = () => submitReview.mutate({ kind: "review_taggability" });
 
   return (
     <div className="space-y-4">
@@ -398,7 +406,6 @@ function GraphExplorer() {
         <span className={totals.described < totals.taggable ? "text-[var(--warning)]" : undefined}>
           {totals.described} con descripción
         </span>
-        <span>{totals.with_exemplars} con ejemplos</span>
       </div>
 
       {error ? (
@@ -487,6 +494,29 @@ function GraphExplorer() {
         </span>
       </div>
 
+      {/* The flag is absent from every graph written before it existed, so it reads `false`
+          even on one whose exclusion list proves the old in-build pass ran. The second half
+          is what tells those apart, and it mirrors `stages/initialize.py`. */}
+      {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
+        <Alert
+          tone="warning"
+          title="Etiquetabilidad sin revisar"
+          action={
+            <Button size="sm" disabled={!profileReady || running} onClick={launchReview}>
+              Revisar etiquetabilidad
+            </Button>
+          }
+        >
+          <p>
+            Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
+            identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
+            ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios de
+            esta asignatura.
+            {!profileReady ? " Construye antes el perfil de ejemplares." : null}
+          </p>
+        </Alert>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <Card className="flex min-h-0 flex-col overflow-hidden">
           <CardHeader className="pb-2">
@@ -526,7 +556,6 @@ function GraphExplorer() {
                         {!concept.description ? (
                           <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
                         ) : null}
-                        <span className="ml-2 tabular-nums">{concept.exemplars}</span>
                       </td>
                     </tr>
                   );
@@ -656,6 +685,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                   </Badge>
                 ) : undefined,
             },
+            { value: "curriculum", label: "Currículo" },
           ]}
           value={tab}
           onChange={setTab}
@@ -664,6 +694,8 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
     >
       {tab === "graph" ? (
         <GraphExplorer />
+      ) : tab === "curriculum" ? (
+        <CurriculumTab />
       ) : kg.data ? (
         <DescriptionReview kg={kg.data} />
       ) : (

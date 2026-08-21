@@ -6,14 +6,6 @@ from . import config, inference, progress
 from .prompts import json_repair_prompt
 
 
-def prepare_models() -> None:
-    all_models = sorted(
-        {value for name, value in vars(config).items() if name.endswith("_LLM")}
-    )
-
-    ensure_models(all_models, "del pipeline")
-
-
 def ensure_models(models: list[str], label: str) -> None:
     unique = list(dict.fromkeys(models))
     logger.info(f"Preparando los modelos {label}: {', '.join(unique)}")

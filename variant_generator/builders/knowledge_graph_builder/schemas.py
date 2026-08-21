@@ -58,6 +58,15 @@ DROP_SCHEMA = {
     "required": ["drop"],
 }
 
+# Two shapes for one word: the naming pass answers with the domain NAMES alone and the
+# assignment pass with the map of who goes where. The decoder enforces whichever it is
+# handed, so asking for names under `DOMAINS_SCHEMA` would license the enumeration again.
+DOMAIN_NAMES_SCHEMA = {
+    "type": "object",
+    "properties": {"domains": {"type": "array", "items": {"type": "string"}}},
+    "required": ["domains"],
+}
+
 DOMAINS_SCHEMA = {
     "type": "object",
     "properties": {
@@ -75,16 +84,4 @@ TAGGABLE_SCHEMA = {
         "non_taggable": {"type": "object", "additionalProperties": {"type": "string"}}
     },
     "required": ["non_taggable"],
-}
-
-# Two flat maps and not a map of objects, for the same reason as the ones above: what this
-# converter safely accepts is an `additionalProperties` of a scalar type. Nesting one object
-# per concept would read better and be a bet on the engine.
-DIFFICULTY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "levels": {"type": "object", "additionalProperties": {"type": "integer"}},
-        "thresholds": {"type": "object", "additionalProperties": {"type": "string"}},
-    },
-    "required": ["levels", "thresholds"],
 }

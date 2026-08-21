@@ -30,6 +30,7 @@ export interface Scene {
   arrows: boolean;
   hulls: boolean;
   selected: number;
+  picked?: Set<number>;
   focused: number;
   highlight?: Set<string>;
   hiddenRelations?: Set<number>;
@@ -125,10 +126,11 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     const isFocus = index === focus;
     const isNear = near?.has(index) ?? false;
     const isMarked = scene.highlight ? scene.highlight.has(name) : true;
-    const dimmed = (focus >= 0 && !isFocus && !isNear) || !isMarked;
+    const isPicked = scene.picked?.has(index) ?? false;
+    const dimmed = !isPicked && ((focus >= 0 && !isFocus && !isNear) || !isMarked);
 
     context.globalAlpha = dimmed ? DIM : 1;
-    context.fillStyle = model.domainColours[group] ?? palette.muted;
+    context.fillStyle = isPicked ? palette.accent : (model.domainColours[group] ?? palette.muted);
     context.beginPath();
     context.arc(body.x, body.y, radius, 0, Math.PI * 2);
     context.fill();
@@ -141,6 +143,15 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
       context.beginPath();
       context.arc(body.x, body.y, Math.max(1.5, radius - 2.4), 0, Math.PI * 2);
       context.fill();
+    }
+
+    if (isPicked) {
+      context.globalAlpha = 1;
+      context.strokeStyle = palette.accent;
+      context.lineWidth = 2 / scale;
+      context.beginPath();
+      context.arc(body.x, body.y, radius + 3, 0, Math.PI * 2);
+      context.stroke();
     }
 
     if (index === scene.selected) {
@@ -156,6 +167,7 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
       labels !== "none" &&
       (isFocus ||
         isNear ||
+        isPicked ||
         index === scene.selected ||
         showAll ||
         (model.hubs.has(index) && !dimmed) ||

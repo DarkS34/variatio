@@ -8,6 +8,7 @@ import type {
   ConceptSource,
   ExemplarsProfile,
   Coverage,
+  CurriculumState,
   EvaluationDetail,
   EvaluationListing,
   EvaluationParams,
@@ -117,6 +118,16 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
     xhr.send(form);
   });
 }
+
+// Named exports rather than members of `api`, because the two screens that read the
+// curriculum — the graph's tab and the generation form — import them by name.
+export const getCurriculum = () => request<CurriculumState>("/api/kg/curriculum");
+
+export const putCurriculum = (concepts: string[], closePrerequisites: boolean) =>
+  put<CurriculumState>("/api/kg/curriculum", {
+    concepts,
+    close_prerequisites: closePrerequisites,
+  });
 
 export const api = {
   me: () => request<Session>("/api/auth/me"),

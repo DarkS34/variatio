@@ -1,4 +1,4 @@
-"""Phase 3 — domains, the syllabus order, taggability, and the one file a build writes.
+"""Phase 3 — domains, the syllabus order, and the one file a build writes.
 
 The result is still a DRAFT. The final curation into `instance/knowledge_graph.json`
 (draining the unclassified bucket, fixing dubious directions) is manual.
@@ -10,25 +10,22 @@ from pathlib import Path
 import networkx as nx
 from loguru import logger
 
-from ... import config, difficulty, inference, progress
+from ... import config, inference, progress
 from ...prompts import (
     assign_leftover_concepts_prompt,
-    concept_difficulty_prompt,
     curate_graph_domains_prompt,
     link_cross_domain_relations_prompt,
     link_domain_relations_prompt,
-    review_taggable_concepts_prompt,
 )
 from ...json_io import write_json
 from . import blocks, parsing
-from .schemas import DIFFICULTY_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA, TAGGABLE_SCHEMA
+from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA
 
 
 def run(
     cleaned: dict,
     output_path: str | Path,
     sources_path: str | Path,
-    difficulty_path: str | Path,
     *,
     schema,
     max_attempts: int,
@@ -63,30 +60,17 @@ def run(
         )
     progress.advance(1.0)
 
-    non_taggable = review_taggability(
-        concepts_by_domains, relations, max_attempts=max_attempts
-    )
-
-    calibration = calibrate_difficulty(
-        concepts_by_domains,
-        relations,
-        set(non_taggable),
-        schema=schema,
-        max_attempts=max_attempts,
-    )
-
     curated = {
         "concepts_by_domains": concepts_by_domains,
-        "generic_non_taggable_concepts": non_taggable,
+        "generic_non_taggable_concepts": [],
+        "taggability_reviewed": False,
         "relations": typed,
     }
     write_json(output_path, curated)
     write_sources(sources_path, cleaned, universe)
-    difficulty.save_difficulty(difficulty_path, calibration)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
-        f"{len(universe) - len(non_taggable)} etiquetables, "
-        f"{len(typed)} grupo(s) de relación"
+        f"{len(typed)} grupo(s) de relación; falta revisar la etiquetabilidad"
     )
     return curated
 
@@ -120,6 +104,19 @@ def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
 # DOMAINS ---------------------------------------------------------------------------------
 
 
+# This call names the blocks and places nothing, so it is shown every concept — the units
+# of a syllabus cannot be named from a sample — but NOT the relation evidence: that is what
+# justifies WHERE a concept goes, which is `assign_round`'s question and where the evidence
+# is shown. It is also most of what used to make this the largest prompt in the pipeline.
+#
+# `think=False` with the grammar, and here that is load-bearing rather than a default. Asked
+# to partition the whole inventory, this call turned the reasoning channel into the answer:
+# measured over 203 concepts with `qwen3.8:27b-q4_K_M` at `low`, it enumerated
+# «24. Colecciones → Domain 5 ✓» for 36 929 characters, hit its stop token at concept 60 and
+# returned `response == ""` with `done_reason: "stop"` — indistinguishable upstream from a
+# real answer, and every concept would have landed in `Sin clasificar`, silently. The prompt
+# no longer asks for the partition, but a handful of names is exactly what a grammar pins
+# down, and the enumeration is one prompt edit away.
 def curate_domains(
     concepts: list[str],
     relations: list[list],
@@ -129,45 +126,32 @@ def curate_domains(
     max_attempts: int,
 ) -> dict:
     prompt = curate_graph_domains_prompt(
-        blocks.nodes_block(concepts, relations, {}, origins),
+        blocks.nodes_block(concepts, [], {}, origins),
         blocks.documents_block(documents),
     )
-    # NOT `think=True`, and this is the one call where that is load-bearing. Asked to
-    # partition the whole inventory, a reasoning model turns the reasoning channel into the
-    # answer: measured over 203 concepts with `qwen3.8:27b-q4_K_M` at `low`, it enumerated
-    # «24. Colecciones → Domain 5 ✓» for 36 929 characters, hit its stop token at concept 60
-    # and returned `response == ""` — with no JSON anywhere in the deliberation to salvage,
-    # and `done_reason: "stop"`, so nothing upstream could tell it apart from a real answer.
-    # Every concept would have landed in `Sin clasificar`, which is silent: the graph builds,
-    # it is just worthless, because neither the per-domain linking nor the taggability pass
-    # can reason about that bucket.
-    #
-    # Off, with the grammar, the same call takes 56 s instead of 400 and places 202 of the
-    # 203. It is also what `assign_round` below has always done, for the same reason: this is
-    # a partition, not a judgement, and a partition is exactly what a grammar can pin down.
     response = inference.generate(
-        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAINS_SCHEMA
+        model=config.KG_DOMAINS_MODEL, prompt=prompt, think=False, format=DOMAIN_NAMES_SCHEMA
     ).response
-    raw = parsing.parse_object(response, "[domains] ", DOMAINS_SCHEMA, max_attempts) or {}
-    by_domain = reconcile_domains(concepts, raw.get("domains", {}) or {})
+    raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts) or {}
+
+    named: list[str] = []
+    for domain in raw.get("domains") or []:
+        name = domain.strip() if isinstance(domain, str) else ""
+        if name and name != config.KG_BUILDER_UNCLASSIFIED_DOMAIN and name not in named:
+            named.append(name)
+    if not named:
+        logger.warning("El modelo no nombró ningún dominio; todo queda sin clasificar")
+        return {config.KG_BUILDER_UNCLASSIFIED_DOMAIN: sorted(concepts)}
+
+    logger.info(f"{len(named)} dominio(s) nombrados; asignando {len(concepts)} concepto(s) por lotes")
+    by_domain = {domain: [] for domain in named}
+    remaining = assign_round(sorted(concepts), by_domain, relations, max_attempts=max_attempts)
+
+    for domain in by_domain:
+        by_domain[domain] = sorted(set(by_domain[domain]))
+    if remaining:
+        by_domain[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(remaining)
     return place_leftovers(by_domain, relations, max_attempts=max_attempts)
-
-
-def reconcile_domains(concepts: list[str], domains_raw: dict) -> dict:
-    valid = set(concepts)
-    placed: set[str] = set()
-    by_domain: dict[str, list[str]] = {}
-    for domain, members in domains_raw.items():
-        if not isinstance(members, list):
-            continue
-        kept = sorted({c for c in members if c in valid and c not in placed})
-        if kept:
-            placed.update(kept)
-            by_domain[domain] = kept
-    leftover = sorted(c for c in concepts if c not in placed)
-    if leftover:
-        by_domain.setdefault(config.KG_BUILDER_UNCLASSIFIED_DOMAIN, []).extend(leftover)
-    return by_domain
 
 
 # A concept parked in the unclassified bucket is not a concept the model judged hard to
@@ -340,186 +324,6 @@ def link_cross_domain(concepts_by_domains: dict, *, schema, max_attempts: int) -
             "que no cruzaban ningún dominio"
         )
     return crossing
-
-
-# TAGGABILITY ---------------------------------------------------------------------------------
-
-
-# Domain assignment and taggability are two different judgements, and asking for both
-# in the same call gave the second one whatever attention was left after partitioning
-# a few hundred concepts: the draft came back with a handful of non-taggables and a
-# long tail of terms ("Codificación", "Diseño", "Ejecución") that label everything and
-# therefore identify nothing. One call per domain, judging only that, is the fix.
-def review_taggability(
-    concepts_by_domains: dict, relations: list[list], *, max_attempts: int
-) -> list[str]:
-    domains = list(concepts_by_domains)
-    if not domains:
-        return []
-
-    progress.phase("taggable")
-    non_taggable: set[str] = set()
-    with progress.step(
-        "kg_taggability", "Revisando qué conceptos sirven como etiqueta", len(domains)
-    ) as reporter:
-        for idx, domain in enumerate(domains, 1):
-            progress.checkpoint()
-            members = concepts_by_domains[domain]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
-            progress.advance((idx - 1) / len(domains), f"{domain} ({idx}/{len(domains)})")
-            non_taggable.update(
-                judge_domain(domain, members, domains, relations, max_attempts=max_attempts)
-            )
-
-    logger.info(
-        f"Etiquetabilidad: {len(non_taggable)} concepto(s) excluidos "
-        f"en {len(domains)} dominio(s)"
-    )
-    progress.advance(1.0, f"{len(non_taggable)} concepto(s) no etiquetables")
-    return sorted(non_taggable)
-
-
-def judge_domain(
-    domain: str,
-    members: list[str],
-    domains: list[str],
-    relations: list[list],
-    *,
-    max_attempts: int,
-) -> list[str]:
-    prompt = review_taggable_concepts_prompt(
-        domain,
-        blocks.concepts_block(domains),
-        blocks.nodes_block(members, relations, {}),
-    )
-    response = inference.generate(
-        model=config.KG_TAGGABLE_MODEL, prompt=prompt, think=True
-    ).response
-    raw = (
-        parsing.parse_object(
-            response, f"[taggable · {domain}] ", TAGGABLE_SCHEMA, max_attempts
-        )
-        or {}
-    )
-    verdicts = raw.get("non_taggable") or {}
-    if isinstance(verdicts, list):
-        verdicts = {c: "" for c in verdicts if isinstance(c, str)}
-    if not isinstance(verdicts, dict):
-        return []
-
-    valid = set(members)
-    excluded = []
-    for concept, reason in verdicts.items():
-        if concept in valid:
-            excluded.append(concept)
-            logger.debug(f"[{domain}] «{concept}» no sirve como etiqueta: {reason}")
-    return excluded
-
-
-# DIFFICULTY ------------------------------------------------------------------------------------
-
-
-# It asks ONLY about the taggable concepts, and the order of the two phases is what allows
-# that: a concept that is useless as a label will never be the objective of an exercise, so it
-# has no threshold to write and does not deserve a call. What does enter the computation is the
-# WHOLE graph — `difficulty.calibrate` receives every concept — because a non-taggable
-# prerequisite still orders the syllabus and still has to stay below.
-def calibrate_difficulty(
-    concepts_by_domains: dict,
-    relations: list[list],
-    non_taggable: set[str],
-    *,
-    schema,
-    max_attempts: int,
-) -> dict:
-    domains = list(concepts_by_domains)
-    concepts = [c for cs in concepts_by_domains.values() for c in cs]
-    if not domains:
-        return dict(difficulty.EMPTY)
-
-    progress.phase("difficulty")
-    levels: dict[str, int] = {}
-    thresholds: dict[str, str] = {}
-    with progress.step(
-        "kg_difficulty", "Calibrando cuánto exige cada concepto", len(domains)
-    ) as reporter:
-        for idx, domain in enumerate(domains, 1):
-            progress.checkpoint()
-            members = [c for c in concepts_by_domains[domain] if c not in non_taggable]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
-            progress.advance((idx - 1) / len(domains), f"{domain} ({idx}/{len(domains)})")
-            if not members:
-                continue
-            judged, written = judge_domain_difficulty(
-                domain, members, domains, relations, max_attempts=max_attempts
-            )
-            levels.update(judged)
-            thresholds.update(written)
-
-    unjudged = [c for c in concepts if c not in non_taggable and c not in levels]
-    if unjudged:
-        logger.warning(
-            f"{len(unjudged)} concepto(s) etiquetables sin nivel del modelo; "
-            "se calibran solo con la estructura del grafo"
-        )
-    progress.advance(1.0, f"{len(levels)} concepto(s) calibrados")
-    return difficulty.calibrate(concepts, relations, schema, levels, thresholds)
-
-
-# `think=False` under grammar, and it is not the comfortable choice: judging how much a concept
-# demands IS a judgement, and the taggability call next to it does reason. What decides it is
-# the SHAPE OF THE OUTPUT — one line per concept over a whole domain, which is exactly the mould
-# in which `curate_graph_domains_prompt` turned the reasoning channel into the answer and came
-# back empty — and the price: one reasoning call per domain is ~450 s measured, a good half hour
-# added to every build.
-#
-# It is the first thing to look at again if the tiers come out flat. The output is under
-# grammar, so that failure cannot happen here; what is lost is deliberation.
-def judge_domain_difficulty(
-    domain: str,
-    members: list[str],
-    domains: list[str],
-    relations: list[list],
-    *,
-    max_attempts: int,
-) -> tuple[dict[str, int], dict[str, str]]:
-    prompt = concept_difficulty_prompt(
-        domain,
-        blocks.concepts_block(domains),
-        blocks.nodes_block(members, relations, {}),
-    )
-    response = inference.generate(
-        model=config.KG_DIFFICULTY_MODEL,
-        prompt=prompt,
-        think=False,
-        format=DIFFICULTY_SCHEMA,
-    ).response
-    raw = (
-        parsing.parse_object(
-            response, f"[difficulty · {domain}] ", DIFFICULTY_SCHEMA, max_attempts
-        )
-        or {}
-    )
-
-    valid = set(members)
-    levels: dict[str, int] = {}
-    for concept, level in (raw.get("levels") or {}).items():
-        if concept not in valid:
-            continue
-        try:
-            levels[concept] = min(max(int(level), 1), config.DIFFICULTY_LEVELS)
-        except (TypeError, ValueError):
-            continue
-    thresholds = {
-        concept: " ".join(str(text).split())
-        for concept, text in (raw.get("thresholds") or {}).items()
-        if concept in valid and str(text).strip()
-    }
-
-    missing = len(valid) - len(levels)
-    if missing:
-        logger.debug(f"[{domain}] {missing} concepto(s) sin nivel en la respuesta")
-    return levels, thresholds
 
 
 # TYPING AND CYCLES ---------------------------------------------------------------------------

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import auth, kg_view
+from variant_generator import config
+
+from .. import auth, curriculum, kg_view
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 from .pipeline import pipeline_payload
@@ -37,6 +39,11 @@ class DescriptionBody(BaseModel):
 
 class GraphBody(BaseModel):
     graph: dict
+
+
+class CurriculumBody(BaseModel):
+    concepts: list[str]
+    close_prerequisites: bool = False
 
 
 def _handle(access: auth.Access, action):
@@ -175,3 +182,21 @@ def remove_edge(body: EdgeBody, access: auth.Access = auth.VIEW) -> dict:
     return _handle(
         access, lambda: kg_edit.remove_edge(access.ws, body.relation, body.source, body.target)
     )
+
+
+# CURRICULUM ----------------------------------------------------------------------------------
+
+
+@router.get("/curriculum")
+def read_curriculum(access: auth.Access = auth.VIEW) -> dict:
+    graph = kg_edit.load_graph(access.ws)
+    return curriculum.load(access.ws, graph)
+
+
+@router.put("/curriculum", dependencies=[auth.EDIT])
+def write_curriculum(body: CurriculumBody, access: auth.Access = auth.VIEW) -> dict:
+    graph = kg_edit.load_graph(access.ws)
+    concepts = body.concepts
+    if body.close_prerequisites:
+        concepts = curriculum.closure(concepts, graph, config.KG_PREREQUISITE_RELATION)
+    return curriculum.save(access.ws, concepts, graph)

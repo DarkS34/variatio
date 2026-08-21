@@ -15,6 +15,12 @@ class KnowledgeGraph:
         }
         self.all_concepts: list[str] = [c for cs in self.concepts_by_domains.values() for c in cs]
 
+        # A build writes `false` here and an empty list below, so an unreviewed graph loads
+        # with EVERY concept taggable — including the ones that label everything and
+        # therefore identify nothing. Refusing to tag would leave a fresh build with nothing
+        # to work with, so the loader states the flag and the caller decides what to do
+        # about it; `stages.initialize` says it out loud.
+        self.taggability_reviewed: bool = bool(data.get("taggability_reviewed", False))
         self.generic_non_taggable_concepts: set[str] = set(
             data.get("generic_non_taggable_concepts", [])
         )
@@ -76,3 +82,27 @@ class KnowledgeGraph:
             return sorted(graph.predecessors(concept))
 
         raise ValueError(f"direction must be 'out' or 'in', not {direction!r}")
+
+    # `A → B` means "B is a prerequisite of A", so OUTGOING edges point to the
+    # prerequisites. In networkx that is `descendants`, not `ancestors`: the domain's
+    # names and the library's names are crossed, and confusing them swaps "assumed
+    # known" with "not yet taught" with nothing failing.
+    def _closure(self, concepts: list[str], relation: str, forward: bool) -> list[str]:
+        if not self.has_relation(relation):
+            return []
+        graph = self.graphs[relation]
+        if not graph.is_directed():
+            logger.warning(f"«{relation}» no es dirigida; no se puede calcular su cierre")
+            return []
+        reach = nx.descendants if forward else nx.ancestors
+        found: set[str] = set()
+        for concept in concepts:
+            if concept in graph:
+                found |= reach(graph, concept)
+        return sorted(found - set(concepts))
+
+    def prerequisite_closure(self, concepts: list[str], relation: str) -> list[str]:
+        return self._closure(concepts, relation, forward=True)
+
+    def dependent_closure(self, concepts: list[str], relation: str) -> list[str]:
+        return self._closure(concepts, relation, forward=False)

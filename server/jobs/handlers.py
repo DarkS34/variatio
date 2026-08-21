@@ -11,10 +11,14 @@ from variant_generator import config, progress, stages
 from variant_generator.concept_tagger import ConceptTagger
 from variant_generator.evaluation import ARMS
 from variant_generator.evaluation import rag as rag_arm
+from variant_generator.exemplars_profile import ExemplarsProfile
+from variant_generator.knowledge_graph import KnowledgeGraph
 from variant_generator.workspace import Workspace
 
-from .. import deps, evaluation_store, review, settings
+from .. import curriculum as curriculum_store
+from .. import deps, evaluation_store, review, settings, storage
 from ..db import repository, session_scope, study
+from ..editors import kg_edit
 from .build_process import run_build
 from .models import Job
 from .runner import JobControl
@@ -104,6 +108,35 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     }
 
 
+def handle_review_taggability(job: Job, control: JobControl) -> dict:
+    deps.require_inference()
+    ws = _workspace(job)
+
+    profile_path = stages.exemplars_profile_path(ws)
+    if profile_path is None:
+        raise ValueError(
+            "La etiquetabilidad se decide contra el perfil de ejemplares, y este "
+            "workspace no lo tiene todavía: constrúyelo antes."
+        )
+
+    graph_path = stages.knowledge_graph_path(ws)
+    if graph_path is None:
+        raise ValueError("No hay grafo de conocimiento que revisar.")
+
+    from variant_generator import taggability
+
+    profile = ExemplarsProfile(profile_path)
+    graph = KnowledgeGraph(graph_path)
+    bank = storage.read_json(ws.exemplars_bank_path) or {}
+
+    with progress.overall(taggability.BUILD_PHASES):
+        progress.phase("taggable")
+        non_taggable = taggability.review(graph, profile, bank)
+
+    result = kg_edit.set_non_taggable(ws, non_taggable)
+    return {"non_taggable": result["non_taggable"], "concepts": len(graph.all_concepts)}
+
+
 def handle_generate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     context = _context(job)
@@ -112,7 +145,9 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     concepts = params.get("concepts") or None
     item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None
-    curriculum = params.get("curriculum") or None
+    curriculum = curriculum_store.resolve(
+        context.workspace, context.knowledge_graph, params.get("curriculum")
+    )
     instructions = params.get("instructions") or None
     # Absent means "as it always was": every caller that predates the switch reasons.
     think = bool(params.get("think", True))
@@ -157,7 +192,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         }
         for r in results
     ]
-    saved = _remember(job, items, resolved_type.key)
+    saved = _remember(job, items, resolved_type.key, curriculum)
     return {
         "requested": n,
         "produced": len(results),
@@ -170,7 +205,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
 # Persisting the variants is deliberately best-effort: a database that is briefly away
 # must not turn a minute of GPU into a failed job, because the items are already in the
 # job result and on screen. What is lost is the history, and the log says so.
-def _remember(job: Job, items: list[dict], item_type: str) -> int:
+def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str] | None) -> int:
     if not items:
         return 0
     params = job.params
@@ -188,7 +223,7 @@ def _remember(job: Job, items: list[dict], item_type: str) -> int:
                     item_type=entry.get("item_type") or item_type,
                     item=entry["item"],
                     concepts=params.get("concepts") or [],
-                    curriculum=params.get("curriculum") or [],
+                    curriculum=curriculum or [],
                     fixed=params.get("fixed") or {},
                     instructions=params.get("instructions"),
                     think=bool(params.get("think", True)),
@@ -284,6 +319,7 @@ HANDLERS = {
     "describe_concepts": handle_describe_concepts,
     "index": handle_index,
     "tag": handle_tag,
+    "review_taggability": handle_review_taggability,
     "generate": handle_generate,
     "evaluate": handle_evaluate,
 }

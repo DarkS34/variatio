@@ -154,10 +154,11 @@ def _validate(context: PipelineContext, item_type, commission: Commission) -> No
         )
 
     if commission.curriculum:
-        unknown_curriculum = [c for c in commission.curriculum if c not in taggable]
+        known = set(context.knowledge_graph.all_concepts)
+        unknown_curriculum = [c for c in commission.curriculum if c not in known]
         if unknown_curriculum:
             raise ValueError(
-                f"Unknown curriculum concepts (not in KG taggable set): {unknown_curriculum}"
+                f"Unknown curriculum concepts (not in the knowledge graph): {unknown_curriculum}"
             )
         outside = [c for c in commission.concepts if c not in set(commission.curriculum)]
         if outside:

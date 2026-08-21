@@ -21,6 +21,14 @@ GATES: dict[str, str | None] = {
     "evaluate": "__all__",
 }
 
+# `GATES` answers "are the UPSTREAM of X approved?", which is the question for building
+# X. Taggability needs a different one: that a SPECIFIC artifact is approved. It cannot
+# reuse `EXEMPLARS_BANK` as its gate — that would demand the graph be approved, and this
+# is reviewed BEFORE approving it — so it gets its own table.
+NEEDS_APPROVED: dict[str, str] = {
+    "review_taggability": review.EXEMPLARS_PROFILE,
+}
+
 
 class JobBody(BaseModel):
     kind: str
@@ -29,6 +37,11 @@ class JobBody(BaseModel):
 
 
 def gate_error(ws: Workspace, kind: str) -> str | None:
+    needed = NEEDS_APPROVED.get(kind)
+    if needed is not None:
+        if runtime.review_state(ws).state(needed)["status"] != "approved":
+            return f"Aprueba primero: {review.LABELS[needed]}."
+
     gate = GATES.get(kind)
     if gate is None:
         return None

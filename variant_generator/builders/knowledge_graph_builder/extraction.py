@@ -172,6 +172,7 @@ def extract_documents(
                     seen_here.update((source, target))
                 for concept in sorted(seen_here):
                     origins[concept].add(di)
+                for concept in sorted(set(chunk_concepts)):
                     remember_passage(passages[concept], concept, chunk, name, location)
                 relations.update(tuple(r) for r in chunk_relations)
                 progress.emit(
@@ -204,18 +205,52 @@ def remember_passage(
     stored.append({"document": document, "location": location, "text": text})
 
 
-# Se recorta por párrafos y no por caracteres: media frase citada como prueba de que un
-# concepto existe en el material no prueba nada, y el modelo que la lee tiene que poder
-# entenderla. Se parte del párrafo donde el término aparece de verdad y se crece hacia los
-# vecinos hasta el presupuesto; cuando el nombre no aparece literalmente — el extractor
-# normaliza, así que pasa — se cita la cabeza del fragmento, que es de donde salió igual.
+_LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
+_SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
+MIN_LEADER_RUNS = 3
+
+
+def is_navigation(paragraph: str) -> bool:
+    if not paragraph.strip():
+        return True
+    return len(_LEADER.findall(paragraph)) >= MIN_LEADER_RUNS
+
+
+def clip_to_sentence(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    window = text[:max_chars]
+    ends = [m.end() for m in _SENTENCE_END.finditer(window)]
+    if ends:
+        return window[: ends[-1]].strip()
+    cut = window.rfind(" ")
+    return window[:cut].strip() if cut > 0 else ""
+
+
+# It is cut by paragraphs, never by characters: half a sentence quoted as proof that a
+# concept exists in the material proves nothing, and the model reading it has to be able
+# to understand it. It starts at the paragraph where the term genuinely occurs and grows
+# into its neighbours up to the budget. When the name does not occur in any non-navigation
+# paragraph, NO passage is stored: a concept with no anchoring is honest and the interface
+# already reports it, whereas quoting the head of the chunk anchored 43 of 200 concepts to
+# the document's table of contents.
 def excerpt(chunk: str, concept: str, max_chars: int) -> str:
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", chunk) if p.strip()]
+    paragraphs = [
+        p
+        for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
+        if p and not is_navigation(p)
+    ]
     if not paragraphs:
         return ""
 
-    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), 0)
-    text = paragraphs[hit][:max_chars]
+    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), None)
+    if hit is None:
+        return ""
+
+    text = clip_to_sentence(paragraphs[hit], max_chars)
+    if not text:
+        return ""
+
     before, after = hit - 1, hit + 1
     while before >= 0 or after < len(paragraphs):
         grown = False
@@ -232,8 +267,43 @@ def excerpt(chunk: str, concept: str, max_chars: int) -> str:
     return text.strip()
 
 
+MIN_NEEDLE_LENGTH = 3
+MAX_INFLECTION_SLACK = 2
+
+_STOPWORDS = frozenset(
+    {"de", "del", "la", "el", "los", "las", "en", "y", "o", "a", "un", "una", "por", "con", "para"}
+)
+
+
+def _singular(word: str) -> str:
+    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
+        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
+            return word[: -len(suffix)]
+    return word
+
+
+def _stems(text: str) -> set[str]:
+    return {_singular(w) for w in re.findall(r"\w+", _fold(text))}
+
+
 def mentions(text: str, concept: str) -> bool:
-    return _fold(concept) in _fold(text)
+    if re.search(rf"(?<!\w){re.escape(_fold(concept))}(?!\w)", _fold(text)):
+        return True
+    needles = [
+        _singular(w)
+        for w in re.findall(r"\w+", _fold(concept))
+        if w not in _STOPWORDS and len(w) >= MIN_NEEDLE_LENGTH
+    ]
+    if not needles:
+        return False
+    stems = _stems(text)
+    return all(
+        any(
+            stem.startswith(needle) and len(stem) - len(needle) <= MAX_INFLECTION_SLACK
+            for stem in stems
+        )
+        for needle in needles
+    )
 
 
 def _fold(text: str) -> str:

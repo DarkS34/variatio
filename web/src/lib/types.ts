@@ -9,6 +9,7 @@ export type JobKind =
   | "describe_concepts"
   | "index"
   | "tag"
+  | "review_taggability"
   | "generate"
   | "evaluate";
 
@@ -221,6 +222,7 @@ export interface KgSummary {
     taggable: number;
     described: number;
     with_exemplars: number;
+    taggability_reviewed: boolean;
   };
 }
 
@@ -265,6 +267,17 @@ export interface GraphView {
   nodes: [string, number, number][];
   /** [sourceIndex, targetIndex, relationIndex] */
   links: [number, number, number][];
+}
+
+/**
+ * `dropped` is computed against the whole graph, not the taggable set: a curriculum
+ * declares coverage, so a non-taggable concept in it is legitimate and only a concept
+ * the graph no longer has at all stops counting.
+ */
+export interface CurriculumState {
+  concepts: string[];
+  updated_at: string | null;
+  dropped: string[];
 }
 
 /* Exemplars bank ------------------------------------------------------------------- */
