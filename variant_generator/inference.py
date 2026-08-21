@@ -118,10 +118,13 @@ class OllamaEngine:
         self._capabilities: dict[str, list[str]] = {}
 
     def is_available(self) -> bool:
+        # Every failure is the same answer, "no", and the caller is a health check: catching
+        # only `ConnectError` let a `ReadTimeout` — what a busy or tunnelled engine returns —
+        # escape and turn `GET /api/health` into a 500 for the whole panel.
         try:
             response = httpx.get(config.OLLAMA_HOST, timeout=3.0)
             return response.status_code == 200
-        except httpx.ConnectError:
+        except httpx.HTTPError:
             return False
 
     # Asking a model that has no reasoning mode to think is a hard error in Ollama, so
