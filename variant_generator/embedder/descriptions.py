@@ -16,7 +16,7 @@ from loguru import logger
 from .. import config, inference, progress
 from ..json_io import write_json
 from ..knowledge_graph import KnowledgeGraph
-from ..prompts import concept_description_prompt
+from ..prompts import concept_description_prompt, describe_domain_concepts_prompt
 from ..utils import parse_with_repair
 from .vectors import embed_normalized
 
@@ -31,6 +31,45 @@ DESCRIPTION_SCHEMA = {
     "properties": {"description": {"type": "string"}},
     "required": ["description"],
 }
+
+
+# The batch answer's keys are pinned to the exact concept names and every one is required,
+# which is the same move `tagging_schema` makes with its `enum`: the prompt already demands
+# «una entrada por cada concepto, ni una más ni una menos», and this is that rule stated
+# where the decoder enforces it instead of hoping. Without it a batch that silently drops
+# three concepts looks like a successful call.
+def _batch_schema(concepts: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "descriptions": {
+                "type": "object",
+                "properties": {c: {"type": "string"} for c in concepts},
+                "required": list(concepts),
+            }
+        },
+        "required": ["descriptions"],
+    }
+
+
+def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | None, str | None]:
+    try:
+        data = json.loads(response)
+    except json.JSONDecodeError as e:
+        return None, str(e)
+    if not isinstance(data, dict):
+        return None, "la respuesta no es un objeto"
+    written = data.get("descriptions")
+    if not isinstance(written, dict):
+        return None, "falta el objeto «descriptions»"
+
+    out = {}
+    for concept in concepts:
+        text = written.get(concept)
+        if not isinstance(text, str) or not text.strip():
+            return None, f"falta la descripción de «{concept}»"
+        out[concept] = " ".join(text.split())
+    return out, None
 
 
 # The descriptions file is a `{concepto: texto}` cache and nothing else: reading or writing
@@ -217,23 +256,51 @@ class ConceptDescriber:
         descriptions: dict[str, str],
         against: dict[str, list[str]] | None = None,
     ) -> None:
+        # `against` is the refine pass rewriting one description against the one it collided
+        # with, which is a per-concept question and stays per-concept. Everything else goes out
+        # one domain at a time.
+        if against is not None:
+            self._write_one_by_one(plan, descriptions, against)
+            return
+
+        groups: dict[str, list[str]] = {}
+        for concept in plan:
+            groups.setdefault(self.knowledge_graph.concept_domain[concept], []).append(concept)
+
         with progress.step(
             "descriptions", "Generando descripciones de conceptos", total=len(plan)
         ) as reporter:
-            for i, concept in enumerate(plan, 1):
+            done = 0
+            for domain, batch in groups.items():
                 progress.checkpoint()
-                reporter.tick(i, detail=concept)
+                reporter.tick(done + 1, detail=f"{domain} ({len(batch)})")
                 try:
-                    descriptions[concept] = self.describe(
-                        concept, descriptions, against=(against or {}).get(concept)
-                    )
+                    descriptions.update(self.describe_domain(domain, batch, descriptions))
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.warning(f"[{concept}] descripción de reserva, sin modelo: {e}")
-                    descriptions[concept] = self.simple_describe(concept)
-                # Checkpoint after every concept: a cancelled run keeps what it wrote.
+                    logger.warning(f"[{domain}] el lote falló, se escribe uno a uno: {e}")
+                    self._write_one_by_one(batch, descriptions, {})
+                done += len(batch)
+                reporter.tick(done, detail=domain)
+                # Checkpoint after every domain: a cancelled run keeps what it wrote.
                 self.save(descriptions)
+
+    def _write_one_by_one(
+        self, plan: list[str], descriptions: dict[str, str], against: dict[str, list[str]]
+    ) -> None:
+        for concept in plan:
+            progress.checkpoint()
+            try:
+                descriptions[concept] = self.describe(
+                    concept, descriptions, against=against.get(concept)
+                )
+            except progress.Cancelled:
+                raise
+            except Exception as e:
+                logger.warning(f"[{concept}] descripción de reserva, sin modelo: {e}")
+                descriptions[concept] = self.simple_describe(concept)
+            self.save(descriptions)
 
     def _by_domain(self, concepts: list[str]) -> list[str]:
         return sorted(concepts, key=lambda c: (self.knowledge_graph.concept_domain[c], c))
@@ -352,6 +419,100 @@ class ConceptDescriber:
                     f"[{concept}] choca con {', '.join(peers)} (máx {similarity[i].max():.3f})"
                 )
         return collisions
+
+    # BATCH -----------------------------------------------------------------------------------
+
+    # One call per domain instead of one per concept. Writing them one at a time made
+    # differentiation a REQUEST — the siblings block asks for it and the model answered by
+    # copying the sibling and changing its first verb («Detectar y corregir…» against
+    # «Identificar y corregir…», cosine 0.969). Written together it is a CONSTRAINT: the
+    # competing descriptions are in the same answer, so separating them is the task and not
+    # an afterthought.
+    def describe_domain(
+        self, domain: str, concepts: list[str], written: dict[str, str] | None = None
+    ) -> dict[str, str]:
+        prompt = describe_domain_concepts_prompt(
+            domain=domain,
+            concepts_block=self._batch_concepts_block(concepts),
+            passages_block=self._batch_passages_block(concepts),
+            context=self.context,
+            domains_block=self._domains_block(domain),
+            existing_block=self._existing_block(domain, concepts, written or {}),
+        )
+        response = inference.generate(
+            model=config.DESCRIPTION_GENERATION_LLM,
+            think=False,
+            prompt=prompt,
+            format=_batch_schema(concepts),
+            temperature=config.TEMPERATURE_DETERMINISTIC,
+        ).response
+        parsed, error = parse_with_repair(
+            response,
+            lambda text: _parse_batch(text, concepts),
+            config.REPAIR_LLM,
+            config.MAX_JSON_REPAIR_TRIES,
+            shape='{"descriptions": {"<concepto>": "…"}}',
+            format=_batch_schema(concepts),
+            log_prefix=f"[{domain}] ",
+        )
+        if parsed is None:
+            raise ValueError(f"descripciones ilegibles para «{domain}»: {error}")
+        return parsed
+
+    def _batch_concepts_block(self, concepts: list[str]) -> str:
+        lines = []
+        for concept in concepts:
+            lines.append(f"- {concept}")
+            for verbose, neighbors in self.collect_relations(concept).items():
+                lines.append(f"    · {verbose}: {', '.join(neighbors)}")
+        return "\n".join(lines)
+
+    # Each distinct passage once, with the concepts it yielded. A core passage feeds up to
+    # eight of them, so per-concept repetition would spend the window on the same paragraphs
+    # over and over — and, worse, would hide the very fact the model has to act on: that these
+    # concepts came out of the SAME text and are therefore the ones at risk of collapsing
+    # into one another.
+    def _batch_passages_block(self, concepts: list[str]) -> str:
+        wanted = set(concepts)
+        by_text: dict[str, list[str]] = {}
+        places: dict[str, str] = {}
+        for concept in concepts:
+            for entry in self.passages.get(concept) or []:
+                text = (entry.get("text") or "").strip()
+                if not text:
+                    continue
+                by_text.setdefault(text, [])
+                if concept not in by_text[text]:
+                    by_text[text].append(concept)
+                place = entry.get("location") or ""
+                if self.name_documents:
+                    place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+                places.setdefault(text, place)
+
+        blocks = []
+        for text, owners in by_text.items():
+            head = f"[{places[text]}]" if places[text] else ""
+            named = ", ".join(o for o in owners if o in wanted)
+            blocks.append(f"{head}\nCONCEPTOS EXTRAÍDOS DE AQUÍ: {named}\n\n{text}")
+        return "\n\n---\n\n".join(blocks)
+
+    # A partial batch still has to separate itself from the siblings it is NOT rewriting,
+    # or an incremental top-up would land on top of a description nobody asked to change.
+    def _existing_block(self, domain: str, batch: list[str], written: dict[str, str]) -> str:
+        taggable = set(self.knowledge_graph.taggable_concepts)
+        rest = [
+            c
+            for c in self.knowledge_graph.concepts_by_domains.get(domain, [])
+            if c in taggable and c not in set(batch) and (written.get(c) or "").strip()
+        ]
+        return "\n".join(f"- {c}: {' '.join(written[c].split())}" for c in rest)
+
+    def _domains_block(self, current: str) -> str:
+        lines = []
+        for domain, names in self.knowledge_graph.concepts_by_domains.items():
+            mark = " (el que estás describiendo)" if domain == current else ""
+            lines.append(f"- {domain}{mark}: {', '.join(names)}")
+        return "\n".join(lines)
 
     # RELATIONS -------------------------------------------------------------------------------
 
