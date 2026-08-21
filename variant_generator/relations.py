@@ -32,17 +32,17 @@ class RelationType:
     def catalog_entry(self) -> str:
         lines = [f"- `{self.key}` — {self.definition}"]
         if self.reading:
-            lines.append(f'  Reading: "{self.reading}".')
+            lines.append(f'  Lectura: "{self.reading}".')
         lines.append(
-            "  Direction: "
+            "  Dirección: "
             + (
-                "directed — SOURCE and TARGET are not interchangeable."
+                "dirigida — ORIGEN y DESTINO no son intercambiables."
                 if self.directed
-                else "symmetric — the order of SOURCE and TARGET does not matter."
+                else "simétrica — el orden de ORIGEN y DESTINO da igual."
             )
         )
         if self.examples:
-            lines.append("  Examples:")
+            lines.append("  Ejemplos:")
             lines.extend(f'    · ["{s}", "{self.key}", "{t}"]' for s, t in self.examples)
         return "\n".join(lines)
 
@@ -106,6 +106,10 @@ class RelationSchema:
         return ", ".join(f'"{key}"' for key in self.keys)
 
 
+# Nothing selects this schema: `config.KG_RELATION_SCHEMA` is `es` and must stay so. Since
+# the KG prompts became Spanish, `catalog_entry` renders its scaffolding in Spanish, so an
+# English `definition` would come out under a «Lectura:»/«Dirección:» heading and next to
+# ORIGEN/DESTINO. Selecting `en` means translating the slot names here first.
 RELATION_SCHEMA_EN = RelationSchema(
     fallback="related_to",
     prerequisite="prerequisite",
@@ -176,9 +180,10 @@ RELATION_SCHEMA_EN = RelationSchema(
 )
 
 
-# Spanish counterpart. `key`, `verbose` and `examples` are translated because they
-# surface in the output and in this package's own Spanish prompts; `definition` and
-# `reading` stay English, since they are embedded in the English extraction prompts.
+# Spanish counterpart, and the one `config.KG_RELATION_SCHEMA` selects. Every field is
+# Spanish now: `key`, `verbose` and `examples` because they surface in the output, and
+# `definition` and `reading` because the KG prompts that interpolate them are Spanish too.
+# ORIGEN/DESTINO are the slot names `catalog_entry` and those prompts use; they must agree.
 RELATION_SCHEMA_ES = RelationSchema(
     fallback="relacionado",
     prerequisite="prerrequisito",
@@ -187,10 +192,10 @@ RELATION_SCHEMA_ES = RelationSchema(
             key="prerrequisito",
             verbose="tiene como prerrequisito",
             definition=(
-                "the SOURCE presupposes or needs the TARGET; the TARGET must be mastered "
-                "BEFORE the SOURCE."
+                "el ORIGEN presupone o necesita el DESTINO; el DESTINO debe dominarse "
+                "ANTES que el ORIGEN."
             ),
-            reading="to learn SOURCE you must first know TARGET",
+            reading="para aprender ORIGEN hay que saber antes DESTINO",
             examples=(
                 ("Búsqueda binaria", "Lista ordenada"),
                 ("Multiplicación", "Suma"),
@@ -203,8 +208,8 @@ RELATION_SCHEMA_ES = RelationSchema(
         RelationType(
             key="es_un",
             verbose="es un tipo de",
-            definition="the SOURCE is a TYPE, case or subclass of the TARGET.",
-            reading="SOURCE is a kind of TARGET",
+            definition="el ORIGEN es un TIPO, caso o subclase del DESTINO.",
+            reading="ORIGEN es un tipo de DESTINO",
             examples=(
                 ("Ballena", "Mamífero"),
                 ("Soneto", "Poema"),
@@ -218,9 +223,9 @@ RELATION_SCHEMA_ES = RelationSchema(
             key="parte_de",
             verbose="es parte de",
             definition=(
-                "the SOURCE is a COMPONENT of the TARGET; the TARGET is the whole that contains it."
+                "el ORIGEN es un COMPONENTE del DESTINO; el DESTINO es el todo que lo contiene."
             ),
-            reading="SOURCE is part of TARGET",
+            reading="ORIGEN es parte de DESTINO",
             examples=(
                 ("Núcleo", "Célula"),
                 ("Estribillo", "Canción"),
@@ -234,9 +239,10 @@ RELATION_SCHEMA_ES = RelationSchema(
             key="relacionado",
             verbose="se relaciona con",
             definition=(
-                "a genuine semantic association that does not cleanly fit any of the types above."
+                "una asociación semántica genuina que no encaja limpiamente en ninguno de los "
+                "tipos anteriores."
             ),
-            reading="SOURCE and TARGET are semantically associated",
+            reading="ORIGEN y DESTINO están asociados semánticamente",
             examples=(
                 ("Oferta", "Demanda"),
                 ("Fotosíntesis", "Respiración celular"),

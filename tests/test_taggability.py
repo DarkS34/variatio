@@ -126,7 +126,7 @@ def test_the_prompt_carries_the_samples_when_given():
         taggability.modalities_block(FakeProfile()),
         "- Escribe una función recursiva.",
     )
-    assert "REAL ITEMS FROM THIS SUBJECT'S MATERIAL" in prompt
+    assert "EJERCICIOS REALES DEL MATERIAL DE ESTA ASIGNATURA" in prompt
     assert "Escribe una función recursiva." in prompt
 
 
@@ -139,4 +139,4 @@ def test_the_prompt_omits_the_samples_section_when_empty():
         taggability.modalities_block(FakeProfile()),
         "",
     )
-    assert "REAL ITEMS FROM THIS SUBJECT'S MATERIAL" not in prompt
+    assert "EJERCICIOS REALES DEL MATERIAL DE ESTA ASIGNATURA" not in prompt

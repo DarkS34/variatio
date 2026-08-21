@@ -752,28 +752,29 @@ JSON:"""
 
 # ── GRAFO DE CONOCIMIENTO ─────────────────────────────────────────────────────
 #
-# En inglés, a diferencia del resto del fichero: el vocabulario de relaciones
-# (`relations.py`) inyecta aquí sus `definition` y `reading`, que están escritas
-# en inglés porque son andamiaje de estos prompts y no salida visible.
+# The JSON keys these prompts draw — `concepts`, `relations`, `merges`, `canonical`,
+# `aliases`, `drop`, `domains`, `non_taggable` — stay English: they are the grammar
+# `schemas.py` pins and what the parsers read. Only the prose is Spanish. ORIGEN and
+# DESTINO name the two slots of a triple and must match `relations.py`.
 
 _KG_LANGUAGE_RULE = """\
-# LANGUAGE
-Write every concept name in the SAME LANGUAGE as the source material. Do not translate it, do not normalise it to English, do not transliterate it. Keep the original wording, accents and casing of the subject terminology.
-The relation type keys listed below are FIXED IDENTIFIERS, not words of the text: emit them exactly as written, whatever the language of the source."""
+# IDIOMA
+Escribe el nombre de cada concepto EN EL MISMO IDIOMA que el material de origen. No lo traduzcas, no lo normalices a otro idioma, no lo transliteres. Conserva la redacción, los acentos y las mayúsculas de la terminología de la asignatura.
+Las claves de los tipos de relación que se listan abajo son IDENTIFICADORES FIJOS, no palabras del texto: emítelas exactamente como están escritas, sea cual sea el idioma del material."""
 
 
 def _kg_type_preference_rule(schema) -> str:
     if schema.fallback is None:
         return (
-            "- Emit a relation only when one of the types above clearly applies. "
-            "If none of them does, do not emit the relation at all."
+            "- Emite una relación solo cuando uno de los tipos de arriba se aplique con "
+            "claridad. Si ninguno lo hace, no emitas la relación."
         )
     specific = ", ".join(f"`{key}`" for key in schema.specific_keys())
     return (
-        f"- Prefer the SPECIFIC type ({specific}) whenever its reading is clearly true; "
-        f"reserve `{schema.fallback}` for real associations that fit none of the others. "
-        f"Do not force a specific type when in doubt, but do not use `{schema.fallback}` "
-        "as a default dumping ground either."
+        f"- Prefiere el tipo ESPECÍFICO ({specific}) siempre que su lectura sea claramente "
+        f"cierta; reserva `{schema.fallback}` para asociaciones reales que no encajen en "
+        f"ningún otro. No fuerces un tipo específico ante la duda, pero tampoco uses "
+        f"`{schema.fallback}` como cajón de sastre por defecto."
     )
 
 
@@ -781,100 +782,100 @@ def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> 
     location_block = ""
     if location:
         location_block = (
-            "\n# WHERE THIS FRAGMENT SITS IN THE MATERIAL\n"
+            "\n# DÓNDE SE SITÚA ESTE FRAGMENTO EN EL MATERIAL\n"
             f"{location}\n"
-            "This is the heading path of the section the fragment was taken from. Use it to "
-            "tell what the section is ABOUT from what it merely mentions in passing, and to "
-            "name concepts the way this part of the syllabus names them — the neighbouring "
-            "fragments of this same section are being read with this same heading, so their "
-            "names have to come out identical to yours.\n"
+            "Es la ruta de encabezados de la sección de la que se ha tomado el fragmento. "
+            "Úsala para distinguir de QUÉ trata la sección frente a lo que solo menciona de "
+            "pasada, y para nombrar los conceptos como los nombra esta parte del temario — "
+            "los fragmentos vecinos de esta misma sección se están leyendo con este mismo "
+            "encabezado, así que sus nombres tienen que salir idénticos a los tuyos.\n"
         )
 
     return f"""\
-Extract a KNOWLEDGE GRAPH from a fragment of teaching material on ANY subject. Identify the CONCEPTS of the subject and the TYPED RELATIONS between them, directly in the schema given below.
+Extrae un GRAFO DE CONOCIMIENTO de un fragmento de material docente de CUALQUIER asignatura. Identifica los CONCEPTOS de la materia y las RELACIONES TIPADAS entre ellos, directamente en el esquema que se indica abajo.
 {location_block}
 
-# WHAT COUNTS AS A VALID CONCEPT
-A concept NAMES an idea of the subject: a term that could be an entry in a glossary or an index (a thing, technique, category, structure, phenomenon or named entity). It is NOT a phrase that describes or predicates something.
-- Glossary test: if you would NOT put it as an entry in an index of the subject, it is NOT a concept.
-- Do NOT extract: document metadata (section titles, bibliography, licences, authors), incidental scenarios from examples (objects, characters or specific situations that merely illustrate), or fragments that read as part of a sentence (they start with a verb, contain a conjugated verb, or express a condition or an action).
+# QUÉ CUENTA COMO CONCEPTO VÁLIDO
+Un concepto NOMBRA una idea de la materia: un término que podría ser una entrada de un glosario o de un índice (una cosa, técnica, categoría, estructura, fenómeno o entidad con nombre propio). NO es una frase que describa o predique algo.
+- Prueba del glosario: si NO lo pondrías como entrada en un índice de la materia, NO es un concepto.
+- NO extraigas: metadatos del documento (títulos de sección, bibliografía, licencias, autores), escenarios incidentales de los ejemplos (objetos, personajes o situaciones concretas que solo ilustran), ni fragmentos que se lean como parte de una oración (empiezan por un verbo, contienen un verbo conjugado, o expresan una condición o una acción).
 
-# NAMING CANON (CRITICAL)
-This fragment is one of hundreds extracted independently from the same corpus, and the results are merged by NAME. Two fragments that name the same idea differently produce two concepts that will never be reconciled, so do not name what this fragment happens to say — name what the index of the subject would say.
-- SINGULAR always, even if the fragment speaks in plural.
-- NOUN form, never the adjective or the quality: name the thing, not its property.
-- No articles, no determiners, no possessives.
-- No qualifier borrowed from the example, the exercise or the tool at hand: name the concept, then stop.
-- Keep the wording the teaching material itself uses for the idea when it has one; do not translate it, do not modernise it, do not expand an abbreviation the material keeps short.
-- The same idea must come out with the SAME name every time, whichever fragment it appears in.
+# CANON DE NOMBRADO (CRÍTICO)
+Este fragmento es uno de cientos extraídos por separado del mismo corpus, y los resultados se fusionan POR NOMBRE. Dos fragmentos que nombren la misma idea de forma distinta producen dos conceptos que no se reconciliarán nunca, así que no nombres lo que este fragmento dice por casualidad — nombra lo que diría el índice de la materia.
+- SINGULAR siempre, aunque el fragmento hable en plural.
+- Forma SUSTANTIVA, nunca el adjetivo ni la cualidad: nombra la cosa, no su propiedad.
+- Sin artículos, sin determinantes, sin posesivos.
+- Sin ningún matiz tomado del ejemplo, del ejercicio o de la herramienta de turno: nombra el concepto y para ahí.
+- Conserva la redacción que el propio material docente usa para la idea cuando la tiene; no la traduzcas, no la modernices, no desarrolles una abreviatura que el material mantiene corta.
+- La misma idea debe salir con el MISMO nombre siempre, aparezca en el fragmento que aparezca.
 
 {_KG_LANGUAGE_RULE}
 
-# RELATION TYPES (respect the SOURCE → TARGET direction)
-Each relation is a triple [source, type, target]. Direction matters: choose the order that makes the stated reading true.
+# TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
+Cada relación es una terna [origen, tipo, destino]. La dirección importa: elige el orden que hace cierta la lectura enunciada.
 {schema.catalog_block()}
 
-# RELATION RULES
-- Source and target must be DIFFERENT, and both must appear in your `concepts` list. Relating a concept to itself is forbidden.
+# REGLAS DE RELACIÓN
+- El origen y el destino deben ser DISTINTOS, y ambos deben aparecer en tu lista `concepts`. Está prohibido relacionar un concepto consigo mismo.
 {_kg_type_preference_rule(schema)}
-- Extract only relations SUPPORTED by the text of the fragment, not by outside knowledge.
+- Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "concepts": ["<concept>", "..."],
-  "relations": [["<source>", "<type>", "<target>"], "..."]
+  "concepts": ["<concepto>", "..."],
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
 }}
-- `type` is one of: {schema.key_list()}. Nothing else.
-- Every source and target in `relations` must appear in `concepts`.
-- If the fragment yields no extractable concepts, return {{"concepts": [], "relations": []}}.
-- No text before or after, no backticks, no comments.
+- El `<tipo>` es uno de: {schema.key_list()}. Nada más.
+- Todo origen y todo destino de `relations` debe aparecer en `concepts`.
+- Si el fragmento no da ningún concepto extraíble, devuelve {{"concepts": [], "relations": []}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# FRAGMENT
+# FRAGMENTO
 {source_text}
 
 JSON:"""
 
 
 _KG_TEACHING_ORDER_RULE = """\
-# THE TEACHING ORDER IS THE POINT
-Fragment-by-fragment extraction sees a dependency only when two concepts are explained in the same breath, which is exactly when the material does NOT need to state it. The ordering of the syllabus is therefore almost entirely missing, and recovering it is the main reason this pass exists.
-- Go through the concepts asking, for each one: what must a student ALREADY understand before this can be taught? Every such answer that is itself on the list is a relation to propose.
-- A dependency is real even if the two concepts never appeared together: that they are far apart in the material is evidence FOR proposing it here, not against.
-- Most concepts of a subject rest on something else. A concept with nothing before it should be the exception — the true starting points — not the norm.
-- Do not chain what is already implied: state the DIRECT dependency, not the whole ancestry. If A rests on B and B on C, do not also relate A to C.
-- Being cautious is not free here: a dependency you leave out is one no later step can recover.
-- Prefer BOTH ends to be things a student is taught and could be examined on. The extraction also picked up tooling, notation, library calls and document vocabulary; an ordering hung off those describes the material rather than the syllabus, and nothing downstream can use it. When a dependency is real but one end is such a term, look for the taught concept behind it and relate that one instead."""
+# EL ORDEN DE ENSEÑANZA ES LO QUE IMPORTA
+La extracción fragmento a fragmento solo ve una dependencia cuando dos conceptos se explican de una misma vez, que es justo cuando el material NO necesita enunciarla. El orden del temario falta, por tanto, casi por completo, y recuperarlo es la razón principal de que exista este paso.
+- Recorre los conceptos preguntándote, para cada uno: ¿qué debe entender YA un alumno antes de que esto pueda enseñarse? Cada respuesta que esté a su vez en la lista es una relación que proponer.
+- Una dependencia es real aunque los dos conceptos no hayan aparecido nunca juntos: que estén lejos el uno del otro en el material es evidencia A FAVOR de proponerla aquí, no en contra.
+- La mayoría de los conceptos de una materia se apoyan en algo. Un concepto sin nada delante debería ser la excepción — los puntos de partida de verdad —, no la norma.
+- No encadenes lo que ya está implícito: enuncia la dependencia DIRECTA, no toda la ascendencia. Si A se apoya en B y B en C, no relaciones además A con C.
+- Ser cauto no sale gratis aquí: una dependencia que dejes fuera es una que ningún paso posterior puede recuperar.
+- Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación, llamadas de biblioteca y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
 
 
 def link_domain_relations_prompt(domain: str, nodes_block: str, schema) -> str:
     return f"""\
-You are given the concepts of ONE thematic block, «{domain}», of a knowledge graph built from the teaching material of a single subject. Each concept is listed with the relations already known about it, as evidence.
+Se te dan los conceptos de UN bloque temático, «{domain}», de un grafo de conocimiento construido a partir del material docente de una sola asignatura. Cada concepto se lista con las relaciones que ya se conocen de él, como evidencia.
 
-Your task: propose the TYPED RELATIONS that are MISSING between the concepts of this block — above all the order in which they have to be taught.
+Tu tarea: propón las RELACIONES TIPADAS que FALTAN entre los conceptos de este bloque — sobre todo el orden en que hay que enseñarlos.
 
 {_KG_LANGUAGE_RULE}
 
-# RELATION TYPES (respect the SOURCE → TARGET direction)
+# TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
 {schema.catalog_block()}
 
-# RULES
-- Source and target must be DIFFERENT and both must appear LITERALLY in the list below. Do not invent concepts, do not rewrite their names, and do not relate a concept to itself.
-- Do NOT restate a relation already shown as evidence. Only what is missing.
+# REGLAS
+- El origen y el destino deben ser DISTINTOS y ambos deben aparecer LITERALMENTE en la lista de abajo. No inventes conceptos, no reescribas sus nombres y no relaciones un concepto consigo mismo.
+- NO repitas una relación que ya se muestre como evidencia. Solo lo que falta.
 {_kg_type_preference_rule(schema)}
 
 {_KG_TEACHING_ORDER_RULE}
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "relations": [["<source>", "<type>", "<target>"], "..."]
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
 }}
-- `type` is one of: {schema.key_list()}.
-- If nothing is missing, return {{"relations": []}}.
-- No text before or after, no backticks, no comments.
+- El `<tipo>` es uno de: {schema.key_list()}.
+- Si no falta nada, devuelve {{"relations": []}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# CONCEPTS OF «{domain}» (with the relations already known)
+# CONCEPTOS DE «{domain}» (con las relaciones ya conocidas)
 {nodes_block}
 
 JSON:"""
@@ -882,32 +883,32 @@ JSON:"""
 
 def link_cross_domain_relations_prompt(domains_block: str, schema) -> str:
     return f"""\
-You are given the concepts of a knowledge graph built from the teaching material of a single subject, grouped into the THEMATIC BLOCKS of the syllabus. The relations inside each block have already been proposed.
+Se te dan los conceptos de un grafo de conocimiento construido a partir del material docente de una sola asignatura, agrupados en los BLOQUES TEMÁTICOS del temario. Las relaciones dentro de cada bloque ya se han propuesto.
 
-Your task: propose ONLY the TYPED RELATIONS that CROSS from one block to another — the backbone that orders the syllabus as a whole and that no reading of a single block could reveal.
+Tu tarea: propón SOLO las RELACIONES TIPADAS que CRUZAN de un bloque a otro — el armazón que ordena el temario en su conjunto y que ninguna lectura de un solo bloque podría revelar.
 
 {_KG_LANGUAGE_RULE}
 
-# RELATION TYPES (respect the SOURCE → TARGET direction)
+# TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
 {schema.catalog_block()}
 
-# RULES
-- Source and target must belong to DIFFERENT blocks. A relation between two concepts of the same block will be discarded: it is not what this pass is for.
-- Both must appear LITERALLY in the lists below. Do not invent concepts and do not rewrite their names.
+# REGLAS
+- El origen y el destino deben pertenecer a BLOQUES DISTINTOS. Una relación entre dos conceptos del mismo bloque se descartará: no es para lo que sirve este paso.
+- Ambos deben aparecer LITERALMENTE en las listas de abajo. No inventes conceptos y no reescribas sus nombres.
 {_kg_type_preference_rule(schema)}
 
 {_KG_TEACHING_ORDER_RULE}
-- Work block by block: for each one, ask which concepts of the EARLIER blocks it rests on. The blocks are given in the order the material presents them, which is itself evidence about the teaching order — but it is not conclusive, and a later block can hold a prerequisite of an earlier one.
+- Trabaja bloque a bloque: para cada uno, pregúntate en qué conceptos de los bloques ANTERIORES se apoya. Los bloques vienen en el orden en que el material los presenta, que es en sí mismo evidencia sobre el orden de enseñanza — pero no es concluyente, y un bloque posterior puede contener un prerrequisito de uno anterior.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "relations": [["<source>", "<type>", "<target>"], "..."]
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
 }}
-- `type` is one of: {schema.key_list()}.
-- No text before or after, no backticks, no comments.
+- El `<tipo>` es uno de: {schema.key_list()}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# THEMATIC BLOCKS AND THEIR CONCEPTS
+# BLOQUES TEMÁTICOS Y SUS CONCEPTOS
 {domains_block}
 
 JSON:"""
@@ -915,34 +916,34 @@ JSON:"""
 
 def merge_candidate_groups_prompt(groups_block: str) -> str:
     return f"""\
-You are given SMALL GROUPS of node names from a knowledge graph automatically extracted from a corpus of teaching material, each name with its outgoing relations as evidence. Extraction ran fragment by fragment and each fragment named things in its own words, so the SAME idea arrives several times wearing different grammar. The groups were formed by NAME SIMILARITY alone, which is a suspicion, not a verdict: many groups hold names that merely resemble each other and must be left alone.
+Se te dan GRUPOS PEQUEÑOS de nombres de nodo de un grafo de conocimiento extraído automáticamente de un corpus de material docente, cada nombre con sus relaciones salientes como evidencia. La extracción fue fragmento a fragmento y cada fragmento nombró las cosas con sus propias palabras, así que la MISMA idea llega varias veces vestida con otra gramática. Los grupos se formaron SOLO por parecido de nombre, que es una sospecha, no un veredicto: muchos grupos contienen nombres que simplemente se parecen y hay que dejar en paz.
 
-Your task: inside EACH group, and never across groups, decide which names are THE SAME CONCEPT and must be folded into one.
+Tu tarea: dentro de CADA grupo, y nunca entre grupos, decide qué nombres son EL MISMO CONCEPTO y deben fundirse en uno.
 
-# THE MERGE TEST: ONE GLOSSARY ENTRY, ONE CONCEPT
-- Would an index of the subject give these names ONE entry or TWO? If one, merge them, however different their grammar.
-- Merge across grammatical form: the adjective, the noun and the quality of the same idea are one concept; so are the singular, the plural and the plural noun phrase; so are a term and the same term with the object it applies to attached.
-- Merge a term and its own definition-as-a-name: when one name states the idea and another spells out that same idea as a longer phrase, they are one concept.
-- Do NOT merge two ideas a student could be examined on separately, even when they always appear together: a mechanism and the technique that uses it stay apart, and so do a part and the whole it belongs to, and so do a general term and one of its specific kinds.
-- Do NOT merge two names just because they belong to the same topic, are related, or often appear together. Sharing a word is not evidence.
-- Use the relations as evidence: names with clearly different relations are usually different concepts.
-- Over-merging costs more than under-merging: a concept lost by merging cannot be recovered later. When the two readings are equally defensible, leave them apart.
+# LA PRUEBA DE FUSIÓN: UNA ENTRADA DE GLOSARIO, UN CONCEPTO
+- ¿Un índice de la materia daría a estos nombres UNA entrada o DOS? Si una, fúndelos, por distinta que sea su gramática.
+- Funde a través de la forma gramatical: el adjetivo, el sustantivo y la cualidad de la misma idea son un solo concepto; también lo son el singular, el plural y el sintagma nominal en plural; y también un término y ese mismo término con el objeto al que se aplica pegado detrás.
+- Funde un término con su propia definición usada como nombre: cuando un nombre enuncia la idea y otro desarrolla esa misma idea como una frase más larga, son un solo concepto.
+- NO fundas dos ideas de las que un alumno podría examinarse por separado, aunque aparezcan siempre juntas: un mecanismo y la técnica que lo usa siguen aparte, y también una parte y el todo al que pertenece, y también un término general y una de sus clases concretas.
+- NO fundas dos nombres solo porque pertenezcan al mismo tema, estén relacionados o aparezcan a menudo juntos. Compartir una palabra no es evidencia.
+- Usa las relaciones como evidencia: nombres con relaciones claramente distintas suelen ser conceptos distintos.
+- Fundir de más cuesta más que fundir de menos: un concepto perdido en una fusión no se recupera después. Cuando las dos lecturas sean igual de defendibles, déjalos aparte.
 
-# CANONICAL NAME
-- The canonical MUST be one of the names of its own group, copied exactly. Do not invent names, do not translate them, do not fix their spelling.
-- Prefer the shortest form that still names the idea completely, and the one written as a noun.
+# NOMBRE CANÓNICO
+- El canónico DEBE ser uno de los nombres de su propio grupo, copiado exactamente. No inventes nombres, no los traduzcas, no corrijas su ortografía.
+- Prefiere la forma más corta que siga nombrando la idea por completo, y la que esté escrita como sustantivo.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "merges": [{{"canonical": "<name>", "aliases": ["<name>", "..."]}}, "..."]
+  "merges": [{{"canonical": "<nombre>", "aliases": ["<nombre>", "..."]}}, "..."]
 }}
-- One entry per set of names that ARE the same concept. Names that merge with nothing simply do not appear.
-- Never put names from two different groups in the same entry.
-- If nothing in any group merges, return {{"merges": []}}.
-- No text before or after, no backticks, no comments.
+- Una entrada por cada conjunto de nombres que SEAN el mismo concepto. Los nombres que no se funden con nada simplemente no aparecen.
+- Nunca pongas nombres de dos grupos distintos en la misma entrada.
+- Si no se funde nada en ningún grupo, devuelve {{"merges": []}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# GROUPS
+# GRUPOS
 {groups_block}
 
 JSON:"""
@@ -950,44 +951,45 @@ JSON:"""
 
 def filter_graph_nodes_prompt(nodes_block: str) -> str:
     return f"""\
-You are given part of the NODES of a knowledge graph automatically extracted from a corpus of teaching material on a single subject, each with its outgoing relations as evidence. The extraction is noisy: alongside the concepts of the subject it picked up metadata, incidental scenarios and sentence fragments.
+Se te da parte de los NODOS de un grafo de conocimiento extraído automáticamente de un corpus de material docente de una sola asignatura, cada uno con sus relaciones salientes como evidencia. La extracción es ruidosa: junto a los conceptos de la materia recogió metadatos, escenarios incidentales y fragmentos de oración.
 
-Your task: list the nodes that do NOT name a concept of the subject and must be removed. Everything you do not list is kept.
+Tu tarea: lista los nodos que NO nombran un concepto de la materia y hay que eliminar. Todo lo que no listes se conserva.
 
-# WHAT COUNTS AS A VALID NODE
-A valid node NAMES a concept of the subject: a term that could be an entry in a glossary or an index (a thing, idea, technique, category, structure, phenomenon or named entity). It is NOT a phrase that describes, explains or predicates something.
+# QUÉ CUENTA COMO NODO VÁLIDO
+Un nodo válido NOMBRA un concepto de la materia: un término que podría ser una entrada de un glosario o de un índice (una cosa, idea, técnica, categoría, estructura, fenómeno o entidad con nombre propio). NO es una frase que describa, explique o predique algo.
 
-# REMOVE
-- Document metadata: section titles, bibliography, licences, authors, page furniture.
-- Fragments that are not noun phrases: anything that starts with a verb, carries a
-  conjugated verb, or states a condition or an action.
-- Single letters, isolated symbols and bare values.
-- The objects, characters or scenarios of the illustrative examples, which belong to the
-  example and not to the subject.
+# ELIMINA
+- Metadatos del documento: títulos de sección, bibliografía, licencias, autores, elementos de
+  maquetación.
+- Fragmentos que no son sintagmas nominales: cualquier cosa que empiece por un verbo, lleve un
+  verbo conjugado, o enuncie una condición o una acción.
+- Letras sueltas, símbolos aislados y valores desnudos.
+- Los objetos, personajes o escenarios de los ejemplos ilustrativos, que pertenecen al ejemplo
+  y no a la materia.
 
-Judge only whether the string NAMES something. Whether the thing it names is useful as a
-LABEL for exercises is a different question, asked later and with the exemplars profile in
-hand; do not answer it here. An umbrella term, a cross-cutting quality or a generic stage of
-the work all NAME something, so they stay.
+Juzga únicamente si la cadena NOMBRA algo. Si lo que nombra sirve como ETIQUETA de ejercicios
+es otra pregunta, que se hace más tarde y con el perfil de ejemplares delante; no la respondas
+aquí. Un término paraguas, una cualidad transversal o una etapa genérica del trabajo NOMBRAN
+algo, así que se quedan.
 
-# KEEP
-- Do not remove a term for being short, elementary, generic or infrequent. Rarity is not evidence of noise here, and whether a concept is useful as a LABEL is decided much later by someone else — that is not your question.
-- When a node names something of the subject at all, keep it.
+# CONSERVA
+- No elimines un término por ser corto, elemental, genérico o poco frecuente. La rareza no es evidencia de ruido aquí, y si un concepto sirve como ETIQUETA lo decide mucho más tarde otro paso — esa no es tu pregunta.
+- Cuando un nodo nombre algo de la materia, por poco que sea, consérvalo.
 
-# WHEN IN DOUBT
-- Glossary test: if you would NOT put it as an entry in an index of the subject, remove it.
-- With a FRAGMENT, remove even when in doubt. With a CONCEPT, keep even when in doubt.
+# ANTE LA DUDA
+- Prueba del glosario: si NO lo pondrías como entrada en un índice de la materia, elimínalo.
+- Ante un FRAGMENTO, elimina incluso en la duda. Ante un CONCEPTO, conserva incluso en la duda.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "drop": {{"<node>": "<why it does not name a concept, 10 words max>"}}
+  "drop": {{"<nodo>": "<por qué no nombra un concepto, 10 palabras máximo>"}}
 }}
-- The keys are EXACT names from the list below. Do not invent, rename, translate or fix spelling.
-- Judge only the nodes listed here. If all of them are concepts, return {{"drop": {{}}}}.
-- No text before or after, no backticks, no comments.
+- Las claves son nombres EXACTOS de la lista de abajo. No inventes, no renombres, no traduzcas ni corrijas la ortografía.
+- Juzga solo los nodos listados aquí. Si todos son conceptos, devuelve {{"drop": {{}}}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# NODES
+# NODOS
 {nodes_block}
 
 JSON:"""
@@ -998,48 +1000,48 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
     sources_rule = ""
     if documents_block:
         sources_block = (
-            "\n# THE DOCUMENTS THE CORPUS IS MADE OF\n"
+            "\n# LOS DOCUMENTOS DE LOS QUE SE COMPONE EL CORPUS\n"
             f"{documents_block}\n"
-            "Each document is listed under a code with the title it gives itself; titles that "
-            "nearly every document repeats (the course header, standing section names) have "
-            "already been removed, so what is left is what tells one document apart from "
-            "another. Each concept below carries, in parentheses, the codes of the documents "
-            "it was extracted from.\n"
+            "Cada documento se lista bajo un código con el título que él mismo se da; los "
+            "títulos que repiten casi todos los documentos (la cabecera de la asignatura, los "
+            "nombres de sección fijos) ya se han quitado, así que lo que queda es lo que "
+            "distingue un documento de otro. Cada concepto de abajo lleva entre paréntesis los "
+            "códigos de los documentos de los que se extrajo.\n"
         )
         sources_rule = (
-            "\n- START FROM THE DOCUMENT TITLES: teaching material is already organised by "
-            "topic, so a title that names a thematic block is a valid domain name, and the "
-            "concepts extracted from that document are its natural members. They are a "
-            "STARTING POINT, not a constraint: merge several documents into one domain, split "
-            "a document that covers several blocks, rewrite a title that describes a document "
-            "rather than a theme, and ignore any title that names no theme at all."
+            "\n- PARTE DE LOS TÍTULOS DE LOS DOCUMENTOS: el material docente ya está organizado "
+            "por temas, así que un título que nombra un bloque temático es un nombre de dominio "
+            "válido, y los conceptos extraídos de ese documento son sus miembros naturales. Son "
+            "un PUNTO DE PARTIDA, no una restricción: funde varios documentos en un dominio, "
+            "parte un documento que cubra varios bloques, reescribe un título que describa un "
+            "documento en vez de un tema, e ignora cualquier título que no nombre tema alguno."
         )
 
     return f"""\
-You are given the already cleaned CONCEPTS of a knowledge graph. They come from a single corpus of teaching material on one subject.
+Se te dan los CONCEPTOS ya limpios de un grafo de conocimiento. Proceden de un solo corpus de material docente de una asignatura.
 
-Your task: NAME the thematic DOMAINS the subject is made of. You are NOT placing the concepts — every one of them will be assigned to one of your domains afterwards, in small batches. Name the blocks, and nothing else.
+Tu tarea: NOMBRA los DOMINIOS temáticos de los que se compone la materia. NO estás colocando los conceptos — cada uno de ellos se asignará después a uno de tus dominios, por lotes pequeños. Nombra los bloques y nada más.
 {sources_block}
-# DOMAINS
-- A domain is a thematic block of the subject (in the style of the main topics or units of a syllabus), not a fine-grained tag.
-- Propose FEW domains (as a guideline, between 3 and 8), each one covering a reasonable mass of the concepts below.{sources_rule}
-- BETWEEN THEM THEY MUST COVER THE WHOLE LIST: read it to the end and check that every concept would have an obvious domain to go to. A concept that none of your domains would receive means a block is missing.
-- NO CATCH-ALL: it is FORBIDDEN to create a generic dumping-ground domain such as "Other", "Various", "Miscellaneous" or "Unclassified". Every concept has a theme, and a domain that names no theme can receive none of them.
+# DOMINIOS
+- Un dominio es un bloque temático de la materia (al estilo de los temas o unidades principales de un temario), no una etiqueta de grano fino.
+- Propón POCOS dominios (como orientación, entre 3 y 8), cada uno cubriendo una masa razonable de los conceptos de abajo.{sources_rule}
+- ENTRE TODOS DEBEN CUBRIR LA LISTA ENTERA: léela hasta el final y comprueba que cada concepto tendría un dominio evidente al que ir. Un concepto que ninguno de tus dominios recibiría significa que falta un bloque.
+- NADA DE CAJÓN DE SASTRE: está PROHIBIDO crear un dominio genérico de descarte del tipo «Otros», «Varios», «Miscelánea» o «Sin clasificar». Todo concepto tiene un tema, y un dominio que no nombra ningún tema no puede recibir ninguno.
 
-# NAMES
-- The DOMAIN NAMES are yours to write: short and descriptive, in the SAME LANGUAGE as the concepts.
-- Do not repeat a name, and do not write two names for the same block.
+# NOMBRES
+- Los NOMBRES DE LOS DOMINIOS los escribes tú: cortos y descriptivos, EN EL MISMO IDIOMA que los conceptos.
+- No repitas un nombre, y no escribas dos nombres para el mismo bloque.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "domains": ["<Domain name>", "..."]
+  "domains": ["<Nombre de dominio>", "..."]
 }}
-- The domain names alone: a handful of strings, nothing else.
-- Do NOT list the concepts and do NOT write which concept belongs where. That is a later question, and anything you write about it here is discarded.
-- No text before or after, no backticks, no comments.
+- Solo los nombres de los dominios: un puñado de cadenas, nada más.
+- NO listes los conceptos y NO escribas qué concepto va dónde. Esa es una pregunta posterior, y todo lo que escribas aquí sobre ella se descarta.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# CONCEPTS
+# CONCEPTOS
 {nodes_block}
 
 JSON:"""
@@ -1051,29 +1053,29 @@ JSON:"""
 # much smaller question, with the domains already decided so this pass cannot invent more.
 def assign_leftover_concepts_prompt(domains_block: str, nodes_block: str) -> str:
     return f"""\
-The concepts of a knowledge graph built from the teaching material of a single subject have already been grouped into thematic domains. The concepts below were LEFT OUT of that grouping — not because they are wrong, but because they were overlooked.
+Los conceptos de un grafo de conocimiento construido a partir del material docente de una sola asignatura ya se han agrupado en dominios temáticos. Los conceptos de abajo QUEDARON FUERA de esa agrupación — no porque estén mal, sino porque se pasaron por alto.
 
-Your task: place EVERY concept below into ONE of the EXISTING domains.
+Tu tarea: coloca CADA concepto de abajo en UNO de los dominios EXISTENTES.
 
-# RULES
-- The domain names are FIXED. Use them exactly as written. Do NOT create new domains, do NOT rename them, do NOT leave a concept out.
-- Every concept below must appear exactly once in the output.
-- Assign by theme and by the relation evidence: the domain that already holds the concepts this one relates to is almost always the right one.
-- There is no "other" and no "unclassified": if a concept seems to fit nowhere, choose the domain it is LEAST unrelated to.
-- Use the EXACT input names. Do not invent, rename, translate or fix spelling.
+# REGLAS
+- Los nombres de los dominios son FIJOS. Úsalos exactamente como están escritos. NO crees dominios nuevos, NO los renombres, NO dejes fuera ningún concepto.
+- Cada concepto de abajo debe aparecer exactamente una vez en la salida.
+- Asigna por tema y por la evidencia de las relaciones: el dominio que ya contiene los conceptos con los que este se relaciona es casi siempre el correcto.
+- No hay «otros» ni «sin clasificar»: si un concepto parece no encajar en ninguno, elige aquel con el que sea MENOS ajeno.
+- Usa los nombres EXACTOS de la entrada. No inventes, no renombres, no traduzcas ni corrijas la ortografía.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "domains": {{"<existing domain name>": ["<concept>", "..."]}}
+  "domains": {{"<nombre de dominio existente>": ["<concepto>", "..."]}}
 }}
-- Only domains that receive at least one concept need to appear.
-- No text before or after, no backticks, no comments.
+- Solo hace falta que aparezcan los dominios que reciban al menos un concepto.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# EXISTING DOMAINS AND WHAT THEY ALREADY HOLD
+# DOMINIOS EXISTENTES Y LO QUE YA CONTIENEN
 {domains_block}
 
-# CONCEPTS TO PLACE (with the relations already known)
+# CONCEPTOS A COLOCAR (con las relaciones ya conocidas)
 {nodes_block}
 
 JSON:"""
@@ -1088,61 +1090,62 @@ def review_taggable_concepts_prompt(
     samples_block: str = "",
 ) -> str:
     context_lines = "\n".join(f"- {k}: {v}" for k, v in (context or {}).items())
-    context_section = f"\n# TEACHING CONTEXT\n{context_lines}\n" if context_lines else ""
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_lines}\n" if context_lines else ""
     samples_section = (
-        "\n# REAL ITEMS FROM THIS SUBJECT'S MATERIAL (what an item actually looks like here)\n"
+        "\n# EJERCICIOS REALES DEL MATERIAL DE ESTA ASIGNATURA (cómo es aquí un ejercicio)\n"
         f"{samples_block}\n"
         if samples_block.strip()
         else ""
     )
     return f"""\
-You are reviewing ONE thematic domain of a knowledge graph built from a corpus of teaching material on a single subject. The graph exists to LABEL learning items (exercises, problems, assessment tasks), and a label answers exactly one question: what does this item make the student PRACTISE?
+Estás revisando UN dominio temático de un grafo de conocimiento construido a partir de un corpus de material docente de una sola asignatura. El grafo existe para ETIQUETAR ejercicios (problemas, tareas de evaluación), y una etiqueta responde exactamente a una pregunta: ¿qué hace PRACTICAR ese ejercicio a quien lo resuelve?
 
-Your task: decide which of the concepts listed below are USELESS AS LABELS and must be excluded from labelling. Everything you do not list stays usable as a label.
+Tu tarea: decide cuáles de los conceptos listados abajo son INÚTILES COMO ETIQUETA y hay que excluir del etiquetado. Todo lo que no listes sigue sirviendo como etiqueta.
 {context_section}
-# WHAT AN ITEM IS IN THIS INSTANCE
-This subject sets its tasks in these modalities, and every label you keep will be used to
-label items OF THESE SHAPES and no others. A concept that no item of these modalities could
-ever be ABOUT is useless as a label here, however respectable it is as a term.
+# QUÉ ES UN EJERCICIO EN ESTA INSTANCIA
+Esta asignatura plantea sus tareas en estas modalidades, y toda etiqueta que conserves se usará
+para etiquetar ejercicios DE ESTAS FORMAS y de ninguna otra. Un concepto sobre el que ningún
+ejercicio de estas modalidades podría tratar jamás es inútil como etiqueta aquí, por respetable
+que sea como término.
 {modalities_block}
 {samples_section}
-# THE TEST: DOES IT DISCRIMINATE?
-For each concept, in this order:
-1. Could an item have THIS concept as its objective — one that a student who has mastered everything else except this could NOT solve? If not, exclude it.
-2. Could this same label be put, without lying, on items that practise clearly different things from different parts of the syllabus? If yes, exclude it.
-A label that fits almost everything tells you nothing about anything.
+# LA PRUEBA: ¿DISCRIMINA?
+Para cada concepto, en este orden:
+1. ¿Podría un ejercicio tener ESTE concepto como objetivo — uno que un alumno que domina todo lo demás salvo este NO pudiera resolver? Si no, exclúyelo.
+2. ¿Podría ponerse esta misma etiqueta, sin mentir, a ejercicios que practican cosas claramente distintas de partes distintas del temario? Si sí, exclúyelo.
+Una etiqueta que encaja en casi todo no dice nada de nada.
 
-# EXCLUDE
-- One of any two concepts of this domain that would end up labelling the SAME items — the ones no exercise could tell apart because whatever practises one practises the other. Keep the one a teacher would write on the exam, exclude the other. (A concept that survives as a label is still in the graph through its relations.)
-- The subject, the course or the discipline itself, its units, and umbrella terms that just name a part of the syllabus.
-- Generic activities or stages of the work: writing, running, designing, analysing, testing, documenting, maintaining, solving, and the like.
-- Cross-cutting qualities and virtues: quality, efficiency as a virtue, readability, correctness, usefulness — unless the corpus treats it as a technical object with content and criteria of its own.
-- Vocabulary of the MATERIAL instead of the subject: concept, technique, notation, example, summary, recommended reading, introduction, beginning, end, section titles.
-- Languages, tools, platforms, libraries, standards and their names.
-- A parent term whose specific children are also on the list and which adds nothing beyond them.
-- Single letters and symbols, isolated values, and the objects, characters or scenarios of the illustrative examples.
+# EXCLUYE
+- Uno de cualesquiera dos conceptos de este dominio que acabarían etiquetando LOS MISMOS ejercicios — aquellos que ningún ejercicio podría distinguir porque lo que practica uno practica el otro. Conserva el que un docente escribiría en el examen, excluye el otro. (Un concepto excluido sigue en el grafo a través de sus relaciones.)
+- La asignatura, el curso o la disciplina en sí, sus unidades, y los términos paraguas que solo nombran una parte del temario.
+- Actividades o etapas genéricas del trabajo: escribir, ejecutar, diseñar, analizar, probar, documentar, mantener, resolver y similares.
+- Cualidades y virtudes transversales: calidad, eficiencia como virtud, legibilidad, corrección, utilidad — salvo que el corpus la trate como un objeto técnico con contenido y criterios propios.
+- Vocabulario del MATERIAL en vez de la materia: concepto, técnica, notación, ejemplo, resumen, lectura recomendada, introducción, principio, final, títulos de sección.
+- Lenguajes, herramientas, plataformas, bibliotecas, estándares y sus nombres.
+- Un término padre cuyos hijos específicos están también en la lista y que no aporta nada más allá de ellos.
+- Letras y símbolos sueltos, valores aislados, y los objetos, personajes o escenarios de los ejemplos ilustrativos.
 
-# KEEP
-- Any specific technique, structure, mechanism, operation, rule or phenomenon of the subject, EVEN IF elementary: elementary is not the same as generic. An item can be about it.
-- Whatever a student can be asked to apply, build, trace, compare, choose between or fix.
-- Do not exclude a concept for being short, frequent, or a prerequisite of many others: what matters is whether an item can be ABOUT it, not how often it is used as a tool.
+# CONSERVA
+- Cualquier técnica, estructura, mecanismo, operación, regla o fenómeno específico de la materia, AUNQUE sea elemental: elemental no es lo mismo que genérico. Un ejercicio puede tratar sobre ello.
+- Todo aquello que se le puede pedir a un alumno que aplique, construya, trace, compare, elija entre varias opciones o corrija.
+- No excluyas un concepto por ser corto, frecuente o prerrequisito de muchos otros: lo que importa es si un ejercicio puede TRATAR SOBRE él, no cuántas veces se usa como herramienta.
 
-# WHEN IN DOUBT, EXCLUDE
-An excluded concept stays in the graph and keeps doing its work through its relations (prerequisites, hierarchy, composition); it is only never used as a label. One kept concept that does not discriminate pollutes the labelling of the whole corpus.
+# ANTE LA DUDA, EXCLUYE
+Un concepto excluido sigue en el grafo y sigue haciendo su trabajo a través de sus relaciones (prerrequisitos, jerarquía, composición); simplemente no se usa nunca como etiqueta. Un concepto conservado que no discrimina contamina el etiquetado de todo el corpus.
 
-# OUTPUT
-A single JSON object with exactly this shape:
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
 {{
-  "non_taggable": {{"<concept>": "<why it does not discriminate, 12 words max>"}}
+  "non_taggable": {{"<concepto>": "<por qué no discrimina, 12 palabras máximo>"}}
 }}
-- The keys are EXACT names from the list below. Do not invent, rename, translate or fix spelling.
-- Judge only the concepts of this domain. If all of them discriminate, return {{"non_taggable": {{}}}}.
-- No text before or after, no backticks, no comments.
+- Las claves son nombres EXACTOS de la lista de abajo. No inventes, no renombres, no traduzcas ni corrijas la ortografía.
+- Juzga solo los conceptos de este dominio. Si todos discriminan, devuelve {{"non_taggable": {{}}}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# DOMAINS OF THE SUBJECT (context: this is the whole syllabus)
+# DOMINIOS DE LA MATERIA (contexto: esto es el temario entero)
 {domains_block}
 
-# CONCEPTS OF THE DOMAIN «{domain}» (with their outgoing relations as evidence)
+# CONCEPTOS DEL DOMINIO «{domain}» (con sus relaciones salientes como evidencia)
 {nodes_block}
 
 JSON:"""

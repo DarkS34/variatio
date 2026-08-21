@@ -64,5 +64,5 @@ def test_the_naming_prompt_is_not_shown_the_relation_evidence(monkeypatch):
 
 def test_the_naming_prompt_asks_for_names_and_not_for_a_partition():
     prompt = curate_graph_domains_prompt("- Variable\n- Función")
-    assert '"domains": ["<Domain name>", "..."]' in prompt
-    assert "Do NOT list the concepts" in prompt
+    assert '"domains": ["<Nombre de dominio>", "..."]' in prompt
+    assert "NO listes los conceptos" in prompt
