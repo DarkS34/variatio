@@ -39,20 +39,25 @@ import { runStore } from "@/state/runStore";
  */
 const NAV = [
   { path: "/", label: "Panel", qualifier: null, icon: Activity, artifact: null, group: "watch" },
-  {
-    path: "/preparar/grafo",
-    label: "Grafo",
-    qualifier: "de conocimiento",
-    icon: Network,
-    artifact: "knowledge_graph",
-    group: "prepare",
-  },
+  // The profile leads the «prepare» group, and this order has to keep matching
+  // `server/review.ARTIFACTS` — the panel's cards and their 1-2-3 badges read that tuple,
+  // this array is a second copy of the same decision. The reason it is the profile: a graph
+  // can be built with nothing, but its taggability review cannot run until the profile is
+  // approved, so starting here is starting at a stage you cannot finish.
   {
     path: "/preparar/perfil",
     label: "Perfil",
     qualifier: "de ejemplares",
     icon: FileJson,
     artifact: "exemplars_profile",
+    group: "prepare",
+  },
+  {
+    path: "/preparar/grafo",
+    label: "Grafo",
+    qualifier: "de conocimiento",
+    icon: Network,
+    artifact: "knowledge_graph",
     group: "prepare",
   },
   {

@@ -19,13 +19,19 @@ EXEMPLARS_PROFILE = stages.EXEMPLARS_PROFILE
 KNOWLEDGE_GRAPH = stages.KNOWLEDGE_GRAPH
 EXEMPLARS_BANK = stages.EXEMPLARS_BANK
 
-ARTIFACTS: tuple[str, ...] = (KNOWLEDGE_GRAPH, EXEMPLARS_PROFILE, EXEMPLARS_BANK)
+ARTIFACTS: tuple[str, ...] = (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH, EXEMPLARS_BANK)
 
-# Verified against the code, not assumed: the profile only reads the raw exemplars,
-# the KG only reads the raw corpus, and the bank needs both (schema for extraction,
-# concepts for tagging). The first two are independent of each other, so the order
-# `ARTIFACTS` lists them in is a presentation choice — it is the navbar's — and only the
-# bank coming last is forced.
+# This tuple is the chain as the screens draw it — the navbar, the panel's cards and their
+# 1-2-3 badges all read it, so it has to be the order a person actually works in.
+#
+# The profile leads since 2026-08-21, and that is no longer just presentation. Building the
+# graph still needs nothing (`UPSTREAM[KNOWLEDGE_GRAPH]` is `()` and must stay so — a build
+# reads only the raw corpus). But FINISHING it does: the taggability review is a job of its
+# own now and `routers/jobs.NEEDS_APPROVED` gates it on an APPROVED profile, because a
+# concept is useless as a label only relative to the shapes of item this instance sets.
+# Starting a workspace with the graph therefore walks you into a stage you cannot complete.
+# The bank still comes last, and that one IS forced by `UPSTREAM`: it needs the profile's
+# schema to extract and the graph's concepts to tag.
 UPSTREAM: dict[str, tuple[str, ...]] = {
     KNOWLEDGE_GRAPH: (),
     EXEMPLARS_PROFILE: (),
