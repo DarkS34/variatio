@@ -106,7 +106,7 @@ function tokensIn(text) {
 }
 
 const lightSrc = block(/:root\s*\{([\s\S]*?)\n\}/);
-const darkSrc = block(/prefers-color-scheme:\s*dark\s*\)\s*\{\s*:root\s*\{([\s\S]*?)\n  \}/);
+const darkSrc = block(/:root\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
 const light = tokensIn(lightSrc);
 const dark = { ...light, ...tokensIn(darkSrc) };
 

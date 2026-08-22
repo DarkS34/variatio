@@ -1,11 +1,12 @@
-import { LogOut, ShieldCheck, Sparkles, UserRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { LogOut, Monitor, Moon, ShieldCheck, Sparkles, Sun, UserRound } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
 import { useRouter } from "@/lib/router";
 import { ROLE_LABELS, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
+import { themeStore, type ThemePreference } from "@/state/theme";
 import { cn } from "@/lib/utils";
 
 /**
@@ -97,6 +98,13 @@ export function AccountMenu() {
 
           <Separator />
 
+          {/* The one setting that is about the screen and not the account, so it lives
+              with the account menu and not in «Mi perfil»: it is per browser, and the
+              same person reads this on a bright laptop and at a dark desk. */}
+          <ThemeRow />
+
+          <Separator />
+
           <div className="p-1">
             <MenuItem
               icon={<LogOut className="size-4" />}
@@ -112,6 +120,43 @@ export function AccountMenu() {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+const THEMES: { value: ThemePreference; label: string; icon: React.ReactNode }[] = [
+  { value: "system", label: "Como el sistema", icon: <Monitor className="size-4" /> },
+  { value: "light", label: "Claro", icon: <Sun className="size-4" /> },
+  { value: "dark", label: "Oscuro", icon: <Moon className="size-4" /> },
+];
+
+function ThemeRow() {
+  const preference = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot);
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-2">
+      <span className="text-small text-muted-foreground">Tema</span>
+      <div role="radiogroup" aria-label="Tema" className="flex rounded-md border border-border p-0.5">
+        {THEMES.map((theme) => {
+          const on = theme.value === preference;
+          return (
+            <button
+              key={theme.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={theme.label}
+              title={theme.label}
+              onClick={() => themeStore.set(theme.value)}
+              className={cn(
+                "flex size-7 items-center justify-center rounded transition-colors",
+                on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {theme.icon}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

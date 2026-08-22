@@ -394,12 +394,13 @@ export function GraphCanvas({
       applyParking(bodies.current, modelRef.current, size.current);
     }
 
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onTheme = () => {
+    // The stylesheet keys the dark tokens on `data-theme`, which `state/theme.ts` stamps
+    // for the OS and for the toggle alike, so the attribute is the one thing to watch.
+    const onTheme = new MutationObserver(() => {
       palette.current = readPalette();
       repaint();
-    };
-    media.addEventListener("change", onTheme);
+    });
+    onTheme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     // Non-passive, because the page must not scroll while the wheel is zooming.
     const onWheel = (event: WheelEvent) => {
@@ -423,7 +424,7 @@ export function GraphCanvas({
 
     return () => {
       observer.disconnect();
-      media.removeEventListener("change", onTheme);
+      onTheme.disconnect();
       canvas.removeEventListener("wheel", onWheel);
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;

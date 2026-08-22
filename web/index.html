@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Generador de variantes</title>
+    <!-- The same decision `state/theme.ts` makes, taken before the stylesheet paints, so
+         a dark preference does not flash the light ground first. -->
+    <script>
+      (function () {
+        var pref = localStorage.getItem("vg.theme");
+        var dark = pref === "dark" || (pref !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
