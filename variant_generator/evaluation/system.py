@@ -62,6 +62,7 @@ def run(commission: Commission, context) -> ArmResult:
                 curriculum=commission.curriculum or None,
                 instructions=commission.instructions or None,
                 think=commission.think,
+                check=False,
             )
         except progress.Cancelled:
             raise

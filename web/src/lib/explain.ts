@@ -76,6 +76,8 @@ export const STEP_EXPLAIN: Record<string, string> = {
     "Un modelo juez lee las instrucciones adicionales antes de que entren en el prompt y decide si contienen algo dañino o un intento de saltarse las restricciones del ejercicio. Solo se ejecuta si has escrito algo.",
   generate:
     "Una variante por vuelta, con los mismos ejemplares en todas: prompt, generación en streaming y validación contra el esquema.",
+  check:
+    "Lo que el sistema puede comprobar de la variante sin juzgarla: si nombra algo no impartido, si se parece demasiado a un ejemplo o a otra del lote, y si el etiquetador la reconoce como el concepto pedido. Señales para quien la lee, no un rechazo.",
   build_exemplars_profile: "Infiere el esquema de un ítem a partir de los ejemplares en bruto.",
   build_knowledge_graph: "Construye el grafo desde el corpus: extracción, limpieza y curación.",
   build_exemplars_bank: "Extrae los ítems de los documentos y los valida contra el perfil.",
@@ -180,7 +182,9 @@ export function describeEvent(event: VgEvent): { text: string; tone: ActivityTon
         tone: "warn",
       };
     case "item.produced":
-      return { text: `Ítem ${event.index} generado y validado`, tone: "good" };
+      return event.checks?.flags?.length
+        ? { text: `Ítem ${event.index} generado, con ${event.checks.flags.length} señal(es)`, tone: "warn" }
+        : { text: `Ítem ${event.index} generado y validado`, tone: "good" };
     case "item.rejected":
       return { text: `Ítem ${event.index} descartado: no valida contra el esquema`, tone: "warn" };
     case "item.tagged":

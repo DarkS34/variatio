@@ -1,4 +1,4 @@
-import { Brain, ChevronRight, Copy } from "lucide-react";
+import { Brain, ChevronRight, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
-import type { ExemplarsProfile, ItemTypeSpec } from "@/lib/types";
+import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** A value that already fences its own code carries markdown, not raw source. */
@@ -56,17 +56,53 @@ export function ItemFields({
   );
 }
 
+/**
+ * What the pipeline could verify about a variant after writing it. None of it rejects:
+ * the schema already did that, and what is left — a forbidden concept named, a near
+ * copy, the tagger not recognising the objective — are signals for the person reading.
+ */
+export function ItemChecks({ checks }: { checks?: ItemChecks | null }) {
+  if (!checks) return null;
+  const flagged = checks.flags.length > 0;
+  const tagger = checks.tagger;
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-small",
+        flagged ? "border-attention/40 text-attention" : "border-border text-muted-foreground",
+      )}
+    >
+      {flagged ? <ShieldAlert className="mt-0.5 size-3.5 shrink-0" /> : <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {flagged ? (
+          checks.flags.map((flag) => <span key={flag}>{flag}</span>)
+        ) : (
+          <span>Sin señales: el etiquetador la reconoce, nada prohibido, escenario propio.</span>
+        )}
+        <span className="text-micro text-muted-foreground">
+          {tagger ? `etiquetada como ${tagger.primary ?? "nada"}` : "sin etiquetador"}
+          {checks.similarity
+            ? ` · más cercana a ${checks.similarity.to} (${checks.similarity.score.toFixed(2)})`
+            : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function ResultCard({
   index,
   item,
   itemType,
   thinking,
+  checks,
   profile,
 }: {
   index: number;
   item: Record<string, unknown>;
   itemType?: string;
   thinking?: string | null;
+  checks?: ItemChecks | null;
   profile: ExemplarsProfile;
 }) {
   const [showThinking, setShowThinking] = useState(false);
@@ -97,6 +133,7 @@ export function ResultCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <ItemFields item={item} spec={spec} />
+        <ItemChecks checks={checks} />
 
         {thinking ? (
           <div className="overflow-hidden rounded-lg border border-border">

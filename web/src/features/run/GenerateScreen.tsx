@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import type { ExemplarsProfile } from "@/lib/types";
+import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
@@ -52,12 +52,14 @@ export function GenerateScreen() {
       item: Record<string, unknown>;
       item_type?: string;
       thinking?: string;
+      checks?: ItemChecks | null;
     }[];
     if (fromResult.length > 0) return fromResult;
     return (run?.items ?? []).map((i) => ({
       item: i.item,
       item_type: i.item_type,
       thinking: i.thinking ?? undefined,
+      checks: i.checks,
     }));
   }, [isGenerate, run]);
 
@@ -212,7 +214,12 @@ function Results({
   profile,
   run,
 }: {
-  results: { item: Record<string, unknown>; item_type?: string; thinking?: string }[];
+  results: {
+    item: Record<string, unknown>;
+    item_type?: string;
+    thinking?: string;
+    checks?: ItemChecks | null;
+  }[];
   profile: ExemplarsProfile;
   run: RunView | null;
 }) {
@@ -270,6 +277,7 @@ function Results({
           item={result.item}
           itemType={result.item_type}
           thinking={result.thinking}
+          checks={result.checks}
           profile={profile}
         />
       ))}

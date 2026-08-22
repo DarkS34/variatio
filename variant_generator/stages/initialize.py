@@ -196,6 +196,7 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
         exemplars_profile=exemplars_profile,
         content_context=content_context,
         generator_model=config.CONTENT_GENERATION_LLM,
+        tagger=tagger,
     )
 
     context = PipelineContext(

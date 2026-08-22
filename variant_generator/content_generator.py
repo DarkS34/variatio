@@ -5,7 +5,8 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import config, guardrail, inference, progress
+from . import checks, config, guardrail, inference, progress
+from .concept_tagger import ConceptTagger
 from .content_context import ContentContext
 from .embedder import Embedder
 from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
@@ -105,6 +106,13 @@ def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> 
         except (ValidationError, ValueError, TypeError) as e:
             error = f"{type(e).__name__}: {e!s}"
             continue
+        floor = checks.content_floor(item, item_type)
+        if floor:
+            error = floor
+            continue
+        ignored = [k for k, v in fixed.items() if k in raw and raw[k] != v]
+        if ignored:
+            logger.warning(f"El modelo ignoró valor(es) fijo(s), se sobrescriben: {', '.join(ignored)}")
         best, best_score = item, score
 
     if best is None:
@@ -148,7 +156,7 @@ def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
             elif isinstance(value, list) and value:
                 text_blocks.append((name, "\n".join(f"- {entry}" for entry in value)))
         header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
-        lines = ["---", f"ITEM{header}:", primary_text]
+        lines = ["---", f"{primary.upper()}{header}:", primary_text]
         for name, value in text_blocks:
             lines.append(f"{name.upper()}:")
             lines.append(value)
@@ -193,6 +201,7 @@ class GeneratedContent(BaseModel):
     item: BaseModel
     item_type: str
     thinking: str | None = None
+    checks: dict | None = None
 
 
 class ContentGenerator:
@@ -205,6 +214,7 @@ class ContentGenerator:
         generator_model: str,
         content_context: ContentContext | None = None,
         repair_model: str = config.REPAIR_LLM,
+        tagger: ConceptTagger | None = None,
     ):
         self.knowledge_graph = knowledge_graph
         self.exemplars_bank = exemplars_bank
@@ -213,6 +223,7 @@ class ContentGenerator:
         self.content_context = content_context or ContentContext()
         self.generator_model = generator_model
         self.repair_model = repair_model
+        self.tagger = tagger
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.max_few_shot = config.MAX_FEW_SHOT_EXAMPLES
@@ -227,6 +238,7 @@ class ContentGenerator:
         curriculum: list[str] | None = None,
         instructions: str | None = None,
         think: bool = True,
+        check: bool = True,
     ) -> list[GeneratedContent]:
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
@@ -250,15 +262,15 @@ class ContentGenerator:
         prerequisites_block = self._format_prerequisites(
             self._prerequisites(concepts, curriculum)
         )
-        excluded_block = self._format_concept_list(self._posteriors(concepts, curriculum))
+        posteriors = self._posteriors(concepts, curriculum)
+        excluded_block = self._format_concept_list(posteriors)
         curriculum_block = self._format_concept_list(curriculum or [])
         rules_block = "\n".join(f"- {r}" for r in target_type.general_generation_rules)
         few_shot_block = self._build_few_shot_block(target_type, [item for _, item in few_shot])
         instance_template = self._build_instance_template(target_type, fixed)
-        field_guidance_block = self._build_field_guidance_block(target_type, fixed)
+        fields_block = self._build_fields_block(target_type, fixed)
         fixed_values_block = self._build_fixed_values_block(target_type, fixed)
         item_type_block = self._build_item_type_block(target_type)
-        schema_str = target_type.schema_str()
 
         accepted: list[GeneratedContent] = []
         with progress.step("generate", "Generando variantes", total=n) as reporter:
@@ -276,9 +288,8 @@ class ContentGenerator:
                     few_shot_block=few_shot_block,
                     already_generated=already,
                     instance_template=instance_template,
-                    field_guidance_block=field_guidance_block,
+                    fields_block=fields_block,
                     fixed_values_block=fixed_values_block,
-                    schema=schema_str,
                     instructions=instructions,
                 )
 
@@ -290,6 +301,18 @@ class ContentGenerator:
                     progress.emit("item.rejected", index=i + 1)
                     continue
 
+                if check:
+                    with progress.step("check", "Comprobando la variante"):
+                        result.checks = checks.run(
+                            result.item,
+                            target_type,
+                            targets=concepts,
+                            forbidden=posteriors,
+                            embedder=self.embedder,
+                            tagger=self.tagger,
+                            few_shot=few_shot,
+                            batch=[r.item for r in accepted],
+                        )
                 accepted.append(result)
                 progress.emit(
                     "item.produced",
@@ -297,6 +320,7 @@ class ContentGenerator:
                     item=result.item.model_dump(mode="json"),
                     item_type=target_type.key,
                     thinking=result.thinking,
+                    checks=result.checks,
                 )
 
         return accepted
@@ -448,9 +472,18 @@ class ContentGenerator:
         for c in concepts:
             text = " ".join((descriptions.get(c) or "").split())
             if not text:
-                text = " ".join(describer.simple_describe(c).split())
-            lines.append(f"- **{c}**: {text}" if text else f"- {c}")
+                text = self._relations_sentence(describer.collect_relations(c))
+            lines.append(f"- **{c}**: {text}" if text else f"- **{c}**")
         return "\n".join(lines)
+
+    @staticmethod
+    def _relations_sentence(relations: dict[str, list[str]]) -> str:
+        parts = [
+            f"{verb} {', '.join(neighbors)}" for verb, neighbors in relations.items() if neighbors
+        ]
+        if not parts:
+            return ""
+        return "Sin descripción; en el grafo " + "; ".join(parts) + "."
 
     def _build_item_type_block(self, item_type: ItemType) -> str:
         lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
@@ -492,15 +525,50 @@ class ContentGenerator:
         lines.append("}")
         return "\n".join(lines)
 
-    def _build_field_guidance_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
-        lines = [
-            f"- `{name}`: {guidance}"
-            for name, guidance in item_type.field_guidance("generation").items()
-            if name not in fixed
-        ]
-        if not lines:
-            return "(ninguno anotado; rigen las reglas de la modalidad y las descripciones del schema)"
+    _FIELD_META_KEYS = frozenset(
+        {"description", "title", "type", "enum", "guidance", "default", "anyOf", "items", "$ref"}
+    )
+
+    def _build_fields_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
+        schema = item_type.stripped_schema()
+        properties = schema.get("properties", {})
+        required = set(schema.get("required", []))
+        guidance = item_type.field_guidance("generation")
+        lines = []
+        for name, spec in properties.items():
+            if name in fixed:
+                continue
+            facets = [self._field_type(spec)]
+            if "enum" in spec:
+                facets.append(
+                    "uno de: " + " | ".join(json.dumps(v, ensure_ascii=False) for v in spec["enum"])
+                )
+            facets.extend(
+                f"{key}={json.dumps(value, ensure_ascii=False)}"
+                for key, value in spec.items()
+                if key not in self._FIELD_META_KEYS
+            )
+            if name not in required:
+                facets.append("opcional")
+            desc = " ".join((spec.get("description") or "").split())
+            line = f"- `{name}` ({', '.join(facets)})"
+            if desc:
+                line += f": {desc}"
+            if name in guidance:
+                line += f"\n  Guía anotada a mano para este campo: {guidance[name]}"
+            lines.append(line)
         return "\n".join(lines)
+
+    @staticmethod
+    def _field_type(spec: dict) -> str:
+        if "type" in spec:
+            if spec["type"] == "array":
+                inner = (spec.get("items") or {}).get("type")
+                return f"lista de {inner}" if inner else "lista"
+            return str(spec["type"])
+        if "anyOf" in spec:
+            return " o ".join(str(v.get("type", "objeto")) for v in spec["anyOf"])
+        return "valor"
 
     def _build_fixed_values_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
         properties = item_type.stripped_schema().get("properties", {})

@@ -542,6 +542,19 @@ export interface GenerationAuthor {
   username: string | null;
 }
 
+export interface ItemChecks {
+  forbidden: string[];
+  similarity: { to: string; score: number; high: boolean } | null;
+  tagger?: {
+    primary: string | null;
+    concepts: string[];
+    method: string | null;
+    on_target: boolean;
+    targets_found: string[];
+  };
+  flags: string[];
+}
+
 export interface GenerationRow {
   id: number;
   created_at: number;
@@ -554,6 +567,7 @@ export interface GenerationRow {
   think: boolean;
   author: GenerationAuthor;
   item: Record<string, unknown>;
+  checks?: ItemChecks | null;
 }
 
 export interface GenerationListing {

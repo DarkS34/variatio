@@ -41,6 +41,7 @@ def _view(row: Generation, user, include_item: bool = True) -> dict:
     }
     if include_item:
         payload["item"] = row.item or {}
+        payload["checks"] = row.checks
     return payload
 
 

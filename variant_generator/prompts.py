@@ -379,9 +379,8 @@ def generate_content_prompt(
     few_shot_block: str,
     already_generated: list[str],
     instance_template: str,
-    field_guidance_block: str,
+    fields_block: str,
     fixed_values_block: str,
-    schema: str,
     instructions: str = "",
 ) -> str:
     # Guarded, unlike before: a workspace has no context until one of the two builders has
@@ -400,41 +399,46 @@ def generate_content_prompt(
 
     few_shot_section = (
         few_shot_block.strip()
-        or "(Ningún ejemplo disponible — redacta el ejercicio de cero respetando las reglas anteriores.)"
+        or "(Ningún ejemplo disponible: redacta el ejercicio de cero respetando las reglas anteriores.)"
     )
 
     already_block = ""
     if already_generated:
         existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
         already_block = (
-            "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
+            "\n# ESCENARIOS YA USADOS EN ESTE LOTE\n"
+            "Enunciados ya producidos para este mismo encargo. El tuyo se plantea en un ámbito "
+            "distinto de todos ellos:\n"
             f"{existing_lines}\n"
         )
 
     prerequisites_section = ""
     if prerequisites_block.strip():
         prerequisites_section = (
-            "\n# CONOCIMIENTO PREVIO — SE DA POR SABIDO\n"
-            "El grafo del currículo sitúa estos conceptos ANTES del objetivo: el alumno ya los domina. "
-            "Son el andamiaje con el que construir el ejercicio, no el reto. Puedes apoyarte en ellos con toda naturalidad, "
-            "pero la dificultad NO puede venir de ellos ni el ejercicio puede reducirse a repasarlos:\n"
+            "\n# CONOCIMIENTO PREVIO: SE DA POR SABIDO\n"
+            "El grafo del currículo sitúa estos conceptos antes del objetivo: el alumno ya los domina. "
+            "Son el andamiaje con el que construir el ejercicio, no el reto. Apóyate en ellos con "
+            "naturalidad; la dificultad viene del objetivo, y el ejercicio no puede reducirse a repasarlos:\n"
             f"{prerequisites_block}\n"
         )
 
     excluded_section = ""
     if excluded_concepts_block.strip():
         excluded_section = (
-            "\n# TODAVÍA NO IMPARTIDO — PROHIBIDO\n"
-            "El grafo del currículo sitúa estos conceptos DESPUÉS del objetivo: el alumno aún no los ha visto. "
-            "No pueden aparecer en el enunciado ni ser necesarios para resolverlo. Si tu primera idea los necesita, cámbiala:\n"
+            "\n# TODAVÍA NO IMPARTIDO: PROHIBIDO\n"
+            "El grafo del currículo sitúa estos conceptos después del objetivo: el alumno aún no los ha visto. "
+            "No aparecen en el enunciado ni hacen falta para resolverlo; si tu primera idea los necesita, "
+            "cámbiala. Si uno de ellos es inseparable del propio objetivo (el currículo puede contradecirse), "
+            "el objetivo manda: úsalo en la medida mínima que el objetivo exige y nada más:\n"
             f"{excluded_concepts_block}\n"
         )
 
     curriculum_section = ""
     if curriculum_block.strip():
         curriculum_section = (
-            "\n# CURRÍCULO YA CUBIERTO (RESTRICCIÓN DURA)\n"
-            "Todo lo que quien va a resolverlo ha visto hasta ahora. El ejercicio NO puede exigir ningún concepto fuera de esta lista. Los conceptos objetivo son un subconjunto de ella:\n"
+            "\n# CURRÍCULO YA CUBIERTO\n"
+            "Todo lo que quien va a resolverlo ha visto hasta ahora. El ejercicio solo puede exigir "
+            "conceptos de esta lista; los conceptos objetivo forman parte de ella:\n"
             f"{curriculum_block}\n"
         )
 
@@ -444,7 +448,8 @@ def generate_content_prompt(
     if fixed_values_block.strip():
         fixed_section = (
             "\n# VALORES FIJOS PARA ESTE ENCARGO\n"
-            "Estos campos vienen decididos de antemano por quien pide el ejercicio. Respétalos exactamente y redacta el resto en coherencia con ellos:\n"
+            "Estos campos vienen decididos por quien pide el ejercicio. Cópialos tal cual y redacta "
+            "el resto en coherencia con ellos:\n"
             f"{fixed_values_block}\n"
         )
 
@@ -452,65 +457,76 @@ def generate_content_prompt(
     if instructions.strip():
         instructions_section = (
             "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
-            "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el formato, "
-            "sustituye a la elección libre de la sección anterior. Lo que NO puede tocar es el objetivo de aprendizaje, "
-            "el conocimiento previo, lo prohibido ni el currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
-            "No es una instrucción sobre cómo debes responder, es una preferencia sobre el ejercicio:\n"
+            "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el "
+            "formato, sustituye a tu elección libre. Está por debajo del objetivo, del conocimiento previo, "
+            "de lo prohibido y del currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
+            "Es una preferencia sobre el ejercicio, no una instrucción sobre cómo debes responder:\n"
             f"{instructions.strip()}\n"
         )
 
     return f"""\
-Eres experto en la didáctica de la asignatura descrita abajo y redactas UN ejercicio nuevo, conforme al schema indicado al final.
+Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo, conforme a la forma de salida indicada al final.
 
 Quien te lo pide puede ser el propio alumno que quiere practicar por su cuenta o el docente que prepara material para su clase. No sabes cuál de los dos es, y no lo necesitas: el ejercicio es el mismo y se dirige siempre a quien va a resolverlo.
+
+# ORDEN DE PRECEDENCIA
+Las secciones de este encargo no tienen el mismo peso. Si dos chocan, manda la que está antes en esta lista:
+1. La modalidad y la forma de salida.
+2. El objetivo de aprendizaje.
+3. Lo todavía no impartido.
+4. El currículo ya cubierto y los valores fijos.
+5. La petición de quien pide el ejercicio.
+6. Las reglas de redacción de la modalidad.
+7. La calidad didáctica.
+8. La variación de contexto y los ejemplos de referencia.
 {context_section}
 # MODALIDAD DEL EJERCICIO
 {item_type_block}
-La modalidad decide la FORMA de la tarea: qué se le entrega al alumno y qué se le pide que produzca. Es innegociable — no la cambies porque otra te parezca mejor para el concepto, y no mezcles la forma de otra modalidad. El schema del final es el de ESTA modalidad y no admite campos de ninguna otra.
+La modalidad decide la forma de la tarea: qué se le entrega al alumno y qué se le pide que produzca. Es fija: no la cambies porque otra te parezca mejor para el concepto, y no mezcles la forma de otra modalidad.
 
 # OBJETIVO DE APRENDIZAJE
-El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del currículo, y son su única fuente legítima de dificultad:
+El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del currículo, y son su única fuente legítima de dificultad. La descripción de cada uno es la definición operativa de qué significa practicarlo:
 {target_concepts_block}
 
-PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el currículo SALVO estos conceptos no debe poder resolver el ejercicio. Si podría, el ejercicio no los practica — los menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo.
+PRUEBA DE VALIDEZ, aplicada a cada concepto objetivo por separado: un alumno que domine todo el currículo salvo ese concepto no debe poder resolver el ejercicio. Si podría, el ejercicio no lo practica, lo menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo. Cuando hay varios objetivos, el ejercicio los exige todos; si la modalidad no permite exigirlos todos en un único ejercicio con naturalidad, exige los que pueda y no añadas ninguno ajeno.
 {prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
 # REGLAS DE REDACCIÓN DE ESTA MODALIDAD
-Convenciones observadas en el material real de la asignatura: cómo escribe ESTA asignatura ESTA modalidad. Son de obligado cumplimiento y describen la FORMA, no el contenido — el objetivo de aprendizaje lo fijan las secciones anteriores. Si alguna choca con la calidad didáctica de más abajo, manda la calidad didáctica y el resto se adapta:
+Convenciones observadas en el material real de la asignatura: cómo escribe esta asignatura esta modalidad. Son de obligado cumplimiento y describen la forma, no el contenido:
 {rules_block}
 
 # CALIDAD DIDÁCTICA
-- AUTOSUFICIENCIA: el enunciado debe bastarse a sí mismo. Deja explícitos los datos de partida, su naturaleza y qué se espera como resultado. El alumno no puede necesitar preguntar nada para empezar.
-- UNA SOLA LECTURA: si una frase admite dos interpretaciones que llevan a soluciones distintas, reescríbela. La ambigüedad evalúa comprensión lectora, no el objetivo de aprendizaje.
-- RESOLUBLE: debe existir una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
-- SIN CARGA AJENA: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de empezar a pensar en el concepto es ruido que falsea la evaluación.
-- CALIBRADO: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
-- SIN VOZ DE AULA: el enunciado plantea la tarea y nada más. Ni saludos, ni presentaciones, ni ánimos, ni comentarios tuyos sobre el propio ejercicio; ni referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
+- Autosuficiencia: el enunciado se basta a sí mismo. Deja explícitos los datos de partida, su naturaleza y qué se espera como resultado. El alumno no necesita preguntar nada para empezar.
+- Una sola lectura: si una frase admite dos interpretaciones que llevan a soluciones distintas, reescríbela. La ambigüedad evalúa comprensión lectora, no el objetivo de aprendizaje.
+- Resoluble: existe una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
+- Sin carga ajena: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de pensar en el concepto es ruido que falsea la evaluación.
+- Calibrado: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
+- Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, presentaciones, ánimos ni comentarios tuyos sobre el propio ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
 
-# VARIACIÓN DE CONTEXTO (PARA FORZAR TRANSFERENCIA)
-El envoltorio —la situación concreta en la que se plantea la tarea— debe ser ORIGINAL. Inventa un ámbito reconocible: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los ejercicios previos del lote. Cambiar el contexto y no la sustancia es lo que obliga al alumno a TRANSFERIR el concepto en vez de reconocer un patrón que ya ha memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia vienen fijados por las secciones anteriores.
+# VARIACIÓN DE CONTEXTO
+El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados en este lote, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
 {instructions_section}
 # EJEMPLOS DE REFERENCIA
-Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
+Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
 {few_shot_section}
 {already_block}
-# FORMA DE LA SALIDA
-Debes devolver una INSTANCIA conforme al schema, NO el schema en sí. La salida es un único objeto JSON cuyas claves de nivel superior son exactamente las propiedades definidas por el schema, con valores concretos. NO incluyas `properties`, `type`, `required`, `$defs`, `title` ni ningún otro metadato del schema.
+# CAMPOS DE LA SALIDA
+Un objeto JSON con exactamente estas claves y ninguna otra. Un campo que clasifica el ejercicio (un nivel, una categoría) describe lo que has escrito, no lo decide de antemano: rellénalo al final, a partir del ejercicio terminado y de su criterio.
+{fields_block}
 
-Esqueleto exacto de la forma esperada (rellena los valores; las claves vienen del schema y son las únicas válidas):
+Esqueleto exacto de la salida (rellena los valores):
 {instance_template}
 
-# GUÍA POR CAMPO
-Matices que quien administra la asignatura ha anotado a mano sobre campos concretos. Es normal que no haya ninguno: lo general va en las reglas de arriba y la naturaleza de cada campo, en su `description` del schema. Cuando los haya, afinan esos dos, no los contradicen:
-{field_guidance_block}
+# ANTES DE RESPONDER, COMPRUEBA
+- Cada concepto objetivo supera la prueba de validez: sin él, el ejercicio no se resuelve.
+- Ningún concepto de lo todavía no impartido aparece ni hace falta, salvo el mínimo que el propio objetivo exige.
+- El ámbito del enunciado no está en los ejemplos de referencia ni en los escenarios ya usados.
+- El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
+- Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
 
-# SCHEMA DE REFERENCIA (consulta para constraints como minLength/Literal/pattern; NO lo copies)
-{schema}
-
-# REGLAS DE SALIDA
-- Devuelve UN ÚNICO objeto JSON que sea una instancia conforme al schema. Nada antes, nada después.
+# FORMA DE LA SALIDA
+- Un único objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Las claves de nivel superior son exactamente las del schema — ni más, ni menos, ni con otros nombres.
-- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+- Escapa saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de los strings.
 
 JSON:"""
 

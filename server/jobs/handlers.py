@@ -197,6 +197,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
             "item": r.item.model_dump(mode="json"),
             "item_type": r.item_type,
             "thinking": r.thinking,
+            "checks": r.checks,
         }
         for r in results
     ]
@@ -236,6 +237,7 @@ def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str]
                     instructions=params.get("instructions"),
                     think=bool(params.get("think", True)),
                     thinking=entry.get("thinking"),
+                    checks=entry.get("checks"),
                 )
     except Exception as exc:  # noqa: BLE001 - the run succeeded; only its record did not
         logger.warning(f"No se pudieron guardar las variantes en la base de datos: {exc}")

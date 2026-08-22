@@ -250,6 +250,9 @@ class Embedder:
         self._embed_cache[key] = vector
         return vector
 
+    def embed_document(self, text: str) -> np.ndarray:
+        return self._embed(text, "document")
+
     def _pending_keys(self, keys: list[str]) -> list[str]:
         return [k for k in dict.fromkeys(keys) if k not in self._embed_cache]
 

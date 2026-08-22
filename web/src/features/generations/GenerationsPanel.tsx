@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
-import { ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
+import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { when } from "@/lib/format";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
@@ -263,7 +263,10 @@ function GenerationCard({
 
       <CardContent className="space-y-3">
         {expanded ? (
-          <ItemFields item={row.item} spec={spec} />
+          <>
+            <ItemFields item={row.item} spec={spec} />
+            <ItemChecks checks={row.checks} />
+          </>
         ) : (
           <p className="line-clamp-3 whitespace-pre-wrap text-body text-muted-foreground">
             {primary}
