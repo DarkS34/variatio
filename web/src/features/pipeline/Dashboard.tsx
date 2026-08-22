@@ -34,6 +34,8 @@ import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { Health, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+import { ContextCard } from "./ContextCard";
 import {
   useBuildPhases,
   useCancelJob,
@@ -657,6 +659,7 @@ export function Dashboard() {
         </div>
         <div className="space-y-4">
           <ActivityCard />
+          <ContextCard />
           <SystemCard />
         </div>
       </div>

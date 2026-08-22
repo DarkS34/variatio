@@ -684,3 +684,16 @@ export interface VgEvent {
   kind: string;
   [payload: string]: any;
 }
+
+/** El contexto de la asignatura: prosa más los tres datos que la rama naive lee por nombre. */
+export interface ContentContextState {
+  exists: boolean;
+  narrative: string;
+  facts: Record<string, string>;
+  block: string;
+  source: "curated" | "draft" | null;
+  path: string | null;
+  /** El texto que la última construcción sintetizó y que el curado está tapando. */
+  pending_draft: string | null;
+  canonical_keys: string[];
+}
