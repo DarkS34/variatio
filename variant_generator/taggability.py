@@ -2,6 +2,7 @@ from loguru import logger
 
 from . import config, inference, progress
 from .builders.knowledge_graph_builder import blocks, parsing
+from .content_context import ContentContext
 from .builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
 from .prompts import review_taggable_concepts_prompt
 
@@ -44,8 +45,10 @@ def review(
     knowledge_graph,
     exemplars_profile,
     exemplars_bank: dict | None = None,
+    content_context: ContentContext | None = None,
     max_attempts: int = config.MAX_JSON_REPAIR_TRIES,
 ) -> list[str]:
+    content_context = content_context or ContentContext()
     domains = list(knowledge_graph.concepts_by_domains)
     if not domains:
         return []
@@ -74,6 +77,7 @@ def review(
                     relations,
                     exemplars_profile,
                     exemplars_bank,
+                    content_context,
                     modalities,
                     max_attempts,
                 )
@@ -102,6 +106,7 @@ def _judge_domain(
     relations,
     exemplars_profile,
     exemplars_bank,
+    content_context,
     modalities,
     max_attempts,
 ) -> list[str]:
@@ -109,7 +114,7 @@ def _judge_domain(
         domain,
         blocks.concepts_block(domains),
         blocks.nodes_block(members, relations, {}),
-        exemplars_profile.content_context,
+        content_context.prompt_block(),
         modalities,
         samples_block(exemplars_profile, exemplars_bank, members),
     )

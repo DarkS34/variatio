@@ -28,7 +28,7 @@ from ... import config, progress
 from ...relations import RelationSchema
 from ...utils import ensure_models
 from ...workspace import Workspace
-from .. import _source_docs
+from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
@@ -58,6 +58,10 @@ BUILD_PHASES = (
     ("domains", "Agrupando los conceptos en dominios", 9),
     ("link", "Enlazando conceptos y ordenando el temario", 26),
     ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
+    # Una sola llamada, como `curate`: lleva peso para que la barra no salte al final, no
+    # porque cueste. Va la última porque necesita los nombres de los bloques, que es lo que
+    # el grafo sabe de la asignatura y ninguna fase anterior tiene todavía.
+    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 
 BUILD_MODELS = [
@@ -69,6 +73,7 @@ BUILD_MODELS = [
     config.KG_DOMAINS_LEFTOVERS_MODEL,
     config.KG_LINK_DOMAIN_MODEL,
     config.KG_LINK_CROSS_DOMAIN_MODEL,
+    config.KG_CONTEXT_MODEL,
     config.REPAIR_LLM,
 ]
 
@@ -116,7 +121,35 @@ class KnowledgeGraphBuilder:
         cleaned = self.clean(staging)
 
         progress.checkpoint()
-        return self.curate(cleaned)
+        graph = self.curate(cleaned)
+
+        # After `curate` and not inside it: `curate(cleaned)` is separately callable and
+        # promises to be a transform from data to data, while this writes a second file.
+        progress.checkpoint()
+        self.synthesize_context(graph)
+        return graph
+
+    # What the graph knows about the subject that nothing else does: the names of the
+    # blocks the syllabus is divided into, and how big it is. NOT the concepts themselves
+    # -- the prompt forbids enumerating them, and the graph is right there for whoever
+    # wants the list.
+    def synthesize_context(self, graph: dict) -> None:
+        progress.phase("context")
+        domains = list(graph.get("concepts_by_domains") or {})
+        if not domains:
+            return
+        total = sum(len(members) for members in graph["concepts_by_domains"].values())
+        evidence = "\n".join(
+            [
+                f"El temario se divide en {len(domains)} bloque(s), "
+                f"con {total} concepto(s) en total. Se llaman:",
+                *(f"- {domain}" for domain in domains),
+            ]
+        )
+        _context.synthesize(
+            self.workspace, evidence, "EL GRAFO DEL TEMARIO", config.KG_CONTEXT_MODEL
+        )
+        progress.advance(1.0)
 
     def extract(self, input_dir: str | Path, recursive: bool = False) -> dict:
         return extraction.run(

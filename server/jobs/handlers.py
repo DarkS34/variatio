@@ -137,7 +137,9 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
 
     with progress.overall(taggability.BUILD_PHASES):
         progress.phase("taggable")
-        non_taggable = taggability.review(graph, profile, bank)
+        non_taggable = taggability.review(
+            graph, profile, bank, stages.load_content_context(ws)
+        )
 
     result = kg_edit.set_non_taggable(ws, non_taggable)
     return {"non_taggable": result["non_taggable"], "concepts": len(graph.all_concepts)}

@@ -219,6 +219,7 @@ EXEMPLARS_TRANSCRIBE_MODEL = LLM_MAIN
 # Exemplars profile builder
 EP_SCAN_MODEL = LLM_MAIN
 EP_CONSOLIDATE_MODEL = LLM_MAIN
+EP_CONTEXT_MODEL = LLM_MAIN
 
 # Exemplars bank builder
 EB_EXTRACT_MODEL = LLM_MAIN
@@ -239,6 +240,7 @@ KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
 KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
 KG_TAGGABLE_MODEL = LLM_MAIN
+KG_CONTEXT_MODEL = LLM_MAIN
 
 # Runtime pipeline
 
@@ -397,6 +399,13 @@ MAX_FEW_SHOT_EXAMPLES = 4
 MAX_JSON_REPAIR_TRIES = 3
 
 GENERATION_INSTRUCTIONS_MAX_CHARS = 600
+
+# El contexto de la asignatura entra en TODOS los prompts del sistema, así que su coste se
+# paga una vez por llamada y en cada una de ellas. 900 caracteres son ~250 tokens: espacio
+# de sobra para decir qué materia es, a qué nivel, en qué idioma y con qué convenciones, y
+# poco suficiente como para que no compita con el material que el prompt lleva de verdad.
+# También es lo que acota la síntesis: sin techo, cada reconstrucción añadiría un matiz más.
+CONTENT_CONTEXT_MAX_CHARS = 900
 GUARDRAIL_CRITERIA = ("harm", "jailbreak")
 
 

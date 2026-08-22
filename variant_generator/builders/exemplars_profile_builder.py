@@ -16,16 +16,23 @@ from ..prompts import (
 )
 from ..utils import ensure_models, parse_with_repair
 from ..workspace import Workspace
-from . import _source_docs
+from . import _context, _source_docs
 
 
 BUILD_PHASES = (
     ("convert", "Transcribiendo los ejemplares", 40),
     ("scan", "Buscando modalidades de ejercicio", 40),
-    ("consolidate", "Consolidando el perfil", 20),
+    ("consolidate", "Consolidando el perfil", 19),
+    # Una llamada al final, con lo que el perfil sabe de la asignatura que el grafo no
+    # sabe: en qué formas plantea sus tareas y cómo suenan de verdad.
+    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 
 MAX_EXCERPTS_PER_TYPE = 3
+
+# Cuántos ejemplares literales ve la síntesis del contexto. Tres bastan para fijar materia,
+# nivel y notación, y son pocos como para no arrastrar la temática de uno solo al texto.
+CONTEXT_EXCERPTS = 3
 
 # The scan's shape is fixed, so it is stated as a schema. The CONSOLIDATION's is not: what it
 # returns is a profile, and a profile CONTAINS JSON Schemas the model writes itself, one per
@@ -60,11 +67,13 @@ class ExemplarsProfileBuilder:
         workspace: Workspace,
         scan_model: str = config.EP_SCAN_MODEL,
         consolidate_model: str = config.EP_CONSOLIDATE_MODEL,
+        context_model: str = config.EP_CONTEXT_MODEL,
         verbose: bool = True,
     ):
         self.workspace = workspace
         self.scan_model = scan_model
         self.consolidate_model = consolidate_model
+        self.context_model = context_model
         self.chunk_size = config.EP_CHUNK_SIZE
         self.excerpt_chars = config.EP_SCAN_EXCERPT_CHARS
         self.max_item_types = config.EP_MAX_ITEM_TYPES
@@ -82,6 +91,7 @@ class ExemplarsProfileBuilder:
                 config.EXEMPLARS_TRANSCRIBE_MODEL,
                 self.scan_model,
                 self.consolidate_model,
+                self.context_model,
                 config.REPAIR_LLM,
             ],
             "del perfil de ejemplares",
@@ -123,7 +133,40 @@ class ExemplarsProfileBuilder:
                 f"Borrador del perfil en {Path(output_file_path).name}: "
                 f"necesita correcciones a mano antes de cargar ({e})"
             )
+
+        self.synthesize_context(profile, findings)
         return profile
+
+    # What the profile knows about the subject that the graph does not: the FORMS in which
+    # this subject sets its tasks, and how one of them actually sounds. The excerpt is what
+    # keeps the synthesis from writing about programming in the abstract when the material
+    # is a first-year Python workbook.
+    def synthesize_context(self, profile: dict, found: dict[str, dict]) -> None:
+        progress.phase("context")
+        item_types = profile.get("item_types") or {}
+        if not item_types:
+            return
+        lines = [f"La asignatura plantea sus tareas en {len(item_types)} modalidad(es):"]
+        for key, spec in item_types.items():
+            label = spec.get("label") or key
+            lines.append(f"- {label}: {spec.get('description') or 'sin descripción'}")
+
+        # The verbatim excerpts, and they are the half that matters. The modality labels
+        # say the shape of a task; only a real statement says that the subject is a
+        # first-year Python workbook rather than programming in the abstract.
+        excerpts = [
+            excerpt
+            for record in found.values()
+            for _, excerpt in record.get("excerpts", [])
+        ][:CONTEXT_EXCERPTS]
+        if excerpts:
+            lines.append("Ejemplares literales del material:")
+            lines.extend(f"---\n{excerpt}" for excerpt in excerpts)
+
+        _context.synthesize(
+            self.workspace, "\n".join(lines), "EL PERFIL DE EJEMPLARES", self.context_model
+        )
+        progress.advance(1.0)
 
     # CONVERSION ----------------------------------------------------------------------------------
 

@@ -6,6 +6,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config, guardrail, inference, progress
+from .content_context import ContentContext
 from .embedder import Embedder
 from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .knowledge_graph import KnowledgeGraph
@@ -202,13 +203,14 @@ class ContentGenerator:
         embedder: Embedder,
         exemplars_profile: ExemplarsProfile,
         generator_model: str,
+        content_context: ContentContext | None = None,
         repair_model: str = config.REPAIR_LLM,
     ):
         self.knowledge_graph = knowledge_graph
         self.exemplars_bank = exemplars_bank
         self.embedder = embedder
         self.exemplars_profile = exemplars_profile
-        self.context = exemplars_profile.content_context
+        self.content_context = content_context or ContentContext()
         self.generator_model = generator_model
         self.repair_model = repair_model
 
@@ -264,7 +266,7 @@ class ContentGenerator:
                 progress.checkpoint()
                 already = self._collect_already_generated(target_type, accepted)
                 prompt = generate_content_prompt(
-                    context=self.context,
+                    context_block=self.content_context.prompt_block(),
                     item_type_block=item_type_block,
                     target_concepts_block=target_block,
                     prerequisites_block=prerequisites_block,

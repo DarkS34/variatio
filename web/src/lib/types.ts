@@ -180,7 +180,6 @@ export interface ItemTypeSpec {
 
 export interface ExemplarsProfile {
   /** Shared by every modality: it describes the subject, not the exercise. */
-  content_context: Record<string, string>;
   item_types: Record<string, ItemTypeSpec>;
 }
 

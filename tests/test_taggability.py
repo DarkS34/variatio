@@ -1,5 +1,12 @@
 from variant_generator import taggability
+from variant_generator.content_context import ContentContext
 from variant_generator.prompts import review_taggable_concepts_prompt
+
+# The context is no longer a field of the profile: it is its own artifact, so the fake
+# stops carrying it and the prompt is handed the rendered block, like every caller.
+CONTEXT = ContentContext.from_legacy(
+    {"asignatura": "Programación I", "nivel": "primero de grado"}
+)
 
 
 class FakeType:
@@ -11,7 +18,6 @@ class FakeType:
 
 
 class FakeProfile:
-    content_context = {"asignatura": "Programación I", "nivel": "primero de grado"}
     item_types = {
         "coding": FakeType("coding", "Ejercicio de código", "Escribir un programa", "statement"),
         "mcq": FakeType("mcq", "Pregunta cerrada", "Elegir una opción", "statement"),
@@ -108,7 +114,7 @@ def test_the_prompt_carries_the_context_and_the_modalities():
         "Funciones",
         "- Funciones",
         "- Recursividad",
-        FakeProfile().content_context,
+        CONTEXT.prompt_block(),
         taggability.modalities_block(FakeProfile()),
         "",
     )
@@ -122,7 +128,7 @@ def test_the_prompt_carries_the_samples_when_given():
         "Funciones",
         "- Funciones",
         "- Recursividad",
-        FakeProfile().content_context,
+        CONTEXT.prompt_block(),
         taggability.modalities_block(FakeProfile()),
         "- Escribe una función recursiva.",
     )
@@ -135,7 +141,7 @@ def test_the_prompt_omits_the_samples_section_when_empty():
         "Funciones",
         "- Funciones",
         "- Recursividad",
-        FakeProfile().content_context,
+        CONTEXT.prompt_block(),
         taggability.modalities_block(FakeProfile()),
         "",
     )

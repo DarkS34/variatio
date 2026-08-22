@@ -77,72 +77,6 @@ function AddInline({
   );
 }
 
-function ContextRow({
-  name,
-  value,
-  taken,
-  onRename,
-  onChange,
-  onRemove,
-}: {
-  name: string;
-  value: string;
-  taken: string[];
-  onRename: (next: string) => void;
-  onChange: (next: string) => void;
-  onRemove: () => void;
-}) {
-  const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
-
-  const trimmed = draft.trim();
-  const error =
-    trimmed === name
-      ? null
-      : !trimmed
-        ? "La clave no puede estar vacía"
-        : taken.includes(trimmed)
-          ? "Esa clave ya existe"
-          : null;
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label={`Clave de ${name}`}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => {
-            if (trimmed !== name && !error) onRename(trimmed);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-            if (event.key === "Escape") setDraft(name);
-          }}
-          className={cn("h-8 w-48 shrink-0 font-mono text-small", error && "border-destructive")}
-        />
-        <Input
-          aria-label={`Valor de ${name}`}
-          value={value}
-          placeholder="valor"
-          className="h-8"
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          title={`Quitar ${name}`}
-          className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          onClick={onRemove}
-        >
-          <X />
-        </Button>
-      </div>
-      {error ? <p className="text-small text-destructive">{error}</p> : null}
-    </div>
-  );
-}
-
 function TypeStrip({
   keys,
   active,
@@ -353,13 +287,6 @@ export function ProfileEditor() {
     setOpen((current) => current.filter((entry) => entry !== name));
   };
 
-  const renameContextKey = (from: string, to: string) => {
-    const context: Record<string, string> = {};
-    for (const [key, value] of Object.entries(draft.content_context))
-      context[key === from ? to : key] = value;
-    update({ content_context: context });
-  };
-
   const applyRaw = () => {
     try {
       const parsed = JSON.parse(rawText);
@@ -437,53 +364,6 @@ export function ProfileEditor() {
         </div>
       ) : (
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle>Contexto del contenido</CardTitle>
-                <InfoHint label="Qué es el contexto">
-                  Pares clave/valor que acompañan a cada prompt: asignatura, idioma, lenguaje de
-                  programación… Lo que no cambia entre ítems ni entre modalidades.
-                </InfoHint>
-                <Badge variant="outline" className="ml-auto">
-                  {Object.keys(draft.content_context).length}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-2 lg:grid-cols-2">
-              {Object.entries(draft.content_context).map(([key, value]) => (
-                <ContextRow
-                  key={key}
-                  name={key}
-                  value={value}
-                  taken={Object.keys(draft.content_context)}
-                  onRename={(next) => renameContextKey(key, next)}
-                  onChange={(next) =>
-                    update({ content_context: { ...draft.content_context, [key]: next } })
-                  }
-                  onRemove={() => {
-                    const context = { ...draft.content_context };
-                    delete context[key];
-                    update({ content_context: context });
-                  }}
-                />
-              ))}
-
-              {Object.keys(draft.content_context).length === 0 ? (
-                <p className="text-small text-destructive">
-                  El contexto no puede quedar vacío: añade al menos una clave.
-                </p>
-              ) : null}
-
-              <AddInline
-                placeholder="nueva_clave"
-                cta="Añadir"
-                onAdd={(key) => update({ content_context: { ...draft.content_context, [key]: "" } })}
-                validate={(key) => (key in draft.content_context ? "Esa clave ya existe" : null)}
-              />
-            </CardContent>
-          </Card>
-
           <TypeStrip
             keys={typeKeys}
             active={activeKey}

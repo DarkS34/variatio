@@ -22,8 +22,12 @@ from . import external
 
 def build_prompt(commission: Commission, context) -> str:
     item_type = context.exemplars_profile.item_type(commission.item_type)
+    # The three canonical facts, not the narrative. This arm composes a sentence a person
+    # would type, and handing it synthesised prose would change what the baseline measures.
     return naive_generation_prompt(
-        context=context.exemplars_profile.content_context,
+        subject=context.content_context.subject,
+        educational_level=context.content_context.educational_level,
+        language_of_instruction=context.content_context.language_of_instruction,
         concepts=commission.concepts,
         keys=list(item_type.field_specs),
         fixed=commission.fixed,

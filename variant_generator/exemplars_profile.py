@@ -97,7 +97,7 @@ class ItemType:
 
 
 class ExemplarsProfile:
-    _REQUIRED_KEYS: ClassVar[tuple] = ("content_context", "item_types")
+    _REQUIRED_KEYS: ClassVar[tuple] = ("item_types",)
     _TYPE_REQUIRED_KEYS: ClassVar[tuple] = ("primary_field", "fields")
     _SCALAR_TYPES: ClassVar[dict] = {
         "string": str,
@@ -115,11 +115,20 @@ class ExemplarsProfile:
         self.path = Path(path)
         self._raw = self._load(self.path)
         self._validate(self._raw)
-        self.content_context: dict = self._raw["content_context"]
         self.item_types: dict[str, ItemType] = {
             key: ItemType(key, spec)
             for key, spec in self._raw["item_types"].items()
         }
+
+    # What subject this is left the profile on 2026-08-22 and became `content_context.json`,
+    # because the KG build has to be able to write it and a build writes exactly one artifact.
+    # A profile written before that still carries the key; this exposes it so `initialize`
+    # can fall back to it and say so, rather than silently losing the subject. Nothing on
+    # the graph's path reads it -- that dependency is what the move removed.
+    @property
+    def legacy_content_context(self) -> dict:
+        raw = self._raw.get("content_context")
+        return dict(raw) if isinstance(raw, dict) else {}
 
     @property
     def type_keys(self) -> list[str]:
@@ -244,8 +253,6 @@ class ExemplarsProfile:
         if missing:
             raise ValueError(f"ExemplarsProfile missing required keys: {missing}")
 
-        if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
-            raise ValueError("'content_context' must be a non-empty object")
         if not isinstance(raw["item_types"], dict) or not raw["item_types"]:
             raise ValueError("'item_types' must be a non-empty object")
 

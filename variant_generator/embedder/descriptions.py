@@ -14,6 +14,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config, inference, progress
+from ..content_context import ContentContext
 from ..json_io import write_json
 from ..knowledge_graph import KnowledgeGraph
 from ..prompts import concept_description_prompt, describe_domain_concepts_prompt
@@ -125,7 +126,7 @@ class ConceptDescriber:
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
-        context: dict,
+        context: ContentContext,
         path: str | Path,
         sources_path: str | Path,
         siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
@@ -173,6 +174,13 @@ class ConceptDescriber:
             # sobre otro corpus cambia lo que el concepto significa aquí, y una descripción
             # escrita contra los párrafos anteriores ya no describe lo mismo.
             "passages": [p.get("text", "") for p in self.passages.get(concept, [])],
+            # También entra el contexto, y era un hueco: el prompt lo lee para fijar la
+            # materia, el nivel y el idioma, así que cambiar de asignatura cambia lo que
+            # una descripción debería decir. Sin esto, editar el contexto dejaba intactas
+            # descripciones escritas contra el anterior. Es más barato de lo que parece:
+            # el contexto es uno para toda la instancia, así que o no cambia nada o se
+            # reescriben todas, que es justo lo correcto en ese caso.
+            "context": self.context.prompt_block(),
         }
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:12]
@@ -322,7 +330,7 @@ class ConceptDescriber:
             domain=domain,
             relations=relations,
             siblings=siblings,
-            context=self.context,
+            context_block=self.context.prompt_block(),
             passages=self.passages.get(concept),
             name_documents=self.name_documents,
         )
@@ -435,7 +443,7 @@ class ConceptDescriber:
             domain=domain,
             concepts_block=self._batch_concepts_block(concepts),
             passages_block=self._batch_passages_block(concepts),
-            context=self.context,
+            context_block=self.context.prompt_block(),
             domains_block=self._domains_block(domain),
             existing_block=self._existing_block(domain, concepts, written or {}),
         )
