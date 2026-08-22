@@ -37,3 +37,8 @@ def test_workspace_resolves_under_workspaces_dir():
     ws = paths.workspace("otro")
     assert ws.slug == "otro"
     assert ws.root.parent == paths.WORKSPACES_DIR.resolve()
+
+
+def test_project_root_is_the_repository():
+    assert (paths.PROJECT_ROOT / "pyproject.toml").is_file()
+    assert paths.PROJECT_ROOT.name != "variant_generator"
