@@ -1,0 +1,125 @@
+{
+  "engine": {
+    "name": "ollama",
+    "ollama_host": "localhost:13434",
+    "idle_unload_seconds": 1800,
+    "idle_unload_poll_seconds": 60
+  },
+  "models": {
+    "main": "qwen3.8:27b-q4_K_M",
+    "guardrail": "granite4.1-guardian:8b-q4_K_M",
+    "embedding": "qwen3-embedding:4b",
+    "phases": {
+      "exemplars_transcribe": null,
+      "ep_scan": null,
+      "ep_consolidate": null,
+      "ep_context": null,
+      "eb_extract": null,
+      "kg_extract": null,
+      "kg_clean_merge": null,
+      "kg_clean_drop": null,
+      "kg_domains": null,
+      "kg_domains_leftovers": null,
+      "kg_link_domain": null,
+      "kg_link_cross_domain": null,
+      "kg_taggable": null,
+      "kg_context": null,
+      "description_generation": null,
+      "concept_tagger": null,
+      "variant_generation": null,
+      "repair": null
+    }
+  },
+  "sampling": {
+    "think_effort": "low",
+    "temperature_deterministic": 0.0,
+    "temperature_reasoning": 0.2,
+    "temperature_generation": 0.3,
+    "temperature_repair": 0.2
+  },
+  "context_window": {
+    "main": 65536,
+    "guardrail": 4096,
+    "embedding": 4096
+  },
+  "builders": {
+    "transcribe_dpi": 200,
+    "transcribe_temperature": 0.0,
+    "transcribe_max_retries": 1,
+    "transcribe_prompt_version": 1,
+    "exemplars_ocr": true,
+    "ep_chunk_size": 12000,
+    "ep_scan_excerpt_chars": 400,
+    "ep_max_item_types": 6,
+    "eb_chunk_size": 12000,
+    "kg_chunk_size": 12000,
+    "kg_max_evidence_relations": 6,
+    "kg_extract_gleaning_passes": 1,
+    "kg_definition_max_chars": 220,
+    "kg_max_source_passages": 3,
+    "kg_source_passage_chars": 900,
+    "kg_plural_suffixes": [
+      "s"
+    ],
+    "kg_merge_qualifier_pattern": "\\s+en (python|java)\\b",
+    "kg_unclassified_domain": "Sin clasificar",
+    "kg_max_titles_per_doc": 3,
+    "kg_title_ubiquity": 0.6,
+    "kg_relation_schema": "es",
+    "kg_merge_similarity": 0.8,
+    "kg_max_merge_group": 8,
+    "kg_merge_groups_per_call": 10,
+    "kg_clean_batch_size": 60,
+    "kg_domain_batch_size": 20,
+    "kg_domain_rounds": 3
+  },
+  "retrieval": {
+    "query_prefix": "Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como herramienta\nQuery: ",
+    "document_prefix": "",
+    "batch_size": 16,
+    "field_max_chars": 2000,
+    "max_chars": 12000,
+    "similarity_threshold": 0.4,
+    "description_weight": 0.5,
+    "description_siblings_top_k": 8,
+    "description_collision_similarity": 0.85,
+    "description_prompt_version": 2
+  },
+  "generation": {
+    "tagger_top_k": 10,
+    "tagger_fallback_top_k": 30,
+    "max_few_shot_examples": 4,
+    "max_json_repair_tries": 3,
+    "check_similarity_threshold": 0.85,
+    "instructions_max_chars": 600,
+    "content_context_max_chars": 900,
+    "guardrail_criteria": [
+      "harm",
+      "jailbreak"
+    ]
+  },
+  "evaluation": {
+    "providers": [
+      "gemini",
+      "groq"
+    ],
+    "models": {
+      "gemini": "gemini-3.6-flash",
+      "groq": "llama-3.3-70b-versatile"
+    },
+    "timeout": 60.0
+  },
+  "logging": {
+    "level": "INFO",
+    "noisy_loggers": [
+      "docling",
+      "docling_core",
+      "docling_ibm_models",
+      "PIL"
+    ],
+    "noisy_warning_modules": [
+      "docling.*",
+      "PIL.*"
+    ]
+  }
+}

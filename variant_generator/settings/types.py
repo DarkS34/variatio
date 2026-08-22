@@ -50,8 +50,20 @@ def coerce(setting: Setting, raw: object) -> object:
         if setting.nullable:
             return None
         raise SettingError(f"'{setting.name or setting.key}' no admite un valor vacío")
-    value = _convert(setting, raw)
+    value = _canonical(setting, _convert(setting, raw))
     _check(setting, value)
+    return value
+
+
+# A `choices` list is a closed vocabulary, so it is matched without regard to case and the
+# declared spelling is what comes back. This is what keeps `VG_LOG_LEVEL=debug` working the
+# way `config.LOG_LEVEL`'s `.upper()` used to make it work.
+def _canonical(setting: Setting, value: object) -> object:
+    if not setting.choices or not isinstance(value, str):
+        return value
+    for choice in setting.choices:
+        if isinstance(choice, str) and choice.lower() == value.lower():
+            return choice
     return value
 
 
