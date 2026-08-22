@@ -21,7 +21,7 @@ type Language = "python" | "json" | "text";
 type Block =
   | { kind: "code"; code: string; language: Language }
   | { kind: "heading"; level: number; text: string }
-  | { kind: "list"; ordered: boolean; items: string[] }
+  | { kind: "list"; ordered: boolean; start: number; items: string[] }
   | { kind: "quote"; text: string }
   | { kind: "table"; header: string[]; rows: string[][] }
   | { kind: "rule" }
@@ -31,7 +31,7 @@ const FENCE = /^\s{0,3}(```|~~~)\s*([\w+#-]*)\s*$/;
 const HEADING = /^\s{0,3}(#{1,6})\s+(.*)$/;
 const RULE = /^\s{0,3}([-*_])\s*(?:\1\s*){2,}$/;
 const UNORDERED = /^\s*[-*+]\s+(.*)$/;
-const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
+const ORDERED = /^\s*(\d+)[.)]\s+(.*)$/;
 const QUOTE = /^\s{0,3}>\s?(.*)$/;
 const TABLE_RULE = /^\s*\|?(?:\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?\s*$/;
 
@@ -121,25 +121,42 @@ function parseBlocks(source: string): Block[] {
       continue;
     }
 
-    const pattern = UNORDERED.test(line) ? UNORDERED : ORDERED.test(line) ? ORDERED : null;
+    const ordered = ORDERED.test(line);
+    const pattern = UNORDERED.test(line) ? UNORDERED : ordered ? ORDERED : null;
     if (pattern) {
       const items: string[] = [];
+      // De dónde arranca la numeración. Es lo que salva a una lista que SÍ se ha partido
+      // en dos bloques —porque entre medias hay un párrafo o un bloque de código— de
+      // volver a empezar por 1 en el segundo trozo.
+      const start = ordered ? Number(ORDERED.exec(line)![1]) : 1;
       while (index < lines.length) {
         const match = pattern.exec(lines[index]);
         if (match) {
-          items.push(match[1]);
+          items.push(ordered ? match[2] : match[1]);
           index += 1;
           continue;
         }
+        // Una línea en blanco no cierra la lista si lo que viene detrás sigue siendo la
+        // misma lista. El modelo separa los puntos con un salto de más, y cortar ahí abría
+        // un <ol> nuevo por cada punto, todos numerados desde 1.
+        if (!lines[index].trim()) {
+          let ahead = index;
+          while (ahead < lines.length && !lines[ahead].trim()) ahead += 1;
+          if (ahead < lines.length && pattern.test(lines[ahead])) {
+            index = ahead;
+            continue;
+          }
+          break;
+        }
         // A wrapped continuation line belongs to the item above it, not to a new block.
-        if (items.length > 0 && lines[index].trim() && !FENCE.test(lines[index])) {
+        if (items.length > 0 && !FENCE.test(lines[index])) {
           items[items.length - 1] += `\n${lines[index].trim()}`;
           index += 1;
           continue;
         }
         break;
       }
-      blocks.push({ kind: "list", ordered: pattern === ORDERED, items });
+      blocks.push({ kind: "list", ordered, start, items });
       continue;
     }
 
@@ -281,6 +298,7 @@ export function Markdown({
             return (
               <Tag
                 key={key}
+                start={block.ordered && block.start !== 1 ? block.start : undefined}
                 className={cn(
                   "space-y-1 pl-5 marker:text-muted-foreground",
                   block.ordered ? "list-decimal" : "list-disc",
