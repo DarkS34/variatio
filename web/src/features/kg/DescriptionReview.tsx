@@ -54,7 +54,7 @@ function WritingProgress() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Spinner />
           <p className="text-sm font-medium">{step?.label ?? run.job?.label}</p>
-          <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
+          <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
@@ -73,7 +73,7 @@ function WritingProgress() {
             barras apiladas contando lo mismo se leían como dos cosas distintas. */}
         {/* Se guarda tras cada concepto, así que cancelar conserva lo escrito. Decirlo
             aquí es lo que hace que el botón de arriba no dé miedo. */}
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-small text-muted-foreground">
           {step?.detail ?? "Preparando…"} · se guarda tras cada concepto, cancelar no pierde
           lo ya escrito
         </p>
@@ -87,7 +87,7 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
 
   if (sources.length === 0) {
     return (
-      <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warning)]">
+      <p className="mt-2 flex items-center gap-1.5 text-small text-attention">
         <TriangleAlert className="size-3.5" />
         Sin respaldo en el corpus: se redactó solo con las relaciones del grafo.
       </p>
@@ -99,7 +99,7 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="flex items-center gap-1.5 text-small text-muted-foreground transition-colors hover:text-foreground"
       >
         <FileText className="size-3.5" />
         {open ? "Ocultar" : "Ver"} el material del que sale ({sources.length})
@@ -109,7 +109,7 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
           {sources.map((source, index) => (
             <blockquote
               key={index}
-              className="border-l-2 border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed"
+              className="border-l-2 border-border bg-muted/40 px-3 py-2 text-small leading-relaxed"
             >
               {named || source.location ? (
                 <p className="mb-1 font-mono text-[11px] text-muted-foreground">
@@ -183,11 +183,11 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-56 flex-1">
-          <div className="mb-1 flex items-baseline justify-between text-xs">
+          <div className="mb-1 flex items-baseline justify-between text-small">
             <span className="text-muted-foreground">
               {writing ? "Escribiendo descripciones" : "Conceptos con descripción"}
             </span>
-            <span className="tabular-nums">
+            <span className="nums">
               {writing
                 ? `${step?.current ?? 0}/${step?.total ?? kg.totals.taggable}`
                 : `${described}/${kg.totals.taggable}`}
@@ -245,7 +245,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
 
       {/* Se dice una vez, visible, y no detrás de una (i): es la única frase que explica
           por qué esta pestaña existe y por qué no hay que pulsar nada para tenerlas. */}
-      <p className="text-xs leading-relaxed text-muted-foreground">
+      <p className="text-small leading-relaxed text-muted-foreground">
         Las descripciones son el texto contra el que se emparejan los ítems al etiquetar:
         un concepto sin ella no tiene vector y nunca sale como candidato. Se escriben solas
         al indexar, a partir de los párrafos del corpus de teoría en los que aparece cada
@@ -274,6 +274,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <Input
+          aria-label="Filtrar por concepto o dominio"
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           placeholder="Filtrar por concepto o dominio…"
@@ -287,7 +288,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
           <TriangleAlert />
           Solo sin descripción
         </Button>
-        <span className="text-xs text-muted-foreground">{rows.length} concepto(s)</span>
+        <span className="text-small text-muted-foreground">{rows.length} concepto(s)</span>
       </div>
 
       <div className="space-y-2">
@@ -300,7 +301,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
               key={concept.name}
               className={cn(
                 "rounded-lg border border-border p-3",
-                !stored && "border-[color-mix(in_oklch,var(--warning)_45%,var(--border))]",
+                !stored && "border-[color-mix(in_oklch,var(--attention)_45%,var(--border))]",
               )}
             >
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -311,7 +312,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                 )}
                 <div className="ml-auto flex items-center gap-2">
                   {saved[concept.name] ? (
-                    <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                    <span className="flex items-center gap-1 text-small text-settled">
                       <Check className="size-3.5" />
                       guardada
                     </span>
@@ -345,12 +346,13 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                 </div>
               </div>
               <Textarea
+                aria-label={`Descripción de ${concept.name}`}
                 value={value}
                 onChange={(event) =>
                   setEdits((current) => ({ ...current, [concept.name]: event.target.value }))
                 }
                 placeholder="Sin descripción: se generará con el modelo o puedes escribirla aquí."
-                className="min-h-20 text-sm"
+                className="min-h-20"
               />
               <SourcePassages
                 sources={sources[concept.name] ?? []}

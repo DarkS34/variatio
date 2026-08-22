@@ -108,7 +108,7 @@ export function CurriculumTab() {
         <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
           <div className="min-w-0">
             <CardTitle>Currículo ({selected.length} concepto(s))</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-small text-muted-foreground">
               Guardado por última vez: {when(curriculum.data?.updated_at ?? null)}
               {dirty ? " · con cambios sin guardar" : null}
             </p>
@@ -179,7 +179,7 @@ export function CurriculumTab() {
           />
           <div>
             <p className="text-sm">Cerrar bajo prerrequisitos al guardar</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Añade también todo aquello de lo que dependen los conceptos elegidos. Se propone
               antes de guardar; nada se añade sin que lo veas.
             </p>

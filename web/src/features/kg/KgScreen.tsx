@@ -19,9 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
+import { Table, TableEmpty, TBody, TD, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
 import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
@@ -61,19 +64,27 @@ function ConceptDetail({
   const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const toast = useToast();
   const neighbours = useQuery({
     queryKey: ["kg", "neighbours", concept.name],
     queryFn: () => api.kgNeighbours(concept.name),
   });
 
-  const run = <T,>(action: () => Promise<T>) => {
+  // Every edit of the graph goes through here, so this is where the acknowledgement
+  // belongs. Deleting a concept takes its relations with it and the only way back is the
+  // history file; it was one of the actions that said nothing at all.
+  const run = <T,>(action: () => Promise<T>, done?: string) => {
     setError(null);
     return action()
       .then(() => {
         onChanged();
         neighbours.refetch();
+        if (done) toast({ title: done });
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        setError(e.message);
+        toast({ title: "No se ha podido guardar", description: e.message, tone: "danger" });
+      });
   };
 
   const update = useMutation({
@@ -85,12 +96,10 @@ function ConceptDetail({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="space-y-1">
-          <Label>Nombre</Label>
+        <Field label="Nombre">
           <Input value={name} onChange={(event) => setName(event.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label>Dominio</Label>
+        </Field>
+        <Field label="Dominio">
           <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
             {domains.map((option) => (
               <option key={option} value={option}>
@@ -98,7 +107,7 @@ function ConceptDetail({
               </option>
             ))}
           </Select>
-        </div>
+        </Field>
         <div className="flex items-center justify-between rounded-md border border-border p-2">
           <div className="flex items-center gap-1.5">
             <p className="text-sm">Etiquetable</p>
@@ -137,31 +146,31 @@ function ConceptDetail({
 
       {concept.description ? (
         <div className="space-y-1">
-          <Label>Descripción</Label>
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">Descripción</h4>
           <p className="rounded-md border border-border bg-muted/40 p-2 text-sm leading-relaxed">
             {concept.description}
           </p>
         </div>
       ) : (
         <Alert tone="attention">
-          <p className="text-xs">Sin descripción: no compite en el retrieval.</p>
+          <p className="text-small">Sin descripción: no compite en el retrieval.</p>
         </Alert>
       )}
 
-      <div className="flex gap-4 text-xs text-muted-foreground">
+      <div className="flex gap-4 text-small text-muted-foreground">
         <span>grado {concept.degree}</span>
       </div>
 
       <Separator />
 
       <div className="space-y-2">
-        <Label>Relaciones</Label>
+        <h4 className="text-micro font-condensed uppercase text-muted-foreground">Relaciones</h4>
         {neighbours.isLoading ? (
           <Spinner />
         ) : (
           Object.entries(neighbours.data?.relations ?? {}).map(([verb, data]) => (
             <div key={verb} className="space-y-1">
-              <p className="text-xs font-medium">{verb}</p>
+              <p className="text-small font-medium">{verb}</p>
               <div className="flex flex-wrap gap-1">
                 {[...data.out.map((n) => ({ n, dir: "→" })), ...data.in.map((n) => ({ n, dir: "←" }))].map(
                   ({ n, dir }) => (
@@ -188,7 +197,7 @@ function ConceptDetail({
                   ),
                 )}
                 {data.out.length === 0 && data.in.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-small text-muted-foreground">—</span>
                 ) : null}
               </div>
             </div>
@@ -196,14 +205,24 @@ function ConceptDetail({
         )}
 
         <div className="flex gap-1 pt-1">
-          <Select value={relation} onChange={(event) => setRelation(event.target.value)} className="text-xs">
+          <Select
+            aria-label="Tipo de relación"
+            value={relation}
+            onChange={(event) => setRelation(event.target.value)}
+            className="text-small"
+          >
             {relations.map((verb) => (
               <option key={verb} value={verb}>
                 {verb}
               </option>
             ))}
           </Select>
-          <Select value={target} onChange={(event) => setTarget(event.target.value)} className="text-xs">
+          <Select
+            aria-label="Concepto destino"
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+            className="text-small"
+          >
             <option value="">concepto…</option>
             {concepts
               .filter((c) => c.name !== concept.name)
@@ -225,7 +244,7 @@ function ConceptDetail({
         </div>
       </div>
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-small text-destructive">{error}</p> : null}
 
       <Separator />
 
@@ -234,7 +253,7 @@ function ConceptDetail({
         className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => {
           if (!window.confirm(`¿Eliminar el concepto "${concept.name}" y sus relaciones?`)) return;
-          run(() => api.deleteConcept(concept.name));
+          run(() => api.deleteConcept(concept.name), "Concepto eliminado");
         }}
       >
         <Trash2 />
@@ -259,11 +278,13 @@ function AddConceptDialog({
   const [domain, setDomain] = useState(domains[0] ?? "");
   const [taggable, setTaggable] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const create = useMutation({
     mutationFn: () => api.addConcept(name.trim(), domain, taggable),
     onSuccess: () => {
       onDone();
+      toast({ title: "Concepto creado", description: name.trim() });
       setName("");
       onClose();
     },
@@ -289,12 +310,10 @@ function AddConceptDialog({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-1">
-          <Label>Nombre</Label>
+        <Field label="Nombre">
           <Input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
-        </div>
-        <div className="space-y-1">
-          <Label>Dominio</Label>
+        </Field>
+        <Field label="Dominio">
           <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
             {domains.map((option) => (
               <option key={option} value={option}>
@@ -302,12 +321,12 @@ function AddConceptDialog({
               </option>
             ))}
           </Select>
-        </div>
+        </Field>
         <div className="flex items-center gap-2">
           <Switch checked={taggable} onCheckedChange={setTaggable} label="etiquetable" />
           <span className="text-sm">Etiquetable</span>
         </div>
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {error ? <p className="text-small text-destructive">{error}</p> : null}
       </div>
     </Dialog>
   );
@@ -373,6 +392,7 @@ function GraphExplorer() {
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
+            aria-label="Buscar concepto o descripción"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar concepto o descripción…"
@@ -380,6 +400,7 @@ function GraphExplorer() {
           />
         </div>
         <Select
+          aria-label="Filtrar por dominio"
           value={domainFilter}
           onChange={(event) => setDomainFilter(event.target.value)}
           className="max-w-56"
@@ -407,10 +428,10 @@ function GraphExplorer() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-small text-muted-foreground">
         <span>{totals.concepts} conceptos</span>
         <span>{totals.taggable} etiquetables</span>
-        <span className={totals.described < totals.taggable ? "text-[var(--warning)]" : undefined}>
+        <span className={totals.described < totals.taggable ? "text-attention" : undefined}>
           {totals.described} con descripción
         </span>
       </div>
@@ -434,7 +455,7 @@ function GraphExplorer() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
         <span className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted-foreground">Relaciones:</span>
           {graph.data.relations.map((relation, index) => (
@@ -496,7 +517,7 @@ function GraphExplorer() {
                 style={{ background: domainColour(index, graph.data!.groups.length) }}
               />
               {group.name}
-              <span className="tabular-nums">{group.count}</span>
+              <span className="nums">{group.count}</span>
             </button>
           ))}
         </span>
@@ -525,20 +546,17 @@ function GraphExplorer() {
             <CardTitle>Conceptos ({filtered.length})</CardTitle>
           </CardHeader>
           <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto p-0">
-            <table className="w-full text-sm">
-              <tbody>
+            <Table minWidth="18rem">
+              <TBody>
                 {filtered.map((concept) => {
                   const groupIndex = graph.data!.groups.findIndex((g) => g.name === concept.domain);
                   return (
-                    <tr
+                    <TR
                       key={concept.name}
-                      onClick={() => setSelected(concept.name)}
-                      className={cn(
-                        "cursor-pointer border-b border-border transition-colors hover:bg-accent",
-                        selected === concept.name && "bg-primary/10",
-                      )}
+                      selected={selected === concept.name}
+                      onSelect={() => setSelected(concept.name)}
                     >
-                      <td className="w-1 py-1.5 pl-3">
+                      <TD className="w-1 pr-0">
                         <span
                           className="block size-2 rounded-full"
                           style={{
@@ -548,29 +566,28 @@ function GraphExplorer() {
                             ),
                           }}
                         />
-                      </td>
-                      <td className="min-w-0 py-1.5 pl-2 pr-2">
+                      </TD>
+                      <TD className="min-w-0">
                         <span className={cn(!concept.taggable && "text-muted-foreground line-through")}>
                           {concept.name}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap py-1.5 pr-3 text-right text-xs text-muted-foreground">
+                      </TD>
+                      <TD align="num" className="whitespace-nowrap">
                         {!concept.description ? (
-                          <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
+                          <TriangleAlert
+                            className="inline size-3.5 text-attention"
+                            aria-label="Sin descripción"
+                          />
                         ) : null}
-                      </td>
-                    </tr>
+                      </TD>
+                    </TR>
                   );
                 })}
                 {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="p-4 text-center text-sm text-muted-foreground">
-                      Ningún concepto coincide con el filtro.
-                    </td>
-                  </tr>
+                  <TableEmpty colSpan={3}>Ningún concepto coincide con el filtro.</TableEmpty>
                 ) : null}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </CardContent>
         </Card>
 
@@ -612,7 +629,7 @@ function GraphExplorer() {
                 style={{ background: domainColour(index, kg.data!.domains.length) }}
               />
               {domain.name}
-              <span className="text-xs text-muted-foreground">{domain.concepts.length}</span>
+              <span className="text-small text-muted-foreground">{domain.concepts.length}</span>
               <button
                 aria-label={`Renombrar ${domain.name}`}
                 title="Renombrar"

@@ -571,7 +571,7 @@ export function GraphCanvas({
             disabled={option.value === "curriculum" && model.curriculumEdges === 0}
             onClick={() => setMode(option.value)}
             className={cn(
-              "flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+              "flex items-center gap-1.5 rounded px-2 py-1 text-small font-medium transition-colors disabled:opacity-40",
               mode === option.value
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -669,7 +669,7 @@ export function GraphCanvas({
 
       {hoveredNode ? (
         <div
-          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-xs shadow-lg backdrop-blur"
+          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-small shadow-lg backdrop-blur"
           style={{
             left: Math.min(tip.x + 14, Math.max(0, size.current.width - 260)),
             top: Math.max(4, tip.y - 46),
