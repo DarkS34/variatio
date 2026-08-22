@@ -84,9 +84,9 @@ export function AccountMenu() {
               label="Variantes guardadas"
               onClick={() => go("/perfil/variantes")}
             />
-            {/* La instalación entera: cuentas, invitaciones, workspaces y el estudio. Vive
-                aquí y no en la barra porque aparece para una cuenta de toda la instalación
-                y la barra es la cadena de artefactos. */}
+            {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
+                and not in the bar because it appears for an installation-wide account and the bar is the
+                chain of artifacts. */}
             {user.is_admin ? (
               <MenuItem
                 icon={<ShieldCheck className="size-4" />}

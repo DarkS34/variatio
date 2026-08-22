@@ -82,8 +82,8 @@ class JobRunner:
     def __init__(self, bus: EventBus, handlers: dict[str, Handler]):
         self.bus = bus
         self.handlers = handlers
-        # Qué se encola solo cuando un trabajo termina bien. La cola sigue siendo genérica:
-        # quién sigue a quién lo decide `jobs/chain.py`, que se instala en `runtime.py`.
+        # What gets enqueued by itself when a job finishes well. The queue stays generic: who
+        # follows whom is decided by `jobs/chain.py`, which `runtime.py` installs.
         self.after_success: Callable[["JobRunner", Job], None] | None = None
         self._queue: queue.Queue[str] = queue.Queue()
         self._jobs: dict[str, Job] = {}
@@ -211,10 +211,10 @@ class JobRunner:
         with self._lock:
             return self._current is not None or bool(self.pending())
 
-    # Segundos desde el último trabajo encolado o terminado. Es la única medida de
-    # inactividad que existe aquí, y basta: en este servidor todo lo que habla con Ollama
-    # pasa por la cola, así que «nadie ha pedido nada» y «la GPU no hace falta» son lo
-    # mismo. Devuelve 0 mientras algo corre, para que nada la lea como inactividad.
+    # Seconds since the last job enqueued or finished. It is the only measure of idleness that
+    # exists here, and it is enough: on this server everything that talks to Ollama goes
+    # through the queue, so «nobody has asked for anything» and «the GPU is not needed» are
+    # the same thing. Returns 0 while something runs, so nothing reads it as idleness.
     def idle_seconds(self) -> float:
         with self._lock:
             if self._current is not None or bool(self.pending()):
@@ -264,8 +264,8 @@ class JobRunner:
             with self._lock:
                 self._current = None
 
-    # Encadenar es una comodidad, no parte del resultado: si falla, el trabajo que acaba
-    # de terminar sigue estando terminado y solo se pierde el eslabón siguiente.
+    # Chaining is a convenience, not part of the result: if it fails, the job that just
+    # finished is still finished and only the next link is lost.
     def _chain(self, job: Job) -> None:
         if self.after_success is None:
             return

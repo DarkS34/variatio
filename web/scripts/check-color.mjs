@@ -200,7 +200,7 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
       const line = `ΔE ${kind.padEnd(6)} primary vs ${arm.slice(2)}: ${d.toFixed(1)} (mín ${floor})`;
       d >= floor ? ok(line) : fail(`${line}`);
     }
-    // Y que los tres arcos sigan separados entre pares ADYACENTES en el orden declarado.
+    // And that the three arcs stay apart between ADJACENT pairs in the declared order.
     for (let i = 0; i + 1 < ARMS.length; i++) {
       if (!tokens[ARMS[i]] || !tokens[ARMS[i + 1]]) continue;
       const d = deltaE(tokens[ARMS[i]], tokens[ARMS[i + 1]], kind);

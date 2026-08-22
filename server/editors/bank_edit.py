@@ -107,9 +107,9 @@ def listing(
     if order == "suspicion":
         rows.sort(key=lambda r: (_suspicion(r), r["id"]))
     elif order == "recent":
-        # Los ids son C001, C002… y se asignan en orden de extracción, así que «lo último
-        # escrito» es exactamente el final de esa lista. Es lo que mira la vista en vivo
-        # mientras el constructor todavía está escribiendo el fichero.
+        # The ids are C001, C002… assigned in extraction order, so «the last thing written» is
+        # exactly the tail of that list. It is what the live view looks at while the builder is
+        # still writing the file.
         rows.sort(key=lambda r: r["id"], reverse=True)
     else:
         rows.sort(key=lambda r: r["id"])

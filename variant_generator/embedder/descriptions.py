@@ -21,12 +21,12 @@ from ..prompts import concept_description_prompt, describe_domain_concepts_promp
 from ..utils import parse_with_repair
 from .vectors import embed_normalized
 
-# Decodificación con gramática, y no `think=False` a secas. `DESCRIPTION_GENERATION_LLM` es
-# un modelo que razona, y con el canal de razonamiento cerrado razona DENTRO de la
-# respuesta: en la instancia de referencia, la descripción de «Error de compilación» son
-# 9 000 caracteres de deliberación en inglés —«The user is asking for…», «Let's re-read the
-# relations carefully»— que se guardaron tal cual y se indexaron como si fueran prosa. Bajo
-# la gramática el primer token ya tiene que ser `{`, así que ese fallo no cabe.
+# Grammar-constrained decoding, and not a bare `think=False`. `DESCRIPTION_GENERATION_LLM`
+# is a reasoning model, and with the reasoning channel closed it reasons INSIDE the answer:
+# on the reference instance, the description of «Error de compilación» is 9 000 characters
+# of English deliberation — «The user is asking for…», «Let's re-read the relations
+# carefully» — stored as is and indexed as if it were prose. Under the grammar the first
+# token already has to be `{`, so that failure has nowhere to go.
 DESCRIPTION_SCHEMA = {
     "type": "object",
     "properties": {"description": {"type": "string"}},
@@ -90,10 +90,10 @@ def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
     write_json(path, descriptions)
 
 
-# El anclaje al corpus que escribe la construcción del grafo: `{"documents": [...],
-# "concepts": {concepto: [{document, location, text}]}}`. Se lee como se leen las
-# descripciones — solo el fichero — porque un workspace cuyo grafo llegó importado no lo
-# tiene, y eso no es un error: se describe con las relaciones, como antes de que existiera.
+# The corpus anchoring the graph build writes: `{"documents": [...], "concepts":
+# {concept: [{document, location, text}]}}`. It is read the way the descriptions are read
+# — only the file — because a workspace whose graph arrived imported does not have it, and
+# that is not an error: it is described from the relations, as before it existed.
 def load_sources(path: str | Path) -> dict:
     path = Path(path)
     if not path.exists():
@@ -142,8 +142,8 @@ class ConceptDescriber:
 
         sources = load_sources(self.sources_path)
         self.passages: dict[str, list[dict]] = sources["concepts"]
-        # Nombrar el documento solo aporta cuando hay varios; con uno solo repite la misma
-        # línea en cada pasaje de cada concepto y no distingue nada.
+        # Naming the document only helps when there are several; with one it repeats the same
+        # line in every passage of every concept and distinguishes nothing.
         self.name_documents = len(sources["documents"]) > 1
 
     def load(self) -> dict[str, str]:
@@ -170,16 +170,16 @@ class ConceptDescriber:
             "prompt": config.DESCRIPTION_PROMPT_VERSION,
             "domain": self.knowledge_graph.concept_domain[concept],
             "relations": {v: sorted(ns) for v, ns in self.collect_relations(concept).items()},
-            # El anclaje entra en la huella porque entra en el prompt: reconstruir el grafo
-            # sobre otro corpus cambia lo que el concepto significa aquí, y una descripción
-            # escrita contra los párrafos anteriores ya no describe lo mismo.
+            # The anchoring enters the fingerprint because it enters the prompt: rebuilding the graph
+            # over another corpus changes what the concept means here, and a description written
+            # against the previous paragraphs no longer describes the same thing.
             "passages": [p.get("text", "") for p in self.passages.get(concept, [])],
-            # También entra el contexto, y era un hueco: el prompt lo lee para fijar la
-            # materia, el nivel y el idioma, así que cambiar de asignatura cambia lo que
-            # una descripción debería decir. Sin esto, editar el contexto dejaba intactas
-            # descripciones escritas contra el anterior. Es más barato de lo que parece:
-            # el contexto es uno para toda la instancia, así que o no cambia nada o se
-            # reescriben todas, que es justo lo correcto en ese caso.
+            # The context enters too, and that was a gap: the prompt reads it to fix the subject, the
+            # level and the language, so changing subject changes what a description should say.
+            # Without this, editing the context left descriptions written against the previous one
+            # intact. It is cheaper than it looks: the context is one for the whole instance, so
+            # either nothing changes or all of them are rewritten, which is exactly right in that
+            # case.
             "context": self.context.prompt_block(),
         }
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)

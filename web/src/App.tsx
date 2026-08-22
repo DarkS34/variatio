@@ -32,16 +32,16 @@ export function App() {
         return <GenerateScreen />;
       case "/evaluar":
         return <EvaluationScreen />;
-      // La cuenta de quien mira: sus datos, sus variantes y sus accesos. Cada pestaña es
-      // una ruta para que «mis variantes» siga siendo un enlace que se puede guardar.
+      // The account of whoever is looking: their data, their variants and their accesses. Each
+      // tab is a route so that «mis variantes» stays a link that can be bookmarked.
       case "/perfil":
         return <AccountScreen tab="cuenta" />;
       case "/perfil/variantes":
         return <AccountScreen tab="variantes" />;
       case "/perfil/accesos":
         return <AccountScreen tab="accesos" />;
-      // Donde vivían las variantes cuando eran pantalla propia. Se redirige en vez de
-      // duplicar la pantalla: los enlaces antiguos siguen llevando a donde están ahora.
+      // Where the variants lived when they were a screen of their own. Redirected rather than
+      // duplicating the screen: old links still lead to where they are now.
       case "/variantes":
         return <Redirect to="/perfil/variantes" />;
       // Guarded on the server by `require_admin`; the route exists for everyone because

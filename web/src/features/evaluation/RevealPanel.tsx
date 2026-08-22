@@ -117,9 +117,9 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
         </span>
       </header>
 
-      {/* Se dice después de elegir, nunca antes: es idéntico para las tres propuestas, así
-          que no delata ninguna, pero sabiéndolo de antemano se lee distinto lo que hay en
-          pantalla — y el sorteo existía justo para medirlo sin ese sesgo. */}
+      {/* Said after choosing, never before: it is identical for the three proposals, so it gives
+          none away, but knowing it beforehand changes how what is on screen is read — and the draw
+          existed precisely to measure without that bias. */}
       <p className="text-small text-muted-foreground">
         {session.think
           ? "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir."

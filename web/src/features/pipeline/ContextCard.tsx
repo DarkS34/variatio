@@ -13,9 +13,9 @@ import { truncate } from "@/lib/format";
 import { useCanEdit } from "@/state/auth";
 import { keys, useContentContext } from "@/state/queries";
 
-// El párrafo se paga en cada llamada del sistema y puede llegar a 900 caracteres
-// (`CONTENT_CONTEXT_MAX_CHARS`). En el panel se lee para reconocerlo, no para revisarlo:
-// entero convertía una tarjeta de la columna en un muro. Se ve completo al editarlo.
+// The paragraph is paid for in every call the system makes and may reach 900 characters
+// (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to recognise it, not to review it:
+// in full it turned a card of the column into a wall. It is shown whole when editing.
 const PREVIEW_CHARS = 200;
 
 const FACT_LABEL: Record<string, string> = {
@@ -25,16 +25,16 @@ const FACT_LABEL: Record<string, string> = {
 };
 
 /**
- * De qué asignatura es esta instancia, en prosa.
+ * What subject this instance is about, in prose.
  *
- * Vive en el panel y no en una etapa porque no es una: no tiene datos en bruto propios ni
- * constructor propio, y no está en `review.ARTIFACTS`. Lo sintetizan las construcciones del
- * grafo y del perfil, cada una con lo que su artefacto sabe de la asignatura, y cada una
- * escribe el BORRADOR. Lo que se edita aquí es el curado, que es el que manda al leer —
- * ese par es lo que impide que una reconstrucción reescriba lo que escribió una persona.
+ * It lives on the panel and not in a stage because it is not one: it has no raw data of its
+ * own, no builder of its own, and it is not in `review.ARTIFACTS`. The graph and profile
+ * builds synthesise it, each with what its artifact knows about the subject, and each
+ * writes the DRAFT. What is edited here is the curated one, which wins on read — that pair
+ * is what keeps a rebuild from rewriting what a person wrote.
  *
- * Los tres datos sueltos no son decoración ni un resto del formato viejo: la rama naive de
- * la evaluación compone una frase con ellos y no puede leer el párrafo.
+ * The three loose facts are neither decoration nor a leftover of the old format: the
+ * evaluation's naive arm composes a sentence from them and cannot read the paragraph.
  */
 export function ContextCard() {
   const query = useContentContext();
@@ -165,10 +165,9 @@ export function ContextCard() {
                   <Pencil />
                   {data.exists ? "Editar" : "Escribirlo"}
                 </Button>
-                {/* Una construcción siempre escribe el borrador, así que con un contexto
-                    curado la última síntesis queda ahí sin leerse. El aviso que lo decía
-                    con el texto entero dentro se fue del panel; queda por dónde adoptarla,
-                    que es lo único que no se puede hacer desde ningún otro sitio. */}
+                {/* A build always writes the draft, so with a curated context the latest synthesis sits
+                    there unread. The notice that said so with the whole text inside left the panel; what
+                    stays is the way to adopt it, the one thing that cannot be done from anywhere else. */}
                 {data.pending_draft ? (
                   <Button
                     size="sm"

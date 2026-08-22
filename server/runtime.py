@@ -14,11 +14,12 @@ from .review import ReviewState
 
 bus = EventBus()
 runner = JobRunner(bus, HANDLERS)
-# Las derivaciones obligatorias de una construcción se encolan solas al terminar. La cola
-# no sabe nada de la cadena: se la instalamos aquí, que es donde se monta el proceso.
+# A build's mandatory derivations enqueue themselves when it finishes. The queue knows
+# nothing about the chain: it is installed here, where the process is assembled.
 runner.after_success = chain.advance
-# Ni bus ni cola: solo mira el reloj de la cola y suelta la GPU cuando lleva media hora
-# sin nada que hacer. Vive aquí porque lo que vigila es el proceso, no una petición.
+# Neither bus nor queue: it only reads the queue's clock and releases the GPU after half
+# an hour with nothing to do. Lives here because what it watches is the process, not a
+# request.
 idle_unloader = IdleUnloader(runner)
 
 

@@ -38,12 +38,12 @@ def build_knowledge_graph(ws: Workspace | None = None) -> dict:
     return KnowledgeGraphBuilder(workspace=ws).build(ws.raw_corpus_dir)
 
 
-# Extraer y etiquetar son un solo trabajo desde 2026-08-22: cada documento se etiqueta
-# nada más salir del extractor y se guarda ya anotado. Eran dos pasos que había que lanzar
-# a mano uno detrás del otro, y el segundo no era opcional — un banco sin etiquetar no
-# sirve ni para generar ni para indexar. Etiquetar por documento en vez de al final tiene
-# además el efecto que el arranque en caliente ya explotaba entre ejecuciones: los ítems
-# del documento 3 se etiquetan contra un índice que ya contiene los de los documentos 1 y 2.
+# Extracting and tagging are one job since 2026-08-22: each document is tagged as soon as
+# it leaves the extractor and is saved already annotated. They were two steps that had to
+# be launched by hand one after the other, and the second was not optional — an untagged
+# bank is useless for generating and for indexing alike. Tagging per document instead of at
+# the end also has the effect the warm start already exploited between runs: document 3's
+# items are tagged against an index that already holds those of documents 1 and 2.
 def build_exemplars_bank(
     exemplars_profile: ExemplarsProfile | None = None,
     ws: Workspace | None = None,
@@ -70,8 +70,8 @@ def build_exemplars_bank(
     return bank
 
 
-# Sin grafo no hay con qué etiquetar, y eso no es un error: el banco se extrae igual y
-# queda pendiente de `stages.tag_bank`, que es como funcionaba hasta ahora.
+# Without a graph there is nothing to tag with, and that is not an error: the bank is
+# extracted anyway and stays pending for `stages.tag_bank`, which is how it worked so far.
 def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
     kg_path = _artifacts.knowledge_graph_path(ws)
     if kg_path is None:
@@ -80,10 +80,10 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
         )
         return None
 
-    # Perezoso a propósito: construir el `Embedder` indexa todos los conceptos y escribe
-    # las descripciones que falten, y eso son minutos. Hacerlo aquí lo pondría ANTES de la
-    # primera fase del plan, con la barra parada en 0 %; hacerlo en la primera llamada lo
-    # pone dentro de la fase que ya lo está contando.
+    # Lazy on purpose: building the `Embedder` indexes every concept and writes the missing
+    # descriptions, and that is minutes. Doing it here would put it BEFORE the plan's first
+    # phase, with the bar stuck at 0 %; doing it on the first call puts it inside the phase
+    # that is already counting it.
     state: dict = {}
 
     def ready():
@@ -98,14 +98,14 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
 
     def annotate(bank: dict, new_ids: list[str]) -> dict:
         embedder, tagger = ready()
-        # El índice se refresca con el banco completo antes de etiquetar: vectoriza solo
-        # lo nuevo (el resto se reutiliza de la caché) y vuelve a fundir los centroides,
-        # que es lo que hace que las etiquetas de los documentos anteriores cuenten.
+        # The index is refreshed with the whole bank before tagging: it embeds only what is new
+        # (the rest is reused from the cache) and re-merges the centroids, which is what makes the
+        # previous documents' tags count.
         embedder.enrich_index_with_content(bank)
         working = dict(bank)
 
-        # Se guarda tras cada ítem por lo mismo que en `stages/tag.py`: cancelar a mitad
-        # conserva todas las decisiones ya tomadas.
+        # Saved after each item for the same reason as in `stages/tag.py`: cancelling halfway
+        # keeps every decision already taken.
         def checkpoint(item_id: str, item: dict) -> None:
             working[item_id] = item
             write_json(ws.exemplars_bank_path, working)

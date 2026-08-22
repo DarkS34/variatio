@@ -23,15 +23,15 @@ BUILD_PHASES = (
     ("convert", "Transcribiendo los ejemplares", 40),
     ("scan", "Buscando modalidades de ejercicio", 40),
     ("consolidate", "Consolidando el perfil", 19),
-    # Una llamada al final, con lo que el perfil sabe de la asignatura que el grafo no
-    # sabe: en qué formas plantea sus tareas y cómo suenan de verdad.
+    # One call at the end, with what the profile knows about the subject that the graph does
+    # not: in what forms it poses its tasks and how they actually sound.
     ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 
 MAX_EXCERPTS_PER_TYPE = 3
 
-# Cuántos ejemplares literales ve la síntesis del contexto. Tres bastan para fijar materia,
-# nivel y notación, y son pocos como para no arrastrar la temática de uno solo al texto.
+# How many verbatim exemplars the context synthesis sees. Three are enough to pin the
+# subject, level and notation, and few enough not to drag one item's topic into the text.
 CONTEXT_EXCERPTS = 3
 
 # The scan's shape is fixed, so it is stated as a schema. The CONSOLIDATION's is not: what it

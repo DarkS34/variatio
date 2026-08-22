@@ -23,20 +23,19 @@ import {
 } from "@/state/queries";
 
 /**
- * Lo que la cadena escribe sola, puesto donde se puede leer y corregir.
+ * What the chain writes on its own, put where it can be read and corrected.
  *
- * Las descripciones NO son un paso manual: `initialize` — y por tanto «Indexar
- * conceptos», y cualquier generación — construye el `Embedder`, y lo primero que este
- * hace es escribir la descripción de todo concepto etiquetable que no la tenga. Esta
- * pantalla es donde se revisan y donde se puede forzar la reescritura, no donde se
- * originan.
+ * The descriptions are NOT a manual step: `initialize` — and therefore «Indexar conceptos»,
+ * and any generation — builds the `Embedder`, and the first thing it does is write the
+ * description of every taggable concept that lacks one. This screen is where they are
+ * reviewed and where a rewrite can be forced, not where they originate.
  *
- * Cada una se redacta contra los párrafos del corpus de teoría de los que salió el
- * concepto (`sources`), que es lo que se enseña debajo del texto: sin esa prueba una
- * descripción es lo que el modelo sabía del tema, y no lo que dice el temario.
+ * Each is composed against the paragraphs of the theory corpus the concept came from
+ * (`sources`), which is what is shown under the text: without that evidence a description is
+ * what the model knew about the topic, and not what the syllabus says.
  */
 
-/** Lo que está pasando mientras se escriben, en la pantalla donde se ha pedido. */
+/** What is happening while they are being written, on the screen where it was asked for. */
 function WritingProgress() {
   const run = useJobRun("describe_concepts");
   const cancel = useCancelJob();
@@ -69,10 +68,10 @@ function WritingProgress() {
             Cancelar
           </Button>
         </div>
-        {/* Sin barra: la del encabezado ya es la de este trabajo mientras corre. Dos
-            barras apiladas contando lo mismo se leían como dos cosas distintas. */}
-        {/* Se guarda tras cada concepto, así que cancelar conserva lo escrito. Decirlo
-            aquí es lo que hace que el botón de arriba no dé miedo. */}
+        {/* No bar: the header's is already this job's while it runs. Two stacked bars counting the
+            same thing read as two different things. */}
+        {/* Saved after each concept, so cancelling keeps what was written. Saying so here is what
+            makes the button above not scary. */}
         <p className="truncate text-small text-muted-foreground">
           {step?.detail ?? "Preparando…"} · se guarda tras cada concepto, cancelar no pierde
           lo ya escrito
@@ -174,9 +173,9 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
   const namedDocuments = Boolean(query.data?.many_documents);
   const described = kg.totals.taggable - missing.length;
 
-  /* Una sola barra: mientras se escribe cuenta el trabajo, y el resto del tiempo la
-     cobertura. Eran dos, apiladas y avanzando a la vez, que es como se lee que son dos
-     medidas distintas cuando durante una generación son la misma. */
+  /* One bar: while writing it counts the job, and the rest of the time the coverage. There
+     were two, stacked and advancing together, which reads as two different measures when
+     during a generation they are the same one. */
   const step = writing ? run?.steps.filter((s) => s.status === "running").at(-1) : undefined;
 
   return (
@@ -204,10 +203,9 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
           )}
         </div>
 
-        {/* El botón se quedaba igual al pulsarlo: `submit.isPending` solo dura lo que
-            tarda el POST, y a partir de ahí el trabajo corría sin que esta pantalla dijera
-            nada. Lo que manda ahora es el estado del trabajo en el flujo de eventos, que
-            es el mismo que pinta la barra de abajo. */}
+        {/* The button stayed the same when pressed: `submit.isPending` only lasts as long as the
+            POST, and from then on the job ran without this screen saying anything. What rules now is
+            the job's state in the event stream, the same one that paints the bar below. */}
         <Button
           variant={missing.length > 0 ? "default" : "outline"}
           disabled={submit.isPending || writing || Boolean(offline)}
@@ -243,8 +241,8 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
 
       <WritingProgress />
 
-      {/* Se dice una vez, visible, y no detrás de una (i): es la única frase que explica
-          por qué esta pestaña existe y por qué no hay que pulsar nada para tenerlas. */}
+      {/* Said once, visibly, and not behind an (i): it is the only sentence that explains why
+          this tab exists and why nothing has to be pressed to have them. */}
       <p className="text-small leading-relaxed text-muted-foreground">
         Las descripciones son el texto contra el que se emparejan los ítems al etiquetar:
         un concepto sin ella no tiene vector y nunca sale como candidato. Se escriben solas

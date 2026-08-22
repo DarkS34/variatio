@@ -229,9 +229,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* La consecuencia va en la propia frase: era lo único que decía la (i) que había
-            al lado, y una advertencia que hay que abrir para entenderla no es una
-            advertencia. */}
+        {/* The consequence goes in the sentence itself: it was all the (i) beside it said, and a
+            warning one has to open in order to understand is not a warning. */}
         {offline || missingModels.length > 0 ? (
           <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-4 py-1.5 text-small">
             {offline ? (

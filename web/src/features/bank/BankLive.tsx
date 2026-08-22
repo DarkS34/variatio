@@ -10,17 +10,17 @@ import type { BankItem, BankItemType } from "@/lib/types";
 const VISIBLE = 8;
 
 /**
- * Lo que el constructor lleva escrito, mientras lo escribe.
+ * What the builder has written so far, while it writes it.
  *
- * La pantalla de una etapa se vacía durante una reconstrucción, y con razón: lo que hay
- * en ella está a punto de dejar de ser lo que se está mirando. Esto no es eso — no es el
- * banco anterior, es el que está saliendo — y por eso vive bajo la barra de progreso y es
- * de solo lectura: no hay nada que editar en un fichero que se sigue escribiendo.
+ * A stage's screen empties during a rebuild, and rightly so: what is on it is about to stop
+ * being what one is looking at. This is not that — it is not the previous bank, it is the
+ * one coming out — which is why it lives under the progress bar and is read-only: there is
+ * nothing to edit in a file that is still being written.
  *
- * Se pregunta por REST y no por el flujo de eventos a propósito: una construcción larga
- * desborda el buffer de eventos, así que un navegador recargado a mitad se quedaría sin
- * nada; el fichero, en cambio, está siempre ahí. Y sale ordenado por id descendente, que
- * es el orden de extracción al revés: lo último escrito, arriba.
+ * It is asked over REST and not through the event stream on purpose: a long build overruns
+ * the event buffer, so a browser reloaded halfway would be left with nothing; the file, on
+ * the other hand, is always there. And it comes sorted by id descending, which is the
+ * extraction order reversed: the last thing written, on top.
  */
 export function BankLive() {
   const query = useQuery({

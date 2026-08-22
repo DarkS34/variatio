@@ -1,8 +1,8 @@
-"""Los ajustes del sistema, como atributos.
+"""The system's settings, as attributes.
 
-Este módulo no decide ningún valor: los declara `settings/registry/`, con su medición al
-lado, y `settings.apply` los escribe aquí. Lo que se lee abajo es el índice de lo que el
-sistema expone, no su definición.
+This module decides no value: `settings/registry/` declares them, with their measurement
+beside each one, and `settings.apply` writes them here. What is read below is the index
+of what the system exposes, not its definition.
 """
 
 from .relations import RelationSchema

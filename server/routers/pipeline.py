@@ -57,9 +57,9 @@ def get_pipeline(access: auth.Access = auth.VIEW) -> dict:
 # share of the work, and what a share costs depends on the models, which change.
 #
 # Declared before `/{artifact}/…` so «phases» is read as itself and not as an artifact.
-# Hay trabajos que no construyen ningún artefacto y aun así tienen un plan de fases: la
-# revisión de etiquetabilidad parchea una lista del grafo en su sitio. `useArtifactRun` no
-# los encuentra —se indexa por artefacto—, así que su plan se publica por tipo de trabajo.
+# Some jobs build no artifact and still have a phase plan: the taggability review patches
+# a list of the graph in place. `useArtifactRun` cannot find them — it is keyed by artifact
+# —, so their plan is published by job kind.
 JOB_PHASES = {"review_taggability": taggability.BUILD_PHASES}
 
 

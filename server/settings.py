@@ -49,13 +49,13 @@ def provision(ws: Workspace) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-# La otra mitad de `provision`, y solo la usa el panel de administración: borrar un
-# workspace de la base de datos y dejar su árbol en disco deja cientos de megas huérfanos
-# bajo un slug que ya no consta en ninguna parte.
+# The other half of `provision`, used only by the administration panel: deleting a
+# workspace from the database while leaving its tree on disk leaves hundreds of orphaned
+# megabytes under a slug that is no longer on record anywhere.
 #
-# La comprobación de que el directorio cuelga de `WORKSPACES_DIR` no es decorativa: aquí
-# entra un slug que viene de una petición, y `shutil.rmtree` sobre una ruta mal resuelta no
-# se puede deshacer. `Workspace.__post_init__` ya la resuelve, así que basta comparar.
+# The check that the directory hangs from `WORKSPACES_DIR` is not decorative: the slug
+# arriving here comes from a request, and `shutil.rmtree` on a mis-resolved path cannot
+# be undone. `Workspace.__post_init__` already resolves it, so comparing is enough.
 def destroy(ws: Workspace) -> bool:
     root = ws.root
     parent = Path(paths.WORKSPACES_DIR).resolve()

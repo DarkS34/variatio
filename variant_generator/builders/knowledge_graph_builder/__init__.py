@@ -32,9 +32,9 @@ from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
-    "KnowledgeGraphBuilder",
-    "BUILD_PHASES",
     "BUILD_MODELS",
+    "BUILD_PHASES",
+    "KnowledgeGraphBuilder",
     "blocks",
     "cleaning",
     "curation",
@@ -61,9 +61,9 @@ BUILD_PHASES = (
     ("domains", "Agrupando los conceptos en dominios", 9),
     ("link", "Enlazando conceptos y ordenando el temario", 26),
     ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
-    # Una sola llamada, como `curate`: lleva peso para que la barra no salte al final, no
-    # porque cueste. Va la última porque necesita los nombres de los bloques, que es lo que
-    # el grafo sabe de la asignatura y ninguna fase anterior tiene todavía.
+    # One call, like `curate`: it carries a weight so the bar does not jump at the end, not
+    # because it costs. It goes last because it needs the names of the blocks, which is what
+    # the graph knows about the subject and no earlier phase has yet.
     ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 

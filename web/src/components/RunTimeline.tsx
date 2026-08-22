@@ -102,10 +102,9 @@ export function RunTimeline({
                     >
                       {step.label}
                     </span>
-                    {/* La (i) solo mientras la frase NO esté a la vista. El paso en curso
-                        ya la imprime entera debajo del título, así que ahí el icono era
-                        una segunda copia de la misma frase a un centímetro de la primera:
-                        cuando las dos dicen lo mismo, se queda la visible. */}
+                    {/* The (i) only while the sentence is NOT in view. The running step already prints it in
+                        full under the title, so there the icon was a second copy of the same sentence a
+                        centimetre from the first: when both say the same thing, the visible one stays. */}
                     {explain && !running ? (
                       <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint>
                     ) : null}

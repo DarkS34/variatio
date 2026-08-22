@@ -125,9 +125,9 @@ function parseBlocks(source: string): Block[] {
     const pattern = UNORDERED.test(line) ? UNORDERED : ordered ? ORDERED : null;
     if (pattern) {
       const items: string[] = [];
-      // De dónde arranca la numeración. Es lo que salva a una lista que SÍ se ha partido
-      // en dos bloques —porque entre medias hay un párrafo o un bloque de código— de
-      // volver a empezar por 1 en el segundo trozo.
+      // Where the numbering starts. It is what saves a list that DID get split into two blocks
+      // — because there is a paragraph or a code block in between — from starting again at 1 in
+      // the second piece.
       const start = ordered ? Number(ORDERED.exec(line)![1]) : 1;
       while (index < lines.length) {
         const match = pattern.exec(lines[index]);
@@ -136,9 +136,9 @@ function parseBlocks(source: string): Block[] {
           index += 1;
           continue;
         }
-        // Una línea en blanco no cierra la lista si lo que viene detrás sigue siendo la
-        // misma lista. El modelo separa los puntos con un salto de más, y cortar ahí abría
-        // un <ol> nuevo por cada punto, todos numerados desde 1.
+        // A blank line does not close the list when what follows is still the same list. The model
+        // separates the items with one break too many, and cutting there opened a new <ol> for each
+        // item, all numbered from 1.
         if (!lines[index].trim()) {
           let ahead = index;
           while (ahead < lines.length && !lines[ahead].trim()) ahead += 1;

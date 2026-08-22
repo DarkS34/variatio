@@ -97,8 +97,8 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
                 "members": len(identity.members_of(db, workspace.id)),
                 "generations": study.count_generations(db, workspace.id),
                 "warm": workspace.slug in deps.warm_slugs(),
-                # La cadena de cada instancia, para poder vaciar una etapa desde aquí sin
-                # cambiarse a ella. Es leer tres ficheros por workspace, no montar su índice.
+                # Each instance's chain, so a stage can be emptied from here without switching to it. It
+                # is reading three files per workspace, not mounting its index.
                 "stages": _chain(workspace.slug),
             }
             for workspace in workspaces
@@ -259,10 +259,11 @@ def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db))
 
 # WORKSPACES ------------------------------------------------------------------------------
 #
-# Lo único que este panel escribe sobre las instancias, y es borrado: no construye, no
-# edita y no aprueba nada. Está aquí y no en `/api/workspaces` porque aquello exige ser
-# miembro del workspace activo — cuando lo que hace falta es limpiar la instalación, eso
-# obliga a entrar en cada instancia para poder quitarla, que es justo lo contrario.
+# The only thing this panel writes about instances, and it is deletion: it builds,
+# edits and approves nothing. It lives here and not under `/api/workspaces` because that
+# requires membership of the active workspace — when what is needed is to clean up the
+# installation, that forces entering each instance in order to remove it, the exact
+# opposite.
 
 
 @router.delete("/workspaces/{slug}")
@@ -274,8 +275,8 @@ def delete_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
         raise HTTPException(409, "No se puede borrar el único workspace de la instalación.")
 
     ws = settings.workspace_for(slug)
-    # El árbol primero: si la fila cae y el borrado del directorio falla, quedan ficheros
-    # que ya no consta a quién pertenecían. Al revés, un fallo deja la fila y se reintenta.
+    # The tree first: if the row goes and deleting the directory fails, files are left whose
+    # owner is no longer on record. The other way round, a failure leaves the row and retries.
     try:
         removed = settings.destroy(ws)
     except (ValueError, OSError) as exc:
@@ -287,10 +288,10 @@ def delete_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     return {"deleted": slug, "path": str(ws.root), "files_removed": removed}
 
 
-# Vaciar una etapa. Deja el workspace en pie y su artefacto en «missing», que es lo que
-# permite reconstruirlo: lo que se borra es el fichero curado, el borrador y las
-# derivaciones de la caché que hablaban de él. `.history/` no se toca, así que un borrado
-# equivocado se deshace desde «Restaurar» en la pantalla del artefacto.
+# Empty a stage. Leaves the workspace standing and its artifact «missing», which is what
+# allows rebuilding it: what is deleted is the curated file, the draft and the cache
+# derivations that spoke of it. `.history/` is untouched, so a mistaken deletion is undone
+# from «Restaurar» on the artifact's screen.
 @router.delete("/workspaces/{slug}/artifacts/{artifact}")
 def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) -> dict:
     if artifact not in review.ARTIFACTS:

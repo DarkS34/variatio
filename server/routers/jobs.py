@@ -81,10 +81,10 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
 
-    # Sin motor no hay ningún trabajo que pueda salir bien: los nueve llaman a un modelo.
-    # Antes se aceptaba, se encolaba y reventaba dentro, dejando un fallo en el historial
-    # donde tendría que haber habido un botón deshabilitado. `force` salta las puertas de
-    # la cadena — que son una decisión del usuario — y no esto, que es una imposibilidad.
+    # Without an engine no job can succeed: all nine call a model. It used to be accepted,
+    # enqueued and blow up inside, leaving a failure in the history where there should have
+    # been a disabled button. `force` skips the chain's gates — which are the user's decision
+    # — and not this, which is an impossibility.
     if not inference.is_available():
         raise HTTPException(
             503,

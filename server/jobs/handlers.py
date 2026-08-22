@@ -31,10 +31,10 @@ def _workspace(job: Job) -> Workspace:
 def _build(artifact: str):
     def handler(job: Job, control: JobControl) -> dict:
         result = run_build(artifact, control)
-        # La construcción ocurre en otro proceso, así que el contexto que ESTE tiene en
-        # memoria sigue hablando del artefacto anterior. Sin esto, lo que venga detrás
-        # —etiquetar, indexar, generar, y ahora la cadena— reutilizaría el grafo o el
-        # banco que se acaba de reemplazar.
+        # The build happens in another process, so the context THIS one holds in memory still
+        # speaks of the previous artifact. Without this, whatever comes next — tagging, indexing,
+        # generating, and now the chain — would reuse the graph or the bank that was just
+        # replaced.
         deps.invalidate(job.workspace, f"'{artifact}' reconstruido")
         return result
 

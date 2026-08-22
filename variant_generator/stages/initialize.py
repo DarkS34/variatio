@@ -16,10 +16,10 @@ from ..workspace import Workspace
 from . import _artifacts
 
 
-# El cableado del índice y del etiquetador, aparte de `initialize` porque hay un segundo
-# sitio que los necesita: la construcción del banco, que etiqueta cada documento nada más
-# extraerlo y no puede llamar a `initialize` — el banco que esa función exige es
-# justamente el que se está escribiendo.
+# The wiring of the index and the tagger, apart from `initialize` because a second place
+# needs them: the bank build, which tags each document right after extracting it and
+# cannot call `initialize` — the bank that function requires is precisely the one being
+# written.
 def _embed_text(exemplars_profile: ExemplarsProfile):
     return partial(
         exemplars_profile.embed_text, field_max_chars=config.EMBEDDING_FIELD_MAX_CHARS

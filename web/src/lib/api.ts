@@ -316,9 +316,9 @@ export const api = {
     post<{ invite: InviteRow; link: string }>("/api/admin/invites", body),
   adminRevokeInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
-  // Lo único que el panel escribe sobre las instancias, y es borrado. Va por `/api/admin`
-  // y no por `/api/workspaces` porque aquello exige ser miembro del workspace activo, que
-  // obligaría a entrar en cada instancia para poder quitarla.
+  // The one thing the panel writes about instances, and it is deletion. It goes through
+  // `/api/admin` and not `/api/workspaces` because the latter requires membership of the
+  // active workspace, which would force entering each instance in order to remove it.
   adminDeleteWorkspace: (slug: string) =>
     request<{ deleted: string; path: string; files_removed: boolean }>(
       `/api/admin/workspaces/${encodeURIComponent(slug)}`,

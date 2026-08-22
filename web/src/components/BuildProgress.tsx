@@ -43,12 +43,12 @@ export function BuildProgress({
 }
 
 /**
- * La misma tarjeta, para cualquier trabajo con un plan de fases.
+ * The same card, for any job with a phase plan.
  *
- * `BuildProgress` la envuelve con el plan del artefacto que se construye; los trabajos que
- * no escriben ninguno —la revisión de etiquetabilidad, que parchea una lista en su sitio—
- * la usan directamente con su propio plan. Eran la misma barra, y separarlas habría dado
- * dos formas distintas de dibujar lo mismo.
+ * `BuildProgress` wraps it with the plan of the artifact being built; the jobs that write
+ * none — the taggability review, which patches a list in place — use it directly with their
+ * own plan. They were the same bar, and separating them would have given two different ways
+ * of drawing the same thing.
  */
 export function JobProgress({
   run,
@@ -96,9 +96,9 @@ export function JobProgress({
               )}
             />
           </span>
-          {/* Sin (i): esta tarjeta sale bajo la cabecera del artefacto, que ya explica qué
-              es, y el nombre del trabajo más la fase en curso dicen qué está pasando. La
-              explicación del trabajo sigue estando una vez, en el cajón de ejecución. */}
+          {/* No (i): this card appears under the artifact's header, which already explains what it
+              is, and the job name plus the running phase say what is happening. The job's explanation
+              is still given once, in the run drawer. */}
           <p className="text-body font-medium">{run.job.label}</p>
           <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
@@ -118,8 +118,8 @@ export function JobProgress({
           ) : null}
         </div>
 
-        {/* Sin plan de fases todavía (arranque, o carga de modelos) la barra es
-            indeterminada a propósito: mejor eso que un 0 % que parece atascado. */}
+        {/* With no phase plan yet (start-up, or model loading) the bar is indeterminate on
+            purpose: better that than a 0 % that looks stuck. */}
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate text-body">

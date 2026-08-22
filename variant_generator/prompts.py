@@ -242,11 +242,11 @@ def concept_description_prompt(
             + "\n"
         )
 
-    # El anclaje al corpus: los párrafos del material de teoría de donde salió este
-    # concepto. Sin ellos el modelo describe de memoria y arrastra el vocabulario de su
-    # propio entrenamiento — así es como «Recursividad» acabó hablando de automorfismos en
-    # un curso de primero. El nombre del documento solo se dice cuando el corpus tiene más
-    # de uno: con un único documento no distingue nada y solo gasta contexto.
+    # The corpus anchoring: the paragraphs of the theory material this concept came from.
+    # Without them the model describes from memory and drags in the vocabulary of its own
+    # training — that is how «Recursividad» ended up talking about automorphisms in a
+    # first-year course. The document name is only given when the corpus has more than one:
+    # with a single document it distinguishes nothing and only spends context.
     passages_block = ""
     if passages:
         cited = []
@@ -531,24 +531,24 @@ Esqueleto exacto de la salida (rellena los valores):
 JSON:"""
 
 
-# ── EVALUACIÓN COMPARATIVA ────────────────────────────────────────────────────
+# ── COMPARATIVE EVALUATION ────────────────────────────────────────────────────
 #
-# Los dos prompts de las ramas de referencia del modo Evaluación. No los "mejores":
-# son deliberadamente pobres, porque miden qué aporta lo que el sistema añade.
+# The two prompts of the reference arms of the Evaluation mode. Not the "best" ones: they
+# are deliberately poor, because they measure what the system's additions contribute.
 #
-# Lo que SÍ llevan, y por qué:
-#   · los nombres de concepto — un usuario medio escribe el tema;
-#   · el contexto docente — quien pide el ejercicio, alumno o docente, sabe de qué
-#     asignatura y a qué nivel lo quiere;
-#   · la lista de claves de salida — sin ella la rama devuelve prosa y la comparación
-#     mediría formato en vez de contenido, que es un artefacto que invalida el experimento;
-#   · una línea de registro — el modelo comercial abría el enunciado saludando y
-#     comentando el ejercicio. Eso es formato conversacional, no didáctica: dejarlo mediría
-#     cortesía en vez de calidad del ítem, exactamente el mismo artefacto que justifica la
-#     línea anterior. Dice qué NO poner, no cómo redactar el ejercicio.
-# Lo que NO pueden llevar nunca: descripciones de concepto, prerrequisitos, posteriores,
-# currículo, o cualquier sección didáctica de `generate_content_prompt`. Todo eso solo
-# existe gracias al grafo, que es justo lo que se está midiendo.
+# What they DO carry, and why:
+#   · the concept names — an ordinary user writes the topic;
+#   · the teaching context — whoever asks for the exercise, student or teacher, knows
+#     which subject and at what level they want it;
+#   · the list of output keys — without it the arm returns prose and the comparison
+#     would measure format instead of content, an artifact that invalidates the experiment;
+#   · one register line — the commercial model opened the statement greeting and
+#     commenting on the exercise. That is conversational format, not didactics: leaving it
+#     would measure politeness instead of item quality, exactly the same artifact that
+#     justifies the previous line. It says what NOT to put, not how to write the exercise.
+# What they can NEVER carry: concept descriptions, prerequisites, posteriors, curriculum,
+# or any didactic section of `generate_content_prompt`. All of that only exists thanks to
+# the graph, which is precisely what is being measured.
 
 
 # The one prompt that does NOT take the rendered block. It composes a sentence -- "Eres
@@ -623,20 +623,20 @@ def rag_generation_prompt(
 JSON:"""
 
 
-# ── CONTEXTO DE LA ASIGNATURA ─────────────────────────────────────────────────
+# ── THE SUBJECT'S CONTEXT ─────────────────────────────────────────────────────
 #
-# La síntesis del contexto, compartida por los DOS constructores: el del grafo la llama al
-# final de su curación con los bloques del temario, y el del perfil al final de la suya con
-# las modalidades. Cada uno aporta lo que su artefacto sabe de la asignatura y ninguno ve
-# lo que sabe el otro, así que la llamada es siempre una FUSIÓN: entra lo que ya había
-# escrito y sale un texto que lo incorpora.
+# The context synthesis, shared by BOTH builders: the graph's calls it at the end of its
+# curation with the syllabus blocks, and the profile's at the end of its own with the
+# modalities. Each contributes what its artifact knows about the subject and neither sees
+# what the other knows, so the call is always a MERGE: what was already written goes in
+# and a text that incorporates it comes out.
 #
-# Por eso lo que más se legisla aquí es la conservación. El fallo natural de un modelo al
-# que se le da un texto y material nuevo es reescribir el texto; repetido en cada
-# reconstrucción, eso parafrasea lo que escribió una persona hasta que deja de ser suyo.
-# La deriva la para de verdad el par borrador/curado —el curado gana al leer y esta llamada
-# nunca lo toca—, pero un texto que respeta lo que ya decía es lo que hace que el borrador
-# valga para curarlo en vez de para reescribirlo entero.
+# That is why what is legislated hardest here is preservation. The natural failure of a
+# model given a text and new material is to rewrite the text; repeated on every rebuild,
+# that paraphrases what a person wrote until it stops being theirs. What really stops the
+# drift is the draft/curated pair — the curated one wins on read and this call never
+# touches it —, but a text that respects what was already said is what makes the draft
+# worth curating instead of rewriting whole.
 
 
 def synthesize_content_context_prompt(

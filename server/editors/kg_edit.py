@@ -94,9 +94,9 @@ def summary(ws: Workspace) -> dict:
 def descriptions(ws: Workspace) -> dict:
     graph = _load(raw(ws))
     stored = stages.load_concept_descriptions(ws)
-    # El anclaje viaja con las descripciones porque es de lo que se responde por ellas: es
-    # el trozo de temario del que salió el concepto, y es lo que permite juzgar si lo que
-    # el modelo escribió describe el material o describe lo que el modelo ya sabía.
+    # The anchoring travels with the descriptions because it is what answers for them: the
+    # piece of syllabus the concept came from, and what lets one judge whether the model
+    # described the material or described what it already knew.
     sources = stages.load_concept_sources(ws)
     anchored = sources["concepts"]
     return {
@@ -312,9 +312,10 @@ def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str)
 
 
 # The description cache is keyed by concept name and nothing else invalidates it:
-# a rename would otherwise leave the text stranded under the old key forever. El anclaje
-# al corpus se mueve con ella, por lo mismo: renombrar un concepto no cambia de qué párrafo
-# del temario salió, y dejarlo bajo el nombre viejo lo pierde igual que perdería el texto.
+# a rename would otherwise leave the text stranded under the old key forever. The corpus
+# anchoring moves with it, for the same reason: renaming a concept does not change which
+# paragraph of the syllabus it came from, and leaving it under the old name loses it just
+# as it would lose the text.
 def _move_description(ws: Workspace, name: str, new_name: str) -> None:
     stored = stages.load_concept_descriptions(ws)
     if name in stored:

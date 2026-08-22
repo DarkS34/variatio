@@ -62,7 +62,7 @@ export interface BuildPhase {
 
 export interface BuildPlans {
   artifacts: Record<ArtifactName, BuildPhase[]>;
-  /** Planes de trabajos que no escriben ningún artefacto y aun así tienen fases. */
+  /** Plans of jobs that write no artifact and still have phases. */
   jobs: Partial<Record<JobKind, BuildPhase[]>>;
 }
 
@@ -87,11 +87,11 @@ export interface Job {
 }
 
 /**
- * Un modelo residente en el motor AHORA MISMO, tal y como lo cuenta `/api/ps`.
+ * A model resident in the engine RIGHT NOW, as `/api/ps` reports it.
  *
- * Es la única medida real de qué está usando la máquina: `required` solo dice qué nombra
- * `config.py`, y una constante nombrada no es un modelo cargado. `expires_at` es lo que
- * distingue una expulsión por VRAM de un vencimiento del temporizador de residencia.
+ * It is the only real measure of what the machine is using: `required` only says what
+ * `config.py` names, and a named constant is not a loaded model. `expires_at` is what tells
+ * a VRAM eviction from the residency timer running out.
  */
 export interface RunningModel {
   model: string;
@@ -228,11 +228,11 @@ export interface KgSummary {
 }
 
 /**
- * De dónde salió un concepto: el trozo literal del corpus de teoría en el que aparece.
+ * Where a concept came from: the literal piece of the theory corpus it appears in.
  *
- * Lo escribe la construcción del grafo y lo lee el prompt que redacta la descripción, así
- * que también es lo que hay que mirar para juzgarla: si el texto describe el material o
- * describe lo que el modelo ya sabía del tema.
+ * The graph build writes it and the prompt that composes the description reads it, so it is
+ * also what to look at to judge the description: whether the text describes the material or
+ * what the model already knew about the topic.
  */
 export interface ConceptSource {
   document: string;
@@ -606,7 +606,7 @@ export interface AdminWorkspace {
   generations: number;
   /** Its pipeline context is in memory right now: what the LRU registry is holding. */
   warm: boolean;
-  /** Su cadena, para poder vaciar una etapa sin cambiarse a esa instancia. */
+  /** Its chain, so a stage can be emptied without switching to that instance. */
   stages: {
     artifact: ArtifactName;
     label: string;
@@ -699,7 +699,7 @@ export interface VgEvent {
   [payload: string]: any;
 }
 
-/** El contexto de la asignatura: prosa más los tres datos que la rama naive lee por nombre. */
+/** The subject's context: prose plus the three facts the naive arm reads by name. */
 export interface ContentContextState {
   exists: boolean;
   narrative: string;
@@ -707,7 +707,7 @@ export interface ContentContextState {
   block: string;
   source: "curated" | "draft" | null;
   path: string | null;
-  /** El texto que la última construcción sintetizó y que el curado está tapando. */
+  /** The text the last build synthesised and the curated one is covering. */
   pending_draft: string | null;
   canonical_keys: string[];
 }

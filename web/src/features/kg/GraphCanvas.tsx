@@ -658,8 +658,8 @@ export function GraphCanvas({
         ) : null}
       </div>
 
-      {/* Un grafo con pocos prerrequisitos apila casi todo en el nivel 0. Eso es un dato
-          sobre el grafo, no un fallo de la vista: decirlo evita que parezca lo segundo. */}
+      {/* A graph with few prerequisites piles almost everything on level 0. That is a fact about
+          the graph, not a failure of the view: saying so keeps it from looking like the latter. */}
       {mode === "curriculum" && model.levelCount < 3 ? (
         <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
           Solo {model.curriculumEdges} relación(es) de prerrequisito ordenan {graph.nodes.length}{" "}

@@ -44,9 +44,9 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             "required": required,
             "installed": installed,
             "missing": missing,
-            # Lo que el motor tiene residente ahora mismo, con su VRAM y hasta cuándo. Es
-            # la única medida real de qué está usando la máquina: `required` solo dice qué
-            # nombra `config.py`, y una constante nombrada no es un modelo cargado.
+            # What the engine has resident right now, with its VRAM and until when. It is the only
+            # real measure of what the machine is using: `required` only says what `config.py` names,
+            # and a named constant is not a loaded model.
             "running": running,
         },
         # Whether *this* workspace's indices are warm, not whether any are: with a registry

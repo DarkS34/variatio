@@ -468,8 +468,8 @@ function GraphExplorer() {
         </Alert>
       ) : null}
 
-      {/* El grafo manda: ancho completo y alto de ventana. Las listas van debajo, donde
-          caben en horizontal en vez de estrangular el lienzo. */}
+      {/* The graph rules: full width and viewport height. The lists go below, where they fit
+          horizontally instead of strangling the canvas. */}
       <div className="h-[clamp(26rem,60vh,46rem)] w-full">
         <GraphCanvas
           graph={graph.data}
@@ -507,7 +507,7 @@ function GraphExplorer() {
                   : "border-border text-foreground hover:bg-accent",
               )}
             >
-              {/* Un trazo, no un punto: es el color de una arista del lienzo, no el de un nodo. */}
+              {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
               <span
                 className="h-0.5 w-3 rounded-full"
                 style={{
@@ -552,9 +552,9 @@ function GraphExplorer() {
       {/* The flag is absent from every graph written before it existed, so it reads `false`
           even on one whose exclusion list proves the old in-build pass ran. The second half
           is what tells those apart, and it mirrors `stages/initialize.py`. */}
-      {/* Sin botón propio: el de la cabecera es el único, con su motivo en el tooltip y
-          su barra de progreso debajo. Aquí queda lo que la cabecera no puede decir — qué
-          significa que la revisión no se haya hecho. */}
+      {/* No button of its own: the header's is the only one, with its reason in the tooltip and
+          its progress bar below. What stays here is what the header cannot say — what it means
+          that the review has not been done. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
         <Alert tone="attention" title="Etiquetabilidad sin revisar">
           <p>
@@ -717,10 +717,10 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const { navigate } = useRouter();
   const missing = (kg.data?.totals.taggable ?? 0) - (kg.data?.totals.described ?? 0);
 
-  // La etiquetabilidad se lanza desde la cabecera, como todo lo demás que un artefacto
-  // sabe hacer consigo mismo, y no desde un aviso enterrado en la pestaña del grafo. No
-  // pone la etapa en «construyendo» —parchea una lista en su sitio, no reescribe nada—
-  // así que su progreso va debajo de la cabecera y el resto de la pantalla sigue viva.
+  // Taggability is launched from the header, like everything else an artifact knows how to
+  // do to itself, and not from a notice buried in the graph tab. It does not put the stage in
+  // «construyendo» — it patches a list in place, rewrites nothing — so its progress goes under
+  // the header and the rest of the screen stays live.
   const totals = kg.data?.totals;
   const reviewed = Boolean(totals?.taggability_reviewed);
   const profileReady =

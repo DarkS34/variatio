@@ -1,18 +1,18 @@
-"""Lo que sigue solo a una construcción, y hasta dónde puede llegar.
+"""What follows a build on its own, and how far it may go.
 
-Una fase que TIENE que ocurrir no debería ser un botón. Al terminar el grafo hay que
-escribir las descripciones —sin ellas ningún concepto tiene vector y el etiquetado no
-existe—, decidir qué conceptos sirven como etiqueta y calentar los índices. Eran tres
-pulsaciones en dos pantallas distintas y ninguna de las tres era opcional, así que las
-encadena la construcción que las deja pendientes.
+A phase that HAS to happen should not be a button. Once the graph is built the
+descriptions have to be written — without them no concept has a vector and tagging does
+not exist —, the concepts that work as labels have to be decided, and the indices warmed.
+That was three clicks on two different screens and none of the three was optional, so
+the build that leaves them pending chains them.
 
-Lo que NO se encadena es lo que depende de un artefacto que puede no existir todavía.
-Cada eslabón declara su condición: si no se cumple se salta, se dice en el registro y la
-cadena sigue con el siguiente. En un workspace recién creado —grafo primero, perfil
-todavía no— se saltan los tres y la construcción termina en el grafo, igual que antes.
+What is NOT chained is whatever depends on an artifact that may not exist yet. Each link
+declares its condition: if it does not hold the link is skipped, the log says so and the
+chain goes on with the next one. In a freshly created workspace — graph first, no profile
+yet — all three are skipped and the build ends at the graph, as before.
 
-Un eslabón que falla o se cancela corta la cadena: `advance` solo se llama tras un
-trabajo que terminó bien.
+A link that fails or is cancelled cuts the chain: `advance` is only called after a job
+that finished well.
 """
 
 from loguru import logger
@@ -23,8 +23,8 @@ from variant_generator.workspace import Workspace
 from .. import review, settings
 from .models import JOB_LABELS, Job
 
-# Qué arrastra cada trabajo detrás de sí. Solo la construcción del grafo tiene cadena:
-# es la única cuyo resultado deja tres derivaciones obligatorias sin hacer.
+# What each job drags behind it. Only the graph build has a chain: it is the only one
+# whose result leaves three mandatory derivations undone.
 CHAINS: dict[str, tuple[str, ...]] = {
     "build_kg": ("describe_concepts", "review_taggability", "index"),
 }
@@ -36,9 +36,9 @@ def _profile_exists(ws: Workspace) -> str | None:
     return None
 
 
-# La etiquetabilidad se juzga contra las modalidades del perfil y contra ítems reales, así
-# que su puerta es la misma que la de `routers/jobs.NEEDS_APPROVED`: el perfil aprobado.
-# Con el perfil construido pero sin aprobar se salta y se sigue; no es un error.
+# Taggability is judged against the profile's modalities and against real items, so its
+# gate is the same as `routers/jobs.NEEDS_APPROVED`'s: an approved profile. With the
+# profile built but not approved it is skipped and the chain goes on; it is not an error.
 def _profile_approved(ws: Workspace) -> str | None:
     reason = _profile_exists(ws)
     if reason is not None:

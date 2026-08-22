@@ -41,11 +41,12 @@ def describe_concepts(
     return descriptions
 
 
-# Escribir descripciones exige el grafo y el perfil, porque hay que redactarlas; LEERLAS
-# no exige ninguno de los dos, y hacerlo pasar por `_describer` ataba la pantalla del grafo
-# al perfil de ejemplares — un artefacto que el grafo no tiene como upstream (`review.UPSTREAM`).
-# El síntoma era que, con el grafo ya construido, `GET /api/kg` devolvía 404 diciendo que
-# faltaba el perfil, y la interfaz lo leía como que no había grafo en el workspace.
+# Writing descriptions requires the graph and the profile, because they have to be
+# composed; READING them requires neither, and routing it through `_describer` tied the
+# graph screen to the exemplars profile — an artifact the graph does not have as an
+# upstream (`review.UPSTREAM`). The symptom was that, with the graph already built,
+# `GET /api/kg` answered 404 saying the profile was missing, and the interface read that
+# as the workspace having no graph.
 def load_concept_descriptions(ws: Workspace | None = None) -> dict[str, str]:
     return load_descriptions(_artifacts.resolve(ws).concept_descriptions_path)
 
@@ -56,7 +57,7 @@ def save_concept_descriptions(
     save_descriptions(_artifacts.resolve(ws).concept_descriptions_path, descriptions)
 
 
-# El anclaje al corpus, tal cual lo dejó la construcción del grafo. Se lee por el mismo
-# motivo que las descripciones y con la misma regla: solo el fichero, sin grafo ni perfil.
+# The corpus anchoring, as the graph build left it. Read for the same reason as the
+# descriptions and under the same rule: only the file, no graph and no profile.
 def load_concept_sources(ws: Workspace | None = None) -> dict:
     return load_sources(_artifacts.resolve(ws).concept_sources_path)

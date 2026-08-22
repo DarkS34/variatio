@@ -104,13 +104,12 @@ export function useHealth() {
 }
 
 /**
- * Por qué ningún trabajo puede lanzarse ahora mismo, o `null`.
+ * Why no job can be launched right now, or `null`.
  *
- * Los nueve tipos de trabajo llaman a un modelo, así que sin motor no hay ninguno que
- * pueda salir bien. Vive aquí y no en cada pantalla porque el servidor ya lo rechaza con
- * un 503: esto es lo que evita que el botón llegue siquiera a pedirlo. Mientras `/health`
- * no ha contestado todavía no se bloquea nada — un botón deshabilitado por no saber es
- * peor que uno que falla una vez.
+ * All nine job kinds call a model, so without an engine none can succeed. It lives here and
+ * not in each screen because the server already refuses with a 503: this is what keeps the
+ * button from even asking. While `/health` has not answered yet nothing is blocked — a
+ * button disabled out of ignorance is worse than one that fails once.
  */
 export function useEngineOffline(): string | null {
   const health = useHealth();
@@ -139,12 +138,12 @@ export function useKgGraph() {
 }
 
 /**
- * Las descripciones, y mientras se están escribiendo, refrescadas solas.
+ * The descriptions, and while they are being written, refreshed on their own.
  *
- * El escritor guarda tras cada concepto — cancelar no pierde lo hecho — pero la pantalla
- * solo volvía a preguntar cuando el trabajo terminaba o cuando la pestaña recuperaba el
- * foco, así que la lista se llenaba a saltos y por sorpresa. Con el trabajo en curso se
- * pregunta cada pocos segundos, que es el ritmo al que se escriben.
+ * The writer saves after each concept — cancelling loses nothing — but the screen only asked
+ * again when the job finished or when the tab regained focus, so the list filled in jumps
+ * and by surprise. With the job running it asks every few seconds, which is the pace they
+ * are written at.
  */
 export function useDescriptions() {
   const live = useJobRunning("describe_concepts");
@@ -180,7 +179,7 @@ export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[]
   return plans.data?.artifacts?.[artifact] ?? [];
 }
 
-/** Lo mismo para un trabajo que no escribe ningún artefacto y aun así tiene fases. */
+/** The same for a job that writes no artifact and still has phases. */
 export function useJobPhases(kind: JobKind): BuildPhase[] {
   const plans = useBuildPlans();
   return plans.data?.jobs?.[kind] ?? [];
@@ -389,11 +388,11 @@ export function useDeleteAccount() {
 }
 
 /**
- * Vaciar una etapa desde el panel de administración.
+ * Empty a stage from the administration panel.
  *
- * Invalida `["admin"]` y también la cadena: el workspace afectado puede ser el que esta
- * pestaña tiene abierto, y entonces lo que hay en pantalla — el grafo, el perfil, el
- * banco — acaba de dejar de existir en disco.
+ * Invalidates `["admin"]` and the chain too: the affected workspace may be the one this tab
+ * has open, and then what is on screen — the graph, the profile, the bank — has just stopped
+ * existing on disk.
  */
 export function useDeleteArtifact() {
   const client = useQueryClient();
@@ -409,13 +408,13 @@ export function useDeleteArtifact() {
 }
 
 /**
- * Quitar un workspace entero desde el panel, que es cualquiera y no el activo.
+ * Remove a whole workspace from the panel, which is any one and not the active one.
  *
- * Es la versión del administrador de `useDeleteWorkspace`, y no puede ser la misma: aquella
- * borra la instancia en la que estás y por eso vacía la caché entera y suelta el selector.
- * Aquí eso solo procede cuando la que se ha ido resulta ser la de esta pestaña; en el caso
- * normal el borrado es de otra instancia y tirar la caché sería recargar la pantalla sin
- * motivo.
+ * It is the administrator's version of `useDeleteWorkspace`, and cannot be the same one:
+ * that one deletes the instance you are in and therefore empties the whole cache and
+ * releases the switcher. Here that only applies when the one gone turns out to be this tab's;
+ * in the normal case the deletion is of another instance and dropping the cache would reload
+ * the screen for no reason.
  */
 export function useAdminDeleteWorkspace() {
   const client = useQueryClient();

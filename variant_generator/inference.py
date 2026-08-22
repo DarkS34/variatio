@@ -306,10 +306,10 @@ class OllamaEngine:
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Could not list Ollama models: {e}") from e
 
-    # Qué está cargado AHORA, que es lo único que se puede medir de verdad desde aquí: la
-    # sesión no corre en la máquina de la GPU, así que `nvidia-smi` contesta sobre otra
-    # tarjeta y `/api/ps` es la única lectura honesta de residencia y de VRAM. `expires_at`
-    # dice hasta cuándo, así que una expulsión se distingue de un vencimiento del temporizador.
+    # What is loaded NOW, which is the only thing that can actually be measured from here: the
+    # session does not run on the GPU machine, so `nvidia-smi` answers about another card and
+    # `/api/ps` is the only honest reading of residency and VRAM. `expires_at` says until
+    # when, so an eviction can be told from the timer running out.
     def running_models(self) -> list[dict]:
         try:
             response = self._client.ps()
@@ -326,10 +326,10 @@ class OllamaEngine:
             for info in response.models
         ]
 
-    # `ollama stop <modelo>`, que por debajo no es un endpoint propio: es una llamada
-    # cualquiera con `keep_alive=0`, y el servidor descarga los pesos al terminarla. Se
-    # manda por el endpoint que corresponde al modelo — un embedder no sabe generar y
-    # contestaría 400 — y con el prompt vacío, que es lo mismo que hace `warmup`.
+    # `ollama stop <model>`, which underneath is not an endpoint of its own: it is an ordinary
+    # call with `keep_alive=0`, and the server unloads the weights when it finishes. It is sent
+    # through the endpoint that matches the model — an embedder cannot generate and would
+    # answer 400 — and with an empty prompt, which is what `warmup` does.
     def unload(self, model: str, is_embedding: bool = False) -> bool:
         try:
             if is_embedding:
@@ -353,9 +353,9 @@ class OllamaEngine:
             if self.unload(model, is_embedding=self._looks_like_embedding(model))
         ]
 
-    # `config.EMBEDDING_MODELS` nombra los que esta instancia usa; `/api/ps` puede devolver
-    # además cualquier otro que el servidor tenga cargado por su cuenta, y para esos la
-    # capacidad declarada es la única fuente fiable.
+    # `config.EMBEDDING_MODELS` names the ones this instance uses; `/api/ps` may also return
+    # any other the server has loaded on its own, and for those the declared capability is the
+    # only reliable source.
     def _looks_like_embedding(self, model: str) -> bool:
         if model in config.EMBEDDING_MODELS:
             return True

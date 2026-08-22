@@ -1,8 +1,8 @@
-"""Los ajustes de la instalación, leídos y reescritos sin reiniciar el proceso.
+"""The installation's settings, read and rewritten without restarting the process.
 
-Vive bajo `/api/admin` y no bajo `/api/workspaces` porque la configuración es de la
-instalación entera: un workspace no elige el modelo con el que se construye, ya que la
-aritmética de co-residencia en la GPU es una sola para todo el proceso.
+Lives under `/api/admin` and not under `/api/workspaces` because the configuration
+belongs to the whole installation: a workspace does not choose the model it is built
+with, since the GPU co-residency arithmetic is one for the whole process.
 """
 
 from fastapi import APIRouter, Depends, HTTPException

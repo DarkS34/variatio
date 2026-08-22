@@ -115,8 +115,8 @@ function StageCard({ stage }: { stage: StageState }) {
         {building ? <BuildProgress artifact={stage.artifact} /> : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          {/* Mientras se construye no hay nada que revisar: la pantalla del artefacto
-              oculta el que hay hasta que termine, y esta tarjeta ya muestra el progreso. */}
+          {/* While building there is nothing to review: the artifact's screen hides the existing one
+              until it finishes, and this card already shows the progress. */}
           {missing || building ? null : (
             <Link to={SCREEN[stage.artifact]}>
               <Button size="sm" variant={stage.status === "approved" ? "outline" : "default"} disabled={blocked}>
@@ -190,17 +190,17 @@ function settingLabel(name: string): string {
 }
 
 /**
- * Qué modelos tiene el motor cargados AHORA, no cuántas constantes los nombran.
+ * Which models the engine has loaded NOW, not how many constants name them.
  *
- * Esta fila contaba antes los modelos distintos que aparecen en `config.py`, y eso mide el
- * fichero de configuración, no la máquina: una constante nombrada no es un modelo cargado,
- * y con todas apuntando al mismo valor el número era casi siempre el mismo dijera lo que
- * dijera la GPU. Lo que sí responde a «qué está usando esto» es `/api/ps`: qué está
- * residente, cuánta VRAM ocupa y hasta cuándo — la única lectura honesta de residencia
- * desde aquí, porque el servidor no corre en la máquina de la GPU.
+ * This row used to count the distinct models that appear in `config.py`, and that measures
+ * the configuration file, not the machine: a named constant is not a loaded model, and with
+ * all of them pointing at the same value the number was almost always the same whatever the
+ * GPU said. What does answer «what is this using» is `/api/ps`: what is resident, how much
+ * VRAM it takes and until when — the only honest reading of residency from here, because the
+ * server does not run on the GPU machine.
  *
- * Los que la instancia *pide* siguen accesibles al abrir la lista, porque es donde se ve
- * si uno está sin instalar y qué fase se quedaría sin él.
+ * The ones the instance *asks for* stay reachable by opening the list, because that is where
+ * one sees whether one is not installed and which phase would go without it.
  */
 function ModelsRow({ models }: { models: Health["models"] }) {
   const [open, setOpen] = useState(false);
@@ -337,13 +337,13 @@ function ModelsRow({ models }: { models: Health["models"] }) {
 }
 
 /**
- * Qué está haciendo el sistema ahora mismo — el único sitio donde se dice.
+ * What the system is doing right now — the one place it is said.
  *
- * La cabecera llevaba este estado y competía por el ancho con las pestañas hasta
- * empujarlas a un scroll horizontal, así que baja aquí entero. Habla de *cualquier*
- * trabajo, no del modo que lo lanzó: construir, indexar, etiquetar, generar y evaluar
- * salen del mismo stream y se leen igual. El paso a paso sigue en el cajón de ejecución;
- * esto responde solo a «qué hay en marcha, cuánto lleva y puedo pararlo».
+ * The header carried this state and competed for width with the tabs until it pushed them
+ * into a horizontal scroll, so it moves down here whole. It speaks of *any* job, not of the
+ * mode that launched it: building, indexing, tagging, generating and evaluating come out of
+ * the same stream and read the same. The step by step stays in the run drawer; this only
+ * answers «what is running, how long has it been, and can I stop it».
  */
 function ActivityCard() {
   const run = useActiveRun();
@@ -413,8 +413,8 @@ function ActivityCard() {
               <span className="font-medium">{run.job.label}</span>
             </div>
 
-            {/* La explicación va como texto y no detrás de una (i): estaba en las dos
-                partes a la vez, y de las dos la que se lee es la que ya está en pantalla. */}
+            {/* The explanation goes as text and not behind an (i): it was in both places at once, and
+                of the two the one that gets read is the one already on screen. */}
             <p className="text-small text-muted-foreground">
               {explain?.what ?? "Trabajo en curso."}
             </p>
@@ -432,8 +432,8 @@ function ActivityCard() {
               ) : null}
             </div>
 
-            {/* Sin porcentaje global la barra es indeterminada a propósito: un paso puede
-                ir por 8/8 y quedar aún media ejecución por delante. */}
+            {/* With no overall percentage the bar is indeterminate on purpose: a step can be at 8/8
+                and still have half a run ahead. */}
             {active ? (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
@@ -636,9 +636,9 @@ export function Dashboard() {
             <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
-        {/* «Sistema» abre la columna: es de lo que se mira de un vistazo —si el motor
-            responde, qué tiene cargado— y al final de todo había que bajar a buscarlo.
-            Encima es la más corta de las tres, así que no aparta a las otras dos. */}
+        {/* «Sistema» opens the column: it is what gets checked at a glance — whether the engine
+            answers, what it has loaded — and at the very bottom one had to scroll to find it. It is
+            also the shortest of the three, so it does not push the other two away. */}
         <div className="space-y-4">
           <SystemCard />
           <ActivityCard />

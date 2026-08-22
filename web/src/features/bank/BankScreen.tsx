@@ -404,9 +404,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       return next;
     });
 
-  // Extraer y volver a extraer son el mismo trabajo con consecuencias opuestas: con el
-  // banco vacío es el paso que falta, y con ítems dentro es un borrado de todo lo
-  // etiquetado y corregido. El botón lo dice y `BuildButton` pide confirmación.
+  // Extracting and re-extracting are the same job with opposite consequences: with an empty
+  // bank it is the missing step, and with items inside it deletes everything tagged and
+  // corrected. The button says so and `BuildButton` asks for confirmation.
   const hasItems = (listing?.totals.items ?? 0) > 0;
   const locked = stage?.status === "approved";
 
@@ -669,13 +669,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           </div>
         ) : null}
 
-        {/* El único sitio desde el que se etiqueta a mano, y solo aparece habiendo algo
-            seleccionado. Ya no hay «Etiquetar pendientes» en la cabecera: extraer y
-            etiquetar son un solo trabajo desde que el extractor etiqueta cada documento
-            nada más sacarlo, así que un botón para lanzar el etiquetado por su cuenta
-            ofrecía un paso que ya no existe. Lo que queda sin concepto es lo que el
-            verificador rechazó, y eso se corrige sobre ítems concretos: «Ver los N sin
-            concepto» los filtra, se seleccionan, y este botón los vuelve a pasar. */}
+        {/* The only place tagging is done by hand, and it only appears with something selected.
+            There is no «Etiquetar pendientes» in the header any more: extracting and tagging are one
+            job since the extractor tags each document as soon as it comes out, so a button to launch
+            the tagging on its own offered a step that no longer exists. What is left without a
+            concept is what the verifier rejected, and that is corrected on concrete items: «Ver los
+            N sin concepto» filters them, they are selected, and this button runs them again. */}
         {selected.size > 0 ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
             <span>{selected.size} ítem(s) seleccionados</span>

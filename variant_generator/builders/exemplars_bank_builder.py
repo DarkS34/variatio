@@ -20,10 +20,10 @@ from . import _source_docs
 # Transcribing a PDF is one model call per page, so conversion is no longer the rounding
 # error it was when Docling did it in three seconds.
 #
-# `extract` cuesta ahora más que antes porque no solo extrae: cada documento se etiqueta
-# nada más salir, dentro de la misma fase, para que un ítem aparezca ya con sus conceptos
-# en lugar de esperar a un segundo trabajo que había que lanzar a mano. Los pesos siguen
-# siendo una estimación, como lo eran los dos anteriores.
+# `extract` now costs more than before because it does not only extract: each document is
+# tagged as soon as it comes out, inside the same phase, so an item appears with its
+# concepts already instead of waiting for a second job that had to be launched by hand.
+# The weights are still an estimate, as the two before them were.
 BUILD_PHASES = (
     ("convert", "Transcribiendo los documentos", 30),
     ("extract", "Extrayendo y etiquetando los ítems", 70),
@@ -93,8 +93,8 @@ class ExemplarsBankBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
-    # El etiquetador y el embebedor entran aquí porque la construcción los usa: cada
-    # documento se etiqueta nada más extraerlo, dentro de este mismo trabajo.
+    # The tagger and the embedder come in here because the build uses them: each document is
+    # tagged right after extracting it, inside this same job.
     def bootstrap(self) -> None:
         ensure_models(
             [
@@ -107,13 +107,13 @@ class ExemplarsBankBuilder:
             "del banco de ejemplares",
         )
 
-    # build() persiste checkpoints en disco y además devuelve el banco, para que el
-    # llamador pueda usarlo sin releerlo.
+    # build() persists checkpoints to disk and also returns the bank, so the caller can use it
+    # without re-reading it.
     #
-    # `on_items(bank, new_ids)` es el gancho por el que entra el etiquetado: se llama con
-    # el banco entero justo después de escribir los ítems de un documento y devuelve ese
-    # mismo banco anotado. El constructor no sabe qué hace —no conoce ni el grafo ni el
-    # etiquetador—; lo cablea `stages/build.py`, que es la capa cuyo trabajo es orquestar.
+    # `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
+    # whole bank right after writing a document's items and returns that same bank annotated.
+    # The builder does not know what it does — it knows neither the graph nor the tagger —;
+    # `stages/build.py` wires it, being the layer whose job is to orchestrate.
     def build(
         self,
         input_dir: str,
@@ -165,9 +165,8 @@ class ExemplarsBankBuilder:
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
                 if on_items is not None:
-                    # Media fase por documento: extraer es la primera mitad y etiquetar la
-                    # segunda, así que la barra se mueve dentro de un documento y no solo
-                    # al pasar al siguiente.
+                    # Half a phase per document: extracting is the first half and tagging the second, so the
+                    # bar moves within a document and not only when moving on to the next one.
                     progress.advance(
                         (idx - 0.5) / len(files),
                         f"{file_path.name} ({idx}/{len(files)}) · etiquetando "

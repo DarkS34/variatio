@@ -682,9 +682,9 @@ export function GenerateForm({
             </div>
           ) : null}
 
-          {/* En comparación no hay interruptor a propósito: el modo de razonamiento es lo
-              que allí se mide, así que lo sortea la sesión. Decirlo aquí evita que la
-              ausencia del control se lea como una casilla que falta. */}
+          {/* In comparison there is no switch on purpose: the reasoning mode is what is measured
+              there, so the session draws it. Saying so here keeps the control's absence from reading
+              as a missing checkbox. */}
           {variant === "generate" ? (
             <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
               <div className="flex flex-wrap items-center gap-2">

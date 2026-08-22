@@ -46,9 +46,10 @@ def read_file(path: str | Path) -> dict[str, object]:
     return _flatten(raw)
 
 
-# default < fichero < entorno. El entorno gana porque es la anulación deliberada, y la
-# pantalla lo dice en vez de dejar editar algo que se va a pisar. Un valor inválido en el
-# fichero no impide arrancar: se avisa y se cae al default.
+# default < file < environment. The environment wins because it is the deliberate
+# override, and the screen says so instead of letting someone edit a value that will be
+# overwritten. An invalid value in the file does not stop the process starting: it warns
+# and falls back to the default.
 def resolve(
     settings: list[Setting], file_values: dict[str, object], environ: dict[str, str]
 ) -> tuple[dict[str, object], dict[str, str]]:

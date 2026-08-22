@@ -370,9 +370,9 @@ def merge_definitions(
     return {name: best[name][1] for name in sorted(best)}
 
 
-# Al fusionar dos nombres se fusionan sus pruebas: el pasaje que justificaba «Listas
-# anidadas» sigue justificando «Listas», y tirarlo dejaría al superviviente sin nada que
-# enseñar. El tope se vuelve a aplicar aquí, porque cinco alias aportan cinco listas.
+# Merging two names merges their evidence: the passage that justified «Listas anidadas»
+# still justifies «Listas», and throwing it away would leave the survivor with nothing to
+# show. The cap is applied again here, because five aliases bring five lists.
 def merge_passages(passages: dict, node_map: dict, surviving: set) -> dict:
     merged: dict[str, list[dict]] = defaultdict(list)
     for name, entries in passages.items():

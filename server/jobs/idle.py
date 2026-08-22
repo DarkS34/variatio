@@ -1,17 +1,17 @@
-"""Soltar la GPU cuando lleva mucho rato sin que nadie la pida.
+"""Release the GPU when nobody has asked for it in a long while.
 
-`OLLAMA_KEEP_ALIVE=24h` es deliberado: mantiene los tres modelos residentes durante una
-sesión de trabajo, que es exactamente lo que se quiere mientras se trabaja. Su defecto es
-que no distingue una pausa de un abandono, y una instalación que nadie ha tocado desde
-ayer sigue ocupando ~29 GiB de una tarjeta que es compartida.
+`OLLAMA_KEEP_ALIVE=24h` is deliberate: it keeps the three models resident through a
+working session, which is exactly what is wanted while someone is working. Its flaw is
+that it cannot tell a pause from an abandonment, and an installation nobody has touched
+since yesterday keeps ~29 GiB of a card that is shared.
 
-Este hilo es esa distinción, y nada más: mira el reloj de la cola — la cola es por dónde
-pasa TODO el tráfico de modelos de este proceso — y cuando lleva `IDLE_UNLOAD_SECONDS`
-sin un trabajo, manda descargar lo que haya residente. No es un sustituto del keep-alive
-ni un temporizador más corto: los modelos siguen calientes toda la sesión, y se sueltan
-una sola vez cuando la sesión se ha acabado de hecho.
+This thread is that distinction and nothing more: it reads the queue's clock — the queue
+is where ALL of this process's model traffic goes through — and once it has gone
+`IDLE_UNLOAD_SECONDS` without a job, it unloads whatever is resident. It is not a
+replacement for the keep-alive nor a shorter timer: the models stay warm for the whole
+session, and are released once, when the session is actually over.
 
-Descargar es gratis de deshacer: la siguiente llamada los vuelve a cargar sola.
+Unloading is free to undo: the next call loads them again by itself.
 """
 
 import threading
@@ -28,9 +28,9 @@ class IdleUnloader:
         self.runner = runner
         self._thread: threading.Thread | None = None
         self._stopping = threading.Event()
-        # Una sola descarga por periodo de inactividad: sin esto, cada vuelta del bucle
-        # volvería a pedir `/api/ps` y a mandar una descarga que ya no tiene nada que
-        # descargar, y un servidor parado escribiría una línea de registro por minuto.
+        # One unload per idle period: without this, every turn of the loop would ask `/api/ps`
+        # again and send an unload with nothing left to unload, and an idle server would write one
+        # log line per minute.
         self._released = False
 
     def start(self) -> None:
@@ -52,7 +52,7 @@ class IdleUnloader:
         while not self._stopping.wait(config.IDLE_UNLOAD_POLL_SECONDS):
             try:
                 self._tick()
-            except Exception as e:  # noqa: BLE001 - un vigilante no puede tumbar el proceso
+            except Exception as e:  # noqa: BLE001 - a watchdog must not take the process down
                 logger.warning(f"El vigilante de inactividad falló esta vuelta: {e}")
 
     def _tick(self) -> None:

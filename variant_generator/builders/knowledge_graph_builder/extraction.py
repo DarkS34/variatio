@@ -205,12 +205,12 @@ def extract_documents(
     }
 
 
-# ANCLAJE AL CORPUS -----------------------------------------------------------------------
+# CORPUS ANCHORING ------------------------------------------------------------------------
 #
-# Un concepto del grafo es lo que un modelo dijo haber leído; el pasaje es lo que se leyó
-# de verdad. Guardarlos juntos es lo que permite enseñar de dónde sale cada nodo, y es lo
-# que `concept_description_prompt` usa para describir con el vocabulario del temario en vez
-# de con el que el modelo tenga a mano.
+# A concept of the graph is what a model said it read; the passage is what was actually
+# read. Keeping them together is what allows showing where each node comes from, and it
+# is what `concept_description_prompt` uses to describe with the syllabus's vocabulary
+# instead of whatever the model has at hand.
 
 
 def remember_passage(

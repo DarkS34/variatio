@@ -766,8 +766,8 @@ function AccountRows({
             <ChevronRight
               className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
             />
-            {/* Para una cuenta de administración la lista de membresías no describe a qué
-                entra: entra a todo. Decir «sin acceso a ninguno» ahí sería falso. */}
+            {/* For an administrator account the membership list does not describe what it can enter:
+                it enters everything. Saying «sin acceso a ninguno» there would be false. */}
             {account.is_admin ? (
               <span className="text-muted-foreground">acceso total (administración)</span>
             ) : account.workspaces.length === 0 ? (
@@ -797,10 +797,10 @@ function AccountRows({
               Ver sus sesiones
             </Button>
           ) : null}
-          {/* Desactivar o borrar la propia cuenta deja la instalación sin quien la
-              administre, y el servidor rechaza las dos igualmente; no ofrecerlas evita el
-              409 por sorpresa. Van juntas y en este orden porque son la misma decisión con
-              dos intensidades: cerrar la puerta, o quitar la cuenta. */}
+          {/* Deactivating or deleting one's own account leaves the installation with nobody to
+              administer it, and the server refuses both anyway; not offering them avoids a surprise
+              409. They go together and in this order because they are one decision at two
+              intensities: closing the door, or removing the account. */}
           {self ? null : (
             <>
               <Button
@@ -1053,8 +1053,8 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           {pending.map((invite) => (
             <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-body">
               <div className="min-w-0 flex-1">
-                {/* No hay destinatario que nombrar: lo que distingue dos enlaces pendientes
-                    es cuándo se emitieron y para qué instancia. */}
+                {/* There is no addressee to name: what tells two pending links apart is when they were
+                    issued and for which instance. */}
                 <p className="truncate">
                   Enlace del {new Date(invite.created_at).toLocaleDateString("es-ES")}
                   {invite.created_by ? (
@@ -1117,12 +1117,12 @@ function InviteLink({ link }: { link: string }) {
 }
 
 /**
- * Las instancias de la instalación, y lo único que este panel escribe sobre ellas: quitarlas.
+ * The installation's instances, and the one thing this panel writes about them: removing them.
  *
- * Vaciar una etapa y borrar el workspace son la misma decisión con dos alcances, así que
- * viven en la misma fila: la etapa se vacía desde su distintivo, el workspace desde el
- * botón del final. Ninguna de las dos construye ni aprueba nada — para eso hay que entrar
- * en la instancia, que es donde se ve lo que se está tocando.
+ * Emptying a stage and deleting the workspace are one decision at two scopes, so they live
+ * in the same row: the stage is emptied from its badge, the workspace from the button at the
+ * end. Neither builds nor approves anything — for that one enters the instance, which is
+ * where what is being touched can be seen.
  */
 function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const remove = useAdminDeleteWorkspace();
@@ -1217,12 +1217,12 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
 }
 
 /**
- * La cadena de una instancia, y el sitio desde el que se vacía una etapa.
+ * An instance's chain, and the place a stage is emptied from.
  *
- * Vaciar deja el artefacto en «missing» y su workspace en pie: se borra el fichero curado,
- * el borrador y las derivaciones de la caché que hablaban de él. Las copias de `.history/`
- * no se tocan, así que un borrado equivocado se deshace desde «Restaurar» en la pantalla
- * del artefacto — y eso es justo lo que hace que ofrecerlo aquí no sea temerario.
+ * Emptying leaves the artifact «missing» and its workspace standing: the curated file, the
+ * draft and the cache derivations that spoke of it are deleted. The copies under
+ * `.history/` are untouched, so a mistaken deletion is undone from «Restaurar» on the
+ * artifact's screen — and that is exactly what makes offering it here not reckless.
  */
 function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
   const discard = useDeleteArtifact();
@@ -1283,11 +1283,11 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
 }
 
 /**
- * Borrar un workspace es irreversible y se lleva los ficheros, así que se escribe el slug.
+ * Deleting a workspace is irreversible and takes the files with it, so the slug is typed.
  *
- * No es ceremonia: la fila de al lado se parece a esta, el botón es un icono, y lo que
- * desaparece incluye los documentos que alguien subió — que son lo único aquí que no se
- * puede reconstruir con una GPU y un rato.
+ * Not ceremony: the row next to it looks like this one, the button is an icon, and what
+ * disappears includes the documents someone uploaded — the only thing here that cannot be
+ * rebuilt with a GPU and a while.
  */
 function DeleteWorkspaceDialog({
   workspace,

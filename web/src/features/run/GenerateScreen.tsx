@@ -120,8 +120,8 @@ export function GenerateScreen() {
         </InfoHint>
       </header>
 
-      {/* Sin motor no se genera: el servidor lo rechaza con un 503 y el formulario se
-          deshabilita entero, en vez de dejar pulsar y devolver un error de trabajo. */}
+      {/* Without an engine nothing is generated: the server refuses with a 503 and the whole form
+          is disabled, instead of letting one press and getting a job error back. */}
       {unlocked && offline ? (
         <Alert tone="attention" title="Sin motor de inferencia">
           <p>{offline} Arráncalo y vuelve a intentarlo.</p>
