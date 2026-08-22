@@ -1,17 +1,9 @@
-import {
-  Activity,
-  FileJson,
-  Library,
-  Network,
-  Play,
-  Scale,
-  ScrollText,
-  Share2,
-} from "lucide-react";
+import { Activity, Play, Scale, ScrollText } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { Rail, type RailStop } from "@/components/ui/rail";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
@@ -22,85 +14,108 @@ import { useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/q
 import { runStore } from "@/state/runStore";
 
 /**
- * Three groups, separated on screen, because they are three different things.
+ * THREE BLOCKS, AND ONLY THE MIDDLE ONE IS A CHAIN.
  *
- * «Panel» is where the chain is watched; the middle three are the instance being
- * *prepared*, in the order they are prepared in; the last two *use* it. That the middle
- * block has to be finished before the right one does anything is now said by the rail
- * below, which is why the vertical separators that used to say it are gone.
+ * The rail used to run under all six destinations, which said something false: that «Panel»
+ * comes before «Perfil» in the same sense that «Perfil» comes before «Banco». It does not —
+ * the panel is where the chain is WATCHED, from outside it. So the rail now spans exactly
+ * the three instance artifacts, which really are a sequence with dependencies, and the
+ * other three destinations are pills that do not pretend to be stops on it.
  *
- * Two things are deliberately NOT here, and for the same reason — the navbar is the chain
- * and nothing else. «Variantes guardadas» is a personal archive, and «Administración» is
- * the installation seen from outside, which is not about the instance in front of you and
- * appears for one account in the whole installation. Both live in the account menu.
+ * The three blocks, left to right:
+ *   - «Panel» — watching. Its own pill, separated by a rule, because it is about the chain
+ *     rather than a step of it.
+ *   - Perfil → Grafo → Banco — the instance being PREPARED, in the order it is prepared in.
+ *     This order has to keep matching `server/review.ARTIFACTS`: the panel's cards and their
+ *     1-2-3 badges read that tuple and this array is a second copy of the same decision. The
+ *     reason it starts at the profile: a graph can be built with nothing, but its taggability
+ *     review cannot run until the profile is approved, so starting at the graph is starting
+ *     at a stage you cannot finish.
+ *   - «Generar» and «Evaluar» — USING what the middle block produced. Both are gated on the
+ *     whole chain being approved, which is why they sit after the rule rather than on the
+ *     rail: what gates them is the block as a whole, not the stop before them.
  *
- * `qualifier` and `icon` are kept on the entries although the rail draws neither: the
- * qualifier is still the full name for a tooltip, and dropping the icons is what buys the
- * width the labels need. They are one edit away if either is wanted back.
+ * «Evaluar» carries `--study`, and that is the one place in the navigation that spends a
+ * colour. It is not decoration: evaluation is the only destination the palette's frontier
+ * metaphor does not describe — it is not before, at or after the frontier, it is where the
+ * frontier is measured — and the token exists precisely so that saying so does not require
+ * borrowing a state colour that means something else. See `index.css`.
+ *
+ * Two destinations are deliberately NOT here, and for the reason the rail exists: the navbar
+ * is the chain and the two things that consume it. «Variantes guardadas» is a personal
+ * archive and «Administración» is the installation seen from outside; both live in the
+ * account menu.
  */
-const NAV = [
-  { path: "/", label: "Panel", qualifier: null, icon: Activity, artifact: null, group: "watch" },
-  // The profile leads the «prepare» group, and this order has to keep matching
-  // `server/review.ARTIFACTS` — the panel's cards and their 1-2-3 badges read that tuple,
-  // this array is a second copy of the same decision. The reason it is the profile: a graph
-  // can be built with nothing, but its taggability review cannot run until the profile is
-  // approved, so starting here is starting at a stage you cannot finish.
-  {
-    path: "/preparar/perfil",
-    label: "Perfil",
-    qualifier: "de ejemplares",
-    icon: FileJson,
-    artifact: "exemplars_profile",
-    group: "prepare",
-  },
-  {
-    path: "/preparar/grafo",
-    label: "Grafo",
-    qualifier: "de conocimiento",
-    icon: Network,
-    artifact: "knowledge_graph",
-    group: "prepare",
-  },
-  {
-    path: "/preparar/banco",
-    label: "Banco",
-    qualifier: "de ejemplares",
-    icon: Library,
-    artifact: "exemplars_bank",
-    group: "prepare",
-  },
-  { path: "/generar", label: "Generar", qualifier: null, icon: Play, artifact: null, group: "use" },
-  { path: "/evaluar", label: "Evaluar", qualifier: null, icon: Scale, artifact: null, group: "use" },
+const STAGES = [
+  { path: "/preparar/perfil", label: "Perfil", artifact: "exemplars_profile" },
+  { path: "/preparar/grafo", label: "Grafo", artifact: "knowledge_graph" },
+  { path: "/preparar/banco", label: "Banco", artifact: "exemplars_bank" },
 ] as const;
 
-/**
- * The chain, drawn.
- *
- * The three groups survive and their order still has to match `server/review.ARTIFACTS`;
- * what goes are the vertical separators that used to mark them, because the rail already
- * tells the sequence and a hairline on top of a stretch told it twice. The break between
- * «preparar» and «usar» now reads as the dotted stretch it always was.
- *
- * A destination with no artifact has no stage status of its own. «Generar» and «Evaluar»
- * are blocked until the chain is approved and the pipeline says so; the panel never is.
- */
-function navStops(
-  stages: StageState[],
-  path: string,
-  generationUnlocked: boolean,
-): RailStop[] {
-  return NAV.map((item) => {
+function stageStops(stages: StageState[], path: string): RailStop[] {
+  return STAGES.map((item) => {
     const stage = stages.find((s) => s.artifact === item.artifact);
-    const gated = item.group === "use" && !generationUnlocked;
     return {
       key: item.path,
       label: item.label,
-      status: stage?.status ?? (gated ? "missing" : "approved"),
-      blocked: stage ? Boolean(stage.blocked_reason) : gated,
+      status: stage?.status ?? "missing",
+      blocked: Boolean(stage?.blocked_reason),
       href: item.path,
       active: path === item.path,
     };
   });
+}
+
+/**
+ * A destination that is not a stop on the rail.
+ *
+ * `tone` is what separates «Evaluar» from the other two, and it only ever takes the two
+ * values below — a third would mean the navigation had started encoding something else.
+ * The tint is `color-mix` over the header's own ground rather than a second token, so the
+ * pill sits on the translucent header without a seam.
+ */
+function NavPill({
+  to,
+  label,
+  icon: Icon,
+  active,
+  tone = "plain",
+  disabledReason,
+}: {
+  to: string;
+  label: string;
+  icon: typeof Activity;
+  active: boolean;
+  tone?: "plain" | "study";
+  disabledReason?: string | null;
+}) {
+  const study = tone === "study";
+  return (
+    <Link
+      to={to}
+      title={disabledReason ?? label}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium transition-colors",
+        !study && "text-muted-foreground hover:bg-accent hover:text-foreground",
+        !study && active && "bg-accent text-foreground",
+        // The study pill is tinted even when it is NOT the current page: what the tint says
+        // is "this destination is a different kind of thing", which is true from wherever
+        // you are looking at it. Active only deepens it.
+        study &&
+          "text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)] hover:bg-[color-mix(in_oklch,var(--study)_16%,transparent)]",
+        study && active && "bg-[color-mix(in_oklch,var(--study)_18%,transparent)]",
+        disabledReason && "opacity-45",
+      )}
+    >
+      <Icon className="size-4" />
+      {label}
+    </Link>
+  );
+}
+
+function NavRule() {
+  return <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -134,26 +149,57 @@ export function AppShell({ children }: { children: ReactNode }) {
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
 
+  // Both "use" destinations are gated by the SAME condition — the whole chain approved —
+  // so the reason is derived once and handed to both pills. They stay reachable: the
+  // screens behind them explain what is missing, which a dimmed link cannot.
+  const locked = (pipeline.data?.generation_unlocked ?? false)
+    ? null
+    : "Requiere las tres etapas aprobadas";
+
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-4 px-4">
           <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
-            <Share2 className="size-5 text-primary" />
+            <Logo className="size-5 text-primary" />
             <span className="hidden 2xl:inline">Generador de variantes</span>
           </Link>
 
           <WorkspaceSwitcher />
 
-          {/* The rail is the only thing competing for width here: the run's state lives in
-              the panel and not up top, precisely because it squeezed this until a
+          {/* The navigation is the only thing competing for width here: the run's state
+              lives in the panel and not up top, precisely because it squeezed this until a
               horizontal scrollbar appeared over the tabs. If it still does not fit it
               scrolls without painting one. */}
-          <nav className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Rail
-              stops={navStops(stages, path, pipeline.data?.generation_unlocked ?? false)}
-              size="sm"
-              className="min-w-[34rem]"
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <NavPill to="/" label="Panel" icon={Activity} active={path === "/"} />
+
+            <NavRule />
+
+            {/* The rail gets a surface of its own so the three stages read as ONE object
+                with three parts rather than as three pills that happen to be adjacent.
+                That is the whole point of separating it: the line between the marks means
+                a dependency, and it only means that if it is visibly bounded. */}
+            <div className="shrink-0 rounded-lg border border-border/70 bg-secondary/50 px-3 py-1">
+              <Rail stops={stageStops(stages, path)} size="sm" className="min-w-[15rem]" />
+            </div>
+
+            <NavRule />
+
+            <NavPill
+              to="/generar"
+              label="Generar"
+              icon={Play}
+              active={path === "/generar"}
+              disabledReason={locked}
+            />
+            <NavPill
+              to="/evaluar"
+              label="Evaluar"
+              icon={Scale}
+              active={path === "/evaluar"}
+              tone="study"
+              disabledReason={locked}
             />
           </nav>
 

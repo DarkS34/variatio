@@ -9,12 +9,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        // Ochre is the only warm colour in this palette and it means one thing: act
-        // here. It belongs to frontier actions — approving a draft, launching the
-        // taggability review — never to an ordinary one; the moment it is used for
-        // "save" it stops meaning anything.
+        // Amber is the one colour in this palette that outranks the ground's own warmth,
+        // and it means one thing: act here. It belongs to frontier actions — approving a
+        // draft, launching the taggability review — never to an ordinary one; the moment
+        // it is used for "save" it stops meaning anything.
         attention:
-          "bg-attention text-[oklch(0.99_0.003_72)] hover:bg-[color-mix(in_oklch,var(--attention)_88%,black)]",
+          "bg-attention text-[oklch(0.99_0.003_70)] hover:bg-[color-mix(in_oklch,var(--attention)_88%,black)]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

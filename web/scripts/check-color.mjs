@@ -121,11 +121,12 @@ const TEXT = [
   "--destructive",
   "--code-string",
   "--code-number",
+  "--study",
 ];
 const SURFACES = ["--background", "--card"];
 // A separator carries no information, so WCAG asks nothing of it; a control outline does.
 const OUTLINE = { "--input": 3, "--border": 1.3 };
-const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive"];
+const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--study"];
 const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
 
 // Text on a tint of ITS OWN hue. This is the case the plain contrast table cannot see and
@@ -137,6 +138,7 @@ const TINTED = [
   ["--attention", 0.08],
   ["--settled", 0.08],
   ["--destructive", 0.08],
+  ["--study", 0.08],
 ];
 
 const TEXT_MIN = 4.5;

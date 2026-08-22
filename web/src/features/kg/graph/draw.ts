@@ -90,9 +90,9 @@ export function readPalette(): Palette {
     muted: read("--muted-foreground", "#888"),
     border: read("--border", "#ddd"),
     background: read("--card", "#fff"),
-    accent: read("--primary", "#3b82f6"),
-    settled: read(TONE_VAR.settled, "#347361"),
-    attention: read(TONE_VAR.attention, "#925D00"),
+    accent: read("--primary", "#363A9F"),
+    settled: read(TONE_VAR.settled, "#367357"),
+    attention: read(TONE_VAR.attention, "#9A5D00"),
     ahead: read(TONE_VAR.muted, "#888"),
   };
 }
