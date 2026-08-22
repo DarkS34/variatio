@@ -31,16 +31,16 @@ export function StatTile({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2.5">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-small text-muted-foreground">{label}</p>
       <p
         className={cn(
-          "mt-0.5 text-2xl font-semibold tabular-nums",
+          "mt-0.5 text-2xl font-semibold nums",
           tone === "accent" && "text-primary",
         )}
       >
         {value}
       </p>
-      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="text-micro text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -80,7 +80,7 @@ export function BarRows({
   const [hover, setHover] = useState<string | null>(null);
 
   if (total <= 0) {
-    return <p className="text-xs text-muted-foreground">Todavía no hay datos que resumir.</p>;
+    return <p className="text-small text-muted-foreground">Todavía no hay datos que resumir.</p>;
   }
 
   return (
@@ -95,7 +95,7 @@ export function BarRows({
             onMouseLeave={() => setHover(null)}
           >
             <span
-              className="shrink-0 truncate text-xs text-muted-foreground"
+              className="shrink-0 truncate text-small text-muted-foreground"
               style={{ width: labelWidth }}
               title={row.label}
             >
@@ -120,13 +120,13 @@ export function BarRows({
               ) : null}
             </div>
 
-            <span className="w-20 shrink-0 text-right text-xs tabular-nums">
+            <span className="w-20 shrink-0 text-right text-small nums">
               {row.value}
               <span className="ml-1 text-muted-foreground">{Math.round(share * 100)} %</span>
             </span>
 
             {hover === row.key && row.detail ? (
-              <div className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-[11px] shadow-md">
+              <div className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-micro shadow-md">
                 {row.detail}
               </div>
             ) : null}
@@ -134,7 +134,7 @@ export function BarRows({
         );
       })}
       {reference !== undefined && referenceLabel ? (
-        <p className="text-[11px] text-muted-foreground">{referenceLabel}</p>
+        <p className="text-micro text-muted-foreground">{referenceLabel}</p>
       ) : null}
     </div>
   );
@@ -163,7 +163,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
 
   if (points.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         Ninguna comparación registrada todavía.
       </p>
     );
@@ -174,7 +174,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-3 text-micro text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-[2px] bg-primary" />
           Decididas
@@ -183,7 +183,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
           <span className="size-2 rounded-[2px] bg-primary/25" />
           Sin decidir
         </span>
-        <span className="ml-auto tabular-nums">máx. {peak}/día</span>
+        <span className="ml-auto nums">máx. {peak}/día</span>
       </div>
 
       <div className="relative">
@@ -217,9 +217,9 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
                 ) : null}
 
                 {hover === index ? (
-                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-[11px] shadow-md">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-micro shadow-md">
                     <span className="font-medium">{point.day}</span>
-                    <span className="ml-2 tabular-nums text-muted-foreground">
+                    <span className="ml-2 nums text-muted-foreground">
                       {point.decided}/{point.sessions} decididas
                     </span>
                   </div>
@@ -230,7 +230,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
         </div>
       </div>
 
-      <div className="flex justify-between text-[11px] tabular-nums text-muted-foreground">
+      <div className="flex justify-between text-micro nums text-muted-foreground">
         {points
           .filter((_, index) => index % showEvery === 0)
           .map((point) => (
@@ -271,7 +271,7 @@ export function ShareMeter({
           />
         ) : null}
       </span>
-      <span className="w-10 text-right tabular-nums">
+      <span className="w-10 text-right nums">
         {total > 0 ? `${Math.round(share * 100)} %` : "—"}
       </span>
     </span>

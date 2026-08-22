@@ -50,8 +50,6 @@ const RULES = [
       "components/RunDrawer.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
-      "features/admin/AdminScreen.tsx",
-      "features/admin/charts.tsx",
     ],
   },
   {
@@ -74,7 +72,6 @@ const RULES = [
       "components/ConceptPicker.tsx",
       "components/ConceptSelector/index.tsx",
       "components/LogViewer.tsx",
-      "features/admin/AdminScreen.tsx",
     ],
   },
   {
@@ -87,7 +84,6 @@ const RULES = [
       // in the primitive would be applying a layout decision to somebody else's document.
       "components/ui/table.tsx",
       "components/Markdown.tsx",
-      "features/admin/AdminScreen.tsx",
     ],
   },
   {
@@ -103,7 +99,6 @@ const RULES = [
       "components/RawImport.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
-      "features/admin/AdminScreen.tsx",
       "lib/format.ts",
     ],
   },
