@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check:color": "node scripts/check-color.mjs"
+    "check:color": "node scripts/check-color.mjs",
+    "check:ui": "node scripts/check-ui.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.3.0",
