@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from .. import config
+from .. import paths
 from ..content_context import ContentContext, load_for, resolve_path
 from ..workspace import Workspace
 
@@ -17,7 +17,7 @@ class MissingArtifactError(Exception):
 
 
 def resolve(ws: Workspace | None = None) -> Workspace:
-    return ws or config.default_workspace()
+    return ws or paths.default_workspace()
 
 
 def _json_has_key(path: str | Path, key: str) -> bool:

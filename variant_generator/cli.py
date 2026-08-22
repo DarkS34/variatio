@@ -3,7 +3,7 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, config, stages
+from . import bootstrap, config, paths, stages
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -112,7 +112,7 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    ws = config.workspace(args.workspace)
+    ws = paths.workspace(args.workspace)
 
     try:
         bootstrap()

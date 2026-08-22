@@ -1,51 +1,9 @@
 import os
-from pathlib import Path
 
+# Imported for its side effect: `paths` loads the `.env`, and every `os.environ` read
+# below expects it to have happened.
+from . import paths as _paths  # noqa: F401
 from .relations import BUILTIN_SCHEMAS
-from .workspace import DEFAULT_SLUG, Workspace
-
-
-# A real environment variable always wins: the file is the convenience, the export is
-# the deliberate override. Only secrets and host settings live here — never a model
-# name or a threshold, which belong in this file where they can be reviewed in git.
-def _load_dotenv(path: Path) -> None:
-    if not path.is_file():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        key, _, value = stripped.partition("=")
-        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
-
-
-# File Paths & Cache ----------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-_load_dotenv(PROJECT_ROOT / ".env")
-
-# Every per-instance path lives on `Workspace`, never here: a path constant resolved at
-# import time is exactly what makes two users overwrite each other's graph. What stays in
-# this module is what is genuinely global — models, thresholds, the Ollama host.
-WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
-
-# `default` is a workspace like any other and lives where the others live. It used to be
-# the single-user layout this repo always had, hanging off PROJECT_ROOT, which made the
-# first instance a special case in every listing and put it somewhere no other instance
-# could be. Moved into the tree on 2026-08-17 by explicit user request: one shape for every
-# instance, and `workspaces/` as the only directory holding user data. The move is byte for
-# byte — the `.npz` and the markdown cache are fingerprinted by content and not by path, so
-# nothing was re-embedded.
-
-
-def default_workspace() -> Workspace:
-    return workspace(DEFAULT_SLUG)
-
-
-def workspace(slug: str | None = None) -> Workspace:
-    slug = slug or DEFAULT_SLUG
-    return Workspace(WORKSPACES_DIR / slug, slug=slug)
-
 
 # Inference ----------------------------------------------
 INFERENCE_ENGINE = "ollama"

@@ -6,7 +6,7 @@ import shutil
 from datetime import timedelta
 from pathlib import Path
 
-from variant_generator import config
+from variant_generator import paths
 from variant_generator.workspace import DEFAULT_SLUG, Workspace
 
 # One process now serves MANY workspaces, so there is no `workspace()` any more: a
@@ -22,7 +22,7 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 
 
 def workspace_for(slug: str | None) -> Workspace:
-    return config.workspace(slug)
+    return paths.workspace(slug)
 
 
 def slug_error(slug: str) -> str | None:
@@ -58,7 +58,7 @@ def provision(ws: Workspace) -> None:
 # se puede deshacer. `Workspace.__post_init__` ya la resuelve, así que basta comparar.
 def destroy(ws: Workspace) -> bool:
     root = ws.root
-    parent = Path(config.WORKSPACES_DIR).resolve()
+    parent = Path(paths.WORKSPACES_DIR).resolve()
     if root.parent != parent or root == parent:
         raise ValueError(f"'{root}' no está dentro de '{parent}': no se borra nada.")
     if not root.is_dir():
@@ -153,7 +153,7 @@ MAIL_FROM = os.environ.get("MAIL_FROM", "Generador de variantes <no-reply@localh
 def smtp_host() -> str:
     return os.environ.get("SMTP_HOST", "").strip()
 
-WEB_DIST_DIR: Path = config.PROJECT_ROOT / "web" / "dist"
+WEB_DIST_DIR: Path = paths.PROJECT_ROOT / "web" / "dist"
 
 # Kept in memory for instant `?since=N` replay after a browser reload; the JSONL
 # on disk is the long-term record.

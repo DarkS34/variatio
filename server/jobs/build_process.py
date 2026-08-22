@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 
-from variant_generator import config, progress
+from variant_generator import paths, progress
 
 from .protocol import MARKER
 from .runner import JobControl
@@ -22,7 +22,7 @@ def run_build(artifact: str, control: JobControl) -> dict:
         command += ["--workspace", control.job.workspace]
     process = subprocess.Popen(
         command,
-        cwd=str(config.PROJECT_ROOT),
+        cwd=str(paths.PROJECT_ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
