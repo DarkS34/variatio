@@ -3,7 +3,7 @@ from pathlib import Path
 from loguru import logger
 
 from ..concept_tagger import ConceptTagger
-from ..json_io import write_json
+from ..core.json_io import write_json
 from .initialize import PipelineContext
 
 

@@ -12,11 +12,12 @@ from pathlib import Path
 
 from loguru import logger
 
-from ... import config, inference, progress
+from ... import config
+from ...core import inference, progress
+from ...core.lexicon import mentions
 from ...prompts import extract_typed_graph_prompt, glean_typed_graph_prompt
 from .. import _source_docs
 from . import parsing
-from .lexicon import MAX_INFLECTION_SLACK, MIN_NEEDLE_LENGTH, mentions  # noqa: F401
 from .schemas import EXTRACT_SCHEMA
 
 

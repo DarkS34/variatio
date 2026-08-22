@@ -1,9 +1,10 @@
 from loguru import logger
 
-from . import config, inference, progress
+from . import config
 from .builders.knowledge_graph_builder import blocks, parsing
-from .content_context import ContentContext
 from .builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
+from .core import inference, progress
+from .instance.content_context import ContentContext
 from .prompts import review_taggable_concepts_prompt
 
 MAX_SAMPLES_PER_DOMAIN = 3

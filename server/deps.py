@@ -17,9 +17,10 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variant_generator import inference, stages
+from variant_generator import stages
+from variant_generator.core import inference
+from variant_generator.core.workspace import Workspace
 from variant_generator.stages import PipelineContext
-from variant_generator.workspace import Workspace
 
 MAX_CONTEXTS = 8
 

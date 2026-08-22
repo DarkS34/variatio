@@ -7,7 +7,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from ... import config, inference, progress
+from ... import config
+from ...core import inference, progress
 from ...prompts import EMPTY_PAGE_MARK, transcribe_page_prompt
 from .files import SUPPORTED_EXTS, required_cache_dir
 from .markdown import tidy_markdown, to_markdown

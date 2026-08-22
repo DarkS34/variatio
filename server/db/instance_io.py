@@ -13,8 +13,9 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from variant_generator import json_io, stages
-from variant_generator.workspace import Workspace as FsWorkspace
+from variant_generator import stages
+from variant_generator.core import json_io
+from variant_generator.core.workspace import Workspace as FsWorkspace
 
 from . import repository as repo
 from .models import CURATED, DRAFT, SLOT_CORPUS, SLOT_EXEMPLARS

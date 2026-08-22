@@ -5,14 +5,15 @@ from pathlib import Path
 
 from loguru import logger
 
-from .. import config, progress
+from .. import config
 from ..concept_tagger import ConceptTagger
-from ..content_context import ContentContext
-from ..variant_generator import VariantGenerator
+from ..core import progress
+from ..core.workspace import Workspace
 from ..embedder import Embedder
-from ..exemplars_profile import ExemplarsProfile
-from ..knowledge_graph import KnowledgeGraph
-from ..workspace import Workspace
+from ..instance.content_context import ContentContext
+from ..instance.exemplars_profile import ExemplarsProfile
+from ..instance.knowledge_graph import KnowledgeGraph
+from ..variant_generator import VariantGenerator
 from . import _artifacts
 
 

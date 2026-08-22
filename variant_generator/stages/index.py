@@ -1,8 +1,8 @@
 from loguru import logger
 
+from ..core.workspace import Workspace
 from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
-from ..knowledge_graph import KnowledgeGraph
-from ..workspace import Workspace
+from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 
 

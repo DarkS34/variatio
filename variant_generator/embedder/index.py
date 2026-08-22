@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from .. import config, inference, progress
-from ..knowledge_graph import KnowledgeGraph
+from .. import config
+from ..core import inference, progress
+from ..instance.knowledge_graph import KnowledgeGraph
 from . import cache
 from .descriptions import ConceptDescriber
 from .vectors import l2_normalize, prefix_for

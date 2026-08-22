@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from .. import paths
-from ..content_context import ContentContext, load_for, resolve_path
-from ..workspace import Workspace
+from ..core import paths
+from ..core.workspace import Workspace
+from ..instance.content_context import ContentContext, load_for, resolve_path
 
 EXEMPLARS_PROFILE = "exemplars_profile"
 KNOWLEDGE_GRAPH = "knowledge_graph"

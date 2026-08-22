@@ -14,7 +14,8 @@ from contextlib import contextmanager
 
 from loguru import logger
 
-from variant_generator import config, progress
+from variant_generator import config
+from variant_generator.core import progress
 
 from .bus import EventBus
 from .models import SUBPROCESS_KINDS, Job

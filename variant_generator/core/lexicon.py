@@ -1,7 +1,7 @@
 import re
 import unicodedata
 
-from ... import config
+from .. import config
 
 MIN_NEEDLE_LENGTH = 3
 MAX_INFLECTION_SLACK = 2

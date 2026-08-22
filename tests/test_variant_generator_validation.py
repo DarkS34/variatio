@@ -2,8 +2,8 @@ import json
 
 import pytest
 
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 from variant_generator.variant_generator import VariantGenerator
-from variant_generator.knowledge_graph import KnowledgeGraph
 
 from .conftest import CHAIN_GRAPH
 

@@ -7,13 +7,14 @@ read a process-wide workspace would write one person's build into another's dire
 
 from loguru import logger
 
-from variant_generator import config, progress, stages
+from variant_generator import config, stages
 from variant_generator.concept_tagger import ConceptTagger
+from variant_generator.core import progress
+from variant_generator.core.workspace import Workspace
 from variant_generator.evaluation import ARMS
 from variant_generator.evaluation import rag as rag_arm
-from variant_generator.exemplars_profile import ExemplarsProfile
-from variant_generator.knowledge_graph import KnowledgeGraph
-from variant_generator.workspace import Workspace
+from variant_generator.instance.exemplars_profile import ExemplarsProfile
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from .. import curriculum as curriculum_store
 from .. import deps, evaluation_store, review, settings, storage

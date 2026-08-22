@@ -2,23 +2,9 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from . import config, inference, progress
-from .prompts import json_repair_prompt
-
-
-def ensure_models(models: list[str], label: str) -> None:
-    unique = list(dict.fromkeys(models))
-    logger.info(f"Preparando los modelos {label}: {', '.join(unique)}")
-
-    failed = [m for m in unique if not inference.ensure_model(m)]
-    if failed:
-        raise RuntimeError(f"No se pudieron instalar los modelos: {', '.join(failed)}")
-
-    for m in unique:
-        progress.checkpoint()
-        inference.warmup(m, is_embedding=(m in config.EMBEDDING_MODELS))
-
-    logger.success(f"Modelos {label} listos")
+from .. import config
+from ..prompts import json_repair_prompt
+from . import inference, progress
 
 
 # `format` is required for the same reason `shape` is: a silent default is what let the

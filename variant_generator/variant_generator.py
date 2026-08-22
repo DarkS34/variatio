@@ -5,14 +5,15 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import checks, config, guardrail, inference, progress
+from . import checks, config, guardrail
 from .concept_tagger import ConceptTagger
-from .content_context import ContentContext
+from .core import inference, progress
+from .core.repair import parse_with_repair
 from .embedder import Embedder
-from .exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
-from .knowledge_graph import KnowledgeGraph
+from .instance.content_context import ContentContext
+from .instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
+from .instance.knowledge_graph import KnowledgeGraph
 from .prompts import generate_content_prompt
-from .utils import parse_with_repair
 
 
 def json_objects(text: str) -> list[str]:

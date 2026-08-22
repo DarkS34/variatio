@@ -6,8 +6,8 @@ import shutil
 from datetime import timedelta
 from pathlib import Path
 
-from variant_generator import paths
-from variant_generator.workspace import DEFAULT_SLUG, Workspace
+from variant_generator.core import paths
+from variant_generator.core.workspace import DEFAULT_SLUG, Workspace
 
 # One process now serves MANY workspaces, so there is no `workspace()` any more: a
 # function with no argument is exactly the process-global that made two users overwrite

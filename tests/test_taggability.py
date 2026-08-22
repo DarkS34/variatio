@@ -1,5 +1,5 @@
 from variant_generator import taggability
-from variant_generator.content_context import ContentContext
+from variant_generator.instance.content_context import ContentContext
 from variant_generator.prompts import review_taggable_concepts_prompt
 
 # The context is no longer a field of the profile: it is its own artifact, so the fake

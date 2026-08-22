@@ -2,11 +2,12 @@ import json
 
 from loguru import logger
 
-from .. import config, inference
-from ..content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
+from .. import config
+from ..core import inference
+from ..core.repair import parse_with_repair
+from ..core.workspace import Workspace
+from ..instance.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
 from ..prompts import synthesize_content_context_prompt
-from ..utils import parse_with_repair
-from ..workspace import Workspace
 
 CONTENT_CONTEXT_SCHEMA = {
     "type": "object",

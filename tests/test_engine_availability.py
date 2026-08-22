@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from variant_generator import inference
+from variant_generator.core import inference
 
 
 @pytest.mark.parametrize(

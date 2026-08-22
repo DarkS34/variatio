@@ -1,8 +1,8 @@
 import json
 from datetime import datetime, timezone
 
-from variant_generator.knowledge_graph import KnowledgeGraph
-from variant_generator.workspace import Workspace
+from variant_generator.core.workspace import Workspace
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from . import storage
 

@@ -6,7 +6,8 @@ import ollama
 from loguru import logger
 from tqdm import tqdm
 
-from . import config, progress
+from .. import config
+from . import progress
 
 TokenSink = Callable[[str, str], None]
 
@@ -511,3 +512,18 @@ def required_models() -> dict[str, str]:
 
 def warmup(model: str, is_embedding: bool = False) -> None:
     engine().warmup(model, is_embedding=is_embedding)
+
+
+def ensure_models(models: list[str], label: str) -> None:
+    unique = list(dict.fromkeys(models))
+    logger.info(f"Preparando los modelos {label}: {', '.join(unique)}")
+
+    failed = [m for m in unique if not ensure_model(m)]
+    if failed:
+        raise RuntimeError(f"No se pudieron instalar los modelos: {', '.join(failed)}")
+
+    for m in unique:
+        progress.checkpoint()
+        warmup(m, is_embedding=(m in config.EMBEDDING_MODELS))
+
+    logger.success(f"Modelos {label} listos")

@@ -1,6 +1,5 @@
 from loguru import logger
 
-from .. import progress
 from ..builders import (
     exemplars_bank_builder,
     exemplars_profile_builder,
@@ -9,10 +8,11 @@ from ..builders import (
 from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.exemplars_profile_builder import ExemplarsProfileBuilder
 from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
-from ..exemplars_profile import ExemplarsProfile
-from ..json_io import write_json
-from ..knowledge_graph import KnowledgeGraph
-from ..workspace import Workspace
+from ..core import progress
+from ..core.json_io import write_json
+from ..core.workspace import Workspace
+from ..instance.exemplars_profile import ExemplarsProfile
+from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 from .initialize import make_embedder, make_tagger
 

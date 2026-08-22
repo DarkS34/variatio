@@ -13,7 +13,8 @@ import time
 
 from loguru import logger
 
-from .. import config, inference, progress
+from .. import config
+from ..core import inference, progress
 from . import FAILED, OK, ArmResult, Commission
 
 

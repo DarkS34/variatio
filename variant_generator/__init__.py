@@ -4,8 +4,8 @@ import warnings
 
 from loguru import logger
 
-from . import inference
 from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES
+from .core import inference
 
 for name in NOISY_LOGGERS:
     logging.getLogger(name).setLevel(logging.ERROR)

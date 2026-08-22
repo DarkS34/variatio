@@ -4,11 +4,12 @@ from collections.abc import Callable
 from json_repair import repair_json
 from loguru import logger
 
-from . import config, inference, progress
-from .content_context import ContentContext
+from . import config
+from .core import inference, progress
+from .core.repair import parse_with_repair
 from .embedder import Embedder
+from .instance.content_context import ContentContext
 from .prompts import tag_concepts_prompt
-from .utils import parse_with_repair
 
 TRACE_KEY = "_tagging"
 

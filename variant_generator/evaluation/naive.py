@@ -13,9 +13,9 @@ import time
 from loguru import logger
 
 from .. import config
-from ..variant_generator import parse_item
+from ..core.repair import parse_with_repair
 from ..prompts import naive_generation_prompt
-from ..utils import parse_with_repair
+from ..variant_generator import parse_item
 from . import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission
 from . import external
 

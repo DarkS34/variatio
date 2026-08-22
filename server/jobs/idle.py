@@ -18,7 +18,8 @@ import threading
 
 from loguru import logger
 
-from variant_generator import config, inference
+from variant_generator import config
+from variant_generator.core import inference
 
 from .runner import JobRunner
 

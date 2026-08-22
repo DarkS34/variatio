@@ -24,10 +24,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from ... import config, progress
-from ...relations import RelationSchema
-from ...utils import ensure_models
-from ...workspace import Workspace
+from ... import config
+from ...core import progress
+from ...core.inference import ensure_models
+from ...core.workspace import Workspace
+from ...instance.relations import RelationSchema
 from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 

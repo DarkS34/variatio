@@ -10,14 +10,15 @@ from pathlib import Path
 import networkx as nx
 from loguru import logger
 
-from ... import config, inference, progress
+from ... import config
+from ...core import inference, progress
+from ...core.json_io import write_json
 from ...prompts import (
     assign_leftover_concepts_prompt,
     curate_graph_domains_prompt,
     link_cross_domain_relations_prompt,
     link_domain_relations_prompt,
 )
-from ...json_io import write_json
 from . import blocks, parsing
 from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA
 

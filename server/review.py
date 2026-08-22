@@ -10,8 +10,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from variant_generator import json_io, stages
-from variant_generator.workspace import Workspace
+from variant_generator import stages
+from variant_generator.core import json_io
+from variant_generator.core.workspace import Workspace
 
 from . import storage
 

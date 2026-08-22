@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from .json_io import write_json
-from .workspace import Workspace
+from ..core.json_io import write_json
+from ..core.workspace import Workspace
 
 CANONICAL_KEYS = ("subject", "educational_level", "language_of_instruction")
 

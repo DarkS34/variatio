@@ -50,7 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     from loguru import logger
 
     import variant_generator
-    from variant_generator import config, paths, progress, stages
+    from variant_generator import config, stages
+    from variant_generator.core import paths, progress
 
     emitter = StdoutEmitter()
     signal.signal(signal.SIGTERM, emitter.request_cancel)

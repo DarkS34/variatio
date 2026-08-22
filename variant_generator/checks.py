@@ -3,10 +3,10 @@ from loguru import logger
 from pydantic import BaseModel
 
 from . import config
-from .builders.knowledge_graph_builder.lexicon import mentions
 from .concept_tagger import TRACE_KEY, ConceptTagger
+from .core.lexicon import mentions
 from .embedder import Embedder
-from .exemplars_profile import ItemType
+from .instance.exemplars_profile import ItemType
 
 MIN_PRIMARY_CHARS = 20
 

@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from variant_generator import config
-from variant_generator.knowledge_graph import KnowledgeGraph
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 
 def _slug(text: str) -> str:

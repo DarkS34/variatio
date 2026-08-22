@@ -17,7 +17,8 @@ from collections import defaultdict
 import numpy as np
 from loguru import logger
 
-from ... import config, inference, progress
+from ... import config
+from ...core import inference, progress
 from ...embedder import embed_normalized
 from ...prompts import filter_graph_nodes_prompt, merge_candidate_groups_prompt
 from . import blocks, parsing

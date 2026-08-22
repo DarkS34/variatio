@@ -8,9 +8,9 @@ surface is manual editing, and it is validated here for the same reason.
 
 from variant_generator import config
 from variant_generator.concept_tagger import TRACE_KEY
-from variant_generator.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from variant_generator.knowledge_graph import KnowledgeGraph
-from variant_generator.workspace import Workspace
+from variant_generator.core.workspace import Workspace
+from variant_generator.instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
 

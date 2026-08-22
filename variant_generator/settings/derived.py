@@ -2,7 +2,7 @@ import os
 
 from loguru import logger
 
-from ..relations import BUILTIN_SCHEMAS
+from ..instance.relations import BUILTIN_SCHEMAS
 
 PHASES = {
     "models.phases.exemplars_transcribe": "EXEMPLARS_TRANSCRIBE_MODEL",

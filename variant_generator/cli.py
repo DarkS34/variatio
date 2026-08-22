@@ -3,7 +3,8 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, config, paths, stages
+from . import bootstrap, config, stages
+from .core import paths
 
 
 def build_parser() -> argparse.ArgumentParser:

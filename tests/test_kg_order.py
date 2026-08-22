@@ -9,7 +9,7 @@ from variant_generator.builders.knowledge_graph_builder import (
     extraction,
     parsing,
 )
-from variant_generator.relations import RELATION_SCHEMA_ES as SCHEMA
+from variant_generator.instance.relations import RELATION_SCHEMA_ES as SCHEMA
 
 PREREQ = SCHEMA.prerequisite_verbose
 EMPTY = '{"concepts": [], "relations": []}'

@@ -9,7 +9,8 @@ which model they ask. The model is an argument now.
 import numpy as np
 from loguru import logger
 
-from .. import config, inference, progress
+from .. import config
+from ..core import inference, progress
 
 
 def l2_normalize(vector: np.ndarray) -> np.ndarray:

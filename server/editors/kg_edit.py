@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 from variant_generator import stages
-from variant_generator.knowledge_graph import KnowledgeGraph
-from variant_generator.workspace import Workspace
+from variant_generator.core.workspace import Workspace
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
 

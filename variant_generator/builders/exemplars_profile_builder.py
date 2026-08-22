@@ -5,17 +5,19 @@ from pathlib import Path
 from json_repair import repair_json
 from loguru import logger
 
-from .. import config, inference, progress
-from ..exemplars_profile import ExemplarsProfile
-from ..json_io import write_json
+from .. import config
+from ..core import inference, progress
+from ..core.inference import ensure_models
+from ..core.json_io import write_json
+from ..core.repair import parse_with_repair
+from ..core.workspace import Workspace
+from ..instance.exemplars_profile import ExemplarsProfile
 from ..prompts import (
     consolidate_exemplars_profile_prompt,
     json_repair_prompt,
     repair_exemplars_profile_prompt,
     scan_item_types_prompt,
 )
-from ..utils import ensure_models, parse_with_repair
-from ..workspace import Workspace
 from . import _context, _source_docs
 
 

@@ -9,7 +9,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config
-from ...utils import parse_with_repair
+from ...core.repair import parse_with_repair
 
 
 def parse_json_object(text: str) -> tuple[dict | None, str | None]:

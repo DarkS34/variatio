@@ -197,7 +197,7 @@ SETTINGS: list[Setting] = [
         choices=("ollama",),
         doc="""Qué implementación de motor de inferencia respalda generate()/embed()/embed_batch().
 Solo 'ollama' está implementado; `config.INFERENCE_ENGINE` lo selecciona y la lógica de
-negocio nunca llama a un SDK directamente — todo pasa por `variant_generator.inference`.""",
+negocio nunca llama a un SDK directamente — todo pasa por `variant_generator.core.inference`.""",
     ),
     Setting(
         key="engine.ollama_host",

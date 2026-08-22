@@ -3,8 +3,9 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from . import config, inference, progress
-from .inference import InferenceError
+from . import config
+from .core import inference, progress
+from .core.inference import InferenceError
 
 _SCORE = re.compile(r"<score>\s*(yes|no)\s*</score>", re.IGNORECASE)
 _BARE = re.compile(r"\b(yes|no)\b", re.IGNORECASE)

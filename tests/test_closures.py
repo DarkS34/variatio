@@ -1,4 +1,4 @@
-from variant_generator.knowledge_graph import KnowledgeGraph
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from .conftest import PREREQUISITE
 

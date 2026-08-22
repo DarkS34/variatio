@@ -1,7 +1,7 @@
 import os
 
-from variant_generator import paths
-from variant_generator.dotenv import load_dotenv
+from variant_generator.core import paths
+from variant_generator.core.dotenv import load_dotenv
 
 
 def test_load_dotenv_does_not_override_a_real_export(tmp_path, monkeypatch):

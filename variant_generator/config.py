@@ -5,7 +5,7 @@ beside each one, and `settings.apply` writes them here. What is read below is th
 of what the system exposes, not its definition.
 """
 
-from .relations import RelationSchema
+from .instance.relations import RelationSchema
 from .settings import apply
 
 INFERENCE_ENGINE: str

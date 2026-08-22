@@ -5,8 +5,8 @@ the file at runtime is the only honest judge of whether an edit is valid, and th
 gets the exact error the pipeline would raise.
 """
 
-from variant_generator.exemplars_profile import ExemplarsProfile
-from variant_generator.workspace import Workspace
+from variant_generator.core.workspace import Workspace
+from variant_generator.instance.exemplars_profile import ExemplarsProfile
 
 from .. import deps, review, storage
 
