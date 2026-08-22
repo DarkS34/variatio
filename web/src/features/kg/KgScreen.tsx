@@ -22,7 +22,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, getCurriculum } from "@/lib/api";
 import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
@@ -316,6 +316,14 @@ function AddConceptDialog({
 function GraphExplorer() {
   const kg = useKg();
   const graph = useKgGraph();
+  // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
+  // and when the workspace has none, because an empty set means "covered nothing yet",
+  // which is a different statement and would dim the whole graph.
+  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: getCurriculum });
+  const curriculumSet = useMemo(
+    () => (curriculum.data ? new Set(curriculum.data.concepts) : undefined),
+    [curriculum.data],
+  );
   const invalidate = useInvalidateChain();
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -422,6 +430,7 @@ function GraphExplorer() {
           onSelect={setSelected}
           highlight={highlight}
           hiddenRelations={hiddenRelations}
+          curriculum={curriculumSet}
         />
       </div>
 

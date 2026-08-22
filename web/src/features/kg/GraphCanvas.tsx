@@ -22,7 +22,7 @@ import {
   type Body,
   type LayoutMode,
 } from "./graph/layout";
-import { buildModel } from "./graph/model";
+import { buildModel, frontierOf } from "./graph/model";
 
 /**
  * The knowledge graph, drawn by hand on a canvas, in two layouts.
@@ -50,6 +50,10 @@ interface Props {
   initialMode?: LayoutMode;
   highlight?: Set<string>;
   hiddenRelations?: Set<number>;
+  /** Concepts the course has covered. `undefined` — NOT an empty set — means no curriculum
+   *  is in force and the graph keeps its domain colours; an empty set is a course that has
+   *  covered nothing yet, which is a different statement and is drawn as one. */
+  curriculum?: Set<string>;
   className?: string;
 }
 
@@ -68,6 +72,7 @@ export function GraphCanvas({
   initialMode,
   highlight,
   hiddenRelations,
+  curriculum,
   className,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -117,6 +122,24 @@ export function GraphCanvas({
   modelRef.current = model;
   const graphRef = useRef(graph);
   graphRef.current = graph;
+  // This is where the whole idea of the redesign becomes visible: the concepts are already
+  // placed by prerequisite depth, and the colour now says where each one falls relative to
+  // the frontier. It is the same drawing as the navbar, at another scale.
+  const curriculumIndices = useMemo(() => {
+    if (!curriculum) return undefined;
+    const indices = new Set<number>();
+    for (const name of curriculum) {
+      const index = model.nameIndex.get(name);
+      if (index !== undefined) indices.add(index);
+    }
+    return indices;
+  }, [curriculum, model]);
+
+  const frontier = useMemo(
+    () => (curriculumIndices ? frontierOf(graph, model, curriculumIndices) : undefined),
+    [graph, model, curriculumIndices],
+  );
+
   const viewProps = useRef({
     selected,
     picked: pickedIndices,
@@ -125,6 +148,8 @@ export function GraphCanvas({
     mode,
     labels,
     arrows,
+    curriculum: curriculumIndices,
+    frontier,
   });
   viewProps.current = {
     selected,
@@ -134,6 +159,8 @@ export function GraphCanvas({
     mode,
     labels,
     arrows,
+    curriculum: curriculumIndices,
+    frontier,
   };
 
   const wake = useCallback(() => {
@@ -287,6 +314,8 @@ export function GraphCanvas({
         focused: hoveredRef.current ?? -1,
         highlight: props.highlight,
         hiddenRelations: props.hiddenRelations,
+        curriculum: props.curriculum,
+        frontier: props.frontier,
       };
     };
 
@@ -608,12 +637,30 @@ export function GraphCanvas({
           {graph.nodes.length} conceptos · {graph.links.length} relaciones
           {graph.meta.isolated > 0 ? ` · ${graph.meta.isolated} aislados` : ""}
         </span>
+
+        {/* Without a key, three colours on a canvas are three colours. */}
+        {mode === "curriculum" && curriculumIndices ? (
+          <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+            {(
+              [
+                ["Cubierto", "var(--settled)", curriculumIndices.size],
+                ["Frontera", "var(--attention)", frontier?.size ?? 0],
+                ["Sin impartir", "var(--muted-foreground)", graph.nodes.length - curriculumIndices.size - (frontier?.size ?? 0)],
+              ] as const
+            ).map(([label, colour, count]) => (
+              <span key={label} className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full" style={{ background: colour }} />
+                {label} <span className="nums">{count}</span>
+              </span>
+            ))}
+          </span>
+        ) : null}
       </div>
 
       {/* Un grafo con pocos prerrequisitos apila casi todo en el nivel 0. Eso es un dato
           sobre el grafo, no un fallo de la vista: decirlo evita que parezca lo segundo. */}
       {mode === "curriculum" && model.levelCount < 3 ? (
-        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--warning)_40%,transparent)] bg-[color-mix(in_oklch,var(--warning)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
+        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
           Solo {model.curriculumEdges} relación(es) de prerrequisito ordenan {graph.nodes.length}{" "}
           conceptos, así que casi todo cae en el nivel 0. Añade prerrequisitos en el detalle de cada
           concepto para que esta vista diga algo.

@@ -150,3 +150,37 @@ function prerequisiteLevels(
   for (let index = 0; index < count; index += 1) depth(index);
   return { levels, levelCount: Math.max(...levels) + 1, edges };
 }
+
+/**
+ * What can be taught next: not covered, but with every prerequisite already covered.
+ *
+ * It lives here, next to `prerequisiteLevels`, because both depend on the same convention
+ * and getting it backwards fails silently — `A -> B` means "B is a prerequisite of A", so
+ * a concept's prerequisites are the TARGETS of its outgoing edges. Read the other way you
+ * still get a plausible non-empty set, and the only symptom is a frontier drawn behind the
+ * course instead of in front of it.
+ */
+export function frontierOf(
+  graph: GraphView,
+  model: GraphModel,
+  curriculum: Set<number>,
+): Set<number> {
+  const frontier = new Set<number>();
+  if (model.prerequisite === null || model.curriculumEdges === 0) return frontier;
+
+  const requires = new Map<number, number[]>();
+  for (const [source, target, kind] of graph.links) {
+    if (kind !== model.prerequisite) continue;
+    if (!requires.has(source)) requires.set(source, []);
+    requires.get(source)!.push(target);
+  }
+
+  for (let index = 0; index < graph.nodes.length; index += 1) {
+    if (curriculum.has(index)) continue;
+    const priors = requires.get(index);
+    // A concept with no prerequisites at all is reachable from the start, so it belongs to
+    // the frontier of an empty course too — which is exactly what a first week looks like.
+    if ((priors ?? []).every((prior) => curriculum.has(prior))) frontier.add(index);
+  }
+  return frontier;
+}
