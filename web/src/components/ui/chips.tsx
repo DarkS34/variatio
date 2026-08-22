@@ -70,12 +70,21 @@ export function ChipInput({
   placeholder = "Escribe un valor y pulsa Enter…",
   hint,
   className,
+  id,
+  "aria-describedby": describedBy,
+  "aria-label": ariaLabel,
 }: {
   values: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
   hint?: string;
   className?: string;
+  /** Forwarded to the inner <input> so that a <Field> wrapping this binds to something
+   *  real. Without it the label would point at an id nothing carries, which looks correct
+   *  in the markup and does nothing for a screen reader or for a click. */
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-label"?: string;
 }) {
   const [text, setText] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -133,6 +142,9 @@ export function ChipInput({
         ))}
         <input
           ref={inputRef}
+          id={id}
+          aria-describedby={describedBy}
+          aria-label={ariaLabel}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onBlur={() => add(text)}

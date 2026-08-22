@@ -14,9 +14,10 @@ import { useEffect, useMemo, useState } from "react";
 import { StageGate } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
@@ -54,6 +55,7 @@ function AddInline({
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         <Input
+          aria-label={placeholder}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
@@ -63,9 +65,9 @@ function AddInline({
             }
           }}
           placeholder={placeholder}
-          className={mono ? "font-mono text-sm" : "text-sm"}
+          className={mono ? "font-mono" : undefined}
         />
-        {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
+        {error ? <p className="mt-1 text-small text-destructive">{error}</p> : null}
       </div>
       <Button variant="outline" onClick={submit} disabled={!text.trim() || Boolean(error)}>
         <Plus />
@@ -107,6 +109,7 @@ function ContextRow({
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         <Input
+          aria-label={`Clave de ${name}`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => {
@@ -116,12 +119,13 @@ function ContextRow({
             if (event.key === "Enter") event.currentTarget.blur();
             if (event.key === "Escape") setDraft(name);
           }}
-          className={cn("h-8 w-48 shrink-0 font-mono text-xs", error && "border-destructive")}
+          className={cn("h-8 w-48 shrink-0 font-mono text-small", error && "border-destructive")}
         />
         <Input
+          aria-label={`Valor de ${name}`}
           value={value}
           placeholder="valor"
-          className="h-8 text-sm"
+          className="h-8"
           onChange={(event) => onChange(event.target.value)}
         />
         <Button
@@ -134,7 +138,7 @@ function ContextRow({
           <X />
         </Button>
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-small text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -386,12 +390,12 @@ export function ProfileEditor() {
 
         {validation ? (
           validation.valid ? (
-            <span className="flex items-center gap-1.5 text-xs text-[var(--success)]">
+            <span className="flex items-center gap-1.5 text-small text-settled">
               <CircleCheck className="size-3.5" />
               El perfil carga correctamente
             </span>
           ) : (
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-destructive">
+            <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
               <TriangleAlert className="size-3.5 shrink-0" />
               <span className="truncate" title={validation.error ?? undefined}>
                 {validation.error}
@@ -423,10 +427,10 @@ export function ProfileEditor() {
           <Textarea
             value={rawText}
             onChange={(event) => setRawText(event.target.value)}
-            className="min-h-[32rem] font-mono text-xs"
+            className="min-h-[32rem] font-mono text-small"
             spellCheck={false}
           />
-          {rawError ? <p className="text-xs text-destructive">{rawError}</p> : null}
+          {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
           <Button size="sm" onClick={applyRaw}>
             Aplicar al formulario
           </Button>
@@ -466,7 +470,7 @@ export function ProfileEditor() {
               ))}
 
               {Object.keys(draft.content_context).length === 0 ? (
-                <p className="text-xs text-destructive">
+                <p className="text-small text-destructive">
                   El contexto no puede quedar vacío: añade al menos una clave.
                 </p>
               ) : null}
@@ -507,30 +511,27 @@ export function ProfileEditor() {
                     pertenece cada ejercicio del documento, y el generador, para saber qué forma
                     debe tener el ítem. Escríbela discriminante: qué la distingue de las demás.
                   </InfoHint>
-                  <code className="ml-auto font-mono text-xs text-muted-foreground">
+                  <code className="ml-auto font-mono text-small text-muted-foreground">
                     {activeKey}
                   </code>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="space-y-1">
-                  <Label>Nombre legible</Label>
+                <Field label="Nombre legible">
                   <Input
                     value={spec.label ?? ""}
                     placeholder="Pregunta tipo test"
-                    className="text-sm"
                     onChange={(event) => updateType({ label: event.target.value })}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label>Descripción</Label>
+                </Field>
+                <Field label="Descripción">
                   <Textarea
                     value={spec.description ?? ""}
                     placeholder="Qué es esta modalidad y cómo se reconoce en el material"
-                    className="min-h-20 text-sm"
+                    className="min-h-20"
                     onChange={(event) => updateType({ description: event.target.value })}
                   />
-                </div>
+                </Field>
               </CardContent>
             </Card>
 
@@ -552,12 +553,13 @@ export function ProfileEditor() {
               <CardContent className="space-y-2">
                 {rules.map((rule, index) => (
                   <div key={index} className="flex items-start gap-2">
-                    <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] tabular-nums text-muted-foreground">
+                    <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground">
                       {index + 1}
                     </span>
                     <Textarea
+                      aria-label={`Regla ${index + 1}`}
                       value={rule}
-                      className="min-h-16 text-sm"
+                      className="min-h-16"
                       placeholder="Una regla por bloque"
                       onChange={(event) => {
                         const next = [...rules];
@@ -582,7 +584,7 @@ export function ProfileEditor() {
                 ))}
 
                 {rules.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     Sin reglas: el modelo solo seguirá las guías de cada campo.
                   </p>
                 ) : null}
@@ -646,7 +648,7 @@ export function ProfileEditor() {
                     onClick={() => toggleIndexed(name)}
                     title={locked ? "El campo primario siempre se indexa" : undefined}
                     className={cn(
-                      "rounded-md border px-2 py-1 font-mono text-xs transition-colors",
+                      "rounded-md border px-2 py-1 font-mono text-small transition-colors",
                       on
                         ? "border-primary/40 bg-primary/10 text-foreground"
                         : "border-border text-muted-foreground hover:bg-muted",
