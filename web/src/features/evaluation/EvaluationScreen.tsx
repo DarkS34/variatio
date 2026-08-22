@@ -64,9 +64,9 @@ function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: b
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">
             Preparando las tres propuestas
-            <span className="ml-2 tabular-nums text-muted-foreground">{done} de 3</span>
+            <span className="ml-2 nums text-muted-foreground">{done} de 3</span>
           </p>
-          <p className="text-xs tabular-nums text-muted-foreground">{duration(elapsed)}</p>
+          <p className="text-small nums text-muted-foreground">{duration(elapsed)}</p>
         </div>
         <Progress value={done} max={3} className="hidden w-40 sm:block" />
         <Button variant="outline" size="sm" onClick={onCancel} disabled={cancelling}>
@@ -75,7 +75,7 @@ function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: b
         </Button>
       </div>
 
-      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+      <p className="flex items-start gap-1.5 text-small text-muted-foreground">
         <EyeOff className="mt-0.5 size-3.5 shrink-0" />
         Durante una comparación se ocultan el registro y el detalle técnico: dirían de qué
         arquitectura sale cada propuesta antes de que la leas.

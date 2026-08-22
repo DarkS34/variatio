@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/misc";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { when } from "@/lib/format";
 import type { EvaluationSummary } from "@/lib/types";
 
@@ -31,7 +32,7 @@ export function SessionsTable({
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold">
           Tus comparaciones
-          <span className="ml-2 font-normal tabular-nums text-muted-foreground">{total}</span>
+          <span className="ml-2 font-normal nums text-muted-foreground">{total}</span>
         </h2>
       </div>
 
@@ -40,30 +41,30 @@ export function SessionsTable({
           Lanza una comparación y aquí quedará el registro de lo que has evaluado.
         </EmptyState>
       ) : (
-        <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[36rem] text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="px-3 py-2 text-left font-medium">Cuándo</th>
-                <th className="px-3 py-2 text-left font-medium">Conceptos</th>
-                <th className="px-3 py-2 text-left font-medium">Elección</th>
-                <th className="px-3 py-2 text-left font-medium">Razonó</th>
-                <th className="px-3 py-2 text-left font-medium">Rúbrica</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <Table minWidth="36rem">
+            <THead>
+              <TR>
+                <TH>Cuándo</TH>
+                <TH>Conceptos</TH>
+                <TH>Elección</TH>
+                <TH>Razonó</TH>
+                <TH align="num">Rúbrica</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
               {sessions.map((session) => {
                 const meta = session.choice_arm ? ARM_META[session.choice_arm] : null;
                 return (
-                  <tr key={session.id} className="border-b border-border/50 last:border-0">
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                  <TR key={session.id}>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                       {when(new Date(session.created_at * 1000).toISOString())}
-                    </td>
-                    <td className="max-w-64 truncate px-3 py-2">
+                    </TD>
+                    <TD className="max-w-64 truncate px-3 py-2">
                       {session.concepts.join(" · ")}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs">
+                    </TD>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small">
                       {session.chosen_at === null ? (
                         <span className="text-muted-foreground">sin decidir</span>
                       ) : session.choice === null ? (
@@ -82,23 +83,23 @@ export function SessionsTable({
                           {meta?.short}
                         </span>
                       )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
+                    </TD>
+                    <TD className="px-3 py-2 text-small text-muted-foreground">
                       {session.think === null ? "—" : session.think ? "sí" : "no"}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
+                    </TD>
+                    <TD className="px-3 py-2 text-small text-muted-foreground">
                       {session.rated ? "sí" : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">
+                    </TD>
+                    <TD className="px-3 py-2 text-right">
                       <Button variant="ghost" size="sm" onClick={() => onOpen(session.id)}>
                         Abrir
                       </Button>
-                    </td>
-                  </tr>
+                    </TD>
+                  </TR>
                 );
               })}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>

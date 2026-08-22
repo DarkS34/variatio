@@ -71,7 +71,7 @@ function ProposalCard({
           ) : null}
         </div>
         {chosen ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+          <span className="ml-auto flex shrink-0 items-center gap-1 text-small font-medium text-primary">
             <Check className="size-3.5" />
             tu elección
           </span>
@@ -88,7 +88,7 @@ function ProposalCard({
               Esta propuesta no llegó a producir un ejercicio válido.
             </p>
             {revealed && position.error ? (
-              <p className="max-w-64 text-xs text-muted-foreground/80">{position.error}</p>
+              <p className="max-w-64 text-small text-muted-foreground/80">{position.error}</p>
             ) : null}
           </div>
         )}
@@ -150,9 +150,10 @@ export function ComparisonGrid({
       </div>
 
       {!revealed ? (
-        <div className="animate-slide-up flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="animate-slide-up flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-raised">
           <p className="text-sm font-medium">¿Cuál usarías en clase?</p>
           <Input
+            aria-label="Por qué, en una línea"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Por qué, en una línea (opcional)"
