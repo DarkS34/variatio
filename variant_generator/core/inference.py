@@ -504,7 +504,7 @@ def unload_all() -> list[str]:
 
 def required_models() -> dict[str, str]:
     """The models the registry asks for, keyed by the setting that asks for them."""
-    from .settings.derived import PHASES
+    from ..settings.derived import PHASES
 
     names = ["LLM_MAIN", "GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
     return {name: getattr(config, name) for name in names}

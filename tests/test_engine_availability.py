@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from variant_generator import config
 from variant_generator.core import inference
 
 
@@ -34,3 +35,9 @@ def test_a_200_reads_as_available(monkeypatch):
         httpx, "get", lambda *a, **k: httpx.Response(200, request=httpx.Request("GET", "http://x"))
     )
     assert inference.engine().is_available() is True
+
+
+def test_required_models_resolves_the_phase_registry():
+    required = inference.required_models()
+    assert config.LLM_MAIN in required.values()
+    assert config.EMBEDDING_LLM in required.values()
