@@ -44,11 +44,11 @@ export function BankLive() {
     <Card>
       <CardContent className="space-y-3 py-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
             Ítems que van saliendo
           </h4>
           {listing ? (
-            <span className="text-xs tabular-nums text-muted-foreground">
+            <span className="text-small nums text-muted-foreground">
               {listing.totals.tagged}/{listing.totals.items} etiquetados
             </span>
           ) : null}
@@ -67,14 +67,14 @@ export function BankLive() {
               return (
                 <li key={item.id} className="rounded-lg border border-border p-2.5">
                   <div className="flex items-baseline gap-2">
-                    <code className="shrink-0 font-mono text-xs text-muted-foreground">
+                    <code className="shrink-0 font-mono text-small text-muted-foreground">
                       {item.id}
                     </code>
                     <p className="min-w-0 flex-1 text-sm">{truncate(text, 180)}</p>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1">
                     {concepts.length === 0 ? (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 text-small text-muted-foreground">
                         <Tags className="size-3" />
                         etiquetando…
                       </span>
