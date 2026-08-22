@@ -50,7 +50,7 @@ export function FormStep({
       >
         <span
           className={cn(
-            "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition-colors",
+            "flex size-6 shrink-0 items-center justify-center rounded-full text-small font-semibold nums transition-colors",
             answered
               ? "bg-primary/12 text-primary"
               : open
@@ -74,7 +74,7 @@ export function FormStep({
             {hint ? <InfoHint label={title}>{hint}</InfoHint> : null}
           </span>
           {!open ? (
-            <span className="mt-0.5 block truncate text-xs text-muted-foreground">{summary}</span>
+            <span className="mt-0.5 block truncate text-small text-muted-foreground">{summary}</span>
           ) : null}
         </span>
 

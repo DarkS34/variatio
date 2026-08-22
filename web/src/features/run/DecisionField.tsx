@@ -56,9 +56,9 @@ export function DecisionField({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline gap-2">
-        <span className="font-mono text-xs text-muted-foreground">{name}</span>
+        <span className="font-mono text-small text-muted-foreground">{name}</span>
         {label ? (
-          <span className="min-w-0 truncate text-xs text-muted-foreground/70">{label}</span>
+          <span className="min-w-0 truncate text-small text-muted-foreground/70">{label}</span>
         ) : null}
       </div>
 
@@ -82,6 +82,7 @@ export function DecisionField({
         </div>
       ) : (
         <Input
+          aria-label={label}
           type={type === "integer" || type === "number" ? "number" : "text"}
           value={value === undefined || value === null ? "" : String(value)}
           placeholder={`${ANY} — lo decide el modelo`}

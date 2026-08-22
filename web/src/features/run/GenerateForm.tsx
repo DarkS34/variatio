@@ -178,8 +178,11 @@ function ConceptTrack({
     <div className="flex flex-wrap items-center gap-1.5">
       <span
         className={cn(
-          "inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide",
-          tone === "given" ? "text-[var(--success)]" : "text-[var(--warning)]",
+          "inline-flex items-center gap-1 text-micro font-condensed uppercase",
+          // The same two tones the curriculum view uses: what is settled behind you, and
+          // what is ahead and not reachable yet. The strikethrough already carries
+          // "forbidden"; the colour carries the POSITION, which is the whole thesis.
+          tone === "given" ? "text-settled" : "text-muted-foreground",
         )}
       >
         {icon}
@@ -189,10 +192,10 @@ function ConceptTrack({
         <span
           key={name}
           className={cn(
-            "rounded-full border px-2 py-0.5 text-xs",
+            "rounded-full border px-2 py-0.5 text-small",
             tone === "given"
-              ? "border-[color-mix(in_oklch,var(--success)_35%,transparent)] text-[var(--success)]"
-              : "border-[color-mix(in_oklch,var(--warning)_35%,transparent)] text-[var(--warning)] line-through decoration-[var(--warning)]/50",
+              ? "border-[color-mix(in_oklch,var(--settled)_35%,transparent)] text-settled"
+              : "border-border text-muted-foreground line-through decoration-muted-foreground/50",
           )}
         >
           {name}
@@ -248,7 +251,7 @@ function Count({ value, onChange }: { value: number; onChange: (next: number) =>
       <Button variant="ghost" size="icon-sm" onClick={() => clamp(value - 1)} disabled={value <= 1}>
         <Minus />
       </Button>
-      <span className="w-8 text-center text-sm font-medium tabular-nums">{value}</span>
+      <span className="w-8 text-center text-sm font-medium nums">{value}</span>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -467,7 +470,7 @@ export function GenerateForm({
                     {key}
                   </span>
                   {spec.description ? (
-                    <span className="mt-1 block text-xs text-muted-foreground">
+                    <span className="mt-1 block text-small text-muted-foreground">
                       {spec.description}
                     </span>
                   ) : null}
@@ -513,7 +516,7 @@ export function GenerateForm({
                 </span>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-small text-muted-foreground">
                 Este workspace no tiene currículo preestablecido. Puedes definir uno en la
                 pestaña Currículo del grafo, o elegir aquí los conceptos para este lote.
               </p>
@@ -543,8 +546,8 @@ export function GenerateForm({
               onCheckedChange={applyFilter}
               label="Solo conceptos con ejemplares en el banco"
             />
-            <span className="text-xs font-medium">Solo conceptos con ejemplares en el banco</span>
-            <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+            <span className="text-small font-medium">Solo conceptos con ejemplares en el banco</span>
+            <span className="ml-auto text-[11px] nums text-muted-foreground">
               {onlyWithExemplars
                 ? `${hidden} oculto${hidden === 1 ? "" : "s"} sin ejemplares`
                 : `${withoutExemplars} sin ningún ejemplar a la vista`}
@@ -574,7 +577,7 @@ export function GenerateForm({
         />
 
         {!onlyWithExemplars && withoutExemplars > 0 ? (
-          <p className="flex items-start gap-1.5 text-xs text-[var(--warning)]">
+          <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
             Con el filtro apagado puedes elegir conceptos sin ningún ítem en el banco. Si
             ninguno de los elegidos tiene ejemplares, la generación será zero-shot y la
@@ -583,12 +586,12 @@ export function GenerateForm({
         ) : null}
 
         {wholeBatchZeroShot ? (
-          <p className="flex items-start gap-1.5 text-xs text-[var(--warning)]">
+          <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
             Ningún concepto elegido tiene ejemplares en el banco: se generará en zero-shot.
           </p>
         ) : zeroShot.length > 0 ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-small text-muted-foreground">
             Sin ejemplares propios, pero el lote sí tendrá ejemplos de los demás conceptos:{" "}
             {zeroShot.join(", ")}.
           </p>
@@ -596,7 +599,7 @@ export function GenerateForm({
 
         {given.length > 0 || forbidden.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-dashed border-border p-2.5">
-            <p className="text-xs text-muted-foreground">Lo que el grafo le dirá al modelo:</p>
+            <p className="text-small text-muted-foreground">Lo que el grafo le dirá al modelo:</p>
             <ConceptTrack
               tone="given"
               icon={<Check className="size-3" />}
@@ -646,14 +649,15 @@ export function GenerateForm({
           {...step("instructions")}
         >
           <Textarea
+            aria-label="Instrucciones adicionales"
             value={state.instructions}
             maxLength={MAX_INSTRUCTIONS}
             placeholder="Por ejemplo: que el contexto sea deportivo, o que el enunciado incluya una tabla de datos"
             onChange={(event) => patch({ instructions: event.target.value })}
-            className={cn("min-h-20 text-sm", blockedInstructions && "border-destructive")}
+            className={cn("min-h-20", blockedInstructions && "border-destructive")}
           />
           <div className="flex items-center gap-2">
-            <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+            <span className="ml-auto text-small nums text-muted-foreground">
               {state.instructions.length}/{MAX_INSTRUCTIONS}
             </span>
           </div>
@@ -693,18 +697,18 @@ export function GenerateForm({
                   <Brain className="size-3.5" />
                   Razonamiento previo
                 </span>
-                <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                <span className="ml-auto text-[11px] nums text-muted-foreground">
                   {state.think ? "activado" : "desactivado"}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-small text-muted-foreground">
                 {state.think
                   ? "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Por eso tarda bastante más —hasta varios minutos por ítem— y ese razonamiento queda visible junto al resultado."
                   : "El modelo responde directamente, sin deliberar. Va mucho más rápido, pero suele ajustarse peor al concepto objetivo y respetar peor lo que el grafo marca como todavía no impartido."}
               </p>
             </div>
           ) : (
-            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <p className="flex items-start gap-1.5 text-small text-muted-foreground">
               <Brain className="mt-0.5 size-3.5 shrink-0" />
               El razonamiento previo no se elige aquí: cada comparación lo enciende o lo apaga
               al azar, igual para las dos propuestas locales —la comercial delibera según
@@ -716,14 +720,14 @@ export function GenerateForm({
           {footnote}
 
           {problems.length > 0 ? (
-            <ul className="space-y-1 text-xs text-destructive">
+            <ul className="space-y-1 text-small text-destructive">
               {problems.map((problem) => (
                 <li key={problem}>· {problem}</li>
               ))}
             </ul>
           ) : null}
 
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          {error ? <p className="text-small text-destructive">{error}</p> : null}
 
           {running ? (
             <Button variant="outline" className="w-full" onClick={onCancel}>

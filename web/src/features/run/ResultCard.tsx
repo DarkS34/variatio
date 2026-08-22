@@ -79,7 +79,7 @@ export function ResultCard({
         <div className="flex items-center gap-2">
           <CardTitle>Ítem {index}</CardTitle>
           {manyTypes ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-small text-muted-foreground">
               {typeLabel(profile, itemType ?? null)}
             </span>
           ) : null}
@@ -104,19 +104,19 @@ export function ResultCard({
               type="button"
               onClick={() => setShowThinking((v) => !v)}
               aria-expanded={showThinking}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronRight
                 className={cn("size-3.5 transition-transform", showThinking && "rotate-90")}
               />
               <Brain className="size-3.5" />
               Razonamiento
-              <span className="ml-auto tabular-nums">
+              <span className="ml-auto nums">
                 {thinking.length.toLocaleString("es-ES")}
               </span>
             </button>
             {showThinking ? (
-              <pre className="thin-scroll max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
+              <pre className="thin-scroll max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-small leading-relaxed whitespace-pre-wrap text-muted-foreground">
                 {thinking}
               </pre>
             ) : null}

@@ -229,7 +229,7 @@ function Results({
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">
           Resultados
-          <span className="ml-2 font-normal text-muted-foreground tabular-nums">
+          <span className="ml-2 font-normal text-muted-foreground nums">
             {results.length}
             {requested ? ` de ${requested}` : ""}
           </span>
