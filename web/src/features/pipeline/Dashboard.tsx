@@ -168,7 +168,7 @@ function RawSection() {
           </span>
         ) : null}
         {emptySlots.length > 0 ? (
-          <Badge variant="warning">
+          <Badge variant="attention">
             {emptySlots.map((slot) => slot.label.toLowerCase()).join(" y ")} sin archivos
           </Badge>
         ) : null}
@@ -249,7 +249,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               ninguno en memoria
             </Badge>
           ) : (
-            <Badge variant="success" className="cursor-pointer hover:opacity-85">
+            <Badge variant="settled" className="cursor-pointer hover:opacity-85">
               {resident.length} · {bytes(vram)}
             </Badge>
           )}
@@ -314,7 +314,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
                     {missing ? (
                       <Badge variant="danger">sin instalar</Badge>
                     ) : loaded ? (
-                      <Badge variant="success">cargado</Badge>
+                      <Badge variant="settled">cargado</Badge>
                     ) : (
                       <Badge variant="outline">en disco</Badge>
                     )}
@@ -552,7 +552,7 @@ function SystemCard() {
             </InfoHint>
           </span>
           {context_ready ? (
-            <Badge variant="success">Calientes</Badge>
+            <Badge variant="settled">Calientes</Badge>
           ) : (
             <div className="flex items-center gap-2">
               <Badge variant="outline">Fríos</Badge>

@@ -40,19 +40,19 @@ export function when(iso: string | null): string {
 
 export const ARTIFACT_STATUS: Record<
   ArtifactStatus,
-  { label: string; tone: "default" | "secondary" | "outline" | "success" | "warning" | "danger" | "info" }
+  { label: string; tone: "default" | "secondary" | "outline" | "settled" | "attention" | "danger" }
 > = {
   missing: { label: "Sin construir", tone: "outline" },
-  building: { label: "Construyendo", tone: "info" },
-  draft: { label: "Borrador", tone: "warning" },
-  approved: { label: "Aprobado", tone: "success" },
+  building: { label: "Construyendo", tone: "default" },
+  draft: { label: "Borrador", tone: "attention" },
+  approved: { label: "Aprobado", tone: "settled" },
   stale: { label: "Obsoleto", tone: "danger" },
 };
 
 export const JOB_STATUS: Record<JobStatus, { label: string; tone: string }> = {
   queued: { label: "En cola", tone: "text-muted-foreground" },
-  running: { label: "En curso", tone: "text-[var(--info)]" },
-  succeeded: { label: "Completado", tone: "text-[var(--success)]" },
+  running: { label: "En curso", tone: "text-primary" },
+  succeeded: { label: "Completado", tone: "text-settled" },
   failed: { label: "Fallido", tone: "text-destructive" },
   cancelled: { label: "Cancelado", tone: "text-muted-foreground" },
 };

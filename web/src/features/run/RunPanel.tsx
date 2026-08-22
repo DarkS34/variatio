@@ -25,9 +25,9 @@ export function RunPanel({
         <div className="flex items-center gap-2">
           <CardTitle className="flex-1">Ejecución</CardTitle>
           {run.guardrail && !run.guardrail.checked ? (
-            <Badge variant="warning">instrucciones sin revisar</Badge>
+            <Badge variant="attention">instrucciones sin revisar</Badge>
           ) : null}
-          {run.job ? <Badge variant={running ? "info" : "outline"}>{run.job.label}</Badge> : null}
+          {run.job ? <Badge variant={running ? "default" : "outline"}>{run.job.label}</Badge> : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

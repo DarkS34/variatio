@@ -106,7 +106,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
           <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
           <CardTitle className="flex-1">{slot.label}</CardTitle>
           {empty ? (
-            <Badge variant="warning">vacío</Badge>
+            <Badge variant="attention">vacío</Badge>
           ) : (
             <Badge variant="outline">
               {slot.files.length} archivo(s) · {bytes(slot.bytes)}

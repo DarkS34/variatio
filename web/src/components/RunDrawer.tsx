@@ -165,10 +165,10 @@ export function RunDrawer({
                   Qué ha ido pasando
                 </h4>
                 {run.items.length > 0 ? (
-                  <Badge variant="success">{run.items.length} ítem(s)</Badge>
+                  <Badge variant="settled">{run.items.length} ítem(s)</Badge>
                 ) : null}
                 {run.taggedCount > 0 ? (
-                  <Badge variant="info">{run.taggedCount} etiquetado(s)</Badge>
+                  <Badge variant="default">{run.taggedCount} etiquetado(s)</Badge>
                 ) : null}
               </div>
               <ActivityFeed lines={run.activity} />

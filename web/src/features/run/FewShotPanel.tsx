@@ -129,7 +129,7 @@ export function FewShotPanel({
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         <BookOpenText className="size-3.5" />
         Ejemplares usados para el few-shot prompting
-        <Badge variant={exemplars.length === 0 ? "warning" : "outline"} className="ml-auto">
+        <Badge variant={exemplars.length === 0 ? "attention" : "outline"} className="ml-auto">
           {exemplars.length === 0 ? "zero-shot" : exemplars.length}
         </Badge>
       </button>

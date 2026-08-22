@@ -40,13 +40,13 @@ function Origin({
         </span>
         <span className="text-sm font-medium">{meta.label}</span>
         {chosen ? (
-          <Badge variant="info">
+          <Badge variant="default">
             <Trophy />
             elegida
           </Badge>
         ) : null}
         {position.status !== "ok" ? (
-          <Badge variant={position.status === "unavailable" ? "outline" : "warning"}>
+          <Badge variant={position.status === "unavailable" ? "outline" : "attention"}>
             {position.status === "unavailable" ? "no disponible" : "sin ítem válido"}
           </Badge>
         ) : null}

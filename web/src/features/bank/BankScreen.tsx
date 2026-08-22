@@ -284,7 +284,7 @@ function ItemRow({
         <td className="py-2 pr-3">
           <div className="flex max-w-64 flex-wrap gap-1">
             {untagged ? (
-              <Badge variant="warning">
+              <Badge variant="attention">
                 <TriangleAlert />
                 sin concepto
               </Badge>

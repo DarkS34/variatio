@@ -235,7 +235,7 @@ function Results({
           </span>
         </h2>
         {produced !== undefined && requested !== undefined && produced < requested ? (
-          <Badge variant="warning">
+          <Badge variant="attention">
             generación parcial: {produced}/{requested}
           </Badge>
         ) : null}

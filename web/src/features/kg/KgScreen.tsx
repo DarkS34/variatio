@@ -716,7 +716,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                 label: "Descripciones",
                 badge:
                   missing > 0 ? (
-                    <Badge variant="warning" className="ml-1">
+                    <Badge variant="attention" className="ml-1">
                       {missing}
                     </Badge>
                   ) : undefined,

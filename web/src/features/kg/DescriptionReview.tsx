@@ -307,7 +307,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                 <span className="text-sm font-medium">{concept.name}</span>
                 <Badge variant="outline">{concept.domain}</Badge>
                 {hasExemplars(concept) ? null : (
-                  <Badge variant="warning">sin ejemplos</Badge>
+                  <Badge variant="attention">sin ejemplos</Badge>
                 )}
                 <div className="ml-auto flex items-center gap-2">
                   {saved[concept.name] ? (

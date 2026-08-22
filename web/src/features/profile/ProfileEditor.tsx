@@ -401,7 +401,7 @@ export function ProfileEditor() {
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
-          {dirty ? <Badge variant="warning">sin guardar</Badge> : null}
+          {dirty ? <Badge variant="attention">sin guardar</Badge> : null}
           <Button
             onClick={() => save.mutate(draft)}
             disabled={!dirty || save.isPending || validation?.valid === false}
