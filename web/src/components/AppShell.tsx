@@ -8,11 +8,11 @@ import {
   ScrollText,
   Share2,
 } from "lucide-react";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
-
+import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
+import { Rail, type RailStop } from "@/components/ui/rail";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
@@ -25,17 +25,18 @@ import { runStore } from "@/state/runStore";
  * Three groups, separated on screen, because they are three different things.
  *
  * «Panel» is where the chain is watched; the middle three are the instance being
- * *prepared*, in the order they are prepared in; the last two *use* it. The separators
- * are the whole point — without them six tabs read as one flat list and nothing says
- * that the middle block has to be finished before the right one does anything.
+ * *prepared*, in the order they are prepared in; the last two *use* it. That the middle
+ * block has to be finished before the right one does anything is now said by the rail
+ * below, which is why the vertical separators that used to say it are gone.
  *
  * Two things are deliberately NOT here, and for the same reason — the navbar is the chain
  * and nothing else. «Variantes guardadas» is a personal archive, and «Administración» is
  * the installation seen from outside, which is not about the instance in front of you and
  * appears for one account in the whole installation. Both live in the account menu.
  *
- * `qualifier` is the half of the name that only fits on a wide screen. It is dropped,
- * never abbreviated: «Grafo» and «Perfil» are already what these are called out loud.
+ * `qualifier` and `icon` are kept on the entries although the rail draws neither: the
+ * qualifier is still the full name for a tooltip, and dropping the icons is what buys the
+ * width the labels need. They are one edit away if either is wanted back.
  */
 const NAV = [
   { path: "/", label: "Panel", qualifier: null, icon: Activity, artifact: null, group: "watch" },
@@ -72,60 +73,34 @@ const NAV = [
   { path: "/evaluar", label: "Evaluar", qualifier: null, icon: Scale, artifact: null, group: "use" },
 ] as const;
 
-function NavItem({
-  path,
-  label,
-  qualifier,
-  icon: Icon,
-  stage,
-  active,
-  accent,
-}: {
-  path: string;
-  label: string;
-  qualifier?: string | null;
-  icon: typeof Activity;
-  stage?: StageState;
-  active: boolean;
-  /** The two tabs that *use* the instance are tinted, so the working half of the app is
-   *  findable without reading the labels. */
-  accent?: boolean;
-}) {
-  const locked = Boolean(stage?.blocked_reason);
-  return (
-    <Link
-      to={path}
-      title={qualifier ? `${label} ${qualifier}` : label}
-      className={cn(
-        "flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors",
-        accent
-          ? active
-            ? "bg-primary/15 font-medium text-foreground ring-1 ring-inset ring-primary/40"
-            : "bg-primary/[0.07] text-foreground/80 hover:bg-primary/15 hover:text-foreground"
-          : active
-            ? "bg-accent font-medium text-accent-foreground"
-            : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <Icon className={cn("size-4", accent && "text-primary")} />
-      {label}
-      {qualifier ? <span className="hidden font-normal opacity-60 xl:inline">{qualifier}</span> : null}
-      {stage ? <StageDot status={stage.status} locked={locked} /> : null}
-    </Link>
-  );
-}
-
-function StageDot({ status, locked }: { status: StageState["status"]; locked: boolean }) {
-  const colour = locked
-    ? "bg-muted-foreground/40"
-    : {
-        approved: "bg-[var(--success)]",
-        draft: "bg-[var(--warning)]",
-        stale: "bg-destructive",
-        building: "bg-[var(--info)] animate-pulse-soft",
-        missing: "bg-muted-foreground/40",
-      }[status];
-  return <span className={cn("size-1.5 rounded-full", colour)} />;
+/**
+ * The chain, drawn.
+ *
+ * The three groups survive and their order still has to match `server/review.ARTIFACTS`;
+ * what goes are the vertical separators that used to mark them, because the rail already
+ * tells the sequence and a hairline on top of a stretch told it twice. The break between
+ * «preparar» and «usar» now reads as the dotted stretch it always was.
+ *
+ * A destination with no artifact has no stage status of its own. «Generar» and «Evaluar»
+ * are blocked until the chain is approved and the pipeline says so; the panel never is.
+ */
+function navStops(
+  stages: StageState[],
+  path: string,
+  generationUnlocked: boolean,
+): RailStop[] {
+  return NAV.map((item) => {
+    const stage = stages.find((s) => s.artifact === item.artifact);
+    const gated = item.group === "use" && !generationUnlocked;
+    return {
+      key: item.path,
+      label: item.label,
+      status: stage?.status ?? (gated ? "missing" : "approved"),
+      blocked: stage ? Boolean(stage.blocked_reason) : gated,
+      href: item.path,
+      active: path === item.path,
+    };
+  });
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -155,7 +130,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [stream.currentJobId]);
 
   const stages = pipeline.data?.stages ?? [];
-  const stageFor = (artifact: string | null) => stages.find((s) => s.artifact === artifact);
 
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
@@ -171,27 +145,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <WorkspaceSwitcher />
 
-          {/* La barra de pestañas es lo único que compite por el ancho aquí: el estado de
-              la ejecución vive en el Panel, no arriba, precisamente porque lo estrujaba
-              hasta hacer aparecer un scroll horizontal sobre las pestañas. Si aun así no
-              cabe, se desplaza sin pintar la barra de scroll. */}
-          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {NAV.map((item, index) => (
-              <Fragment key={item.path}>
-                {index > 0 && NAV[index - 1].group !== item.group ? (
-                  <span aria-hidden className="mx-1.5 h-5 w-px shrink-0 bg-border" />
-                ) : null}
-                <NavItem
-                  path={item.path}
-                  label={item.label}
-                  qualifier={item.qualifier}
-                  icon={item.icon}
-                  stage={stageFor(item.artifact)}
-                  active={path === item.path}
-                  accent={item.group === "use"}
-                />
-              </Fragment>
-            ))}
+          {/* The rail is the only thing competing for width here: the run's state lives in
+              the panel and not up top, precisely because it squeezed this until a
+              horizontal scrollbar appeared over the tabs. If it still does not fit it
+              scrolls without painting one. */}
+          <nav className="flex min-w-0 flex-1 items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Rail
+              stops={navStops(stages, path, pipeline.data?.generation_unlocked ?? false)}
+              size="sm"
+              className="min-w-[34rem]"
+            />
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -204,7 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ScrollText />
               <span className="hidden lg:inline">Registro</span>
               {stream.logs.length > 0 ? (
-                <span className="tabular-nums text-muted-foreground">{stream.logs.length}</span>
+                <span className="nums text-muted-foreground">{stream.logs.length}</span>
               ) : null}
             </Button>
             <AccountMenu />
@@ -215,7 +178,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             al lado, y una advertencia que hay que abrir para entenderla no es una
             advertencia. */}
         {offline || missingModels.length > 0 ? (
-          <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--warning)_12%,transparent)] px-4 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-4 py-1.5 text-small">
             {offline ? (
               <span>
                 Ollama no responde en <code className="font-mono">{health.data?.host}</code>:
@@ -235,7 +198,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main
         className={cn(
           "mx-auto w-full max-w-[1600px] flex-1 px-4 py-6",
-          drawerOpen && "pb-[56vh]",
+          // scroll-pb as well as pb: without it a control focused while the drawer is open
+          // gets scrolled to a position underneath the drawer.
+          drawerOpen && "pb-[56vh] scroll-pb-[56vh]",
         )}
       >
         {children}
@@ -249,7 +214,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
 
       {!drawerOpen ? (
-        <div className="fixed bottom-4 right-4 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-xs font-medium shadow-lg">
+        <div className="fixed bottom-4 right-4 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised">
           <button
             onClick={() => openDrawer("progress")}
             className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"
@@ -266,7 +231,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <ScrollText className="size-4" />
             {stream.logs.length > 0 ? (
-              <span className="tabular-nums">{stream.logs.length}</span>
+              <span className="nums">{stream.logs.length}</span>
             ) : null}
           </button>
         </div>

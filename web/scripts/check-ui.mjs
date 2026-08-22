@@ -37,7 +37,6 @@ const RULES = [
     re: /\btext-xs\b/g,
     exempt: [
       "components/ActivityFeed.tsx",
-      "components/AppShell.tsx",
       "components/BuildProgress.tsx",
       "components/CodeBlock.tsx",
       "components/ConceptPicker.tsx",
@@ -140,7 +139,6 @@ const RULES = [
     re: /var\(--(?:success|warning|info)\)/g,
     exempt: [
       "components/ActivityFeed.tsx",
-      "components/AppShell.tsx",
       "components/BuildProgress.tsx",
       "components/CodeBlock.tsx",
       "components/ConceptPicker.tsx",
