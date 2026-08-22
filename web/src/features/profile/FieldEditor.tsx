@@ -17,6 +17,7 @@ import {
 import { useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { LOCKED_HINT, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChipInput } from "@/components/ui/chips";
@@ -148,10 +149,12 @@ function TypePicker({
   value,
   onChange,
   options = TYPES,
+  disabled = false,
 }: {
   value: FieldType;
   onChange: (next: FieldType) => void;
   options?: TypeMeta[];
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -159,7 +162,8 @@ function TypePicker({
         <button
           key={option}
           type="button"
-          title={caption}
+          disabled={disabled}
+          title={disabled ? LOCKED_HINT : caption}
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
@@ -167,6 +171,7 @@ function TypePicker({
             value === option
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+            disabled && "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
           )}
         >
           <Icon className="size-3.5" />
@@ -224,15 +229,18 @@ function NumberBox({
   value,
   onChange,
   placeholder,
+  disabled = false,
 }: {
   value: number | undefined;
   onChange: (next: number | undefined) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   return (
     <Input
       type="number"
       aria-label={placeholder}
+      readOnly={disabled}
       value={value ?? ""}
       placeholder={placeholder}
       onChange={(event) =>
@@ -316,6 +324,7 @@ export function FieldEditor({
   onMakePrimary: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
+  const locked = useStageLocked();
   const [nameDraft, setNameDraft] = useState(name);
   const [showRaw, setShowRaw] = useState(false);
   const [editingRaw, setEditingRaw] = useState(false);
@@ -425,13 +434,15 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={onMakePrimary}
-            disabled={isPrimary || !canBePrimary}
+            disabled={isPrimary || !canBePrimary || locked}
             title={
               isPrimary
                 ? "Ya es el campo primario"
-                : canBePrimary
-                  ? "Marcar como campo primario"
-                  : "Solo un campo de texto puede ser el primario"
+                : locked
+                  ? LOCKED_HINT
+                  : canBePrimary
+                    ? "Marcar como campo primario"
+                    : "Solo un campo de texto puede ser el primario"
             }
           >
             <Star className={cn(isPrimary && "fill-current text-primary")} />
@@ -440,8 +451,8 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={() => onMove(-1)}
-            disabled={first}
-            title="Subir"
+            disabled={first || locked}
+            title={locked ? LOCKED_HINT : "Subir"}
           >
             <ArrowUp />
           </Button>
@@ -449,8 +460,8 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={() => onMove(1)}
-            disabled={last}
-            title="Bajar"
+            disabled={last || locked}
+            title={locked ? LOCKED_HINT : "Bajar"}
           >
             <ArrowDown />
           </Button>
@@ -458,8 +469,14 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={onRemove}
-            disabled={isPrimary}
-            title={isPrimary ? "El campo primario no se puede borrar" : "Eliminar campo"}
+            disabled={isPrimary || locked}
+            title={
+              isPrimary
+                ? "El campo primario no se puede borrar"
+                : locked
+                  ? LOCKED_HINT
+                  : "Eliminar campo"
+            }
             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 />
@@ -477,6 +494,7 @@ export function FieldEditor({
             >
               <Input
                 value={nameDraft}
+                readOnly={locked}
                 onChange={(event) => setNameDraft(event.target.value)}
                 onBlur={commitName}
                 onKeyDown={(event) => {
@@ -488,7 +506,7 @@ export function FieldEditor({
             </Row>
 
             <Row label="Tipo" description={META[type].caption}>
-              <TypePicker value={type} onChange={setType} />
+              <TypePicker value={type} onChange={setType} disabled={locked} />
             </Row>
           </div>
 
@@ -499,6 +517,8 @@ export function FieldEditor({
             >
               <Segmented
                 value={nullable ? "optional" : "required"}
+                disabled={locked}
+                title={locked ? LOCKED_HINT : undefined}
                 onChange={(next) => setNullable(next === "optional")}
                 options={[
                   { value: "required", label: "Obligatorio" },
@@ -513,13 +533,15 @@ export function FieldEditor({
             >
               <Segmented
                 value={decidedBy}
-                disabled={undecidable}
+                disabled={undecidable || locked}
                 title={
                   isPrimary
                     ? "El campo primario es el ítem en sí: no es una preferencia que se elija antes de generar"
                     : undecidable
                       ? "Una lista o un objeto libre no admiten un control con el que elegir antes de generar"
-                      : undefined
+                      : locked
+                        ? LOCKED_HINT
+                        : undefined
                 }
                 onChange={(next) =>
                   onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
@@ -536,12 +558,14 @@ export function FieldEditor({
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minLength}
+                    disabled={locked}
                     placeholder="mín"
                     onChange={(next) => setSchema({ minLength: next })}
                   />
                   <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maxLength}
+                    disabled={locked}
                     placeholder="máx"
                     onChange={(next) => setSchema({ maxLength: next })}
                   />
@@ -554,12 +578,14 @@ export function FieldEditor({
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minimum}
+                    disabled={locked}
                     placeholder="mín"
                     onChange={(next) => setSchema({ minimum: next })}
                   />
                   <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maximum}
+                    disabled={locked}
                     placeholder="máx"
                     onChange={(next) => setSchema({ maximum: next })}
                   />
@@ -589,19 +615,22 @@ export function FieldEditor({
                   <span className="flex items-center gap-2 text-attention">
                     El tipo admite vacío pero la lista de opciones no lo incluye, así que el
                     pipeline lo tratará como obligatorio.
-                    <button
-                      type="button"
-                      onClick={() => setNullable(true)}
-                      className="underline underline-offset-2"
-                    >
-                      Corregir
-                    </button>
+                    {locked ? null : (
+                      <button
+                        type="button"
+                        onClick={() => setNullable(true)}
+                        className="underline underline-offset-2"
+                      >
+                        Corregir
+                      </button>
+                    )}
                   </span>
                 ) : null
               }
             >
               <ChipInput
                 values={enumValues(schema)}
+                disabled={locked}
                 onChange={(values) =>
                   setSchema({ enum: nullable ? [...values, null] : values })
                 }
@@ -622,6 +651,7 @@ export function FieldEditor({
             <div className="space-y-2">
               <Row label="Tipo de cada elemento">
                 <TypePicker
+                  disabled={locked}
                   value={baseType(schema.items ?? {})}
                   onChange={(next) =>
                     setSchema({
@@ -637,6 +667,7 @@ export function FieldEditor({
               {baseType(schema.items ?? {}) === "enum" ? (
                 <ChipInput
                   aria-label="Valores que puede tomar cada elemento"
+                  disabled={locked}
                   values={enumValues(schema.items ?? {})}
                   onChange={(values) => setSchema({ items: { type: "string", enum: values } })}
                   placeholder="Valores que puede tomar cada elemento…"
@@ -655,6 +686,7 @@ export function FieldEditor({
           <Row label="Descripción" hint="Viaja al modelo dentro del esquema: di qué contiene el campo, no cómo escribirlo.">
             <Textarea
               value={spec.description ?? ""}
+              readOnly={locked}
               onChange={(event) => onChange({ ...spec, description: event.target.value })}
               placeholder="Qué contiene este campo"
               className="min-h-16"
@@ -676,6 +708,7 @@ export function FieldEditor({
             >
               <Textarea
                 value={spec.guidance?.extraction ?? ""}
+                readOnly={locked}
                 onChange={(event) =>
                   onChange({
                     ...spec,
@@ -700,6 +733,7 @@ export function FieldEditor({
             >
               <Textarea
                 value={spec.guidance?.generation ?? ""}
+                readOnly={locked}
                 onChange={(event) =>
                   onChange({
                     ...spec,
@@ -757,6 +791,8 @@ export function FieldEditor({
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={locked}
+                      title={locked ? LOCKED_HINT : undefined}
                       onClick={() => {
                         setRawText(JSON.stringify(spec, null, 2));
                         setRawError(null);

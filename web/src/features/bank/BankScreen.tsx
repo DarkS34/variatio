@@ -3,7 +3,6 @@ import {
   ChevronRight,
   RefreshCw,
   Search,
-  Tags,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -11,7 +10,7 @@ import { useMemo, useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
-import { StageGate } from "@/components/StageGate";
+import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { BankLive } from "./BankLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +47,7 @@ function ItemEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const locked = useStageLocked();
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const field of fields) {
@@ -97,15 +97,21 @@ function ItemEditor({
       description={item.source ? `Origen: ${item.source}` : undefined}
       className="max-w-4xl"
       footer={
-        <>
+        locked ? (
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            Cerrar
           </Button>
-          <Button onClick={submit} disabled={pending}>
-            {pending ? <Spinner /> : null}
-            Guardar
-          </Button>
-        </>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={submit} disabled={pending}>
+              {pending ? <Spinner /> : null}
+              Guardar
+            </Button>
+          </>
+        )
       }
     >
       <div className="grid gap-5 lg:grid-cols-2">
@@ -118,6 +124,7 @@ function ItemEditor({
               </Label>
               <Textarea
                 value={values[field] ?? ""}
+                readOnly={locked}
                 onChange={(event) =>
                   setValues((current) => ({ ...current, [field]: event.target.value }))
                 }
@@ -142,6 +149,7 @@ function ItemEditor({
               onChange={setSelected}
               primary={primary}
               onPrimaryChange={setPrimary}
+              disabled={locked}
               maxHeight="14rem"
             />
           </div>
@@ -211,6 +219,7 @@ function ItemRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const locked = useStageLocked();
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
   const text = String(item[primaryField] ?? "");
@@ -302,7 +311,14 @@ function ItemRow({
           <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label="Detalle">
             <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label="Eliminar">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onDelete}
+            disabled={locked}
+            title={locked ? LOCKED_HINT : "Eliminar"}
+            aria-label="Eliminar"
+          >
             <Trash2 />
           </Button>
         </TD>
@@ -392,12 +408,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // banco vacío es el paso que falta, y con ítems dentro es un borrado de todo lo
   // etiquetado y corregido. El botón lo dice y `BuildButton` pide confirmación.
   const hasItems = (listing?.totals.items ?? 0) > 0;
-  const pendingTags = listing?.totals.untagged ?? 0;
+  const locked = stage?.status === "approved";
 
   return (
     <StageGate
       stage={stage}
-      title="3 · Banco de ejemplares"
+      title="Banco de ejemplares"
       description={
         <>
           Los ítems extraídos de los documentos y etiquetados con conceptos del grafo. Se revisan
@@ -413,39 +429,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           ? `Volver a extraer descarta los ${listing?.totals.items} ítem(s) que hay ahora —con sus etiquetas y las correcciones hechas a mano— y los vuelve a sacar de los documentos en bruto. ¿Continuar?`
           : undefined,
       }}
-      actions={
-        <>
-          <Button
-            disabled={
-              submit.isPending ||
-              Boolean(offline) ||
-              (selected.size === 0 && pendingTags === 0)
-            }
-            onClick={() =>
-              submit.mutate({
-                kind: "tag",
-                params: selected.size > 0 ? { ids: [...selected] } : {},
-              })
-            }
-            title={
-              offline
-                ? offline
-                : selected.size > 0
-                  ? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`
-                  : pendingTags > 0
-                    ? `Etiqueta los ${pendingTags} ítem(s) que aún no tienen concepto`
-                    : hasItems
-                      ? "Todos los ítems ya tienen concepto: selecciona alguno para volver a etiquetarlo"
-                      : "No hay ítems que etiquetar: extrae el banco primero"
-            }
-          >
-            {submit.isPending ? <Spinner /> : <Tags />}
-            {selected.size > 0
-              ? `Re-etiquetar (${selected.size})`
-              : `Etiquetar pendientes${pendingTags > 0 ? ` (${pendingTags})` : ""}`}
-          </Button>
-        </>
-      }
     >
       <div className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-3">
@@ -686,6 +669,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           </div>
         ) : null}
 
+        {/* El único sitio desde el que se etiqueta a mano, y solo aparece habiendo algo
+            seleccionado. Ya no hay «Etiquetar pendientes» en la cabecera: extraer y
+            etiquetar son un solo trabajo desde que el extractor etiqueta cada documento
+            nada más sacarlo, así que un botón para lanzar el etiquetado por su cuenta
+            ofrecía un paso que ya no existe. Lo que queda sin concepto es lo que el
+            verificador rechazó, y eso se corrige sobre ítems concretos: «Ver los N sin
+            concepto» los filtra, se seleccionan, y este botón los vuelve a pasar. */}
         {selected.size > 0 ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
             <span>{selected.size} ítem(s) seleccionados</span>
@@ -695,9 +685,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <Button
               size="sm"
               className="ml-auto"
+              disabled={locked || submit.isPending || Boolean(offline)}
+              title={
+                locked
+                  ? LOCKED_HINT
+                  : (offline ?? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`)
+              }
               onClick={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
             >
-              <RefreshCw />
+              {submit.isPending ? <Spinner /> : <RefreshCw />}
               Re-etiquetar selección
             </Button>
           </div>

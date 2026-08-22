@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { StageGate } from "@/components/StageGate";
+import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -34,12 +34,14 @@ function AddInline({
   onAdd,
   validate,
   mono = true,
+  disabled = false,
 }: {
   placeholder: string;
   cta: string;
   onAdd: (value: string) => void;
   validate?: (value: string) => string | null;
   mono?: boolean;
+  disabled?: boolean;
 }) {
   const [text, setText] = useState("");
   const error = text.trim() ? (validate?.(text.trim()) ?? null) : null;
@@ -56,6 +58,8 @@ function AddInline({
       <div className="min-w-0 flex-1">
         <Input
           aria-label={placeholder}
+          disabled={disabled}
+          title={disabled ? LOCKED_HINT : undefined}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
@@ -69,7 +73,12 @@ function AddInline({
         />
         {error ? <p className="mt-1 text-small text-destructive">{error}</p> : null}
       </div>
-      <Button variant="outline" onClick={submit} disabled={!text.trim() || Boolean(error)}>
+      <Button
+        variant="outline"
+        onClick={submit}
+        disabled={disabled || !text.trim() || Boolean(error)}
+        title={disabled ? LOCKED_HINT : undefined}
+      >
         <Plus />
         {cta}
       </Button>
@@ -85,6 +94,7 @@ function TypeStrip({
   onSelect,
   onAdd,
   onRemove,
+  disabled = false,
 }: {
   keys: string[];
   active: string;
@@ -93,6 +103,7 @@ function TypeStrip({
   onSelect: (key: string) => void;
   onAdd: (key: string) => void;
   onRemove: (key: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -120,7 +131,7 @@ function TypeStrip({
           >
             <span className="text-body font-medium">{labels[key] || key}</span>
             <Badge variant="outline">{counts[key]}</Badge>
-            {keys.length > 1 ? (
+            {keys.length > 1 && !disabled ? (
               <span
                 role="button"
                 tabIndex={-1}
@@ -144,6 +155,7 @@ function TypeStrip({
         cta="Añadir modalidad"
         onAdd={onAdd}
         validate={(key) => nameError(key, keys)}
+        disabled={disabled}
       />
     </div>
   );
@@ -152,6 +164,7 @@ function TypeStrip({
 export function ProfileEditor() {
   const query = useProfile();
   const invalidate = useInvalidateChain();
+  const stageLocked = useStageLocked();
 
   const [draft, setDraft] = useState<ExemplarsProfile | null>(null);
   const [activeType, setActiveType] = useState<string | null>(null);
@@ -335,7 +348,8 @@ export function ProfileEditor() {
           {dirty ? <Badge variant="attention">sin guardar</Badge> : null}
           <Button
             onClick={() => save.mutate(draft)}
-            disabled={!dirty || save.isPending || validation?.valid === false}
+            disabled={stageLocked || !dirty || save.isPending || validation?.valid === false}
+            title={stageLocked ? LOCKED_HINT : undefined}
           >
             {save.isPending ? <Spinner /> : <Save />}
             Guardar
@@ -354,11 +368,17 @@ export function ProfileEditor() {
           <Textarea
             value={rawText}
             onChange={(event) => setRawText(event.target.value)}
+            readOnly={stageLocked}
             className="min-h-[32rem] font-mono text-small"
             spellCheck={false}
           />
           {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
-          <Button size="sm" onClick={applyRaw}>
+          <Button
+            size="sm"
+            onClick={applyRaw}
+            disabled={stageLocked}
+            title={stageLocked ? LOCKED_HINT : undefined}
+          >
             Aplicar al formulario
           </Button>
         </div>
@@ -379,6 +399,7 @@ export function ProfileEditor() {
             }}
             onAdd={addType}
             onRemove={removeType}
+            disabled={stageLocked}
           />
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -401,6 +422,7 @@ export function ProfileEditor() {
                   <Input
                     value={spec.label ?? ""}
                     placeholder="Pregunta tipo test"
+                    readOnly={stageLocked}
                     onChange={(event) => updateType({ label: event.target.value })}
                   />
                 </Field>
@@ -409,6 +431,7 @@ export function ProfileEditor() {
                     value={spec.description ?? ""}
                     placeholder="Qué es esta modalidad y cómo se reconoce en el material"
                     className="min-h-20"
+                    readOnly={stageLocked}
                     onChange={(event) => updateType({ description: event.target.value })}
                   />
                 </Field>
@@ -444,6 +467,7 @@ export function ProfileEditor() {
                       aria-label={`Regla ${index + 1}`}
                       value={rule}
                       className="min-h-16"
+                      readOnly={stageLocked}
                       placeholder="Una regla por bloque"
                       onChange={(event) => {
                         const next = [...rules];
@@ -454,7 +478,8 @@ export function ProfileEditor() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      title="Quitar regla"
+                      disabled={stageLocked}
+                      title={stageLocked ? LOCKED_HINT : "Quitar regla"}
                       className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       onClick={() =>
                         updateType({
@@ -477,6 +502,8 @@ export function ProfileEditor() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  disabled={stageLocked}
+                  title={stageLocked ? LOCKED_HINT : undefined}
                   onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
                 >
                   <Plus />
@@ -529,9 +556,15 @@ export function ProfileEditor() {
                   <button
                     key={name}
                     type="button"
-                    disabled={locked}
+                    disabled={locked || stageLocked}
                     onClick={() => toggleIndexed(name)}
-                    title={locked ? "El campo primario siempre se indexa" : undefined}
+                    title={
+                      locked
+                        ? "El campo primario siempre se indexa"
+                        : stageLocked
+                          ? LOCKED_HINT
+                          : undefined
+                    }
                     className={cn(
                       "rounded-md border px-2 py-1 font-mono text-small transition-colors",
                       on
@@ -597,6 +630,7 @@ export function ProfileEditor() {
             cta="Añadir campo"
             onAdd={addField}
             validate={(name) => fieldNameError(name, names)}
+            disabled={stageLocked}
           />
         </div>
       )}
@@ -608,7 +642,7 @@ export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
   return (
     <StageGate
       stage={stage}
-      title="2 · Perfil de ejemplares"
+      title="Perfil de ejemplares"
       description={
         <>
           Define qué es un ítem: sus campos, sus tipos y las guías que el modelo sigue al

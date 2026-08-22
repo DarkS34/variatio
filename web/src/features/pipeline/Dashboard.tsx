@@ -6,7 +6,6 @@ import {
   ChevronRight,
   CircleAlert,
   CircleCheck,
-  CircleDashed,
   Cpu,
   Hourglass,
   Lock,
@@ -27,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, PhaseBar, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
@@ -494,7 +493,6 @@ function ActivityCard() {
 
 function SystemCard() {
   const health = useHealth();
-  const raw = useRaw();
   const invalidate = useInvalidateChain();
   const index = useMutation({
     mutationFn: () => api.submitJob("index", {}, true),
@@ -511,7 +509,6 @@ function SystemCard() {
   }
 
   const { available, engine, host, models, context_ready } = health.data;
-  const slots = raw.data?.slots ?? [];
 
   return (
     <Card>
@@ -566,24 +563,6 @@ function SystemCard() {
               </Button>
             </div>
           )}
-        </div>
-
-        <Separator />
-
-        <div className="space-y-1 text-small text-muted-foreground">
-          {slots.map((slot) => (
-            <p key={slot.kind} className="flex items-center gap-1.5">
-              {slot.files.length > 0 ? (
-                <CircleCheck className="size-3.5 shrink-0 text-settled" />
-              ) : (
-                <CircleDashed className="size-3.5 shrink-0" />
-              )}
-              <span className="min-w-0 flex-1 truncate">
-                {slot.label}
-              </span>
-              <span className="nums">{slot.files.length} archivo(s)</span>
-            </p>
-          ))}
         </div>
       </CardContent>
     </Card>
@@ -657,10 +636,13 @@ export function Dashboard() {
             <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
+        {/* «Sistema» abre la columna: es de lo que se mira de un vistazo —si el motor
+            responde, qué tiene cargado— y al final de todo había que bajar a buscarlo.
+            Encima es la más corta de las tres, así que no aparta a las otras dos. */}
         <div className="space-y-4">
+          <SystemCard />
           <ActivityCard />
           <ContextCard />
-          <SystemCard />
         </div>
       </div>
 

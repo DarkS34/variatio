@@ -13,7 +13,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
-import { StageGate } from "@/components/StageGate";
+import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +58,7 @@ function ConceptDetail({
   concepts: KgConcept[];
   onChanged: () => void;
 }) {
+  const locked = useStageLocked();
   const [name, setName] = useState(concept.name);
   const [domain, setDomain] = useState(concept.domain);
   const [relation, setRelation] = useState(relations[0] ?? "");
@@ -97,10 +98,19 @@ function ConceptDetail({
     <div className="space-y-4">
       <div className="space-y-2">
         <Field label="Nombre">
-          <Input value={name} onChange={(event) => setName(event.target.value)} />
+          <Input
+            value={name}
+            readOnly={locked}
+            onChange={(event) => setName(event.target.value)}
+          />
         </Field>
         <Field label="Dominio">
-          <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
+          <Select
+            value={domain}
+            disabled={locked}
+            title={locked ? LOCKED_HINT : undefined}
+            onChange={(event) => setDomain(event.target.value)}
+          >
             {domains.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -118,13 +128,14 @@ function ConceptDetail({
           </div>
           <Switch
             checked={concept.taggable}
+            disabled={locked}
             onCheckedChange={(next) =>
               run(() => api.updateConcept({ name: concept.name, taggable: next }))
             }
             label="etiquetable"
           />
         </div>
-        {dirty ? (
+        {dirty && !locked ? (
           <Button
             size="sm"
             className="w-full"
@@ -177,22 +188,24 @@ function ConceptDetail({
                     <Badge key={`${verb}-${dir}-${n}`} variant="secondary" className="pr-1">
                       <span className="text-muted-foreground">{dir}</span>
                       {n}
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${n}`}
-                        onClick={() =>
-                          run(() =>
-                            api.removeEdge(
-                              verb,
-                              dir === "→" ? concept.name : n,
-                              dir === "→" ? n : concept.name,
-                            ),
-                          )
-                        }
-                        className="rounded-full p-0.5 hover:bg-background/60"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
+                      {locked ? null : (
+                        <button
+                          type="button"
+                          aria-label={`Quitar ${n}`}
+                          onClick={() =>
+                            run(() =>
+                              api.removeEdge(
+                                verb,
+                                dir === "→" ? concept.name : n,
+                                dir === "→" ? n : concept.name,
+                              ),
+                            )
+                          }
+                          className="rounded-full p-0.5 hover:bg-background/60"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      )}
                     </Badge>
                   ),
                 )}
@@ -207,6 +220,7 @@ function ConceptDetail({
         <div className="flex gap-1 pt-1">
           <Select
             aria-label="Tipo de relación"
+            disabled={locked}
             value={relation}
             onChange={(event) => setRelation(event.target.value)}
             className="text-small"
@@ -219,6 +233,7 @@ function ConceptDetail({
           </Select>
           <Select
             aria-label="Concepto destino"
+            disabled={locked}
             value={target}
             onChange={(event) => setTarget(event.target.value)}
             className="text-small"
@@ -235,7 +250,8 @@ function ConceptDetail({
           <Button
             size="icon"
             variant="outline"
-            disabled={!target || !relation}
+            disabled={locked || !target || !relation}
+            title={locked ? LOCKED_HINT : undefined}
             onClick={() => run(() => api.addEdge(relation, concept.name, target)).then(() => setTarget(""))}
             aria-label="Añadir relación"
           >
@@ -250,6 +266,8 @@ function ConceptDetail({
 
       <Button
         variant="outline"
+        disabled={locked}
+        title={locked ? LOCKED_HINT : undefined}
         className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => {
           if (!window.confirm(`¿Eliminar el concepto "${concept.name}" y sus relaciones?`)) return;
@@ -333,6 +351,7 @@ function AddConceptDialog({
 }
 
 function GraphExplorer() {
+  const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
   // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
@@ -412,12 +431,19 @@ function GraphExplorer() {
             </option>
           ))}
         </Select>
-        <Button variant="outline" onClick={() => setAddingConcept(true)}>
+        <Button
+          variant="outline"
+          disabled={locked}
+          title={locked ? LOCKED_HINT : undefined}
+          onClick={() => setAddingConcept(true)}
+        >
           <Plus />
           Concepto
         </Button>
         <Button
           variant="outline"
+          disabled={locked}
+          title={locked ? LOCKED_HINT : undefined}
           onClick={() => {
             const name = window.prompt("Nombre del nuevo dominio");
             if (name?.trim()) api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
@@ -632,19 +658,25 @@ function GraphExplorer() {
               <span className="text-small text-muted-foreground">{domain.concepts.length}</span>
               <button
                 aria-label={`Renombrar ${domain.name}`}
-                title="Renombrar"
+                disabled={locked}
+                title={locked ? LOCKED_HINT : "Renombrar"}
                 onClick={() => {
                   const next = window.prompt("Nuevo nombre del dominio", domain.name);
                   if (next?.trim() && next !== domain.name)
                     api.renameDomain(domain.name, next.trim()).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
               >
                 <Pencil className="size-3.5" />
               </button>
               <button
                 aria-label={`Eliminar ${domain.name}`}
-                title={`Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`}
+                disabled={locked}
+                title={
+                  locked
+                    ? LOCKED_HINT
+                    : `Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`
+                }
                 onClick={() => {
                   if (
                     !window.confirm(
@@ -654,7 +686,7 @@ function GraphExplorer() {
                     return;
                   api.deleteDomain(domain.name).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-muted-foreground transition-colors hover:text-destructive"
+                className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -698,18 +730,20 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
       ? "Construye antes el grafo."
       : stage.status === "building"
         ? "El grafo se está reconstruyendo."
-        : offline
-          ? offline
-          : !profileReady
-            ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
-            : reviewing
-              ? "La revisión está en marcha."
-              : null;
+        : stage.status === "approved"
+          ? LOCKED_HINT
+          : offline
+            ? offline
+            : !profileReady
+              ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
+              : reviewing
+                ? "La revisión está en marcha."
+                : null;
 
   return (
     <StageGate
       stage={stage}
-      title="1 · Grafo de conocimiento"
+      title="Grafo de conocimiento"
       description={
         <>
           El vocabulario del sistema. Todo lo que se etiquete y se genere después saldrá de aquí:

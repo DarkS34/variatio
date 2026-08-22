@@ -9,8 +9,14 @@ import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
+import { truncate } from "@/lib/format";
 import { useCanEdit } from "@/state/auth";
 import { keys, useContentContext } from "@/state/queries";
+
+// El párrafo se paga en cada llamada del sistema y puede llegar a 900 caracteres
+// (`CONTENT_CONTEXT_MAX_CHARS`). En el panel se lee para reconocerlo, no para revisarlo:
+// entero convertía una tarjeta de la columna en un muro. Se ve completo al editarlo.
+const PREVIEW_CHARS = 200;
 
 const FACT_LABEL: Record<string, string> = {
   subject: "Materia",
@@ -144,42 +150,41 @@ export function ContextCard() {
         ) : (
           <>
             {data.narrative ? (
-              <p className="text-body">{data.narrative}</p>
+              <p className="text-body" title={data.narrative}>
+                {truncate(data.narrative, PREVIEW_CHARS)}
+              </p>
             ) : data.block ? (
               <pre className="whitespace-pre-wrap font-mono text-small text-muted-foreground">
-                {data.block}
+                {truncate(data.block, PREVIEW_CHARS)}
               </pre>
             ) : null}
 
             {canEdit ? (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                <Pencil />
-                {data.exists ? "Editar" : "Escribirlo"}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                  <Pencil />
+                  {data.exists ? "Editar" : "Escribirlo"}
+                </Button>
+                {/* Una construcción siempre escribe el borrador, así que con un contexto
+                    curado la última síntesis queda ahí sin leerse. El aviso que lo decía
+                    con el texto entero dentro se fue del panel; queda por dónde adoptarla,
+                    que es lo único que no se puede hacer desde ningún otro sitio. */}
+                {data.pending_draft ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => adopt.mutate()}
+                    disabled={adopt.isPending}
+                    title="Sustituye este texto por la síntesis de la última construcción"
+                  >
+                    {adopt.isPending ? <Spinner /> : <Check />}
+                    Adoptar el borrador
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
           </>
         )}
-
-        {/* Una construcción siempre escribe el borrador, así que con un contexto curado la
-            última síntesis queda ahí sin leerse. Decirlo es justo para lo que sirve tener
-            los dos ficheros: si no, reconstruir parecería no haber hecho nada. */}
-        {data.pending_draft && !editing ? (
-          <Alert tone="info" title="La última construcción escribió otra versión">
-            <p className="text-small">{data.pending_draft}</p>
-            {canEdit ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={() => adopt.mutate()}
-                disabled={adopt.isPending}
-              >
-                {adopt.isPending ? <Spinner /> : <Check />}
-                Adoptarla
-              </Button>
-            ) : null}
-          </Alert>
-        ) : null}
       </CardContent>
     </Card>
   );

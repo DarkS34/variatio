@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 // and belong to whichever component fixes the height; only the textarea, which fixes none,
 // keeps padding as its way of making room.
 const field =
-  "flex w-full rounded-md border border-input bg-background px-3 text-body shadow-none transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+  "flex w-full rounded-md border border-input bg-background px-3 text-body shadow-none transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 read-only:cursor-default read-only:bg-muted/40";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(field, "h-9 py-1", className)} {...props} />;

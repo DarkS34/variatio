@@ -7,79 +7,90 @@
    FRONTIER. What is behind you is settled, where you are is where you have to act, and
    what lies ahead is dimmed and not reachable yet. That is not decorative metaphor: it is
    the very calculation the generator already performs — assumed_known / target /
-   forbidden — and the same state machine the interface already has.
+   forbidden — and the same state machine the interface already has. The semantics have
+   never moved; the MATERIAL has, twice.
 
-   The material world is WARM PAPER AND INK: a warm off-white ground, sepia-black ink,
-   indigo for everything structural, and amber as the single "act here" colour. It replaces
-   the earlier cool cyanotype; the semantics did not move, only the material.
+   The material now is THE DUPLICATOR: the spirit duplicator that printed the exercise
+   sheets this app generates, on cool grey stock, in the two inks the machine actually
+   held — a saturated violet and an ochre — with a wine red for the correction. It replaces
+   the warm paper and indigo, which replaced a cool cyanotype. What makes it the right
+   material rather than a costume: the whole output of this app is a sheet of exercises,
+   and violet on grey is what a sheet of exercises looked like before it was a PDF.
 
    Every value here is MEASURED, not picked: `pnpm check:color` reads them out of this file
    and re-derives the tables. Lowering a lightness or raising a chroma without running it
    again is undoing the work in silence. */
 :root {
-  /* The ground carries a little chroma at 85° so it reads as paper rather than as a grey
-     that failed. 0.006 is the ceiling: above it the white of a card stops looking white. */
-  --background: oklch(0.979 0.006 85);
-  --foreground: oklch(0.232 0.014 62);
-  --card: oklch(0.997 0.003 85);
-  --card-foreground: oklch(0.232 0.014 62);
-  --popover: oklch(0.997 0.003 85);
-  --popover-foreground: oklch(0.232 0.014 62);
-  /* The indigo is not free to be any indigo: it has to stay separable from --arm-system,
-     which is blue, and under deuteranopia the two collapse. A first draft at
-     oklch(0.432 0.115 275) measured ΔE 7.9 deutan / 11.8 protan against it, both under the
-     floor of 15. Dropping the lightness and RAISING the chroma is what buys the margin —
-     20.9 deutan / 28.1 protan — and it improves the text contrast at the same time
-     (8.77 against the ground, up from 7.6). */
-  --primary: oklch(0.41 0.16 275);
-  --primary-foreground: oklch(0.985 0.004 275);
-  --secondary: oklch(0.953 0.006 85);
-  --secondary-foreground: oklch(0.3 0.014 62);
-  --muted: oklch(0.953 0.006 85);
-  --muted-foreground: oklch(0.508 0.012 62);
-  --accent: oklch(0.928 0.01 85);
-  --accent-foreground: oklch(0.3 0.014 62);
+  /* Cool stock, not cream. The chroma sits at 265° so the ground reads as duplicator paper
+     — grey with the blue of the ink in it — and 0.005 is the ceiling: above it a card
+     stops looking like a fresh sheet laid on the pile. */
+  --background: oklch(0.972 0.005 265);
+  --foreground: oklch(0.235 0.022 280);
+  --card: oklch(0.995 0.002 265);
+  --card-foreground: oklch(0.235 0.022 280);
+  --popover: oklch(0.995 0.002 265);
+  --popover-foreground: oklch(0.235 0.022 280);
+  /* The violet is not free to be any violet, and it is constrained from two sides at once:
+     it has to stay separable from --arm-system, which is blue and collapses towards it
+     under deuteranopia, and from --arm-naive, which is plum and collapses towards it under
+     protanopia. A first draft at oklch(0.44 0.185 305) measured ΔE 13.2 deutan against
+     arm-system, under the floor of 15. Dropping the lightness and RAISING the chroma is
+     what buys the margin — 21.5 deutan / 17.6 protan — and it lifts the text contrast at
+     the same time (8.90 against the ground). */
+  --primary: oklch(0.415 0.2 302);
+  --primary-foreground: oklch(0.985 0.004 302);
+  --secondary: oklch(0.945 0.007 265);
+  --secondary-foreground: oklch(0.3 0.022 280);
+  --muted: oklch(0.945 0.007 265);
+  --muted-foreground: oklch(0.505 0.018 280);
+  --accent: oklch(0.918 0.012 265);
+  --accent-foreground: oklch(0.3 0.022 280);
 
   /* These replace --success/--warning/--info BY MEANING, not by name: what they report is
      where something falls relative to the frontier, not whether it is going well. --info
      is retired outright — "building" becomes --primary plus motion, which is what already
      means "alive", and a fourth family of blue next to the primary distinguished nothing. */
-  --settled: oklch(0.505 0.078 162);
-  --attention: oklch(0.535 0.125 70);
-  /* Chroma 0.175 and not 0.155: at 0.155 this red and --settled land at the same lightness,
-     and a protanope — who loses exactly the channel that separated them — sees them at
-     ΔE 13.9, below the floor of 15. Raising the chroma instead of the lightness is free:
-     ΔE 17.8, and the text contrast IMPROVES, from 5.95 to 6.42. */
-  --destructive: oklch(0.49 0.175 22);
-  --destructive-foreground: oklch(0.985 0.003 22);
+  --settled: oklch(0.51 0.09 172);
+  /* The second ink of the machine. It has to clear 4.5 on its OWN 8 % tint, which is the
+     badge case, and that is what pins the lightness at 0.54: at 0.545 the tint measured
+     4.49 and failed by a hundredth. */
+  --attention: oklch(0.54 0.14 78);
+  /* Wine, at hue 13 rather than the scarlet 25 a first draft used: under deuteranopia a
+     scarlet turns as yellow as the ochre beside it and the pair measured ΔE 10.5, under
+     the floor of 15. Pulling the hue towards the magenta end costs nothing on screen and
+     buys 43.0. */
+  --destructive: oklch(0.475 0.175 13);
+  --destructive-foreground: oklch(0.985 0.003 13);
 
   /* The evaluation is the one destination the frontier metaphor does not describe: it is
      not before, at, or after the frontier — it is where the frontier is MEASURED. So it
-     gets a colour outside the warm-paper / indigo / amber story rather than a state token,
-     and cyan is the one family left that clears ΔE 15 against all four semantic colours and
+     gets a colour outside the violet / ochre / wine story rather than a state token, and
+     petrol is the one family left that clears ΔE 15 against all four semantic colours and
      ΔE 10 against the three arms in both modes. It is deliberately NOT one of the arms:
      those are per-entity slots in the comparison, and spending one on the navigation would
      claim the destination belongs to an arm. */
-  --study: oklch(0.44 0.095 205);
+  --study: oklch(0.45 0.1 215);
 
-  --border: oklch(0.858 0.008 85);
+  --border: oklch(0.855 0.01 265);
   /* --input stops being the same value as --border. They were, at 1.23:1 against the
      ground, against the 3:1 WCAG demands of the outline of a control that conveys
      information: every form field in this app was literally almost invisible. */
-  --input: oklch(0.628 0.012 275);
-  --ring: oklch(0.54 0.15 275);
+  --input: oklch(0.625 0.015 280);
+  --ring: oklch(0.55 0.18 302);
 
   --radius: 0.375rem;
 
-  /* Syntax highlighting has its own pair so that amber keeps meaning "act here" rather
-     than "string literal". */
-  --code-string: oklch(0.468 0.075 162);
-  --code-number: oklch(0.485 0.095 310);
+  /* Syntax highlighting has its own pair so that the ochre keeps meaning "act here" rather
+     than "string literal". The number used to be violet, which is the primary now, so it
+     moves to a blue no state token speaks for. */
+  --code-string: oklch(0.47 0.085 172);
+  --code-number: oklch(0.48 0.11 250);
 
   /* Two steps of elevation and no more: the border does the rest of the work. The shadow
-     is tinted with the ink rather than pure black, or a warm ground gets a cold shadow. */
-  --elevation-raised: 0 1px 2px oklch(0.232 0.014 62 / 0.07), 0 2px 8px oklch(0.232 0.014 62 / 0.07);
-  --elevation-overlay: 0 8px 32px oklch(0.232 0.014 62 / 0.15);
+     is tinted with the ink rather than pure black, or the stock gets its shadow from
+     another printer. */
+  --elevation-raised: 0 1px 2px oklch(0.235 0.022 280 / 0.08), 0 2px 8px oklch(0.235 0.022 280 / 0.08);
+  --elevation-overlay: 0 8px 32px oklch(0.235 0.022 280 / 0.16);
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-micro: 120ms;
@@ -93,8 +104,9 @@
      in NORMAL vision (the readable floor is 15) and both sat under the 0.10 chroma a hue
      needs to do identity work at all. In other words the three bars of «cuántas veces
      ganó cada una» were, for a real reader, two bars and a doubt.
-     These three clear every check in both modes with no warning: worst adjacent pair
-     ΔE 9.7 deuteranopic / 18.6 normal in light, 9.4 / 18.1 in dark.
+     They do NOT move when the material of the palette does: they are the encoding of the
+     study, and a recorded session read beside a fresh one has to draw its arms the same
+     way.
      Two things must not change. The ORDER — naive, rag, system — is what the pairs were
      validated on, so charts render the arms in it; and the SLOTS are per entity, never
      per rank, so a filter that drops an arm must not repaint the survivors. They also
@@ -107,36 +119,38 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* The warmth survives the inversion: the dark ground keeps the ink's hue (62°) instead
-       of going blue, which is what makes the two modes read as one material. */
-    --background: oklch(0.169 0.009 62);
-    --foreground: oklch(0.937 0.006 85);
-    --card: oklch(0.207 0.01 62);
-    --card-foreground: oklch(0.937 0.006 85);
-    --popover: oklch(0.207 0.01 62);
-    --popover-foreground: oklch(0.937 0.006 85);
-    --primary: oklch(0.73 0.115 275);
-    --primary-foreground: oklch(0.169 0.009 275);
-    --secondary: oklch(0.251 0.011 62);
-    --secondary-foreground: oklch(0.937 0.006 85);
-    --muted: oklch(0.251 0.011 62);
-    --muted-foreground: oklch(0.674 0.011 62);
-    --accent: oklch(0.289 0.012 62);
-    --accent-foreground: oklch(0.937 0.006 85);
+    /* The stock survives the inversion: the dark ground keeps the hue of the ink (280°)
+       instead of going neutral, which is what makes the two modes read as one material. */
+    --background: oklch(0.172 0.013 280);
+    --foreground: oklch(0.935 0.007 265);
+    --card: oklch(0.212 0.015 280);
+    --card-foreground: oklch(0.935 0.007 265);
+    --popover: oklch(0.212 0.015 280);
+    --popover-foreground: oklch(0.935 0.007 265);
+    --primary: oklch(0.74 0.14 302);
+    --primary-foreground: oklch(0.172 0.013 302);
+    --secondary: oklch(0.255 0.016 280);
+    --secondary-foreground: oklch(0.935 0.007 265);
+    --muted: oklch(0.255 0.016 280);
+    --muted-foreground: oklch(0.672 0.015 280);
+    --accent: oklch(0.292 0.018 280);
+    --accent-foreground: oklch(0.935 0.007 265);
 
-    --settled: oklch(0.72 0.078 162);
-    --attention: oklch(0.79 0.125 70);
-    --destructive: oklch(0.645 0.175 22);
-    --destructive-foreground: oklch(0.169 0.009 22);
+    --settled: oklch(0.73 0.09 172);
+    --attention: oklch(0.8 0.135 78);
+    /* Hue 12 and not the 13 of the light mode: at high lightness the wine slides towards
+       coral, and the extra degree of magenta is what keeps the two modes the same red. */
+    --destructive: oklch(0.66 0.18 12);
+    --destructive-foreground: oklch(0.172 0.013 12);
 
-    --study: oklch(0.72 0.095 205);
+    --study: oklch(0.73 0.1 215);
 
-    --border: oklch(0.311 0.012 62);
-    --input: oklch(0.512 0.014 275);
-    --ring: oklch(0.645 0.115 275);
+    --border: oklch(0.315 0.016 280);
+    --input: oklch(0.515 0.018 280);
+    --ring: oklch(0.65 0.13 302);
 
-    --code-string: oklch(0.73 0.075 162);
-    --code-number: oklch(0.74 0.085 310);
+    --code-string: oklch(0.74 0.085 172);
+    --code-number: oklch(0.74 0.1 250);
 
     --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.32), 0 2px 8px oklch(0 0 0 / 0.3);
     --elevation-overlay: 0 8px 32px oklch(0 0 0 / 0.52);

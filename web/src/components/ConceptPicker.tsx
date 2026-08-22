@@ -37,6 +37,7 @@ export function ConceptPicker({
   showExemplarCount = true,
   onlyWithExemplars = false,
   maxHeight = "18rem",
+  disabled = false,
 }: {
   concepts: KgConcept[];
   selected: string[];
@@ -47,6 +48,7 @@ export function ConceptPicker({
   showExemplarCount?: boolean;
   onlyWithExemplars?: boolean;
   maxHeight?: string;
+  disabled?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [override, setOverride] = useState<Record<string, boolean>>({});
@@ -131,7 +133,7 @@ export function ConceptPicker({
                 className="size-1.5 shrink-0 rounded-full"
                 style={{ background: colours.get(domainOf.get(name) ?? "") }}
               />
-              {onPrimaryChange ? (
+              {onPrimaryChange && !disabled ? (
                 <button
                   type="button"
                   onClick={() => onPrimaryChange(name)}
@@ -143,14 +145,16 @@ export function ConceptPicker({
               ) : (
                 <span className="max-w-56 truncate">{name}</span>
               )}
-              <button
-                type="button"
-                onClick={() => toggle(name)}
-                aria-label={`Quitar ${name}`}
-                className="rounded-full p-0.5 hover:bg-background/60"
-              >
-                <X className="size-3" />
-              </button>
+              {disabled ? null : (
+                <button
+                  type="button"
+                  onClick={() => toggle(name)}
+                  aria-label={`Quitar ${name}`}
+                  className="rounded-full p-0.5 hover:bg-background/60"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </Badge>
           ))
         )}
@@ -159,7 +163,7 @@ export function ConceptPicker({
             {showAllSelected ? "Ver menos" : `+${selected.length - MAX_VISIBLE_CHIPS} más`}
           </Button>
         ) : null}
-        {selected.length > 1 ? (
+        {selected.length > 1 && !disabled ? (
           <Button variant="ghost" size="sm" onClick={() => onChange([])}>
             Limpiar
           </Button>
@@ -229,13 +233,15 @@ export function ConceptPicker({
                   >
                     {picked}/{items.length}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => toggleDomain(items, picked === items.length)}
-                    className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    {picked === items.length ? "ninguno" : "todos"}
-                  </button>
+                  {disabled ? null : (
+                    <button
+                      type="button"
+                      onClick={() => toggleDomain(items, picked === items.length)}
+                      className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      {picked === items.length ? "ninguno" : "todos"}
+                    </button>
+                  )}
                 </div>
 
                 {open ? (
@@ -247,6 +253,7 @@ export function ConceptPicker({
                         <button
                           key={concept.name}
                           type="button"
+                          disabled={disabled}
                           onClick={() => toggle(concept.name)}
                           title={
                             showExemplarCount
@@ -260,6 +267,7 @@ export function ConceptPicker({
                             isSelected
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border bg-background hover:border-primary/50 hover:bg-accent",
+                            disabled && "cursor-default opacity-70 hover:border-border hover:bg-background",
                           )}
                         >
                           <span className="truncate">{concept.name}</span>

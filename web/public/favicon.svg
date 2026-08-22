@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#363A9F" stroke-width="1.8" stroke-linecap="round">
-  <style>@media (prefers-color-scheme: dark){:root{--m:#93A1F0}}:root{--m:#363A9F}path,circle{stroke:var(--m)}circle.n{fill:var(--m)}</style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6217A3" stroke-width="1.8" stroke-linecap="round">
+  <style>@media (prefers-color-scheme: dark){:root{--m:#BF93F1}}:root{--m:#6217A3}path,circle{stroke:var(--m)}circle.n{fill:var(--m)}</style>
   <path d="M7.5 10.3C10.4 7.4 13 5.9 16.1 5.5"/>
   <path d="M8.2 12H16.9"/>
   <path d="M7.5 13.7C10.4 16.6 13 18.1 16.1 18.5"/>

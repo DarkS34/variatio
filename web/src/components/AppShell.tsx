@@ -160,19 +160,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+        {/* THREE COLUMNS, AND THE MIDDLE ONE IS THE CENTRE OF THE HEADER.
+            The navigation used to be a `flex-1` sitting after the logo and the workspace
+            switcher, so it started wherever those two happened to end: it read as pushed
+            to the left, and it MOVED sideways every time the switcher changed the length
+            of a workspace name. Here the two flanks are `flex-1 basis-0`, so they are
+            always the same width and the nav lands on the centre line of the header
+            whatever they contain.
+            The nav keeps its own scroll for the narrow case, and it is the only item that
+            can shrink: a flank with `basis-0` has a shrink weight of zero, so the squeeze
+            lands where there is a scroller to absorb it. */}
         <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-4 px-4">
-          <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
-            <Logo className="size-5 text-primary" />
-            <span className="hidden 2xl:inline">Generador de variantes</span>
-          </Link>
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-4">
+            <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
+              <Logo className="size-5 text-primary" />
+              <span className="hidden 2xl:inline">Generador de variantes</span>
+            </Link>
 
-          <WorkspaceSwitcher />
+            <WorkspaceSwitcher />
+          </div>
 
-          {/* The navigation is the only thing competing for width here: the run's state
-              lives in the panel and not up top, precisely because it squeezed this until a
-              horizontal scrollbar appeared over the tabs. If it still does not fit it
-              scrolls without painting one. */}
-          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <NavPill to="/" label="Panel" icon={Activity} active={path === "/"} />
 
             <NavRule />
@@ -204,7 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </nav>
 
-          <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-3">
             <Button
               variant="ghost"
               size="sm"

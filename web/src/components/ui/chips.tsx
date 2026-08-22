@@ -70,6 +70,7 @@ export function ChipInput({
   placeholder = "Escribe un valor y pulsa Enter…",
   hint,
   className,
+  disabled = false,
   id,
   "aria-describedby": describedBy,
   "aria-label": ariaLabel,
@@ -79,6 +80,7 @@ export function ChipInput({
   placeholder?: string;
   hint?: string;
   className?: string;
+  disabled?: boolean;
   /** Forwarded to the inner <input> so that a <Field> wrapping this binds to something
    *  real. Without it the label would point at an id nothing carries, which looks correct
    *  in the markup and does nothing for a screen reader or for a click. */
@@ -126,21 +128,33 @@ export function ChipInput({
   return (
     <div className={className}>
       <div
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => (disabled ? undefined : inputRef.current?.focus())}
         className={cn(
           "flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-1.5",
           "transition-colors focus-within:ring-2 focus-within:ring-ring",
+          disabled && "bg-muted/40",
         )}
       >
-        {values.map((value, index) => (
-          <Chip
-            key={`${index}-${value}`}
-            value={value}
-            onCommit={(next) => commitAt(index, next)}
-            onRemove={() => onChange(values.filter((_, i) => i !== index))}
-          />
-        ))}
+        {values.map((value, index) =>
+          disabled ? (
+            <Badge key={`${index}-${value}`} variant="secondary" className="h-6 py-0">
+              {value}
+            </Badge>
+          ) : (
+            <Chip
+              key={`${index}-${value}`}
+              value={value}
+              onCommit={(next) => commitAt(index, next)}
+              onRemove={() => onChange(values.filter((_, i) => i !== index))}
+            />
+          ),
+        )}
+        {values.length === 0 && disabled ? (
+          <span className="px-1 text-body text-muted-foreground">—</span>
+        ) : null}
         <input
+          hidden={disabled}
+          disabled={disabled}
           ref={inputRef}
           id={id}
           aria-describedby={describedBy}
