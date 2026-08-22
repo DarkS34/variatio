@@ -20,7 +20,7 @@ def answer(monkeypatch, response: str) -> list[str]:
 
 
 def place_all_in_the_first_domain(monkeypatch):
-    def fake_assign_round(pending, placed, relations, *, max_attempts):
+    def fake_assign_round(pending, placed, relations, definitions=None, *, max_attempts):
         first = next(iter(placed))
         placed[first].extend(pending)
         return []

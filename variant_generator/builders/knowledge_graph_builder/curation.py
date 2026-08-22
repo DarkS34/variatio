@@ -42,19 +42,29 @@ def run(
             relations,
             cleaned.get("documents") or [],
             cleaned.get("origins") or {},
+            cleaned.get("definitions") or {},
             max_attempts=max_attempts,
         )
         logger.info(f"Dominios: {len(concepts_by_domains)}")
     progress.advance(1.0, f"{len(concepts_by_domains)} dominio(s)")
 
+    positions = cleaned.get("positions") or {}
+    definitions = cleaned.get("definitions") or {}
+    concepts_by_domains = order_domains(concepts_by_domains, positions)
     relations = link_relations(
-        concepts_by_domains, relations, schema=schema, max_attempts=max_attempts
+        concepts_by_domains,
+        relations,
+        definitions,
+        schema=schema,
+        max_attempts=max_attempts,
     )
 
     progress.phase("curate")
     with progress.step("kg_curate", "Tipando las relaciones y rompiendo ciclos"):
         universe = {c for cs in concepts_by_domains.values() for c in cs}
-        typed = break_cycles(build_typed_relations(relations, universe, schema))
+        typed = build_typed_relations(relations, universe, schema)
+        report_against_order(typed, positions, schema.prerequisite_verbose)
+        typed = break_cycles(typed, positions, schema.prerequisite_verbose)
         logger.info(
             f"Relaciones: {len(typed)} grupo(s) tipados sobre {len(universe)} concepto(s)"
         )
@@ -88,9 +98,11 @@ def run(
 # nombrar el documento de cada pasaje solo tiene sentido cuando hay más de uno.
 def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
     passages = cleaned.get("passages") or {}
+    definitions = cleaned.get("definitions") or {}
     documents = [d.get("name", "") for d in (cleaned.get("documents") or [])]
     anchored = {c: passages[c] for c in sorted(universe) if passages.get(c)}
-    write_json(path, {"documents": documents, "concepts": anchored})
+    defined = {c: definitions[c] for c in sorted(universe) if definitions.get(c)}
+    write_json(path, {"documents": documents, "concepts": anchored, "definitions": defined})
 
     orphans = len(universe) - len(anchored)
     if orphans:
@@ -122,6 +134,7 @@ def curate_domains(
     relations: list[list],
     documents: list[dict],
     origins: dict[str, list[int]],
+    definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
 ) -> dict:
@@ -149,13 +162,15 @@ def curate_domains(
 
     logger.info(f"{len(named)} dominio(s) nombrados; asignando {len(concepts)} concepto(s) por lotes")
     by_domain = {domain: [] for domain in named}
-    remaining = assign_round(sorted(concepts), by_domain, relations, max_attempts=max_attempts)
+    remaining = assign_round(
+        sorted(concepts), by_domain, relations, definitions, max_attempts=max_attempts
+    )
 
     for domain in by_domain:
         by_domain[domain] = sorted(set(by_domain[domain]))
     if remaining:
         by_domain[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(remaining)
-    return place_leftovers(by_domain, relations, max_attempts=max_attempts)
+    return place_leftovers(by_domain, relations, definitions, max_attempts=max_attempts)
 
 
 # A concept parked in the unclassified bucket is not a concept the model judged hard to
@@ -163,7 +178,13 @@ def curate_domains(
 # scaffolding, but it gets no domain-level review: neither the per-domain linking nor
 # the taggability pass can reason about a bucket that shares no theme. Asking again,
 # with only the leftovers and the domains already fixed, is a much smaller question.
-def place_leftovers(by_domain: dict, relations: list[list], *, max_attempts: int) -> dict:
+def place_leftovers(
+    by_domain: dict,
+    relations: list[list],
+    definitions: dict[str, str] | None = None,
+    *,
+    max_attempts: int,
+) -> dict:
     unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
     leftovers = by_domain.get(unclassified)
     if not leftovers:
@@ -182,7 +203,9 @@ def place_leftovers(by_domain: dict, relations: list[list], *, max_attempts: int
     # genuinely unplaceable concept costs one extra call and not three.
     for _ in range(config.KG_BUILDER_DOMAIN_ROUNDS):
         before = len(remaining)
-        remaining = assign_round(remaining, placed, relations, max_attempts=max_attempts)
+        remaining = assign_round(
+            remaining, placed, relations, definitions, max_attempts=max_attempts
+        )
         if not remaining or len(remaining) == before:
             break
 
@@ -198,7 +221,12 @@ def place_leftovers(by_domain: dict, relations: list[list], *, max_attempts: int
 
 
 def assign_round(
-    pending: list[str], placed: dict, relations: list[list], *, max_attempts: int
+    pending: list[str],
+    placed: dict,
+    relations: list[list],
+    definitions: dict[str, str] | None = None,
+    *,
+    max_attempts: int,
 ) -> list[str]:
     size = config.KG_BUILDER_DOMAIN_BATCH_SIZE
     batches = [pending[i : i + size] for i in range(0, len(pending), size)]
@@ -210,7 +238,8 @@ def assign_round(
             0.5 + 0.45 * (idx - 1) / len(batches), f"sin dominio: {len(unplaced)} concepto(s)"
         )
         prompt = assign_leftover_concepts_prompt(
-            blocks.domains_block(placed), blocks.nodes_block(batch, relations, {})
+            blocks.domains_block(placed),
+            blocks.nodes_block(batch, relations, {}, definitions=definitions),
         )
         response = inference.generate(
             model=config.KG_DOMAINS_LEFTOVERS_MODEL,
@@ -242,12 +271,39 @@ def assign_round(
 # LINKING -------------------------------------------------------------------------------------
 
 
+# The order the material introduces things in is the oldest signal in prerequisite
+# learning (RefD and its successors read it straight off the textbook), and it is free:
+# extraction recorded where each concept was first seen. Domains are ordered by the median
+# of their members and members by their own position, so when the linking prompts say
+# «the list follows the material», it is true — it used to be whatever order the model
+# named the domains in.
+def order_domains(concepts_by_domains: dict, positions: dict[str, int]) -> dict:
+    def median(members: list[str]) -> float:
+        known = sorted(positions[m] for m in members if m in positions)
+        if not known:
+            return float("inf")
+        middle = len(known) // 2
+        return known[middle] if len(known) % 2 else (known[middle - 1] + known[middle]) / 2
+
+    unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
+    domains = sorted(
+        concepts_by_domains,
+        key=lambda d: (d == unclassified, median(concepts_by_domains[d]), d),
+    )
+    return {d: blocks.ordered(concepts_by_domains[d], positions) for d in domains}
+
+
 # One question over the whole inventory produced 10 prerequisite edges for 199 concepts:
 # ordering a syllabus is not something a model does in one turn over a flat list. Asked
 # per domain — a dozen concepts at a time, with the relations already known as evidence —
 # and then once for what crosses domains, it is a question that can actually be answered.
 def link_relations(
-    concepts_by_domains: dict, relations: list[list], *, schema, max_attempts: int
+    concepts_by_domains: dict,
+    relations: list[list],
+    definitions: dict[str, str] | None = None,
+    *,
+    schema,
+    max_attempts: int,
 ) -> list[list]:
     domains = list(concepts_by_domains)
     if not domains:
@@ -269,7 +325,12 @@ def link_relations(
             known.update(
                 tuple(r)
                 for r in link_domain(
-                    domain, members, relations, schema=schema, max_attempts=max_attempts
+                    domain,
+                    members,
+                    relations,
+                    definitions,
+                    schema=schema,
+                    max_attempts=max_attempts,
                 )
             )
 
@@ -279,7 +340,7 @@ def link_relations(
         known.update(
             tuple(r)
             for r in link_cross_domain(
-                concepts_by_domains, schema=schema, max_attempts=max_attempts
+                concepts_by_domains, definitions, schema=schema, max_attempts=max_attempts
             )
         )
 
@@ -289,12 +350,18 @@ def link_relations(
 
 
 def link_domain(
-    domain: str, members: list[str], relations: list[list], *, schema, max_attempts: int
+    domain: str,
+    members: list[str],
+    relations: list[list],
+    definitions: dict[str, str] | None = None,
+    *,
+    schema,
+    max_attempts: int,
 ) -> list[list]:
     if len(members) < 2:
         return []
     prompt = link_domain_relations_prompt(
-        domain, blocks.nodes_block(members, relations, {}), schema
+        domain, blocks.nodes_block(members, relations, {}, definitions=definitions), schema
     )
     response = inference.generate(
         model=config.KG_LINK_DOMAIN_MODEL,
@@ -308,11 +375,17 @@ def link_domain(
     return parsing.valid_relations(raw.get("relations", []), schema, allowed=set(members))
 
 
-def link_cross_domain(concepts_by_domains: dict, *, schema, max_attempts: int) -> list[list]:
+def link_cross_domain(
+    concepts_by_domains: dict,
+    definitions: dict[str, str] | None = None,
+    *,
+    schema,
+    max_attempts: int,
+) -> list[list]:
     if len(concepts_by_domains) < 2:
         return []
     prompt = link_cross_domain_relations_prompt(
-        blocks.domains_block(concepts_by_domains), schema
+        blocks.domains_block(concepts_by_domains, definitions), schema
     )
     response = inference.generate(
         model=config.KG_LINK_CROSS_DOMAIN_MODEL,
@@ -362,20 +435,48 @@ def build_typed_relations(relations: list[list], universe: set, schema) -> list[
     return typed
 
 
-# Removes the DFS back edge of every cycle in `directed`+`acyclic` relations, to guarantee
-# the loader's cycle check passes. It leaves `acyclic: false` relations (e.g. «es parte de»)
-# untouched and does NOT try to keep the semantically-correct direction — that stays manual.
-def break_cycles(typed: list[dict]) -> list[dict]:
+# A prerequisite edge `A → B` reads «B before A», so B should be introduced before A in
+# the material. Counting the edges that say otherwise measures the draft against the one
+# witness that is not a model; it is reported, never acted on — the cross-domain prompt is
+# right that the order is evidence and not a verdict, and a textbook may well present a
+# consequence before its foundation.
+def report_against_order(typed: list[dict], positions: dict, prerequisite: str | None) -> None:
+    if not positions or prerequisite is None:
+        return
+    group = next((g for g in typed if g["details"]["verbose"] == prerequisite), None)
+    if group is None:
+        return
+    edges = [(s, t) for s, ts in group["relations_data"].items() for t in ts]
+    judged = [(s, t) for s, t in edges if s in positions and t in positions]
+    backwards = [(s, t) for s, t in judged if positions[t] > positions[s]]
+    logger.info(
+        f"Orden del material: {len(backwards)} de {len(judged)} arista(s) de "
+        f"«{prerequisite}» apuntan a un concepto que el material introduce más tarde"
+    )
+
+
+# Every cycle in a `directed`+`acyclic` relation loses one edge, so the loader's cycle
+# check passes. For the prerequisite relation the edge that goes is the one that most
+# contradicts the order of the material — the one whose target is introduced furthest
+# AFTER its source — because that is the one most likely to have been written backwards.
+# Where no position is known, or for any other acyclic relation, it is the DFS back edge,
+# as before, and the direction of what survives is still not corrected: that stays manual.
+def break_cycles(
+    typed: list[dict], positions: dict | None = None, prerequisite: str | None = None
+) -> list[dict]:
+    positions = positions or {}
     for group in typed:
         details = group["details"]
         if not (details.get("acyclic") and details.get("directed")):
             continue
+        ordered = bool(positions) and details["verbose"] == prerequisite
         graph = nx.DiGraph()
         for source, targets in group["relations_data"].items():
             graph.add_edges_from((source, target) for target in targets)
         removed = []
         while not nx.is_directed_acyclic_graph(graph):
-            source, target = nx.find_cycle(graph)[-1][:2]
+            cycle = [edge[:2] for edge in nx.find_cycle(graph)]
+            source, target = most_backwards(cycle, positions) if ordered else cycle[-1]
             graph.remove_edge(source, target)
             removed.append((source, target))
         if not removed:
@@ -388,3 +489,13 @@ def break_cycles(typed: list[dict]) -> list[dict]:
             f"Rotas {len(removed)} arista(s) de retroceso en «{details['verbose']}»: {removed}"
         )
     return typed
+
+
+def most_backwards(cycle: list[tuple[str, str]], positions: dict) -> tuple[str, str]:
+    def lag(edge: tuple[str, str]) -> float:
+        source, target = edge
+        if source not in positions or target not in positions:
+            return float("-inf")
+        return positions[target] - positions[source]
+
+    return max(cycle, key=lag)

@@ -317,6 +317,17 @@ EB_CHUNK_SIZE = 12_000
 KG_BUILDER_CHUNK_SIZE = 12_000
 KG_MAX_EVIDENCE_RELATIONS = 6
 
+# Una segunda lectura de cada fragmento, enseñándole al modelo lo que ya encontró y
+# pidiéndole lo que falta (el «gleaning» de GraphRAG/LightRAG). La primera lectura se
+# queda corta sobre todo en relaciones entre conceptos que sí nombró; la segunda se detiene
+# sola en cuanto no añade nada. Es la fase más barata de la construcción (8 % medido), así
+# que doblarla es asumible; 0 la desactiva.
+KG_EXTRACT_GLEANING_PASSES = 1
+# Una definición de una línea por concepto, escrita en el fragmento que lo introduce y
+# recortada aquí por si el modelo se extiende; acompaña al nombre en todas las llamadas
+# posteriores de la construcción.
+KG_DEFINITION_MAX_CHARS = 220
+
 # El anclaje de cada concepto al corpus: de qué párrafos del material de teoría salió.
 # Es lo que permite enseñar que un concepto del grafo viene de algo real, y es lo que
 # `concept_description_prompt` lee para no describir de memoria.

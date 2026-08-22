@@ -51,9 +51,12 @@ __all__ = [
 # jumps. Conversion keeps a real share for the first build and simply flies past on later
 # ones, where the markdown cache answers instead of Docling. Taggability moved out of the
 # build entirely (see `variant_generator/taggability.py`) and carries no weight here.
+# Extraction's 8 is the measured share of ONE reading per chunk; the gleaning pass
+# (`KG_EXTRACT_GLEANING_PASSES`) reads each chunk a second time with the same model and a
+# slightly longer prompt, so its weight is that measurement doubled, not a new timing.
 BUILD_PHASES = (
     ("convert", "Convirtiendo los documentos del corpus", 11),
-    ("extract", "Extrayendo conceptos y relaciones", 8),
+    ("extract", "Extrayendo conceptos y relaciones", 16),
     ("clean", "Fusionando duplicados y normalizando nombres", 25),
     ("domains", "Agrupando los conceptos en dominios", 9),
     ("link", "Enlazando conceptos y ordenando el temario", 26),

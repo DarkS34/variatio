@@ -35,8 +35,13 @@ def run(staging: dict, *, schema, max_attempts: int) -> dict:
     logger.info(f"Fusión mecánica: {len(nodes)} → {len(representatives)} nodo(s)")
     progress.advance(0.1, f"{len(nodes)} → {len(representatives)} nodo(s) por fusión mecánica")
 
+    definitions = staging.get("definitions") or {}
     llm_map = propose_merges(
-        representatives, staging["relations"], det_map, max_attempts=max_attempts
+        representatives,
+        staging["relations"],
+        det_map,
+        definitions,
+        max_attempts=max_attempts,
     )
     canonicals = sorted({llm_map.get(n, n) for n in representatives})
     logger.info(f"Fusión semántica: {len(representatives)} → {len(canonicals)} nodo(s)")
@@ -44,7 +49,7 @@ def run(staging: dict, *, schema, max_attempts: int) -> dict:
 
     surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
     drop = propose_drops(
-        canonicals, staging["relations"], surviving, max_attempts=max_attempts
+        canonicals, staging["relations"], surviving, definitions, max_attempts=max_attempts
     )
     progress.advance(0.95, f"{len(drop)} descarte(s)")
 
@@ -104,7 +109,12 @@ def deterministic_merge(nodes: list[str]) -> tuple[dict, list[str]]:
 
 
 def propose_merges(
-    nodes: list[str], relations: list[list], det_map: dict, *, max_attempts: int
+    nodes: list[str],
+    relations: list[list],
+    det_map: dict,
+    definitions: dict[str, str] | None = None,
+    *,
+    max_attempts: int,
 ) -> dict:
     groups = merge_candidates(nodes)
     if not groups:
@@ -130,7 +140,7 @@ def propose_merges(
                 0.1 + 0.4 * (idx - 1) / len(batches), f"grupos {idx}/{len(batches)}"
             )
             prompt = merge_candidate_groups_prompt(
-                blocks.groups_block(batch, relations, det_map)
+                blocks.groups_block(batch, relations, det_map, definitions)
             )
             response = inference.generate(
                 model=config.KG_CLEAN_MERGE_MODEL,
@@ -239,7 +249,12 @@ def resolve_chains(alias_map: dict) -> dict:
 
 
 def propose_drops(
-    nodes: list[str], relations: list[list], node_map: dict, *, max_attempts: int
+    nodes: list[str],
+    relations: list[list],
+    node_map: dict,
+    definitions: dict[str, str] | None = None,
+    *,
+    max_attempts: int,
 ) -> set:
     size = config.KG_BUILDER_CLEAN_BATCH_SIZE
     batches = [nodes[i : i + size] for i in range(0, len(nodes), size)]
@@ -254,7 +269,9 @@ def propose_drops(
             progress.advance(
                 0.6 + 0.35 * (idx - 1) / len(batches), f"lote {idx}/{len(batches)}"
             )
-            prompt = filter_graph_nodes_prompt(blocks.nodes_block(batch, relations, node_map))
+            prompt = filter_graph_nodes_prompt(
+                blocks.nodes_block(batch, relations, node_map, definitions=definitions)
+            )
             # Reasoning stays ON, and this is measured, not assumed: it looks like a
             # lexical verdict that could be read off the name, and turning it off is 6.8x
             # faster — but over the same 180 already-clean nodes it went from 1 drop to
@@ -313,6 +330,7 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
         canonical = node_map.get(name)
         if canonical in ents:
             origins[canonical].update(sources)
+    positions = merge_positions(graph.get("positions") or {}, node_map, ents)
     return {
         "entities": entities,
         "edges": sorted({r[1] for r in relations}),
@@ -320,7 +338,36 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
         "documents": graph.get("documents") or [],
         "origins": {name: sorted(origins[name]) for name in sorted(origins)},
         "passages": merge_passages(graph.get("passages") or {}, node_map, ents),
+        "positions": positions,
+        "definitions": merge_definitions(
+            graph.get("definitions") or {}, graph.get("positions") or {}, node_map, ents
+        ),
     }
+
+
+# A merged concept was introduced where its EARLIEST alias was: the position is the
+# minimum over the aliases, and the definition is the one written at that introduction.
+def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
+    merged: dict[str, int] = {}
+    for name, position in positions.items():
+        canonical = node_map.get(name)
+        if canonical in surviving:
+            merged[canonical] = min(position, merged.get(canonical, position))
+    return {name: merged[name] for name in sorted(merged)}
+
+
+def merge_definitions(
+    definitions: dict, positions: dict, node_map: dict, surviving: set
+) -> dict:
+    best: dict[str, tuple[int, str]] = {}
+    for name, definition in definitions.items():
+        canonical = node_map.get(name)
+        if canonical not in surviving or not definition:
+            continue
+        candidate = (positions.get(name, 0), definition)
+        if canonical not in best or candidate < best[canonical]:
+            best[canonical] = candidate
+    return {name: best[name][1] for name in sorted(best)}
 
 
 # Al fusionar dos nombres se fusionan sus pruebas: el pasaje que justificaba «Listas

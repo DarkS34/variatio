@@ -941,6 +941,25 @@ def _kg_type_preference_rule(schema) -> str:
     )
 
 
+_KG_DEFINITION_RULE = """\
+# UNA DEFINICIÓN POR CONCEPTO
+Cada concepto lleva una DEFINICIÓN de UNA frase, tomada de cómo lo explica el propio fragmento: qué es, en los términos de la materia. Es lo que permitirá, más adelante, distinguir dos nombres parecidos y decidir qué se enseña antes de qué, así que tiene que nombrar la idea y no el ejemplo.
+- Una sola frase, de 10 a 25 palabras, impersonal (sin «el alumno», sin «se aprende a»).
+- Dice QUÉ ES, no para qué se usa en el ejercicio ni con qué herramienta se hace.
+- Si el fragmento solo menciona el concepto sin explicarlo, una definición mínima basta; no inventes detalle que el texto no da."""
+
+
+_KG_EXTRACT_OUTPUT = """\
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
+{
+  "concepts": [{"name": "<concepto>", "definition": "<una frase>"}, "..."],
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
+}
+- El `<tipo>` es uno de los identificadores listados arriba. Nada más.
+- Todo origen y todo destino de `relations` se escribe con el nombre EXACTO del concepto."""
+
+
 def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> str:
     location_block = ""
     if location:
@@ -972,6 +991,8 @@ Este fragmento es uno de cientos extraídos por separado del mismo corpus, y los
 - Conserva la redacción que el propio material docente usa para la idea cuando la tiene; no la traduzcas, no la modernices, no desarrolles una abreviatura que el material mantiene corta.
 - La misma idea debe salir con el MISMO nombre siempre, aparezca en el fragmento que aparezca.
 
+{_KG_DEFINITION_RULE}
+
 {_KG_LANGUAGE_RULE}
 
 # TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
@@ -982,17 +1003,71 @@ Cada relación es una terna [origen, tipo, destino]. La dirección importa: elig
 - El origen y el destino deben ser DISTINTOS, y ambos deben aparecer en tu lista `concepts`. Está prohibido relacionar un concepto consigo mismo.
 {_kg_type_preference_rule(schema)}
 - Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
+- Sé exhaustivo con las relaciones: cuando el fragmento explique un concepto apoyándose en otro, eso es una relación que enunciar, aunque el texto no la formule como tal. Dos conceptos de tu lista que el fragmento trate juntos y sin ninguna relación entre ellos es, casi siempre, una relación que falta.
 
-# SALIDA
-Un único objeto JSON exactamente con esta forma:
-{{
-  "concepts": ["<concepto>", "..."],
-  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
-}}
-- El `<tipo>` es uno de: {schema.key_list()}. Nada más.
-- Todo origen y todo destino de `relations` debe aparecer en `concepts`.
+{_KG_EXTRACT_OUTPUT}
 - Si el fragmento no da ningún concepto extraíble, devuelve {{"concepts": [], "relations": []}}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
+
+# FRAGMENTO
+{source_text}
+
+JSON:"""
+
+
+# The second reading of a chunk. Shown the inventory the first one wrote, it is asked only
+# for what is missing — the «gleaning» pass of GraphRAG and LightRAG — and its answer is
+# merged into the first, never replacing it.
+def glean_typed_graph_prompt(
+    source_text: str,
+    schema,
+    location: str,
+    concepts: list[str],
+    definitions: dict[str, str],
+    relations: list[list[str]],
+) -> str:
+    location_line = f"Sección: {location}\n" if location else ""
+    found_concepts = "\n".join(
+        f"- {name} — {definitions[name]}" if definitions.get(name) else f"- {name}"
+        for name in concepts
+    )
+    found_relations = (
+        "\n".join(f'- ["{s}", "{k}", "{t}"]' for s, k, t in relations) or "- (ninguna)"
+    )
+    return f"""\
+Un primer lector extrajo de este fragmento de material docente los conceptos y las relaciones tipadas que se listan abajo. Una primera lectura SIEMPRE se queda corta: nombra lo evidente, enuncia pocas relaciones y cierra.
+
+Tu tarea: una SEGUNDA lectura del mismo fragmento que devuelva SOLO lo que falta — conceptos de la materia que el primer lector no nombró y, sobre todo, RELACIONES que el texto sostiene entre conceptos ya nombrados y que no aparecen en la lista.
+{location_line}
+# QUÉ BUSCAR
+- Relaciones entre dos conceptos YA LISTADOS que el fragmento trata juntos: cuando explica uno apoyándose en el otro, cuando uno es un caso o una parte del otro, cuando el texto los presenta en secuencia. Recorre la lista de conceptos de dos en dos y pregúntate si el texto los relaciona.
+- Conceptos que el fragmento explica (no que solo menciona de pasada) y que no están en la lista. Aplica la prueba del glosario: si no sería una entrada de un índice de la materia, no es un concepto.
+- Nombra los conceptos nuevos con el canon del primer lector: SINGULAR, forma sustantiva, sin artículos, sin matices del ejemplo, y con la misma redacción que el propio material usa.
+- Reutiliza EXACTAMENTE los nombres ya listados cuando una relación los mencione. No los reescribas, no los corrijas, no los traduzcas.
+
+{_KG_DEFINITION_RULE}
+
+{_KG_LANGUAGE_RULE}
+
+# TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
+{schema.catalog_block()}
+
+# REGLAS DE RELACIÓN
+- El origen y el destino deben ser DISTINTOS y ambos deben estar en la lista ya conocida o en tu lista `concepts`.
+{_kg_type_preference_rule(schema)}
+- Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
+- NO repitas nada de lo ya listado: ni conceptos ni relaciones. Solo lo nuevo.
+
+{_KG_EXTRACT_OUTPUT}
+- En `concepts` van SOLO los conceptos nuevos; los ya conocidos pueden usarse en `relations` sin volver a listarlos.
+- Si de verdad no falta nada, devuelve {{"concepts": [], "relations": []}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
+
+# CONCEPTOS YA EXTRAÍDOS
+{found_concepts}
+
+# RELACIONES YA EXTRAÍDAS
+{found_relations}
 
 # FRAGMENTO
 {source_text}
@@ -1009,6 +1084,15 @@ La extracción fragmento a fragmento solo ve una dependencia cuando dos concepto
 - No encadenes lo que ya está implícito: enuncia la dependencia DIRECTA, no toda la ascendencia. Si A se apoya en B y B en C, no relaciones además A con C.
 - Ser cauto no sale gratis aquí: una dependencia que dejes fuera es una que ningún paso posterior puede recuperar.
 - Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación, llamadas de biblioteca y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
+
+
+_KG_MATERIAL_ORDER_RULE = """\
+# EL ORDEN DE LA LISTA ES EL ORDEN DEL MATERIAL
+Los conceptos se listan en el ORDEN EN QUE EL MATERIAL LOS INTRODUCE, de principio a fin del corpus. Quien escribió el material ya decidió un orden de enseñanza, y ese orden es la mejor evidencia que tienes:
+- Un concepto se apoya, casi siempre, en conceptos que van ANTES que él en la lista. Para cada uno, mira hacia arriba y pregúntate cuáles de los anteriores tiene que saber ya un alumno.
+- Proponer que un concepto se apoye en otro que va DESPUÉS en la lista es afirmar que el material lo enseña en el orden equivocado. Puede ser cierto — un manual a veces adelanta una consecuencia —, pero exige que la dependencia sea inequívoca; ante la duda, respeta el orden del material.
+- La distancia en la lista no es un obstáculo: lo primero del corpus es el cimiento de casi todo lo que viene después, y esas dependencias largas son justo las que faltan.
+- Cada concepto lleva, cuando se conoce, una definición de una frase tomada del material. Juzga la dependencia sobre la definición, no sobre el parecido de los nombres."""
 
 
 def link_domain_relations_prompt(domain: str, nodes_block: str, schema) -> str:
@@ -1029,6 +1113,8 @@ Tu tarea: propón las RELACIONES TIPADAS que FALTAN entre los conceptos de este 
 
 {_KG_TEACHING_ORDER_RULE}
 
+{_KG_MATERIAL_ORDER_RULE}
+
 # SALIDA
 Un único objeto JSON exactamente con esta forma:
 {{
@@ -1038,7 +1124,7 @@ Un único objeto JSON exactamente con esta forma:
 - Si no falta nada, devuelve {{"relations": []}}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# CONCEPTOS DE «{domain}» (con las relaciones ya conocidas)
+# CONCEPTOS DE «{domain}», EN EL ORDEN DEL MATERIAL (con su definición y las relaciones ya conocidas)
 {nodes_block}
 
 JSON:"""
@@ -1061,7 +1147,9 @@ Tu tarea: propón SOLO las RELACIONES TIPADAS que CRUZAN de un bloque a otro —
 {_kg_type_preference_rule(schema)}
 
 {_KG_TEACHING_ORDER_RULE}
-- Trabaja bloque a bloque: para cada uno, pregúntate en qué conceptos de los bloques ANTERIORES se apoya. Los bloques vienen en el orden en que el material los presenta, que es en sí mismo evidencia sobre el orden de enseñanza — pero no es concluyente, y un bloque posterior puede contener un prerrequisito de uno anterior.
+
+{_KG_MATERIAL_ORDER_RULE}
+- Trabaja bloque a bloque: para cada uno, pregúntate en qué conceptos de los bloques ANTERIORES se apoya. Los bloques también vienen en el orden en que el material los presenta, y dentro de cada bloque sus conceptos siguen ese mismo orden.
 
 # SALIDA
 Un único objeto JSON exactamente con esta forma:
@@ -1071,7 +1159,7 @@ Un único objeto JSON exactamente con esta forma:
 - El `<tipo>` es uno de: {schema.key_list()}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# BLOQUES TEMÁTICOS Y SUS CONCEPTOS
+# BLOQUES TEMÁTICOS Y SUS CONCEPTOS, EN EL ORDEN DEL MATERIAL (cada concepto con su definición)
 {domains_block}
 
 JSON:"""
@@ -1090,6 +1178,7 @@ Tu tarea: dentro de CADA grupo, y nunca entre grupos, decide qué nombres son EL
 - NO fundas dos ideas de las que un alumno podría examinarse por separado, aunque aparezcan siempre juntas: un mecanismo y la técnica que lo usa siguen aparte, y también una parte y el todo al que pertenece, y también un término general y una de sus clases concretas.
 - NO fundas dos nombres solo porque pertenezcan al mismo tema, estén relacionados o aparezcan a menudo juntos. Compartir una palabra no es evidencia.
 - Usa las relaciones como evidencia: nombres con relaciones claramente distintas suelen ser conceptos distintos.
+- Cuando un nombre lleve detrás de « — » una definición tomada del material, juzga sobre las definiciones antes que sobre los nombres: dos definiciones de la misma idea son un concepto, dos definiciones distintas son dos, por mucho que los nombres se parezcan.
 - Fundir de más cuesta más que fundir de menos: un concepto perdido en una fusión no se recupera después. Cuando las dos lecturas sean igual de defendibles, déjalos aparte.
 
 # NOMBRE CANÓNICO
@@ -1140,6 +1229,7 @@ algo, así que se quedan.
 - Cuando un nodo nombre algo de la materia, por poco que sea, consérvalo.
 
 # ANTE LA DUDA
+- Cuando un nodo lleve detrás de « — » una definición tomada del material, léela: un nombre torpe con una definición que enuncia una idea de la materia es un concepto y se queda.
 - Prueba del glosario: si NO lo pondrías como entrada en un índice de la materia, elimínalo.
 - Ante un FRAGMENTO, elimina incluso en la duda. Ante un CONCEPTO, conserva incluso en la duda.
 
@@ -1223,7 +1313,7 @@ Tu tarea: coloca CADA concepto de abajo en UNO de los dominios EXISTENTES.
 # REGLAS
 - Los nombres de los dominios son FIJOS. Úsalos exactamente como están escritos. NO crees dominios nuevos, NO los renombres, NO dejes fuera ningún concepto.
 - Cada concepto de abajo debe aparecer exactamente una vez en la salida.
-- Asigna por tema y por la evidencia de las relaciones: el dominio que ya contiene los conceptos con los que este se relaciona es casi siempre el correcto.
+- Asigna por tema y por la evidencia de las relaciones: el dominio que ya contiene los conceptos con los que este se relaciona es casi siempre el correcto. La definición que acompaña a cada concepto, detrás de « — », dice de qué trata cuando el nombre no basta.
 - No hay «otros» ni «sin clasificar»: si un concepto parece no encajar en ninguno, elige aquel con el que sea MENOS ajeno.
 - Usa los nombres EXACTOS de la entrada. No inventes, no renombres, no traduzcas ni corrijas la ortografía.
 

@@ -50,3 +50,35 @@ def valid_relations(raw: list, schema, allowed: set[str] | None) -> list[list[st
             continue
         out.append([source, relation, target])
     return out
+
+
+# A concept arrives as `{"name", "definition"}`, but a bare string is still read: the
+# grammar pins the shape for the two passes that run under it, and nothing else should
+# fail on an answer the older prompt would have produced.
+def concepts_with_definitions(raw: list) -> tuple[list[str], dict[str, str]]:
+    names: list[str] = []
+    definitions: dict[str, str] = {}
+    for entry in raw or []:
+        if isinstance(entry, str):
+            name, definition = entry, ""
+        elif isinstance(entry, dict):
+            name, definition = entry.get("name"), entry.get("definition")
+        else:
+            continue
+        if not isinstance(name, str) or not name.strip():
+            continue
+        name = name.strip()
+        if name not in names:
+            names.append(name)
+        if isinstance(definition, str) and definition.strip() and name not in definitions:
+            definitions[name] = clip_definition(definition)
+    return names, definitions
+
+
+def clip_definition(text: str) -> str:
+    text = " ".join(text.split())
+    limit = config.KG_DEFINITION_MAX_CHARS
+    if len(text) <= limit:
+        return text
+    cut = text.rfind(" ", 0, limit)
+    return text[: cut if cut > 0 else limit].rstrip(" ,;:") + "…"
