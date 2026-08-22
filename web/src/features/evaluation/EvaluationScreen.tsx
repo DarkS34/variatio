@@ -186,7 +186,7 @@ export function EvaluationScreen() {
       </header>
 
       {!unlocked ? (
-        <Alert tone="warning" title="Comparación bloqueada">
+        <Alert tone="attention" title="Comparación bloqueada">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
             Sin aprobar:{" "}
@@ -205,7 +205,7 @@ export function EvaluationScreen() {
       ) : null}
 
       {external && !external.configured ? (
-        <Alert tone="warning" title="La propuesta comercial no está configurada">
+        <Alert tone="attention" title="La propuesta comercial no está configurada">
           <p>{external.reason}</p>
           <p className="mt-1 text-muted-foreground">
             La sesión seguirá adelante y esa propuesta quedará registrada como no

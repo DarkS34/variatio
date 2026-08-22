@@ -662,7 +662,7 @@ export function ProfileEditor() {
           </Card>
 
           {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
-            <Alert tone="warning" title="El campo primario no es de texto">
+            <Alert tone="attention" title="El campo primario no es de texto">
               <p>
                 <code className="font-mono">{spec.primary_field}</code> es el texto que se embebe y
                 se etiqueta contra el grafo; con otro tipo el emparejamiento con conceptos pierde

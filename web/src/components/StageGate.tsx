@@ -123,7 +123,7 @@ export function StageGate({
       ) : null}
 
       {blocked ? (
-        <Alert tone="warning" title="Bloqueado">
+        <Alert tone="attention" title="Bloqueado">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
             {stage.blocked_reason}
@@ -138,7 +138,7 @@ export function StageGate({
           el corpus se deshabilita y su tooltip dice exactamente eso. */}
       {missing && rawMissing ? (
         <Alert
-          tone="warning"
+          tone="attention"
           title="Faltan los datos de partida"
           action={
             <Link to="/">
@@ -190,7 +190,7 @@ export function StageGate({
 
 export function StaleWarning({ children }: { children: ReactNode }) {
   return (
-    <Alert tone="warning">
+    <Alert tone="attention">
       <p className="flex items-start gap-1.5">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
         <span>{children}</span>

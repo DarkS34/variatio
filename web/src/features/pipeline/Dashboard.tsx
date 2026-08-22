@@ -641,7 +641,7 @@ export function Dashboard() {
         </Alert>
       ) : (
         <Alert
-          tone="success"
+          tone="settled"
           title="Cadena aprobada de principio a fin"
           action={
             <Button size="sm" onClick={() => navigate("/generar")}>

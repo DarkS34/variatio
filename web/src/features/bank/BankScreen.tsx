@@ -464,7 +464,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                   <Progress
                     value={listing.totals.tagged}
                     max={listing.totals.items}
-                    tone={listing.totals.untagged === 0 ? "success" : "warning"}
+                    tone={listing.totals.untagged === 0 ? "settled" : "attention"}
                   />
                   {listing.totals.untagged > 0 ? (
                     <button

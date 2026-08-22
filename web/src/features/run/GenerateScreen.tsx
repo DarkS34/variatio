@@ -121,13 +121,13 @@ export function GenerateScreen() {
       {/* Sin motor no se genera: el servidor lo rechaza con un 503 y el formulario se
           deshabilita entero, en vez de dejar pulsar y devolver un error de trabajo. */}
       {unlocked && offline ? (
-        <Alert tone="warning" title="Sin motor de inferencia">
+        <Alert tone="attention" title="Sin motor de inferencia">
           <p>{offline} Arráncalo y vuelve a intentarlo.</p>
         </Alert>
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="warning" title="Generación bloqueada">
+        <Alert tone="attention" title="Generación bloqueada">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
             Sin aprobar:{" "}

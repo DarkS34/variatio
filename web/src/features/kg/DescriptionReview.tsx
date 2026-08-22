@@ -199,7 +199,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
             <Progress
               value={described}
               max={kg.totals.taggable}
-              tone={missing.length === 0 ? "success" : "warning"}
+              tone={missing.length === 0 ? "settled" : "attention"}
             />
           )}
         </div>
@@ -254,12 +254,12 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
       </p>
 
       {missing.length > 0 && !writing ? (
-        <Alert tone="warning" title={`${missing.length} concepto(s) sin descripción`} />
+        <Alert tone="attention" title={`${missing.length} concepto(s) sin descripción`} />
       ) : null}
 
       {unanchored.length > 0 ? (
         <Alert
-          tone="warning"
+          tone="attention"
           title={`${unanchored.length} concepto(s) sin respaldo en el corpus`}
           action={
             <InfoHint label="Qué significa sin respaldo">

@@ -37,7 +37,7 @@ function Chip({
           }
         }}
         style={{ width: `${Math.max(draft.length, 4) + 2}ch` }}
-        className="h-6 rounded-full border border-primary bg-background px-2.5 text-xs outline-none"
+        className="h-6 rounded-full border border-primary bg-background px-2.5 text-small outline-none"
       />
     );
   }
@@ -152,13 +152,13 @@ export function ChipInput({
             }
           }}
           placeholder={values.length === 0 ? placeholder : "añadir…"}
-          className="h-6 min-w-32 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+          className="h-6 min-w-32 flex-1 bg-transparent px-1 text-body outline-none placeholder:text-muted-foreground"
         />
       </div>
       {notice ? (
-        <p className="mt-1 text-xs text-[var(--warning)]">{notice}</p>
+        <p className="mt-1 text-small text-attention">{notice}</p>
       ) : hint ? (
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        <p className="mt-1 text-small text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );

@@ -143,7 +143,7 @@ function ConceptDetail({
           </p>
         </div>
       ) : (
-        <Alert tone="warning">
+        <Alert tone="attention">
           <p className="text-xs">Sin descripción: no compite en el retrieval.</p>
         </Alert>
       )}
@@ -500,7 +500,7 @@ function GraphExplorer() {
           su barra de progreso debajo. Aquí queda lo que la cabecera no puede decir — qué
           significa que la revisión no se haya hecho. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
-        <Alert tone="warning" title="Etiquetabilidad sin revisar">
+        <Alert tone="attention" title="Etiquetabilidad sin revisar">
           <p>
             Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
             identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
@@ -750,7 +750,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
 
       {stage?.status === "approved" && missing === 0 ? (
         <Alert
-          tone="success"
+          tone="settled"
           className="mt-4"
           title="Grafo listo para etiquetar"
           action={

@@ -21,7 +21,7 @@ const sorted = (names: string[]) => [...names].sort((a, b) => a.localeCompare(b,
 // larger than the screen announced.
 const NOTICE = {
   none: {
-    tone: "warning",
+    tone: "attention",
     title: "El grafo no declara prerrequisitos",
     body: "Sin una relación de prerrequisito no hay nada que cerrar: se guardará exactamente lo que hayas elegido.",
   },
@@ -31,7 +31,7 @@ const NOTICE = {
     body: "El grafo se está cargando. En cuanto llegue se listarán aquí, antes de guardar.",
   },
   error: {
-    tone: "warning",
+    tone: "attention",
     title: "No se ha podido leer el grafo",
     body: "No se puede decir cuáles entrarán, pero al guardar el servidor los añadirá igualmente: el currículo guardado puede acabar siendo mayor que el que ves aquí. Vuelve a cargar la página, o apaga el cierre por prerrequisitos para guardar solo lo elegido.",
   },
@@ -144,7 +144,7 @@ export function CurriculumTab() {
       </Card>
 
       {dropped.length > 0 ? (
-        <Alert tone="warning" title="Conceptos que ya no están en el grafo">
+        <Alert tone="attention" title="Conceptos que ya no están en el grafo">
           <p>
             Estos estaban en el currículo y el grafo ya no los tiene, así que dejan de contar:{" "}
             {dropped.join(", ")}. Vuelve a guardar para quitarlos del fichero.
