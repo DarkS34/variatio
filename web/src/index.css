@@ -289,23 +289,37 @@ body {
 }
 
 .animate-fade-in {
-  animation: vg-fade-in 0.18s ease-out;
+  animation: vg-fade-in var(--motion-enter) var(--ease);
 }
 .animate-slide-up {
-  animation: vg-slide-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: vg-slide-up var(--motion-overlay) var(--ease);
 }
 .animate-pulse-soft {
   animation: vg-pulse-soft 1.6s ease-in-out infinite;
 }
 .animate-progress-sweep {
-  animation: vg-progress-sweep 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation: vg-progress-sweep 1.4s var(--ease) infinite;
   will-change: transform;
 }
 
+/* This used to cover the sweep and nothing else, so entrances and the drawer still slid.
+   What is deliberately NOT switched off is the pulse: it is the only indicator that a
+   build running for hours is still alive, and removing it leaves the screen saying the
+   same thing whether the job is advancing or has hung. A slow change of opacity is not
+   what triggers a vestibular disorder; displacement is. */
 @media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up {
+    animation: none;
+  }
   .animate-progress-sweep {
     animation: vg-pulse-soft 1.6s ease-in-out infinite;
     transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
 
