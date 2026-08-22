@@ -232,6 +232,29 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* A visible focus ring, once, instead of 67 call sites each remembering. There were 67 raw
+   <button> elements across 36 files with none, so "the focus is always visible" was simply
+   not true of this app.
+   `:where()` is what makes it a FLOOR rather than an override: it carries zero specificity,
+   so any component that styles its own focus — the button, the input, the checkbox — still
+   wins, and anything that forgets still gets something. */
+:where(
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    [role="checkbox"],
+    a[href],
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
 @keyframes vg-fade-in {
   from {
     opacity: 0;
