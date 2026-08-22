@@ -195,9 +195,9 @@ SETTINGS: list[Setting] = [
         group="Motor",
         impact=Impact.ENGINE,
         choices=("ollama",),
-        doc="""Which inference engine implementation backs generate()/embed()/embed_batch().
-Only 'ollama' is implemented; `config.INFERENCE_ENGINE` selects it and business logic
-never calls an SDK directly — everything goes through `variant_generator.inference`.""",
+        doc="""Qué implementación de motor de inferencia respalda generate()/embed()/embed_batch().
+Solo 'ollama' está implementado; `config.INFERENCE_ENGINE` lo selecciona y la lógica de
+negocio nunca llama a un SDK directamente — todo pasa por `variant_generator.inference`.""",
     ),
     Setting(
         key="engine.ollama_host",
@@ -207,10 +207,10 @@ never calls an SDK directly — everything goes through `variant_generator.infer
         group="Motor",
         impact=Impact.ENGINE,
         env="OLLAMA_HOST",
-        doc="""The Ollama host as `host:port` (or a full `http(s)://` URL). `config.py` reads
-this from the `OLLAMA_HOST` environment variable and normalises a bare host:port by
-prefixing it with `http://`; the registry keeps the bare default, and that prefixing
-happens elsewhere, not here.""",
+        doc="""El host de Ollama como `host:puerto` (o una URL `http(s)://` completa). `config.py` lo
+lee de la variable de entorno `OLLAMA_HOST` y normaliza un `host:puerto` desnudo
+anteponiéndole `http://`; el registro guarda el valor desnudo y ese prefijo se añade en
+otro sitio, no aquí.""",
     ),
     Setting(
         key="engine.idle_unload_seconds",

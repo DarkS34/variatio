@@ -12,51 +12,54 @@ where it should have paid off, it was a wash (top-1 0.6153 → 0.6045, margin +0
 Same lesson as embeddinggemma: a prefix is a measured claim, never an intuition."""),
     Setting(key="retrieval.document_prefix", name="EMBEDDING_DOCUMENT_PREFIX", kind="str",
             default="", group="Recuperación", impact=Impact.REINDEX,
-            doc="""Empty on purpose: qwen3-embedding's prescribed usage takes a query prefix but no
-document prefix. A prefix is a per-model measured claim, never an intuition — see
-EMBEDDING_QUERY_PREFIX."""),
+            doc="""Vacío a propósito: el uso prescrito de qwen3-embedding lleva prefijo en la consulta pero
+no en el documento. Un prefijo es una afirmación medida por modelo, nunca una intuición —
+véase EMBEDDING_QUERY_PREFIX."""),
     Setting(key="retrieval.batch_size", name="EMBEDDING_BATCH_SIZE", kind="int", default=16,
             group="Recuperación", impact=Impact.NONE, minimum=1,
-            doc="""Number of texts sent to the embedding model per call to /api/embed; batching
-amortises request overhead across the bank and the concepts index."""),
+            doc="""Cuántos textos se envían al modelo de embeddings por llamada a /api/embed; agrupar
+amortiza el coste de cada petición a lo largo del banco y del índice de conceptos."""),
     Setting(key="retrieval.field_max_chars", name="EMBEDDING_FIELD_MAX_CHARS", kind="int",
             default=2000, group="Recuperación", impact=Impact.REINDEX, minimum=1,
-            doc="""Caps each field `embed_fields` appends AFTER the primary one, so one long code listing
-cannot crowd the others out of the context. Single-field profiles are not capped: their
-text stays byte-identical to the primary field, which is what keeps their cached vectors
-and the threshold below valid."""),
+            doc="""Acota cada campo que `embed_fields` añade DESPUÉS del principal, para que un listado de
+código largo no expulse a los demás del contexto. Los perfiles de un solo campo no se
+acotan: su texto queda byte a byte idéntico al campo principal, que es lo que mantiene
+válidos sus vectores en caché y el umbral de abajo."""),
     Setting(key="retrieval.max_chars", name="EMBEDDING_MAX_CHARS", kind="int", default=12000,
             group="Recuperación", impact=Impact.NONE, minimum=1,
-            doc="""The safe budget for one embedding call, enforced as a WARNING at initialize rather than
-by truncating. Measured on qwen3-embedding:4b at num_ctx 4096, and the two paths disagree:
-`embed_batch` (/api/embed) silently truncates above ~20 000 chars, while `embed`
-(/api/embeddings) raises a 500 at ~15 500 — so the same oversized item indexes fine and
-then blows up at tagging time. 12 000 keeps a margin under the lower of the two."""),
+            doc="""El presupuesto seguro de una llamada de embedding, aplicado como AVISO al inicializar y
+no truncando. Medido en qwen3-embedding:4b con num_ctx 4096, y los dos caminos no
+coinciden: `embed_batch` (/api/embed) trunca en silencio por encima de ~20 000
+caracteres, mientras que `embed` (/api/embeddings) devuelve un 500 a ~15 500 — así que
+el mismo ítem sobredimensionado se indexa bien y luego revienta al etiquetar. 12 000 deja
+margen por debajo del menor de los dos."""),
     Setting(key="retrieval.similarity_threshold", name="EMBEDDER_SIMILARITY_THRESHOLD",
             kind="float", default=0.40, group="Recuperación", impact=Impact.CONTEXTS,
             minimum=0.0, maximum=1.0,
-            doc="""Re-measured after `embed_fields` and it STAYS at 0.40 — the change does not move the
-distribution it gates. Cold (a fresh bank, scored against pure concept descriptions, which
-is the regime tagging runs in) the noise median went slightly DOWN, 0.3418 → 0.3329, and
-the lowest real top-1 barely moved, 0.5005 → 0.4938. Warm (the reference bank, scored
-against the merged index + the kNN leg, which is what the pipeline really does) the noise
-median is 0.3776 — that is the 0.382 recorded here — and the lowest top-1 is 0.6226.
-So 0.40 still sits above the noise in both regimes and below every observed real top-1."""),
+            doc="""Vuelto a medir tras `embed_fields` y SE QUEDA en 0.40: el cambio no mueve la distribución
+que acota. En frío (un banco nuevo, puntuado contra descripciones de concepto puras, que
+es el régimen en el que corre el etiquetado) la mediana del ruido bajó ligeramente,
+0.3418 → 0.3329, y el top-1 real más bajo apenas se movió, 0.5005 → 0.4938. En caliente
+(el banco de referencia, puntuado contra el índice fusionado más la pata kNN, que es lo
+que el pipeline hace de verdad) la mediana del ruido es 0.3776 — el 0.382 que se anotó
+aquí — y el top-1 más bajo es 0.6226. Así que 0.40 sigue por encima del ruido en ambos
+regímenes y por debajo de todo top-1 real observado."""),
     Setting(key="retrieval.description_weight", name="EMBEDDER_DESCRIPTION_WEIGHT",
             kind="float", default=0.5, group="Recuperación", impact=Impact.REINDEX,
             minimum=0.0, maximum=1.0,
-            doc="""The merged index is α·description + (1-α)·centroid(exemplars); the weighting exists
-because a plain mean let the description fade to 1/(1+n) as exemplars accumulated, so a
-concept's anchor weakened with its popularity."""),
+            doc="""El índice fusionado es α·descripción + (1-α)·centroide(ejemplares); la ponderación existe
+porque una media simple dejaba que la descripción se diluyera a 1/(1+n) conforme se
+acumulaban ejemplares, de modo que el ancla de un concepto se debilitaba con su
+popularidad."""),
     Setting(key="retrieval.description_siblings_top_k", name="DESCRIPTION_SIBLINGS_TOP_K",
             kind="int", default=8, group="Recuperación", impact=Impact.NONE, minimum=1,
-            doc="""How many nearest concepts by embedding are shown to the description prompt as sibling
-context when writing or reviewing one concept's description."""),
+            doc="""Cuántos conceptos vecinos por embedding se muestran al prompt de descripción como
+contexto de hermanos al escribir o revisar la descripción de un concepto."""),
     Setting(key="retrieval.description_collision_similarity",
             name="DESCRIPTION_COLLISION_SIMILARITY", kind="float", default=0.85,
             group="Recuperación", impact=Impact.NONE, minimum=0.0, maximum=1.0,
-            doc="""Cosine similarity above which two concept descriptions are flagged as a likely
-collision — worded too alike to distinguish the concepts they anchor."""),
+            doc="""Similitud coseno por encima de la cual dos descripciones de concepto se marcan como
+probable colisión: redactadas tan parecido que no distinguen los conceptos que anclan."""),
     Setting(key="retrieval.description_prompt_version", name="DESCRIPTION_PROMPT_VERSION",
             kind="int", default=2, group="Recuperación", impact=Impact.LOCKED,
             editable=False, minimum=1,

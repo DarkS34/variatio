@@ -9,22 +9,22 @@ SETTINGS: list[Setting] = [
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_EXTERNAL_PROVIDER",
-        doc="""Only the Evaluation mode reads this block; the pipeline never imports `evaluation/`.
+        doc="""Solo el modo de evaluación lee este bloque; el pipeline nunca importa `evaluation/`.
 
-The `*_MODEL_ID` names deliberately end in neither `_MODEL` nor `_LLM`:
-`inference.required_models()` collects both suffixes by introspection and `/api/health`
-demands them from Ollama, so either name would surface in the UI as a model that is
-never installed — these are served by an external provider and never pulled.
+Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
+`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
+exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
+modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
 
-`EVAL_EXTERNAL_PROVIDER` is a CHAIN in preference order, not a single name. The free tiers
-this arm runs on answer 429 halfway through a data-collection session, and a provider that
-stops answering hands over to the next one instead of costing the session its commercial
-proposal. Each provider brings its own key and its own model id, so the two can never be
-crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible. `none` (or an
-empty value) disables the arm.
+`EVAL_EXTERNAL_PROVIDER` es una CADENA en orden de preferencia, no un único nombre. Los
+planes gratuitos en los que corre este brazo responden 429 a mitad de una sesión de
+recogida de datos, y un proveedor que deja de responder cede el turno al siguiente en vez
+de costarle a la sesión su propuesta comercial. Cada proveedor trae su propia clave y su
+propio id de modelo, así que nunca pueden cruzarse — lo que la única
+`EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor vacío) desactiva el brazo.
 
-The keys come from the environment (or the gitignored `.env`) and default to empty: with
-no key at all the naive arm records itself `unavailable` and the session runs with two.""",
+Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:
+sin ninguna clave el brazo naive se registra como `unavailable` y la sesión corre con dos.""",
     ),
     Setting(
         key="evaluation.models.gemini",
@@ -34,13 +34,13 @@ no key at all the naive arm records itself `unavailable` and the session runs wi
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_GEMINI_MODEL_ID",
-        doc="""The `*_MODEL_ID` names deliberately end in neither `_MODEL` nor `_LLM`:
-`inference.required_models()` collects both suffixes by introspection and `/api/health`
-demands them from Ollama, so either name would surface in the UI as a model that is
-never installed — these are served by an external provider and never pulled.
+        doc="""Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
+`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
+exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
+modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
 
-Each provider brings its own key and its own model id, so the two can never be
-crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible.""",
+Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
+cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
     ),
     Setting(
         key="evaluation.models.groq",
@@ -50,13 +50,13 @@ crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible."""
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_GROQ_MODEL_ID",
-        doc="""The `*_MODEL_ID` names deliberately end in neither `_MODEL` nor `_LLM`:
-`inference.required_models()` collects both suffixes by introspection and `/api/health`
-demands them from Ollama, so either name would surface in the UI as a model that is
-never installed — these are served by an external provider and never pulled.
+        doc="""Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
+`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
+exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
+modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
 
-Each provider brings its own key and its own model id, so the two can never be
-crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible.""",
+Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
+cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
     ),
     Setting(
         key="evaluation.keys.gemini",
@@ -68,15 +68,15 @@ crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible."""
         env="EVAL_GEMINI_API_KEY",
         secret=True,
         editable=False,
-        doc="""Each provider brings its own key and its own model id, so the two can never be
-crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible. `none` (or an
-empty value) disables the arm.
+        doc="""Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
+cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor
+vacío) desactiva el brazo.
 
-The keys come from the environment (or the gitignored `.env`) and default to empty: with
-no key at all the naive arm records itself `unavailable` and the session runs with two.
+Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:
+sin ninguna clave el brazo naive se registra como `unavailable` y la sesión corre con dos.
 
-They are never serialised into `config.json` and never leave the API — they live only in
-the gitignored `.env`.""",
+Nunca se serializan en `config.json` ni salen de la API: viven solo en el `.env` ignorado
+por git.""",
     ),
     Setting(
         key="evaluation.keys.groq",
@@ -88,15 +88,15 @@ the gitignored `.env`.""",
         env="EVAL_GROQ_API_KEY",
         secret=True,
         editable=False,
-        doc="""Each provider brings its own key and its own model id, so the two can never be
-crossed — which is what the single `EVAL_EXTERNAL_API_KEY` made impossible. `none` (or an
-empty value) disables the arm.
+        doc="""Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
+cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor
+vacío) desactiva el brazo.
 
-The keys come from the environment (or the gitignored `.env`) and default to empty: with
-no key at all the naive arm records itself `unavailable` and the session runs with two.
+Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:
+sin ninguna clave el brazo naive se registra como `unavailable` y la sesión corre con dos.
 
-They are never serialised into `config.json` and never leave the API — they live only in
-the gitignored `.env`.""",
+Nunca se serializan en `config.json` ni salen de la API: viven solo en el `.env` ignorado
+por git.""",
     ),
     Setting(
         key="evaluation.timeout",
@@ -106,7 +106,8 @@ the gitignored `.env`.""",
         group="Evaluación",
         impact=Impact.NONE,
         minimum=1.0,
-        doc="""Per attempt, so a chain of two waits for this twice in the worst case. The arm runs on
-a thread alongside the two local ones, which take minutes, so it is not the wall clock.""",
+        doc="""Por intento, así que una cadena de dos espera esto dos veces en el peor caso. El brazo
+corre en un hilo junto a los dos locales, que tardan minutos, de modo que no es el reloj
+de pared.""",
     ),
 ]

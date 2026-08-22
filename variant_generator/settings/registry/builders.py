@@ -9,10 +9,10 @@ SETTINGS: list[Setting] = [
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Page-image transcription of raw exemplars. Docling reads these PDFs as text and loses
-three things at once: it detaches code blocks from the question that cites them, it
-collapses their line breaks, and it drops the colour that marks the correct option.
-Rendering the page and reading it as an image recovers all three.""",
+        doc="""Transcripción de los ejemplares en bruto a partir de la imagen de cada página. Docling lee
+estos PDF como texto y pierde tres cosas a la vez: separa los bloques de código de la
+pregunta que los cita, aplana sus saltos de línea y deja caer el color que marca la opción
+correcta. Renderizar la página y leerla como imagen recupera las tres.""",
     ),
     Setting(
         key="builders.transcribe_temperature",
@@ -23,15 +23,15 @@ Rendering the page and reading it as an image recovers all three.""",
         impact=Impact.NONE,
         minimum=0.0,
         maximum=2.0,
-        doc="""Transcription is copying, not writing: at Ollama's default temperature the same page
-came back with `a = 99` and `if a < 0 : break` dedented out of their `while True:`,
-which silently changes what the exercise asks. Pinned to 0 for that reason.
+        doc="""Transcribir es copiar, no escribir: a la temperatura por defecto de Ollama la misma
+página volvió con `a = 99` e `if a < 0 : break` sacados de su `while True:`, lo que cambia
+en silencio lo que pide el ejercicio. Fijada a 0 por eso.
 
-It stays a constant of its own rather than becoming `TEMPERATURE_DETERMINISTIC`, although
-it holds the same number and for the same reason: this one is part of the page cache's
-fingerprint (`_source_docs/pages.py`), so changing it re-transcribes every page of every
-corpus. Aliasing it would make that consequence follow from an edit made about something
-else entirely.""",
+Sigue siendo una constante propia en vez de `TEMPERATURE_DETERMINISTIC`, aunque tenga el
+mismo valor y por la misma razón: esta forma parte de la huella de la caché de páginas
+(`_source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
+todos los corpus. Unificarlas haría que esa consecuencia siguiera a una edición hecha
+pensando en otra cosa.""",
     ),
     Setting(
         key="builders.transcribe_max_retries",
@@ -41,8 +41,9 @@ else entirely.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=0,
-        doc="""Number of times the page-image transcription is retried after a parse failure before
-the builder gives up on that page and falls back to Docling's own text extraction.""",
+        doc="""Cuántas veces se reintenta la transcripción de la imagen de una página tras un fallo de
+parseo antes de que el constructor renuncie a esa página y recurra a la extracción de
+texto de Docling.""",
     ),
     Setting(
         key="builders.transcribe_prompt_version",
@@ -53,7 +54,7 @@ the builder gives up on that page and falls back to Docling's own text extractio
         impact=Impact.LOCKED,
         editable=False,
         minimum=1,
-        doc="""Bump when transcribe_page_prompt changes: it is part of the page cache fingerprint.
+        doc="""Súbelo al cambiar transcribe_page_prompt: forma parte de la huella de la caché de páginas.
 
 Lo sube quien edita el prompt, no quien mira una pantalla.""",
     ),
@@ -64,8 +65,8 @@ Lo sube quien edita el prompt, no quien mira una pantalla.""",
         default=True,
         group="Constructores",
         impact=Impact.NONE,
-        doc="""Only reached by the Docling fallback (non-PDF sources, or PDFs whose transcription
-failed): scanned pages whose text never made it into the PDF at all.""",
+        doc="""Solo llega a usarse en el camino de respaldo de Docling (fuentes que no son PDF, o PDF
+cuya transcripción falló): páginas escaneadas cuyo texto nunca entró en el PDF.""",
     ),
     Setting(
         key="builders.ep_chunk_size",
@@ -75,8 +76,9 @@ failed): scanned pages whose text never made it into the PDF at all.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps the number of characters per chunk when the exemplars-profile builder splits a
-source document for scanning, keeping each call within the model's usable context.""",
+        doc="""Acota los caracteres por fragmento cuando el constructor del perfil de ejemplares parte
+un documento fuente para escanearlo, de modo que cada llamada quepa en el contexto útil
+del modelo.""",
     ),
     Setting(
         key="builders.ep_scan_excerpt_chars",
@@ -86,8 +88,9 @@ source document for scanning, keeping each call within the model's usable contex
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Bounds how many characters of each scanned item type's excerpt are kept, enough to
-recognise the modality without carrying the whole example into every later call.""",
+        doc="""Acota cuántos caracteres del extracto de cada modalidad detectada se conservan: los
+suficientes para reconocer la modalidad sin arrastrar el ejemplo entero a cada llamada
+posterior.""",
     ),
     Setting(
         key="builders.ep_max_item_types",
@@ -97,8 +100,8 @@ recognise the modality without carrying the whole example into every later call.
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many distinct item types the exemplars-profile builder will keep from a
-scan, so a noisy corpus cannot fragment the profile into near-duplicate modalities.""",
+        doc="""Acota cuántas modalidades distintas conserva el constructor del perfil tras el escaneo,
+para que un corpus ruidoso no fragmente el perfil en modalidades casi duplicadas.""",
     ),
     Setting(
         key="builders.eb_chunk_size",
@@ -108,8 +111,8 @@ scan, so a noisy corpus cannot fragment the profile into near-duplicate modaliti
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps the number of characters per chunk when the exemplars-bank builder batches a
-source document's markdown for extraction.""",
+        doc="""Acota los caracteres por fragmento cuando el constructor del banco de ejemplares agrupa
+el markdown de un documento fuente para extraerlo.""",
     ),
     Setting(
         key="builders.kg_chunk_size",
@@ -119,8 +122,8 @@ source document's markdown for extraction.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps the number of characters per chunk the knowledge-graph builder reads at a time
-during extraction, bounding how much text one extraction call has to reason over.""",
+        doc="""Acota los caracteres por fragmento que el constructor del grafo lee de una vez durante
+la extracción, limitando cuánto texto tiene que razonar una sola llamada.""",
     ),
     Setting(
         key="builders.kg_max_evidence_relations",
@@ -130,8 +133,9 @@ during extraction, bounding how much text one extraction call has to reason over
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many relation triples are shown as evidence for a concept in the cleaning
-and domain-assignment prompts, so a hub concept cannot crowd out the rest of the batch.""",
+        doc="""Acota cuántas ternas de relación se muestran como evidencia de un concepto en los prompts
+de limpieza y de asignación de dominios, para que un concepto muy conectado no desplace
+al resto del lote.""",
     ),
     Setting(
         key="builders.kg_extract_gleaning_passes",
@@ -200,8 +204,9 @@ para que se lea como material y no como un recorte.""",
         default=["s"],
         group="Constructores",
         impact=Impact.NONE,
-        doc="""Suffixes stripped when normalising a concept's key for merge comparison, so plural
-and singular mentions of the same concept are recognised as one.""",
+        doc="""Sufijos que se quitan al normalizar la clave de un concepto para compararlo en la fusión,
+de modo que las menciones en plural y en singular del mismo concepto se reconozcan como
+una sola.""",
     ),
     Setting(
         key="builders.kg_merge_qualifier_pattern",
@@ -233,8 +238,8 @@ called `Unclassified` instead of being retried.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many section titles per source document are offered as domain-naming
-evidence, so one document with many headings cannot dominate the domain-naming call.""",
+        doc="""Acota cuántos títulos de sección por documento se ofrecen como evidencia al nombrar los
+dominios, para que un documento con muchos encabezados no domine esa llamada.""",
     ),
     Setting(
         key="builders.kg_title_ubiquity",
@@ -245,8 +250,9 @@ evidence, so one document with many headings cannot dominate the domain-naming c
         impact=Impact.NONE,
         minimum=0.0,
         maximum=1.0,
-        doc="""The fraction of documents a heading must appear in before it counts as a recurring
-section title rather than a one-off, feeding the domain-naming call.""",
+        doc="""La fracción de documentos en la que debe aparecer un encabezado para contar como título
+de sección recurrente en vez de como uno suelto; alimenta la llamada que nombra los
+dominios.""",
     ),
     Setting(
         key="builders.kg_relation_schema",
@@ -256,8 +262,8 @@ section title rather than a one-off, feeding the domain-naming call.""",
         group="Constructores",
         impact=Impact.LOCKED,
         editable=False,
-        doc="""Selects which relation vocabulary from `relations.py` the graph uses; it fixes the
-Spanish verbose labels the loader indexes the graph by.
+        doc="""Elige qué vocabulario de relaciones de `relations.py` usa el grafo; fija las etiquetas
+verbose en español por las que el cargador indexa el grafo.
 
 Decisión cerrada: debe seguir siendo «es». Las etiquetas verbose son load-bearing y el
 grafo que se distribuye las contiene; cambiarlo invalidaría todos los grafos de todos
@@ -272,8 +278,8 @@ los workspaces.""",
         impact=Impact.NONE,
         minimum=0.0,
         maximum=1.0,
-        doc="""The cosine-similarity floor above which two concept names are proposed to the
-merge-decision call as candidates for being the same concept, during graph cleaning.""",
+        doc="""El suelo de similitud coseno por encima del cual dos nombres de concepto se proponen a la
+llamada de fusión como candidatos a ser el mismo concepto, durante la limpieza del grafo.""",
     ),
     Setting(
         key="builders.kg_max_merge_group",
@@ -294,8 +300,8 @@ decision during graph cleaning, keeping each call's comparison set small enough 
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many candidate merge groups are bundled into a single cleaning call,
-bounding how much the model must decide on at once.""",
+        doc="""Acota cuántos grupos candidatos a fusión se agrupan en una sola llamada de limpieza,
+limitando cuánto tiene que decidir el modelo de una vez.""",
     ),
     Setting(
         key="builders.kg_clean_batch_size",
@@ -305,8 +311,8 @@ bounding how much the model must decide on at once.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many concepts are sent to the model in one batch during the cleaning
-phase's merge and drop passes.""",
+        doc="""Acota cuántos conceptos se envían al modelo en un lote durante las pasadas de fusión y
+descarte de la fase de limpieza.""",
     ),
     Setting(
         key="builders.kg_domain_batch_size",
@@ -316,8 +322,8 @@ phase's merge and drop passes.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many concepts are placed into domains in a single `assign_round` call,
-keeping the per-call placement batch small enough to judge accurately.""",
+        doc="""Acota cuántos conceptos se colocan en dominios en una sola llamada de `assign_round`,
+manteniendo cada lote lo bastante pequeño como para juzgarlo bien.""",
     ),
     Setting(
         key="builders.kg_domain_rounds",
@@ -327,7 +333,7 @@ keeping the per-call placement batch small enough to judge accurately.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many times `place_leftovers` re-asks the model to place concepts it left
-unclassified, before whatever remains is given up to `KG_BUILDER_UNCLASSIFIED_DOMAIN`.""",
+        doc="""Acota cuántas veces `place_leftovers` vuelve a pedir al modelo que coloque los conceptos
+que dejó sin clasificar, antes de que lo que quede vaya a `KG_BUILDER_UNCLASSIFIED_DOMAIN`.""",
     ),
 ]
