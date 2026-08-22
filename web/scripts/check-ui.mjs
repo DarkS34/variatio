@@ -48,7 +48,6 @@ const RULES = [
       "components/Markdown.tsx",
       "components/RawImport.tsx",
       "components/RunDrawer.tsx",
-      "components/StageGate.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
       "features/account/AccountScreen.tsx",

@@ -6,7 +6,9 @@ import { BuildProgress } from "@/components/BuildProgress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, Spinner } from "@/components/ui/misc";
+import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
+import { StatusMark } from "@/components/ui/status";
+import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, when } from "@/lib/format";
 import { Link } from "@/lib/router";
@@ -16,7 +18,16 @@ import { useMutation } from "@tanstack/react-query";
 
 export function StageBadge({ stage }: { stage: StageState }) {
   const meta = ARTIFACT_STATUS[stage.status];
-  return <Badge variant={meta.tone as never}>{meta.label}</Badge>;
+  // The mark carries the shape, the text carries the name, and neither depends on the
+  // other: this was the third of the three different drawings the same concept had.
+  return (
+    <Badge
+      variant={meta.tone}
+      mark={<StatusMark status={stage.status} blocked={Boolean(stage.blocked_reason)} />}
+    >
+      {meta.label}
+    </Badge>
+  );
 }
 
 /**
@@ -47,13 +58,23 @@ export function StageGate({
 }) {
   const invalidate = useInvalidateChain();
   const rawMissing = useRawMissingFor(stage?.artifact);
+  const toast = useToast();
+  // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
+  // changed the state of the whole chain and said nothing, and invalidating a query does
+  // not always change anything visible on the screen you pressed the button from.
   const approve = useMutation({
     mutationFn: () => api.approve(stage!.artifact),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast({ title: "Aprobado", description: stage!.label });
+    },
   });
   const reopen = useMutation({
     mutationFn: () => api.reopen(stage!.artifact),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast({ title: "Reabierto", description: stage!.label });
+    },
   });
 
   if (!stage) {
@@ -74,7 +95,7 @@ export function StageGate({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+            <h1 className="text-title">{title}</h1>
             <InfoHint label={`Qué es ${title}`}>{description}</InfoHint>
             <StageBadge stage={stage} />
             {/* Un borrador no es un defecto: puede estar bien tal cual. El distintivo dice
@@ -111,7 +132,7 @@ export function StageGate({
       </header>
 
       {stage.status === "approved" && stage.approved_at ? (
-        <p className="text-xs text-muted-foreground">Aprobado el {when(stage.approved_at)}.</p>
+        <p className="text-small text-muted-foreground">Aprobado el {when(stage.approved_at)}.</p>
       ) : null}
 
       {stage.stale_because.length > 0 ? (
@@ -137,23 +158,21 @@ export function StageGate({
           para una acción que es una. El botón de la cabecera se explica solo: cuando falta
           el corpus se deshabilita y su tooltip dice exactamente eso. */}
       {missing && rawMissing ? (
-        <Alert
-          tone="attention"
+        <EmptyState
+          icon={<UploadCloud />}
           title="Faltan los datos de partida"
           action={
             <Link to="/">
-              <Button size="sm" variant="outline">
+              <Button variant="attention">
                 <UploadCloud />
                 Importar
               </Button>
             </Link>
           }
         >
-          <p>
-            «{rawMissing}» no tiene ningún documento, y es la materia prima de{" "}
-            {stage.label.toLowerCase()}. Impórtalos desde el panel y vuelve aquí.
-          </p>
-        </Alert>
+          «{rawMissing}» no tiene ningún documento, y es la materia prima de{" "}
+          {stage.label.toLowerCase()}. Impórtalos desde el panel y vuelve aquí.
+        </EmptyState>
       ) : null}
 
       {/* Una etapa sin construir no tiene contenido, y pedírselo a la pantalla es pedirle
