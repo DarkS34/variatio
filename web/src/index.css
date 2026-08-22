@@ -170,7 +170,41 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", SFMono-Regular, Menlo, monospace;
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Six steps, with the levels IN ORDER. Before this the app had two sizes for everything
+     and the headings ran backwards: CardTitle is an h3 at 14 px and the h4s are at 12, i.e.
+     smaller than the body text they sit above. That, and not the colour, is why every
+     screen read as one uniform grey sheet.
+     The body stays at 14 px on purpose — the app is dense and raising it would push the
+     layout around. The problem was never that 14 was small, it was that 12 was used 247
+     times. */
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  --text-heading: 1.125rem;
+  --text-heading--line-height: 1.4;
+  --text-heading--font-weight: 600;
+
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.55;
+
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.35;
+  --text-micro--letter-spacing: 0.08em;
+  --text-micro--font-weight: 500;
 }
 
 * {
@@ -193,8 +227,26 @@ body,
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The width axis is what keeps this from reading as a template: the ROLE is encoded with
+   the width of the letter, not with one more size. Only `display` (expanded) and `micro`
+   (condensed, small caps) use it — the two ends of the scale. Fontsource exposes the axis
+   through font-stretch, so that is the property, not font-variation-settings. */
+@utility font-expanded {
+  font-stretch: 112%;
+}
+@utility font-condensed {
+  font-stretch: 78%;
+}
+
+/* Any figure compared down a column: counts, durations, percentages, table cells. */
+@utility nums {
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes vg-fade-in {
