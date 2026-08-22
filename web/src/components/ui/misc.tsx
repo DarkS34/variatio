@@ -265,17 +265,24 @@ export function Alert({
 export function EmptyState({
   icon,
   title,
+  action,
   children,
 }: {
   icon?: ReactNode;
   title: string;
+  /** What to do so that it stops being empty. An empty screen with no action is a hole;
+   *  with one it is where the work starts. Optional on purpose — some holes genuinely have
+   *  no action, a search with no results being the obvious one, and forcing a button there
+   *  would mean inventing one. */
+  action?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-10 text-center">
-      {icon ? <div className="text-muted-foreground">{icon}</div> : null}
-      <p className="text-sm font-medium">{title}</p>
-      {children ? <div className="max-w-md text-sm text-muted-foreground">{children}</div> : null}
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-12 text-center">
+      {icon ? <div className="text-muted-foreground [&_svg]:size-8">{icon}</div> : null}
+      <p className="font-display font-expanded text-title">{title}</p>
+      {children ? <div className="max-w-md text-muted-foreground">{children}</div> : null}
+      {action ? <div className="mt-1">{action}</div> : null}
     </div>
   );
 }
