@@ -62,7 +62,7 @@ BUILD_PHASES = (
 
 BUILD_MODELS = [
     config.KG_EXTRACT_MODEL,
-    config.KG_CLEAN_EMBEDDING_MODEL,
+    config.EMBEDDING_LLM,
     config.KG_CLEAN_MERGE_MODEL,
     config.KG_CLEAN_DROP_MODEL,
     config.KG_DOMAINS_MODEL,

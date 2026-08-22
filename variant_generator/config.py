@@ -225,7 +225,6 @@ EB_EXTRACT_MODEL = LLM_MAIN
 
 # Knowledge graph builder
 KG_EXTRACT_MODEL = LLM_MAIN
-KG_CLEAN_EMBEDDING_MODEL = EMBEDDING_LLM
 KG_CLEAN_MERGE_MODEL = LLM_MAIN
 KG_CLEAN_DROP_MODEL = LLM_MAIN
 # The one phase whose call had to give up reasoning outright when `LLM_MAIN` became a
@@ -254,7 +253,7 @@ CONTENT_GENERATION_LLM = LLM_MAIN
 # middle of a corpus. Whatever else moves off `LLM_MAIN`, this follows it.
 REPAIR_LLM = LLM_MAIN
 
-EMBEDDING_MODELS = (EMBEDDING_LLM, KG_CLEAN_EMBEDDING_MODEL)
+EMBEDDING_MODELS = (EMBEDDING_LLM,)
 
 # These are what make the three models co-resident, so they are not free to grow: measured
 # on the A40 through `/api/ps`, `LLM_MAIN` at 65536 + guardrail + embedder come to 29.05 GiB
@@ -281,7 +280,6 @@ LLM_CONTEXT = {
     LLM_MAIN: 65536,
     GUARDRAIL_LLM: 4096,
     EMBEDDING_LLM: 4096,
-    KG_CLEAN_EMBEDDING_MODEL: 4096,
 }
 
 

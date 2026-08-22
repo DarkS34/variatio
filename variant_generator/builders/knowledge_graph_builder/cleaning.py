@@ -156,7 +156,7 @@ def merge_candidates(nodes: list[str]) -> list[list[str]]:
     if len(nodes) < 2:
         return []
     vectors = embed_normalized(
-        nodes, "los nombres de los nodos", model=config.KG_CLEAN_EMBEDDING_MODEL
+        nodes, "los nombres de los nodos", model=config.EMBEDDING_LLM
     )
     if vectors is None:
         return []
