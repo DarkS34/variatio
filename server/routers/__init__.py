@@ -2,6 +2,7 @@ from . import (
     admin,
     auth,
     bank,
+    config,
     context,
     evaluation,
     generations,
@@ -29,6 +30,7 @@ ROUTERS = [
     generations.router,
     evaluation.router,
     admin.router,
+    config.router,
     ws.router,
 ]
 

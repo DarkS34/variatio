@@ -418,6 +418,13 @@ def engine_name() -> str:
     return config.INFERENCE_ENGINE
 
 
+# The engine is built once and holds the host it was built with, so a change to
+# `INFERENCE_ENGINE` or `OLLAMA_HOST` is only real once the cached one is dropped.
+def reset_engine() -> None:
+    global _engine
+    _engine = None
+
+
 def generate(
     model: str,
     prompt: str,

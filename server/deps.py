@@ -66,6 +66,17 @@ def invalidate(slug: str, reason: str) -> None:
         _invalid_reasons[slug] = reason
 
 
+def invalidate_all(reason: str) -> int:
+    with _lock:
+        slugs = list(_contexts)
+        for slug in slugs:
+            _contexts.pop(slug, None)
+            _invalid_reasons[slug] = reason
+        if slugs:
+            logger.info(f"[contextos] {len(slugs)} contexto(s) invalidado(s): {reason}")
+        return len(slugs)
+
+
 def peek(slug: str) -> PipelineContext | None:
     with _lock:
         return _contexts.get(slug)

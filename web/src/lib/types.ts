@@ -711,3 +711,34 @@ export interface ContentContextState {
   pending_draft: string | null;
   canonical_keys: string[];
 }
+
+/* Configuration ---------------------------------------------------------------------- */
+
+export type ConfigSource = "default" | "file" | "env";
+export type ConfigImpact = "none" | "engine" | "contexts" | "reindex" | "locked";
+
+export type ConfigSetting = {
+  key: string;
+  name: string;
+  kind: string;
+  group: string;
+  doc: string;
+  impact: ConfigImpact;
+  editable: boolean;
+  source: ConfigSource;
+  env: string | null;
+  choices: string[] | null;
+  minimum: number | null;
+  maximum: number | null;
+  nullable: boolean;
+  secret: boolean;
+  value?: unknown;
+  default?: unknown;
+  state?: "configurada" | "ausente";
+};
+
+export type ConfigPayload = {
+  groups: string[];
+  settings: ConfigSetting[];
+  applied?: string[];
+};

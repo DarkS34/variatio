@@ -49,6 +49,7 @@ import {
 } from "@/state/queries";
 
 import { BarRows, DayColumns, ShareMeter, StatTile, type BarRow } from "./charts";
+import { ConfigTab } from "./ConfigTab";
 
 /** A three-way blind choice: what pure chance would produce. Every share is read
  *  against it, and the panel never shows one without drawing the other. */
@@ -104,6 +105,7 @@ export function AdminScreen() {
           { value: "estudio", label: "Evaluaciones" },
           { value: "cuentas", label: "Cuentas y accesos" },
           { value: "workspaces", label: "Workspaces" },
+          { value: "config", label: "Configuración" },
         ]}
         value={tab}
         onChange={setTab}
@@ -133,6 +135,8 @@ export function AdminScreen() {
       {tab === "workspaces" && overview.data ? (
         <WorkspacesTab overview={overview.data} />
       ) : null}
+
+      {tab === "config" ? <ConfigTab /> : null}
     </div>
   );
 }

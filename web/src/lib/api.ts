@@ -7,6 +7,7 @@ import type {
   BankListing,
   BuildPlans,
   ConceptSource,
+  ConfigPayload,
   ExemplarsProfile,
   Coverage,
   CurriculumState,
@@ -339,6 +340,11 @@ export const api = {
       `/api/admin/accounts/${userId}/memberships/${encodeURIComponent(workspace)}`,
       { method: "DELETE" },
     ),
+
+  adminConfig: () => request<ConfigPayload>("/api/admin/config"),
+  updateAdminConfig: (values: Record<string, unknown>) =>
+    put<ConfigPayload>("/api/admin/config", { values }),
+  reloadAdminConfig: () => post<ConfigPayload>("/api/admin/config/reload"),
 
   // No `n` anywhere in here: one item per arm per session is what makes the session the
   // statistical unit of the study.
