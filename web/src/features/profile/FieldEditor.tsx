@@ -691,11 +691,12 @@ export function FieldEditor({
                 <span className="inline-flex items-center gap-1.5">
                   <Wand2 className="size-3.5" />
                   Cómo generarlo
-                  <InfoHint label="Guía de generación">
-                    Se usa al generar ítems nuevos: estilo, formato y restricciones del campo.
-                  </InfoHint>
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-condensed text-muted-foreground">
+                    solo a mano
+                  </span>
                 </span>
               }
+              description="El constructor no lo rellena: lo general va en las reglas de la modalidad. Escríbelo solo cuando este campo concreto necesite un matiz que las reglas no cubren."
             >
               <Textarea
                 value={spec.guidance?.generation ?? ""}
@@ -705,7 +706,7 @@ export function FieldEditor({
                     guidance: { ...spec.guidance, generation: event.target.value || undefined },
                   })
                 }
-                placeholder="Cómo debe redactarse al generar"
+                placeholder="Vacío salvo que este campo necesite un matiz propio"
                 className="min-h-24 text-small"
               />
             </Field>

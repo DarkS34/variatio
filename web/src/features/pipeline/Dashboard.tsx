@@ -60,7 +60,7 @@ const EXPLAIN: Record<string, string> = {
     "Los ítems extraídos de los documentos, etiquetados con conceptos del grafo. Alimentan los ejemplos few-shot de la generación.",
 };
 
-function StageCard({ stage, index }: { stage: StageState; index: number }) {
+function StageCard({ stage }: { stage: StageState }) {
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
   const building = stage.status === "building";
@@ -75,22 +75,12 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
       )}
     >
       <CardHeader className="pb-2">
+        {/* No ordinal here. The cards are laid out in `server/review.ARTIFACTS` order and
+            that order is load-bearing, but numbering it said something the layout already
+            says — and said it wrongly to anyone who reads the chain as graph-first. What
+            state the stage is in is `StageBadge`'s job, in a shape and a word; the numbered
+            circle also turned green, so it was a third drawing of the same fact. */}
         <div className="flex items-center gap-2">
-          {/* The number keeps saying WHERE in the chain this is — it reads
-              server/review.ARTIFACTS and that is a closed decision — and the mark beside
-              it says WHAT state it is in, with a shape rather than only a colour. Before,
-              the badge tried to carry both by turning green, so a reader who cannot
-              separate the two hues had one channel for two questions. */}
-          <span
-            className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full text-micro font-condensed",
-              stage.status === "approved"
-                ? "bg-settled text-background"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {index + 1}
-          </span>
           <div className="flex flex-1 items-center gap-1.5">
             <CardTitle>{stage.label}</CardTitle>
             <InfoHint label={`Qué es ${stage.label}`}>{EXPLAIN[stage.artifact]}</InfoHint>
@@ -661,8 +651,8 @@ export function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
-          {stages.map((stage, index) => (
-            <StageCard key={stage.artifact} stage={stage} index={index} />
+          {stages.map((stage) => (
+            <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
         <div className="space-y-4">

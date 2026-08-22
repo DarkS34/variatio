@@ -14,7 +14,7 @@ RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_conc
 
 
 class ItemType:
-    def __init__(self, key: str, raw: dict, content_context: dict):
+    def __init__(self, key: str, raw: dict):
         self.key = key
         self.label: str = raw.get("label") or key
         self.description: str = raw.get("description") or ""
@@ -22,7 +22,6 @@ class ItemType:
         self.embed_fields: list[str] = list(raw.get("embed_fields") or [self.primary_field])
         self.general_generation_rules: list[str] = list(raw.get("general_generation_rules") or [])
         self.field_specs: dict[str, dict] = raw["fields"]
-        self.content_context = content_context
         self.content_item: type[BaseModel] = self._build_content_item()
 
     def _build_content_item(self) -> type[BaseModel]:
@@ -33,12 +32,6 @@ class ItemType:
         model.PRIMARY_FIELD = self.primary_field
         model.ITEM_TYPE = self.key
         return model
-
-    @property
-    def user_decided_fields(self) -> list[str]:
-        return [
-            name for name, spec in self.field_specs.items() if spec.get("decided_by") == "user"
-        ]
 
     def stripped_schema(self) -> dict:
         schema = copy.deepcopy(self.content_item.model_json_schema())
@@ -124,7 +117,7 @@ class ExemplarsProfile:
         self._validate(self._raw)
         self.content_context: dict = self._raw["content_context"]
         self.item_types: dict[str, ItemType] = {
-            key: ItemType(key, spec, self.content_context)
+            key: ItemType(key, spec)
             for key, spec in self._raw["item_types"].items()
         }
 

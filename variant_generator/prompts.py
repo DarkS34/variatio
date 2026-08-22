@@ -474,7 +474,8 @@ El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del curríc
 
 PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el currículo SALVO estos conceptos no debe poder resolver el ejercicio. Si podría, el ejercicio no los practica — los menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo.
 {prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
-# REGLAS DE GENERACIÓN
+# REGLAS DE REDACCIÓN DE ESTA MODALIDAD
+Convenciones observadas en el material real de la asignatura: cómo escribe ESTA asignatura ESTA modalidad. Son de obligado cumplimiento y describen la FORMA, no el contenido — el objetivo de aprendizaje lo fijan las secciones anteriores. Si alguna choca con la calidad didáctica de más abajo, manda la calidad didáctica y el resto se adapta:
 {rules_block}
 
 # CALIDAD DIDÁCTICA
@@ -499,7 +500,7 @@ Esqueleto exacto de la forma esperada (rellena los valores; las claves vienen de
 {instance_template}
 
 # GUÍA POR CAMPO
-Instrucciones específicas para la generación de cada campo. Complementan la `description` del schema (que describe la naturaleza intrínseca del campo):
+Matices que quien administra la asignatura ha anotado a mano sobre campos concretos. Es normal que no haya ninguno: lo general va en las reglas de arriba y la naturaleza de cada campo, en su `description` del schema. Cuando los haya, afinan esos dos, no los contradicen:
 {field_guidance_block}
 
 # SCHEMA DE REFERENCIA (consulta para constraints como minLength/Literal/pattern; NO lo copies)
@@ -726,7 +727,7 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
         "<nombre_de_campo>": {{
           "schema": {{ "type": "string" }},
           "description": "...",
-          "guidance": {{ "extraction": "...", "generation": "..." }}
+          "guidance": {{ "extraction": "..." }}
         }}
       }}
     }}
@@ -738,7 +739,7 @@ Metadatos docentes de la asignatura, deducidos de los fragmentos de ejemplo del 
 
 # item_types — CUÁNTAS MODALIDADES
 - FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si se rellenan las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
-- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `guidance.generation` saldrían casi iguales, es una sola.
+- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `general_generation_rules` saldrían casi iguales, es una sola.
 - DESCARTA LO ANECDÓTICO. Una modalidad que aparece una vez en todo el corpus y que encaja razonablemente dentro de otra, va dentro de la otra. Solo sobrevive por su cuenta la que el material usa de verdad como formato propio.
 - COMO MUCHO {max_types} modalidades. Si te salen más, es que estás separando por tema o por dificultad en vez de por anatomía: vuelve a fusionar. Lo habitual son 1-3.
 - Ordénalas de más frecuente a menos: la primera es la que el sistema usa por defecto.
@@ -746,7 +747,7 @@ Metadatos docentes de la asignatura, deducidos de los fragmentos de ejemplo del 
 Para cada modalidad:
 - `label`: su nombre legible, en el idioma del material («Pregunta tipo test», «Corrección de errores»).
 - `description`: qué es y cómo se reconoce. Lo lee tanto el extractor —para decidir a qué modalidad pertenece cada ejercicio del documento— como el generador. Sé discriminante: describe lo que la distingue de las demás modalidades del perfil, no lo que tienen en común.
-- `general_generation_rules`: reglas transversales a todos los campos que debería respetar la redacción de ejercicios NUEVOS DE ESTA MODALIDAD: convenciones de estilo, notación, formato o alcance que observes de forma consistente. Describe cómo escribe ESTA asignatura esta modalidad, no buenas prácticas didácticas genéricas — de la calidad pedagógica ya se ocupa el generador. Una regla que solo tiene sentido para una modalidad (p. ej. exigir docstring y bloque de prueba) va SOLO en esa modalidad.
+- `general_generation_rules`: cómo se redacta un ejercicio NUEVO de esta modalidad. Es la parte más importante de lo que produces y tiene sección propia más abajo — léela antes de escribirlas.
 
 # fields — CÓMO SE LLAMAN
 {EXEMPLARS_PROFILE_FIELD_NAMING}
@@ -765,7 +766,7 @@ Para cada campo:
 {EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
 - `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma de instrucción de la asignatura.
 - `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
-- `guidance.generation`: cómo REDACTAR este campo al crear un ejercicio nuevo desde cero. **Inclúyela SOLO si el campo se redacta de verdad** (ver criterio abajo); si no, omítela y deja en `guidance` únicamente `extraction`.
+- `guidance.generation`: **NO la escribas. Nunca.** Existe en el formato, pero es un campo que rellena a mano quien administra la asignatura cuando un campo concreto necesita un matiz que las reglas no cubren. Tú deja en `guidance` únicamente `extraction`. Lo que sepas sobre cómo se REDACTA esta modalidad va entero en `general_generation_rules`.
 
 # POLÍTICA DE NULOS — `null` ES EL ÚLTIMO RECURSO
 Un campo admite `null` SOLO cuando el contenido que representa PUEDE NO EXISTIR en un ejercicio de esa modalidad (p. ej. la solución de un ejercicio que se plantea sin resolver). Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido.
@@ -775,12 +776,18 @@ Por tanto, para todo campo CLASIFICATORIO (nivel, categoría…):
 - Su `description` debe incluir un CRITERIO INTERNO DE CLASIFICACIÓN propio de la asignatura: enumera cada valor posible junto a las SEÑALES OBSERVABLES que lo identifican (qué construcciones, qué complejidad, qué exigencia o qué conocimientos previos supone el ejercicio). El criterio debe cubrir TODO el material, de modo que cualquier ejercicio pueda clasificarse sin excepción.
 - Su `guidance.extraction` debe decir: si el documento trae una etiqueta explícita, se usa esa; si NO la trae, se aplica al contenido del ejercicio el criterio definido en `description`. NUNCA "si no hay etiqueta, null".
 
-# QUÉ CAMPOS LLEVAN guidance.generation (SENTIDO COMÚN)
-No todos los campos se redactan; muchos son de ENTRADA, no de salida. Clasifica cada campo:
-- CONTENIDO REDACTADO — su valor es lo que se escribe al crear un ejercicio nuevo desde cero (el enunciado, la solución, las opciones). → `guidance` con `extraction` Y `generation`.
-- ENTRADA / CONTROL / METADATO — su valor NO se redacta: lo DECIDE de antemano quien pide el ejercicio (un nivel de dificultad objetivo), es una etiqueta o clasificación, o solo tiene sentido al leer un documento ya existente (identificadores, procedencia, referencia al documento origen). → `guidance` con SOLO `extraction`; OMITE `generation`.
+# general_generation_rules — CÓMO ESCRIBE ESTA ASIGNATURA (LA PARTE QUE MÁS IMPORTA)
+Es lo ÚNICO que el perfil le dice al generador sobre cómo se redacta un ejercicio de esta modalidad. Aquí no hay una segunda oportunidad campo a campo: lo que no esté en estas reglas, el generador no lo sabe. Dedícale más atención que a ninguna otra parte del perfil.
 
-Prueba rápida: al pedir un ejercicio nuevo, ¿se FIJARÍA este valor como parámetro de entrada, o es una etiqueta/clasificación? → NO lleva `guidance.generation`. ¿Se REDACTA como parte del ejercicio creado? → SÍ la lleva. El `primary_field` es siempre contenido redactado: lleva `guidance.generation`.
+Escríbelas mirando los `excerpt` del inventario y preguntándote qué tienen en común TODOS los ejemplares de esta modalidad. Una regla es una CONVENCIÓN OBSERVADA en este material, no una opinión tuya sobre didáctica.
+
+- CADA REGLA DEBE SER COMPROBABLE. Tiene que poder leerse un ejercicio ya escrito y decir si la cumple o no. «El enunciado debe ser claro» no es comprobable y no es una regla; «el enunciado debe especificar la entrada, la salida y el comportamiento esperado» sí lo es.
+- NOMBRA EL CAMPO al que se aplica cuando la regla sea de un campo concreto («la solución debe…», «el enunciado debe…»). No hay guía por campo que lo diga en tu lugar, así que la regla tiene que decirlo ella.
+- CUBRE, cuando el material los muestre de forma consistente: qué debe contener obligatoriamente cada campo redactado; la NOTACIÓN y las convenciones de formato propias de la asignatura (cómo se documenta, qué encabezados, qué unidades, qué símbolos); la EXTENSIÓN y el alcance típicos de un ejemplar; y las relaciones de COHERENCIA entre campos (que la solución responda exactamente a lo que pide el enunciado, que el material de partida y la solución encajen).
+- NADA DE DIDÁCTICA GENÉRICA. «Debe fomentar el pensamiento crítico», «debe ser motivador», «adecuar la dificultad al nivel»: de todo eso ya se ocupa el generador, que sabe de didáctica y no sabe de esta asignatura. Tú aportas lo segundo. Si una regla valdría igual para cualquier asignatura del mundo, sobra.
+- NADA DE CONTENIDO. No fijes el tema, el ámbito ni los conceptos de los ejercicios: eso lo decide cada encargo contra el grafo del currículo. Las reglas hablan de la FORMA.
+- SOLO DE ESTA MODALIDAD. Una regla que solo tiene sentido aquí (exigir docstring y bloque de prueba) va SOLO aquí. Si es cierta de todas las modalidades por igual, es que describe la asignatura entera y no aporta nada en ninguna.
+- CANTIDAD: entre 3 y 8. Menos de 3 casi siempre significa que no has mirado los ejemplares; más de 8, que estás desmenuzando una regla en sus consecuencias o colando didáctica genérica.
 
 # primary_field
 Uno por modalidad. El nombre del campo que porta la CARGA SEMÁNTICA principal del ejercicio: el enunciado, el texto que plantea la tarea al alumno. Aguas abajo es lo que se compara contra el grafo del currículo para decidir qué concepto practica cada ejercicio, así que debe ser el campo que se lee para saber de qué va el ejercicio. Debe ser una de las claves de los `fields` de ESA modalidad.
@@ -799,7 +806,7 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 - Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` únicamente donde el contenido pueda no existir.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
-- ANTES DE RESPONDER, verifica las cinco cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual.
+- ANTES DE RESPONDER, verifica las seis cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables.
 
 <<<INVENTARIO>>>
 {findings}

@@ -497,7 +497,7 @@ class ContentGenerator:
             if name not in fixed
         ]
         if not lines:
-            return "(ningún campo con guía específica adicional; sigue las descripciones del schema)"
+            return "(ninguno anotado; rigen las reglas de la modalidad y las descripciones del schema)"
         return "\n".join(lines)
 
     def _build_fixed_values_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:

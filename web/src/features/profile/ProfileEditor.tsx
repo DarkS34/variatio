@@ -538,17 +538,21 @@ export function ProfileEditor() {
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <CardTitle>Reglas de generación</CardTitle>
-                  <InfoHint label="Qué son las reglas">
-                    Se añaden a los prompts de generación DE ESTA MODALIDAD, sea cual sea el campo.
-                    Una regla que solo tiene sentido aquí (exigir docstring, pedir cuatro
-                    alternativas) va aquí, no en las demás. Para lo específico de un campo usa su
-                    guía de generación.
-                  </InfoHint>
+                  <CardTitle>Reglas de redacción</CardTitle>
                   <Badge variant="outline" className="ml-auto">
                     {rules.length}
                   </Badge>
                 </div>
+                {/* Visible, not behind an (i): this is the one thing on the screen that
+                    decides how a generated item reads, and it is the only instrument the
+                    profile carries for it — the per-field generation guidance is a manual
+                    exception now, not the other half of a pair. */}
+                <p className="text-small text-muted-foreground">
+                  Cómo escribe esta asignatura esta modalidad, y lo único que el perfil le dice al
+                  generador sobre la forma del ejercicio. Cada regla debe poder comprobarse leyendo
+                  un ejercicio ya escrito, y nombrar el campo al que se aplica. Lo que valdría para
+                  cualquier asignatura no es una regla: de la didáctica ya se ocupa el generador.
+                </p>
               </CardHeader>
               <CardContent className="space-y-2">
                 {rules.map((rule, index) => (
@@ -584,8 +588,9 @@ export function ProfileEditor() {
                 ))}
 
                 {rules.length === 0 ? (
-                  <p className="text-small text-muted-foreground">
-                    Sin reglas: el modelo solo seguirá las guías de cada campo.
+                  <p className="text-small text-attention">
+                    Sin reglas: el generador escribirá esta modalidad sin ninguna convención de la
+                    asignatura, solo con las descripciones del schema. Lo habitual son entre 3 y 8.
                   </p>
                 ) : null}
 

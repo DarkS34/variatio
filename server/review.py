@@ -21,8 +21,10 @@ EXEMPLARS_BANK = stages.EXEMPLARS_BANK
 
 ARTIFACTS: tuple[str, ...] = (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH, EXEMPLARS_BANK)
 
-# This tuple is the chain as the screens draw it — the navbar, the panel's cards and their
-# 1-2-3 badges all read it, so it has to be the order a person actually works in.
+# This tuple is the chain as the screens draw it — the navbar and the panel's cards read
+# it, so it has to be the order a person actually works in. It is the LAYOUT that says the
+# order; the cards carry no ordinal (removed 2026-08-22), because a number next to a card
+# that is already third from the left only adds a second place for the two to disagree.
 #
 # The profile leads since 2026-08-21, and that is no longer just presentation. Building the
 # graph still needs nothing (`UPSTREAM[KNOWLEDGE_GRAPH]` is `()` and must stay so — a build

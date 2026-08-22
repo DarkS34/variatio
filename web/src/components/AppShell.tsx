@@ -26,8 +26,9 @@ import { runStore } from "@/state/runStore";
  *   - «Panel» — watching. Its own pill, separated by a rule, because it is about the chain
  *     rather than a step of it.
  *   - Perfil → Grafo → Banco — the instance being PREPARED, in the order it is prepared in.
- *     This order has to keep matching `server/review.ARTIFACTS`: the panel's cards and their
- *     1-2-3 badges read that tuple and this array is a second copy of the same decision. The
+ *     This order has to keep matching `server/review.ARTIFACTS`: the panel lays its cards
+ *     out in that tuple and this array is a second copy of the same decision. Neither place
+ *     numbers the steps — the order is the layout, in both. The
  *     reason it starts at the profile: a graph can be built with nothing, but its taggability
  *     review cannot run until the profile is approved, so starting at the graph is starting
  *     at a stage you cannot finish.
