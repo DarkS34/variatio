@@ -37,6 +37,7 @@ def save_generation(
     instructions: str | None,
     think: bool,
     thinking: str | None,
+    checks: dict | None = None,
 ) -> Generation:
     row = Generation(
         workspace_id=workspace_id,
@@ -50,6 +51,7 @@ def save_generation(
         think=bool(think),
         item=item,
         thinking=thinking or None,
+        checks=checks or None,
     )
     session.add(row)
     session.flush()

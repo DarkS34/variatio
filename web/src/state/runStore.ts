@@ -1,5 +1,5 @@
 import { describeEvent, type ActivityLine } from "@/lib/explain";
-import type { FewShotExemplar, Job, VgEvent } from "@/lib/types";
+import type { FewShotExemplar, ItemChecks, Job, VgEvent } from "@/lib/types";
 import { activeWorkspace } from "./workspace";
 
 /**
@@ -39,6 +39,7 @@ export interface ProducedItem {
   item: Record<string, unknown>;
   item_type?: string;
   thinking?: string | null;
+  checks?: ItemChecks | null;
 }
 
 /** Which side of the stream the model is writing on right now. */
@@ -492,6 +493,7 @@ class RunStore {
               item: event.item,
               item_type: event.item_type,
               thinking: event.thinking,
+              checks: event.checks,
             },
           ],
         };

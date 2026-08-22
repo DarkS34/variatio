@@ -64,7 +64,7 @@ function Guarded({ children }: { children: ReactNode }) {
   if (session.isError) {
     return (
       <AuthLayout title="El servidor no responde">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body text-muted-foreground">
           {session.error instanceof Error ? session.error.message : "Error desconocido"}
         </p>
         <Button className="mt-4 w-full" onClick={() => session.refetch()}>
@@ -96,7 +96,7 @@ function NoWorkspace() {
       title="Todavía no tienes ningún workspace"
       description="Un workspace es una instancia entera: su corpus, su grafo, su perfil y su banco."
     >
-      <p className="text-sm text-muted-foreground">
+      <p className="text-body text-muted-foreground">
         Puedes esperar a que te inviten a uno existente, o empezar el tuyo ahora mismo.
         Entraste como{" "}
         <span className="font-medium text-foreground">{session.data?.user.username}</span>.
@@ -110,12 +110,13 @@ function NoWorkspace() {
         }}
       >
         <Input
+          aria-label="Nombre de la asignatura"
           placeholder="Nombre de la asignatura"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
         {create.isError ? (
-          <p className="text-xs text-destructive">{(create.error as Error).message}</p>
+          <p className="text-small text-destructive">{(create.error as Error).message}</p>
         ) : slug ? (
           <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
         ) : null}

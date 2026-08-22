@@ -49,7 +49,7 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          "flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold uppercase text-secondary-foreground transition-colors hover:bg-accent",
+          "flex size-8 items-center justify-center rounded-full bg-secondary text-small font-semibold uppercase text-secondary-foreground transition-colors hover:bg-accent",
           open && "ring-2 ring-ring",
         )}
       >
@@ -62,8 +62,8 @@ export function AccountMenu() {
           className="absolute right-0 top-10 z-40 w-64 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
           <div className="p-3">
-            <p className="truncate text-sm font-medium">{user.name}</p>
-            <p className="truncate font-mono text-xs text-muted-foreground">{user.username}</p>
+            <p className="truncate text-body font-medium">{user.name}</p>
+            <p className="truncate font-mono text-small text-muted-foreground">{user.username}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {role ? <Badge variant="outline">{ROLE_LABELS[role]}</Badge> : null}
               {user.is_admin ? <Badge variant="secondary">Administrador</Badge> : null}
@@ -129,7 +129,7 @@ function MenuItem({
     <button
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
     >
       <span className="text-muted-foreground">{icon}</span>
       {label}

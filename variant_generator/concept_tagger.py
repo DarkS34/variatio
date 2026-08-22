@@ -5,6 +5,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from . import config, inference, progress
+from .content_context import ContentContext
 from .embedder import Embedder
 from .prompts import tag_concepts_prompt
 from .utils import parse_with_repair
@@ -34,14 +35,14 @@ class ConceptTagger:
         embedder: Embedder,
         concept_tagger_model: str,
         embed_text: Callable[[dict], str],
-        context: dict | None = None,
+        context: ContentContext | None = None,
         top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
         fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
     ):
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
         self.embed_text = embed_text
-        self.context = context
+        self.context = context if context is not None else ContentContext()
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
         self.fallback_top_k = fallback_top_k
@@ -115,7 +116,7 @@ class ConceptTagger:
             statement=statement,
             candidates=self._candidates_block(candidates),
             relations=self._relations_block(candidate_names),
-            context=self.context,
+            context_block=self.context.prompt_block(),
         )
 
         result = self._verify(prompt, candidate_names, think=False)

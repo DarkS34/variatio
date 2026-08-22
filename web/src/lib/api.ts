@@ -1,5 +1,6 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
+  ContentContextState,
   AdminEvaluations,
   AdminOverview,
   ArtifactName,
@@ -182,6 +183,11 @@ export const api = {
     request<{ deleted: string; slot: RawSlot }>(`/api/raw/${kind}/${encodeURIComponent(name)}`, {
       method: "DELETE",
     }),
+
+  context: () => request<ContentContextState>("/api/context"),
+  saveContext: (narrative: string, facts: Record<string, string>) =>
+    put<ContentContextState>("/api/context", { narrative, facts }),
+  adoptContextDraft: () => post<ContentContextState>("/api/context/adopt-draft", {}),
 
   profile: () => request<ProfilePayload>("/api/profile"),
   validateProfile: (profile: ExemplarsProfile) =>

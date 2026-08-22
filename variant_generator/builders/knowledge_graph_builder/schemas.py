@@ -14,10 +14,19 @@ _RELATIONS_SCHEMA = {
     "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3},
 }
 
+# A concept carries its one-line definition from the chunk that introduced it. Every later
+# pass — merging, dropping, placing, linking — used to judge a bare name, and a bare name
+# is what the tagger was forbidden to judge long ago («centroids over names»).
+_CONCEPT_SCHEMA = {
+    "type": "object",
+    "properties": {"name": {"type": "string"}, "definition": {"type": "string"}},
+    "required": ["name", "definition"],
+}
+
 EXTRACT_SCHEMA = {
     "type": "object",
     "properties": {
-        "concepts": {"type": "array", "items": {"type": "string"}},
+        "concepts": {"type": "array", "items": _CONCEPT_SCHEMA},
         "relations": _RELATIONS_SCHEMA,
     },
     "required": ["concepts", "relations"],

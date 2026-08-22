@@ -4,8 +4,8 @@ import {
   ArrowRight,
   Ban,
   ChevronRight,
+  CircleAlert,
   CircleCheck,
-  CircleDashed,
   Cpu,
   Hourglass,
   Lock,
@@ -26,13 +26,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, PhaseBar, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
 import { Link, useRouter } from "@/lib/router";
 import type { Health, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+import { ContextCard } from "./ContextCard";
 import {
   useBuildPhases,
   useCancelJob,
@@ -59,7 +61,7 @@ const EXPLAIN: Record<string, string> = {
     "Los ítems extraídos de los documentos, etiquetados con conceptos del grafo. Alimentan los ejemplos few-shot de la generación.",
 };
 
-function StageCard({ stage, index }: { stage: StageState; index: number }) {
+function StageCard({ stage }: { stage: StageState }) {
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
   const building = stage.status === "building";
@@ -68,23 +70,18 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
     <Card
       className={cn(
         "relative transition-colors",
-        stage.status === "approved" && "border-[color-mix(in_oklch,var(--success)_45%,var(--border))]",
+        stage.status === "approved" && "border-[color-mix(in_oklch,var(--settled)_45%,var(--border))]",
         stage.status === "stale" && "border-destructive/50",
         blocked && "opacity-70",
       )}
     >
       <CardHeader className="pb-2">
+        {/* No ordinal here. The cards are laid out in `server/review.ARTIFACTS` order and
+            that order is load-bearing, but numbering it said something the layout already
+            says — and said it wrongly to anyone who reads the chain as graph-first. What
+            state the stage is in is `StageBadge`'s job, in a shape and a word; the numbered
+            circle also turned green, so it was a third drawing of the same fact. */}
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-              stage.status === "approved"
-                ? "bg-[var(--success)] text-background"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {stage.status === "approved" ? <CircleCheck className="size-3.5" /> : index + 1}
-          </span>
           <div className="flex flex-1 items-center gap-1.5">
             <CardTitle>{stage.label}</CardTitle>
             <InfoHint label={`Qué es ${stage.label}`}>{EXPLAIN[stage.artifact]}</InfoHint>
@@ -97,7 +94,7 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
         {stage.stale_because.length > 0 ? (
           <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-2">
             {stage.stale_because.map((cause) => (
-              <p key={cause.artifact} className="text-xs text-destructive">
+              <p key={cause.artifact} className="text-small text-destructive">
                 {cause.reason}
               </p>
             ))}
@@ -105,14 +102,14 @@ function StageCard({ stage, index }: { stage: StageState; index: number }) {
         ) : null}
 
         {blocked ? (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-small text-muted-foreground">
             <Lock className="size-3.5" />
             {stage.blocked_reason}
           </p>
         ) : null}
 
         {stage.approved_at && stage.status === "approved" ? (
-          <p className="text-xs text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
+          <p className="text-small text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
         ) : null}
 
         {building ? <BuildProgress artifact={stage.artifact} /> : null}
@@ -153,22 +150,22 @@ function RawSection() {
           type="button"
           onClick={() => setOpen((value) => !value)}
           disabled={emptySlots.length > 0}
-          className="flex items-center gap-1.5 text-sm font-medium disabled:cursor-default"
+          className="flex items-center gap-1.5 text-body font-medium disabled:cursor-default"
         >
           {emptySlots.length > 0 ? (
-            <UploadCloud className="size-4 text-[var(--warning)]" />
+            <UploadCloud className="size-4 text-attention" />
           ) : (
             <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} />
           )}
           Datos en bruto
         </button>
         {total > 0 ? (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-small text-muted-foreground">
             {total} archivo(s) · {bytes(size)}
           </span>
         ) : null}
         {emptySlots.length > 0 ? (
-          <Badge variant="warning">
+          <Badge variant="attention">
             {emptySlots.map((slot) => slot.label.toLowerCase()).join(" y ")} sin archivos
           </Badge>
         ) : null}
@@ -249,7 +246,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               ninguno en memoria
             </Badge>
           ) : (
-            <Badge variant="success" className="cursor-pointer hover:opacity-85">
+            <Badge variant="settled" className="cursor-pointer hover:opacity-85">
               {resident.length} · {bytes(vram)}
             </Badge>
           )}
@@ -265,11 +262,11 @@ function ModelsRow({ models }: { models: Health["models"] }) {
       >
         <div className="space-y-4">
           <section className="space-y-2">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <h3 className="text-micro font-condensed uppercase text-muted-foreground">
               En memoria ahora ({resident.length})
             </h3>
             {resident.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 El motor no tiene ningún modelo cargado. El primer trabajo que necesite uno
                 paga su carga.
               </p>
@@ -278,14 +275,14 @@ function ModelsRow({ models }: { models: Health["models"] }) {
                 {resident.map((entry) => (
                   <li key={entry.model} className="rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="font-mono text-sm">{entry.model}</code>
-                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      <code className="font-mono text-body">{entry.model}</code>
+                      <span className="ml-auto text-micro nums text-muted-foreground">
                         {entry.size_vram ? `${bytes(entry.size_vram)} en VRAM` : "sin VRAM"}
                       </span>
                     </div>
-                    <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    <p className="mt-1 flex flex-wrap gap-x-3 text-small text-muted-foreground">
                       {entry.context_length ? (
-                        <span className="tabular-nums">
+                        <span className="nums">
                           contexto {entry.context_length.toLocaleString("es-ES")}
                         </span>
                       ) : null}
@@ -296,29 +293,29 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               </ul>
             )}
             {vram > 0 ? (
-              <p className="text-xs tabular-nums text-muted-foreground">
+              <p className="text-small nums text-muted-foreground">
                 {bytes(vram)} de VRAM ocupados en total.
               </p>
             ) : null}
           </section>
 
           <section className="space-y-2 border-t border-border pt-3">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <h3 className="text-micro font-condensed uppercase text-muted-foreground">
               Los que pide la instancia ({required.length})
             </h3>
             <ul className="space-y-2">
               {required.map(({ model, settings, missing, loaded }) => (
                 <li key={model} className="rounded-lg border border-border p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-mono text-sm">{model}</code>
+                    <code className="font-mono text-body">{model}</code>
                     {missing ? (
                       <Badge variant="danger">sin instalar</Badge>
                     ) : loaded ? (
-                      <Badge variant="success">cargado</Badge>
+                      <Badge variant="settled">cargado</Badge>
                     ) : (
                       <Badge variant="outline">en disco</Badge>
                     )}
-                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    <span className="ml-auto text-micro nums text-muted-foreground">
                       {settings.length} fase(s)
                     </span>
                   </div>
@@ -377,9 +374,9 @@ function ActivityCard() {
           </InfoHint>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-3 text-body">
         {stream.connected ? null : (
-          <p className="flex items-center gap-1.5 text-xs text-[var(--warning)]">
+          <p className="flex items-center gap-1.5 text-small text-attention">
             <WifiOff className="size-3.5 shrink-0" />
             Sin conexión con el servidor; reintentando.
           </p>
@@ -390,7 +387,7 @@ function ActivityCard() {
           // workspace: your own screen is idle and the next job you launch will wait,
           // and nothing else on the page would say why.
           pipeline.data?.engine_busy_elsewhere ? (
-            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <p className="flex items-start gap-1.5 text-small text-muted-foreground">
               <Hourglass className="mt-0.5 size-3.5 shrink-0" />
               Nada tuyo en ejecución. La GPU está ocupada con un trabajo de otro
               workspace: solo se ejecuta uno cada vez, así que lo que lances ahora
@@ -404,12 +401,12 @@ function ActivityCard() {
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="relative flex size-2 shrink-0">
                 {active ? (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--info)] opacity-60" />
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
                 ) : null}
                 <span
                   className={cn(
                     "relative inline-flex size-2 rounded-full",
-                    active ? "bg-[var(--info)]" : "bg-muted-foreground",
+                    active ? "bg-primary" : "bg-muted-foreground",
                   )}
                 />
               </span>
@@ -418,15 +415,15 @@ function ActivityCard() {
 
             {/* La explicación va como texto y no detrás de una (i): estaba en las dos
                 partes a la vez, y de las dos la que se lee es la que ya está en pantalla. */}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               {explain?.what ?? "Trabajo en curso."}
             </p>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
               <span className={cn("font-medium", JOB_STATUS[status!]?.tone)}>
                 {JOB_STATUS[status!]?.label}
               </span>
-              <span className="flex items-center gap-1 tabular-nums text-muted-foreground">
+              <span className="flex items-center gap-1 nums text-muted-foreground">
                 <Hourglass className="size-3" />
                 {duration(active ? elapsed : run.job.elapsed_ms)}
               </span>
@@ -440,10 +437,10 @@ function ActivityCard() {
             {active ? (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate text-xs">
+                  <span className="min-w-0 truncate text-small">
                     {overall?.label ?? step?.label ?? "Preparando el proceso…"}
                   </span>
-                  <span className="shrink-0 text-xs font-medium tabular-nums">
+                  <span className="shrink-0 text-small font-medium nums">
                     {overall
                       ? `${overall.percent} %`
                       : step?.total
@@ -464,13 +461,13 @@ function ActivityCard() {
                   />
                 )}
                 {overall?.detail ? (
-                  <p className="truncate text-xs text-muted-foreground">{overall.detail}</p>
+                  <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
                 ) : null}
               </div>
             ) : null}
 
             {run.job.error ? (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
                 {run.job.error}
               </p>
             ) : null}
@@ -496,7 +493,6 @@ function ActivityCard() {
 
 function SystemCard() {
   const health = useHealth();
-  const raw = useRaw();
   const invalidate = useInvalidateChain();
   const index = useMutation({
     mutationFn: () => api.submitJob("index", {}, true),
@@ -513,7 +509,6 @@ function SystemCard() {
   }
 
   const { available, engine, host, models, context_ready } = health.data;
-  const slots = raw.data?.slots ?? [];
 
   return (
     <Card>
@@ -523,20 +518,21 @@ function SystemCard() {
           Sistema
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-3 text-body">
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground">Motor de inferencia</span>
           <span className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                available ? "bg-[var(--success)]" : "bg-destructive",
-              )}
-            />
+            {/* Reachable or not used to be one dot in two hues, which is the worst case
+                of colour-only encoding: it is the single line this panel is read for. */}
+            {available ? (
+              <CircleCheck className="size-3.5 shrink-0 text-settled" />
+            ) : (
+              <CircleAlert className="size-3.5 shrink-0 text-destructive" />
+            )}
             <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
-            <span className="font-mono text-xs text-muted-foreground">{host}</span>
+            <span className="font-mono text-small text-muted-foreground">{host}</span>
             {available ? null : (
-              <span className="text-xs text-destructive">sin conexión</span>
+              <span className="text-small text-destructive">sin conexión</span>
             )}
           </span>
         </div>
@@ -552,7 +548,7 @@ function SystemCard() {
             </InfoHint>
           </span>
           {context_ready ? (
-            <Badge variant="success">Calientes</Badge>
+            <Badge variant="settled">Calientes</Badge>
           ) : (
             <div className="flex items-center gap-2">
               <Badge variant="outline">Fríos</Badge>
@@ -567,24 +563,6 @@ function SystemCard() {
               </Button>
             </div>
           )}
-        </div>
-
-        <Separator />
-
-        <div className="space-y-1 text-xs text-muted-foreground">
-          {slots.map((slot) => (
-            <p key={slot.kind} className="flex items-center gap-1.5">
-              {slot.files.length > 0 ? (
-                <CircleCheck className="size-3.5 shrink-0 text-[var(--success)]" />
-              ) : (
-                <CircleDashed className="size-3.5 shrink-0" />
-              )}
-              <span className="min-w-0 flex-1 truncate">
-                {slot.label}
-              </span>
-              <span className="tabular-nums">{slot.files.length} archivo(s)</span>
-            </p>
-          ))}
         </div>
       </CardContent>
     </Card>
@@ -611,7 +589,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Panel</h1>
+        <h1 className="font-display font-expanded text-display">Panel</h1>
         <InfoHint label="Cómo funciona la cadena">
           Cada artefacto se construye, se revisa y se aprueba antes de desbloquear el siguiente.
           Se revisa una vez al principio; después se generan variantes contra una instancia
@@ -641,7 +619,7 @@ export function Dashboard() {
         </Alert>
       ) : (
         <Alert
-          tone="success"
+          tone="settled"
           title="Cadena aprobada de principio a fin"
           action={
             <Button size="sm" onClick={() => navigate("/generar")}>
@@ -654,13 +632,17 @@ export function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
-          {stages.map((stage, index) => (
-            <StageCard key={stage.artifact} stage={stage} index={index} />
+          {stages.map((stage) => (
+            <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
+        {/* «Sistema» abre la columna: es de lo que se mira de un vistazo —si el motor
+            responde, qué tiene cargado— y al final de todo había que bajar a buscarlo.
+            Encima es la más corta de las tres, así que no aparta a las otras dos. */}
         <div className="space-y-4">
-          <ActivityCard />
           <SystemCard />
+          <ActivityCard />
+          <ContextCard />
         </div>
       </div>
 

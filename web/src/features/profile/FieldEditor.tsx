@@ -14,14 +14,16 @@ import {
   Type,
   Wand2,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { LOCKED_HINT, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChipInput } from "@/components/ui/chips";
+import { Field } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import type { FieldSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -147,10 +149,12 @@ function TypePicker({
   value,
   onChange,
   options = TYPES,
+  disabled = false,
 }: {
   value: FieldType;
   onChange: (next: FieldType) => void;
   options?: TypeMeta[];
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -158,14 +162,16 @@ function TypePicker({
         <button
           key={option}
           type="button"
-          title={caption}
+          disabled={disabled}
+          title={disabled ? LOCKED_HINT : caption}
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
-            "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-small font-medium transition-colors",
             value === option
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+            disabled && "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
           )}
         >
           <Icon className="size-3.5" />
@@ -205,7 +211,7 @@ function Segmented({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            "rounded-md px-3 py-1 text-small font-medium transition-colors",
             value === option.value
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -223,43 +229,69 @@ function NumberBox({
   value,
   onChange,
   placeholder,
+  disabled = false,
 }: {
   value: number | undefined;
   onChange: (next: number | undefined) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   return (
     <Input
       type="number"
+      aria-label={placeholder}
+      readOnly={disabled}
       value={value ?? ""}
       placeholder={placeholder}
       onChange={(event) =>
         onChange(event.target.value === "" ? undefined : Number(event.target.value))
       }
-      className="h-8 w-24 text-sm"
+      className="h-8 w-24"
     />
   );
 }
 
+/**
+ * The local label wrapper, and every control in this editor already goes through it — so
+ * delegating to `Field` is what binds all nine at once instead of nine by hand.
+ *
+ * The hint stays OUTSIDE the <label>. It is a button, and a button inside a label makes
+ * two click targets out of one: clicking to focus the field would sometimes open the hint
+ * instead. `Field` renders the label itself, so the hint sits beside it in a row of its own.
+ */
 function Row({
   label,
   hint,
+  error,
+  description,
   children,
   className,
 }: {
   label: string;
   hint?: ReactNode;
-  children: ReactNode;
+  error?: ReactNode;
+  description?: ReactNode;
+  children: ReactElement;
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <div className="flex items-center gap-1.5">
-        <Label>{label}</Label>
-        {hint ? <InfoHint label={label}>{hint}</InfoHint> : null}
-      </div>
+    <Field
+      label={
+        hint ? (
+          <span className="inline-flex items-center gap-1.5">
+            {label}
+            <InfoHint label={label}>{hint}</InfoHint>
+          </span>
+        ) : (
+          label
+        )
+      }
+      error={error}
+      description={description}
+      className={className}
+    >
       {children}
-    </div>
+    </Field>
   );
 }
 
@@ -292,6 +324,7 @@ export function FieldEditor({
   onMakePrimary: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
+  const locked = useStageLocked();
   const [nameDraft, setNameDraft] = useState(name);
   const [showRaw, setShowRaw] = useState(false);
   const [editingRaw, setEditingRaw] = useState(false);
@@ -376,7 +409,7 @@ export function FieldEditor({
             )}
           />
           <Icon className="size-4 shrink-0 text-primary" />
-          <span className="shrink-0 font-mono text-sm font-medium">{name}</span>
+          <span className="shrink-0 font-mono text-body font-medium">{name}</span>
           {isPrimary ? (
             <Badge className="shrink-0" title="Es el texto que se etiqueta y se embebe">
               <Star className="fill-current" />
@@ -390,7 +423,7 @@ export function FieldEditor({
             {nullable ? "opcional" : "obligatorio"}
           </Badge>
           {!open && spec.description ? (
-            <span className="min-w-0 truncate text-xs text-muted-foreground">
+            <span className="min-w-0 truncate text-small text-muted-foreground">
               {spec.description}
             </span>
           ) : null}
@@ -401,13 +434,15 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={onMakePrimary}
-            disabled={isPrimary || !canBePrimary}
+            disabled={isPrimary || !canBePrimary || locked}
             title={
               isPrimary
                 ? "Ya es el campo primario"
-                : canBePrimary
-                  ? "Marcar como campo primario"
-                  : "Solo un campo de texto puede ser el primario"
+                : locked
+                  ? LOCKED_HINT
+                  : canBePrimary
+                    ? "Marcar como campo primario"
+                    : "Solo un campo de texto puede ser el primario"
             }
           >
             <Star className={cn(isPrimary && "fill-current text-primary")} />
@@ -416,8 +451,8 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={() => onMove(-1)}
-            disabled={first}
-            title="Subir"
+            disabled={first || locked}
+            title={locked ? LOCKED_HINT : "Subir"}
           >
             <ArrowUp />
           </Button>
@@ -425,8 +460,8 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={() => onMove(1)}
-            disabled={last}
-            title="Bajar"
+            disabled={last || locked}
+            title={locked ? LOCKED_HINT : "Bajar"}
           >
             <ArrowDown />
           </Button>
@@ -434,8 +469,14 @@ export function FieldEditor({
             variant="ghost"
             size="icon-sm"
             onClick={onRemove}
-            disabled={isPrimary}
-            title={isPrimary ? "El campo primario no se puede borrar" : "Eliminar campo"}
+            disabled={isPrimary || locked}
+            title={
+              isPrimary
+                ? "El campo primario no se puede borrar"
+                : locked
+                  ? LOCKED_HINT
+                  : "Eliminar campo"
+            }
             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 />
@@ -446,23 +487,26 @@ export function FieldEditor({
       {open ? (
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
           <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
-            <Row label="Nombre" hint="Es la clave del campo en cada ítem generado.">
+            <Row
+              label="Nombre"
+              hint="Es la clave del campo en cada ítem generado."
+              error={nameError}
+            >
               <Input
                 value={nameDraft}
+                readOnly={locked}
                 onChange={(event) => setNameDraft(event.target.value)}
                 onBlur={commitName}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") event.currentTarget.blur();
                   if (event.key === "Escape") setNameDraft(name);
                 }}
-                className={cn("font-mono text-sm", nameError && "border-destructive")}
+                className={cn("font-mono", nameError && "border-destructive")}
               />
-              {nameError ? <p className="text-xs text-destructive">{nameError}</p> : null}
             </Row>
 
-            <Row label="Tipo">
-              <TypePicker value={type} onChange={setType} />
-              <p className="text-xs text-muted-foreground">{META[type].caption}</p>
+            <Row label="Tipo" description={META[type].caption}>
+              <TypePicker value={type} onChange={setType} disabled={locked} />
             </Row>
           </div>
 
@@ -473,6 +517,8 @@ export function FieldEditor({
             >
               <Segmented
                 value={nullable ? "optional" : "required"}
+                disabled={locked}
+                title={locked ? LOCKED_HINT : undefined}
                 onChange={(next) => setNullable(next === "optional")}
                 options={[
                   { value: "required", label: "Obligatorio" },
@@ -487,13 +533,15 @@ export function FieldEditor({
             >
               <Segmented
                 value={decidedBy}
-                disabled={undecidable}
+                disabled={undecidable || locked}
                 title={
                   isPrimary
                     ? "El campo primario es el ítem en sí: no es una preferencia que se elija antes de generar"
                     : undecidable
                       ? "Una lista o un objeto libre no admiten un control con el que elegir antes de generar"
-                      : undefined
+                      : locked
+                        ? LOCKED_HINT
+                        : undefined
                 }
                 onChange={(next) =>
                   onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
@@ -510,12 +558,14 @@ export function FieldEditor({
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minLength}
+                    disabled={locked}
                     placeholder="mín"
                     onChange={(next) => setSchema({ minLength: next })}
                   />
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maxLength}
+                    disabled={locked}
                     placeholder="máx"
                     onChange={(next) => setSchema({ maxLength: next })}
                   />
@@ -528,12 +578,14 @@ export function FieldEditor({
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minimum}
+                    disabled={locked}
                     placeholder="mín"
                     onChange={(next) => setSchema({ minimum: next })}
                   />
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maximum}
+                    disabled={locked}
                     placeholder="máx"
                     onChange={(next) => setSchema({ maximum: next })}
                   />
@@ -543,19 +595,42 @@ export function FieldEditor({
           </div>
 
           {lengthInvalid ? (
-            <p className="text-xs text-destructive">La longitud mínima supera a la máxima.</p>
+            <p className="text-small text-destructive">La longitud mínima supera a la máxima.</p>
           ) : null}
           {rangeInvalid ? (
-            <p className="text-xs text-destructive">El valor mínimo supera al máximo.</p>
+            <p className="text-small text-destructive">El valor mínimo supera al máximo.</p>
           ) : null}
 
           {type === "enum" ? (
             <Row
               label="Valores permitidos"
               hint="El modelo solo podrá responder con uno de estos valores. Haz clic en un valor para editarlo."
+              error={
+                enumValues(schema).length === 0
+                  ? "Un campo de opciones necesita al menos un valor."
+                  : null
+              }
+              description={
+                enumMismatch ? (
+                  <span className="flex items-center gap-2 text-attention">
+                    El tipo admite vacío pero la lista de opciones no lo incluye, así que el
+                    pipeline lo tratará como obligatorio.
+                    {locked ? null : (
+                      <button
+                        type="button"
+                        onClick={() => setNullable(true)}
+                        className="underline underline-offset-2"
+                      >
+                        Corregir
+                      </button>
+                    )}
+                  </span>
+                ) : null
+              }
             >
               <ChipInput
                 values={enumValues(schema)}
+                disabled={locked}
                 onChange={(values) =>
                   setSchema({ enum: nullable ? [...values, null] : values })
                 }
@@ -566,54 +641,43 @@ export function FieldEditor({
                     : "Enter o coma para añadir. Retroceso borra el último."
                 }
               />
-              {enumValues(schema).length === 0 ? (
-                <p className="text-xs text-destructive">
-                  Un campo de opciones necesita al menos un valor.
-                </p>
-              ) : null}
-              {enumMismatch ? (
-                <p className="flex items-center gap-2 text-xs text-[var(--warning)]">
-                  El tipo admite vacío pero la lista de opciones no lo incluye, así que el pipeline
-                  lo tratará como obligatorio.
-                  <button
-                    type="button"
-                    onClick={() => setNullable(true)}
-                    className="underline underline-offset-2"
-                  >
-                    Corregir
-                  </button>
-                </p>
-              ) : null}
             </Row>
           ) : null}
 
+          {/* Two real controls here, so the chips leave the field and name themselves: a
+              label binds to exactly one, and pointing it at the picker while the chips sit
+              underneath would be a label that lies about what it names. */}
           {type === "array" ? (
-            <Row label="Tipo de cada elemento">
-              <TypePicker
-                value={baseType(schema.items ?? {})}
-                onChange={(next) =>
-                  setSchema({
-                    items:
-                      next === "enum"
-                        ? { type: "string", enum: enumValues(schema.items ?? {}) }
-                        : { type: next },
-                  })
-                }
-                options={ITEM_TYPES}
-              />
+            <div className="space-y-2">
+              <Row label="Tipo de cada elemento">
+                <TypePicker
+                  disabled={locked}
+                  value={baseType(schema.items ?? {})}
+                  onChange={(next) =>
+                    setSchema({
+                      items:
+                        next === "enum"
+                          ? { type: "string", enum: enumValues(schema.items ?? {}) }
+                          : { type: next },
+                    })
+                  }
+                  options={ITEM_TYPES}
+                />
+              </Row>
               {baseType(schema.items ?? {}) === "enum" ? (
                 <ChipInput
+                  aria-label="Valores que puede tomar cada elemento"
+                  disabled={locked}
                   values={enumValues(schema.items ?? {})}
                   onChange={(values) => setSchema({ items: { type: "string", enum: values } })}
                   placeholder="Valores que puede tomar cada elemento…"
-                  className="pt-1"
                 />
               ) : null}
-            </Row>
+            </div>
           ) : null}
 
           {type === "object" ? (
-            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+            <p className="rounded-lg border border-dashed border-border p-3 text-small text-muted-foreground">
               Se valida como objeto libre: su contenido no se comprueba. Descríbelo bien abajo, es
               lo único que guía al modelo.
             </p>
@@ -622,24 +686,29 @@ export function FieldEditor({
           <Row label="Descripción" hint="Viaja al modelo dentro del esquema: di qué contiene el campo, no cómo escribirlo.">
             <Textarea
               value={spec.description ?? ""}
+              readOnly={locked}
               onChange={(event) => onChange({ ...spec, description: event.target.value })}
               placeholder="Qué contiene este campo"
-              className="min-h-16 text-sm"
+              className="min-h-16"
             />
           </Row>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <FileSearch className="size-3.5 text-muted-foreground" />
-                <Label>Cómo extraerlo</Label>
-                <InfoHint label="Guía de extracción">
-                  Se usa al construir el banco desde los documentos: dónde está el campo y qué
+            <Field
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <FileSearch className="size-3.5" />
+                  Cómo extraerlo
+                  <InfoHint label="Guía de extracción">
+                    Se usa al construir el banco desde los documentos: dónde está el campo y qué
                   recortar.
-                </InfoHint>
-              </div>
+                  </InfoHint>
+                </span>
+              }
+            >
               <Textarea
                 value={spec.guidance?.extraction ?? ""}
+                readOnly={locked}
                 onChange={(event) =>
                   onChange({
                     ...spec,
@@ -647,29 +716,34 @@ export function FieldEditor({
                   })
                 }
                 placeholder="Cómo localizar este campo en los documentos"
-                className="min-h-24 text-xs"
+                className="min-h-24 text-small"
               />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <Wand2 className="size-3.5 text-muted-foreground" />
-                <Label>Cómo generarlo</Label>
-                <InfoHint label="Guía de generación">
-                  Se usa al generar ítems nuevos: estilo, formato y restricciones del campo.
-                </InfoHint>
-              </div>
+            </Field>
+            <Field
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <Wand2 className="size-3.5" />
+                  Cómo generarlo
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-condensed text-muted-foreground">
+                    solo a mano
+                  </span>
+                </span>
+              }
+              description="El constructor no lo rellena: lo general va en las reglas de la modalidad. Escríbelo solo cuando este campo concreto necesite un matiz que las reglas no cubren."
+            >
               <Textarea
                 value={spec.guidance?.generation ?? ""}
+                readOnly={locked}
                 onChange={(event) =>
                   onChange({
                     ...spec,
                     guidance: { ...spec.guidance, generation: event.target.value || undefined },
                   })
                 }
-                placeholder="Cómo debe redactarse al generar"
-                className="min-h-24 text-xs"
+                placeholder="Vacío salvo que este campo necesite un matiz propio"
+                className="min-h-24 text-small"
               />
-            </div>
+            </Field>
           </div>
 
           <div className="space-y-2 border-t border-border pt-3">
@@ -680,7 +754,7 @@ export function FieldEditor({
                 setRawError(null);
                 setShowRaw(!showRaw);
               }}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-1.5 text-small text-muted-foreground transition-colors hover:text-foreground"
             >
               <Braces className="size-3.5" />
               {showRaw ? "Ocultar el JSON del campo" : "Ver el JSON del campo"}
@@ -691,12 +765,13 @@ export function FieldEditor({
                 {editingRaw ? (
                   <>
                     <Textarea
+                      aria-label="JSON del campo"
                       value={rawText}
                       onChange={(event) => setRawText(event.target.value)}
-                      className="min-h-48 font-mono text-xs"
+                      className="min-h-48 font-mono text-small"
                       spellCheck={false}
                     />
-                    {rawError ? <p className="text-xs text-destructive">{rawError}</p> : null}
+                    {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
                     <div className="flex gap-2">
                       <Button size="sm" onClick={applyRaw}>
                         Aplicar campo
@@ -716,6 +791,8 @@ export function FieldEditor({
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={locked}
+                      title={locked ? LOCKED_HINT : undefined}
                       onClick={() => {
                         setRawText(JSON.stringify(spec, null, 2));
                         setRawError(null);

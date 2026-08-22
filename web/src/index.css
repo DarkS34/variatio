@@ -3,37 +3,99 @@
 /* shadcn token names, so components copied from the registry drop straight in.
    Light and dark follow the OS; there is no toggle to get out of sync.
 
-   One cool axis: every neutral carries the same blue cast (hue ~250) and the accents
-   sit on a narrow arc around it — steel blue for anything active, teal for anything
-   settled. Chroma stays low on purpose; colour here means state, not decoration, so
-   the two that must interrupt (warning, destructive) are the only saturated notes. */
+   The idea, in one sentence: COLOUR ENCODES POSITION RELATIVE TO THE KNOWLEDGE
+   FRONTIER. What is behind you is settled, where you are is where you have to act, and
+   what lies ahead is dimmed and not reachable yet. That is not decorative metaphor: it is
+   the very calculation the generator already performs — assumed_known / target /
+   forbidden — and the same state machine the interface already has. The semantics have
+   never moved; the MATERIAL has, twice.
+
+   The material now is THE DUPLICATOR: the spirit duplicator that printed the exercise
+   sheets this app generates, on cool grey stock, in the two inks the machine actually
+   held — a saturated violet and an ochre — with a wine red for the correction. It replaces
+   the warm paper and indigo, which replaced a cool cyanotype. What makes it the right
+   material rather than a costume: the whole output of this app is a sheet of exercises,
+   and violet on grey is what a sheet of exercises looked like before it was a PDF.
+
+   Every value here is MEASURED, not picked: `pnpm check:color` reads them out of this file
+   and re-derives the tables. Lowering a lightness or raising a chroma without running it
+   again is undoing the work in silence. */
 :root {
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.24 0.014 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.014 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.014 255);
-  --primary: oklch(0.52 0.082 245);
-  --primary-foreground: oklch(0.99 0.002 250);
-  --secondary: oklch(0.965 0.004 250);
-  --secondary-foreground: oklch(0.3 0.014 255);
-  --muted: oklch(0.965 0.004 250);
-  --muted-foreground: oklch(0.53 0.012 252);
-  --accent: oklch(0.945 0.008 250);
-  --accent-foreground: oklch(0.3 0.014 255);
-  --destructive: oklch(0.55 0.145 22);
-  --destructive-foreground: oklch(0.99 0.002 250);
-  --success: oklch(0.56 0.072 190);
-  --warning: oklch(0.65 0.1 80);
-  --info: oklch(0.56 0.082 245);
-  --border: oklch(0.915 0.005 250);
-  --input: oklch(0.915 0.005 250);
-  --ring: oklch(0.6 0.07 245);
-  --radius: 0.5rem;
-  /* Syntax highlighting has its own pair so that amber keeps meaning "warning". */
-  --code-string: oklch(0.5 0.07 195);
-  --code-number: oklch(0.52 0.09 300);
+  /* Cool stock, not cream. The chroma sits at 265° so the ground reads as duplicator paper
+     — grey with the blue of the ink in it — and 0.005 is the ceiling: above it a card
+     stops looking like a fresh sheet laid on the pile. */
+  --background: oklch(0.972 0.005 265);
+  --foreground: oklch(0.235 0.022 280);
+  --card: oklch(0.995 0.002 265);
+  --card-foreground: oklch(0.235 0.022 280);
+  --popover: oklch(0.995 0.002 265);
+  --popover-foreground: oklch(0.235 0.022 280);
+  /* The violet is not free to be any violet, and it is constrained from two sides at once:
+     it has to stay separable from --arm-system, which is blue and collapses towards it
+     under deuteranopia, and from --arm-naive, which is plum and collapses towards it under
+     protanopia. A first draft at oklch(0.44 0.185 305) measured ΔE 13.2 deutan against
+     arm-system, under the floor of 15. Dropping the lightness and RAISING the chroma is
+     what buys the margin — 21.5 deutan / 17.6 protan — and it lifts the text contrast at
+     the same time (8.90 against the ground). */
+  --primary: oklch(0.415 0.2 302);
+  --primary-foreground: oklch(0.985 0.004 302);
+  --secondary: oklch(0.945 0.007 265);
+  --secondary-foreground: oklch(0.3 0.022 280);
+  --muted: oklch(0.945 0.007 265);
+  --muted-foreground: oklch(0.505 0.018 280);
+  --accent: oklch(0.918 0.012 265);
+  --accent-foreground: oklch(0.3 0.022 280);
+
+  /* These replace --success/--warning/--info BY MEANING, not by name: what they report is
+     where something falls relative to the frontier, not whether it is going well. --info
+     is retired outright — "building" becomes --primary plus motion, which is what already
+     means "alive", and a fourth family of blue next to the primary distinguished nothing. */
+  --settled: oklch(0.51 0.09 172);
+  /* The second ink of the machine. It has to clear 4.5 on its OWN 8 % tint, which is the
+     badge case, and that is what pins the lightness at 0.54: at 0.545 the tint measured
+     4.49 and failed by a hundredth. */
+  --attention: oklch(0.54 0.14 78);
+  /* Wine, at hue 13 rather than the scarlet 25 a first draft used: under deuteranopia a
+     scarlet turns as yellow as the ochre beside it and the pair measured ΔE 10.5, under
+     the floor of 15. Pulling the hue towards the magenta end costs nothing on screen and
+     buys 43.0. */
+  --destructive: oklch(0.475 0.175 13);
+  --destructive-foreground: oklch(0.985 0.003 13);
+
+  /* The evaluation is the one destination the frontier metaphor does not describe: it is
+     not before, at, or after the frontier — it is where the frontier is MEASURED. So it
+     gets a colour outside the violet / ochre / wine story rather than a state token, and
+     petrol is the one family left that clears ΔE 15 against all four semantic colours and
+     ΔE 10 against the three arms in both modes. It is deliberately NOT one of the arms:
+     those are per-entity slots in the comparison, and spending one on the navigation would
+     claim the destination belongs to an arm. */
+  --study: oklch(0.45 0.1 215);
+
+  --border: oklch(0.855 0.01 265);
+  /* --input stops being the same value as --border. They were, at 1.23:1 against the
+     ground, against the 3:1 WCAG demands of the outline of a control that conveys
+     information: every form field in this app was literally almost invisible. */
+  --input: oklch(0.625 0.015 280);
+  --ring: oklch(0.55 0.18 302);
+
+  --radius: 0.375rem;
+
+  /* Syntax highlighting has its own pair so that the ochre keeps meaning "act here" rather
+     than "string literal". The number used to be violet, which is the primary now, so it
+     moves to a blue no state token speaks for. */
+  --code-string: oklch(0.47 0.085 172);
+  --code-number: oklch(0.48 0.11 250);
+
+  /* Two steps of elevation and no more: the border does the rest of the work. The shadow
+     is tinted with the ink rather than pure black, or the stock gets its shadow from
+     another printer. */
+  --elevation-raised: 0 1px 2px oklch(0.235 0.022 280 / 0.08), 0 2px 8px oklch(0.235 0.022 280 / 0.08);
+  --elevation-overlay: 0 8px 32px oklch(0.235 0.022 280 / 0.16);
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --motion-micro: 120ms;
+  --motion-enter: 180ms;
+  --motion-overlay: 240ms;
 
   /* THE ONE CATEGORICAL SCALE: the three arms of the comparison.
      Deliberately outside the "chroma stays low" rule above, and measured rather than
@@ -42,8 +104,9 @@
      in NORMAL vision (the readable floor is 15) and both sat under the 0.10 chroma a hue
      needs to do identity work at all. In other words the three bars of «cuántas veces
      ganó cada una» were, for a real reader, two bars and a doubt.
-     These three clear every check in both modes with no warning: worst adjacent pair
-     ΔE 9.7 deuteranopic / 18.6 normal in light, 9.4 / 18.1 in dark.
+     They do NOT move when the material of the palette does: they are the encoding of the
+     study, and a recorded session read beside a fresh one has to draw its arms the same
+     way.
      Two things must not change. The ORDER — naive, rag, system — is what the pairs were
      validated on, so charts render the arms in it; and the SLOTS are per entity, never
      per rank, so a filter that drops an arm must not repaint the survivors. They also
@@ -56,30 +119,41 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.165 0.008 255);
-    --foreground: oklch(0.94 0.004 250);
-    --card: oklch(0.198 0.009 255);
-    --card-foreground: oklch(0.94 0.004 250);
-    --popover: oklch(0.215 0.01 255);
-    --popover-foreground: oklch(0.94 0.004 250);
-    --primary: oklch(0.72 0.085 240);
-    --primary-foreground: oklch(0.165 0.01 255);
-    --secondary: oklch(0.25 0.01 255);
-    --secondary-foreground: oklch(0.94 0.004 250);
-    --muted: oklch(0.24 0.01 255);
-    --muted-foreground: oklch(0.68 0.011 252);
-    --accent: oklch(0.28 0.012 255);
-    --accent-foreground: oklch(0.95 0.004 250);
-    --destructive: oklch(0.63 0.15 22);
-    --destructive-foreground: oklch(0.98 0.002 250);
-    --success: oklch(0.72 0.075 188);
-    --warning: oklch(0.78 0.1 80);
-    --info: oklch(0.72 0.08 240);
-    --border: oklch(0.28 0.01 255);
-    --input: oklch(0.3 0.012 255);
-    --ring: oklch(0.62 0.08 240);
-    --code-string: oklch(0.74 0.07 192);
-    --code-number: oklch(0.75 0.08 300);
+    /* The stock survives the inversion: the dark ground keeps the hue of the ink (280°)
+       instead of going neutral, which is what makes the two modes read as one material. */
+    --background: oklch(0.172 0.013 280);
+    --foreground: oklch(0.935 0.007 265);
+    --card: oklch(0.212 0.015 280);
+    --card-foreground: oklch(0.935 0.007 265);
+    --popover: oklch(0.212 0.015 280);
+    --popover-foreground: oklch(0.935 0.007 265);
+    --primary: oklch(0.74 0.14 302);
+    --primary-foreground: oklch(0.172 0.013 302);
+    --secondary: oklch(0.255 0.016 280);
+    --secondary-foreground: oklch(0.935 0.007 265);
+    --muted: oklch(0.255 0.016 280);
+    --muted-foreground: oklch(0.672 0.015 280);
+    --accent: oklch(0.292 0.018 280);
+    --accent-foreground: oklch(0.935 0.007 265);
+
+    --settled: oklch(0.73 0.09 172);
+    --attention: oklch(0.8 0.135 78);
+    /* Hue 12 and not the 13 of the light mode: at high lightness the wine slides towards
+       coral, and the extra degree of magenta is what keeps the two modes the same red. */
+    --destructive: oklch(0.66 0.18 12);
+    --destructive-foreground: oklch(0.172 0.013 12);
+
+    --study: oklch(0.73 0.1 215);
+
+    --border: oklch(0.315 0.016 280);
+    --input: oklch(0.515 0.018 280);
+    --ring: oklch(0.65 0.13 302);
+
+    --code-string: oklch(0.74 0.085 172);
+    --code-number: oklch(0.74 0.1 250);
+
+    --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.32), 0 2px 8px oklch(0 0 0 / 0.3);
+    --elevation-overlay: 0 8px 32px oklch(0 0 0 / 0.52);
 
     /* Re-stepped for the dark surface, not flipped: the band is 0.48-0.67 here. */
     --arm-naive: oklch(0.63 0.125 330);
@@ -105,9 +179,11 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-info: var(--info);
+  --color-settled: var(--settled);
+  --color-attention: var(--attention);
+  --color-study: var(--study);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -115,11 +191,52 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", SFMono-Regular, Menlo, monospace;
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Six steps, with the levels IN ORDER. Before this the app had two sizes for everything
+     and the headings ran backwards: CardTitle is an h3 at 14 px and the h4s are at 12, i.e.
+     smaller than the body text they sit above. That, and not the colour, is why every
+     screen read as one uniform grey sheet.
+     The body stays at 14 px on purpose — the app is dense and raising it would push the
+     layout around. The problem was never that 14 was small, it was that 12 was used 247
+     times. */
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  --text-heading: 1.125rem;
+  --text-heading--line-height: 1.4;
+  --text-heading--font-weight: 600;
+
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.55;
+
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.35;
+  --text-micro--letter-spacing: 0.08em;
+  --text-micro--font-weight: 500;
 }
 
 * {
   border-color: var(--border);
+}
+
+/* Without this the browser paints the remaining native controls with its own scheme
+   — subtree scrollbars, autofill, a date input's calendar — and in dark mode they show
+   up light on top of the app's own ground. */
+:root {
+  color-scheme: light dark;
 }
 
 html,
@@ -131,8 +248,49 @@ body,
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The width axis is what keeps this from reading as a template: the ROLE is encoded with
+   the width of the letter, not with one more size. Only `display` (expanded) and `micro`
+   (condensed, small caps) use it — the two ends of the scale. Fontsource exposes the axis
+   through font-stretch, so that is the property, not font-variation-settings. */
+@utility font-expanded {
+  font-stretch: 112%;
+}
+@utility font-condensed {
+  font-stretch: 78%;
+}
+
+/* Any figure compared down a column: counts, durations, percentages, table cells. */
+@utility nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A visible focus ring, once, instead of 67 call sites each remembering. There were 67 raw
+   <button> elements across 36 files with none, so "the focus is always visible" was simply
+   not true of this app.
+   `:where()` is what makes it a FLOOR rather than an override: it carries zero specificity,
+   so any component that styles its own focus — the button, the input, the checkbox — still
+   wins, and anything that forgets still gets something. */
+:where(
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    [role="checkbox"],
+    a[href],
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius);
 }
 
 @keyframes vg-fade-in {
@@ -175,23 +333,37 @@ body {
 }
 
 .animate-fade-in {
-  animation: vg-fade-in 0.18s ease-out;
+  animation: vg-fade-in var(--motion-enter) var(--ease);
 }
 .animate-slide-up {
-  animation: vg-slide-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: vg-slide-up var(--motion-overlay) var(--ease);
 }
 .animate-pulse-soft {
   animation: vg-pulse-soft 1.6s ease-in-out infinite;
 }
 .animate-progress-sweep {
-  animation: vg-progress-sweep 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation: vg-progress-sweep 1.4s var(--ease) infinite;
   will-change: transform;
 }
 
+/* This used to cover the sweep and nothing else, so entrances and the drawer still slid.
+   What is deliberately NOT switched off is the pulse: it is the only indicator that a
+   build running for hours is still alive, and removing it leaves the screen saying the
+   same thing whether the job is advancing or has hung. A slow change of opacity is not
+   what triggers a vestibular disorder; displacement is. */
 @media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up {
+    animation: none;
+  }
   .animate-progress-sweep {
     animation: vg-pulse-soft 1.6s ease-in-out infinite;
     transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
 

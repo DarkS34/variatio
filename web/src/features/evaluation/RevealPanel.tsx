@@ -33,35 +33,35 @@ function Origin({
     >
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold"
+          className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-body font-semibold"
           style={{ backgroundColor: meta.colour, color: "var(--background)" }}
         >
           {letterFor(position.position)}
         </span>
-        <span className="text-sm font-medium">{meta.label}</span>
+        <span className="text-body font-medium">{meta.label}</span>
         {chosen ? (
-          <Badge variant="info">
+          <Badge variant="default">
             <Trophy />
             elegida
           </Badge>
         ) : null}
         {position.status !== "ok" ? (
-          <Badge variant={position.status === "unavailable" ? "outline" : "warning"}>
+          <Badge variant={position.status === "unavailable" ? "outline" : "attention"}>
             {position.status === "unavailable" ? "no disponible" : "sin ítem válido"}
           </Badge>
         ) : null}
         <span className="ml-auto flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
           <span>{position.model || "—"}</span>
-          <span className="tabular-nums">{duration(position.elapsed_ms)}</span>
+          <span className="nums">{duration(position.elapsed_ms)}</span>
         </span>
       </div>
 
-      <p className="px-3 pb-2 text-xs leading-relaxed text-muted-foreground">
+      <p className="px-3 pb-2 text-small leading-relaxed text-muted-foreground">
         {meta.description}
       </p>
 
       {position.error ? (
-        <p className="px-3 pb-2 text-xs text-[var(--warning)]">{position.error}</p>
+        <p className="px-3 pb-2 text-small text-attention">{position.error}</p>
       ) : null}
 
       <button
@@ -73,7 +73,7 @@ function Origin({
         <ChevronRight className={cn("size-3 transition-transform", open && "rotate-90")} />
         Ver el prompt exacto que recibió
         {position.exemplar_ids && position.exemplar_ids.length > 0 ? (
-          <span className="ml-auto tabular-nums">
+          <span className="ml-auto nums">
             {position.exemplar_ids.length} ejemplo
             {position.exemplar_ids.length === 1 ? "" : "s"} del banco
           </span>
@@ -102,8 +102,8 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
   return (
     <section className="animate-fade-in space-y-3">
       <header className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 className="text-sm font-semibold">De dónde salió cada propuesta</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-body font-semibold">De dónde salió cada propuesta</h2>
+        <p className="text-body text-muted-foreground">
           {session.choice === null
             ? "No elegiste ninguna."
             : `Elegiste ${letterFor(session.choice)} — ${chosenMeta?.label ?? ""}.`}
@@ -120,7 +120,7 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
       {/* Se dice después de elegir, nunca antes: es idéntico para las tres propuestas, así
           que no delata ninguna, pero sabiéndolo de antemano se lee distinto lo que hay en
           pantalla — y el sorteo existía justo para medirlo sin ese sesgo. */}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         {session.think
           ? "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir."
           : "Esta sesión salió sorteada sin razonamiento previo: las dos propuestas locales respondieron directamente."}

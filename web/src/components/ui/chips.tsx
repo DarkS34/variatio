@@ -37,7 +37,7 @@ function Chip({
           }
         }}
         style={{ width: `${Math.max(draft.length, 4) + 2}ch` }}
-        className="h-6 rounded-full border border-primary bg-background px-2.5 text-xs outline-none"
+        className="h-6 rounded-full border border-primary bg-background px-2.5 text-small outline-none"
       />
     );
   }
@@ -70,12 +70,23 @@ export function ChipInput({
   placeholder = "Escribe un valor y pulsa Enter…",
   hint,
   className,
+  disabled = false,
+  id,
+  "aria-describedby": describedBy,
+  "aria-label": ariaLabel,
 }: {
   values: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
   hint?: string;
   className?: string;
+  disabled?: boolean;
+  /** Forwarded to the inner <input> so that a <Field> wrapping this binds to something
+   *  real. Without it the label would point at an id nothing carries, which looks correct
+   *  in the markup and does nothing for a screen reader or for a click. */
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-label"?: string;
 }) {
   const [text, setText] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -117,22 +128,37 @@ export function ChipInput({
   return (
     <div className={className}>
       <div
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => (disabled ? undefined : inputRef.current?.focus())}
         className={cn(
           "flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-1.5",
           "transition-colors focus-within:ring-2 focus-within:ring-ring",
+          disabled && "bg-muted/40",
         )}
       >
-        {values.map((value, index) => (
-          <Chip
-            key={`${index}-${value}`}
-            value={value}
-            onCommit={(next) => commitAt(index, next)}
-            onRemove={() => onChange(values.filter((_, i) => i !== index))}
-          />
-        ))}
+        {values.map((value, index) =>
+          disabled ? (
+            <Badge key={`${index}-${value}`} variant="secondary" className="h-6 py-0">
+              {value}
+            </Badge>
+          ) : (
+            <Chip
+              key={`${index}-${value}`}
+              value={value}
+              onCommit={(next) => commitAt(index, next)}
+              onRemove={() => onChange(values.filter((_, i) => i !== index))}
+            />
+          ),
+        )}
+        {values.length === 0 && disabled ? (
+          <span className="px-1 text-body text-muted-foreground">—</span>
+        ) : null}
         <input
+          hidden={disabled}
+          disabled={disabled}
           ref={inputRef}
+          id={id}
+          aria-describedby={describedBy}
+          aria-label={ariaLabel}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onBlur={() => add(text)}
@@ -152,13 +178,13 @@ export function ChipInput({
             }
           }}
           placeholder={values.length === 0 ? placeholder : "añadir…"}
-          className="h-6 min-w-32 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+          className="h-6 min-w-32 flex-1 bg-transparent px-1 text-body outline-none placeholder:text-muted-foreground"
         />
       </div>
       {notice ? (
-        <p className="mt-1 text-xs text-[var(--warning)]">{notice}</p>
+        <p className="mt-1 text-small text-attention">{notice}</p>
       ) : hint ? (
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        <p className="mt-1 text-small text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );

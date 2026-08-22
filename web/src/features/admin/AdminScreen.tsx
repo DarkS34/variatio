@@ -18,6 +18,8 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { ARM_META } from "@/features/evaluation/arms";
 import { FormError } from "@/features/auth/AuthLayout";
 import { ARTIFACT_STATUS, duration, when } from "@/lib/format";
@@ -87,7 +89,7 @@ export function AdminScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Administración</h1>
+        <h1 className="font-display font-expanded text-display">Administración</h1>
         <InfoHint label="Qué es esto">
           La instalación entera vista desde fuera: quién la usa, quién puede entrar y en
           qué, cuántos workspaces hay y cómo va el estudio de evaluación. Es la única
@@ -211,7 +213,7 @@ function StudyTab({
         ) : null}
 
         {filtered ? (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-small text-muted-foreground">
             {data.aggregates.sessions} sesión(es) en el filtro
           </span>
         ) : null}
@@ -277,8 +279,8 @@ function StudyTab({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-      <h2 className="text-xs font-medium">{title}</h2>
+    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+      <h2 className="text-small font-medium">{title}</h2>
       {children}
     </section>
   );
@@ -313,7 +315,7 @@ function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         {decided} sesión{decided === 1 ? "" : "es"} con elección, de {aggregates.sessions}
       </p>
       <BarRows
@@ -334,7 +336,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-1.5 border-t border-border pt-2">
-      <h3 className="text-[11px] font-medium text-muted-foreground">
+      <h3 className="text-micro font-medium text-muted-foreground">
         Propuestas sin ítem válido
       </h3>
       <div className="grid grid-cols-3 gap-2">
@@ -343,7 +345,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
           const bad = (counts.failed ?? 0) + (counts.unavailable ?? 0);
           return (
             <div key={arm} className="rounded-lg border border-border px-2.5 py-1.5">
-              <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 truncate text-micro text-muted-foreground">
                 <span
                   className="size-2 shrink-0 rounded-[2px]"
                   style={{ backgroundColor: ARM_META[arm].colour }}
@@ -352,12 +354,12 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
               </p>
               <p
                 className={cn(
-                  "text-sm tabular-nums",
-                  bad > 0 ? "text-[var(--warning)]" : "text-foreground",
+                  "text-body nums",
+                  bad > 0 ? "text-[var(--attention)]" : "text-foreground",
                 )}
               >
                 {bad}
-                <span className="ml-1 text-xs text-muted-foreground">de {total}</span>
+                <span className="ml-1 text-small text-muted-foreground">de {total}</span>
               </p>
             </div>
           );
@@ -370,12 +372,12 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
 function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
   const rubric = aggregates.rubric ?? { n: 0 };
   if (!rubric.n) {
-    return <p className="text-xs text-muted-foreground">Ninguna sesión valorada todavía.</p>;
+    return <p className="text-small text-muted-foreground">Ninguna sesión valorada todavía.</p>;
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         {rubric.n} valorada{rubric.n === 1 ? "" : "s"} · escala de 1 a 5
       </p>
       <div className="space-y-1.5">
@@ -384,7 +386,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
           if (!entry) return null;
           return (
             <div key={key} className="flex items-center gap-2">
-              <span className="w-40 shrink-0 truncate text-xs text-muted-foreground">
+              <span className="w-40 shrink-0 truncate text-small text-muted-foreground">
                 {RUBRIC_LABELS[key]}
               </span>
               <div className="relative h-2.5 flex-1 overflow-hidden rounded-[2px] bg-muted">
@@ -400,7 +402,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
                   />
                 ) : null}
               </div>
-              <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+              <span className="w-10 shrink-0 text-right text-small nums">
                 {entry.mean.toFixed(1)}
               </span>
             </div>
@@ -408,10 +410,10 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
         })}
       </div>
       {rubric.complexity?.mean_distance_to_3 !== undefined ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-micro text-muted-foreground">
           En exigencia el objetivo es el 3, no el 5 — de ahí la marca central. La distancia
           media al 3 es{" "}
-          <span className="tabular-nums">{rubric.complexity.mean_distance_to_3}</span>.
+          <span className="nums">{rubric.complexity.mean_distance_to_3}</span>.
         </p>
       ) : null}
     </div>
@@ -429,7 +431,7 @@ function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
   const total = think.on.decided + think.off.decided;
   if (total === 0) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         Todavía no hay sesiones juzgadas de las que sacar la comparación.
       </p>
     );
@@ -459,31 +461,31 @@ function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         El modo se sortea al empezar cada sesión, igual para las dos propuestas locales.
       </p>
-      <div className="thin-scroll overflow-x-auto">
-        <table className="w-full min-w-[22rem] text-xs">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="py-1.5 pr-3 text-left font-medium" />
-              <th className="px-3 py-1.5 text-right font-medium">Con razonamiento</th>
-              <th className="py-1.5 pl-3 text-right font-medium">Sin razonamiento</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div>
+        <Table minWidth="22rem">
+          <THead>
+            <TR>
+              <TH />
+              <TH align="num">Con razonamiento</TH>
+              <TH align="num">Sin razonamiento</TH>
+            </TR>
+          </THead>
+          <TBody>
             {rows.map((row) => (
-              <tr key={row.label} className="border-b border-border/50 last:border-0">
-                <td className="py-1.5 pr-3 text-muted-foreground">{row.label}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{row.on}</td>
-                <td className="py-1.5 pl-3 text-right tabular-nums">{row.off}</td>
-              </tr>
+              <TR key={row.label}>
+                <TD className="py-1.5 pr-3 text-muted-foreground">{row.label}</TD>
+                <TD align="num" className="px-3 py-1.5  nums">{row.on}</TD>
+                <TD align="num" className="py-1.5 pl-3  nums">{row.off}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
       {think.on.decided === 0 || think.off.decided === 0 ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-micro text-muted-foreground">
           Falta uno de los dos lados: hasta que el sorteo llene ambas columnas no hay
           comparación posible.
         </p>
@@ -509,88 +511,84 @@ function GroupTable({
   onSelect: (group: AdminGroup) => void;
 }) {
   if (groups.length === 0) {
-    return <p className="text-xs text-muted-foreground">Nada que agrupar todavía.</p>;
+    return <p className="text-small text-muted-foreground">Nada que agrupar todavía.</p>;
   }
 
   return (
-    <div className="thin-scroll overflow-x-auto">
-      <table className="w-full min-w-[42rem] text-xs">
-        <thead>
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="py-1.5 pr-3 text-left font-medium">{firstHeader}</th>
-            <th className="px-3 py-1.5 text-right font-medium">Sesiones</th>
-            <th className="px-3 py-1.5 text-right font-medium">Decididas</th>
-            <th className="px-3 py-1.5 text-left font-medium">Ganó el sistema</th>
-            <th className="px-3 py-1.5 text-right font-medium">Valoradas</th>
-            <th className="py-1.5 pl-3 text-right font-medium">Última</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div>
+      <Table minWidth="42rem">
+        <THead>
+          <TR>
+            <TH>{firstHeader}</TH>
+            <TH align="num">Sesiones</TH>
+            <TH align="num">Decididas</TH>
+            <TH>Ganó el sistema</TH>
+            <TH align="num">Valoradas</TH>
+            <TH align="num">Última</TH>
+          </TR>
+        </THead>
+        <TBody>
           {groups.map((group) => (
-            <tr
-              key={String(group.key)}
-              className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-accent/50"
-              onClick={() => onSelect(group)}
-            >
-              <td className="max-w-56 truncate py-1.5 pr-3">
+            <TR key={String(group.key)} onSelect={() => onSelect(group)}>
+              <TD className="max-w-56 truncate py-1.5 pr-3">
                 {group.label}
                 {group.name && group.name !== group.label ? (
                   <span className="ml-1 text-muted-foreground">· {group.name}</span>
                 ) : null}
-              </td>
-              <td className="px-3 py-1.5 text-right tabular-nums">{group.sessions}</td>
-              <td className="px-3 py-1.5 text-right tabular-nums">{group.decided}</td>
-              <td className="px-3 py-1.5">
+              </TD>
+              <TD align="num" className="px-3 py-1.5  nums">{group.sessions}</TD>
+              <TD align="num" className="px-3 py-1.5  nums">{group.decided}</TD>
+              <TD className="px-3 py-1.5">
                 <ShareMeter
                   value={group.preferences?.system ?? 0}
                   total={group.decided}
                   reference={CHANCE}
                   title={`${group.preferences?.system ?? 0} de ${group.decided}; la marca es el 33 % del azar`}
                 />
-              </td>
-              <td className="px-3 py-1.5 text-right tabular-nums">{group.rated}</td>
-              <td className="whitespace-nowrap py-1.5 pl-3 text-right text-muted-foreground">
+              </TD>
+              <TD align="num" className="px-3 py-1.5  nums">{group.rated}</TD>
+              <TD align="num" className="whitespace-nowrap py-1.5 pl-3  text-muted-foreground">
                 {group.last_at
                   ? when(new Date(group.last_at * 1000).toISOString())
                   : "—"}
-              </td>
-            </tr>
+              </TD>
+            </TR>
           ))}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }
 
 function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["sessions"] }) {
   return (
-    <div className="thin-scroll max-h-[28rem] overflow-auto">
-      <table className="w-full min-w-[48rem] text-xs">
-        <thead className="sticky top-0 bg-card">
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="py-1.5 pr-3 text-left font-medium">Cuándo</th>
-            <th className="px-3 py-1.5 text-left font-medium">Evaluador</th>
-            <th className="px-3 py-1.5 text-left font-medium">Workspace</th>
-            <th className="px-3 py-1.5 text-left font-medium">Conceptos</th>
-            <th className="px-3 py-1.5 text-left font-medium">Eligió</th>
-            <th className="px-3 py-1.5 text-center font-medium">Razonó</th>
-            <th className="py-1.5 pl-3 text-left font-medium">Nota</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div className="thin-scroll max-h-[28rem] overflow-y-auto">
+      <Table minWidth="48rem">
+        <THead>
+          <TR>
+            <TH>Cuándo</TH>
+            <TH>Evaluador</TH>
+            <TH>Workspace</TH>
+            <TH>Conceptos</TH>
+            <TH>Eligió</TH>
+            <TH className="text-center">Razonó</TH>
+            <TH>Nota</TH>
+          </TR>
+        </THead>
+        <TBody>
           {rows.map((row) => {
             const meta = row.choice_arm ? ARM_META[row.choice_arm] : null;
             return (
-              <tr key={row.id} className="border-b border-border/50 last:border-0">
-                <td className="whitespace-nowrap py-1.5 pr-3 text-muted-foreground">
+              <TR key={row.id}>
+                <TD className="whitespace-nowrap py-1.5 pr-3 text-muted-foreground">
                   {when(new Date(row.created_at * 1000).toISOString())}
-                </td>
-                <td className="max-w-44 truncate px-3 py-1.5">{row.account ?? "—"}</td>
-                <td className="px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+                </TD>
+                <TD className="max-w-44 truncate px-3 py-1.5">{row.account ?? "—"}</TD>
+                <TD className="px-3 py-1.5 font-mono text-micro text-muted-foreground">
                   {row.workspace ?? "—"}
-                </td>
-                <td className="max-w-52 truncate px-3 py-1.5">{row.concepts.join(" · ")}</td>
-                <td className="whitespace-nowrap px-3 py-1.5">
+                </TD>
+                <TD className="max-w-52 truncate px-3 py-1.5">{row.concepts.join(" · ")}</TD>
+                <TD className="whitespace-nowrap px-3 py-1.5">
                   {row.chosen_at === null ? (
                     <span className="text-muted-foreground">sin decidir</span>
                   ) : meta ? (
@@ -604,18 +602,18 @@ function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminE
                   ) : (
                     <span className="text-muted-foreground">ninguna</span>
                   )}
-                </td>
-                <td className="px-3 py-1.5 text-center text-muted-foreground">
+                </TD>
+                <TD className="px-3 py-1.5 text-center text-muted-foreground">
                   {row.think ? "sí" : "no"}
-                </td>
-                <td className="max-w-64 truncate py-1.5 pl-3 text-muted-foreground">
+                </TD>
+                <TD className="max-w-64 truncate py-1.5 pl-3 text-muted-foreground">
                   {row.evaluator_note ?? ""}
-                </td>
-              </tr>
+                </TD>
+              </TR>
             );
           })}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }
@@ -644,6 +642,7 @@ function AccountsTab({
   const toggle = useSetAccountEnabled();
   const remove = useDeleteAccount();
   const session = useSession();
+  const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
 
   // Irreversible, so it is spelled out before it happens — and what it spells out is the
@@ -661,7 +660,16 @@ function AccountsTab({
         ? `Lo que generó se queda pero sin autor: ${kept.join(" y ")}.\n`
         : "") +
       "\nNo se puede deshacer. Para cerrarle la puerta sin borrar nada, desactívala.";
-    if (window.confirm(message)) remove.mutate(account.id);
+    if (!window.confirm(message)) return;
+    // The dialog is the confirmation BEFORE; this is the one after. Everything on this
+    // screen that destroys something says so once it is done, because the row simply
+    // disappearing is indistinguishable from a list that reloaded.
+    remove.mutate(account.id, {
+      onSuccess: () =>
+        toast({ title: "Cuenta eliminada", description: account.username, tone: "attention" }),
+      onError: (error: Error) =>
+        toast({ title: "No se ha podido eliminar", description: error.message, tone: "danger" }),
+    });
   };
 
   return (
@@ -669,22 +677,22 @@ function AccountsTab({
       <InviteSection overview={overview} />
 
       <section className="space-y-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
           Cuentas ({overview.accounts.length})
         </h2>
-        <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[52rem] text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="px-3 py-2 text-left font-medium">Cuenta</th>
-                <th className="px-3 py-2 text-left font-medium">Accesos</th>
-                <th className="px-3 py-2 text-right font-medium">Variantes</th>
-                <th className="px-3 py-2 text-right font-medium">Comparaciones</th>
-                <th className="px-3 py-2 text-left font-medium">Alta</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <Table minWidth="52rem">
+            <THead>
+              <TR>
+                <TH>Cuenta</TH>
+                <TH>Accesos</TH>
+                <TH align="num">Variantes</TH>
+                <TH align="num">Comparaciones</TH>
+                <TH>Alta</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
               {overview.accounts.map((account) => (
                 <AccountRows
                   key={account.id}
@@ -699,8 +707,8 @@ function AccountsTab({
                   busy={toggle.isPending || remove.isPending}
                 />
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
         <FormError error={remove.error} />
       </section>
@@ -731,8 +739,8 @@ function AccountRows({
 }) {
   return (
     <>
-      <tr className="border-b border-border/50 last:border-0">
-        <td className="px-3 py-2">
+      <TR>
+        <TD className="px-3 py-2">
           <span className="flex flex-wrap items-center gap-1.5">
             <span
               className={cn("truncate font-mono", account.disabled && "line-through opacity-60")}
@@ -743,13 +751,13 @@ function AccountRows({
             {self ? <Badge variant="outline">tú</Badge> : null}
             {account.disabled ? <Badge variant="outline">desactivada</Badge> : null}
           </span>
-          <span className="block text-xs text-muted-foreground">{account.name}</span>
-        </td>
-        <td className="px-3 py-2">
+          <span className="block text-small text-muted-foreground">{account.name}</span>
+        </TD>
+        <TD className="px-3 py-2">
           <button
             type="button"
             onClick={onToggle}
-            className="flex items-center gap-1.5 text-left text-xs hover:text-foreground"
+            className="flex items-center gap-1.5 text-left text-small hover:text-foreground"
           >
             <ChevronRight
               className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
@@ -770,16 +778,16 @@ function AccountRows({
               </span>
             )}
           </button>
-        </td>
-        <td className="px-3 py-2 text-right tabular-nums">{account.generations}</td>
-        <td className="px-3 py-2 text-right tabular-nums">
+        </TD>
+        <TD align="num" className="px-3 py-2  nums">{account.generations}</TD>
+        <TD align="num" className="px-3 py-2  nums">
           {account.evaluations}
-          <span className="ml-1 text-xs text-muted-foreground">({account.decided} dec.)</span>
-        </td>
-        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+          <span className="ml-1 text-small text-muted-foreground">({account.decided} dec.)</span>
+        </TD>
+        <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
           {account.created_at ? when(account.created_at) : "—"}
-        </td>
-        <td className="whitespace-nowrap px-3 py-2 text-right">
+        </TD>
+        <TD align="num" className="whitespace-nowrap px-3 py-2">
           {account.evaluations > 0 ? (
             <Button variant="ghost" size="sm" onClick={onInspect}>
               Ver sus sesiones
@@ -811,15 +819,15 @@ function AccountRows({
               </Button>
             </>
           )}
-        </td>
-      </tr>
+        </TD>
+      </TR>
 
       {expanded ? (
-        <tr className="border-b border-border/50 bg-muted/30 last:border-0">
-          <td colSpan={6} className="px-3 py-3">
+        <TR className="bg-muted/30">
+          <TD colSpan={6} className="py-3">
             <MembershipEditor account={account} overview={overview} />
-          </td>
-        </tr>
+          </TD>
+        </TR>
       ) : null}
     </>
   );
@@ -848,12 +856,12 @@ function MembershipEditor({
   if (account.is_admin) {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-small text-muted-foreground">
           Esta cuenta administra la instalación: entra en todos los workspaces sin ser
           miembro de ninguno, así que no hay accesos que darle.
         </p>
         {account.workspaces.length > 0 ? (
-          <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
             Consta además como miembro de
             {account.workspaces.map((membership) => (
               <Badge key={membership.slug} variant="outline">
@@ -869,7 +877,7 @@ function MembershipEditor({
   return (
     <div className="space-y-3">
       {account.workspaces.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-small text-muted-foreground">
           Esta cuenta no es miembro de ningún workspace: puede entrar, pero no verá nada
           hasta que le des acceso a alguno.
         </p>
@@ -877,7 +885,7 @@ function MembershipEditor({
         <ul className="divide-y divide-border rounded-lg border border-border bg-background">
           {account.workspaces.map((membership) => (
             <li key={membership.slug} className="flex flex-wrap items-center gap-2 p-2">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs">
+              <span className="min-w-0 flex-1 truncate font-mono text-small">
                 {membership.slug}
               </span>
               <Select
@@ -948,7 +956,7 @@ function MembershipEditor({
             {grant.isPending ? <Spinner /> : null}
             Conceder
           </Button>
-          <span className="text-xs text-muted-foreground">{ROLE_HINTS[role]}</span>
+          <span className="text-small text-muted-foreground">{ROLE_HINTS[role]}</span>
         </div>
       ) : null}
 
@@ -974,9 +982,9 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
   const pending = invites.data?.invites ?? [];
 
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
           Invitar a alguien
         </h2>
         <InfoHint label="Cómo se entra aquí">
@@ -1026,7 +1034,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           {create.isPending ? <Spinner /> : <LinkIcon />}
           Crear enlace
         </Button>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-small text-muted-foreground">
           {workspace
             ? ROLE_HINTS[role]
             : "Entrará sin acceso a ninguna instancia; se lo das después desde la tabla."}
@@ -1039,19 +1047,19 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
       {pending.length > 0 ? (
         <ul className="divide-y divide-border rounded-lg border border-border">
           {pending.map((invite) => (
-            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-sm">
+            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-body">
               <div className="min-w-0 flex-1">
                 {/* No hay destinatario que nombrar: lo que distingue dos enlaces pendientes
                     es cuándo se emitieron y para qué instancia. */}
                 <p className="truncate">
                   Enlace del {new Date(invite.created_at).toLocaleDateString("es-ES")}
                   {invite.created_by ? (
-                    <span className="ml-1 text-xs text-muted-foreground">
+                    <span className="ml-1 text-small text-muted-foreground">
                       · lo creó {invite.created_by}
                     </span>
                   ) : null}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-small text-muted-foreground">
                   {invite.workspace_slug
                     ? `${invite.workspace_slug} · ${ROLE_LABELS[invite.role]}`
                     : "sin workspace"}{" "}
@@ -1079,12 +1087,12 @@ function InviteLink({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="text-sm">
+      <p className="text-body">
         Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio
         usuario, así que no lo dejes en un sitio compartido.
       </p>
       <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-xs">
+        <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-small">
           {link}
         </code>
         <Button
@@ -1114,44 +1122,45 @@ function InviteLink({ link }: { link: string }) {
  */
 function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const remove = useAdminDeleteWorkspace();
+  const toast = useToast();
   const [target, setTarget] = useState<AdminWorkspace | null>(null);
   const only = overview.workspaces.length === 1;
 
   return (
     <div className="space-y-3">
-      <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[52rem] text-sm">
-          <thead>
-            <tr className="border-b border-border text-xs text-muted-foreground">
-              <th className="px-3 py-2 text-left font-medium">Workspace</th>
-              <th className="px-3 py-2 text-left font-medium">Cadena</th>
-              <th className="px-3 py-2 text-right font-medium">Miembros</th>
-              <th className="px-3 py-2 text-right font-medium">Variantes</th>
-              <th className="px-3 py-2 text-left font-medium">Creado</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <Table minWidth="52rem">
+          <THead>
+            <TR>
+              <TH>Workspace</TH>
+              <TH>Cadena</TH>
+              <TH align="num">Miembros</TH>
+              <TH align="num">Variantes</TH>
+              <TH>Creado</TH>
+              <TH />
+            </TR>
+          </THead>
+          <TBody>
             {overview.workspaces.map((workspace) => (
-              <tr key={workspace.id} className="border-b border-border/50 last:border-0">
-                <td className="px-3 py-2">
+              <TR key={workspace.id}>
+                <TD className="px-3 py-2">
                   {workspace.name}
-                  <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                  <span className="ml-2 font-mono text-micro text-muted-foreground">
                     {workspace.slug}
                   </span>
                   {workspace.warm ? (
-                    <span className="ml-2 text-[11px] text-muted-foreground">· en memoria</span>
+                    <span className="ml-2 text-micro text-muted-foreground">· en memoria</span>
                   ) : null}
-                </td>
-                <td className="px-3 py-2">
+                </TD>
+                <TD className="px-3 py-2">
                   <ChainCell workspace={workspace} />
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{workspace.members}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{workspace.generations}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                </TD>
+                <TD align="num" className="px-3 py-2  nums">{workspace.members}</TD>
+                <TD align="num" className="px-3 py-2  nums">{workspace.generations}</TD>
+                <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                   {workspace.created_at ? when(workspace.created_at) : "—"}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
+                </TD>
+                <TD align="num" className="whitespace-nowrap px-3 py-2">
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -1165,11 +1174,11 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                   >
                     <Trash2 />
                   </Button>
-                </td>
-              </tr>
+                </TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       <FormError error={remove.error} />
@@ -1180,7 +1189,22 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
           busy={remove.isPending}
           onClose={() => setTarget(null)}
           onConfirm={() =>
-            remove.mutate(target.slug, { onSuccess: () => setTarget(null) })
+            remove.mutate(target.slug, {
+              onSuccess: () => {
+                setTarget(null);
+                toast({
+                  title: "Workspace eliminado",
+                  description: `${target.slug}, con su árbol de ficheros.`,
+                  tone: "attention",
+                });
+              },
+              onError: (error: Error) =>
+                toast({
+                  title: "No se ha podido eliminar",
+                  description: error.message,
+                  tone: "danger",
+                }),
+            })
           }
         />
       ) : null}
@@ -1198,6 +1222,7 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
  */
 function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
   const discard = useDeleteArtifact();
+  const toast = useToast();
 
   const confirm = (artifact: AdminWorkspace["stages"][number]) => {
     const message =
@@ -1206,9 +1231,20 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
       "de él; la etapa vuelve a «sin construir» y habrá que reconstruirla.\n\n" +
       "Las copias del historial no se tocan: si te equivocas, se restaura desde la " +
       "pantalla del artefacto.";
-    if (window.confirm(message)) {
-      discard.mutate({ slug: workspace.slug, artifact: artifact.artifact });
-    }
+    if (!window.confirm(message)) return;
+    discard.mutate(
+      { slug: workspace.slug, artifact: artifact.artifact },
+      {
+        onSuccess: () =>
+          toast({
+            title: "Etapa vaciada",
+            description: `«${artifact.label}» de ${workspace.slug}. El historial sigue ahí.`,
+            tone: "attention",
+          }),
+        onError: (error: Error) =>
+          toast({ title: "No se ha podido vaciar", description: error.message, tone: "danger" }),
+      },
+    );
   };
 
   return (
@@ -1286,7 +1322,7 @@ function DeleteWorkspaceDialog({
         </>
       }
     >
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-body">
         <p>Desaparecen de la instalación y del disco:</p>
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
           <li>

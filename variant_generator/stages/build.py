@@ -56,7 +56,11 @@ def build_exemplars_bank(
         exemplars_profile = ExemplarsProfile(path)
 
     logger.info("Construyendo el banco de ejemplares")
-    bank = ExemplarsBankBuilder(exemplars_profile, workspace=ws).build(
+    bank = ExemplarsBankBuilder(
+        exemplars_profile,
+        workspace=ws,
+        content_context=_artifacts.load_content_context(ws),
+    ).build(
         ws.raw_exemplars_dir,
         ws.exemplars_bank_path,
         on_items=_tagging_hook(ws, exemplars_profile),
@@ -84,9 +88,12 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
 
     def ready():
         if not state:
-            embedder = make_embedder(ws, exemplars_profile, KnowledgeGraph(kg_path))
+            content_context = _artifacts.load_content_context(ws)
+            embedder = make_embedder(
+                ws, exemplars_profile, KnowledgeGraph(kg_path), content_context
+            )
             state["embedder"] = embedder
-            state["tagger"] = make_tagger(embedder, exemplars_profile)
+            state["tagger"] = make_tagger(embedder, exemplars_profile, content_context)
         return state["embedder"], state["tagger"]
 
     def annotate(bank: dict, new_ids: list[str]) -> dict:

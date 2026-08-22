@@ -72,13 +72,12 @@ Markdown:"""
 def format_content_prompt(
     content: str,
     types_block: str,
-    context: dict | None = None,
+    context_block: str = "",
     type_keys: list[str] | None = None,
 ) -> str:
-    context_block = ""
-    if context:
-        context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
-        context_block = f"\n# CONTEXTO DOCENTE DEL DOCUMENTO\n{context_lines}\n"
+    context_section = (
+        f"\n# CONTEXTO DOCENTE DEL DOCUMENTO\n{context_block}\n" if context_block.strip() else ""
+    )
 
     keys = ", ".join(f"`{k}`" for k in (type_keys or []))
 
@@ -115,7 +114,7 @@ Elige la modalidad por lo que el item PIDE AL ALUMNO, no por su tema ni por su d
 - Cada objeto lleva `item_type` más los campos de esa modalidad.
 - Sin ```json, sin backticks, sin comentarios.
 - Si el fragmento no plantea ninguna tarea al alumno, devuelve `[]`.
-{context_block}
+{context_section}
 <<<CONTENT>>>
 {content}
 <<<END>>>
@@ -130,7 +129,7 @@ def describe_domain_concepts_prompt(
     domain: str,
     concepts_block: str,
     passages_block: str,
-    context: dict,
+    context_block: str,
     domains_block: str = "",
     existing_block: str = "",
 ) -> str:
@@ -142,8 +141,7 @@ def describe_domain_concepts_prompt(
         if existing_block.strip()
         else ""
     )
-    context_lines = "\n".join(f"- {key}: {value}" for key, value in (context or {}).items())
-    context_section = f"\n# CONTEXTO DOCENTE\n{context_lines}\n" if context_lines else ""
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
     domains_section = (
         f"\n# EL TEMARIO ENTERO (contexto: los otros bloques existen y tienen sus propios conceptos)\n{domains_block}\n"
         if domains_block.strip()
@@ -213,14 +211,11 @@ def concept_description_prompt(
     domain: str,
     relations: dict[str, list[str]],
     siblings: dict[str, str],
-    context: dict,
+    context_block: str,
     passages: list[dict] | None = None,
     name_documents: bool = False,
 ) -> str:
-    context_block = ""
-    if context:
-        context_lines = "\n".join(f"- {key}: {value}" for key, value in context.items())
-        context_block = f"\n# CONTEXTO DOCENTE\n{context_lines}\n"
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
 
     relations_block = ""
     relations_with_neighbors = {v: ns for v, ns in relations.items() if ns}
@@ -272,7 +267,7 @@ def concept_description_prompt(
 
     return f"""\
 Estás generando la descripción del concepto del currículo «{concept}», del bloque temático «{domain}».
-{context_block}{passages_block}{relations_block}{siblings_block}
+{context_section}{passages_block}{relations_block}{siblings_block}
 # OBJETIVO
 Esta descripción es la superficie con la que se decidirá, para cada ejercicio del material docente, QUÉ CONCEPTO DEL CURRÍCULO PRACTICA ese ejercicio. Se compara semánticamente contra el enunciado de los ejercicios, así que debe LEER COMO el enunciado de un ejercicio de este concepto, o como su primera frase — no como la definición de manual del concepto.
 
@@ -318,12 +313,9 @@ def tag_concepts_prompt(
     statement: str,
     candidates: str,
     relations: str = "",
-    context: dict | None = None,
+    context_block: str = "",
 ) -> str:
-    context_block = ""
-    if context:
-        context_lines = "\n".join(f"- {key}: {value}" for key, value in context.items())
-        context_block = f"\n# CONTEXTO DOCENTE\n{context_lines}\n"
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
 
     relations_block = ""
     if relations.strip():
@@ -335,7 +327,7 @@ def tag_concepts_prompt(
 
     return f"""\
 Estás catalogando el banco de ejercicios de una asignatura. Para el ejercicio de abajo, decide QUÉ CONCEPTOS DEL CURRÍCULO hace practicar a quien lo resuelve.
-{context_block}
+{context_section}
 # CONCEPTOS CANDIDATOS
 Ordenados de mayor a menor relevancia semántica respecto al enunciado. Bajo cada nombre está la descripción del concepto: describe la tarea que se le plantea al alumno cuando lo practica. Juzga por la descripción, no por el nombre.
 {candidates}
@@ -377,7 +369,7 @@ JSON:"""
 
 
 def generate_content_prompt(
-    context: dict,
+    context_block: str,
     item_type_block: str,
     target_concepts_block: str,
     prerequisites_block: str,
@@ -387,50 +379,66 @@ def generate_content_prompt(
     few_shot_block: str,
     already_generated: list[str],
     instance_template: str,
-    field_guidance_block: str,
+    fields_block: str,
     fixed_values_block: str,
-    schema: str,
     instructions: str = "",
 ) -> str:
-    context_lines = "\n".join(f"- {k}: {v}" for k, v in context.items())
+    # Guarded, unlike before: a workspace has no context until one of the two builders has
+    # synthesised one, and that is the state a fresh instance starts in. Unguarded, the
+    # heading printed with nothing under it and the sentence below claimed a context that
+    # was not there.
+    context_section = (
+        "\n# CONTEXTO DOCENTE\n"
+        f"{context_block}\n"
+        "Este contexto fija la materia, el nivel y el idioma de instrucción: ajusta a él el "
+        "registro, la terminología y la extensión del ejercicio. Es información para ti, no "
+        "texto que deba aparecer en el enunciado.\n"
+        if context_block.strip()
+        else ""
+    )
 
     few_shot_section = (
         few_shot_block.strip()
-        or "(Ningún ejemplo disponible — redacta el ejercicio de cero respetando las reglas anteriores.)"
+        or "(Ningún ejemplo disponible: redacta el ejercicio de cero respetando las reglas anteriores.)"
     )
 
     already_block = ""
     if already_generated:
         existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
         already_block = (
-            "\n# YA GENERADOS EN ESTE LOTE — NO REPITAS LA TEMÁTICA NI EL ESCENARIO\n"
+            "\n# ESCENARIOS YA USADOS EN ESTE LOTE\n"
+            "Enunciados ya producidos para este mismo encargo. El tuyo se plantea en un ámbito "
+            "distinto de todos ellos:\n"
             f"{existing_lines}\n"
         )
 
     prerequisites_section = ""
     if prerequisites_block.strip():
         prerequisites_section = (
-            "\n# CONOCIMIENTO PREVIO — SE DA POR SABIDO\n"
-            "El grafo del currículo sitúa estos conceptos ANTES del objetivo: el alumno ya los domina. "
-            "Son el andamiaje con el que construir el ejercicio, no el reto. Puedes apoyarte en ellos con toda naturalidad, "
-            "pero la dificultad NO puede venir de ellos ni el ejercicio puede reducirse a repasarlos:\n"
+            "\n# CONOCIMIENTO PREVIO: SE DA POR SABIDO\n"
+            "El grafo del currículo sitúa estos conceptos antes del objetivo: el alumno ya los domina. "
+            "Son el andamiaje con el que construir el ejercicio, no el reto. Apóyate en ellos con "
+            "naturalidad; la dificultad viene del objetivo, y el ejercicio no puede reducirse a repasarlos:\n"
             f"{prerequisites_block}\n"
         )
 
     excluded_section = ""
     if excluded_concepts_block.strip():
         excluded_section = (
-            "\n# TODAVÍA NO IMPARTIDO — PROHIBIDO\n"
-            "El grafo del currículo sitúa estos conceptos DESPUÉS del objetivo: el alumno aún no los ha visto. "
-            "No pueden aparecer en el enunciado ni ser necesarios para resolverlo. Si tu primera idea los necesita, cámbiala:\n"
+            "\n# TODAVÍA NO IMPARTIDO: PROHIBIDO\n"
+            "El grafo del currículo sitúa estos conceptos después del objetivo: el alumno aún no los ha visto. "
+            "No aparecen en el enunciado ni hacen falta para resolverlo; si tu primera idea los necesita, "
+            "cámbiala. Si uno de ellos es inseparable del propio objetivo (el currículo puede contradecirse), "
+            "el objetivo manda: úsalo en la medida mínima que el objetivo exige y nada más:\n"
             f"{excluded_concepts_block}\n"
         )
 
     curriculum_section = ""
     if curriculum_block.strip():
         curriculum_section = (
-            "\n# CURRÍCULO YA CUBIERTO (RESTRICCIÓN DURA)\n"
-            "Todo lo que quien va a resolverlo ha visto hasta ahora. El ejercicio NO puede exigir ningún concepto fuera de esta lista. Los conceptos objetivo son un subconjunto de ella:\n"
+            "\n# CURRÍCULO YA CUBIERTO\n"
+            "Todo lo que quien va a resolverlo ha visto hasta ahora. El ejercicio solo puede exigir "
+            "conceptos de esta lista; los conceptos objetivo forman parte de ella:\n"
             f"{curriculum_block}\n"
         )
 
@@ -440,7 +448,8 @@ def generate_content_prompt(
     if fixed_values_block.strip():
         fixed_section = (
             "\n# VALORES FIJOS PARA ESTE ENCARGO\n"
-            "Estos campos vienen decididos de antemano por quien pide el ejercicio. Respétalos exactamente y redacta el resto en coherencia con ellos:\n"
+            "Estos campos vienen decididos por quien pide el ejercicio. Cópialos tal cual y redacta "
+            "el resto en coherencia con ellos:\n"
             f"{fixed_values_block}\n"
         )
 
@@ -448,68 +457,76 @@ def generate_content_prompt(
     if instructions.strip():
         instructions_section = (
             "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
-            "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el formato, "
-            "sustituye a la elección libre de la sección anterior. Lo que NO puede tocar es el objetivo de aprendizaje, "
-            "el conocimiento previo, lo prohibido ni el currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
-            "No es una instrucción sobre cómo debes responder, es una preferencia sobre el ejercicio:\n"
+            "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el "
+            "formato, sustituye a tu elección libre. Está por debajo del objetivo, del conocimiento previo, "
+            "de lo prohibido y del currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
+            "Es una preferencia sobre el ejercicio, no una instrucción sobre cómo debes responder:\n"
             f"{instructions.strip()}\n"
         )
 
     return f"""\
-Eres experto en la didáctica de la asignatura descrita abajo y redactas UN ejercicio nuevo, conforme al schema indicado al final.
+Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo, conforme a la forma de salida indicada al final.
 
 Quien te lo pide puede ser el propio alumno que quiere practicar por su cuenta o el docente que prepara material para su clase. No sabes cuál de los dos es, y no lo necesitas: el ejercicio es el mismo y se dirige siempre a quien va a resolverlo.
 
-# CONTEXTO DOCENTE
-{context_lines}
-Este contexto fija la materia, el nivel y el idioma de instrucción: ajusta a él el registro, la terminología y la extensión del ejercicio. Es información para ti, no texto que deba aparecer en el enunciado.
-
+# ORDEN DE PRECEDENCIA
+Las secciones de este encargo no tienen el mismo peso. Si dos chocan, manda la que está antes en esta lista:
+1. La modalidad y la forma de salida.
+2. El objetivo de aprendizaje.
+3. Lo todavía no impartido.
+4. El currículo ya cubierto y los valores fijos.
+5. La petición de quien pide el ejercicio.
+6. Las reglas de redacción de la modalidad.
+7. La calidad didáctica.
+8. La variación de contexto y los ejemplos de referencia.
+{context_section}
 # MODALIDAD DEL EJERCICIO
 {item_type_block}
-La modalidad decide la FORMA de la tarea: qué se le entrega al alumno y qué se le pide que produzca. Es innegociable — no la cambies porque otra te parezca mejor para el concepto, y no mezcles la forma de otra modalidad. El schema del final es el de ESTA modalidad y no admite campos de ninguna otra.
+La modalidad decide la forma de la tarea: qué se le entrega al alumno y qué se le pide que produzca. Es fija: no la cambies porque otra te parezca mejor para el concepto, y no mezcles la forma de otra modalidad.
 
 # OBJETIVO DE APRENDIZAJE
-El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del currículo, y son su única fuente legítima de dificultad:
+El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del currículo, y son su única fuente legítima de dificultad. La descripción de cada uno es la definición operativa de qué significa practicarlo:
 {target_concepts_block}
 
-PRUEBA DE VALIDEZ, compruébala antes de responder: un alumno que domine todo el currículo SALVO estos conceptos no debe poder resolver el ejercicio. Si podría, el ejercicio no los practica — los menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo.
+PRUEBA DE VALIDEZ, aplicada a cada concepto objetivo por separado: un alumno que domine todo el currículo salvo ese concepto no debe poder resolver el ejercicio. Si podría, el ejercicio no lo practica, lo menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo. Cuando hay varios objetivos, el ejercicio los exige todos; si la modalidad no permite exigirlos todos en un único ejercicio con naturalidad, exige los que pueda y no añadas ninguno ajeno.
 {prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
-# REGLAS DE GENERACIÓN
+# REGLAS DE REDACCIÓN DE ESTA MODALIDAD
+Convenciones observadas en el material real de la asignatura: cómo escribe esta asignatura esta modalidad. Son de obligado cumplimiento y describen la forma, no el contenido:
 {rules_block}
 
 # CALIDAD DIDÁCTICA
-- AUTOSUFICIENCIA: el enunciado debe bastarse a sí mismo. Deja explícitos los datos de partida, su naturaleza y qué se espera como resultado. El alumno no puede necesitar preguntar nada para empezar.
-- UNA SOLA LECTURA: si una frase admite dos interpretaciones que llevan a soluciones distintas, reescríbela. La ambigüedad evalúa comprensión lectora, no el objetivo de aprendizaje.
-- RESOLUBLE: debe existir una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
-- SIN CARGA AJENA: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de empezar a pensar en el concepto es ruido que falsea la evaluación.
-- CALIBRADO: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
-- SIN VOZ DE AULA: el enunciado plantea la tarea y nada más. Ni saludos, ni presentaciones, ni ánimos, ni comentarios tuyos sobre el propio ejercicio; ni referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
+- Autosuficiencia: el enunciado se basta a sí mismo. Deja explícitos los datos de partida, su naturaleza y qué se espera como resultado. El alumno no necesita preguntar nada para empezar.
+- Una sola lectura: si una frase admite dos interpretaciones que llevan a soluciones distintas, reescríbela. La ambigüedad evalúa comprensión lectora, no el objetivo de aprendizaje.
+- Resoluble: existe una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
+- Sin carga ajena: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de pensar en el concepto es ruido que falsea la evaluación.
+- Calibrado: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
+- Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, presentaciones, ánimos ni comentarios tuyos sobre el propio ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
 
-# VARIACIÓN DE CONTEXTO (PARA FORZAR TRANSFERENCIA)
-El envoltorio —la situación concreta en la que se plantea la tarea— debe ser ORIGINAL. Inventa un ámbito reconocible: logística, biología, juegos, finanzas, geografía, deportes, cocina, música, viajes, e-commerce, agricultura, astronomía, transporte, redes sociales, salud, arte... NO reutilices ámbitos ya cubiertos en los ejemplos de referencia ni en los ejercicios previos del lote. Cambiar el contexto y no la sustancia es lo que obliga al alumno a TRANSFERIR el concepto en vez de reconocer un patrón que ya ha memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia vienen fijados por las secciones anteriores.
+# VARIACIÓN DE CONTEXTO
+El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados en este lote, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
 {instructions_section}
 # EJEMPLOS DE REFERENCIA
-Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Úsalos como referencia de FORMA, REGISTRO Y EXTENSIÓN. NO copies su temática, ni su estructura literal, ni reutilices sus escenarios.
+Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
 {few_shot_section}
 {already_block}
-# FORMA DE LA SALIDA
-Debes devolver una INSTANCIA conforme al schema, NO el schema en sí. La salida es un único objeto JSON cuyas claves de nivel superior son exactamente las propiedades definidas por el schema, con valores concretos. NO incluyas `properties`, `type`, `required`, `$defs`, `title` ni ningún otro metadato del schema.
+# CAMPOS DE LA SALIDA
+Un objeto JSON con exactamente estas claves y ninguna otra. Un campo que clasifica el ejercicio (un nivel, una categoría) describe lo que has escrito, no lo decide de antemano: rellénalo al final, a partir del ejercicio terminado y de su criterio.
+{fields_block}
 
-Esqueleto exacto de la forma esperada (rellena los valores; las claves vienen del schema y son las únicas válidas):
+Esqueleto exacto de la salida (rellena los valores):
 {instance_template}
 
-# GUÍA POR CAMPO
-Instrucciones específicas para la generación de cada campo. Complementan la `description` del schema (que describe la naturaleza intrínseca del campo):
-{field_guidance_block}
+# ANTES DE RESPONDER, COMPRUEBA
+- Cada concepto objetivo supera la prueba de validez: sin él, el ejercicio no se resuelve.
+- Ningún concepto de lo todavía no impartido aparece ni hace falta, salvo el mínimo que el propio objetivo exige.
+- El ámbito del enunciado no está en los ejemplos de referencia ni en los escenarios ya usados.
+- El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
+- Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
 
-# SCHEMA DE REFERENCIA (consulta para constraints como minLength/Literal/pattern; NO lo copies)
-{schema}
-
-# REGLAS DE SALIDA
-- Devuelve UN ÚNICO objeto JSON que sea una instancia conforme al schema. Nada antes, nada después.
+# FORMA DE LA SALIDA
+- Un único objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Las claves de nivel superior son exactamente las del schema — ni más, ni menos, ni con otros nombres.
-- Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+- Escapa saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de los strings.
 
 JSON:"""
 
@@ -534,16 +551,24 @@ JSON:"""
 # existe gracias al grafo, que es justo lo que se está midiendo.
 
 
+# The one prompt that does NOT take the rendered block. It composes a sentence -- "Eres
+# experto en X, a nivel de Y. Redáctalo en Z." -- because that is what a person who has
+# never seen this system would type, and a paragraph of synthesised prose is not that. So
+# the three canonical facts stay addressable by name in `ContentContext`, and this arm
+# reads them and nothing else. Handing it the narrative would change a measured baseline
+# and make old evaluation sessions incomparable.
 def naive_generation_prompt(
-    context: dict,
+    subject: str,
+    educational_level: str,
+    language_of_instruction: str,
     concepts: list[str],
     keys: list[str],
     fixed: dict[str, object] | None = None,
     instructions: str = "",
 ) -> str:
-    subject = context.get("subject") or context.get("materia") or "la asignatura"
-    level = context.get("educational_level") or context.get("nivel") or ""
-    language = context.get("language_of_instruction") or context.get("idioma") or ""
+    subject = subject or "la asignatura"
+    level = educational_level
+    language = language_of_instruction
 
     header = f"Eres experto en {subject}"
     if level:
@@ -594,6 +619,70 @@ def rag_generation_prompt(
 - Devuelve UN ÚNICO objeto JSON conforme al schema. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
 - Las claves de nivel superior son exactamente las del schema.
+
+JSON:"""
+
+
+# ── CONTEXTO DE LA ASIGNATURA ─────────────────────────────────────────────────
+#
+# La síntesis del contexto, compartida por los DOS constructores: el del grafo la llama al
+# final de su curación con los bloques del temario, y el del perfil al final de la suya con
+# las modalidades. Cada uno aporta lo que su artefacto sabe de la asignatura y ninguno ve
+# lo que sabe el otro, así que la llamada es siempre una FUSIÓN: entra lo que ya había
+# escrito y sale un texto que lo incorpora.
+#
+# Por eso lo que más se legisla aquí es la conservación. El fallo natural de un modelo al
+# que se le da un texto y material nuevo es reescribir el texto; repetido en cada
+# reconstrucción, eso parafrasea lo que escribió una persona hasta que deja de ser suyo.
+# La deriva la para de verdad el par borrador/curado —el curado gana al leer y esta llamada
+# nunca lo toca—, pero un texto que respeta lo que ya decía es lo que hace que el borrador
+# valga para curarlo en vez de para reescribirlo entero.
+
+
+def synthesize_content_context_prompt(
+    current_block: str,
+    evidence_block: str,
+    source_label: str,
+    max_chars: int,
+) -> str:
+    current_section = (
+        "\n# CONTEXTO QUE YA EXISTE — PUNTO DE PARTIDA, NO BORRADOR A REESCRIBIR\n"
+        f"{current_block}\n"
+        if current_block.strip()
+        else "\n# CONTEXTO QUE YA EXISTE\n(Ninguno todavía: lo estás escribiendo por primera vez.)\n"
+    )
+    return f"""\
+Escribe, en prosa, QUÉ ASIGNATURA ES ESTA. El texto que produzcas se interpola en todos los prompts de un sistema que genera material de aprendizaje: es lo que fija la materia, el nivel de exigencia, el idioma y las convenciones propias de la asignatura para todo lo que ese sistema redacte después.
+
+No describes un temario ni un programa docente. Describes el TERRENO: de qué va esto, a quién se dirige, en qué idioma se enseña y qué convenciones lo hacen reconocible.
+{current_section}
+# LO QUE APORTA {source_label}
+{evidence_block}
+
+# CÓMO FUSIONAR
+- LO QUE YA ESTABA SE CONSERVA. Cada afirmación del contexto existente sigue en el texto final, y si puede seguir con sus mismas palabras, sigue con sus mismas palabras. Puede haberla escrito una persona a mano; parafrasearla sin necesidad es perderla poco a poco.
+- SOLO AÑADES LO QUE EL MATERIAL NUEVO APORTA DE VERDAD. Si no aporta nada que no estuviera ya dicho, devuelve el contexto que ya había, tal cual. Es una respuesta correcta y frecuente.
+- SI SE CONTRADICEN, MANDA LO QUE YA ESTABA. El material nuevo es una vista parcial de la asignatura; el contexto existente puede venir de una persona que la conoce entera.
+- NO INVENTES. Ni universidad, ni curso académico, ni titulación, ni número de horas, ni bibliografía, ni nada que no esté en uno de los dos bloques de arriba. Ante la duda, omítelo.
+
+# CÓMO DEBE SER EL TEXTO
+- PROSA CONTINUA, en el idioma de instrucción de la asignatura. Una o dos frases seguidas; nada de listas, viñetas, encabezados ni pares clave-valor.
+- COMO MUCHO {max_chars} CARACTERES. Es un techo duro y existe porque este texto se paga en cada llamada del sistema.
+- NADA DE TEMARIO ENUMERADO. Puedes decir en una frase por dónde va la asignatura («cubre desde los tipos básicos hasta la recursividad»); no puedes listar los conceptos ni copiar los nombres de los bloques uno a uno. Para eso ya está el grafo, y quien lea esto lo tiene delante.
+- SIN METACOMENTARIO. No hables del sistema, ni de este encargo, ni de lo que has hecho para escribirlo. El texto empieza describiendo la asignatura.
+- SIN DESTINATARIO. No te dirijas a nadie: ni «tú», ni «el alumno debe», ni «ten en cuenta que». Es una descripción, no una instrucción.
+
+# LOS TRES DATOS APARTE
+Además de la prosa, extrae tres datos sueltos, porque otra parte del sistema los necesita por separado y no puede leer el párrafo:
+- `subject`: el nombre de la asignatura o materia.
+- `educational_level`: la etapa o el curso («primer curso de grado», «segundo de bachillerato»).
+- `language_of_instruction`: el idioma en que se enseña.
+Cada uno, cadena vacía si no se deduce con seguridad de los bloques de arriba. Deben ser COHERENTES con la prosa: lo que digan tiene que estar también dicho en ella.
+
+# REGLAS DE SALIDA
+- Un único objeto JSON con exactamente las claves `narrative`, `subject`, `educational_level` y `language_of_instruction`. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- `narrative` en UNA SOLA LÍNEA: escapa los saltos (`\\n`) y las comillas internas (`\\"`).
 
 JSON:"""
 
@@ -714,7 +803,6 @@ El inventario viene de fragmentos analizados por separado, así que TRAE DUPLICA
 Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
 
 {{
-  "content_context": {{ "<clave>": "<valor>" }},
   "item_types": {{
     "<clave_de_modalidad>": {{
       "label": "<nombre legible>",
@@ -726,19 +814,19 @@ Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
         "<nombre_de_campo>": {{
           "schema": {{ "type": "string" }},
           "description": "...",
-          "guidance": {{ "extraction": "...", "generation": "..." }}
+          "guidance": {{ "extraction": "..." }}
         }}
       }}
     }}
   }}
 }}
 
-# content_context — COMPARTIDO POR TODAS LAS MODALIDADES
-Metadatos docentes de la asignatura, deducidos de los fragmentos de ejemplo del inventario. Objeto de pares clave→valor de texto. Aguas abajo, TODOS los prompts del sistema leen este bloque para fijar el registro, el nivel de exigencia y el idioma de lo que redactan, así que es lo que sitúa la asignatura entera. Usa estas claves canónicas cuando puedas deducir su valor con seguridad — `subject` (materia o asignatura), `educational_level` (etapa o curso: secundaria, primer curso de grado…), `language_of_instruction` (idioma de instrucción) — y añade las que la materia exija (p. ej. `programming_language`). Incluye solo lo que deduzcas con seguridad; nada inventado. Va UNA sola vez, fuera de `item_types`: describe la asignatura, no la modalidad.
+# QUÉ NO DEBES DECLARAR
+Nada sobre la asignatura en sí: ni la materia, ni el nivel educativo, ni el idioma, ni convenciones generales de la carrera. Eso se escribe aparte, en prosa, en otro paso del sistema. Aquí describes ÚNICAMENTE la anatomía de las modalidades. No añadas claves de nivel superior: `item_types` es la única.
 
 # item_types — CUÁNTAS MODALIDADES
 - FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si se rellenan las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
-- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `guidance.generation` saldrían casi iguales, es una sola.
+- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `general_generation_rules` saldrían casi iguales, es una sola.
 - DESCARTA LO ANECDÓTICO. Una modalidad que aparece una vez en todo el corpus y que encaja razonablemente dentro de otra, va dentro de la otra. Solo sobrevive por su cuenta la que el material usa de verdad como formato propio.
 - COMO MUCHO {max_types} modalidades. Si te salen más, es que estás separando por tema o por dificultad en vez de por anatomía: vuelve a fusionar. Lo habitual son 1-3.
 - Ordénalas de más frecuente a menos: la primera es la que el sistema usa por defecto.
@@ -746,7 +834,7 @@ Metadatos docentes de la asignatura, deducidos de los fragmentos de ejemplo del 
 Para cada modalidad:
 - `label`: su nombre legible, en el idioma del material («Pregunta tipo test», «Corrección de errores»).
 - `description`: qué es y cómo se reconoce. Lo lee tanto el extractor —para decidir a qué modalidad pertenece cada ejercicio del documento— como el generador. Sé discriminante: describe lo que la distingue de las demás modalidades del perfil, no lo que tienen en común.
-- `general_generation_rules`: reglas transversales a todos los campos que debería respetar la redacción de ejercicios NUEVOS DE ESTA MODALIDAD: convenciones de estilo, notación, formato o alcance que observes de forma consistente. Describe cómo escribe ESTA asignatura esta modalidad, no buenas prácticas didácticas genéricas — de la calidad pedagógica ya se ocupa el generador. Una regla que solo tiene sentido para una modalidad (p. ej. exigir docstring y bloque de prueba) va SOLO en esa modalidad.
+- `general_generation_rules`: cómo se redacta un ejercicio NUEVO de esta modalidad. Es la parte más importante de lo que produces y tiene sección propia más abajo — léela antes de escribirlas.
 
 # fields — CÓMO SE LLAMAN
 {EXEMPLARS_PROFILE_FIELD_NAMING}
@@ -757,7 +845,7 @@ Un campo por cada pieza de información ESENCIAL que compone un ejercicio de esa
 
 - MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un ejercicio. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica. Al mismo tiempo, NO omitas nada esencial para representar o redactar el ejercicio (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera. Lo habitual son 3-5 campos por modalidad.
 - PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío (`is_solved`, `tiene_solucion`: eso ya lo dice que `solucion` sea null); contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
-- NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`temas`, `conceptos`, `palabras_clave`…). Qué concepto del currículo practica cada ejercicio lo anota el sistema aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe a la asignatura entera (materia, nivel educativo, idioma) va en `content_context`, no en `fields`.
+- NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`temas`, `conceptos`, `palabras_clave`…). Qué concepto del currículo practica cada ejercicio lo anota el sistema aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe a la asignatura entera (materia, nivel educativo, idioma) no va en `fields` ni en ningún otro sitio de este perfil.
 - COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el ejercicio, (b) recuperarlo semánticamente y (c) redactar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el enunciado que porta la carga semántica (el `primary_field`, obligatorio); la solución esperada, cuando el material la trae o la admite; y al menos un campo CLASIFICATORIO que se pueda fijar como parámetro al pedir un ejercicio nuevo (dificultad, nivel…). Si la muestra no etiqueta ese eje clasificatorio pero es deducible observando el ejercicio, decláralo igualmente y define el criterio (ver POLÍTICA DE NULOS).
 
 Para cada campo:
@@ -765,7 +853,7 @@ Para cada campo:
 {EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
 - `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma de instrucción de la asignatura.
 - `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
-- `guidance.generation`: cómo REDACTAR este campo al crear un ejercicio nuevo desde cero. **Inclúyela SOLO si el campo se redacta de verdad** (ver criterio abajo); si no, omítela y deja en `guidance` únicamente `extraction`.
+- `guidance.generation`: **NO la escribas. Nunca.** Existe en el formato, pero es un campo que rellena a mano quien administra la asignatura cuando un campo concreto necesita un matiz que las reglas no cubren. Tú deja en `guidance` únicamente `extraction`. Lo que sepas sobre cómo se REDACTA esta modalidad va entero en `general_generation_rules`.
 
 # POLÍTICA DE NULOS — `null` ES EL ÚLTIMO RECURSO
 Un campo admite `null` SOLO cuando el contenido que representa PUEDE NO EXISTIR en un ejercicio de esa modalidad (p. ej. la solución de un ejercicio que se plantea sin resolver). Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido.
@@ -775,12 +863,18 @@ Por tanto, para todo campo CLASIFICATORIO (nivel, categoría…):
 - Su `description` debe incluir un CRITERIO INTERNO DE CLASIFICACIÓN propio de la asignatura: enumera cada valor posible junto a las SEÑALES OBSERVABLES que lo identifican (qué construcciones, qué complejidad, qué exigencia o qué conocimientos previos supone el ejercicio). El criterio debe cubrir TODO el material, de modo que cualquier ejercicio pueda clasificarse sin excepción.
 - Su `guidance.extraction` debe decir: si el documento trae una etiqueta explícita, se usa esa; si NO la trae, se aplica al contenido del ejercicio el criterio definido en `description`. NUNCA "si no hay etiqueta, null".
 
-# QUÉ CAMPOS LLEVAN guidance.generation (SENTIDO COMÚN)
-No todos los campos se redactan; muchos son de ENTRADA, no de salida. Clasifica cada campo:
-- CONTENIDO REDACTADO — su valor es lo que se escribe al crear un ejercicio nuevo desde cero (el enunciado, la solución, las opciones). → `guidance` con `extraction` Y `generation`.
-- ENTRADA / CONTROL / METADATO — su valor NO se redacta: lo DECIDE de antemano quien pide el ejercicio (un nivel de dificultad objetivo), es una etiqueta o clasificación, o solo tiene sentido al leer un documento ya existente (identificadores, procedencia, referencia al documento origen). → `guidance` con SOLO `extraction`; OMITE `generation`.
+# general_generation_rules — CÓMO ESCRIBE ESTA ASIGNATURA (LA PARTE QUE MÁS IMPORTA)
+Es lo ÚNICO que el perfil le dice al generador sobre cómo se redacta un ejercicio de esta modalidad. Aquí no hay una segunda oportunidad campo a campo: lo que no esté en estas reglas, el generador no lo sabe. Dedícale más atención que a ninguna otra parte del perfil.
 
-Prueba rápida: al pedir un ejercicio nuevo, ¿se FIJARÍA este valor como parámetro de entrada, o es una etiqueta/clasificación? → NO lleva `guidance.generation`. ¿Se REDACTA como parte del ejercicio creado? → SÍ la lleva. El `primary_field` es siempre contenido redactado: lleva `guidance.generation`.
+Escríbelas mirando los `excerpt` del inventario y preguntándote qué tienen en común TODOS los ejemplares de esta modalidad. Una regla es una CONVENCIÓN OBSERVADA en este material, no una opinión tuya sobre didáctica.
+
+- CADA REGLA DEBE SER COMPROBABLE. Tiene que poder leerse un ejercicio ya escrito y decir si la cumple o no. «El enunciado debe ser claro» no es comprobable y no es una regla; «el enunciado debe especificar la entrada, la salida y el comportamiento esperado» sí lo es.
+- NOMBRA EL CAMPO al que se aplica cuando la regla sea de un campo concreto («la solución debe…», «el enunciado debe…»). No hay guía por campo que lo diga en tu lugar, así que la regla tiene que decirlo ella.
+- CUBRE, cuando el material los muestre de forma consistente: qué debe contener obligatoriamente cada campo redactado; la NOTACIÓN y las convenciones de formato propias de la asignatura (cómo se documenta, qué encabezados, qué unidades, qué símbolos); la EXTENSIÓN y el alcance típicos de un ejemplar; y las relaciones de COHERENCIA entre campos (que la solución responda exactamente a lo que pide el enunciado, que el material de partida y la solución encajen).
+- NADA DE DIDÁCTICA GENÉRICA. «Debe fomentar el pensamiento crítico», «debe ser motivador», «adecuar la dificultad al nivel»: de todo eso ya se ocupa el generador, que sabe de didáctica y no sabe de esta asignatura. Tú aportas lo segundo. Si una regla valdría igual para cualquier asignatura del mundo, sobra.
+- NADA DE CONTENIDO. No fijes el tema, el ámbito ni los conceptos de los ejercicios: eso lo decide cada encargo contra el grafo del currículo. Las reglas hablan de la FORMA.
+- SOLO DE ESTA MODALIDAD. Una regla que solo tiene sentido aquí (exigir docstring y bloque de prueba) va SOLO aquí. Si es cierta de todas las modalidades por igual, es que describe la asignatura entera y no aporta nada en ninguna.
+- CANTIDAD: entre 3 y 8. Menos de 3 casi siempre significa que no has mirado los ejemplares; más de 8, que estás desmenuzando una regla en sus consecuencias o colando didáctica genérica.
 
 # primary_field
 Uno por modalidad. El nombre del campo que porta la CARGA SEMÁNTICA principal del ejercicio: el enunciado, el texto que plantea la tarea al alumno. Aguas abajo es lo que se compara contra el grafo del currículo para decidir qué concepto practica cada ejercicio, así que debe ser el campo que se lee para saber de qué va el ejercicio. Debe ser una de las claves de los `fields` de ESA modalidad.
@@ -796,10 +890,10 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 # REGLAS DE SALIDA
 - Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`, `content_context`) en el idioma del material.
+- Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`) en el idioma del material.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` únicamente donde el contenido pueda no existir.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
-- ANTES DE RESPONDER, verifica las cinco cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual.
+- ANTES DE RESPONDER, verifica las seis cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables.
 
 <<<INVENTARIO>>>
 {findings}
@@ -825,9 +919,8 @@ El siguiente PERFIL DE EJEMPLARES parsea como JSON válido pero no cumple el for
 {EXEMPLARS_PROFILE_FIELD_NAMING}
 
 # REGLAS
-- Conserva el contenido original (`label`, `description`, `guidance`, reglas, contexto) tal cual; corrige SOLO lo que incumple el formato. Si renombras un campo, renómbralo también donde se le referencie.
-- Claves de nivel superior exactamente: `content_context` y `item_types`. Nada más a ese nivel.
-- `content_context` es un objeto NO VACÍO de pares clave→valor de texto, y va FUERA de `item_types`.
+- Conserva el contenido original (`label`, `description`, `guidance`, reglas) tal cual; corrige SOLO lo que incumple el formato. Si renombras un campo, renómbralo también donde se le referencie.
+- Clave de nivel superior exactamente una: `item_types`. Nada más a ese nivel. Si el perfil trae un `content_context`, DÉJALO donde está: es de una versión anterior y otro paso lo migra; no lo borres ni lo edites.
 - `item_types` es un objeto NO VACÍO. Cada clave casa con `^[a-z][a-z0-9_]*$` y su valor declara al menos `primary_field` y `fields`, y opcionalmente `label`, `description` y `general_generation_rules`.
 - El `primary_field` de cada modalidad debe ser una de las claves de SUS PROPIOS `fields`.
 - `embed_fields`, si está, es una lista no vacía y sin repeticiones que EMPIEZA por el `primary_field` de esa modalidad y solo nombra claves de SUS PROPIOS `fields`.
@@ -864,6 +957,25 @@ def _kg_type_preference_rule(schema) -> str:
     )
 
 
+_KG_DEFINITION_RULE = """\
+# UNA DEFINICIÓN POR CONCEPTO
+Cada concepto lleva una DEFINICIÓN de UNA frase, tomada de cómo lo explica el propio fragmento: qué es, en los términos de la materia. Es lo que permitirá, más adelante, distinguir dos nombres parecidos y decidir qué se enseña antes de qué, así que tiene que nombrar la idea y no el ejemplo.
+- Una sola frase, de 10 a 25 palabras, impersonal (sin «el alumno», sin «se aprende a»).
+- Dice QUÉ ES, no para qué se usa en el ejercicio ni con qué herramienta se hace.
+- Si el fragmento solo menciona el concepto sin explicarlo, una definición mínima basta; no inventes detalle que el texto no da."""
+
+
+_KG_EXTRACT_OUTPUT = """\
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
+{
+  "concepts": [{"name": "<concepto>", "definition": "<una frase>"}, "..."],
+  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
+}
+- El `<tipo>` es uno de los identificadores listados arriba. Nada más.
+- Todo origen y todo destino de `relations` se escribe con el nombre EXACTO del concepto."""
+
+
 def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> str:
     location_block = ""
     if location:
@@ -895,6 +1007,8 @@ Este fragmento es uno de cientos extraídos por separado del mismo corpus, y los
 - Conserva la redacción que el propio material docente usa para la idea cuando la tiene; no la traduzcas, no la modernices, no desarrolles una abreviatura que el material mantiene corta.
 - La misma idea debe salir con el MISMO nombre siempre, aparezca en el fragmento que aparezca.
 
+{_KG_DEFINITION_RULE}
+
 {_KG_LANGUAGE_RULE}
 
 # TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
@@ -905,17 +1019,71 @@ Cada relación es una terna [origen, tipo, destino]. La dirección importa: elig
 - El origen y el destino deben ser DISTINTOS, y ambos deben aparecer en tu lista `concepts`. Está prohibido relacionar un concepto consigo mismo.
 {_kg_type_preference_rule(schema)}
 - Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
+- Sé exhaustivo con las relaciones: cuando el fragmento explique un concepto apoyándose en otro, eso es una relación que enunciar, aunque el texto no la formule como tal. Dos conceptos de tu lista que el fragmento trate juntos y sin ninguna relación entre ellos es, casi siempre, una relación que falta.
 
-# SALIDA
-Un único objeto JSON exactamente con esta forma:
-{{
-  "concepts": ["<concepto>", "..."],
-  "relations": [["<origen>", "<tipo>", "<destino>"], "..."]
-}}
-- El `<tipo>` es uno de: {schema.key_list()}. Nada más.
-- Todo origen y todo destino de `relations` debe aparecer en `concepts`.
+{_KG_EXTRACT_OUTPUT}
 - Si el fragmento no da ningún concepto extraíble, devuelve {{"concepts": [], "relations": []}}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
+
+# FRAGMENTO
+{source_text}
+
+JSON:"""
+
+
+# The second reading of a chunk. Shown the inventory the first one wrote, it is asked only
+# for what is missing — the «gleaning» pass of GraphRAG and LightRAG — and its answer is
+# merged into the first, never replacing it.
+def glean_typed_graph_prompt(
+    source_text: str,
+    schema,
+    location: str,
+    concepts: list[str],
+    definitions: dict[str, str],
+    relations: list[list[str]],
+) -> str:
+    location_line = f"Sección: {location}\n" if location else ""
+    found_concepts = "\n".join(
+        f"- {name} — {definitions[name]}" if definitions.get(name) else f"- {name}"
+        for name in concepts
+    )
+    found_relations = (
+        "\n".join(f'- ["{s}", "{k}", "{t}"]' for s, k, t in relations) or "- (ninguna)"
+    )
+    return f"""\
+Un primer lector extrajo de este fragmento de material docente los conceptos y las relaciones tipadas que se listan abajo. Una primera lectura SIEMPRE se queda corta: nombra lo evidente, enuncia pocas relaciones y cierra.
+
+Tu tarea: una SEGUNDA lectura del mismo fragmento que devuelva SOLO lo que falta — conceptos de la materia que el primer lector no nombró y, sobre todo, RELACIONES que el texto sostiene entre conceptos ya nombrados y que no aparecen en la lista.
+{location_line}
+# QUÉ BUSCAR
+- Relaciones entre dos conceptos YA LISTADOS que el fragmento trata juntos: cuando explica uno apoyándose en el otro, cuando uno es un caso o una parte del otro, cuando el texto los presenta en secuencia. Recorre la lista de conceptos de dos en dos y pregúntate si el texto los relaciona.
+- Conceptos que el fragmento explica (no que solo menciona de pasada) y que no están en la lista. Aplica la prueba del glosario: si no sería una entrada de un índice de la materia, no es un concepto.
+- Nombra los conceptos nuevos con el canon del primer lector: SINGULAR, forma sustantiva, sin artículos, sin matices del ejemplo, y con la misma redacción que el propio material usa.
+- Reutiliza EXACTAMENTE los nombres ya listados cuando una relación los mencione. No los reescribas, no los corrijas, no los traduzcas.
+
+{_KG_DEFINITION_RULE}
+
+{_KG_LANGUAGE_RULE}
+
+# TIPOS DE RELACIÓN (respeta la dirección ORIGEN → DESTINO)
+{schema.catalog_block()}
+
+# REGLAS DE RELACIÓN
+- El origen y el destino deben ser DISTINTOS y ambos deben estar en la lista ya conocida o en tu lista `concepts`.
+{_kg_type_preference_rule(schema)}
+- Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
+- NO repitas nada de lo ya listado: ni conceptos ni relaciones. Solo lo nuevo.
+
+{_KG_EXTRACT_OUTPUT}
+- En `concepts` van SOLO los conceptos nuevos; los ya conocidos pueden usarse en `relations` sin volver a listarlos.
+- Si de verdad no falta nada, devuelve {{"concepts": [], "relations": []}}.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
+
+# CONCEPTOS YA EXTRAÍDOS
+{found_concepts}
+
+# RELACIONES YA EXTRAÍDAS
+{found_relations}
 
 # FRAGMENTO
 {source_text}
@@ -932,6 +1100,15 @@ La extracción fragmento a fragmento solo ve una dependencia cuando dos concepto
 - No encadenes lo que ya está implícito: enuncia la dependencia DIRECTA, no toda la ascendencia. Si A se apoya en B y B en C, no relaciones además A con C.
 - Ser cauto no sale gratis aquí: una dependencia que dejes fuera es una que ningún paso posterior puede recuperar.
 - Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación, llamadas de biblioteca y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
+
+
+_KG_MATERIAL_ORDER_RULE = """\
+# EL ORDEN DE LA LISTA ES EL ORDEN DEL MATERIAL
+Los conceptos se listan en el ORDEN EN QUE EL MATERIAL LOS INTRODUCE, de principio a fin del corpus. Quien escribió el material ya decidió un orden de enseñanza, y ese orden es la mejor evidencia que tienes:
+- Un concepto se apoya, casi siempre, en conceptos que van ANTES que él en la lista. Para cada uno, mira hacia arriba y pregúntate cuáles de los anteriores tiene que saber ya un alumno.
+- Proponer que un concepto se apoye en otro que va DESPUÉS en la lista es afirmar que el material lo enseña en el orden equivocado. Puede ser cierto — un manual a veces adelanta una consecuencia —, pero exige que la dependencia sea inequívoca; ante la duda, respeta el orden del material.
+- La distancia en la lista no es un obstáculo: lo primero del corpus es el cimiento de casi todo lo que viene después, y esas dependencias largas son justo las que faltan.
+- Cada concepto lleva, cuando se conoce, una definición de una frase tomada del material. Juzga la dependencia sobre la definición, no sobre el parecido de los nombres."""
 
 
 def link_domain_relations_prompt(domain: str, nodes_block: str, schema) -> str:
@@ -952,6 +1129,8 @@ Tu tarea: propón las RELACIONES TIPADAS que FALTAN entre los conceptos de este 
 
 {_KG_TEACHING_ORDER_RULE}
 
+{_KG_MATERIAL_ORDER_RULE}
+
 # SALIDA
 Un único objeto JSON exactamente con esta forma:
 {{
@@ -961,7 +1140,7 @@ Un único objeto JSON exactamente con esta forma:
 - Si no falta nada, devuelve {{"relations": []}}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# CONCEPTOS DE «{domain}» (con las relaciones ya conocidas)
+# CONCEPTOS DE «{domain}», EN EL ORDEN DEL MATERIAL (con su definición y las relaciones ya conocidas)
 {nodes_block}
 
 JSON:"""
@@ -984,7 +1163,9 @@ Tu tarea: propón SOLO las RELACIONES TIPADAS que CRUZAN de un bloque a otro —
 {_kg_type_preference_rule(schema)}
 
 {_KG_TEACHING_ORDER_RULE}
-- Trabaja bloque a bloque: para cada uno, pregúntate en qué conceptos de los bloques ANTERIORES se apoya. Los bloques vienen en el orden en que el material los presenta, que es en sí mismo evidencia sobre el orden de enseñanza — pero no es concluyente, y un bloque posterior puede contener un prerrequisito de uno anterior.
+
+{_KG_MATERIAL_ORDER_RULE}
+- Trabaja bloque a bloque: para cada uno, pregúntate en qué conceptos de los bloques ANTERIORES se apoya. Los bloques también vienen en el orden en que el material los presenta, y dentro de cada bloque sus conceptos siguen ese mismo orden.
 
 # SALIDA
 Un único objeto JSON exactamente con esta forma:
@@ -994,7 +1175,7 @@ Un único objeto JSON exactamente con esta forma:
 - El `<tipo>` es uno de: {schema.key_list()}.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 
-# BLOQUES TEMÁTICOS Y SUS CONCEPTOS
+# BLOQUES TEMÁTICOS Y SUS CONCEPTOS, EN EL ORDEN DEL MATERIAL (cada concepto con su definición)
 {domains_block}
 
 JSON:"""
@@ -1013,6 +1194,7 @@ Tu tarea: dentro de CADA grupo, y nunca entre grupos, decide qué nombres son EL
 - NO fundas dos ideas de las que un alumno podría examinarse por separado, aunque aparezcan siempre juntas: un mecanismo y la técnica que lo usa siguen aparte, y también una parte y el todo al que pertenece, y también un término general y una de sus clases concretas.
 - NO fundas dos nombres solo porque pertenezcan al mismo tema, estén relacionados o aparezcan a menudo juntos. Compartir una palabra no es evidencia.
 - Usa las relaciones como evidencia: nombres con relaciones claramente distintas suelen ser conceptos distintos.
+- Cuando un nombre lleve detrás de « — » una definición tomada del material, juzga sobre las definiciones antes que sobre los nombres: dos definiciones de la misma idea son un concepto, dos definiciones distintas son dos, por mucho que los nombres se parezcan.
 - Fundir de más cuesta más que fundir de menos: un concepto perdido en una fusión no se recupera después. Cuando las dos lecturas sean igual de defendibles, déjalos aparte.
 
 # NOMBRE CANÓNICO
@@ -1063,6 +1245,7 @@ algo, así que se quedan.
 - Cuando un nodo nombre algo de la materia, por poco que sea, consérvalo.
 
 # ANTE LA DUDA
+- Cuando un nodo lleve detrás de « — » una definición tomada del material, léela: un nombre torpe con una definición que enuncia una idea de la materia es un concepto y se queda.
 - Prueba del glosario: si NO lo pondrías como entrada en un índice de la materia, elimínalo.
 - Ante un FRAGMENTO, elimina incluso en la duda. Ante un CONCEPTO, conserva incluso en la duda.
 
@@ -1146,7 +1329,7 @@ Tu tarea: coloca CADA concepto de abajo en UNO de los dominios EXISTENTES.
 # REGLAS
 - Los nombres de los dominios son FIJOS. Úsalos exactamente como están escritos. NO crees dominios nuevos, NO los renombres, NO dejes fuera ningún concepto.
 - Cada concepto de abajo debe aparecer exactamente una vez en la salida.
-- Asigna por tema y por la evidencia de las relaciones: el dominio que ya contiene los conceptos con los que este se relaciona es casi siempre el correcto.
+- Asigna por tema y por la evidencia de las relaciones: el dominio que ya contiene los conceptos con los que este se relaciona es casi siempre el correcto. La definición que acompaña a cada concepto, detrás de « — », dice de qué trata cuando el nombre no basta.
 - No hay «otros» ni «sin clasificar»: si un concepto parece no encajar en ninguno, elige aquel con el que sea MENOS ajeno.
 - Usa los nombres EXACTOS de la entrada. No inventes, no renombres, no traduzcas ni corrijas la ortografía.
 
@@ -1171,12 +1354,11 @@ def review_taggable_concepts_prompt(
     domain: str,
     domains_block: str,
     nodes_block: str,
-    context: dict,
+    context_block: str,
     modalities_block: str,
     samples_block: str = "",
 ) -> str:
-    context_lines = "\n".join(f"- {k}: {v}" for k, v in (context or {}).items())
-    context_section = f"\n# CONTEXTO DOCENTE\n{context_lines}\n" if context_lines else ""
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
     samples_section = (
         "\n# EJERCICIOS REALES DEL MATERIAL DE ESTA ASIGNATURA (cómo es aquí un ejercicio)\n"
         f"{samples_block}\n"

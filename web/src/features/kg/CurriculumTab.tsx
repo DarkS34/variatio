@@ -21,7 +21,7 @@ const sorted = (names: string[]) => [...names].sort((a, b) => a.localeCompare(b,
 // larger than the screen announced.
 const NOTICE = {
   none: {
-    tone: "warning",
+    tone: "attention",
     title: "El grafo no declara prerrequisitos",
     body: "Sin una relación de prerrequisito no hay nada que cerrar: se guardará exactamente lo que hayas elegido.",
   },
@@ -31,7 +31,7 @@ const NOTICE = {
     body: "El grafo se está cargando. En cuanto llegue se listarán aquí, antes de guardar.",
   },
   error: {
-    tone: "warning",
+    tone: "attention",
     title: "No se ha podido leer el grafo",
     body: "No se puede decir cuáles entrarán, pero al guardar el servidor los añadirá igualmente: el currículo guardado puede acabar siendo mayor que el que ves aquí. Vuelve a cargar la página, o apaga el cierre por prerrequisitos para guardar solo lo elegido.",
   },
@@ -108,7 +108,7 @@ export function CurriculumTab() {
         <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
           <div className="min-w-0">
             <CardTitle>Currículo ({selected.length} concepto(s))</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-small text-muted-foreground">
               Guardado por última vez: {when(curriculum.data?.updated_at ?? null)}
               {dirty ? " · con cambios sin guardar" : null}
             </p>
@@ -120,7 +120,7 @@ export function CurriculumTab() {
         </CardHeader>
         <CardContent>
           {selected.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               Sin currículo: la generación puede usar cualquier concepto del grafo.
             </p>
           ) : (
@@ -144,7 +144,7 @@ export function CurriculumTab() {
       </Card>
 
       {dropped.length > 0 ? (
-        <Alert tone="warning" title="Conceptos que ya no están en el grafo">
+        <Alert tone="attention" title="Conceptos que ya no están en el grafo">
           <p>
             Estos estaban en el currículo y el grafo ya no los tiene, así que dejan de contar:{" "}
             {dropped.join(", ")}. Vuelve a guardar para quitarlos del fichero.
@@ -178,8 +178,8 @@ export function CurriculumTab() {
             label="cerrar bajo prerrequisitos"
           />
           <div>
-            <p className="text-sm">Cerrar bajo prerrequisitos al guardar</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body">Cerrar bajo prerrequisitos al guardar</p>
+            <p className="text-small text-muted-foreground">
               Añade también todo aquello de lo que dependen los conceptos elegidos. Se propone
               antes de guardar; nada se añade sin que lo veas.
             </p>

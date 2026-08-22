@@ -1,22 +1,33 @@
-import { AlertTriangle, Check, CircleDashed, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, CircleDashed, X } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
+import { StatusMark } from "@/components/ui/status";
 import { Progress } from "@/components/ui/misc";
 import { stepExplain } from "@/lib/explain";
 import { duration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StepView } from "@/state/runStore";
 
+// The running step borrows the shape a building stage uses, so "this is the part still
+// moving" is drawn the same way here and in the navbar. The other four keep their own
+// icons: ok / failed / cancelled are not artifact states and forcing them through the
+// chain's table would be claiming they are.
 function Icon({ step }: { step: StepView }) {
-  if (step.status === "running") {
-    return <Loader2 className="size-4 animate-spin text-[var(--info)]" />;
-  }
-  if (step.status === "ok") return <Check className="size-4 text-[var(--success)]" />;
+  if (step.status === "running") return <StatusMark status="building" size="md" />;
+  if (step.status === "ok") return <Check className="size-4 text-settled" />;
   if (step.status === "failed") return <AlertTriangle className="size-4 text-destructive" />;
   if (step.status === "cancelled") return <X className="size-4 text-muted-foreground" />;
   return <CircleDashed className="size-4 text-muted-foreground" />;
 }
+
+// The line into a SKIPPED step is dotted, for the same reason a rail stretch is: the work
+// did not flow through there. There is no "pending" here to dot — a step only enters this
+// list once it has started — so skipped is the only break in the sequence there is.
+const CONNECTOR = {
+  ran: "bg-border",
+  skipped: "bg-[repeating-linear-gradient(to_bottom,var(--border)_0_3px,transparent_3px_6px)]",
+};
 
 function Insert({ children, last }: { children: ReactNode; last: boolean }) {
   return (
@@ -47,7 +58,7 @@ export function RunTimeline({
 
   if (steps.length === 0 && pending.length === 0) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>Sin pasos todavía.</p>
+      <p className={cn("text-body text-muted-foreground", className)}>Sin pasos todavía.</p>
     );
   }
 
@@ -69,7 +80,14 @@ export function RunTimeline({
             >
               <div className="flex flex-col items-center">
                 <Icon step={step} />
-                {index < steps.length - 1 ? <span className="mt-1 w-px flex-1 bg-border" /> : null}
+                {index < steps.length - 1 ? (
+                  <span
+                    className={cn(
+                      "mt-1 w-px flex-1",
+                      steps[index + 1].status === "skipped" ? CONNECTOR.skipped : CONNECTOR.ran,
+                    )}
+                  />
+                ) : null}
               </div>
 
               <div className="min-w-0 flex-1 pb-1">
@@ -77,18 +95,22 @@ export function RunTimeline({
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span
                       className={cn(
-                        "truncate text-sm",
+                        "truncate text-body",
                         running ? "font-medium" : "text-muted-foreground",
                         step.status === "failed" && "text-destructive",
                       )}
                     >
                       {step.label}
                     </span>
-                    {explain ? (
+                    {/* La (i) solo mientras la frase NO esté a la vista. El paso en curso
+                        ya la imprime entera debajo del título, así que ahí el icono era
+                        una segunda copia de la misma frase a un centímetro de la primera:
+                        cuando las dos dicen lo mismo, se queda la visible. */}
+                    {explain && !running ? (
                       <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint>
                     ) : null}
                   </span>
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  <span className="shrink-0 text-small nums text-muted-foreground">
                     {step.total ? (
                       <>
                         {step.current ?? 0}/{step.total}
@@ -101,12 +123,12 @@ export function RunTimeline({
                 </div>
 
                 {running && explain ? (
-                  <p className="text-xs leading-relaxed text-muted-foreground">{explain}</p>
+                  <p className="text-small leading-relaxed text-muted-foreground">{explain}</p>
                 ) : null}
                 {step.detail ? (
-                  <p className="truncate text-xs text-muted-foreground">{step.detail}</p>
+                  <p className="truncate text-small text-muted-foreground">{step.detail}</p>
                 ) : null}
-                {step.error ? <p className="text-xs text-destructive">{step.error}</p> : null}
+                {step.error ? <p className="text-small text-destructive">{step.error}</p> : null}
                 {hasBar ? (
                   <Progress value={step.current ?? 0} max={step.total} className="mt-1.5" />
                 ) : null}

@@ -18,6 +18,7 @@ export const keys = {
   health: ["health"] as const,
   pipeline: ["pipeline"] as const,
   profile: ["profile"] as const,
+  context: ["context"] as const,
   kg: ["kg"] as const,
   kgGraph: ["kg", "graph"] as const,
   descriptions: ["kg", "descriptions"] as const,
@@ -123,6 +124,10 @@ export function usePipeline() {
 
 export function useProfile() {
   return useQuery({ queryKey: keys.profile, queryFn: api.profile });
+}
+
+export function useContentContext() {
+  return useQuery({ queryKey: keys.context, queryFn: api.context });
 }
 
 export function useKg() {

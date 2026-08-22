@@ -14,7 +14,7 @@ RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_conc
 
 
 class ItemType:
-    def __init__(self, key: str, raw: dict, content_context: dict):
+    def __init__(self, key: str, raw: dict):
         self.key = key
         self.label: str = raw.get("label") or key
         self.description: str = raw.get("description") or ""
@@ -22,7 +22,6 @@ class ItemType:
         self.embed_fields: list[str] = list(raw.get("embed_fields") or [self.primary_field])
         self.general_generation_rules: list[str] = list(raw.get("general_generation_rules") or [])
         self.field_specs: dict[str, dict] = raw["fields"]
-        self.content_context = content_context
         self.content_item: type[BaseModel] = self._build_content_item()
 
     def _build_content_item(self) -> type[BaseModel]:
@@ -33,12 +32,6 @@ class ItemType:
         model.PRIMARY_FIELD = self.primary_field
         model.ITEM_TYPE = self.key
         return model
-
-    @property
-    def user_decided_fields(self) -> list[str]:
-        return [
-            name for name, spec in self.field_specs.items() if spec.get("decided_by") == "user"
-        ]
 
     def stripped_schema(self) -> dict:
         schema = copy.deepcopy(self.content_item.model_json_schema())
@@ -104,7 +97,7 @@ class ItemType:
 
 
 class ExemplarsProfile:
-    _REQUIRED_KEYS: ClassVar[tuple] = ("content_context", "item_types")
+    _REQUIRED_KEYS: ClassVar[tuple] = ("item_types",)
     _TYPE_REQUIRED_KEYS: ClassVar[tuple] = ("primary_field", "fields")
     _SCALAR_TYPES: ClassVar[dict] = {
         "string": str,
@@ -122,11 +115,20 @@ class ExemplarsProfile:
         self.path = Path(path)
         self._raw = self._load(self.path)
         self._validate(self._raw)
-        self.content_context: dict = self._raw["content_context"]
         self.item_types: dict[str, ItemType] = {
-            key: ItemType(key, spec, self.content_context)
+            key: ItemType(key, spec)
             for key, spec in self._raw["item_types"].items()
         }
+
+    # What subject this is left the profile on 2026-08-22 and became `content_context.json`,
+    # because the KG build has to be able to write it and a build writes exactly one artifact.
+    # A profile written before that still carries the key; this exposes it so `initialize`
+    # can fall back to it and say so, rather than silently losing the subject. Nothing on
+    # the graph's path reads it -- that dependency is what the move removed.
+    @property
+    def legacy_content_context(self) -> dict:
+        raw = self._raw.get("content_context")
+        return dict(raw) if isinstance(raw, dict) else {}
 
     @property
     def type_keys(self) -> list[str]:
@@ -251,8 +253,6 @@ class ExemplarsProfile:
         if missing:
             raise ValueError(f"ExemplarsProfile missing required keys: {missing}")
 
-        if not isinstance(raw["content_context"], dict) or not raw["content_context"]:
-            raise ValueError("'content_context' must be a non-empty object")
         if not isinstance(raw["item_types"], dict) or not raw["item_types"]:
             raise ValueError("'item_types' must be a non-empty object")
 

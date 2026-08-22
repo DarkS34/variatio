@@ -3,8 +3,10 @@ from ._artifacts import (
     EXEMPLARS_PROFILE,
     KNOWLEDGE_GRAPH,
     MissingArtifactError,
+    content_context_path,
     exemplars_profile_path,
     knowledge_graph_path,
+    load_content_context,
     missing_artifacts,
 )
 from .build import (
@@ -38,6 +40,7 @@ __all__ = [
     "build_knowledge_graph",
     "build_missing",
     "build_phases",
+    "content_context_path",
     "describe_concepts",
     "evaluate",
     "exemplars_profile_path",
@@ -46,6 +49,7 @@ __all__ = [
     "knowledge_graph_path",
     "load_concept_descriptions",
     "load_concept_sources",
+    "load_content_context",
     "missing_artifacts",
     "save_bank",
     "save_concept_descriptions",

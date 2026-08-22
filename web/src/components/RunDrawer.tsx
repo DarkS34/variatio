@@ -53,11 +53,11 @@ export function RunDrawer({
   const logs = onlyThisJob && run ? run.logs : stream.logs;
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-border bg-card shadow-2xl">
+    <aside className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-border bg-card shadow-overlay">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2">
         <ListTree className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 items-center gap-1.5">
-          <p className="truncate text-sm font-medium">{run?.job?.label ?? "Ejecución"}</p>
+          <p className="truncate text-body font-medium">{run?.job?.label ?? "Ejecución"}</p>
           {explain ? (
             <InfoHint label="Qué hace este trabajo">
               <p>{explain.what}</p>
@@ -71,11 +71,11 @@ export function RunDrawer({
           ) : null}
         </div>
 
-        <span className={cn("text-xs font-medium", run?.job ? JOB_STATUS[status]?.tone : "text-muted-foreground")}>
+        <span className={cn("text-small font-medium", run?.job ? JOB_STATUS[status]?.tone : "text-muted-foreground")}>
           {run?.job ? JOB_STATUS[status]?.label : "Sin ejecuciones en esta sesión"}
         </span>
         {run?.job?.elapsed_ms !== null && run?.job?.elapsed_ms !== undefined ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
+          <span className="text-small nums text-muted-foreground">
             {duration(run.job.elapsed_ms)}
           </span>
         ) : null}
@@ -131,7 +131,7 @@ export function RunDrawer({
       >
         {tab === "logs" ? (
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="flex items-center gap-2 text-small text-muted-foreground">
               <Switch
                 checked={onlyThisJob}
                 onCheckedChange={setOnlyThisJob}
@@ -143,32 +143,32 @@ export function RunDrawer({
             <LogViewer logs={logs} height={tall ? "62vh" : "38vh"} />
           </div>
         ) : !run ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">
+          <p className="p-6 text-center text-body text-muted-foreground">
             Nada ejecutado en esta sesión.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-3">
-              <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
                 Pasos
               </h4>
               <RunTimeline steps={run.steps} />
               {run.job?.error ? (
-                <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
                   {run.job.error}
                 </p>
               ) : null}
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
                   Qué ha ido pasando
                 </h4>
                 {run.items.length > 0 ? (
-                  <Badge variant="success">{run.items.length} ítem(s)</Badge>
+                  <Badge variant="settled">{run.items.length} ítem(s)</Badge>
                 ) : null}
                 {run.taggedCount > 0 ? (
-                  <Badge variant="info">{run.taggedCount} etiquetado(s)</Badge>
+                  <Badge variant="default">{run.taggedCount} etiquetado(s)</Badge>
                 ) : null}
               </div>
               <ActivityFeed lines={run.activity} />

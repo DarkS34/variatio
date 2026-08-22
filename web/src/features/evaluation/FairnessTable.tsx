@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,7 +33,7 @@ const ROWS: { field: string; naive: boolean | string; rag: boolean | string; sys
 ];
 
 function Cell({ value }: { value: boolean | string }) {
-  if (value === true) return <span className="text-[var(--success)]">sí</span>;
+  if (value === true) return <span className="text-settled">sí</span>;
   if (value === false) return <span className="text-muted-foreground/50">no</span>;
   return <span className="text-muted-foreground">{value}</span>;
 }
@@ -46,39 +47,41 @@ export function FairnessTable({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         Qué recibe cada propuesta
       </button>
       {open ? (
-        <div className="thin-scroll overflow-x-auto border-t border-border">
-          <table className="w-full min-w-[34rem] text-xs">
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="px-3 py-2 text-left font-medium">Del encargo</th>
-                <th className="px-3 py-2 text-left font-medium">Comercial</th>
-                <th className="px-3 py-2 text-left font-medium">Solo RAG</th>
-                <th className="px-3 py-2 text-left font-medium">Sistema</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="border-t border-border">
+          {/* The three arms stay in the declared order — naive, rag, system — which is what
+              their contrast pairs were validated on. */}
+          <Table minWidth="34rem">
+            <THead>
+              <TR>
+                <TH>Del encargo</TH>
+                <TH>Comercial</TH>
+                <TH>Solo RAG</TH>
+                <TH>Sistema</TH>
+              </TR>
+            </THead>
+            <TBody>
               {ROWS.map((row) => (
-                <tr key={row.field} className="border-b border-border/50 last:border-0">
-                  <td className="px-3 py-1.5">{row.field}</td>
-                  <td className="px-3 py-1.5">
+                <TR key={row.field}>
+                  <TD>{row.field}</TD>
+                  <TD>
                     <Cell value={row.naive} />
-                  </td>
-                  <td className="px-3 py-1.5">
+                  </TD>
+                  <TD>
                     <Cell value={row.rag} />
-                  </td>
-                  <td className="px-3 py-1.5">
+                  </TD>
+                  <TD>
                     <Cell value={row.system} />
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
           <p className="px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             Las tres reciben el mismo encargo y devuelven un ítem. Las dos locales usan el
             mismo modelo, así que lo que se compara son arquitecturas y no modelos. Las

@@ -72,7 +72,7 @@ function Scale({
             aria-label={`${score} de 5`}
             aria-pressed={value === score}
             className={cn(
-              "h-8 flex-1 rounded-md border text-sm tabular-nums transition-colors",
+              "h-8 flex-1 rounded-md border text-body nums transition-colors",
               value === score
                 ? "border-primary bg-primary text-primary-foreground font-medium"
                 : "border-border hover:bg-accent/60",
@@ -111,15 +111,15 @@ export function RubricForm({
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-sm font-semibold">
+        <h2 className="text-body font-semibold">
           Sobre la variante de{" "}
           <span style={{ color: ARM_META.system.colour }}>este sistema</span>
         </h2>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-small text-muted-foreground">
           Da igual cuál elegiste: esto describe lo que produjo el sistema.
         </p>
         {saved ? (
-          <span className="ml-auto flex items-center gap-1 text-xs text-[var(--success)]">
+          <span className="ml-auto flex items-center gap-1 text-small text-settled">
             <Check className="size-3.5" />
             guardada
           </span>
@@ -129,7 +129,7 @@ export function RubricForm({
       <div className="grid gap-3 sm:grid-cols-2">
         {SCALES.map((scale) => (
           <div key={String(scale.key)} className="space-y-1.5">
-            <p className="text-xs font-medium">{scale.label}</p>
+            <p className="text-small font-medium">{scale.label}</p>
             <p className="text-[11px] leading-snug text-muted-foreground">{scale.question}</p>
             <Scale
               value={draft[scale.key] as number | undefined}
@@ -142,7 +142,7 @@ export function RubricForm({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-xs font-medium">¿Lo usarías en clase?</p>
+        <p className="text-small font-medium">¿Lo usarías en clase?</p>
         <div className="flex gap-1.5">
           {USABILITY.map((option) => (
             <button
@@ -151,7 +151,7 @@ export function RubricForm({
               onClick={() => patch({ usability: option.value })}
               aria-pressed={draft.usability === option.value}
               className={cn(
-                "h-8 flex-1 rounded-md border px-2 text-sm transition-colors",
+                "h-8 flex-1 rounded-md border px-2 text-body transition-colors",
                 draft.usability === option.value
                   ? "border-primary bg-primary text-primary-foreground font-medium"
                   : "border-border hover:bg-accent/60",
@@ -164,10 +164,11 @@ export function RubricForm({
       </div>
 
       <Textarea
+        aria-label="Qué le sobra o le falta"
         value={draft.comment ?? ""}
         onChange={(event) => patch({ comment: event.target.value })}
         placeholder="Qué le sobra o le falta (opcional)"
-        className="min-h-16 text-sm"
+        className="min-h-16"
       />
 
       <Button className="w-full" disabled={!complete || pending} onClick={() => onSave(draft)}>

@@ -1,3 +1,4 @@
+import { TONE_VAR } from "@/lib/status";
 import type { GraphView } from "@/lib/types";
 import type { Body, Frame, LayoutMode } from "./layout";
 import type { GraphModel } from "./model";
@@ -8,6 +9,12 @@ export interface Palette {
   border: string;
   background: string;
   accent: string;
+  /** The three frontier tones. Their names come from `lib/status` and not from string
+   *  literals repeated here: that is what stops the curriculum view painting "covered" in
+   *  a different green from the one the navbar uses. */
+  settled: string;
+  attention: string;
+  ahead: string;
 }
 
 export interface View {
@@ -34,6 +41,28 @@ export interface Scene {
   focused: number;
   highlight?: Set<string>;
   hiddenRelations?: Set<number>;
+  /** Node indices the course has already covered. `undefined` — not an empty set — means
+   *  no curriculum is in force, and everything keeps its domain colour. An EMPTY set is a
+   *  curriculum that was deliberately emptied, which is a different statement. */
+  curriculum?: Set<number>;
+  /** Covered nothing, but every prerequisite covered: what can be taught next. */
+  frontier?: Set<number>;
+}
+
+// The same calculation the generator already performs for every commission — assumed_known
+// / target / forbidden — drawn. Covered in verdigris, the frontier in ochre, what has not
+// been taught dimmed.
+//
+// Outside the curriculum view the colour stays the domain's: there, what you read is what
+// each concept is ABOUT, not the order it is taught in.
+function nodeFill(scene: Scene, index: number, group: number): string {
+  const { palette, model } = scene;
+  if (scene.mode !== "curriculum" || !scene.curriculum) {
+    return model.domainColours[group] ?? palette.muted;
+  }
+  if (scene.frontier?.has(index)) return palette.attention;
+  if (scene.curriculum.has(index)) return palette.settled;
+  return palette.ahead;
 }
 
 interface HullLabel {
@@ -61,7 +90,10 @@ export function readPalette(): Palette {
     muted: read("--muted-foreground", "#888"),
     border: read("--border", "#ddd"),
     background: read("--card", "#fff"),
-    accent: read("--primary", "#3b82f6"),
+    accent: read("--primary", "#6217A3"),
+    settled: read(TONE_VAR.settled, "#1C7760"),
+    attention: read(TONE_VAR.attention, "#9A6100"),
+    ahead: read(TONE_VAR.muted, "#888"),
   };
 }
 
@@ -130,7 +162,7 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     const dimmed = !isPicked && ((focus >= 0 && !isFocus && !isNear) || !isMarked);
 
     context.globalAlpha = dimmed ? DIM : 1;
-    context.fillStyle = isPicked ? palette.accent : (model.domainColours[group] ?? palette.muted);
+    context.fillStyle = isPicked ? palette.accent : nodeFill(scene, index, group);
     context.beginPath();
     context.arc(body.x, body.y, radius, 0, Math.PI * 2);
     context.fill();

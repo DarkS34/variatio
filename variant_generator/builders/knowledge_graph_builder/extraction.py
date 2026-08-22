@@ -7,16 +7,16 @@ canonical and the domains exist to break the question into pieces.
 """
 
 import re
-import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from loguru import logger
 
 from ... import config, inference, progress
-from ...prompts import extract_typed_graph_prompt
+from ...prompts import extract_typed_graph_prompt, glean_typed_graph_prompt
 from .. import _source_docs
 from . import parsing
+from .lexicon import MAX_INFLECTION_SLACK, MIN_NEEDLE_LENGTH, mentions  # noqa: F401
 from .schemas import EXTRACT_SCHEMA
 
 
@@ -40,14 +40,12 @@ def run(
     if not documents:
         return {}
 
-    origins, passages, relations = extract_documents(
-        documents, schema=schema, max_attempts=max_attempts
-    )
-    if not origins:
+    found = extract_documents(documents, schema=schema, max_attempts=max_attempts)
+    if not found["origins"]:
         logger.error("Ningún concepto extraído del corpus")
         return {}
 
-    staging = assemble(origins, passages, relations, documents)
+    staging = assemble(found, documents)
     logger.success(
         f"Extracción terminada: {len(staging['entities'])} concepto(s), "
         f"{len(staging['relations'])} relación(es)"
@@ -137,13 +135,15 @@ def extract_documents(
     *,
     schema,
     max_attempts: int,
-) -> tuple[dict[str, set[int]], dict[str, list[dict]], set[tuple[str, str, str]]]:
+) -> dict:
     total = sum(len(chunks) for _, _, chunks in documents)
     logger.info(f"Extrayendo de {total} fragmento(s) de {len(documents)} documento(s)")
     progress.phase("extract", f"0/{total} fragmento(s)")
 
     origins: dict[str, set[int]] = defaultdict(set)
     passages: dict[str, list[dict]] = defaultdict(list)
+    positions: dict[str, int] = {}
+    definitions: dict[str, str] = {}
     relations: set[tuple[str, str, str]] = set()
     done = 0
 
@@ -164,16 +164,29 @@ def extract_documents(
                     f"fragmento {done}/{total} · {len(origins)} concepto(s)",
                 )
                 tag = f"[{name} · chunk {ci}/{len(chunks)}] "
-                chunk_concepts, chunk_relations = extract_from_chunk(
+                chunk_concepts, chunk_relations, chunk_definitions = extract_from_chunk(
                     chunk, tag, location, schema=schema, max_attempts=max_attempts
+                )
+                chunk_concepts, chunk_relations, chunk_definitions = glean_chunk(
+                    chunk,
+                    tag,
+                    location,
+                    chunk_concepts,
+                    chunk_relations,
+                    chunk_definitions,
+                    schema=schema,
+                    max_attempts=max_attempts,
                 )
                 seen_here = set(chunk_concepts)
                 for source, _key, target in chunk_relations:
                     seen_here.update((source, target))
                 for concept in sorted(seen_here):
                     origins[concept].add(di)
+                    positions.setdefault(concept, done)
                 for concept in sorted(set(chunk_concepts)):
                     remember_passage(passages[concept], concept, chunk, name, location)
+                    if concept not in definitions and chunk_definitions.get(concept):
+                        definitions[concept] = chunk_definitions[concept]
                 relations.update(tuple(r) for r in chunk_relations)
                 progress.emit(
                     "artifact.progress",
@@ -183,7 +196,13 @@ def extract_documents(
                 )
 
     progress.advance(1.0, f"{len(origins)} concepto(s), {len(relations)} relación(es)")
-    return dict(origins), dict(passages), relations
+    return {
+        "origins": dict(origins),
+        "passages": dict(passages),
+        "positions": positions,
+        "definitions": definitions,
+        "relations": relations,
+    }
 
 
 # ANCLAJE AL CORPUS -----------------------------------------------------------------------
@@ -267,49 +286,6 @@ def excerpt(chunk: str, concept: str, max_chars: int) -> str:
     return text.strip()
 
 
-MIN_NEEDLE_LENGTH = 3
-MAX_INFLECTION_SLACK = 2
-
-_STOPWORDS = frozenset(
-    {"de", "del", "la", "el", "los", "las", "en", "y", "o", "a", "un", "una", "por", "con", "para"}
-)
-
-
-def _singular(word: str) -> str:
-    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
-            return word[: -len(suffix)]
-    return word
-
-
-def _stems(text: str) -> set[str]:
-    return {_singular(w) for w in re.findall(r"\w+", _fold(text))}
-
-
-def mentions(text: str, concept: str) -> bool:
-    if re.search(rf"(?<!\w){re.escape(_fold(concept))}(?!\w)", _fold(text)):
-        return True
-    needles = [
-        _singular(w)
-        for w in re.findall(r"\w+", _fold(concept))
-        if w not in _STOPWORDS and len(w) >= MIN_NEEDLE_LENGTH
-    ]
-    if not needles:
-        return False
-    stems = _stems(text)
-    return all(
-        any(
-            stem.startswith(needle) and len(stem) - len(needle) <= MAX_INFLECTION_SLACK
-            for stem in stems
-        )
-        for needle in needles
-    )
-
-
-def _fold(text: str) -> str:
-    lowered = unicodedata.normalize("NFD", text.lower())
-    stripped = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
-    return re.sub(r"\s+", " ", stripped)
 
 
 # The only per-chunk call of the build, so the only one that stays without reasoning:
@@ -321,8 +297,59 @@ def extract_from_chunk(
     *,
     schema,
     max_attempts: int,
-) -> tuple[list[str], list[list[str]]]:
+) -> tuple[list[str], list[list[str]], dict[str, str]]:
     prompt = extract_typed_graph_prompt(chunk, schema, location)
+    return _ask(prompt, log_prefix, schema=schema, max_attempts=max_attempts)
+
+
+# A second look at the same chunk, shown what the first one found. It is the cheapest
+# pass of the build — `extract` measured 8 % of it — and the first reading stops early on
+# purpose: a model asked to list everything lists the obvious and closes the JSON. Asked
+# instead «what is missing», with the inventory in front of it, it fills the relations
+# between concepts it already named, which is exactly where the graph was thin.
+def glean_chunk(
+    chunk: str,
+    log_prefix: str,
+    location: str,
+    concepts: list[str],
+    relations: list[list[str]],
+    definitions: dict[str, str],
+    *,
+    schema,
+    max_attempts: int,
+) -> tuple[list[str], list[list[str]], dict[str, str]]:
+    if not concepts:
+        return concepts, relations, definitions
+    concepts = list(concepts)
+    relations = list(relations)
+    definitions = dict(definitions)
+    for attempt in range(1, config.KG_EXTRACT_GLEANING_PASSES + 1):
+        prompt = glean_typed_graph_prompt(
+            chunk, schema, location, concepts, definitions, relations
+        )
+        more_concepts, more_relations, more_definitions = _ask(
+            prompt, f"{log_prefix}[glean {attempt}] ", schema=schema, max_attempts=max_attempts
+        )
+        known = set(concepts)
+        new_concepts = [c for c in dict.fromkeys(more_concepts) if c not in known]
+        known_relations = {tuple(r) for r in relations}
+        new_relations = [r for r in more_relations if tuple(r) not in known_relations]
+        if not new_concepts and not new_relations:
+            break
+        concepts.extend(new_concepts)
+        relations.extend(new_relations)
+        for name, definition in more_definitions.items():
+            definitions.setdefault(name, definition)
+        logger.debug(
+            f"{log_prefix}segunda lectura: +{len(new_concepts)} concepto(s), "
+            f"+{len(new_relations)} relación(es)"
+        )
+    return concepts, relations, definitions
+
+
+def _ask(
+    prompt: str, log_prefix: str, *, schema, max_attempts: int
+) -> tuple[list[str], list[list[str]], dict[str, str]]:
     response = inference.generate(
         model=config.KG_EXTRACT_MODEL,
         prompt=prompt,
@@ -332,27 +359,31 @@ def extract_from_chunk(
     ).response
     raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts)
     if raw is None:
-        return [], []
-    concepts = [c.strip() for c in raw.get("concepts", []) if isinstance(c, str) and c.strip()]
+        return [], [], {}
+    concepts, definitions = parsing.concepts_with_definitions(raw.get("concepts", []))
     relations = parsing.valid_relations(raw.get("relations", []), schema, allowed=None)
-    return concepts, relations
+    return concepts, relations, definitions
 
 
 # Concepts and relations are collected into SETS across the whole corpus, so a concept seen
 # in twenty chunks costs one entry and no frequency signal survives. Rarity is not evidence
 # of noise here — `cleaning` is told explicitly not to drop a term for being infrequent.
-def assemble(
-    origins: dict[str, set[int]],
-    passages: dict[str, list[dict]],
-    relations: set[tuple[str, str, str]],
-    documents: list[tuple[str, list[str], list[tuple[str, str]]]],
-) -> dict:
-    rels = sorted(list(r) for r in relations)
+# What DOES survive is where each concept was first seen (`positions`, the running chunk
+# count) and the definition written there: the material introduces a concept once, and
+# both the order and the definition are read from that introduction.
+def assemble(found: dict, documents: list[tuple[str, list[str], list[tuple[str, str]]]]) -> dict:
+    origins = found["origins"]
+    rels = sorted(list(r) for r in found["relations"])
+    names = sorted(origins)
+    positions = found.get("positions") or {}
+    definitions = found.get("definitions") or {}
     return {
-        "entities": sorted(origins),
+        "entities": names,
         "edges": sorted({r[1] for r in rels}),
         "relations": rels,
         "documents": [{"name": name, "titles": titles} for name, titles, _ in documents],
-        "origins": {name: sorted(origins[name]) for name in sorted(origins)},
-        "passages": {name: passages.get(name, []) for name in sorted(origins)},
+        "origins": {name: sorted(origins[name]) for name in names},
+        "passages": {name: found["passages"].get(name, []) for name in names},
+        "positions": {name: positions[name] for name in names if name in positions},
+        "definitions": {name: definitions[name] for name in names if definitions.get(name)},
     }

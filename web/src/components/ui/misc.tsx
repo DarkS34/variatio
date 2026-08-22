@@ -24,14 +24,14 @@ export function Progress({
   value: number;
   max?: number | null;
   className?: string;
-  tone?: "primary" | "success" | "warning" | "danger";
+  tone?: "primary" | "settled" | "attention" | "danger";
 }) {
   const indeterminate = !max || max <= 0;
   const pct = indeterminate ? 0 : Math.min(100, Math.round((value / max) * 100));
   const colour = {
     primary: "bg-primary",
-    success: "bg-[var(--success)]",
-    warning: "bg-[var(--warning)]",
+    settled: "bg-settled",
+    attention: "bg-attention",
     danger: "bg-destructive",
   }[tone];
 
@@ -64,9 +64,14 @@ export function Progress({
  * measured weights — so the bar keeps being an honest picture of the time, not a row
  * of equal boxes that suggests seven equal stages.
  *
- * Three states, one colour each: done, running (which pulses, because that is the only
+ * Three states, one colour each: done, running (which sweeps, because that is the only
  * part still moving) and pending. The fill inside the running segment is the same
  * percentage the plain bar would have shown.
+ *
+ * This is NOT replaced by the rail: its stretches carry measured weights and its fill is
+ * continuous, and at six pixels tall that reads better as a bar than as nodes. What it
+ * does adopt is the rail's vocabulary — the same verdigris for what is finished and the
+ * same sweep for what is alive, rather than a pulse of its own.
  */
 export function PhaseBar({
   phases,
@@ -115,13 +120,12 @@ export function PhaseBar({
             className={cn(
               "relative h-1.5 overflow-hidden rounded-full",
               running ? "bg-primary/20" : "bg-muted",
-              running && "animate-pulse-soft",
             )}
           >
             <div
               className={cn(
                 "relative h-full overflow-hidden rounded-full transition-[width] duration-500 ease-out",
-                fill >= 1 ? "bg-[var(--success)]" : "bg-primary",
+                fill >= 1 ? "bg-settled" : "bg-primary",
               )}
               style={{ width: `${fill * 100}%` }}
             >
@@ -233,23 +237,26 @@ export function Alert({
   className,
   action,
 }: {
-  tone?: "info" | "warning" | "danger" | "success";
+  tone?: "info" | "attention" | "danger" | "settled";
   title?: ReactNode;
   children?: ReactNode;
   className?: string;
   action?: ReactNode;
 }) {
   const tones = {
-    info: "border-[color-mix(in_oklch,var(--info)_35%,transparent)] bg-[color-mix(in_oklch,var(--info)_10%,transparent)]",
-    warning:
-      "border-[color-mix(in_oklch,var(--warning)_40%,transparent)] bg-[color-mix(in_oklch,var(--warning)_10%,transparent)]",
+    // "info" survives as the name of a TONE even though the --info token is gone: a
+    // neutral notice is painted with the primary, which is what already means "this is
+    // the system talking", not "something is wrong".
+    info: "border-primary/35 bg-primary/[0.08]",
+    attention:
+      "border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_10%,transparent)]",
     danger: "border-destructive/40 bg-destructive/10",
-    success:
-      "border-[color-mix(in_oklch,var(--success)_35%,transparent)] bg-[color-mix(in_oklch,var(--success)_10%,transparent)]",
+    settled:
+      "border-[color-mix(in_oklch,var(--settled)_35%,transparent)] bg-[color-mix(in_oklch,var(--settled)_10%,transparent)]",
   }[tone];
 
   return (
-    <div className={cn("flex items-start gap-3 rounded-lg border p-3 text-sm", tones, className)}>
+    <div className={cn("flex items-start gap-3 rounded-lg border p-3 text-body", tones, className)}>
       <div className="min-w-0 flex-1">
         {title ? <p className="font-medium">{title}</p> : null}
         {children ? <div className="text-muted-foreground [&_p]:mt-1">{children}</div> : null}
@@ -262,17 +269,24 @@ export function Alert({
 export function EmptyState({
   icon,
   title,
+  action,
   children,
 }: {
   icon?: ReactNode;
   title: string;
+  /** What to do so that it stops being empty. An empty screen with no action is a hole;
+   *  with one it is where the work starts. Optional on purpose — some holes genuinely have
+   *  no action, a search with no results being the obvious one, and forcing a button there
+   *  would mean inventing one. */
+  action?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-10 text-center">
-      {icon ? <div className="text-muted-foreground">{icon}</div> : null}
-      <p className="text-sm font-medium">{title}</p>
-      {children ? <div className="max-w-md text-sm text-muted-foreground">{children}</div> : null}
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-12 text-center">
+      {icon ? <div className="text-muted-foreground [&_svg]:size-8">{icon}</div> : null}
+      <p className="font-display font-expanded text-title">{title}</p>
+      {children ? <div className="max-w-md text-muted-foreground">{children}</div> : null}
+      {action ? <div className="mt-1">{action}</div> : null}
     </div>
   );
 }

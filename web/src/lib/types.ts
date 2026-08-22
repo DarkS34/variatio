@@ -180,7 +180,6 @@ export interface ItemTypeSpec {
 
 export interface ExemplarsProfile {
   /** Shared by every modality: it describes the subject, not the exercise. */
-  content_context: Record<string, string>;
   item_types: Record<string, ItemTypeSpec>;
 }
 
@@ -543,6 +542,19 @@ export interface GenerationAuthor {
   username: string | null;
 }
 
+export interface ItemChecks {
+  forbidden: string[];
+  similarity: { to: string; score: number; high: boolean } | null;
+  tagger?: {
+    primary: string | null;
+    concepts: string[];
+    method: string | null;
+    on_target: boolean;
+    targets_found: string[];
+  };
+  flags: string[];
+}
+
 export interface GenerationRow {
   id: number;
   created_at: number;
@@ -555,6 +567,7 @@ export interface GenerationRow {
   think: boolean;
   author: GenerationAuthor;
   item: Record<string, unknown>;
+  checks?: ItemChecks | null;
 }
 
 export interface GenerationListing {
@@ -684,4 +697,17 @@ export interface VgEvent {
   job_id: string | null;
   kind: string;
   [payload: string]: any;
+}
+
+/** El contexto de la asignatura: prosa más los tres datos que la rama naive lee por nombre. */
+export interface ContentContextState {
+  exists: boolean;
+  narrative: string;
+  facts: Record<string, string>;
+  block: string;
+  source: "curated" | "draft" | null;
+  path: string | null;
+  /** El texto que la última construcción sintetizó y que el curado está tapando. */
+  pending_draft: string | null;
+  canonical_keys: string[];
 }

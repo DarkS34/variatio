@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from .. import config, inference, progress
+from ..content_context import ContentContext
 from ..exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from ..json_io import write_json
 from ..prompts import format_content_prompt
@@ -36,11 +37,12 @@ class ExemplarsBankBuilder:
         self,
         exemplars_profile: ExemplarsProfile,
         workspace: Workspace,
+        content_context: ContentContext | None = None,
         verbose: bool = True,
     ):
         self.workspace = workspace
         self.exemplars_profile = exemplars_profile
-        self.context = exemplars_profile.content_context
+        self.content_context = content_context or ContentContext()
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.EB_CHUNK_SIZE
@@ -251,7 +253,7 @@ class ExemplarsBankBuilder:
         prompt = format_content_prompt(
             content=batch,
             types_block=self._types_block,
-            context=self.context,
+            context_block=self.content_context.prompt_block(),
             type_keys=self._type_keys,
         )
         response = inference.generate(

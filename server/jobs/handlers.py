@@ -137,7 +137,9 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
 
     with progress.overall(taggability.BUILD_PHASES):
         progress.phase("taggable")
-        non_taggable = taggability.review(graph, profile, bank)
+        non_taggable = taggability.review(
+            graph, profile, bank, stages.load_content_context(ws)
+        )
 
     result = kg_edit.set_non_taggable(ws, non_taggable)
     return {"non_taggable": result["non_taggable"], "concepts": len(graph.all_concepts)}
@@ -195,6 +197,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
             "item": r.item.model_dump(mode="json"),
             "item_type": r.item_type,
             "thinking": r.thinking,
+            "checks": r.checks,
         }
         for r in results
     ]
@@ -234,6 +237,7 @@ def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str]
                     instructions=params.get("instructions"),
                     think=bool(params.get("think", True)),
                     thinking=entry.get("thinking"),
+                    checks=entry.get("checks"),
                 )
     except Exception as exc:  # noqa: BLE001 - the run succeeded; only its record did not
         logger.warning(f"No se pudieron guardar las variantes en la base de datos: {exc}")

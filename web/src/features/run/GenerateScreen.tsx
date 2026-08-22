@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import type { ExemplarsProfile } from "@/lib/types";
+import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
@@ -52,12 +52,14 @@ export function GenerateScreen() {
       item: Record<string, unknown>;
       item_type?: string;
       thinking?: string;
+      checks?: ItemChecks | null;
     }[];
     if (fromResult.length > 0) return fromResult;
     return (run?.items ?? []).map((i) => ({
       item: i.item,
       item_type: i.item_type,
       thinking: i.thinking ?? undefined,
+      checks: i.checks,
     }));
   }, [isGenerate, run]);
 
@@ -110,7 +112,7 @@ export function GenerateScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Generar variantes</h1>
+        <h1 className="font-display font-expanded text-display">Generar variantes</h1>
         <InfoHint label="Cómo se genera">
           Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil
           deja en tus manos; el resto lo redacta el modelo, guiado por el grafo y por los
@@ -121,13 +123,13 @@ export function GenerateScreen() {
       {/* Sin motor no se genera: el servidor lo rechaza con un 503 y el formulario se
           deshabilita entero, en vez de dejar pulsar y devolver un error de trabajo. */}
       {unlocked && offline ? (
-        <Alert tone="warning" title="Sin motor de inferencia">
+        <Alert tone="attention" title="Sin motor de inferencia">
           <p>{offline} Arráncalo y vuelve a intentarlo.</p>
         </Alert>
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="warning" title="Generación bloqueada">
+        <Alert tone="attention" title="Generación bloqueada">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
             Sin aprobar:{" "}
@@ -148,7 +150,7 @@ export function GenerateScreen() {
       {collapsed ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
               {summarize(form, profile)}
             </p>
             <Button variant="outline" size="sm" onClick={() => setEditing(true)} disabled={running}>
@@ -212,7 +214,12 @@ function Results({
   profile,
   run,
 }: {
-  results: { item: Record<string, unknown>; item_type?: string; thinking?: string }[];
+  results: {
+    item: Record<string, unknown>;
+    item_type?: string;
+    thinking?: string;
+    checks?: ItemChecks | null;
+  }[];
   profile: ExemplarsProfile;
   run: RunView | null;
 }) {
@@ -227,15 +234,15 @@ function Results({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">
+        <h2 className="text-body font-semibold">
           Resultados
-          <span className="ml-2 font-normal text-muted-foreground tabular-nums">
+          <span className="ml-2 font-normal text-muted-foreground nums">
             {results.length}
             {requested ? ` de ${requested}` : ""}
           </span>
         </h2>
         {produced !== undefined && requested !== undefined && produced < requested ? (
-          <Badge variant="warning">
+          <Badge variant="attention">
             generación parcial: {produced}/{requested}
           </Badge>
         ) : null}
@@ -270,6 +277,7 @@ function Results({
           item={result.item}
           itemType={result.item_type}
           thinking={result.thinking}
+          checks={result.checks}
           profile={profile}
         />
       ))}

@@ -333,10 +333,14 @@ def _forget_description(ws: Workspace, name: str) -> None:
 def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
     sources = stages.load_concept_sources(ws)
     entries = sources["concepts"].pop(name, None)
-    if entries is None:
+    definition = sources.get("definitions", {}).pop(name, None)
+    if entries is None and definition is None:
         return
     if new_name is not None:
-        sources["concepts"][new_name] = entries
+        if entries is not None:
+            sources["concepts"][new_name] = entries
+        if definition is not None:
+            sources["definitions"][new_name] = definition
     storage.write_json(ws.concept_sources_path, sources)
 
 

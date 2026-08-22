@@ -25,9 +25,9 @@ export function RunPanel({
         <div className="flex items-center gap-2">
           <CardTitle className="flex-1">Ejecución</CardTitle>
           {run.guardrail && !run.guardrail.checked ? (
-            <Badge variant="warning">instrucciones sin revisar</Badge>
+            <Badge variant="attention">instrucciones sin revisar</Badge>
           ) : null}
-          {run.job ? <Badge variant={running ? "info" : "outline"}>{run.job.label}</Badge> : null}
+          {run.job ? <Badge variant={running ? "default" : "outline"}>{run.job.label}</Badge> : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -54,7 +54,7 @@ export function RunPanel({
         <TechnicalDetails run={run} />
         {run.activity.length > 0 ? (
           <details className="rounded-lg border border-border">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+            <summary className="cursor-pointer px-3 py-2 text-small font-medium text-muted-foreground">
               Qué ha ido pasando ({run.activity.length})
             </summary>
             <div className="thin-scroll max-h-56 overflow-y-auto border-t border-border p-3">

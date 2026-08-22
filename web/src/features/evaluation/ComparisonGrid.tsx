@@ -53,7 +53,7 @@ function ProposalCard({
       <header className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
         <span
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-lg font-mono text-base font-semibold transition-colors",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg font-mono text-heading transition-colors",
             meta ? "text-background" : "bg-muted text-muted-foreground",
           )}
           style={meta ? { backgroundColor: meta.colour, color: "var(--background)" } : undefined}
@@ -61,7 +61,7 @@ function ProposalCard({
           {letter}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">
+          <p className="truncate text-body font-medium">
             {meta ? meta.label : `Propuesta ${letter}`}
           </p>
           {meta ? (
@@ -71,7 +71,7 @@ function ProposalCard({
           ) : null}
         </div>
         {chosen ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+          <span className="ml-auto flex shrink-0 items-center gap-1 text-small font-medium text-primary">
             <Check className="size-3.5" />
             tu elección
           </span>
@@ -84,11 +84,11 @@ function ProposalCard({
         ) : (
           <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
             <CircleSlash className="size-5 text-muted-foreground/60" />
-            <p className="max-w-56 text-sm text-muted-foreground">
+            <p className="max-w-56 text-body text-muted-foreground">
               Esta propuesta no llegó a producir un ejercicio válido.
             </p>
             {revealed && position.error ? (
-              <p className="max-w-64 text-xs text-muted-foreground/80">{position.error}</p>
+              <p className="max-w-64 text-small text-muted-foreground/80">{position.error}</p>
             ) : null}
           </div>
         )}
@@ -150,9 +150,10 @@ export function ComparisonGrid({
       </div>
 
       {!revealed ? (
-        <div className="animate-slide-up flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-          <p className="text-sm font-medium">¿Cuál usarías en clase?</p>
+        <div className="animate-slide-up flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-raised">
+          <p className="text-body font-medium">¿Cuál usarías en clase?</p>
           <Input
+            aria-label="Por qué, en una línea"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Por qué, en una línea (opcional)"

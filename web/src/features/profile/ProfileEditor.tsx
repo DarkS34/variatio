@@ -11,12 +11,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { StageGate } from "@/components/StageGate";
+import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
@@ -33,12 +34,14 @@ function AddInline({
   onAdd,
   validate,
   mono = true,
+  disabled = false,
 }: {
   placeholder: string;
   cta: string;
   onAdd: (value: string) => void;
   validate?: (value: string) => string | null;
   mono?: boolean;
+  disabled?: boolean;
 }) {
   const [text, setText] = useState("");
   const error = text.trim() ? (validate?.(text.trim()) ?? null) : null;
@@ -54,6 +57,9 @@ function AddInline({
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         <Input
+          aria-label={placeholder}
+          disabled={disabled}
+          title={disabled ? LOCKED_HINT : undefined}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
@@ -63,78 +69,19 @@ function AddInline({
             }
           }}
           placeholder={placeholder}
-          className={mono ? "font-mono text-sm" : "text-sm"}
+          className={mono ? "font-mono" : undefined}
         />
-        {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
+        {error ? <p className="mt-1 text-small text-destructive">{error}</p> : null}
       </div>
-      <Button variant="outline" onClick={submit} disabled={!text.trim() || Boolean(error)}>
+      <Button
+        variant="outline"
+        onClick={submit}
+        disabled={disabled || !text.trim() || Boolean(error)}
+        title={disabled ? LOCKED_HINT : undefined}
+      >
         <Plus />
         {cta}
       </Button>
-    </div>
-  );
-}
-
-function ContextRow({
-  name,
-  value,
-  taken,
-  onRename,
-  onChange,
-  onRemove,
-}: {
-  name: string;
-  value: string;
-  taken: string[];
-  onRename: (next: string) => void;
-  onChange: (next: string) => void;
-  onRemove: () => void;
-}) {
-  const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
-
-  const trimmed = draft.trim();
-  const error =
-    trimmed === name
-      ? null
-      : !trimmed
-        ? "La clave no puede estar vacía"
-        : taken.includes(trimmed)
-          ? "Esa clave ya existe"
-          : null;
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => {
-            if (trimmed !== name && !error) onRename(trimmed);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-            if (event.key === "Escape") setDraft(name);
-          }}
-          className={cn("h-8 w-48 shrink-0 font-mono text-xs", error && "border-destructive")}
-        />
-        <Input
-          value={value}
-          placeholder="valor"
-          className="h-8 text-sm"
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          title={`Quitar ${name}`}
-          className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          onClick={onRemove}
-        >
-          <X />
-        </Button>
-      </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -147,6 +94,7 @@ function TypeStrip({
   onSelect,
   onAdd,
   onRemove,
+  disabled = false,
 }: {
   keys: string[];
   active: string;
@@ -155,11 +103,12 @@ function TypeStrip({
   onSelect: (key: string) => void;
   onAdd: (key: string) => void;
   onRemove: (key: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">Modalidades de ítem</h2>
+        <h2 className="text-body font-semibold tracking-tight">Modalidades de ítem</h2>
         <Badge variant="outline">{keys.length}</Badge>
         <InfoHint label="Qué son las modalidades">
           Cada modalidad es una forma distinta de plantear la tarea — una pregunta con
@@ -180,9 +129,9 @@ function TypeStrip({
               key === active ? "border-primary bg-primary/5" : "border-border hover:bg-accent/40",
             )}
           >
-            <span className="text-sm font-medium">{labels[key] || key}</span>
+            <span className="text-body font-medium">{labels[key] || key}</span>
             <Badge variant="outline">{counts[key]}</Badge>
-            {keys.length > 1 ? (
+            {keys.length > 1 && !disabled ? (
               <span
                 role="button"
                 tabIndex={-1}
@@ -206,6 +155,7 @@ function TypeStrip({
         cta="Añadir modalidad"
         onAdd={onAdd}
         validate={(key) => nameError(key, keys)}
+        disabled={disabled}
       />
     </div>
   );
@@ -214,6 +164,7 @@ function TypeStrip({
 export function ProfileEditor() {
   const query = useProfile();
   const invalidate = useInvalidateChain();
+  const stageLocked = useStageLocked();
 
   const [draft, setDraft] = useState<ExemplarsProfile | null>(null);
   const [activeType, setActiveType] = useState<string | null>(null);
@@ -349,13 +300,6 @@ export function ProfileEditor() {
     setOpen((current) => current.filter((entry) => entry !== name));
   };
 
-  const renameContextKey = (from: string, to: string) => {
-    const context: Record<string, string> = {};
-    for (const [key, value] of Object.entries(draft.content_context))
-      context[key === from ? to : key] = value;
-    update({ content_context: context });
-  };
-
   const applyRaw = () => {
     try {
       const parsed = JSON.parse(rawText);
@@ -386,12 +330,12 @@ export function ProfileEditor() {
 
         {validation ? (
           validation.valid ? (
-            <span className="flex items-center gap-1.5 text-xs text-[var(--success)]">
+            <span className="flex items-center gap-1.5 text-small text-settled">
               <CircleCheck className="size-3.5" />
               El perfil carga correctamente
             </span>
           ) : (
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-destructive">
+            <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
               <TriangleAlert className="size-3.5 shrink-0" />
               <span className="truncate" title={validation.error ?? undefined}>
                 {validation.error}
@@ -401,10 +345,11 @@ export function ProfileEditor() {
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
-          {dirty ? <Badge variant="warning">sin guardar</Badge> : null}
+          {dirty ? <Badge variant="attention">sin guardar</Badge> : null}
           <Button
             onClick={() => save.mutate(draft)}
-            disabled={!dirty || save.isPending || validation?.valid === false}
+            disabled={stageLocked || !dirty || save.isPending || validation?.valid === false}
+            title={stageLocked ? LOCKED_HINT : undefined}
           >
             {save.isPending ? <Spinner /> : <Save />}
             Guardar
@@ -423,63 +368,22 @@ export function ProfileEditor() {
           <Textarea
             value={rawText}
             onChange={(event) => setRawText(event.target.value)}
-            className="min-h-[32rem] font-mono text-xs"
+            readOnly={stageLocked}
+            className="min-h-[32rem] font-mono text-small"
             spellCheck={false}
           />
-          {rawError ? <p className="text-xs text-destructive">{rawError}</p> : null}
-          <Button size="sm" onClick={applyRaw}>
+          {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
+          <Button
+            size="sm"
+            onClick={applyRaw}
+            disabled={stageLocked}
+            title={stageLocked ? LOCKED_HINT : undefined}
+          >
             Aplicar al formulario
           </Button>
         </div>
       ) : (
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle>Contexto del contenido</CardTitle>
-                <InfoHint label="Qué es el contexto">
-                  Pares clave/valor que acompañan a cada prompt: asignatura, idioma, lenguaje de
-                  programación… Lo que no cambia entre ítems ni entre modalidades.
-                </InfoHint>
-                <Badge variant="outline" className="ml-auto">
-                  {Object.keys(draft.content_context).length}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-2 lg:grid-cols-2">
-              {Object.entries(draft.content_context).map(([key, value]) => (
-                <ContextRow
-                  key={key}
-                  name={key}
-                  value={value}
-                  taken={Object.keys(draft.content_context)}
-                  onRename={(next) => renameContextKey(key, next)}
-                  onChange={(next) =>
-                    update({ content_context: { ...draft.content_context, [key]: next } })
-                  }
-                  onRemove={() => {
-                    const context = { ...draft.content_context };
-                    delete context[key];
-                    update({ content_context: context });
-                  }}
-                />
-              ))}
-
-              {Object.keys(draft.content_context).length === 0 ? (
-                <p className="text-xs text-destructive">
-                  El contexto no puede quedar vacío: añade al menos una clave.
-                </p>
-              ) : null}
-
-              <AddInline
-                placeholder="nueva_clave"
-                cta="Añadir"
-                onAdd={(key) => update({ content_context: { ...draft.content_context, [key]: "" } })}
-                validate={(key) => (key in draft.content_context ? "Esa clave ya existe" : null)}
-              />
-            </CardContent>
-          </Card>
-
           <TypeStrip
             keys={typeKeys}
             active={activeKey}
@@ -495,6 +399,7 @@ export function ProfileEditor() {
             }}
             onAdd={addType}
             onRemove={removeType}
+            disabled={stageLocked}
           />
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -507,57 +412,62 @@ export function ProfileEditor() {
                     pertenece cada ejercicio del documento, y el generador, para saber qué forma
                     debe tener el ítem. Escríbela discriminante: qué la distingue de las demás.
                   </InfoHint>
-                  <code className="ml-auto font-mono text-xs text-muted-foreground">
+                  <code className="ml-auto font-mono text-small text-muted-foreground">
                     {activeKey}
                   </code>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="space-y-1">
-                  <Label>Nombre legible</Label>
+                <Field label="Nombre legible">
                   <Input
                     value={spec.label ?? ""}
                     placeholder="Pregunta tipo test"
-                    className="text-sm"
+                    readOnly={stageLocked}
                     onChange={(event) => updateType({ label: event.target.value })}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label>Descripción</Label>
+                </Field>
+                <Field label="Descripción">
                   <Textarea
                     value={spec.description ?? ""}
                     placeholder="Qué es esta modalidad y cómo se reconoce en el material"
-                    className="min-h-20 text-sm"
+                    className="min-h-20"
+                    readOnly={stageLocked}
                     onChange={(event) => updateType({ description: event.target.value })}
                   />
-                </div>
+                </Field>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <CardTitle>Reglas de generación</CardTitle>
-                  <InfoHint label="Qué son las reglas">
-                    Se añaden a los prompts de generación DE ESTA MODALIDAD, sea cual sea el campo.
-                    Una regla que solo tiene sentido aquí (exigir docstring, pedir cuatro
-                    alternativas) va aquí, no en las demás. Para lo específico de un campo usa su
-                    guía de generación.
-                  </InfoHint>
+                  <CardTitle>Reglas de redacción</CardTitle>
                   <Badge variant="outline" className="ml-auto">
                     {rules.length}
                   </Badge>
                 </div>
+                {/* Visible, not behind an (i): this is the one thing on the screen that
+                    decides how a generated item reads, and it is the only instrument the
+                    profile carries for it — the per-field generation guidance is a manual
+                    exception now, not the other half of a pair. */}
+                <p className="text-small text-muted-foreground">
+                  Cómo escribe esta asignatura esta modalidad, y lo único que el perfil le dice al
+                  generador sobre la forma del ejercicio. Cada regla debe poder comprobarse leyendo
+                  un ejercicio ya escrito, y nombrar el campo al que se aplica. Lo que valdría para
+                  cualquier asignatura no es una regla: de la didáctica ya se ocupa el generador.
+                </p>
               </CardHeader>
               <CardContent className="space-y-2">
                 {rules.map((rule, index) => (
                   <div key={index} className="flex items-start gap-2">
-                    <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] tabular-nums text-muted-foreground">
+                    <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground">
                       {index + 1}
                     </span>
                     <Textarea
+                      aria-label={`Regla ${index + 1}`}
                       value={rule}
-                      className="min-h-16 text-sm"
+                      className="min-h-16"
+                      readOnly={stageLocked}
                       placeholder="Una regla por bloque"
                       onChange={(event) => {
                         const next = [...rules];
@@ -568,7 +478,8 @@ export function ProfileEditor() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      title="Quitar regla"
+                      disabled={stageLocked}
+                      title={stageLocked ? LOCKED_HINT : "Quitar regla"}
                       className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       onClick={() =>
                         updateType({
@@ -582,14 +493,17 @@ export function ProfileEditor() {
                 ))}
 
                 {rules.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    Sin reglas: el modelo solo seguirá las guías de cada campo.
+                  <p className="text-small text-attention">
+                    Sin reglas: el generador escribirá esta modalidad sin ninguna convención de la
+                    asignatura, solo con las descripciones del schema. Lo habitual son entre 3 y 8.
                   </p>
                 ) : null}
 
                 <Button
                   size="sm"
                   variant="ghost"
+                  disabled={stageLocked}
+                  title={stageLocked ? LOCKED_HINT : undefined}
                   onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
                 >
                   <Plus />
@@ -600,7 +514,7 @@ export function ProfileEditor() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <h2 className="text-sm font-semibold tracking-tight">
+            <h2 className="text-body font-semibold tracking-tight">
               Campos de «{spec.label || activeKey}»
             </h2>
             <Badge variant="outline">{names.length}</Badge>
@@ -623,7 +537,7 @@ export function ProfileEditor() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-body">
                 Campos que se indexan
                 <InfoHint label="Qué se indexa">
                   Los campos que se leen JUNTOS para decidir qué concepto del currículo practica
@@ -642,11 +556,17 @@ export function ProfileEditor() {
                   <button
                     key={name}
                     type="button"
-                    disabled={locked}
+                    disabled={locked || stageLocked}
                     onClick={() => toggleIndexed(name)}
-                    title={locked ? "El campo primario siempre se indexa" : undefined}
+                    title={
+                      locked
+                        ? "El campo primario siempre se indexa"
+                        : stageLocked
+                          ? LOCKED_HINT
+                          : undefined
+                    }
                     className={cn(
-                      "rounded-md border px-2 py-1 font-mono text-xs transition-colors",
+                      "rounded-md border px-2 py-1 font-mono text-small transition-colors",
                       on
                         ? "border-primary/40 bg-primary/10 text-foreground"
                         : "border-border text-muted-foreground hover:bg-muted",
@@ -662,7 +582,7 @@ export function ProfileEditor() {
           </Card>
 
           {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
-            <Alert tone="warning" title="El campo primario no es de texto">
+            <Alert tone="attention" title="El campo primario no es de texto">
               <p>
                 <code className="font-mono">{spec.primary_field}</code> es el texto que se embebe y
                 se etiqueta contra el grafo; con otro tipo el emparejamiento con conceptos pierde
@@ -710,6 +630,7 @@ export function ProfileEditor() {
             cta="Añadir campo"
             onAdd={addField}
             validate={(name) => fieldNameError(name, names)}
+            disabled={stageLocked}
           />
         </div>
       )}
@@ -721,7 +642,7 @@ export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
   return (
     <StageGate
       stage={stage}
-      title="2 · Perfil de ejemplares"
+      title="Perfil de ejemplares"
       description={
         <>
           Define qué es un ítem: sus campos, sus tipos y las guías que el modelo sigue al

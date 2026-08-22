@@ -29,8 +29,8 @@ const ORDER: Record<string, number> = {
 const LEVEL_COLOUR: Record<string, string> = {
   DEBUG: "text-muted-foreground",
   INFO: "text-foreground",
-  SUCCESS: "text-[var(--success)]",
-  WARNING: "text-[var(--warning)]",
+  SUCCESS: "text-settled",
+  WARNING: "text-attention",
   ERROR: "text-destructive",
   CRITICAL: "text-destructive",
 };
@@ -85,10 +85,11 @@ export function LogViewer({
         <div className="relative min-w-44 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
+            aria-label="Filtrar por texto o módulo"
             value={needle}
             onChange={(event) => setNeedle(event.target.value)}
             placeholder="Filtrar por texto o módulo…"
-            className="h-8 pl-8 text-xs"
+            className="h-8 pl-8 text-small"
           />
         </div>
 
@@ -100,7 +101,7 @@ export function LogViewer({
               onClick={() => setFloor(level)}
               title={`Mostrar desde ${level}`}
               className={cn(
-                "rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                "rounded-full border px-2 py-0.5 text-micro transition-colors",
                 floor === level
                   ? "border-primary text-primary"
                   : "border-border text-muted-foreground hover:text-foreground",
@@ -139,7 +140,7 @@ export function LogViewer({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+        <p className="rounded-md border border-dashed border-border p-4 text-center text-small text-muted-foreground">
           {logs.length === 0
             ? "Todavía no hay registros en esta sesión."
             : "Ningún registro coincide con el filtro."}
@@ -151,7 +152,7 @@ export function LogViewer({
             const el = pane.current;
             if (el) setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
           }}
-          className="thin-scroll overflow-auto rounded-md border border-border bg-muted/30 p-2 font-mono text-[11px] leading-relaxed"
+          className="thin-scroll overflow-auto rounded-md border border-border bg-muted/30 p-2 font-mono text-micro leading-relaxed"
           style={{ height }}
         >
           {filtered.length > visible.length ? (

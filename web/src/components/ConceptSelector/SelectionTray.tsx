@@ -26,8 +26,8 @@ export function SelectionTray({
     <footer className="shrink-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-[110rem] flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            <span className="text-sm font-semibold tabular-nums text-foreground">
+          <p className="text-small text-muted-foreground">
+            <span className="text-body font-semibold nums text-foreground">
               {selected.length}
             </span>{" "}
             de {offered} concepto(s) elegidos
@@ -49,7 +49,7 @@ export function SelectionTray({
         <div className="thin-scroll max-h-24 overflow-y-auto">
           <div className="flex flex-wrap items-center gap-1.5">
             {selected.length === 0 ? (
-              <span className="text-sm text-muted-foreground">Ningún concepto elegido</span>
+              <span className="text-body text-muted-foreground">Ningún concepto elegido</span>
             ) : (
               selected.map((name) => (
                 <Badge key={name} variant="secondary" className="pr-1">
@@ -75,7 +75,7 @@ export function SelectionTray({
         {implied.length > 0 ? (
           <div className="thin-scroll max-h-20 overflow-y-auto border-t border-dashed border-border pt-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="mr-1 text-micro font-medium uppercase tracking-wide text-muted-foreground">
                 Por prerrequisito
               </span>
               {implied.map((name) => (

@@ -19,21 +19,52 @@ export function Tabs({
   onChange: (next: string) => void;
   className?: string;
 }) {
+  const move = (delta: number) => {
+    const index = items.findIndex((item) => item.value === value);
+    if (index < 0) return;
+    // Wrapping, which is what the pattern specifies: from the last one, -> returns to the
+    // first.
+    onChange(items[(index + delta + items.length) % items.length].value);
+  };
+
   return (
     <div
       role="tablist"
       className={cn("inline-flex items-center gap-1 rounded-lg bg-muted p-1", className)}
+      // The roles were here without any of the behaviour they promise. Someone navigating
+      // by keyboard expects the arrows to move between tabs, and instead had to Tab
+      // through all of them to reach the content: a role that lies is worse than no role,
+      // because the screen reader announces a contract that does not exist.
+      onKeyDown={(event) => {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          move(1);
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          move(-1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          onChange(items[0].value);
+        } else if (event.key === "End") {
+          event.preventDefault();
+          onChange(items[items.length - 1].value);
+        }
+      }}
     >
       {items.map((item) => (
         <button
           key={item.value}
           role="tab"
           aria-selected={value === item.value}
+          // Only the active tab is in the tab order; the rest are reached with the arrows.
+          // That is the other half of the pattern, and without it a bar of five tabs is
+          // five stops before the content.
+          tabIndex={value === item.value ? 0 : -1}
           onClick={() => onChange(item.value)}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             value === item.value
-              ? "bg-background text-foreground shadow-sm"
+              ? "bg-background text-foreground shadow-raised"
               : "text-muted-foreground hover:text-foreground",
           )}
         >

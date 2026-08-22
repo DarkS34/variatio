@@ -32,7 +32,7 @@ export function BoardMode({
 
   if (groups.length === 0) {
     return (
-      <p className="p-16 text-center text-sm text-muted-foreground">Sin resultados</p>
+      <p className="p-16 text-center text-body text-muted-foreground">Sin resultados</p>
     );
   }
 
@@ -63,12 +63,12 @@ export function BoardMode({
                 className="size-2.5 shrink-0 rounded-full"
                 style={{ background: colour }}
               />
-              <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide">
+              <h3 className="min-w-0 flex-1 truncate text-small font-semibold uppercase tracking-wide">
                 {domain}
               </h3>
               <span
                 className={cn(
-                  "shrink-0 text-[11px] tabular-nums",
+                  "shrink-0 text-micro nums",
                   picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                 )}
               >
@@ -78,7 +78,7 @@ export function BoardMode({
                 type="button"
                 disabled={free.length === 0}
                 onClick={() => onToggleDomain(free, allChosen)}
-                className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {allChosen ? "ninguno" : "todos"}
               </button>
@@ -110,7 +110,7 @@ export function BoardMode({
                           : undefined
                     }
                     className={cn(
-                      "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                      "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-small transition-colors",
                       state === "selected" && "border-primary bg-primary text-primary-foreground",
                       state === "implied" &&
                         "cursor-not-allowed border-dashed border-primary/40 bg-primary/10 text-primary/70",
@@ -128,13 +128,13 @@ export function BoardMode({
                             "size-1.5 shrink-0 rounded-full",
                             state === "selected"
                               ? "bg-primary-foreground/70"
-                              : "bg-[var(--warning)]",
+                              : "bg-attention",
                           )}
                         />
                       ) : (
                         <span
                           className={cn(
-                            "shrink-0 tabular-nums",
+                            "shrink-0 nums",
                             state === "selected"
                               ? "text-primary-foreground/70"
                               : "text-muted-foreground",

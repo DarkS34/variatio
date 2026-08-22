@@ -1,25 +1,25 @@
 from loguru import logger
 
-from ..exemplars_profile import ExemplarsProfile
 from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
 from ..knowledge_graph import KnowledgeGraph
 from ..workspace import Workspace
 from . import _artifacts
 
 
+# No profile here, and that is the point of moving the context out of it. Describing a
+# concept needs the graph and what subject this is; it never needed the anatomy of an
+# exercise. Loading the profile for its `content_context` alone is what made
+# `review.UPSTREAM[KNOWLEDGE_GRAPH] == ()` false in practice, and it failed exactly in the
+# state a new workspace starts in: a graph built, nothing else yet.
 def _describer(ws: Workspace | None = None) -> ConceptDescriber:
     ws = _artifacts.resolve(ws)
-    profile_path = _artifacts.exemplars_profile_path(ws)
-    if profile_path is None:
-        raise _artifacts.MissingArtifactError(_artifacts.EXEMPLARS_PROFILE)
     kg_path = _artifacts.knowledge_graph_path(ws)
     if kg_path is None:
         raise _artifacts.MissingArtifactError(_artifacts.KNOWLEDGE_GRAPH)
 
-    profile = ExemplarsProfile(profile_path)
     return ConceptDescriber(
         KnowledgeGraph(kg_path),
-        profile.content_context,
+        _artifacts.load_content_context(ws),
         path=ws.concept_descriptions_path,
         sources_path=ws.concept_sources_path,
     )

@@ -107,7 +107,7 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
         // out which names have an account, so it declines to say. The second sentence is
         // not a hedge either — most accounts here have no address at all, and the link
         // reaches its owner through whoever administra la instalación.
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body text-muted-foreground">
           Si esa cuenta existe, el enlace ya está emitido y caduca en 45 minutos. Llega por
           correo solo si la cuenta tiene una dirección asociada; si no, pídeselo a quien
           administra la instalación.

@@ -219,6 +219,7 @@ EXEMPLARS_TRANSCRIBE_MODEL = LLM_MAIN
 # Exemplars profile builder
 EP_SCAN_MODEL = LLM_MAIN
 EP_CONSOLIDATE_MODEL = LLM_MAIN
+EP_CONTEXT_MODEL = LLM_MAIN
 
 # Exemplars bank builder
 EB_EXTRACT_MODEL = LLM_MAIN
@@ -239,6 +240,7 @@ KG_DOMAINS_LEFTOVERS_MODEL = LLM_MAIN
 KG_LINK_DOMAIN_MODEL = LLM_MAIN
 KG_LINK_CROSS_DOMAIN_MODEL = LLM_MAIN
 KG_TAGGABLE_MODEL = LLM_MAIN
+KG_CONTEXT_MODEL = LLM_MAIN
 
 # Runtime pipeline
 
@@ -314,6 +316,17 @@ EB_CHUNK_SIZE = 12_000
 
 KG_BUILDER_CHUNK_SIZE = 12_000
 KG_MAX_EVIDENCE_RELATIONS = 6
+
+# Una segunda lectura de cada fragmento, enseñándole al modelo lo que ya encontró y
+# pidiéndole lo que falta (el «gleaning» de GraphRAG/LightRAG). La primera lectura se
+# queda corta sobre todo en relaciones entre conceptos que sí nombró; la segunda se detiene
+# sola en cuanto no añade nada. Es la fase más barata de la construcción (8 % medido), así
+# que doblarla es asumible; 0 la desactiva.
+KG_EXTRACT_GLEANING_PASSES = 1
+# Una definición de una línea por concepto, escrita en el fragmento que lo introduce y
+# recortada aquí por si el modelo se extiende; acompaña al nombre en todas las llamadas
+# posteriores de la construcción.
+KG_DEFINITION_MAX_CHARS = 220
 
 # El anclaje de cada concepto al corpus: de qué párrafos del material de teoría salió.
 # Es lo que permite enseñar que un concepto del grafo viene de algo real, y es lo que
@@ -395,8 +408,16 @@ TAGGER_TOP_K_CANDIDATES = 10
 TAGGER_FALLBACK_TOP_K = 30
 MAX_FEW_SHOT_EXAMPLES = 4
 MAX_JSON_REPAIR_TRIES = 3
+CHECK_SIMILARITY_THRESHOLD = 0.85
 
 GENERATION_INSTRUCTIONS_MAX_CHARS = 600
+
+# El contexto de la asignatura entra en TODOS los prompts del sistema, así que su coste se
+# paga una vez por llamada y en cada una de ellas. 900 caracteres son ~250 tokens: espacio
+# de sobra para decir qué materia es, a qué nivel, en qué idioma y con qué convenciones, y
+# poco suficiente como para que no compita con el material que el prompt lleva de verdad.
+# También es lo que acota la síntesis: sin techo, cada reconstrucción añadiría un matiz más.
+CONTENT_CONTEXT_MAX_CHARS = 900
 GUARDRAIL_CRITERIA = ("harm", "jailbreak")
 
 

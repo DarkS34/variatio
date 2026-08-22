@@ -62,11 +62,11 @@ function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: b
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
         <Spinner />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">
+          <p className="text-body font-medium">
             Preparando las tres propuestas
-            <span className="ml-2 tabular-nums text-muted-foreground">{done} de 3</span>
+            <span className="ml-2 nums text-muted-foreground">{done} de 3</span>
           </p>
-          <p className="text-xs tabular-nums text-muted-foreground">{duration(elapsed)}</p>
+          <p className="text-small nums text-muted-foreground">{duration(elapsed)}</p>
         </div>
         <Progress value={done} max={3} className="hidden w-40 sm:block" />
         <Button variant="outline" size="sm" onClick={onCancel} disabled={cancelling}>
@@ -75,7 +75,7 @@ function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: b
         </Button>
       </div>
 
-      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+      <p className="flex items-start gap-1.5 text-small text-muted-foreground">
         <EyeOff className="mt-0.5 size-3.5 shrink-0" />
         Durante una comparación se ocultan el registro y el detalle técnico: dirían de qué
         arquitectura sale cada propuesta antes de que la leas.
@@ -88,10 +88,10 @@ function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: b
             className="flex h-64 flex-col overflow-hidden rounded-xl border border-border bg-card"
           >
             <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-muted font-mono text-base font-semibold text-muted-foreground">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-muted font-mono text-heading text-muted-foreground">
                 {letterFor(position)}
               </span>
-              <span className="text-sm text-muted-foreground">Propuesta {letterFor(position)}</span>
+              <span className="text-body text-muted-foreground">Propuesta {letterFor(position)}</span>
             </div>
             <div className="flex-1 space-y-2 p-3">
               <Skeleton className="h-3 w-full" />
@@ -171,7 +171,7 @@ export function EvaluationScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Comparar tres propuestas</h1>
+        <h1 className="font-display font-expanded text-display">Comparar tres propuestas</h1>
         <InfoHint label="Para qué sirve">
           El mismo encargo se resuelve de tres formas: un modelo comercial con un prompt
           corriente, una búsqueda por similitud sobre el banco, y este sistema con el grafo.
@@ -186,7 +186,7 @@ export function EvaluationScreen() {
       </header>
 
       {!unlocked ? (
-        <Alert tone="warning" title="Comparación bloqueada">
+        <Alert tone="attention" title="Comparación bloqueada">
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
             Sin aprobar:{" "}
@@ -205,7 +205,7 @@ export function EvaluationScreen() {
       ) : null}
 
       {external && !external.configured ? (
-        <Alert tone="warning" title="La propuesta comercial no está configurada">
+        <Alert tone="attention" title="La propuesta comercial no está configurada">
           <p>{external.reason}</p>
           <p className="mt-1 text-muted-foreground">
             La sesión seguirá adelante y esa propuesta quedará registrada como no

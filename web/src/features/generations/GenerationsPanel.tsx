@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
-import { ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
+import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { when } from "@/lib/format";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
@@ -72,12 +72,12 @@ export function GenerationsPanel() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-base font-semibold tracking-tight">Variantes guardadas</h2>
+        <h2 className="text-heading">Variantes guardadas</h2>
         <InfoHint label="Qué hay aquí">
           Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
           solas: no hay nada que pulsar al generar.
         </InfoHint>
-        <span className="text-sm tabular-nums text-muted-foreground">{total}</span>
+        <span className="text-body nums text-muted-foreground">{total}</span>
 
         {rows.length > 0 && profile ? (
           <div className="ml-auto flex gap-1">
@@ -131,6 +131,7 @@ export function GenerationsPanel() {
           }}
         >
           <Input
+            aria-label="Buscar en el enunciado, el concepto o las instrucciones"
             placeholder="Buscar en el enunciado, el concepto o las instrucciones…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -188,7 +189,7 @@ function ScopeTab({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors",
+        "flex items-center gap-1.5 px-3 py-1.5 text-body transition-colors",
         active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -223,7 +224,7 @@ function GenerationCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-sm">
+          <CardTitle className="text-body">
             {row.concepts.length > 0 ? row.concepts.join(" · ") : "Sin conceptos declarados"}
           </CardTitle>
           {manyTypes && profile ? (
@@ -235,11 +236,11 @@ function GenerationCard({
               razonó
             </Badge>
           ) : null}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-small text-muted-foreground">
             {when(new Date(row.created_at * 1000).toISOString())}
           </span>
           {showAuthor && row.author.name ? (
-            <span className="text-xs text-muted-foreground">· {row.author.name}</span>
+            <span className="text-small text-muted-foreground">· {row.author.name}</span>
           ) : null}
 
           <div className="ml-auto flex gap-1">
@@ -262,9 +263,12 @@ function GenerationCard({
 
       <CardContent className="space-y-3">
         {expanded ? (
-          <ItemFields item={row.item} spec={spec} />
+          <>
+            <ItemFields item={row.item} spec={spec} />
+            <ItemChecks checks={row.checks} />
+          </>
         ) : (
-          <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+          <p className="line-clamp-3 whitespace-pre-wrap text-body text-muted-foreground">
             {primary}
           </p>
         )}
@@ -273,7 +277,7 @@ function GenerationCard({
 
         <button
           onClick={onToggle}
-          className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+          className="text-small font-medium text-primary underline-offset-4 hover:underline"
         >
           {expanded ? "Ver menos" : "Ver el ítem completo y su encargo"}
         </button>
@@ -294,7 +298,7 @@ function Commission({ row }: { row: GenerationRow }) {
   if (entries.length === 0) return null;
 
   return (
-    <dl className="grid gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:grid-cols-[auto_minmax(0,1fr)]">
+    <dl className="grid gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 p-3 text-small sm:grid-cols-[auto_minmax(0,1fr)]">
       {entries.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="font-medium text-muted-foreground">{label}</dt>

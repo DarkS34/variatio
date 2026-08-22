@@ -62,7 +62,7 @@ function Exemplar({
           </span>
           <span
             className={cn(
-              "mt-1 block text-xs leading-relaxed",
+              "mt-1 block text-small leading-relaxed",
               open ? "whitespace-pre-wrap" : "line-clamp-2",
             )}
           >
@@ -82,7 +82,7 @@ function Exemplar({
                 {isCodeField(field) ? (
                   <CodeBlock code={String(value)} maxHeight="14rem" />
                 ) : (
-                  <p className="text-xs text-muted-foreground">{String(value)}</p>
+                  <p className="text-small text-muted-foreground">{String(value)}</p>
                 )}
               </div>
             );
@@ -124,12 +124,12 @@ export function FewShotPanel({
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         <BookOpenText className="size-3.5" />
         Ejemplares usados para el few-shot prompting
-        <Badge variant={exemplars.length === 0 ? "warning" : "outline"} className="ml-auto">
+        <Badge variant={exemplars.length === 0 ? "attention" : "outline"} className="ml-auto">
           {exemplars.length === 0 ? "zero-shot" : exemplars.length}
         </Badge>
       </button>
@@ -137,7 +137,7 @@ export function FewShotPanel({
       {open ? (
         <div className="space-y-1.5 border-t border-border p-2.5">
           {exemplars.length === 0 ? (
-            <p className="text-xs text-[var(--warning)]">
+            <p className="text-small text-attention">
               Ningún ítem del banco lleva estos conceptos: el modelo genera sin ejemplos.
             </p>
           ) : (

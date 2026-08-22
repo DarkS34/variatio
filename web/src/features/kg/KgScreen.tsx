@@ -13,16 +13,19 @@ import {
 import { useMemo, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
-import { StageGate } from "@/components/StageGate";
+import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
+import { Table, TableEmpty, TBody, TD, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/toast";
+import { api, getCurriculum } from "@/lib/api";
 import { domainColour, relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
@@ -55,25 +58,34 @@ function ConceptDetail({
   concepts: KgConcept[];
   onChanged: () => void;
 }) {
+  const locked = useStageLocked();
   const [name, setName] = useState(concept.name);
   const [domain, setDomain] = useState(concept.domain);
   const [relation, setRelation] = useState(relations[0] ?? "");
   const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const toast = useToast();
   const neighbours = useQuery({
     queryKey: ["kg", "neighbours", concept.name],
     queryFn: () => api.kgNeighbours(concept.name),
   });
 
-  const run = <T,>(action: () => Promise<T>) => {
+  // Every edit of the graph goes through here, so this is where the acknowledgement
+  // belongs. Deleting a concept takes its relations with it and the only way back is the
+  // history file; it was one of the actions that said nothing at all.
+  const run = <T,>(action: () => Promise<T>, done?: string) => {
     setError(null);
     return action()
       .then(() => {
         onChanged();
         neighbours.refetch();
+        if (done) toast({ title: done });
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        setError(e.message);
+        toast({ title: "No se ha podido guardar", description: e.message, tone: "danger" });
+      });
   };
 
   const update = useMutation({
@@ -85,23 +97,30 @@ function ConceptDetail({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="space-y-1">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(event) => setName(event.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label>Dominio</Label>
-          <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
+        <Field label="Nombre">
+          <Input
+            value={name}
+            readOnly={locked}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </Field>
+        <Field label="Dominio">
+          <Select
+            value={domain}
+            disabled={locked}
+            title={locked ? LOCKED_HINT : undefined}
+            onChange={(event) => setDomain(event.target.value)}
+          >
             {domains.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
             ))}
           </Select>
-        </div>
+        </Field>
         <div className="flex items-center justify-between rounded-md border border-border p-2">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm">Etiquetable</p>
+            <p className="text-body">Etiquetable</p>
             <InfoHint label="Qué significa etiquetable">
               Un concepto no etiquetable queda fuera del retrieval y de la generación: sigue en el
               grafo por sus relaciones, pero ningún ítem se le asigna.
@@ -109,13 +128,14 @@ function ConceptDetail({
           </div>
           <Switch
             checked={concept.taggable}
+            disabled={locked}
             onCheckedChange={(next) =>
               run(() => api.updateConcept({ name: concept.name, taggable: next }))
             }
             label="etiquetable"
           />
         </div>
-        {dirty ? (
+        {dirty && !locked ? (
           <Button
             size="sm"
             className="w-full"
@@ -137,58 +157,60 @@ function ConceptDetail({
 
       {concept.description ? (
         <div className="space-y-1">
-          <Label>Descripción</Label>
-          <p className="rounded-md border border-border bg-muted/40 p-2 text-sm leading-relaxed">
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">Descripción</h4>
+          <p className="rounded-md border border-border bg-muted/40 p-2 text-body leading-relaxed">
             {concept.description}
           </p>
         </div>
       ) : (
-        <Alert tone="warning">
-          <p className="text-xs">Sin descripción: no compite en el retrieval.</p>
+        <Alert tone="attention">
+          <p className="text-small">Sin descripción: no compite en el retrieval.</p>
         </Alert>
       )}
 
-      <div className="flex gap-4 text-xs text-muted-foreground">
+      <div className="flex gap-4 text-small text-muted-foreground">
         <span>grado {concept.degree}</span>
       </div>
 
       <Separator />
 
       <div className="space-y-2">
-        <Label>Relaciones</Label>
+        <h4 className="text-micro font-condensed uppercase text-muted-foreground">Relaciones</h4>
         {neighbours.isLoading ? (
           <Spinner />
         ) : (
           Object.entries(neighbours.data?.relations ?? {}).map(([verb, data]) => (
             <div key={verb} className="space-y-1">
-              <p className="text-xs font-medium">{verb}</p>
+              <p className="text-small font-medium">{verb}</p>
               <div className="flex flex-wrap gap-1">
                 {[...data.out.map((n) => ({ n, dir: "→" })), ...data.in.map((n) => ({ n, dir: "←" }))].map(
                   ({ n, dir }) => (
                     <Badge key={`${verb}-${dir}-${n}`} variant="secondary" className="pr-1">
                       <span className="text-muted-foreground">{dir}</span>
                       {n}
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${n}`}
-                        onClick={() =>
-                          run(() =>
-                            api.removeEdge(
-                              verb,
-                              dir === "→" ? concept.name : n,
-                              dir === "→" ? n : concept.name,
-                            ),
-                          )
-                        }
-                        className="rounded-full p-0.5 hover:bg-background/60"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
+                      {locked ? null : (
+                        <button
+                          type="button"
+                          aria-label={`Quitar ${n}`}
+                          onClick={() =>
+                            run(() =>
+                              api.removeEdge(
+                                verb,
+                                dir === "→" ? concept.name : n,
+                                dir === "→" ? n : concept.name,
+                              ),
+                            )
+                          }
+                          className="rounded-full p-0.5 hover:bg-background/60"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      )}
                     </Badge>
                   ),
                 )}
                 {data.out.length === 0 && data.in.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-small text-muted-foreground">—</span>
                 ) : null}
               </div>
             </div>
@@ -196,14 +218,26 @@ function ConceptDetail({
         )}
 
         <div className="flex gap-1 pt-1">
-          <Select value={relation} onChange={(event) => setRelation(event.target.value)} className="text-xs">
+          <Select
+            aria-label="Tipo de relación"
+            disabled={locked}
+            value={relation}
+            onChange={(event) => setRelation(event.target.value)}
+            className="text-small"
+          >
             {relations.map((verb) => (
               <option key={verb} value={verb}>
                 {verb}
               </option>
             ))}
           </Select>
-          <Select value={target} onChange={(event) => setTarget(event.target.value)} className="text-xs">
+          <Select
+            aria-label="Concepto destino"
+            disabled={locked}
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+            className="text-small"
+          >
             <option value="">concepto…</option>
             {concepts
               .filter((c) => c.name !== concept.name)
@@ -216,7 +250,8 @@ function ConceptDetail({
           <Button
             size="icon"
             variant="outline"
-            disabled={!target || !relation}
+            disabled={locked || !target || !relation}
+            title={locked ? LOCKED_HINT : undefined}
             onClick={() => run(() => api.addEdge(relation, concept.name, target)).then(() => setTarget(""))}
             aria-label="Añadir relación"
           >
@@ -225,16 +260,18 @@ function ConceptDetail({
         </div>
       </div>
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-small text-destructive">{error}</p> : null}
 
       <Separator />
 
       <Button
         variant="outline"
+        disabled={locked}
+        title={locked ? LOCKED_HINT : undefined}
         className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => {
           if (!window.confirm(`¿Eliminar el concepto "${concept.name}" y sus relaciones?`)) return;
-          run(() => api.deleteConcept(concept.name));
+          run(() => api.deleteConcept(concept.name), "Concepto eliminado");
         }}
       >
         <Trash2 />
@@ -259,11 +296,13 @@ function AddConceptDialog({
   const [domain, setDomain] = useState(domains[0] ?? "");
   const [taggable, setTaggable] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const create = useMutation({
     mutationFn: () => api.addConcept(name.trim(), domain, taggable),
     onSuccess: () => {
       onDone();
+      toast({ title: "Concepto creado", description: name.trim() });
       setName("");
       onClose();
     },
@@ -289,12 +328,10 @@ function AddConceptDialog({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-1">
-          <Label>Nombre</Label>
+        <Field label="Nombre">
           <Input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
-        </div>
-        <div className="space-y-1">
-          <Label>Dominio</Label>
+        </Field>
+        <Field label="Dominio">
           <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
             {domains.map((option) => (
               <option key={option} value={option}>
@@ -302,20 +339,29 @@ function AddConceptDialog({
               </option>
             ))}
           </Select>
-        </div>
+        </Field>
         <div className="flex items-center gap-2">
           <Switch checked={taggable} onCheckedChange={setTaggable} label="etiquetable" />
-          <span className="text-sm">Etiquetable</span>
+          <span className="text-body">Etiquetable</span>
         </div>
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {error ? <p className="text-small text-destructive">{error}</p> : null}
       </div>
     </Dialog>
   );
 }
 
 function GraphExplorer() {
+  const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
+  // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
+  // and when the workspace has none, because an empty set means "covered nothing yet",
+  // which is a different statement and would dim the whole graph.
+  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: getCurriculum });
+  const curriculumSet = useMemo(
+    () => (curriculum.data ? new Set(curriculum.data.concepts) : undefined),
+    [curriculum.data],
+  );
   const invalidate = useInvalidateChain();
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -365,6 +411,7 @@ function GraphExplorer() {
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
+            aria-label="Buscar concepto o descripción"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar concepto o descripción…"
@@ -372,6 +419,7 @@ function GraphExplorer() {
           />
         </div>
         <Select
+          aria-label="Filtrar por dominio"
           value={domainFilter}
           onChange={(event) => setDomainFilter(event.target.value)}
           className="max-w-56"
@@ -383,12 +431,19 @@ function GraphExplorer() {
             </option>
           ))}
         </Select>
-        <Button variant="outline" onClick={() => setAddingConcept(true)}>
+        <Button
+          variant="outline"
+          disabled={locked}
+          title={locked ? LOCKED_HINT : undefined}
+          onClick={() => setAddingConcept(true)}
+        >
           <Plus />
           Concepto
         </Button>
         <Button
           variant="outline"
+          disabled={locked}
+          title={locked ? LOCKED_HINT : undefined}
           onClick={() => {
             const name = window.prompt("Nombre del nuevo dominio");
             if (name?.trim()) api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
@@ -399,10 +454,10 @@ function GraphExplorer() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-small text-muted-foreground">
         <span>{totals.concepts} conceptos</span>
         <span>{totals.taggable} etiquetables</span>
-        <span className={totals.described < totals.taggable ? "text-[var(--warning)]" : undefined}>
+        <span className={totals.described < totals.taggable ? "text-attention" : undefined}>
           {totals.described} con descripción
         </span>
       </div>
@@ -422,10 +477,11 @@ function GraphExplorer() {
           onSelect={setSelected}
           highlight={highlight}
           hiddenRelations={hiddenRelations}
+          curriculum={curriculumSet}
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
         <span className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted-foreground">Relaciones:</span>
           {graph.data.relations.map((relation, index) => (
@@ -487,7 +543,7 @@ function GraphExplorer() {
                 style={{ background: domainColour(index, graph.data!.groups.length) }}
               />
               {group.name}
-              <span className="tabular-nums">{group.count}</span>
+              <span className="nums">{group.count}</span>
             </button>
           ))}
         </span>
@@ -500,7 +556,7 @@ function GraphExplorer() {
           su barra de progreso debajo. Aquí queda lo que la cabecera no puede decir — qué
           significa que la revisión no se haya hecho. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
-        <Alert tone="warning" title="Etiquetabilidad sin revisar">
+        <Alert tone="attention" title="Etiquetabilidad sin revisar">
           <p>
             Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
             identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
@@ -516,20 +572,17 @@ function GraphExplorer() {
             <CardTitle>Conceptos ({filtered.length})</CardTitle>
           </CardHeader>
           <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto p-0">
-            <table className="w-full text-sm">
-              <tbody>
+            <Table minWidth="18rem">
+              <TBody>
                 {filtered.map((concept) => {
                   const groupIndex = graph.data!.groups.findIndex((g) => g.name === concept.domain);
                   return (
-                    <tr
+                    <TR
                       key={concept.name}
-                      onClick={() => setSelected(concept.name)}
-                      className={cn(
-                        "cursor-pointer border-b border-border transition-colors hover:bg-accent",
-                        selected === concept.name && "bg-primary/10",
-                      )}
+                      selected={selected === concept.name}
+                      onSelect={() => setSelected(concept.name)}
                     >
-                      <td className="w-1 py-1.5 pl-3">
+                      <TD className="w-1 pr-0">
                         <span
                           className="block size-2 rounded-full"
                           style={{
@@ -539,29 +592,28 @@ function GraphExplorer() {
                             ),
                           }}
                         />
-                      </td>
-                      <td className="min-w-0 py-1.5 pl-2 pr-2">
+                      </TD>
+                      <TD className="min-w-0">
                         <span className={cn(!concept.taggable && "text-muted-foreground line-through")}>
                           {concept.name}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap py-1.5 pr-3 text-right text-xs text-muted-foreground">
+                      </TD>
+                      <TD align="num" className="whitespace-nowrap">
                         {!concept.description ? (
-                          <TriangleAlert className="inline size-3.5 text-[var(--warning)]" />
+                          <TriangleAlert
+                            className="inline size-3.5 text-attention"
+                            aria-label="Sin descripción"
+                          />
                         ) : null}
-                      </td>
-                    </tr>
+                      </TD>
+                    </TR>
                   );
                 })}
                 {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="p-4 text-center text-sm text-muted-foreground">
-                      Ningún concepto coincide con el filtro.
-                    </td>
-                  </tr>
+                  <TableEmpty colSpan={3}>Ningún concepto coincide con el filtro.</TableEmpty>
                 ) : null}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </CardContent>
         </Card>
 
@@ -580,7 +632,7 @@ function GraphExplorer() {
                 onChanged={refresh}
               />
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 Selecciona un concepto en el grafo o en la lista para editarlo.
               </p>
             )}
@@ -596,29 +648,35 @@ function GraphExplorer() {
           {(kg.data.domains ?? []).map((domain, index) => (
             <div
               key={domain.name}
-              className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm"
+              className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-body"
             >
               <span
                 className="size-2 rounded-full"
                 style={{ background: domainColour(index, kg.data!.domains.length) }}
               />
               {domain.name}
-              <span className="text-xs text-muted-foreground">{domain.concepts.length}</span>
+              <span className="text-small text-muted-foreground">{domain.concepts.length}</span>
               <button
                 aria-label={`Renombrar ${domain.name}`}
-                title="Renombrar"
+                disabled={locked}
+                title={locked ? LOCKED_HINT : "Renombrar"}
                 onClick={() => {
                   const next = window.prompt("Nuevo nombre del dominio", domain.name);
                   if (next?.trim() && next !== domain.name)
                     api.renameDomain(domain.name, next.trim()).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
               >
                 <Pencil className="size-3.5" />
               </button>
               <button
                 aria-label={`Eliminar ${domain.name}`}
-                title={`Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`}
+                disabled={locked}
+                title={
+                  locked
+                    ? LOCKED_HINT
+                    : `Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`
+                }
                 onClick={() => {
                   if (
                     !window.confirm(
@@ -628,7 +686,7 @@ function GraphExplorer() {
                     return;
                   api.deleteDomain(domain.name).then(refresh).catch((e) => setError(e.message));
                 }}
-                className="text-muted-foreground transition-colors hover:text-destructive"
+                className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -672,18 +730,20 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
       ? "Construye antes el grafo."
       : stage.status === "building"
         ? "El grafo se está reconstruyendo."
-        : offline
-          ? offline
-          : !profileReady
-            ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
-            : reviewing
-              ? "La revisión está en marcha."
-              : null;
+        : stage.status === "approved"
+          ? LOCKED_HINT
+          : offline
+            ? offline
+            : !profileReady
+              ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
+              : reviewing
+                ? "La revisión está en marcha."
+                : null;
 
   return (
     <StageGate
       stage={stage}
-      title="1 · Grafo de conocimiento"
+      title="Grafo de conocimiento"
       description={
         <>
           El vocabulario del sistema. Todo lo que se etiquete y se genere después saldrá de aquí:
@@ -716,7 +776,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                 label: "Descripciones",
                 badge:
                   missing > 0 ? (
-                    <Badge variant="warning" className="ml-1">
+                    <Badge variant="attention" className="ml-1">
                       {missing}
                     </Badge>
                   ) : undefined,
@@ -750,7 +810,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
 
       {stage?.status === "approved" && missing === 0 ? (
         <Alert
-          tone="success"
+          tone="settled"
           className="mt-4"
           title="Grafo listo para etiquetar"
           action={
