@@ -33,6 +33,15 @@ const encode = (c) => {
 const hex = (lin) =>
   "#" + lin.map((c) => Math.round(encode(c) * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
 
+const decode = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+
+// A tint composites over its surface in gamma space, which is where the browser does it.
+const over = (tint, alpha, surface) => {
+  const f = tint.map(encode);
+  const b = surface.map(encode);
+  return f.map((c, i) => decode(alpha * c + (1 - alpha) * b[i]));
+};
+
 const luminance = (lin) => {
   const [r, g, b] = lin.map((c) => Math.min(1, Math.max(0, c)));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -119,6 +128,17 @@ const OUTLINE = { "--input": 3, "--border": 1.3 };
 const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive"];
 const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
 
+// Text on a tint of ITS OWN hue. This is the case the plain contrast table cannot see and
+// that it missed: a badge paints its colour behind its own label, so the tint eats the
+// margin the token was verified at. At 18 % the settled and attention badges measured 4.32
+// and 4.26 in light mode — under the floor, on the badge that reports every stage's state.
+const TINTED = [
+  ["--primary", 0.08],
+  ["--attention", 0.08],
+  ["--settled", 0.08],
+  ["--destructive", 0.08],
+];
+
 const TEXT_MIN = 4.5;
 const DE_MIN = 15;
 
@@ -134,6 +154,13 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
     const ratios = SURFACES.map((s) => contrast(tokens[name], tokens[s]));
     const line = `${name.padEnd(20)} ${hex(tokens[name])}  ${ratios.map((r) => r.toFixed(2)).join(" / ")}`;
     Math.min(...ratios) >= TEXT_MIN ? ok(line) : fail(`${line}  < ${TEXT_MIN}`);
+  }
+
+  for (const [name, alpha] of TINTED) {
+    if (!tokens[name]) continue;
+    const ratio = contrast(tokens[name], over(tokens[name], alpha, tokens["--card"]));
+    const line = `${name.padEnd(20)} sobre su tinte al ${(alpha * 100).toFixed(0)}%  ${ratio.toFixed(2)}`;
+    ratio >= TEXT_MIN ? ok(line) : fail(`${line}  < ${TEXT_MIN}`);
   }
 
   for (const [name, min] of Object.entries(OUTLINE)) {

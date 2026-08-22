@@ -7,14 +7,20 @@ const badgeVariants = cva(
   "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-micro font-condensed uppercase transition-colors [&_svg]:size-3",
   {
     variants: {
+      // Every tint is 8 %, and the number is measured rather than chosen. A badge paints
+      // its own hue behind its own text, so the tint eats the contrast the token was
+      // verified at: settled and attention were at 18 %, which in light mode dropped them
+      // to 4.32 and 4.26 — under the 4.5 floor, on the badge that reports the state of
+      // every stage. What sets the ceiling is not those two but --destructive in dark
+      // mode, which is why one value rather than one per hue.
       variant: {
-        default: "border-transparent bg-primary/12 text-primary",
+        default: "border-transparent bg-primary/8 text-primary",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border text-muted-foreground",
-        settled: "border-transparent bg-[color-mix(in_oklch,var(--settled)_18%,transparent)] text-settled",
+        settled: "border-transparent bg-[color-mix(in_oklch,var(--settled)_8%,transparent)] text-settled",
         attention:
-          "border-transparent bg-[color-mix(in_oklch,var(--attention)_18%,transparent)] text-attention",
-        danger: "border-transparent bg-destructive/15 text-destructive",
+          "border-transparent bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] text-attention",
+        danger: "border-transparent bg-destructive/8 text-destructive",
       },
     },
     defaultVariants: { variant: "default" },
