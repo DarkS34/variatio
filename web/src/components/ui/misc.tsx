@@ -64,9 +64,14 @@ export function Progress({
  * measured weights — so the bar keeps being an honest picture of the time, not a row
  * of equal boxes that suggests seven equal stages.
  *
- * Three states, one colour each: done, running (which pulses, because that is the only
+ * Three states, one colour each: done, running (which sweeps, because that is the only
  * part still moving) and pending. The fill inside the running segment is the same
  * percentage the plain bar would have shown.
+ *
+ * This is NOT replaced by the rail: its stretches carry measured weights and its fill is
+ * continuous, and at six pixels tall that reads better as a bar than as nodes. What it
+ * does adopt is the rail's vocabulary — the same verdigris for what is finished and the
+ * same sweep for what is alive, rather than a pulse of its own.
  */
 export function PhaseBar({
   phases,
@@ -115,7 +120,6 @@ export function PhaseBar({
             className={cn(
               "relative h-1.5 overflow-hidden rounded-full",
               running ? "bg-primary/20" : "bg-muted",
-              running && "animate-pulse-soft",
             )}
           >
             <div
