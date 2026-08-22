@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 
 from .. import config, guardrail, progress
-from ..content_generator import clean_fixed
+from ..variant_generator import clean_fixed
 from ..evaluation import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 from .initialize import PipelineContext
 

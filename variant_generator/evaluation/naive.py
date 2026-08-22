@@ -13,7 +13,7 @@ import time
 from loguru import logger
 
 from .. import config
-from ..content_generator import parse_item
+from ..variant_generator import parse_item
 from ..prompts import naive_generation_prompt
 from ..utils import parse_with_repair
 from . import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission

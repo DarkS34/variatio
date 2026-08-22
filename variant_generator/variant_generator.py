@@ -195,7 +195,7 @@ def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
     return raw if isinstance(raw, dict) else None
 
 
-class GeneratedContent(BaseModel):
+class GeneratedVariant(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     item: BaseModel
@@ -204,7 +204,7 @@ class GeneratedContent(BaseModel):
     checks: dict | None = None
 
 
-class ContentGenerator:
+class VariantGenerator:
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
@@ -239,7 +239,7 @@ class ContentGenerator:
         instructions: str | None = None,
         think: bool = True,
         check: bool = True,
-    ) -> list[GeneratedContent]:
+    ) -> list[GeneratedVariant]:
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
         instructions = (instructions or "").strip()
@@ -272,7 +272,7 @@ class ContentGenerator:
         fixed_values_block = self._build_fixed_values_block(target_type, fixed)
         item_type_block = self._build_item_type_block(target_type)
 
-        accepted: list[GeneratedContent] = []
+        accepted: list[GeneratedVariant] = []
         with progress.step("generate", "Generando variantes", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
@@ -502,7 +502,7 @@ class ContentGenerator:
         return build_few_shot_block(item_type, few_shot)
 
     def _collect_already_generated(
-        self, item_type: ItemType, accepted: list[GeneratedContent]
+        self, item_type: ItemType, accepted: list[GeneratedVariant]
     ) -> list[str]:
         out = []
         for r in accepted:
@@ -584,7 +584,7 @@ class ContentGenerator:
 
     def _generate_one(
         self, prompt: str, fixed: dict[str, object], item_type: ItemType, think: bool = True
-    ) -> GeneratedContent | None:
+    ) -> GeneratedVariant | None:
         resp = inference.generate_stream(
             model=self.generator_model,
             prompt=prompt,
@@ -619,4 +619,4 @@ class ContentGenerator:
 
         if item is None:
             return None
-        return GeneratedContent(item=item, item_type=item_type.key, thinking=thinking)
+        return GeneratedVariant(item=item, item_type=item_type.key, thinking=thinking)

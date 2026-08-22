@@ -1,6 +1,6 @@
 """Arm 3 — this pipeline, exactly as it ships.
 
-One call to `context.generator.generate(...)`: no `if` inside `ContentGenerator`. If the
+One call to `context.generator.generate(...)`: no `if` inside `VariantGenerator`. If the
 evaluation needed to modify the generator, it would already be measuring something other
 than the system. `think` is not an exception to that — it is a parameter the Generate
 screen offers to every user, and this arm merely forwards the value the session drew.
@@ -80,7 +80,7 @@ def run(commission: Commission, context) -> ArmResult:
         item=item,
         raw_response=capture.raw,
         prompt=capture.prompt,
-        model=config.CONTENT_GENERATION_LLM,
+        model=config.VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
         exemplar_ids=capture.exemplar_ids,
         elapsed_ms=round((time.perf_counter() - started) * 1000),

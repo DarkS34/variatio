@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from variant_generator.content_generator import ContentGenerator
+from variant_generator.variant_generator import VariantGenerator
 from variant_generator.knowledge_graph import KnowledgeGraph
 
 from .conftest import CHAIN_GRAPH
@@ -18,8 +18,8 @@ def _graph(tmp_path):
     return KnowledgeGraph(str(path))
 
 
-def _generator(graph: KnowledgeGraph) -> ContentGenerator:
-    generator = object.__new__(ContentGenerator)
+def _generator(graph: KnowledgeGraph) -> VariantGenerator:
+    generator = object.__new__(VariantGenerator)
     generator.knowledge_graph = graph
     generator.taggable_concepts = set(graph.taggable_concepts)
     return generator

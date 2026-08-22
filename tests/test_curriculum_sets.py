@@ -1,4 +1,4 @@
-from variant_generator.content_generator import assumed_known, forbidden
+from variant_generator.variant_generator import assumed_known, forbidden
 
 CLOSURE_UP = ["Función", "Variable"]
 CLOSURE_DOWN = ["Memoización", "Recursividad"]

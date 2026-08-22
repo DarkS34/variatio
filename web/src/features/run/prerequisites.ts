@@ -3,7 +3,7 @@ import type { GraphView } from "@/lib/types";
 /**
  * The same two closures the generator computes server-side, read off the graph payload.
  *
- * `ContentGenerator._prerequisites()` walks the prerequisite relation OUTwards (what the
+ * `VariantGenerator._prerequisites()` walks the prerequisite relation OUTwards (what the
  * student is assumed to master already) and `_posteriors()` INwards (not yet taught, and
  * therefore forbidden). Links arrive as `[source, target, relation]`, so an out-neighbour
  * of `c` is the target of a link whose source is `c`. Getting the direction backwards

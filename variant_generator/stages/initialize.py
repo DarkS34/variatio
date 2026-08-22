@@ -8,7 +8,7 @@ from loguru import logger
 from .. import config, progress
 from ..concept_tagger import ConceptTagger
 from ..content_context import ContentContext
-from ..content_generator import ContentGenerator
+from ..variant_generator import VariantGenerator
 from ..embedder import Embedder
 from ..exemplars_profile import ExemplarsProfile
 from ..knowledge_graph import KnowledgeGraph
@@ -66,7 +66,7 @@ class PipelineContext:
     embedder: Embedder
     exemplars_bank: dict
     tagger: ConceptTagger
-    generator: ContentGenerator
+    generator: VariantGenerator
     exemplars_profile_path: Path
     knowledge_graph_path: Path
     workspace: Workspace
@@ -189,13 +189,13 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
 
     embedder = make_embedder(ws, exemplars_profile, knowledge_graph, content_context)
     tagger = make_tagger(embedder, exemplars_profile, content_context)
-    generator = ContentGenerator(
+    generator = VariantGenerator(
         knowledge_graph=knowledge_graph,
         exemplars_bank=bank,
         embedder=embedder,
         exemplars_profile=exemplars_profile,
         content_context=content_context,
-        generator_model=config.CONTENT_GENERATION_LLM,
+        generator_model=config.VARIANT_GENERATION_LLM,
         tagger=tagger,
     )
 

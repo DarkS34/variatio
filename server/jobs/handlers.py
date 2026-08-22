@@ -171,7 +171,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     detail.append("con razonamiento" if think else "sin razonamiento")
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
-        f"'{config.CONTENT_GENERATION_LLM}' sobre "
+        f"'{config.VARIANT_GENERATION_LLM}' sobre "
         + (", ".join(concepts) if concepts else "los conceptos más frecuentes del banco")
         + " — "
         + "; ".join(detail)
@@ -248,7 +248,7 @@ def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str]
 # WHAT THE EVALUATION IS ALLOWED TO SAY WHILE IT RUNS -------------------------------------------
 #
 # The run drawer is global and always visible, so without a filter the system gives away
-# its own blinding: `ContentGenerator` emits `prompt` and `few_shot` unasked, the RAG arm
+# its own blinding: `VariantGenerator` emits `prompt` and `few_shot` unasked, the RAG arm
 # announces its retrieval, and the token stream reads like a signature.
 #
 # A whitelist rather than a blacklist, because ANY inner step identifies its arm — only

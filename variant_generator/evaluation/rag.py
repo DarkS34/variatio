@@ -5,7 +5,7 @@ bank and none of this TFM. The `naive → rag` step measures what having a bank 
 the `rag → system` step measures what the GRAPH is worth, and that second one is the
 contribution being defended.
 
-Same local model as the system arm (`CONTENT_GENERATION_LLM`), the same number of examples
+Same local model as the system arm (`VARIANT_GENERATION_LLM`), the same number of examples
 (`EVAL_RAG_TOP_K`) and the same reasoning mode (`commission.think`, drawn per session), so
 neither the model, nor the prompt budget, nor whether it deliberated is a loose variable
 between them.
@@ -16,7 +16,7 @@ import time
 from loguru import logger
 
 from .. import config, inference, progress
-from ..content_generator import build_few_shot_block, parse_item
+from ..variant_generator import build_few_shot_block, parse_item
 from ..prompts import rag_generation_prompt
 from ..utils import parse_with_repair
 from . import FAILED, OK, ArmResult, Commission
@@ -77,7 +77,7 @@ def run(commission: Commission, context) -> ArmResult:
     )
 
     resp = inference.generate_stream(
-        model=config.CONTENT_GENERATION_LLM,
+        model=config.VARIANT_GENERATION_LLM,
         prompt=prompt,
         think=commission.think,
         on_token=progress.token_sink("eval"),
@@ -102,7 +102,7 @@ def run(commission: Commission, context) -> ArmResult:
         item=item.model_dump(mode="json") if item is not None else None,
         raw_response=raw,
         prompt=prompt,
-        model=config.CONTENT_GENERATION_LLM,
+        model=config.VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
         exemplar_ids=exemplar_ids,
         elapsed_ms=round((time.perf_counter() - started) * 1000),

@@ -1,4 +1,4 @@
-from ..content_generator import GeneratedContent
+from ..variant_generator import GeneratedVariant
 from .initialize import PipelineContext
 
 
@@ -11,7 +11,7 @@ def generate(
     curriculum: list[str] | None = None,
     instructions: str | None = None,
     think: bool = True,
-) -> list[GeneratedContent]:
+) -> list[GeneratedVariant]:
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
     if not targets:
         raise ValueError(
