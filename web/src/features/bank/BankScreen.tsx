@@ -121,7 +121,7 @@ function ItemEditor({
                 onChange={(event) =>
                   setValues((current) => ({ ...current, [field]: event.target.value }))
                 }
-                className={cn("text-sm", field === primaryField ? "min-h-28" : "min-h-20")}
+                className={cn("text-body", field === primaryField ? "min-h-28" : "min-h-20")}
               />
             </div>
           ))}
@@ -239,7 +239,7 @@ function ItemRow({
           </TD>
         ) : null}
         <TD className="min-w-0 py-2 pl-2 pr-3">
-          <button onClick={onEdit} className="block text-left text-sm hover:underline">
+          <button onClick={onEdit} className="block text-left text-body hover:underline">
             {truncate(text, 200)}
           </button>
           {open ? (
@@ -456,7 +456,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <CardContent className="space-y-2">
               {listing ? (
                 <>
-                  <div className="flex items-baseline justify-between text-sm">
+                  <div className="flex items-baseline justify-between text-body">
                     <span className="text-muted-foreground">Ítems con concepto</span>
                     <span className="nums">
                       {listing.totals.tagged}/{listing.totals.items}
@@ -498,7 +498,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <CardContent className="space-y-2">
               {coverage.data ? (
                 <>
-                  <div className="flex items-baseline justify-between text-sm">
+                  <div className="flex items-baseline justify-between text-body">
                     <span className="text-muted-foreground">Conceptos con ejemplo</span>
                     <span className="nums">
                       {coverage.data.covered}/{coverage.data.total}
@@ -523,7 +523,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 </InfoHint>
               </div>
             </CardHeader>
-            <CardContent className="space-y-1 text-sm">
+            <CardContent className="space-y-1 text-body">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Similitud mínima</span>
                 <span className="nums">{listing?.thresholds.similarity ?? "—"}</span>
@@ -651,7 +651,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               </TBody>
             </Table>
             {listing.items.length === 0 ? (
-              <p className="p-8 text-center text-sm text-muted-foreground">
+              <p className="p-8 text-center text-body text-muted-foreground">
                 Ningún ítem con estos filtros.
               </p>
             ) : null}
@@ -661,7 +661,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         )}
 
         {listing && pages > 1 ? (
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-body">
             <span className="text-muted-foreground">
               {listing.total} ítem(s) · página {listing.page} de {pages}
             </span>
@@ -687,7 +687,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         ) : null}
 
         {selected.size > 0 ? (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
             <span>{selected.size} ítem(s) seleccionados</span>
             <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
               Deseleccionar

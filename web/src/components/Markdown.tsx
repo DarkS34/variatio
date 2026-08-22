@@ -266,7 +266,7 @@ export function Markdown({
   if (blocks.length === 0) return null;
 
   return (
-    <div className={cn("space-y-2 text-sm leading-relaxed break-words", className)}>
+    <div className={cn("space-y-2 text-body leading-relaxed break-words", className)}>
       {blocks.map((block, index) => {
         const key = `b${index}`;
         switch (block.kind) {
@@ -286,7 +286,7 @@ export function Markdown({
                 key={key}
                 className={cn(
                   "mt-3 font-semibold first:mt-0",
-                  block.level <= 2 ? "text-[0.95rem]" : "text-sm",
+                  block.level <= 2 ? "text-[0.95rem]" : "text-body",
                 )}
               >
                 {renderInline(block.text, key)}
@@ -322,7 +322,7 @@ export function Markdown({
           case "table":
             return (
               <div key={key} className="thin-scroll overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-xs">
+                <table className="w-full text-small">
                   <thead>
                     <tr className="border-b border-border bg-muted/40">
                       {block.header.map((cell, i) => (

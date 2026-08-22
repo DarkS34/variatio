@@ -30,7 +30,7 @@ export function SessionsTable({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold">
+        <h2 className="text-body font-semibold">
           Tus comparaciones
           <span className="ml-2 font-normal nums text-muted-foreground">{total}</span>
         </h2>

@@ -56,13 +56,13 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Mi perfil</h1>
+        <h1 className="font-display font-expanded text-display">Mi perfil</h1>
         <InfoHint label="Qué hay aquí">
           Tu cuenta y lo que es tuyo: los datos con los que entras, las variantes que has
           generado y los workspaces a los que tienes acceso. Nada de esto es parte de la
           cadena de artefactos, por eso no está en la barra de arriba.
         </InfoHint>
-        <span className="font-mono text-sm text-muted-foreground">{user.username}</span>
+        <span className="font-mono text-body text-muted-foreground">{user.username}</span>
         {user.is_admin ? <Badge variant="secondary">Administrador</Badge> : null}
       </header>
 
@@ -132,7 +132,7 @@ function IdentityCard() {
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Usuario</Label>
-            <p className="rounded-md border border-dashed border-border px-3 py-2 font-mono text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border px-3 py-2 font-mono text-body text-muted-foreground">
               {user.username}
             </p>
             <p className="text-small text-muted-foreground">
@@ -339,7 +339,7 @@ function AccessTab() {
           {workspaces.map((workspace) => (
             <li key={workspace.slug} className="flex flex-wrap items-center gap-3 p-3">
               <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 truncate text-sm font-medium">
+                <p className="flex flex-wrap items-center gap-2 truncate text-body font-medium">
                   {workspace.name}
                   <span className="font-mono text-small text-muted-foreground">
                     {workspace.slug}

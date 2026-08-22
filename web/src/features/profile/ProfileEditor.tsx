@@ -163,7 +163,7 @@ function TypeStrip({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">Modalidades de ítem</h2>
+        <h2 className="text-body font-semibold tracking-tight">Modalidades de ítem</h2>
         <Badge variant="outline">{keys.length}</Badge>
         <InfoHint label="Qué son las modalidades">
           Cada modalidad es una forma distinta de plantear la tarea — una pregunta con
@@ -184,7 +184,7 @@ function TypeStrip({
               key === active ? "border-primary bg-primary/5" : "border-border hover:bg-accent/40",
             )}
           >
-            <span className="text-sm font-medium">{labels[key] || key}</span>
+            <span className="text-body font-medium">{labels[key] || key}</span>
             <Badge variant="outline">{counts[key]}</Badge>
             {keys.length > 1 ? (
               <span
@@ -602,7 +602,7 @@ export function ProfileEditor() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <h2 className="text-sm font-semibold tracking-tight">
+            <h2 className="text-body font-semibold tracking-tight">
               Campos de «{spec.label || activeKey}»
             </h2>
             <Badge variant="outline">{names.length}</Badge>
@@ -625,7 +625,7 @@ export function ProfileEditor() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-body">
                 Campos que se indexan
                 <InfoHint label="Qué se indexa">
                   Los campos que se leen JUNTOS para decidir qué concepto del currículo practica

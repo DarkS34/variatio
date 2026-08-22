@@ -100,7 +100,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
   const visible = expanded ? slot.files : slot.files.slice(0, VISIBLE_FILES);
 
   return (
-    <Card className={cn(empty && "border-[color-mix(in_oklch,var(--warning)_45%,var(--border))]")}>
+    <Card className={cn(empty && "border-[color-mix(in_oklch,var(--attention)_45%,var(--border))]")}>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
@@ -113,9 +113,9 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
             </Badge>
           )}
         </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">{slot.purpose}</p>
+        <p className="text-small leading-relaxed text-muted-foreground">{slot.purpose}</p>
         <div className="flex flex-wrap items-center gap-1 pt-0.5">
-          <span className="text-[11px] text-muted-foreground">Alimenta:</span>
+          <span className="text-micro text-muted-foreground">Alimenta:</span>
           {slot.feeds.map((artifact) => (
             <Badge key={artifact} variant="secondary">
               {FEEDS[artifact] ?? artifact}
@@ -148,10 +148,10 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
           <UploadCloud
             className={cn("size-6", dragging ? "text-primary" : "text-muted-foreground")}
           />
-          <p className="text-sm font-medium">
+          <p className="text-body font-medium">
             {dragging ? "Suelta aquí los documentos" : "Arrastra documentos o haz clic"}
           </p>
-          <p className="text-xs text-muted-foreground">{extensions.join(" · ")}</p>
+          <p className="text-small text-muted-foreground">{extensions.join(" · ")}</p>
           <input
             ref={input}
             type="file"
@@ -168,24 +168,24 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
         {progress !== null ? (
           <div className="space-y-1">
             <Progress value={progress * 100} max={100} />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Subiendo… {Math.round(progress * 100)}%
             </p>
           </div>
         ) : null}
 
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
-        {notice ? <p className="text-xs text-muted-foreground">{notice}</p> : null}
+        {error ? <p className="text-small text-destructive">{error}</p> : null}
+        {notice ? <p className="text-small text-muted-foreground">{notice}</p> : null}
 
         {empty ? null : (
           <ul className="divide-y divide-border rounded-md border border-border">
             {visible.map((file) => (
-              <li key={file.name} className="flex items-center gap-2 px-2 py-1.5 text-xs">
+              <li key={file.name} className="flex items-center gap-2 px-2 py-1.5 text-small">
                 <FileText className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate" title={file.name}>
                   {file.name}
                 </span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
+                <span className="shrink-0 nums text-muted-foreground">
                   {bytes(file.bytes)}
                 </span>
                 <button
@@ -204,7 +204,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
                 <button
                   type="button"
                   onClick={() => setExpanded((value) => !value)}
-                  className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-small text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {expanded
                     ? "Ver menos"

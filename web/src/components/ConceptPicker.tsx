@@ -118,7 +118,7 @@ export function ConceptPicker({
     <div className="space-y-2">
       <div className="flex min-h-8 flex-wrap items-center gap-1.5">
         {selected.length === 0 ? (
-          <span className="text-sm text-muted-foreground">{emptyHint}</span>
+          <span className="text-body text-muted-foreground">{emptyHint}</span>
         ) : (
           visible.map((name) => (
             <Badge
@@ -170,6 +170,7 @@ export function ConceptPicker({
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
+            aria-label="Buscar concepto o dominio"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar concepto o dominio…"
@@ -188,7 +189,7 @@ export function ConceptPicker({
         style={{ maxHeight }}
       >
         {grouped.length === 0 ? (
-          <p className="p-4 text-center text-sm text-muted-foreground">Sin resultados</p>
+          <p className="p-4 text-center text-body text-muted-foreground">Sin resultados</p>
         ) : (
           grouped.map(([domain, items]) => {
             const picked = items.filter((concept) => chosen.has(concept.name)).length;
@@ -215,14 +216,14 @@ export function ConceptPicker({
                       className="size-2 shrink-0 rounded-full"
                       style={{ background: colour }}
                     />
-                    <span className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="truncate text-small font-medium uppercase tracking-wide text-muted-foreground">
                       {domain}
                     </span>
                   </button>
 
                   <span
                     className={cn(
-                      "shrink-0 text-[11px] tabular-nums",
+                      "shrink-0 text-micro nums",
                       picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                     )}
                   >
@@ -231,7 +232,7 @@ export function ConceptPicker({
                   <button
                     type="button"
                     onClick={() => toggleDomain(items, picked === items.length)}
-                    className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
                     {picked === items.length ? "ninguno" : "todos"}
                   </button>
@@ -255,7 +256,7 @@ export function ConceptPicker({
                               : undefined
                           }
                           className={cn(
-                            "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                            "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-small transition-colors",
                             isSelected
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border bg-background hover:border-primary/50 hover:bg-accent",
@@ -269,13 +270,13 @@ export function ConceptPicker({
                                   "size-1.5 shrink-0 rounded-full",
                                   isSelected
                                     ? "bg-primary-foreground/70"
-                                    : "bg-[var(--warning)]",
+                                    : "bg-attention",
                                 )}
                               />
                             ) : (
                               <span
                                 className={cn(
-                                  "shrink-0 tabular-nums",
+                                  "shrink-0 nums",
                                   isSelected
                                     ? "text-primary-foreground/70"
                                     : "text-muted-foreground",

@@ -89,7 +89,7 @@ export function AdminScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Administración</h1>
+        <h1 className="font-display font-expanded text-display">Administración</h1>
         <InfoHint label="Qué es esto">
           La instalación entera vista desde fuera: quién la usa, quién puede entrar y en
           qué, cuántos workspaces hay y cómo va el estudio de evaluación. Es la única
@@ -354,7 +354,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
               </p>
               <p
                 className={cn(
-                  "text-sm nums",
+                  "text-body nums",
                   bad > 0 ? "text-[var(--attention)]" : "text-foreground",
                 )}
               >
@@ -1047,7 +1047,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
       {pending.length > 0 ? (
         <ul className="divide-y divide-border rounded-lg border border-border">
           {pending.map((invite) => (
-            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-sm">
+            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-body">
               <div className="min-w-0 flex-1">
                 {/* No hay destinatario que nombrar: lo que distingue dos enlaces pendientes
                     es cuándo se emitieron y para qué instancia. */}
@@ -1087,7 +1087,7 @@ function InviteLink({ link }: { link: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="text-sm">
+      <p className="text-body">
         Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio
         usuario, así que no lo dejes en un sitio compartido.
       </p>
@@ -1322,7 +1322,7 @@ function DeleteWorkspaceDialog({
         </>
       }
     >
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-body">
         <p>Desaparecen de la instalación y del disco:</p>
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
           <li>

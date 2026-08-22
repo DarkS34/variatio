@@ -53,18 +53,18 @@ export function GraphMode({
     <div className="flex h-full flex-col">
       <div className="shrink-0 border-b border-border px-4 py-2 sm:px-6">
         <div className="mx-auto flex max-w-[110rem] flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="text-small font-medium uppercase tracking-wide text-muted-foreground">
             Niveles de prerrequisito
           </span>
           {bands.map((band) => (
             <div
               key={band.level}
-              className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-small"
             >
               <span className="font-semibold">N{band.level}</span>
               <span
                 className={cn(
-                  "tabular-nums",
+                  "nums",
                   band.chosen > 0 ? "font-medium text-primary" : "text-muted-foreground",
                 )}
               >
@@ -75,7 +75,7 @@ export function GraphMode({
                 disabled={band.upTo.length === 0}
                 onClick={() => onAdd(band.upTo)}
                 title={`Elegir todos los conceptos que se enseñan hasta el nivel ${band.level}`}
-                className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 hasta aquí
               </button>

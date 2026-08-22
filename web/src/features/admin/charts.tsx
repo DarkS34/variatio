@@ -34,7 +34,7 @@ export function StatTile({
       <p className="text-small text-muted-foreground">{label}</p>
       <p
         className={cn(
-          "mt-0.5 text-2xl font-semibold nums",
+          "mt-0.5 text-title nums",
           tone === "accent" && "text-primary",
         )}
       >

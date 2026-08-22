@@ -159,7 +159,7 @@ function RawSection() {
           type="button"
           onClick={() => setOpen((value) => !value)}
           disabled={emptySlots.length > 0}
-          className="flex items-center gap-1.5 text-sm font-medium disabled:cursor-default"
+          className="flex items-center gap-1.5 text-body font-medium disabled:cursor-default"
         >
           {emptySlots.length > 0 ? (
             <UploadCloud className="size-4 text-attention" />
@@ -275,7 +275,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               En memoria ahora ({resident.length})
             </h3>
             {resident.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 El motor no tiene ningún modelo cargado. El primer trabajo que necesite uno
                 paga su carga.
               </p>
@@ -284,7 +284,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
                 {resident.map((entry) => (
                   <li key={entry.model} className="rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="font-mono text-sm">{entry.model}</code>
+                      <code className="font-mono text-body">{entry.model}</code>
                       <span className="ml-auto text-micro nums text-muted-foreground">
                         {entry.size_vram ? `${bytes(entry.size_vram)} en VRAM` : "sin VRAM"}
                       </span>
@@ -316,7 +316,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               {required.map(({ model, settings, missing, loaded }) => (
                 <li key={model} className="rounded-lg border border-border p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-mono text-sm">{model}</code>
+                    <code className="font-mono text-body">{model}</code>
                     {missing ? (
                       <Badge variant="danger">sin instalar</Badge>
                     ) : loaded ? (
@@ -383,7 +383,7 @@ function ActivityCard() {
           </InfoHint>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-3 text-body">
         {stream.connected ? null : (
           <p className="flex items-center gap-1.5 text-small text-attention">
             <WifiOff className="size-3.5 shrink-0" />
@@ -529,7 +529,7 @@ function SystemCard() {
           Sistema
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-3 text-body">
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground">Motor de inferencia</span>
           <span className="flex items-center gap-1.5">

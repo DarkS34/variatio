@@ -400,7 +400,7 @@ export function FieldEditor({
             )}
           />
           <Icon className="size-4 shrink-0 text-primary" />
-          <span className="shrink-0 font-mono text-sm font-medium">{name}</span>
+          <span className="shrink-0 font-mono text-body font-medium">{name}</span>
           {isPrimary ? (
             <Badge className="shrink-0" title="Es el texto que se etiqueta y se embebe">
               <Star className="fill-current" />

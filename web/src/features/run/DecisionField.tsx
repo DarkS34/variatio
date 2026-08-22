@@ -20,7 +20,7 @@ function Choice({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+        "rounded-lg border px-3 py-1.5 text-body font-medium transition-colors",
         active
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",

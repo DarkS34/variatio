@@ -120,7 +120,7 @@ export function CurriculumTab() {
         </CardHeader>
         <CardContent>
           {selected.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               Sin currículo: la generación puede usar cualquier concepto del grafo.
             </p>
           ) : (
@@ -178,7 +178,7 @@ export function CurriculumTab() {
             label="cerrar bajo prerrequisitos"
           />
           <div>
-            <p className="text-sm">Cerrar bajo prerrequisitos al guardar</p>
+            <p className="text-body">Cerrar bajo prerrequisitos al guardar</p>
             <p className="text-small text-muted-foreground">
               Añade también todo aquello de lo que dependen los conceptos elegidos. Se propone
               antes de guardar; nada se añade sin que lo veas.

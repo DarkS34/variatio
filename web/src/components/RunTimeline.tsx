@@ -58,7 +58,7 @@ export function RunTimeline({
 
   if (steps.length === 0 && pending.length === 0) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>Sin pasos todavía.</p>
+      <p className={cn("text-body text-muted-foreground", className)}>Sin pasos todavía.</p>
     );
   }
 
@@ -95,7 +95,7 @@ export function RunTimeline({
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span
                       className={cn(
-                        "truncate text-sm",
+                        "truncate text-body",
                         running ? "font-medium" : "text-muted-foreground",
                         step.status === "failed" && "text-destructive",
                       )}

@@ -48,7 +48,7 @@ export function WorkspaceSwitcher() {
         aria-expanded={open}
         title={active ? `Workspace: ${active.name}` : "Elegir workspace"}
         className={cn(
-          "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-sm transition-colors hover:bg-accent",
+          "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-body transition-colors hover:bg-accent",
           open && "bg-accent",
         )}
       >
@@ -77,7 +77,7 @@ export function WorkspaceSwitcher() {
                   setOpen(false);
                   if (!workspace.active) switching.mutate(workspace.slug);
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent disabled:opacity-60"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent disabled:opacity-60"
               >
                 <Check
                   className={cn(
@@ -113,7 +113,7 @@ export function WorkspaceSwitcher() {
               <button
                 role="menuitem"
                 onClick={() => setCreating(true)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
               >
                 <FolderPlus className="size-4 text-muted-foreground" />
                 Crear un workspace

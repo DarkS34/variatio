@@ -218,7 +218,7 @@ function ChosenConcepts({
   onRemove: (name: string) => void;
   empty: string;
 }) {
-  if (names.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  if (names.length === 0) return <p className="text-body text-muted-foreground">{empty}</p>;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {names.map((name) => (
@@ -251,7 +251,7 @@ function Count({ value, onChange }: { value: number; onChange: (next: number) =>
       <Button variant="ghost" size="icon-sm" onClick={() => clamp(value - 1)} disabled={value <= 1}>
         <Minus />
       </Button>
-      <span className="w-8 text-center text-sm font-medium nums">{value}</span>
+      <span className="w-8 text-center text-body font-medium nums">{value}</span>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -464,7 +464,7 @@ export function GenerateForm({
                 >
                   <span className="flex items-center gap-1.5">
                     {active ? <Check className="size-3.5 text-primary" /> : null}
-                    <span className="text-sm font-medium">{spec.label || key}</span>
+                    <span className="text-body font-medium">{spec.label || key}</span>
                   </span>
                   <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
                     {key}
@@ -499,7 +499,7 @@ export function GenerateForm({
             }}
             label="Restringir a un currículo"
           />
-          <span className="text-sm font-medium">Restringir a un currículo</span>
+          <span className="text-body font-medium">Restringir a un currículo</span>
         </div>
 
         {state.useCurriculum ? (
@@ -511,7 +511,7 @@ export function GenerateForm({
                   onCheckedChange={(usePresetCurriculum) => patch({ usePresetCurriculum })}
                   label={`Usar el currículo preestablecido (${preset.concepts.length} conceptos)`}
                 />
-                <span className="text-sm">
+                <span className="text-body">
                   Usar el currículo preestablecido ({preset.concepts.length} conceptos)
                 </span>
               </div>
@@ -674,7 +674,7 @@ export function GenerateForm({
         <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
           {variant === "generate" ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium">¿Cuántos ítems?</span>
+              <span className="text-body font-medium">¿Cuántos ítems?</span>
               <Count value={state.n} onChange={(n) => patch({ n })} />
               {state.n > 1 ? (
                 <Badge variant="outline">no repetirán temática entre sí</Badge>
@@ -693,7 +693,7 @@ export function GenerateForm({
                   onCheckedChange={(think) => patch({ think })}
                   label="Razonamiento previo del modelo"
                 />
-                <span className="flex items-center gap-1.5 text-sm font-medium">
+                <span className="flex items-center gap-1.5 text-body font-medium">
                   <Brain className="size-3.5" />
                   Razonamiento previo
                 </span>

@@ -100,10 +100,10 @@ export function CodeBlock({
         aria-label="Copiar"
         className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
-        {copied ? <Check className="text-[var(--success)]" /> : <Copy />}
+        {copied ? <Check className="text-settled" /> : <Copy />}
       </Button>
       <pre
-        className="thin-scroll overflow-auto p-3 font-mono text-xs leading-relaxed"
+        className="thin-scroll overflow-auto p-3 font-mono text-small leading-relaxed"
         style={{ maxHeight }}
       >
         <code>

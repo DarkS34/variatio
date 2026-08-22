@@ -55,7 +55,7 @@ export function BankLive() {
         </div>
 
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body text-muted-foreground">
             Todavía no ha salido ningún ítem. Aparecerán aquí en cuanto el primer documento
             termine de extraerse.
           </p>
@@ -70,7 +70,7 @@ export function BankLive() {
                     <code className="shrink-0 font-mono text-small text-muted-foreground">
                       {item.id}
                     </code>
-                    <p className="min-w-0 flex-1 text-sm">{truncate(text, 180)}</p>
+                    <p className="min-w-0 flex-1 text-body">{truncate(text, 180)}</p>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1">
                     {concepts.length === 0 ? (

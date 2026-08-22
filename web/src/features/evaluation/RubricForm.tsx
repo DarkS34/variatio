@@ -72,7 +72,7 @@ function Scale({
             aria-label={`${score} de 5`}
             aria-pressed={value === score}
             className={cn(
-              "h-8 flex-1 rounded-md border text-sm nums transition-colors",
+              "h-8 flex-1 rounded-md border text-body nums transition-colors",
               value === score
                 ? "border-primary bg-primary text-primary-foreground font-medium"
                 : "border-border hover:bg-accent/60",
@@ -111,7 +111,7 @@ export function RubricForm({
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-sm font-semibold">
+        <h2 className="text-body font-semibold">
           Sobre la variante de{" "}
           <span style={{ color: ARM_META.system.colour }}>este sistema</span>
         </h2>
@@ -151,7 +151,7 @@ export function RubricForm({
               onClick={() => patch({ usability: option.value })}
               aria-pressed={draft.usability === option.value}
               className={cn(
-                "h-8 flex-1 rounded-md border px-2 text-sm transition-colors",
+                "h-8 flex-1 rounded-md border px-2 text-body transition-colors",
                 draft.usability === option.value
                   ? "border-primary bg-primary text-primary-foreground font-medium"
                   : "border-border hover:bg-accent/60",

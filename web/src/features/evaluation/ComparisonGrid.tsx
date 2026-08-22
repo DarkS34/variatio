@@ -53,7 +53,7 @@ function ProposalCard({
       <header className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
         <span
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-lg font-mono text-base font-semibold transition-colors",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg font-mono text-heading transition-colors",
             meta ? "text-background" : "bg-muted text-muted-foreground",
           )}
           style={meta ? { backgroundColor: meta.colour, color: "var(--background)" } : undefined}
@@ -61,7 +61,7 @@ function ProposalCard({
           {letter}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">
+          <p className="truncate text-body font-medium">
             {meta ? meta.label : `Propuesta ${letter}`}
           </p>
           {meta ? (
@@ -84,7 +84,7 @@ function ProposalCard({
         ) : (
           <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
             <CircleSlash className="size-5 text-muted-foreground/60" />
-            <p className="max-w-56 text-sm text-muted-foreground">
+            <p className="max-w-56 text-body text-muted-foreground">
               Esta propuesta no llegó a producir un ejercicio válido.
             </p>
             {revealed && position.error ? (
@@ -151,7 +151,7 @@ export function ComparisonGrid({
 
       {!revealed ? (
         <div className="animate-slide-up flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-raised">
-          <p className="text-sm font-medium">¿Cuál usarías en clase?</p>
+          <p className="text-body font-medium">¿Cuál usarías en clase?</p>
           <Input
             aria-label="Por qué, en una línea"
             value={note}

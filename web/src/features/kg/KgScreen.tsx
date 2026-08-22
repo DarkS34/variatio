@@ -110,7 +110,7 @@ function ConceptDetail({
         </Field>
         <div className="flex items-center justify-between rounded-md border border-border p-2">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm">Etiquetable</p>
+            <p className="text-body">Etiquetable</p>
             <InfoHint label="Qué significa etiquetable">
               Un concepto no etiquetable queda fuera del retrieval y de la generación: sigue en el
               grafo por sus relaciones, pero ningún ítem se le asigna.
@@ -147,7 +147,7 @@ function ConceptDetail({
       {concept.description ? (
         <div className="space-y-1">
           <h4 className="text-micro font-condensed uppercase text-muted-foreground">Descripción</h4>
-          <p className="rounded-md border border-border bg-muted/40 p-2 text-sm leading-relaxed">
+          <p className="rounded-md border border-border bg-muted/40 p-2 text-body leading-relaxed">
             {concept.description}
           </p>
         </div>
@@ -324,7 +324,7 @@ function AddConceptDialog({
         </Field>
         <div className="flex items-center gap-2">
           <Switch checked={taggable} onCheckedChange={setTaggable} label="etiquetable" />
-          <span className="text-sm">Etiquetable</span>
+          <span className="text-body">Etiquetable</span>
         </div>
         {error ? <p className="text-small text-destructive">{error}</p> : null}
       </div>
@@ -606,7 +606,7 @@ function GraphExplorer() {
                 onChanged={refresh}
               />
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 Selecciona un concepto en el grafo o en la lista para editarlo.
               </p>
             )}
@@ -622,7 +622,7 @@ function GraphExplorer() {
           {(kg.data.domains ?? []).map((domain, index) => (
             <div
               key={domain.name}
-              className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm"
+              className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-body"
             >
               <span
                 className="size-2 rounded-full"

@@ -53,7 +53,7 @@ function WritingProgress() {
       <CardContent className="space-y-2 py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Spinner />
-          <p className="text-sm font-medium">{step?.label ?? run.job?.label}</p>
+          <p className="text-body font-medium">{step?.label ?? run.job?.label}</p>
           <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}
@@ -305,7 +305,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
               )}
             >
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{concept.name}</span>
+                <span className="text-body font-medium">{concept.name}</span>
                 <Badge variant="outline">{concept.domain}</Badge>
                 {hasExemplars(concept) ? null : (
                   <Badge variant="attention">sin ejemplos</Badge>

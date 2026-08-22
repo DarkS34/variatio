@@ -72,12 +72,12 @@ export function GenerationsPanel() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-base font-semibold tracking-tight">Variantes guardadas</h2>
+        <h2 className="text-heading">Variantes guardadas</h2>
         <InfoHint label="Qué hay aquí">
           Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
           solas: no hay nada que pulsar al generar.
         </InfoHint>
-        <span className="text-sm nums text-muted-foreground">{total}</span>
+        <span className="text-body nums text-muted-foreground">{total}</span>
 
         {rows.length > 0 && profile ? (
           <div className="ml-auto flex gap-1">
@@ -189,7 +189,7 @@ function ScopeTab({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors",
+        "flex items-center gap-1.5 px-3 py-1.5 text-body transition-colors",
         active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -224,7 +224,7 @@ function GenerationCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-sm">
+          <CardTitle className="text-body">
             {row.concepts.length > 0 ? row.concepts.join(" · ") : "Sin conceptos declarados"}
           </CardTitle>
           {manyTypes && profile ? (
@@ -265,7 +265,7 @@ function GenerationCard({
         {expanded ? (
           <ItemFields item={row.item} spec={spec} />
         ) : (
-          <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+          <p className="line-clamp-3 whitespace-pre-wrap text-body text-muted-foreground">
             {primary}
           </p>
         )}

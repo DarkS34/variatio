@@ -188,7 +188,7 @@ export function ConceptSelector({
     >
       <header className="shrink-0 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-[110rem] flex-wrap items-center gap-3">
-          <h2 className="mr-auto min-w-0 truncate text-sm font-semibold">{title}</h2>
+          <h2 className="mr-auto min-w-0 truncate text-body font-semibold">{title}</h2>
 
           {/* Only the board is searchable. A graph whose nodes vanish as you type is not
               a graph any more, and this is a selector, not a search tool. */}
@@ -196,6 +196,7 @@ export function ConceptSelector({
             <div className="relative min-w-56 flex-1 sm:max-w-md">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
+                aria-label="Buscar concepto o dominio"
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -233,7 +234,7 @@ export function ConceptSelector({
                 disabled={option.value === "graph" && !graph}
                 onClick={() => setView(option.value)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+                  "flex items-center gap-1.5 rounded px-2.5 py-1 text-small font-medium transition-colors disabled:opacity-40",
                   view === option.value
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",

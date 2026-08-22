@@ -69,7 +69,7 @@ export function JobProgress({
   if (!run || !run.job) {
     return (
       <Card className={className}>
-        <CardContent className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+        <CardContent className="flex items-center gap-2 py-4 text-body text-muted-foreground">
           <Spinner />
           {waiting}
         </CardContent>
@@ -87,20 +87,20 @@ export function JobProgress({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="relative flex size-2 shrink-0">
             {active ? (
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--info)] opacity-60" />
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
             ) : null}
             <span
               className={cn(
                 "relative inline-flex size-2 rounded-full",
-                active ? "bg-[var(--info)]" : "bg-muted-foreground",
+                active ? "bg-primary" : "bg-muted-foreground",
               )}
             />
           </span>
           {/* Sin (i): esta tarjeta sale bajo la cabecera del artefacto, que ya explica qué
               es, y el nombre del trabajo más la fase en curso dicen qué está pasando. La
               explicación del trabajo sigue estando una vez, en el cajón de ejecución. */}
-          <p className="text-sm font-medium">{run.job.label}</p>
-          <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
+          <p className="text-body font-medium">{run.job.label}</p>
+          <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
@@ -122,15 +122,15 @@ export function JobProgress({
             indeterminada a propósito: mejor eso que un 0 % que parece atascado. */}
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="min-w-0 truncate text-sm">
+            <p className="min-w-0 truncate text-body">
               {position >= 0 ? (
-                <span className="mr-1.5 tabular-nums text-muted-foreground">
+                <span className="mr-1.5 nums text-muted-foreground">
                   {position + 1}/{phases.length}
                 </span>
               ) : null}
               {overall?.label ?? step?.label ?? "Preparando el proceso…"}
             </p>
-            <span className="shrink-0 text-sm font-medium tabular-nums">
+            <span className="shrink-0 text-body font-medium nums">
               {overall ? `${overall.percent} %` : "—"}
             </span>
           </div>
@@ -147,17 +147,17 @@ export function JobProgress({
           )}
 
           {overall?.detail ? (
-            <p className="truncate text-xs text-muted-foreground">{overall.detail}</p>
+            <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
           ) : null}
         </div>
 
         <div className="space-y-2">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
             Pasos
           </h4>
           <RunTimeline steps={run.steps} />
           {run.job.error ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
               {run.job.error}
             </p>
           ) : null}

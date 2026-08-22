@@ -30,14 +30,14 @@ export function AuthLayout({
         </div>
 
         <Card className="p-6">
-          <h1 className="text-base font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-title">{title}</h1>
           {description ? (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1 text-body text-muted-foreground">{description}</p>
           ) : null}
           <div className="mt-5">{children}</div>
         </Card>
 
-        {footer ? <div className="mt-4 text-center text-sm">{footer}</div> : null}
+        {footer ? <div className="mt-4 text-center text-body">{footer}</div> : null}
       </div>
     </div>
   );
@@ -47,7 +47,7 @@ export function FormError({ error }: { error: unknown }) {
   if (!error) return null;
   const message = error instanceof Error ? error.message : String(error);
   return (
-    <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-body text-destructive">
       {message}
     </p>
   );

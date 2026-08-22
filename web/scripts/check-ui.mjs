@@ -31,26 +31,15 @@ const FILES = walk(SRC).map((full) => ({
 
 const RULES = [
   {
-    name: "El tamaño por defecto no es text-xs",
-    // 247 uses of text-xs against 125 of text-sm: the whole app lived at 12 px. `micro`
-    // stops being a general-purpose size and gets a single declared use.
-    re: /\btext-xs\b/g,
-    exempt: [
-      "components/ActivityFeed.tsx",
-      "components/BuildProgress.tsx",
-      "components/CodeBlock.tsx",
-      "components/ConceptPicker.tsx",
-      "components/ConceptSelector/BoardMode.tsx",
-      "components/ConceptSelector/GraphMode.tsx",
-      "components/ConceptSelector/SelectionTray.tsx",
-      "components/ConceptSelector/index.tsx",
-      "components/LogViewer.tsx",
-      "components/Markdown.tsx",
-      "components/RawImport.tsx",
-      "components/RunDrawer.tsx",
-      "components/TechnicalDetails.tsx",
-      "components/TokenStream.tsx",
-    ],
+    // Two problems, one rule. The first: 247 uses of text-xs against 125 of text-sm, so
+    // the whole app lived at 12 px and `micro` had to stop being a general-purpose size.
+    // The second: Tailwind's own scale is still present — nothing removed it — so a size
+    // can be spelled twice. text-sm and text-body are the same 0.875rem today, which is
+    // not a bug on screen but a bug waiting: move the step and 95 call sites do not
+    // follow it. The six steps of the design scale are the only vocabulary.
+    name: "Ningún tamaño de la escala cruda de Tailwind",
+    re: /\btext-(?:xs|sm|base|lg|xl|2xl|3xl|4xl)\b/g,
+    exempt: [],
   },
   {
     name: "Ningún control de formulario sin etiqueta asociada",
@@ -89,18 +78,7 @@ const RULES = [
   {
     name: "Ningún token retirado (--success / --warning / --info)",
     re: /var\(--(?:success|warning|info)\)/g,
-    exempt: [
-      "components/ActivityFeed.tsx",
-      "components/BuildProgress.tsx",
-      "components/CodeBlock.tsx",
-      "components/ConceptPicker.tsx",
-      "components/ConceptSelector/BoardMode.tsx",
-      "components/LogViewer.tsx",
-      "components/RawImport.tsx",
-      "components/TechnicalDetails.tsx",
-      "components/TokenStream.tsx",
-      "lib/format.ts",
-    ],
+    exempt: [],
   },
 ];
 

@@ -63,7 +63,7 @@ export function FormStep({
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className={cn("text-sm font-medium", !open && !answered && "text-muted-foreground")}>
+            <span className={cn("text-body font-medium", !open && !answered && "text-muted-foreground")}>
               {title}
             </span>
             {optional ? (

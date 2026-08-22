@@ -110,7 +110,7 @@ export function GenerateScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Generar variantes</h1>
+        <h1 className="font-display font-expanded text-display">Generar variantes</h1>
         <InfoHint label="Cómo se genera">
           Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil
           deja en tus manos; el resto lo redacta el modelo, guiado por el grafo y por los
@@ -148,7 +148,7 @@ export function GenerateScreen() {
       {collapsed ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
               {summarize(form, profile)}
             </p>
             <Button variant="outline" size="sm" onClick={() => setEditing(true)} disabled={running}>
@@ -227,7 +227,7 @@ function Results({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">
+        <h2 className="text-body font-semibold">
           Resultados
           <span className="ml-2 font-normal text-muted-foreground nums">
             {results.length}

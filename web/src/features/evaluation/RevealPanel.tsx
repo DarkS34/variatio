@@ -33,12 +33,12 @@ function Origin({
     >
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold"
+          className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-body font-semibold"
           style={{ backgroundColor: meta.colour, color: "var(--background)" }}
         >
           {letterFor(position.position)}
         </span>
-        <span className="text-sm font-medium">{meta.label}</span>
+        <span className="text-body font-medium">{meta.label}</span>
         {chosen ? (
           <Badge variant="default">
             <Trophy />
@@ -102,8 +102,8 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
   return (
     <section className="animate-fade-in space-y-3">
       <header className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 className="text-sm font-semibold">De dónde salió cada propuesta</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-body font-semibold">De dónde salió cada propuesta</h2>
+        <p className="text-body text-muted-foreground">
           {session.choice === null
             ? "No elegiste ninguna."
             : `Elegiste ${letterFor(session.choice)} — ${chosenMeta?.label ?? ""}.`}

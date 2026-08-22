@@ -67,14 +67,6 @@
   --motion-enter: 180ms;
   --motion-overlay: 240ms;
 
-  /* Compatibility aliases. They exist so that the classes naming
-     --success/--warning/--info keep compiling through phases 1-3, and they are REMOVED in
-     the last task. An alias that survives the end of a migration is a dead token somebody
-     will use again without knowing that it was one. */
-  --success: var(--settled);
-  --warning: var(--attention);
-  --info: var(--primary);
-
   /* THE ONE CATEGORICAL SCALE: the three arms of the comparison.
      Deliberately outside the "chroma stays low" rule above, and measured rather than
      chosen. The arms used to borrow state tokens — muted-foreground, success, primary —
@@ -126,10 +118,6 @@
     --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.3), 0 2px 8px oklch(0 0 0 / 0.28);
     --elevation-overlay: 0 8px 32px oklch(0 0 0 / 0.5);
 
-    --success: var(--settled);
-    --warning: var(--attention);
-    --info: var(--primary);
-
     /* Re-stepped for the dark surface, not flipped: the band is 0.48-0.67 here. */
     --arm-naive: oklch(0.63 0.125 330);
     --arm-rag: oklch(0.62 0.125 158);
@@ -156,11 +144,6 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-settled: var(--settled);
   --color-attention: var(--attention);
-  /* Retired names, kept only so the classes still naming them compile through the
-     migration. Removed in the last task. */
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-info: var(--info);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
   --color-border: var(--border);
