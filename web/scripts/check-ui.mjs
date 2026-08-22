@@ -163,6 +163,18 @@ const RULES = [
   },
 ];
 
+// A BUDGET, not an exemption list, and it exists because the four rules above share a
+// blind spot: they would all pass if `text-xs` were replaced by `text-micro` one for one.
+// The app would still live in a single size, just under a different name, and nothing
+// would say so — this was the one check the plan admitted no script could make.
+//
+// It can, as long as what is counted is the size that is supposed to be RARE. `micro` has
+// one declared job: eyebrows, rail labels, table headers and badges. Roughly one or two
+// per screen. The ceiling is set well above that and far below the 247 uses `text-xs` had,
+// so hitting it does not mean "one too many" — it means micro has quietly become the new
+// default and the question of §2.2 is open again.
+const BUDGET = { name: "text-micro sigue siendo un tamaño raro", re: /\btext-micro\b/g, max: 90 };
+
 let failures = 0;
 
 for (const rule of RULES) {
@@ -182,6 +194,17 @@ for (const rule of RULES) {
     console.log(`FALLA  ${rule.name}`);
     for (const hit of hits) console.log(`         ${hit}`);
   }
+}
+
+const used = FILES.reduce((sum, file) => sum + (file.text.match(BUDGET.re)?.length ?? 0), 0);
+if (used <= BUDGET.max) {
+  console.log(`ok     ${BUDGET.name} (${used}/${BUDGET.max})`);
+} else {
+  failures++;
+  console.log(`FALLA  ${BUDGET.name} (${used}/${BUDGET.max})`);
+  console.log("         micro es para eyebrows, etiquetas de raíl, cabeceras y distintivos.");
+  console.log("         Si se ha pasado del techo, probablemente ha sustituido a text-xs uno");
+  console.log("         a uno y la aplicación vuelve a vivir en un solo tamaño.");
 }
 
 console.log(failures === 0 ? "\nTodo pasa.\n" : `\n${failures} regla(s) fallan.\n`);
