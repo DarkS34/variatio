@@ -53,7 +53,6 @@ const RULES = [
       "components/StageGate.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
-      "components/ui/input.tsx",
       "features/account/AccountScreen.tsx",
       "features/admin/AdminScreen.tsx",
       "features/admin/charts.tsx",
