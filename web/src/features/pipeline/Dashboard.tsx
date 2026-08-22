@@ -579,7 +579,7 @@ function SystemCard() {
               ) : (
                 <CircleDashed className="size-3.5 shrink-0" />
               )}
-              <span className="min-w-0 flex-1 truncate" title={slot.path}>
+              <span className="min-w-0 flex-1 truncate">
                 {slot.label}
               </span>
               <span className="tabular-nums">{slot.files.length} archivo(s)</span>

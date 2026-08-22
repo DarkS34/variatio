@@ -1,5 +1,6 @@
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from json_repair import repair_json
@@ -17,9 +18,14 @@ from . import _source_docs
 
 # Transcribing a PDF is one model call per page, so conversion is no longer the rounding
 # error it was when Docling did it in three seconds.
+#
+# `extract` cuesta ahora más que antes porque no solo extrae: cada documento se etiqueta
+# nada más salir, dentro de la misma fase, para que un ítem aparezca ya con sus conceptos
+# en lugar de esperar a un segundo trabajo que había que lanzar a mano. Los pesos siguen
+# siendo una estimación, como lo eran los dos anteriores.
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los documentos", 40),
-    ("extract", "Extrayendo ítems de los documentos", 60),
+    ("convert", "Transcribiendo los documentos", 30),
+    ("extract", "Extrayendo y etiquetando los ítems", 70),
 )
 
 
@@ -85,15 +91,33 @@ class ExemplarsBankBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
+    # El etiquetador y el embebedor entran aquí porque la construcción los usa: cada
+    # documento se etiqueta nada más extraerlo, dentro de este mismo trabajo.
     def bootstrap(self) -> None:
         ensure_models(
-            [config.EXEMPLARS_TRANSCRIBE_MODEL, config.EB_EXTRACT_MODEL, config.REPAIR_LLM],
+            [
+                config.EXEMPLARS_TRANSCRIBE_MODEL,
+                config.EB_EXTRACT_MODEL,
+                config.EMBEDDING_LLM,
+                config.CONCEPT_TAGGER_LLM,
+                config.REPAIR_LLM,
+            ],
             "del banco de ejemplares",
         )
 
     # build() persiste checkpoints en disco y además devuelve el banco, para que el
     # llamador pueda usarlo sin releerlo.
-    def build(self, input_dir: str, output_file_path: str) -> dict[str, dict]:
+    #
+    # `on_items(bank, new_ids)` es el gancho por el que entra el etiquetado: se llama con
+    # el banco entero justo después de escribir los ítems de un documento y devuelve ese
+    # mismo banco anotado. El constructor no sabe qué hace —no conoce ni el grafo ni el
+    # etiquetador—; lo cablea `stages/build.py`, que es la capa cuyo trabajo es orquestar.
+    def build(
+        self,
+        input_dir: str,
+        output_file_path: str,
+        on_items: Callable[[dict, list[str]], dict] | None = None,
+    ) -> dict[str, dict]:
         self.bootstrap()
 
         files = _source_docs.list_source_files(input_dir)
@@ -108,7 +132,9 @@ class ExemplarsBankBuilder:
         pages_by_file = self._convert(files)
 
         progress.phase("extract", f"0/{len(files)} documento(s)")
-        with progress.step("extract", "Extrayendo ítems de los documentos", len(files)) as reporter:
+        with progress.step(
+            "extract", "Extrayendo y etiquetando los ítems", len(files)
+        ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
                 tag = f"[{idx}/{len(files)} {file_path.name}]"
@@ -135,6 +161,27 @@ class ExemplarsBankBuilder:
                 write_json(output_file_path, bank)
                 logger.success(f"{tag} +{len(new_items)} ítem(s); {len(bank)} en total")
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
+
+                if on_items is not None:
+                    # Media fase por documento: extraer es la primera mitad y etiquetar la
+                    # segunda, así que la barra se mueve dentro de un documento y no solo
+                    # al pasar al siguiente.
+                    progress.advance(
+                        (idx - 0.5) / len(files),
+                        f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
+                        f"{len(new_items)} ítem(s)",
+                    )
+                    try:
+                        bank = on_items(bank, list(new_items))
+                    except progress.Cancelled:
+                        raise
+                    except Exception as e:
+                        logger.exception(f"{tag} no se pudo etiquetar: {e}")
+                    else:
+                        write_json(output_file_path, bank)
+                        progress.emit(
+                            "artifact.progress", name="exemplars_bank", count=len(bank)
+                        )
 
         progress.advance(1.0, f"{len(bank)} ítem(s)")
         logger.success(f"Banco terminado: {len(bank)} ítem(s) en {Path(output_file_path).name}")

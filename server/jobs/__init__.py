@@ -1,3 +1,4 @@
+from . import chain
 from .bus import EventBus
 from .handlers import HANDLERS
 from .idle import IdleUnloader
@@ -6,6 +7,7 @@ from .runner import JobControl, JobRunner
 
 __all__ = [
     "HANDLERS",
+    "chain",
     "IdleUnloader",
     "JOB_LABELS",
     "SUBPROCESS_KINDS",

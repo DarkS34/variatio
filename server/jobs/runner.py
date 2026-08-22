@@ -82,6 +82,9 @@ class JobRunner:
     def __init__(self, bus: EventBus, handlers: dict[str, Handler]):
         self.bus = bus
         self.handlers = handlers
+        # Qué se encola solo cuando un trabajo termina bien. La cola sigue siendo genérica:
+        # quién sigue a quién lo decide `jobs/chain.py`, que se instala en `runtime.py`.
+        self.after_success: Callable[["JobRunner", Job], None] | None = None
         self._queue: queue.Queue[str] = queue.Queue()
         self._jobs: dict[str, Job] = {}
         self._controls: dict[str, JobControl] = {}
@@ -248,6 +251,7 @@ class JobRunner:
             else:
                 job.result = result
                 self._settle(job, "succeeded")
+                self._chain(job)
         except progress.Cancelled:
             self._settle(job, "cancelled")
         except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
@@ -259,6 +263,16 @@ class JobRunner:
             logger.remove(sink_id)
             with self._lock:
                 self._current = None
+
+    # Encadenar es una comodidad, no parte del resultado: si falla, el trabajo que acaba
+    # de terminar sigue estando terminado y solo se pierde el eslabón siguiente.
+    def _chain(self, job: Job) -> None:
+        if self.after_success is None:
+            return
+        try:
+            self.after_success(self, job)
+        except Exception as exc:  # noqa: BLE001 - el trabajo ya terminó bien
+            logger.warning(f"No se pudo encadenar nada tras «{job.label}»: {exc}")
 
     def _settle(self, job: Job, status: str) -> None:
         job.status = status

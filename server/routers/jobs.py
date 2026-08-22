@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from variant_generator import inference
 from variant_generator.workspace import Workspace
 
 from .. import auth, review, runtime
@@ -79,6 +80,18 @@ def _mine(job_id: str, access: auth.Access):
 def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
+
+    # Sin motor no hay ningún trabajo que pueda salir bien: los nueve llaman a un modelo.
+    # Antes se aceptaba, se encolaba y reventaba dentro, dejando un fallo en el historial
+    # donde tendría que haber habido un botón deshabilitado. `force` salta las puertas de
+    # la cadena — que son una decisión del usuario — y no esto, que es una imposibilidad.
+    if not inference.is_available():
+        raise HTTPException(
+            503,
+            f"No hay conexión con el motor de inferencia "
+            f"'{inference.engine_name()}'. Arráncalo y vuelve a intentarlo.",
+        )
+
     if not body.force:
         error = gate_error(access.ws, body.kind)
         if error:

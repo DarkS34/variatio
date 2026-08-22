@@ -17,6 +17,7 @@ import {
   useCancelJob,
   useDescriptions,
   useElapsed,
+  useEngineOffline,
   useJobRun,
   useSubmitJob,
 } from "@/state/queries";
@@ -129,6 +130,7 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
 export function DescriptionReview({ kg }: { kg: KgSummary }) {
   const query = useDescriptions();
   const submit = useSubmitJob();
+  const offline = useEngineOffline();
   const run = useJobRun("describe_concepts");
   const writing = run?.job?.status === "running" || run?.job?.status === "queued";
   const [filter, setFilter] = useState("");
@@ -208,7 +210,8 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
             es el mismo que pinta la barra de abajo. */}
         <Button
           variant={missing.length > 0 ? "default" : "outline"}
-          disabled={submit.isPending || writing}
+          disabled={submit.isPending || writing || Boolean(offline)}
+          title={offline ?? undefined}
           onClick={() => submit.mutate({ kind: "describe_concepts", params: {}, force: true })}
         >
           {submit.isPending || writing ? <Spinner /> : <Sparkles />}
@@ -216,8 +219,8 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
         </Button>
         <Button
           variant="ghost"
-          disabled={submit.isPending || writing}
-          title="Vuelve a escribir todas las descripciones desde cero"
+          disabled={submit.isPending || writing || Boolean(offline)}
+          title={offline ?? "Vuelve a escribir todas las descripciones desde cero"}
           onClick={() =>
             submit.mutate({ kind: "describe_concepts", params: { overwrite: true }, force: true })
           }
@@ -227,8 +230,11 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
         </Button>
         <Button
           variant="secondary"
-          disabled={submit.isPending || writing}
-          title="Escribe las descripciones que falten y calcula los embeddings de los conceptos"
+          disabled={submit.isPending || writing || Boolean(offline)}
+          title={
+            offline ??
+            "Escribe las descripciones que falten y calcula los embeddings de los conceptos"
+          }
           onClick={() => submit.mutate({ kind: "index", params: {}, force: true })}
         >
           Indexar conceptos

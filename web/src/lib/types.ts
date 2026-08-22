@@ -62,6 +62,8 @@ export interface BuildPhase {
 
 export interface BuildPlans {
   artifacts: Record<ArtifactName, BuildPhase[]>;
+  /** Planes de trabajos que no escriben ningún artefacto y aun así tienen fases. */
+  jobs: Partial<Record<JobKind, BuildPhase[]>>;
 }
 
 export interface Job {

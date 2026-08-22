@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
   useCancelJob,
+  useEngineOffline,
   useKg,
   useKgGraph,
   usePipeline,
@@ -32,6 +33,7 @@ export function GenerateScreen() {
   const kgGraph = useKgGraph();
   const submit = useSubmitJob();
   const cancel = useCancelJob();
+  const offline = useEngineOffline();
   const run = useActiveRun();
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -83,7 +85,7 @@ export function GenerateScreen() {
 
   // The collapsed bar re-runs the same parameters without reopening the form, so it has to
   // repeat the one precondition the form checks before it enables its own button.
-  const canLaunch = unlocked && form.concepts.length > 0;
+  const canLaunch = unlocked && !offline && form.concepts.length > 0;
 
   const hasRun = isGenerate && (running || results.length > 0 || run?.job?.status === "failed");
   const collapsed = hasRun && !editing;
@@ -95,7 +97,7 @@ export function GenerateScreen() {
       profile={profile}
       concepts={conceptList}
       graph={kgGraph.data}
-      disabled={!unlocked}
+      disabled={!unlocked || Boolean(offline)}
       running={Boolean(running)}
       pending={submit.isPending}
       error={submit.isError ? (submit.error as Error).message : null}
@@ -115,6 +117,14 @@ export function GenerateScreen() {
           ejemplos del banco.
         </InfoHint>
       </header>
+
+      {/* Sin motor no se genera: el servidor lo rechaza con un 503 y el formulario se
+          deshabilita entero, en vez de dejar pulsar y devolver un error de trabajo. */}
+      {unlocked && offline ? (
+        <Alert tone="warning" title="Sin motor de inferencia">
+          <p>{offline} Arráncalo y vuelve a intentarlo.</p>
+        </Alert>
+      ) : null}
 
       {!unlocked ? (
         <Alert tone="warning" title="Generación bloqueada">
@@ -156,7 +166,12 @@ export function GenerateScreen() {
                 Cancelar
               </Button>
             ) : (
-              <Button size="sm" onClick={launch} disabled={!canLaunch || submit.isPending}>
+              <Button
+                size="sm"
+                onClick={launch}
+                disabled={!canLaunch || submit.isPending}
+                title={offline ?? undefined}
+              >
                 {submit.isPending ? <Spinner /> : <RotateCw />}
                 Volver a generar
               </Button>

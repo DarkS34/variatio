@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
 import { duration } from "@/lib/format";
-import type { ArtifactName } from "@/lib/types";
+import type { ArtifactName, BuildPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import type { RunView } from "@/state/runStore";
 import { useArtifactRun, useBuildPhases, useCancelJob, useElapsed } from "@/state/queries";
 
 /**
@@ -30,8 +31,37 @@ export function BuildProgress({
   className?: string;
 }) {
   const run = useArtifactRun(artifact);
-  const cancel = useCancelJob();
   const phases = useBuildPhases(artifact);
+  return (
+    <JobProgress
+      run={run}
+      phases={phases}
+      className={className}
+      waiting="Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso."
+    />
+  );
+}
+
+/**
+ * La misma tarjeta, para cualquier trabajo con un plan de fases.
+ *
+ * `BuildProgress` la envuelve con el plan del artefacto que se construye; los trabajos que
+ * no escriben ninguno —la revisión de etiquetabilidad, que parchea una lista en su sitio—
+ * la usan directamente con su propio plan. Eran la misma barra, y separarlas habría dado
+ * dos formas distintas de dibujar lo mismo.
+ */
+export function JobProgress({
+  run,
+  phases,
+  className,
+  waiting = "En marcha. El detalle aparecerá en cuanto el proceso emita su primer paso.",
+}: {
+  run: RunView | null;
+  phases: BuildPhase[];
+  className?: string;
+  waiting?: string;
+}) {
+  const cancel = useCancelJob();
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
   const elapsed = useElapsed(run?.job?.started_at ?? null, active);
@@ -41,7 +71,7 @@ export function BuildProgress({
       <Card className={className}>
         <CardContent className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
           <Spinner />
-          Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso.
+          {waiting}
         </CardContent>
       </Card>
     );

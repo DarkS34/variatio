@@ -3,6 +3,7 @@ import {
   ArrowRight,
   FolderPlus,
   Link2,
+  ListChecks,
   Pencil,
   Plus,
   Search,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { JobProgress } from "@/components/BuildProgress";
 import { StageGate } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,10 @@ import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  useEngineOffline,
   useInvalidateChain,
+  useJobPhases,
+  useJobRun,
   useJobRunning,
   useKg,
   useKgGraph,
@@ -312,9 +317,6 @@ function GraphExplorer() {
   const kg = useKg();
   const graph = useKgGraph();
   const invalidate = useInvalidateChain();
-  const pipeline = usePipeline();
-  const submitReview = useSubmitJob();
-  const running = useJobRunning("review_taggability");
 
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -356,9 +358,6 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
-  const profileReady =
-    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
-  const launchReview = () => submitReview.mutate({ kind: "review_taggability" });
 
   return (
     <div className="space-y-4">
@@ -497,22 +496,16 @@ function GraphExplorer() {
       {/* The flag is absent from every graph written before it existed, so it reads `false`
           even on one whose exclusion list proves the old in-build pass ran. The second half
           is what tells those apart, and it mirrors `stages/initialize.py`. */}
+      {/* Sin botón propio: el de la cabecera es el único, con su motivo en el tooltip y
+          su barra de progreso debajo. Aquí queda lo que la cabecera no puede decir — qué
+          significa que la revisión no se haya hecho. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
-        <Alert
-          tone="warning"
-          title="Etiquetabilidad sin revisar"
-          action={
-            <Button size="sm" disabled={!profileReady || running} onClick={launchReview}>
-              Revisar etiquetabilidad
-            </Button>
-          }
-        >
+        <Alert tone="warning" title="Etiquetabilidad sin revisar">
           <p>
             Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
             identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
             ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios de
             esta asignatura.
-            {!profileReady ? " Construye antes el perfil de ejemplares." : null}
           </p>
         </Alert>
       ) : null}
@@ -657,8 +650,35 @@ function GraphExplorer() {
 export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const [tab, setTab] = useState("graph");
   const kg = useKg();
+  const pipeline = usePipeline();
+  const submitReview = useSubmitJob();
+  const offline = useEngineOffline();
+  const reviewRun = useJobRun("review_taggability");
+  const reviewing = useJobRunning("review_taggability");
+  const reviewPhases = useJobPhases("review_taggability");
   const { navigate } = useRouter();
   const missing = (kg.data?.totals.taggable ?? 0) - (kg.data?.totals.described ?? 0);
+
+  // La etiquetabilidad se lanza desde la cabecera, como todo lo demás que un artefacto
+  // sabe hacer consigo mismo, y no desde un aviso enterrado en la pestaña del grafo. No
+  // pone la etapa en «construyendo» —parchea una lista en su sitio, no reescribe nada—
+  // así que su progreso va debajo de la cabecera y el resto de la pantalla sigue viva.
+  const totals = kg.data?.totals;
+  const reviewed = Boolean(totals?.taggability_reviewed);
+  const profileReady =
+    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
+  const reviewReason =
+    !stage || stage.status === "missing"
+      ? "Construye antes el grafo."
+      : stage.status === "building"
+        ? "El grafo se está reconstruyendo."
+        : offline
+          ? offline
+          : !profileReady
+            ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
+            : reviewing
+              ? "La revisión está en marcha."
+              : null;
 
   return (
     <StageGate
@@ -672,26 +692,52 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
         </>
       }
       actions={
-        <Tabs
-          items={[
-            { value: "graph", label: "Grafo y conceptos" },
-            {
-              value: "descriptions",
-              label: "Descripciones",
-              badge:
-                missing > 0 ? (
-                  <Badge variant="warning" className="ml-1">
-                    {missing}
-                  </Badge>
-                ) : undefined,
-            },
-            { value: "curriculum", label: "Currículo" },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
+        <>
+          <Button
+            size="sm"
+            variant={reviewed ? "outline" : "default"}
+            disabled={Boolean(reviewReason) || submitReview.isPending}
+            title={
+              reviewReason ??
+              (reviewed
+                ? "Vuelve a decidir qué conceptos sirven como etiqueta"
+                : "Decide qué conceptos sirven como etiqueta contra las modalidades del perfil")
+            }
+            onClick={() => submitReview.mutate({ kind: "review_taggability" })}
+          >
+            {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
+            {reviewing ? "Revisando…" : "Revisar etiquetabilidad"}
+          </Button>
+          <Tabs
+            items={[
+              { value: "graph", label: "Grafo y conceptos" },
+              {
+                value: "descriptions",
+                label: "Descripciones",
+                badge:
+                  missing > 0 ? (
+                    <Badge variant="warning" className="ml-1">
+                      {missing}
+                    </Badge>
+                  ) : undefined,
+              },
+              { value: "curriculum", label: "Currículo" },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+        </>
       }
     >
+      {reviewing || reviewRun?.job?.status === "failed" ? (
+        <JobProgress
+          run={reviewRun}
+          phases={reviewPhases}
+          className="mb-4"
+          waiting="Revisando la etiquetabilidad. El detalle aparecerá con el primer dominio."
+        />
+      ) : null}
+
       {tab === "graph" ? (
         <GraphExplorer />
       ) : tab === "curriculum" ? (

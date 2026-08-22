@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
 import { StageGate } from "@/components/StageGate";
+import { BankLive } from "./BankLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,13 @@ import { api } from "@/lib/api";
 import { TAGGING_METHOD, truncate } from "@/lib/format";
 import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useCoverage, useInvalidateChain, useKg, useSubmitJob } from "@/state/queries";
+import {
+  useCoverage,
+  useEngineOffline,
+  useInvalidateChain,
+  useKg,
+  useSubmitJob,
+} from "@/state/queries";
 
 function ItemEditor({
   item,
@@ -308,6 +315,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const coverage = useCoverage();
   const submit = useSubmitJob();
   const invalidate = useInvalidateChain();
+  const offline = useEngineOffline();
 
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
@@ -396,6 +404,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           ganaron por poco margen.
         </>
       }
+      livePreview={<BankLive />}
       buildLabels={{
         create: "Extraer",
         redo: "Volver a extraer",
@@ -406,7 +415,11 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       actions={
         <>
           <Button
-            disabled={submit.isPending || (selected.size === 0 && pendingTags === 0)}
+            disabled={
+              submit.isPending ||
+              Boolean(offline) ||
+              (selected.size === 0 && pendingTags === 0)
+            }
             onClick={() =>
               submit.mutate({
                 kind: "tag",
@@ -414,13 +427,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               })
             }
             title={
-              selected.size > 0
-                ? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`
-                : pendingTags > 0
-                  ? `Etiqueta los ${pendingTags} ítem(s) que aún no tienen concepto`
-                  : hasItems
-                    ? "Todos los ítems ya tienen concepto: selecciona alguno para volver a etiquetarlo"
-                    : "No hay ítems que etiquetar: extrae el banco primero"
+              offline
+                ? offline
+                : selected.size > 0
+                  ? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`
+                  : pendingTags > 0
+                    ? `Etiqueta los ${pendingTags} ítem(s) que aún no tienen concepto`
+                    : hasItems
+                      ? "Todos los ítems ya tienen concepto: selecciona alguno para volver a etiquetarlo"
+                      : "No hay ítems que etiquetar: extrae el banco primero"
             }
           >
             {submit.isPending ? <Spinner /> : <Tags />}

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from variant_generator import taggability
 from variant_generator.stages import build_phases as phases_of
 
 from .. import auth, deps, review, runtime, storage
@@ -56,16 +57,21 @@ def get_pipeline(access: auth.Access = auth.VIEW) -> dict:
 # share of the work, and what a share costs depends on the models, which change.
 #
 # Declared before `/{artifact}/…` so «phases» is read as itself and not as an artifact.
+# Hay trabajos que no construyen ningún artefacto y aun así tienen un plan de fases: la
+# revisión de etiquetabilidad parchea una lista del grafo en su sitio. `useArtifactRun` no
+# los encuentra —se indexa por artefacto—, así que su plan se publica por tipo de trabajo.
+JOB_PHASES = {"review_taggability": taggability.BUILD_PHASES}
+
+
+def _plan(phases) -> list[dict]:
+    return [{"key": key, "label": label, "weight": weight} for key, label, weight in phases]
+
+
 @router.get("/phases")
 def build_phases() -> dict:
     return {
-        "artifacts": {
-            artifact: [
-                {"key": key, "label": label, "weight": weight}
-                for key, label, weight in phases_of(artifact)
-            ]
-            for artifact in review.ARTIFACTS
-        }
+        "artifacts": {artifact: _plan(phases_of(artifact)) for artifact in review.ARTIFACTS},
+        "jobs": {kind: _plan(phases) for kind, phases in JOB_PHASES.items()},
     }
 
 

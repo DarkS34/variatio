@@ -15,6 +15,43 @@ from ..workspace import Workspace
 from . import _artifacts
 
 
+# El cableado del índice y del etiquetador, aparte de `initialize` porque hay un segundo
+# sitio que los necesita: la construcción del banco, que etiqueta cada documento nada más
+# extraerlo y no puede llamar a `initialize` — el banco que esa función exige es
+# justamente el que se está escribiendo.
+def _embed_text(exemplars_profile: ExemplarsProfile):
+    return partial(
+        exemplars_profile.embed_text, field_max_chars=config.EMBEDDING_FIELD_MAX_CHARS
+    )
+
+
+def make_embedder(
+    ws: Workspace,
+    exemplars_profile: ExemplarsProfile,
+    knowledge_graph: KnowledgeGraph,
+) -> Embedder:
+    return Embedder(
+        knowledge_graph,
+        config.EMBEDDING_LLM,
+        embed_text=_embed_text(exemplars_profile),
+        embed_signature=exemplars_profile.embed_signature,
+        context=exemplars_profile.content_context,
+        descriptions_path=ws.concept_descriptions_path,
+        concept_sources_path=ws.concept_sources_path,
+        concepts_cache_path=ws.concepts_embeddings_path,
+        exemplars_bank_cache_path=ws.exemplars_bank_embeddings_path,
+    )
+
+
+def make_tagger(embedder: Embedder, exemplars_profile: ExemplarsProfile) -> ConceptTagger:
+    return ConceptTagger(
+        embedder,
+        config.CONCEPT_TAGGER_LLM,
+        embed_text=_embed_text(exemplars_profile),
+        context=exemplars_profile.content_context,
+    )
+
+
 @dataclass
 class PipelineContext:
     exemplars_profile: ExemplarsProfile
@@ -112,26 +149,8 @@ def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContex
             f"{sum(1 for item in bank.values() if item.get('concepts'))} ya etiquetados"
         )
 
-    embed_text = partial(
-        exemplars_profile.embed_text, field_max_chars=config.EMBEDDING_FIELD_MAX_CHARS
-    )
-    embedder = Embedder(
-        knowledge_graph,
-        config.EMBEDDING_LLM,
-        embed_text=embed_text,
-        embed_signature=exemplars_profile.embed_signature,
-        context=exemplars_profile.content_context,
-        descriptions_path=ws.concept_descriptions_path,
-        concept_sources_path=ws.concept_sources_path,
-        concepts_cache_path=ws.concepts_embeddings_path,
-        exemplars_bank_cache_path=ws.exemplars_bank_embeddings_path,
-    )
-    tagger = ConceptTagger(
-        embedder,
-        config.CONCEPT_TAGGER_LLM,
-        embed_text=embed_text,
-        context=exemplars_profile.content_context,
-    )
+    embedder = make_embedder(ws, exemplars_profile, knowledge_graph)
+    tagger = make_tagger(embedder, exemplars_profile)
     generator = ContentGenerator(
         knowledge_graph=knowledge_graph,
         exemplars_bank=bank,

@@ -10,8 +10,11 @@ from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.exemplars_profile_builder import ExemplarsProfileBuilder
 from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
 from ..exemplars_profile import ExemplarsProfile
+from ..json_io import write_json
+from ..knowledge_graph import KnowledgeGraph
 from ..workspace import Workspace
 from . import _artifacts
+from .initialize import make_embedder, make_tagger
 
 
 def build_exemplars_profile(ws: Workspace | None = None) -> dict:
@@ -35,6 +38,12 @@ def build_knowledge_graph(ws: Workspace | None = None) -> dict:
     return KnowledgeGraphBuilder(workspace=ws).build(ws.raw_corpus_dir)
 
 
+# Extraer y etiquetar son un solo trabajo desde 2026-08-22: cada documento se etiqueta
+# nada más salir del extractor y se guarda ya anotado. Eran dos pasos que había que lanzar
+# a mano uno detrás del otro, y el segundo no era opcional — un banco sin etiquetar no
+# sirve ni para generar ni para indexar. Etiquetar por documento en vez de al final tiene
+# además el efecto que el arranque en caliente ya explotaba entre ejecuciones: los ítems
+# del documento 3 se etiquetan contra un índice que ya contiene los de los documentos 1 y 2.
 def build_exemplars_bank(
     exemplars_profile: ExemplarsProfile | None = None,
     ws: Workspace | None = None,
@@ -48,11 +57,59 @@ def build_exemplars_bank(
 
     logger.info("Construyendo el banco de ejemplares")
     bank = ExemplarsBankBuilder(exemplars_profile, workspace=ws).build(
-        ws.raw_exemplars_dir, ws.exemplars_bank_path
+        ws.raw_exemplars_dir,
+        ws.exemplars_bank_path,
+        on_items=_tagging_hook(ws, exemplars_profile),
     )
     if not bank:
         raise RuntimeError(f"Could not build an exemplars bank from {ws.raw_exemplars_dir}")
     return bank
+
+
+# Sin grafo no hay con qué etiquetar, y eso no es un error: el banco se extrae igual y
+# queda pendiente de `stages.tag_bank`, que es como funcionaba hasta ahora.
+def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
+    kg_path = _artifacts.knowledge_graph_path(ws)
+    if kg_path is None:
+        logger.warning(
+            "No hay grafo de conocimiento: los ítems se extraen sin etiquetar"
+        )
+        return None
+
+    # Perezoso a propósito: construir el `Embedder` indexa todos los conceptos y escribe
+    # las descripciones que falten, y eso son minutos. Hacerlo aquí lo pondría ANTES de la
+    # primera fase del plan, con la barra parada en 0 %; hacerlo en la primera llamada lo
+    # pone dentro de la fase que ya lo está contando.
+    state: dict = {}
+
+    def ready():
+        if not state:
+            embedder = make_embedder(ws, exemplars_profile, KnowledgeGraph(kg_path))
+            state["embedder"] = embedder
+            state["tagger"] = make_tagger(embedder, exemplars_profile)
+        return state["embedder"], state["tagger"]
+
+    def annotate(bank: dict, new_ids: list[str]) -> dict:
+        embedder, tagger = ready()
+        # El índice se refresca con el banco completo antes de etiquetar: vectoriza solo
+        # lo nuevo (el resto se reutiliza de la caché) y vuelve a fundir los centroides,
+        # que es lo que hace que las etiquetas de los documentos anteriores cuenten.
+        embedder.enrich_index_with_content(bank)
+        working = dict(bank)
+
+        # Se guarda tras cada ítem por lo mismo que en `stages/tag.py`: cancelar a mitad
+        # conserva todas las decisiones ya tomadas.
+        def checkpoint(item_id: str, item: dict) -> None:
+            working[item_id] = item
+            write_json(ws.exemplars_bank_path, working)
+
+        try:
+            return tagger.tag_all(bank, ids=new_ids, on_item=checkpoint)
+        except BaseException:
+            write_json(ws.exemplars_bank_path, working)
+            raise
+
+    return annotate
 
 
 _BUILDERS = {

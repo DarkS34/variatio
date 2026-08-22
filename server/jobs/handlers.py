@@ -30,7 +30,13 @@ def _workspace(job: Job) -> Workspace:
 
 def _build(artifact: str):
     def handler(job: Job, control: JobControl) -> dict:
-        return run_build(artifact, control)
+        result = run_build(artifact, control)
+        # La construcción ocurre en otro proceso, así que el contexto que ESTE tiene en
+        # memoria sigue hablando del artefacto anterior. Sin esto, lo que venga detrás
+        # —etiquetar, indexar, generar, y ahora la cadena— reutilizaría el grafo o el
+        # banco que se acaba de reemplazar.
+        deps.invalidate(job.workspace, f"'{artifact}' reconstruido")
+        return result
 
     return handler
 

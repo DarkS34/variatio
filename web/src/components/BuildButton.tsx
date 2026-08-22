@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
 import type { StageState } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
-import { useHealth, usePipeline, useRawMissingFor, useSubmitJob } from "@/state/queries";
+import {
+  useEngineOffline,
+  usePipeline,
+  useRawMissingFor,
+  useSubmitJob,
+} from "@/state/queries";
 
 /** What the two halves of the action are called on a given screen, when the generic
  *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
@@ -43,7 +48,7 @@ export function BuildButton({
 }) {
   const submit = useSubmitJob();
   const pipeline = usePipeline();
-  const health = useHealth();
+  const offline = useEngineOffline();
   const rawMissing = useRawMissingFor(stage.artifact);
   const canEdit = useCanEdit();
 
@@ -55,7 +60,6 @@ export function BuildButton({
   const engineBusy = Boolean(pipeline.data?.engine_busy);
   const elsewhere = Boolean(pipeline.data?.engine_busy_elsewhere);
   const busy = engineBusy || submit.isPending;
-  const offline = health.data ? !health.data.available : false;
 
   // The permission goes first: a viewer being told that a raw slot is empty would be
   // reading advice about a button they could not press even after fixing it.
@@ -66,7 +70,7 @@ export function BuildButton({
       : rawMissing
         ? `Faltan documentos en «${rawMissing}»: impórtalos en el panel antes de construir.`
         : offline
-          ? "El motor de inferencia no responde."
+          ? offline
           : busy
             ? elsewhere
               ? "La GPU está ocupada con un trabajo de otro workspace. Solo se ejecuta uno cada vez."

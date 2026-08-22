@@ -102,6 +102,21 @@ export function useHealth() {
   return useQuery({ queryKey: keys.health, queryFn: api.health, refetchInterval: 15_000 });
 }
 
+/**
+ * Por qué ningún trabajo puede lanzarse ahora mismo, o `null`.
+ *
+ * Los nueve tipos de trabajo llaman a un modelo, así que sin motor no hay ninguno que
+ * pueda salir bien. Vive aquí y no en cada pantalla porque el servidor ya lo rechaza con
+ * un 503: esto es lo que evita que el botón llegue siquiera a pedirlo. Mientras `/health`
+ * no ha contestado todavía no se bloquea nada — un botón deshabilitado por no saber es
+ * peor que uno que falla una vez.
+ */
+export function useEngineOffline(): string | null {
+  const health = useHealth();
+  if (!health.data) return null;
+  return health.data.available ? null : "El motor de inferencia no responde.";
+}
+
 export function usePipeline() {
   return useQuery({ queryKey: keys.pipeline, queryFn: api.pipeline });
 }
@@ -158,6 +173,12 @@ export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[]
   const plans = useBuildPlans();
   if (!artifact) return [];
   return plans.data?.artifacts?.[artifact] ?? [];
+}
+
+/** Lo mismo para un trabajo que no escribe ningún artefacto y aun así tiene fases. */
+export function useJobPhases(kind: JobKind): BuildPhase[] {
+  const plans = useBuildPlans();
+  return plans.data?.jobs?.[kind] ?? [];
 }
 
 /**
