@@ -14,6 +14,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
 import { App } from "./App";
+import { ToastProvider } from "./components/ui/toast";
 import { AuthGate } from "./features/auth/AuthGate";
 import { ApiError } from "./lib/api";
 import { RouterProvider } from "./lib/router";
@@ -39,10 +40,14 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      {/* Inside the router — a notice may want to link somewhere — and OUTSIDE AuthGate,
+          so the login and invitation screens can acknowledge an action too. */}
       <RouterProvider>
-        <AuthGate>
-          <App />
-        </AuthGate>
+        <ToastProvider>
+          <AuthGate>
+            <App />
+          </AuthGate>
+        </ToastProvider>
       </RouterProvider>
     </QueryClientProvider>
   </StrictMode>,
