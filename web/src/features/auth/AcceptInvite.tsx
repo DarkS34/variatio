@@ -129,7 +129,7 @@ export function AcceptInvite({ token }: { token: string }) {
             value={username}
             onChange={(event) => setUsername(event.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-small text-muted-foreground">
             Con esto entrarás. Minúsculas, cifras, punto, guion o guion bajo.
           </p>
         </div>
@@ -152,7 +152,7 @@ export function AcceptInvite({ token }: { token: string }) {
             <button
               type="button"
               onClick={suggest}
-              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-1 text-small text-muted-foreground transition-colors hover:text-foreground"
             >
               <Sparkles className="size-3.5" />
               Generar una segura
@@ -185,7 +185,7 @@ export function AcceptInvite({ token }: { token: string }) {
               {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-small text-muted-foreground">
             Al menos 12 caracteres. Si usas el gestor de contraseñas de Google o del
             navegador, pulsa en el campo y elige «Sugerir contraseña segura».
           </p>
@@ -202,14 +202,14 @@ export function AcceptInvite({ token }: { token: string }) {
             value={repeat}
             onChange={(event) => setRepeat(event.target.value)}
           />
-          {mismatch ? <p className="text-xs text-destructive">Las dos no coinciden.</p> : null}
+          {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
         </div>
 
         {/* Only after generating one: a password nobody chose has to be copyable before it
             is submitted, or the only record of it is a field about to be cleared. */}
         {generated ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
-            <code className="min-w-0 flex-1 truncate font-mono text-xs">{password}</code>
+            <code className="min-w-0 flex-1 truncate font-mono text-small">{password}</code>
             <Button
               type="button"
               size="sm"
@@ -226,7 +226,7 @@ export function AcceptInvite({ token }: { token: string }) {
           </div>
         ) : null}
 
-        <p className="text-xs text-muted-foreground">{ROLE_HINTS[invite.role]}</p>
+        <p className="text-small text-muted-foreground">{ROLE_HINTS[invite.role]}</p>
 
         <FormError error={accept.error} />
 

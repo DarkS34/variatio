@@ -77,7 +77,7 @@ export function GenerationsPanel() {
           Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
           solas: no hay nada que pulsar al generar.
         </InfoHint>
-        <span className="text-sm tabular-nums text-muted-foreground">{total}</span>
+        <span className="text-sm nums text-muted-foreground">{total}</span>
 
         {rows.length > 0 && profile ? (
           <div className="ml-auto flex gap-1">
@@ -131,6 +131,7 @@ export function GenerationsPanel() {
           }}
         >
           <Input
+            aria-label="Buscar en el enunciado, el concepto o las instrucciones"
             placeholder="Buscar en el enunciado, el concepto o las instrucciones…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -235,11 +236,11 @@ function GenerationCard({
               razonó
             </Badge>
           ) : null}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-small text-muted-foreground">
             {when(new Date(row.created_at * 1000).toISOString())}
           </span>
           {showAuthor && row.author.name ? (
-            <span className="text-xs text-muted-foreground">· {row.author.name}</span>
+            <span className="text-small text-muted-foreground">· {row.author.name}</span>
           ) : null}
 
           <div className="ml-auto flex gap-1">
@@ -273,7 +274,7 @@ function GenerationCard({
 
         <button
           onClick={onToggle}
-          className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+          className="text-small font-medium text-primary underline-offset-4 hover:underline"
         >
           {expanded ? "Ver menos" : "Ver el ítem completo y su encargo"}
         </button>
@@ -294,7 +295,7 @@ function Commission({ row }: { row: GenerationRow }) {
   if (entries.length === 0) return null;
 
   return (
-    <dl className="grid gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:grid-cols-[auto_minmax(0,1fr)]">
+    <dl className="grid gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 p-3 text-small sm:grid-cols-[auto_minmax(0,1fr)]">
       {entries.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="font-medium text-muted-foreground">{label}</dt>

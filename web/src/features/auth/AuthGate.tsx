@@ -110,12 +110,13 @@ function NoWorkspace() {
         }}
       >
         <Input
+          aria-label="Nombre de la asignatura"
           placeholder="Nombre de la asignatura"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
         {create.isError ? (
-          <p className="text-xs text-destructive">{(create.error as Error).message}</p>
+          <p className="text-small text-destructive">{(create.error as Error).message}</p>
         ) : slug ? (
           <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
         ) : null}

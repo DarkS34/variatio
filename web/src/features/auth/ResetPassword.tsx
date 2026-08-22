@@ -49,7 +49,7 @@ export function ResetPassword({ token }: { token: string }) {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="text-xs text-muted-foreground">Al menos 12 caracteres.</p>
+          <p className="text-small text-muted-foreground">Al menos 12 caracteres.</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -62,7 +62,7 @@ export function ResetPassword({ token }: { token: string }) {
             value={repeat}
             onChange={(event) => setRepeat(event.target.value)}
           />
-          {mismatch ? <p className="text-xs text-destructive">Las dos no coinciden.</p> : null}
+          {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
         </div>
 
         <FormError error={reset.error} />

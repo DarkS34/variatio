@@ -50,40 +50,31 @@ const RULES = [
       "components/RunDrawer.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
-      "features/account/AccountScreen.tsx",
       "features/admin/AdminScreen.tsx",
       "features/admin/charts.tsx",
-      "features/auth/AcceptInvite.tsx",
-      "features/auth/AccountMenu.tsx",
-      "features/auth/AuthGate.tsx",
-      "features/auth/ResetPassword.tsx",
-      "features/generations/GenerationsPanel.tsx",
-      "features/workspaces/WorkspaceSwitcher.tsx",
     ],
   },
   {
     name: "Ningún control de formulario sin etiqueta asociada",
     // A text placed above a control is not a label: without htmlFor you cannot click it to
-    // focus the field, and a screen reader announces the control unnamed. What is checked
-    // is that the control goes through <Field>, which is what ties the three together.
+    // focus the field, and a screen reader announces the control unnamed.
     //
-    // Deliberately coarse: `requires` clears the whole file once Field appears in it. A
-    // per-control check would need a parser, and the point here is to stop a NEW screen
-    // being born without labels, not to audit each call site.
+    // Two shapes satisfy this and neither is preferred: <Field>, which also ties the
+    // description and the error in, or a plain <Label htmlFor> matching the control's id.
+    // Requiring Field alone was wrong — it flagged the account and auth screens, which were
+    // already binding every one of their controls correctly, and "rewrite working code to
+    // use my component" is not an accessibility fix.
+    //
+    // Deliberately coarse: `requires` clears the whole file once either shape appears. A
+    // per-control check would need a parser, and the point is to stop a NEW screen being
+    // born without labels, not to audit each call site.
     re: /<(?:Input|Textarea|Select)\b(?![^>]*\baria-label\b)/g,
-    requires: /\bField\b/,
+    requires: /\bField\b|htmlFor=/,
     exempt: [
       "components/ConceptPicker.tsx",
       "components/ConceptSelector/index.tsx",
       "components/LogViewer.tsx",
-      "features/account/AccountScreen.tsx",
       "features/admin/AdminScreen.tsx",
-      "features/auth/AcceptInvite.tsx",
-      "features/auth/AuthGate.tsx",
-      "features/auth/LoginScreen.tsx",
-      "features/auth/ResetPassword.tsx",
-      "features/generations/GenerationsPanel.tsx",
-      "features/workspaces/WorkspaceSwitcher.tsx",
     ],
   },
   {
@@ -112,7 +103,6 @@ const RULES = [
       "components/RawImport.tsx",
       "components/TechnicalDetails.tsx",
       "components/TokenStream.tsx",
-      "features/account/AccountScreen.tsx",
       "features/admin/AdminScreen.tsx",
       "lib/format.ts",
     ],

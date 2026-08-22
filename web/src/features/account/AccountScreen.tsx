@@ -3,6 +3,7 @@ import { ArrowRight, Check, KeyRound, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
@@ -103,6 +104,7 @@ function AccountTabView() {
 function IdentityCard() {
   const session = useSession();
   const update = useUpdateProfile();
+  const toast = useToast();
   const user = session.data?.user;
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -112,7 +114,10 @@ function IdentityCard() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    update.mutate({ name: name.trim(), email: email.trim() || null });
+    update.mutate(
+      { name: name.trim(), email: email.trim() || null },
+      { onSuccess: () => toast({ title: "Guardado" }) },
+    );
   };
 
   return (
@@ -130,7 +135,7 @@ function IdentityCard() {
             <p className="rounded-md border border-dashed border-border px-3 py-2 font-mono text-sm text-muted-foreground">
               {user.username}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               No se puede cambiar: es lo que identifica todo lo que has hecho.
             </p>
           </div>
@@ -143,7 +148,7 @@ function IdentityCard() {
               maxLength={200}
               onChange={(event) => setName(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Como apareces para el resto en este workspace.
             </p>
           </div>
@@ -158,7 +163,7 @@ function IdentityCard() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Solo sirve para recibir el enlace de restablecer la contraseña. No se entra
               con él y no lo ve nadie más.
             </p>
@@ -172,7 +177,7 @@ function IdentityCard() {
               Guardar
             </Button>
             {update.isSuccess && !dirty ? (
-              <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+              <span className="flex items-center gap-1 text-small text-settled">
                 <Check className="size-3.5" />
                 Guardado
               </span>
@@ -187,6 +192,7 @@ function IdentityCard() {
 /** The old dialog, on the page. Same contract, said out loud: changing the password signs
  *  out every other device, because the usual reason to change it is a suspicion. */
 function PasswordCard() {
+  const toast = useToast();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [repeat, setRepeat] = useState("");
@@ -204,6 +210,10 @@ function PasswordCard() {
           setCurrent("");
           setNext("");
           setRepeat("");
+          toast({
+            title: "Contraseña cambiada",
+            description: "Se ha cerrado la sesión en el resto de dispositivos.",
+          });
         },
       },
     );
@@ -219,7 +229,7 @@ function PasswordCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-small text-muted-foreground">
             Al cambiarla se cierra la sesión en el resto de dispositivos; esta pestaña
             sigue abierta con una sesión nueva.
           </p>
@@ -246,7 +256,7 @@ function PasswordCard() {
               value={next}
               onChange={(event) => setNext(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">Al menos 12 caracteres.</p>
+            <p className="text-small text-muted-foreground">Al menos 12 caracteres.</p>
           </div>
 
           <div className="space-y-1.5">
@@ -259,7 +269,7 @@ function PasswordCard() {
               value={repeat}
               onChange={(event) => setRepeat(event.target.value)}
             />
-            {mismatch ? <p className="text-xs text-destructive">Las dos no coinciden.</p> : null}
+            {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
           </div>
 
           <FormError error={change.error} />
@@ -270,7 +280,7 @@ function PasswordCard() {
               Cambiar la contraseña
             </Button>
             {change.isSuccess ? (
-              <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+              <span className="flex items-center gap-1 text-small text-settled">
                 <Check className="size-3.5" />
                 Cambiada
               </span>
@@ -331,14 +341,14 @@ function AccessTab() {
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 truncate text-sm font-medium">
                   {workspace.name}
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="font-mono text-small text-muted-foreground">
                     {workspace.slug}
                   </span>
                   {workspace.slug === current ? (
                     <Badge variant="secondary">en uso</Badge>
                   ) : null}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-small text-muted-foreground">
                   {workspace.as_admin
                     ? "No eres miembro: entras porque administras la instalación."
                     : workspace.role

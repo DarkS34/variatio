@@ -152,21 +152,23 @@ function CreateForm({ onDone }: { onDone: () => void }) {
     >
       <Input
         autoFocus
+        aria-label="Nombre del workspace"
         placeholder="Nombre, p. ej. «Álgebra 2026»"
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
       <Input
+        aria-label="Identificador del workspace"
         placeholder="identificador"
         value={effective}
         onChange={(event) => {
           setTouched(true);
           setSlug(event.target.value.toLowerCase());
         }}
-        className="font-mono text-xs"
+        className="font-mono text-small"
       />
       {create.isError ? (
-        <p className="text-xs text-destructive">{(create.error as Error).message}</p>
+        <p className="text-small text-destructive">{(create.error as Error).message}</p>
       ) : (
         <p className="text-[11px] text-muted-foreground">
           Empieza vacío: subes su corpus y sus ejemplares y construyes su propia cadena.
