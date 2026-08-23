@@ -16,8 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
+import { fromGeneration, stashDraft } from "@/features/run/draft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { when } from "@/lib/format";
+import { useRouter } from "@/lib/router";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -75,7 +77,8 @@ export function GenerationsPanel() {
         <h2 className="text-heading">Variantes guardadas</h2>
         <InfoHint label="Qué hay aquí">
           Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
-          solas: no hay nada que pulsar al generar.
+          solas, una a una en cuanto se validan: no hay nada que pulsar al generar, y una
+          tanda cancelada conserva lo que ya había salido.
         </InfoHint>
         <span className="text-body nums text-muted-foreground">{total}</span>
 
@@ -216,6 +219,7 @@ function GenerationCard({
   onDelete: () => void;
   showAuthor: boolean;
 }) {
+  const { navigate } = useRouter();
   const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
   const manyTypes = profile ? Object.keys(profile.item_types).length > 1 : false;
   const primary = spec ? String(row.item[spec.primary_field] ?? "") : "";
@@ -244,6 +248,18 @@ function GenerationCard({
           ) : null}
 
           <div className="ml-auto flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Abre «Generar» con el mismo encargo: conceptos, currículo, campos fijados e instrucciones"
+              onClick={() => {
+                stashDraft(fromGeneration(row));
+                navigate("/generar");
+              }}
+            >
+              <Sparkles />
+              Generar más como esta
+            </Button>
             <Button
               variant="ghost"
               size="icon-sm"

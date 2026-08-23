@@ -1,4 +1,4 @@
-import { Brain, ChevronRight, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Brain, Check, ChevronRight, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
@@ -104,6 +104,7 @@ export function ResultCard({
   checks,
   retried,
   profile,
+  saved,
 }: {
   index: number;
   item: Record<string, unknown>;
@@ -112,6 +113,8 @@ export function ResultCard({
   checks?: ItemChecks | null;
   retried?: number;
   profile: ExemplarsProfile;
+  /** Whether the server has already kept this item as a row of «Mis variantes». */
+  saved?: boolean;
 }) {
   const [showThinking, setShowThinking] = useState(false);
   const spec = itemTypeOf(profile, { item_type: itemType });
@@ -126,6 +129,12 @@ export function ResultCard({
             <span className="text-small text-muted-foreground">
               {typeLabel(profile, itemType ?? null)}
             </span>
+          ) : null}
+          {saved ? (
+            <Badge variant="secondary" className="gap-1">
+              <Check className="size-3" />
+              guardada
+            </Badge>
           ) : null}
           <div className="ml-auto flex gap-1">
             <Button

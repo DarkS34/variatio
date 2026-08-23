@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from ..variant_generator import GeneratedVariant
 from .initialize import PipelineContext
 
@@ -11,6 +13,7 @@ def generate(
     curriculum: list[str] | None = None,
     instructions: str | None = None,
     think: bool = True,
+    on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
 ) -> list[GeneratedVariant]:
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
     if not targets:
@@ -25,6 +28,7 @@ def generate(
         curriculum=curriculum,
         instructions=instructions,
         think=think,
+        on_accepted=on_accepted,
     )
 
 

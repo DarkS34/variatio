@@ -41,6 +41,8 @@ export interface ProducedItem {
   thinking?: string | null;
   checks?: ItemChecks | null;
   retried?: number;
+  /** The `generations` row this item became, once the server says so. */
+  saved_id?: number | null;
 }
 
 /** Which side of the stream the model is writing on right now. */
@@ -498,6 +500,13 @@ class RunStore {
               retried: event.retried ?? 0,
             },
           ],
+        };
+      case "item.saved":
+        return {
+          ...run,
+          items: run.items.map((i) =>
+            i.index === event.index ? { ...i, saved_id: event.id } : i,
+          ),
         };
       case "item.tagged":
         return { ...run, taggedCount: run.taggedCount + 1 };

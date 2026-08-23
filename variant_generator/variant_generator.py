@@ -289,6 +289,7 @@ class VariantGenerator:
         think: bool = True,
         check: bool = True,
         ruling: object | None = None,
+        on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
     ) -> list[GeneratedVariant]:
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
@@ -390,6 +391,8 @@ class VariantGenerator:
                     checks=result.checks,
                     retried=result.retried,
                 )
+                if on_accepted is not None:
+                    on_accepted(result, i + 1)
 
         return accepted
 

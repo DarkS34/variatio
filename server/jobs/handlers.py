@@ -180,6 +180,15 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         + "; ".join(detail)
     )
 
+    saved_ids: dict[int, int] = {}
+
+    def remember(result, index: int) -> None:
+        row_id = _remember_one(job, result, resolved_type.key, curriculum)
+        if row_id is None:
+            return
+        saved_ids[index] = row_id
+        progress.emit("item.saved", index=index, id=row_id)
+
     results = stages.generate(
         context,
         concepts=concepts,
@@ -189,6 +198,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         curriculum=curriculum,
         instructions=instructions,
         think=think,
+        on_accepted=remember,
     )
     if len(results) < n:
         logger.warning(f"{len(results)}/{n} ítem(s) validados; el resto no pasó el esquema")
@@ -202,51 +212,49 @@ def handle_generate(job: Job, control: JobControl) -> dict:
             "thinking": r.thinking,
             "checks": r.checks,
             "retried": r.retried,
+            "saved_id": saved_ids.get(i + 1),
         }
-        for r in results
+        for i, r in enumerate(results)
     ]
-    saved = _remember(job, items, resolved_type.key, curriculum)
     return {
         "requested": n,
         "produced": len(results),
         "item_type": resolved_type.key,
-        "saved": saved,
+        "saved": len(saved_ids),
         "items": items,
     }
 
 
-# Persisting the variants is deliberately best-effort: a database that is briefly away
-# must not turn a minute of GPU into a failed job, because the items are already in the
-# job result and on screen. What is lost is the history, and the log says so.
-def _remember(job: Job, items: list[dict], item_type: str, curriculum: list[str] | None) -> int:
-    if not items:
-        return 0
+# Each variant is persisted the moment it validates, in its own short session, so a run
+# cancelled after the third item keeps three rows. Best-effort on purpose: a database that
+# is briefly away must not turn a minute of GPU into a failed job — the item is already in
+# the event stream and on screen. What is lost is the record, and the log says so.
+def _remember_one(job: Job, result, item_type: str, curriculum: list[str] | None) -> int | None:
     params = job.params
     try:
         with session_scope() as session:
             workspace = repository.get_workspace(session, job.workspace)
             if workspace is None:
-                return 0
-            for entry in items:
-                generations.save_generation(
-                    session,
-                    workspace_id=workspace.id,
-                    user_id=job.user_id,
-                    job_id=job.id,
-                    item_type=entry.get("item_type") or item_type,
-                    item=entry["item"],
-                    concepts=params.get("concepts") or [],
-                    curriculum=curriculum or [],
-                    fixed=params.get("fixed") or {},
-                    instructions=params.get("instructions"),
-                    think=bool(params.get("think", True)),
-                    thinking=entry.get("thinking"),
-                    checks=entry.get("checks"),
-                )
-    except Exception as exc:  # noqa: BLE001 - the run succeeded; only its record did not
-        logger.warning(f"No se pudieron guardar las variantes en la base de datos: {exc}")
-        return 0
-    return len(items)
+                return None
+            row = generations.save_generation(
+                session,
+                workspace_id=workspace.id,
+                user_id=job.user_id,
+                job_id=job.id,
+                item_type=result.item_type or item_type,
+                item=result.item.model_dump(mode="json"),
+                concepts=params.get("concepts") or [],
+                curriculum=curriculum or [],
+                fixed=params.get("fixed") or {},
+                instructions=params.get("instructions"),
+                think=bool(params.get("think", True)),
+                thinking=result.thinking,
+                checks=result.checks,
+            )
+            return row.id
+    except Exception as exc:  # noqa: BLE001 - the item is on screen; only its record is lost
+        logger.warning(f"No se pudo guardar la variante en la base de datos: {exc}")
+        return None
 
 
 HANDLERS = {

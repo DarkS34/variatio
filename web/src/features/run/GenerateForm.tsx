@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,8 @@ const MAX_INSTRUCTIONS = 600;
 export interface FormState {
   n: number;
   concepts: string[];
-  /** null means "the profile's first modality"; resolved against the profile on render. */
+  /** null means "not chosen yet"; it resolves on its own only when the profile declares a
+   *  single modality, because then there is nothing to choose. */
   itemType: string | null;
   /** Off = no restriction. */
   useCurriculum: boolean;
@@ -78,7 +79,7 @@ export function activeTypeKey(
 ): string | null {
   const keys = typeKeys(profile);
   if (state.itemType && keys.includes(state.itemType)) return state.itemType;
-  return defaultTypeKey(profile);
+  return keys.length === 1 ? defaultTypeKey(profile) : null;
 }
 
 export function activeTypeSpec(
@@ -295,18 +296,9 @@ export function GenerateForm({
     queryFn: getCurriculum,
   });
 
-  // With a preset curriculum the restriction starts on, because that is what the workspace
-  // says has been taught; without one it stays off, so that generating anything does not
-  // first require building a whole selection by hand. Once only: after the user has touched
-  // the switch, a refetch must not undo their answer.
-  const presetApplied = useRef(false);
-  useEffect(() => {
-    if (presetApplied.current || !preset) return;
-    presetApplied.current = true;
-    if (preset.concepts.length > 0 && !state.useCurriculum) patch({ useCurriculum: true });
-  }, [preset]);
-
-  // The other half of the same reconciliation, and deliberately NOT latched: with no preset
+  // The restriction starts OFF whatever the workspace holds (2026-08-23, explicit user
+  // request: every step starts unanswered): a preset curriculum is offered, never applied.
+  // This reconciliation is deliberately NOT latched: with no preset
   // the second switch is not rendered, so leaving it on is a state nobody chose and nobody
   // can see, and it would send a request with no curriculum field — the server then resolves
   // the workspace's own, which is empty, i.e. no restriction — while the concepts picked by
@@ -397,6 +389,7 @@ export function GenerateForm({
   // Same rules the generator enforces server-side; failing here is just faster.
   const problems = useMemo(() => {
     const found: string[] = [];
+    if (types.length > 1 && !typeKey) found.push("Elige el tipo de ítem.");
     if (state.concepts.length === 0) found.push("Elige al menos un concepto objetivo.");
     if (activeCurriculum) {
       const inside = new Set(activeCurriculum);
@@ -407,7 +400,7 @@ export function GenerateForm({
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
       found.push(`Las instrucciones no pueden pasar de ${MAX_INSTRUCTIONS} caracteres.`);
     return found;
-  }, [state.concepts, activeCurriculum, state.instructions]);
+  }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions]);
 
   const step = (id: string) => ({
     open: open === id,
@@ -430,7 +423,7 @@ export function GenerateForm({
           title="¿Qué tipo de ítem?"
           hint="La modalidad decide el esquema del ítem, sus reglas de redacción y de qué ejemplares del banco se sirve el few-shot: solo entran los de esta misma modalidad."
           answered={Boolean(typeKey)}
-          summary={typeSpec?.label || typeKey || "Ninguna"}
+          summary={typeSpec?.label || typeKey || "Ningún tipo elegido todavía"}
           {...step("itemType")}
         >
           <div className="grid gap-2 sm:grid-cols-2">
@@ -480,10 +473,7 @@ export function GenerateForm({
         <div className="flex flex-wrap items-center gap-2">
           <Switch
             checked={state.useCurriculum}
-            onCheckedChange={(useCurriculum) => {
-              presetApplied.current = true;
-              patch({ useCurriculum });
-            }}
+            onCheckedChange={(useCurriculum) => patch({ useCurriculum })}
             label="Restringir a un currículo"
           />
           <span className="text-body font-medium">Restringir a un currículo</span>
