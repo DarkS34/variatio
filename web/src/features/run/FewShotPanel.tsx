@@ -59,6 +59,9 @@ function Exemplar({
                 {primaryConcept}
               </Badge>
             ) : null}
+            {exemplar.origin === "neighbour" ? (
+              <Badge variant="outline">concepto previo</Badge>
+            ) : null}
           </span>
           <span
             className={cn(

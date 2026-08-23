@@ -53,6 +53,7 @@ export function GenerateScreen() {
       item_type?: string;
       thinking?: string;
       checks?: ItemChecks | null;
+      retried?: number;
     }[];
     if (fromResult.length > 0) return fromResult;
     return (run?.items ?? []).map((i) => ({
@@ -60,6 +61,7 @@ export function GenerateScreen() {
       item_type: i.item_type,
       thinking: i.thinking ?? undefined,
       checks: i.checks,
+      retried: i.retried,
     }));
   }, [isGenerate, run]);
 
@@ -219,6 +221,7 @@ function Results({
     item_type?: string;
     thinking?: string;
     checks?: ItemChecks | null;
+    retried?: number;
   }[];
   profile: ExemplarsProfile;
   run: RunView | null;
@@ -278,6 +281,7 @@ function Results({
           itemType={result.item_type}
           thinking={result.thinking}
           checks={result.checks}
+          retried={result.retried}
           profile={profile}
         />
       ))}

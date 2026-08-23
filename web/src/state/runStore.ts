@@ -40,6 +40,7 @@ export interface ProducedItem {
   item_type?: string;
   thinking?: string | null;
   checks?: ItemChecks | null;
+  retried?: number;
 }
 
 /** Which side of the stream the model is writing on right now. */
@@ -494,6 +495,7 @@ class RunStore {
               item_type: event.item_type,
               thinking: event.thinking,
               checks: event.checks,
+              retried: event.retried ?? 0,
             },
           ],
         };

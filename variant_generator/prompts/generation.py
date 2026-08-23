@@ -24,6 +24,7 @@ def generate_content_prompt(
     fixed_values_block: str,
     instructions: str = "",
     requests=None,
+    correction: str | None = None,
 ) -> str:
     # Guarded, unlike before: a workspace has no context until one of the two builders has
     # synthesised one, and that is the state a fresh instance starts in. Unguarded, the
@@ -114,6 +115,17 @@ def generate_content_prompt(
             f"{instructions.strip()}\n"
         )
 
+    correction_section = ""
+    if correction and correction.strip():
+        correction_section = (
+            "\n# CORRECCIÓN DE UN INTENTO ANTERIOR\n"
+            "Una versión anterior de este mismo ejercicio fue rechazada por estos motivos:\n"
+            f"{correction.strip()}\n"
+            "La nueva versión los evita todos. Todo lo demás del encargo se mantiene igual: "
+            "la modalidad, el objetivo, el conocimiento previo, lo prohibido, el currículo, los "
+            "valores fijos y la petición de quien pide el ejercicio.\n"
+        )
+
     return f"""\
 Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo, conforme a la forma de salida indicada al final.
 
@@ -154,7 +166,7 @@ Convenciones observadas en el material real de la asignatura: cómo escribe esta
 
 # VARIACIÓN DE CONTEXTO
 El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados en este lote, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
-{instructions_section}
+{instructions_section}{correction_section}
 # EJEMPLOS DE REFERENCIA
 Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
 {few_shot_section}

@@ -100,14 +100,25 @@ def run(
     if tagger is not None:
         checks["tagger"] = tagger_roundtrip(tagger, text, targets)
 
-    flags = []
+    reasons = []
     if hits:
-        flags.append(f"menciona lo no impartido: {', '.join(hits)}")
+        reasons.append(f"menciona lo no impartido: {', '.join(hits)}")
     if checks["similarity"] and checks["similarity"]["high"]:
-        flags.append(f"muy parecida a {close[0]} ({close[1]:.2f})")
+        reasons.append(f"muy parecida a {close[0]} ({close[1]:.2f})")
+    flags = list(reasons)
     if tagger is not None and not checks["tagger"]["on_target"]:
         flags.append(f"el etiquetador no la reconoce como {' / '.join(targets)}")
     checks["flags"] = flags
+    checks["reasons"] = reasons
+    checks["verdict"] = "retry" if reasons else "accept"
     if flags:
         logger.warning(f"Variante con señales: {'; '.join(flags)}")
     return checks
+
+
+def needs_retry(checks: dict | None) -> bool:
+    return bool(checks) and checks.get("verdict") == "retry"
+
+
+def correction_text(checks: dict | None) -> str:
+    return "\n".join(f"- {reason}" for reason in (checks or {}).get("reasons") or [])

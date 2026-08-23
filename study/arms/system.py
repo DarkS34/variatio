@@ -64,7 +64,7 @@ def run(commission: Commission, context) -> ArmResult:
                 curriculum=commission.curriculum or None,
                 instructions=commission.instructions or None,
                 think=commission.think,
-                check=False,
+                check=True,
                 ruling=commission.ruling,
             )
         except progress.Cancelled:
@@ -88,4 +88,6 @@ def run(commission: Commission, context) -> ArmResult:
         exemplar_ids=capture.exemplar_ids,
         elapsed_ms=round((time.perf_counter() - started) * 1000),
         error=error,
+        checks=results[0].checks if results else None,
+        retried=results[0].retried if results else 0,
     )

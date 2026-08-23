@@ -1,5 +1,6 @@
 import json
 import random
+from collections.abc import Callable
 
 from json_repair import repair_json
 from loguru import logger
@@ -128,7 +129,12 @@ def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> 
     return best, None
 
 
-def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
+NEIGHBOUR = "neighbour"
+
+
+def build_few_shot_block(
+    item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None
+) -> str:
     """How an exemplar is shown to the model.
 
     Module level for the same reason as `parse_item`: the evaluation's RAG arm has to
@@ -144,7 +150,7 @@ def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
     primary = item_type.primary_field
     properties = item_type.stripped_schema().get("properties", {})
     parts = []
-    for ex in few_shot:
+    for position, ex in enumerate(few_shot):
         scalar_meta = []
         text_blocks: list[tuple[str, str]] = []
         primary_text = ""
@@ -164,7 +170,13 @@ def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
             elif isinstance(value, list) and value:
                 text_blocks.append((name, "\n".join(f"- {entry}" for entry in value)))
         header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
-        lines = ["---", f"{primary.upper()}{header}:", primary_text]
+        lines = ["---"]
+        if origins and position < len(origins) and origins[position] == NEIGHBOUR:
+            prior = ex.get("primary_concept") or "concepto previo"
+            lines.append(
+                f"(Ejemplo de un concepto previo: «{prior}». Referencia de forma, no del objetivo.)"
+            )
+        lines += [f"{primary.upper()}{header}:", primary_text]
         for name, value in text_blocks:
             lines.append(f"{name.upper()}:")
             lines.append(value)
@@ -179,14 +191,16 @@ def build_few_shot_block(item_type: ItemType, few_shot: list[dict]) -> str:
 # the student has not seen.
 def assumed_known(closure: list[str], curriculum: list[str] | None) -> list[str]:
     if not curriculum:
-        return sorted(closure)
-    return sorted(set(closure) & set(curriculum))
+        return list(closure)
+    covered = set(curriculum)
+    return [name for name in closure if name in covered]
 
 
 def forbidden(closure: list[str], curriculum: list[str] | None) -> list[str]:
     if not curriculum:
-        return sorted(closure)
-    return sorted(set(closure) - set(curriculum))
+        return list(closure)
+    covered = set(curriculum)
+    return [name for name in closure if name not in covered]
 
 
 def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
@@ -210,6 +224,33 @@ class GeneratedVariant(BaseModel):
     item_type: str
     thinking: str | None = None
     checks: dict | None = None
+    retried: int = 0
+
+
+def generate_with_retries(
+    attempt: Callable[[str | None], GeneratedVariant | None],
+    verify: Callable[[GeneratedVariant], dict] | None,
+    max_retries: int,
+    index: int = 1,
+) -> GeneratedVariant | None:
+    result = attempt(None)
+    if result is None or verify is None:
+        return result
+    result.checks = verify(result)
+    while result.retried < max_retries and checks.needs_retry(result.checks):
+        reasons = list(result.checks.get("reasons") or [])
+        progress.emit("item.retried", index=index, attempt=result.retried + 1, reasons=reasons)
+        logger.info(
+            f"[generate] Reintento {result.retried + 1}/{max_retries} de la variante {index}: "
+            f"{'; '.join(reasons)}"
+        )
+        again = attempt(checks.correction_text(result.checks))
+        if again is None:
+            break
+        again.retried = result.retried + 1
+        again.checks = verify(again)
+        result = again
+    return result
 
 
 class VariantGenerator:
@@ -256,14 +297,17 @@ class VariantGenerator:
         if ruling is None:
             ruling = self._screen_instructions(target_type, concepts, instructions)
 
-        few_shot = self._select_few_shot(target_type, concepts, fixed)
+        few_shot, origins = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
             logger.warning(f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot")
 
         progress.emit(
             "few_shot",
             ids=[ex_id for ex_id, _ in few_shot],
-            items=[{"id": ex_id, "item": _public_fields(item)} for ex_id, item in few_shot],
+            items=[
+                {"id": ex_id, "item": _public_fields(item), "origin": origins[ex_id]}
+                for ex_id, item in few_shot
+            ],
             concepts=concepts,
             item_type=target_type.key,
         )
@@ -276,7 +320,9 @@ class VariantGenerator:
         excluded_block = self._format_concept_list(posteriors)
         curriculum_block = self._format_concept_list(curriculum or [])
         rules_block = "\n".join(f"- {r}" for r in target_type.general_generation_rules)
-        few_shot_block = self._build_few_shot_block(target_type, [item for _, item in few_shot])
+        few_shot_block = self._build_few_shot_block(
+            target_type, [item for _, item in few_shot], [origins[ex_id] for ex_id, _ in few_shot]
+        )
         instance_template = self._build_instance_template(target_type, fixed)
         fields_block = self._build_fields_block(target_type, fixed)
         fixed_values_block = self._build_fixed_values_block(target_type, fixed)
@@ -287,34 +333,32 @@ class VariantGenerator:
             for i in range(n):
                 progress.checkpoint()
                 already = self._collect_already_generated(target_type, accepted)
-                prompt = generate_content_prompt(
-                    context_block=self.content_context.prompt_block(),
-                    item_type_block=item_type_block,
-                    target_concepts_block=target_block,
-                    prerequisites_block=prerequisites_block,
-                    excluded_concepts_block=excluded_block,
-                    curriculum_block=curriculum_block,
-                    rules_block=rules_block,
-                    few_shot_block=few_shot_block,
-                    already_generated=already,
-                    instance_template=instance_template,
-                    fields_block=fields_block,
-                    fixed_values_block=fixed_values_block,
-                    instructions=instructions,
-                    requests=ruling.requests if ruling.checked else None,
-                )
-
                 reporter.tick(i + 1)
-                progress.emit("prompt", index=i + 1, text=prompt)
-                result = self._generate_one(prompt, fixed, target_type, think)
-                if result is None:
-                    logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
-                    progress.emit("item.rejected", index=i + 1)
-                    continue
 
-                if check:
+                def attempt(correction: str | None) -> GeneratedVariant | None:
+                    prompt = generate_content_prompt(
+                        context_block=self.content_context.prompt_block(),
+                        item_type_block=item_type_block,
+                        target_concepts_block=target_block,
+                        prerequisites_block=prerequisites_block,
+                        excluded_concepts_block=excluded_block,
+                        curriculum_block=curriculum_block,
+                        rules_block=rules_block,
+                        few_shot_block=few_shot_block,
+                        already_generated=already,
+                        instance_template=instance_template,
+                        fields_block=fields_block,
+                        fixed_values_block=fixed_values_block,
+                        instructions=instructions,
+                        requests=ruling.requests if ruling.checked else None,
+                        correction=correction,
+                    )
+                    progress.emit("prompt", index=i + 1, text=prompt)
+                    return self._generate_one(prompt, fixed, target_type, think)
+
+                def verify(result: GeneratedVariant) -> dict:
                     with progress.step("check", "Comprobando la variante"):
-                        result.checks = checks.run(
+                        return checks.run(
                             result.item,
                             target_type,
                             targets=concepts,
@@ -324,6 +368,18 @@ class VariantGenerator:
                             few_shot=few_shot,
                             batch=[r.item for r in accepted],
                         )
+
+                result = generate_with_retries(
+                    attempt,
+                    verify if check else None,
+                    config.CHECK_MAX_RETRIES,
+                    index=i + 1,
+                )
+                if result is None:
+                    logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
+                    progress.emit("item.rejected", index=i + 1)
+                    continue
+
                 accepted.append(result)
                 progress.emit(
                     "item.produced",
@@ -332,6 +388,7 @@ class VariantGenerator:
                     item_type=target_type.key,
                     thinking=result.thinking,
                     checks=result.checks,
+                    retried=result.retried,
                 )
 
         return accepted
@@ -442,7 +499,7 @@ class VariantGenerator:
 
     def _select_few_shot(
         self, item_type: ItemType, concepts: list[str], fixed: dict[str, object]
-    ) -> list[tuple[str, dict]]:
+    ) -> tuple[list[tuple[str, dict]], dict[str, str]]:
         target = set(concepts)
         primary: list[tuple[str, dict]] = []
         secondary: list[tuple[str, dict]] = []
@@ -456,9 +513,53 @@ class VariantGenerator:
             else:
                 secondary.append((ex_id, item))
 
-        if not primary and not secondary:
-            return []
+        neighbours: list[tuple[str, dict]] = []
+        if len(primary) + len(secondary) < self.max_few_shot:
+            neighbours = self._neighbour_exemplars(
+                item_type, concepts, {ex_id for ex_id, _ in primary + secondary}
+            )
 
+        if not primary and not secondary and not neighbours:
+            return [], {}
+
+        origins = {ex_id: "primary" for ex_id, _ in primary}
+        origins |= {ex_id: "secondary" for ex_id, _ in secondary}
+        origins |= {ex_id: NEIGHBOUR for ex_id, _ in neighbours}
+        chosen = self._pick_few_shot(concepts, primary, secondary, neighbours, fixed)
+        return chosen, {ex_id: origins[ex_id] for ex_id, _ in chosen}
+
+    def _neighbour_exemplars(
+        self, item_type: ItemType, concepts: list[str], taken: set[str]
+    ) -> list[tuple[str, dict]]:
+        relation = config.KG_PREREQUISITE_RELATION
+        if not relation or not self.knowledge_graph.has_relation(relation):
+            return []
+        graph = self.knowledge_graph[relation]
+        if not graph.is_directed():
+            return []
+        prior: set[str] = set()
+        for concept in concepts:
+            if concept in graph:
+                prior.update(self.knowledge_graph.neighbors(concept, relation, "out"))
+        prior -= set(concepts)
+        if not prior:
+            return []
+        return [
+            (ex_id, item)
+            for ex_id, item in self.exemplars_bank.items()
+            if ex_id not in taken
+            and self._is_type(item, item_type.key)
+            and item.get("primary_concept") in prior
+        ]
+
+    def _pick_few_shot(
+        self,
+        concepts: list[str],
+        primary: list[tuple[str, dict]],
+        secondary: list[tuple[str, dict]],
+        neighbours: list[tuple[str, dict]],
+        fixed: dict[str, object],
+    ) -> list[tuple[str, dict]]:
         if fixed:
 
             def pinned(pool: list[tuple[str, dict]]) -> list[tuple[str, dict]]:
@@ -473,13 +574,18 @@ class VariantGenerator:
 
         if len(primary) >= self.max_few_shot:
             return random.sample(primary, self.max_few_shot)
-        if not secondary:
+        if not secondary and not neighbours:
             return primary
 
-        by_id = dict(secondary)
-        ranked = self.embedder.rank_exemplars(concepts, list(by_id))
-        fill = self.max_few_shot - len(primary)
-        return primary + [(ex_id, by_id[ex_id]) for ex_id in ranked[:fill]]
+        chosen = list(primary)
+        for pool in (secondary, neighbours):
+            fill = self.max_few_shot - len(chosen)
+            if fill <= 0 or not pool:
+                continue
+            by_id = dict(pool)
+            ranked = self.embedder.rank_exemplars(concepts, list(by_id))
+            chosen += [(ex_id, by_id[ex_id]) for ex_id in ranked[:fill]]
+        return chosen
 
     def _format_target_concepts(self, concepts: list[str]) -> str:
         descriptions = self.embedder.concept_descriptions
@@ -538,8 +644,10 @@ class VariantGenerator:
             )
         return "\n".join(lines)
 
-    def _build_few_shot_block(self, item_type: ItemType, few_shot: list[dict]) -> str:
-        return build_few_shot_block(item_type, few_shot)
+    def _build_few_shot_block(
+        self, item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None
+    ) -> str:
+        return build_few_shot_block(item_type, few_shot, origins)
 
     def _collect_already_generated(
         self, item_type: ItemType, accepted: list[GeneratedVariant]

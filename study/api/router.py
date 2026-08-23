@@ -267,4 +267,6 @@ def _position(session: EvaluationSession, position: int, revealed: bool) -> dict
         "exemplar_ids": result.exemplar_ids,
         "elapsed_ms": result.elapsed_ms,
         "error": result.error,
+        "checks": result.checks,
+        "retried": result.retried,
     }

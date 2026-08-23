@@ -3,6 +3,8 @@
  * for the same reason the Python does: the study is measured against the system, not part
  * of it. `lib/types.ts` keeps only the two counters the admin overview prints. */
 
+import type { ItemChecks } from "@/lib/types";
+
 /* Evaluation ----------------------------------------------------------------------- */
 
 export type EvaluationArm = "naive" | "rag" | "system";
@@ -29,6 +31,8 @@ export interface EvaluationPosition {
   exemplar_ids?: string[];
   elapsed_ms?: number;
   error?: string | null;
+  checks?: ItemChecks | null;
+  retried?: number;
 }
 
 export type Usability = "as_is" | "with_edits" | "no";

@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Markdown } from "@/components/Markdown";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
@@ -61,7 +62,7 @@ export function ItemFields({
  * the schema already did that, and what is left — a forbidden concept named, a near
  * copy, the tagger not recognising the objective — are signals for the person reading.
  */
-export function ItemChecks({ checks }: { checks?: ItemChecks | null }) {
+export function ItemChecks({ checks, retried }: { checks?: ItemChecks | null; retried?: number }) {
   if (!checks) return null;
   const flagged = checks.flags.length > 0;
   const tagger = checks.tagger;
@@ -74,6 +75,11 @@ export function ItemChecks({ checks }: { checks?: ItemChecks | null }) {
     >
       {flagged ? <ShieldAlert className="mt-0.5 size-3.5 shrink-0" /> : <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {retried ? (
+          <span>
+            <Badge variant="outline">Reintentada ×{retried}</Badge>
+          </span>
+        ) : null}
         {flagged ? (
           checks.flags.map((flag) => <span key={flag}>{flag}</span>)
         ) : (
@@ -96,6 +102,7 @@ export function ResultCard({
   itemType,
   thinking,
   checks,
+  retried,
   profile,
 }: {
   index: number;
@@ -103,6 +110,7 @@ export function ResultCard({
   itemType?: string;
   thinking?: string | null;
   checks?: ItemChecks | null;
+  retried?: number;
   profile: ExemplarsProfile;
 }) {
   const [showThinking, setShowThinking] = useState(false);
@@ -133,7 +141,7 @@ export function ResultCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <ItemFields item={item} spec={spec} />
-        <ItemChecks checks={checks} />
+        <ItemChecks checks={checks} retried={retried} />
 
         {thinking ? (
           <div className="overflow-hidden rounded-lg border border-border">

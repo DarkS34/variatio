@@ -191,6 +191,11 @@ export function describeEvent(event: VgEvent): { text: string; tone: ActivityTon
         text: `JSON no válido en ${event.where}; reintento ${event.attempt}/${event.max_attempts}`,
         tone: "warn",
       };
+    case "item.retried":
+      return {
+        text: `Ítem ${event.index} rechazado, reintento ${event.attempt}: ${(event.reasons ?? []).join("; ")}`,
+        tone: "warn",
+      };
     case "item.produced":
       return event.checks?.flags?.length
         ? { text: `Ítem ${event.index} generado, con ${event.checks.flags.length} señal(es)`, tone: "warn" }

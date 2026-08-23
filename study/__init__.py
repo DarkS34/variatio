@@ -68,6 +68,8 @@ class ArmResult:
     exemplar_ids: list[str]
     elapsed_ms: int
     error: str | None = None
+    checks: dict | None = None
+    retried: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -81,6 +83,8 @@ class ArmResult:
             "exemplar_ids": list(self.exemplar_ids),
             "elapsed_ms": self.elapsed_ms,
             "error": self.error,
+            "checks": self.checks,
+            "retried": self.retried,
         }
 
 
