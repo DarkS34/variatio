@@ -6,7 +6,7 @@
     "idle_unload_poll_seconds": 60
   },
   "models": {
-    "main": "qwen3.8:27b-q4_K_M",
+    "main": "qwen3.8:27b-q8_0",
     "guardrail": "granite4.1-guardian:8b-q4_K_M",
     "embedding": "qwen3-embedding:4b",
     "phases": {
@@ -27,6 +27,7 @@
       "description_generation": null,
       "concept_tagger": null,
       "variant_generation": null,
+      "admissibility": null,
       "repair": null
     }
   },
@@ -41,6 +42,27 @@
     "main": 65536,
     "guardrail": 4096,
     "embedding": 4096
+  },
+  "reasoning": {
+    "phases": {
+      "exemplars_transcribe": false,
+      "ep_scan": false,
+      "ep_consolidate": true,
+      "ep_context": false,
+      "eb_extract": false,
+      "kg_extract": false,
+      "kg_clean_merge": true,
+      "kg_clean_drop": true,
+      "kg_domains": false,
+      "kg_domains_leftovers": false,
+      "kg_link_domain": true,
+      "kg_link_cross_domain": true,
+      "kg_taggable": true,
+      "kg_context": false,
+      "description_generation": false,
+      "concept_tagger": true,
+      "admissibility": false
+    }
   },
   "builders": {
     "transcribe_dpi": 200,
@@ -91,6 +113,7 @@
     "max_few_shot_examples": 4,
     "max_json_repair_tries": 3,
     "check_similarity_threshold": 0.85,
+    "check_max_retries": 1,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
@@ -105,7 +128,7 @@
     ],
     "models": {
       "gemini": "gemini-3.6-flash",
-      "groq": "llama-3.3-70b-versatile"
+      "groq": "openai/gpt-oss-120b"
     },
     "timeout": 60.0
   },
