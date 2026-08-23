@@ -31,6 +31,7 @@ import type {
   KgConcept,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useScope } from "@/state/queries";
 
 import { DecisionField, describeDecision } from "./DecisionField";
 import { FormStep } from "./FormStep";
@@ -341,6 +342,10 @@ export function GenerateForm({
   const typeKey = activeTypeKey(state, profile);
   const typeSpec = activeTypeSpec(state, profile);
   const decided = userDecidedFields(typeSpec);
+  // The resolved key, not `state.itemType`: null there means the profile's first modality,
+  // and that is the state the form starts in, so the raw value would leave the query off
+  // in the commonest case of all.
+  const scope = useScope(typeKey);
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
@@ -652,7 +657,7 @@ export function GenerateForm({
             aria-label="Instrucciones adicionales"
             value={state.instructions}
             maxLength={MAX_INSTRUCTIONS}
-            placeholder="Por ejemplo: que el contexto sea deportivo, o que el enunciado incluya una tabla de datos"
+            placeholder="Por ejemplo: que el contexto sea deportivo"
             onChange={(event) => patch({ instructions: event.target.value })}
             className={cn("min-h-20", blockedInstructions && "border-destructive")}
           />
@@ -661,6 +666,41 @@ export function GenerateForm({
               {state.instructions.length}/{MAX_INSTRUCTIONS}
             </span>
           </div>
+
+          {scope.data ? (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-small">
+              <div>
+                <span className="font-medium">Aquí puedes pedir</span>
+                <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                  {scope.data.slots.map((slot) => (
+                    <li key={slot.key}>
+                      {slot.label} — <span className="italic">«{slot.example}»</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {scope.data.owners.length > 0 ? (
+                <div>
+                  <span className="font-medium">Esto se decide más arriba</span>
+                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {scope.data.owners.map((owner) => (
+                      <li key={owner.key}>
+                        {owner.label} — {owner.where}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {scope.data.facts.length > 0 ? (
+                <div>
+                  <span className="font-medium">Esto lo fija la asignatura</span>
+                  <p className="mt-1 text-muted-foreground">
+                    {scope.data.facts.map((fact) => fact.value).join(" · ")}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {blockedInstructions ? (
             <Alert tone="danger" title="Instrucciones bloqueadas">

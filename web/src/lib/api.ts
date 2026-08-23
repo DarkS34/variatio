@@ -5,6 +5,7 @@ import type {
   ArtifactName,
   BankListing,
   BuildPlans,
+  CommissionScope,
   ConceptSource,
   ConfigPayload,
   ExemplarsProfile,
@@ -125,6 +126,11 @@ export const putCurriculum = (concepts: string[], closePrerequisites: boolean) =
     concepts,
     close_prerequisites: closePrerequisites,
   });
+
+// Named for the same reason: the generation form imports it directly. It 404s until the
+// graph and the profile are built, which is what keeps the block off a fresh workspace.
+export const getScope = (itemType: string) =>
+  request<CommissionScope>(`/api/pipeline/scope?item_type=${encodeURIComponent(itemType)}`);
 
 export const api = {
   me: () => request<Session>("/api/auth/me"),

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { api } from "@/lib/api";
+import { api, getScope } from "@/lib/api";
 import type {
   ArtifactName,
   BuildPhase,
+  CommissionScope,
   JobKind,
   Role,
 } from "@/lib/types";
@@ -26,6 +27,9 @@ export const keys = {
   // The phase plan of each builder. It is a property of the code, not of the instance, so
   // it is fetched once and never invalidated — nothing a user does can change it.
   phases: ["pipeline", "phases"] as const,
+  // Keyed by modality, because the fields a modality declares are half of what decides
+  // the owners: two modalities of one instance do not have the same scope.
+  scope: (itemType: string) => ["pipeline", "scope", itemType] as const,
   generations: (params: Record<string, unknown>) => ["generations", params] as const,
   generation: (id: number) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
@@ -170,6 +174,21 @@ export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[]
   const plans = useBuildPlans();
   if (!artifact) return [];
   return plans.data?.artifacts?.[artifact] ?? [];
+}
+
+/**
+ * What the commission's free-text field may ask for, for one modality.
+ *
+ * `staleTime: Infinity` like the phase plan: it is derived from artifacts a generation
+ * run cannot change, and switching workspace clears the whole cache anyway.
+ */
+export function useScope(itemType: string | null) {
+  return useQuery<CommissionScope>({
+    queryKey: keys.scope(itemType ?? ""),
+    queryFn: () => getScope(itemType!),
+    enabled: Boolean(itemType),
+    staleTime: Infinity,
+  });
 }
 
 /** The same for a job that writes no artifact and still has phases. */

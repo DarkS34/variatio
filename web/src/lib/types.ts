@@ -66,6 +66,19 @@ export interface BuildPlans {
   jobs: Partial<Record<JobKind, BuildPhase[]>>;
 }
 
+/**
+ * What the free-text field of a commission may and may not ask for.
+ *
+ * Derived by the server from this instance's own artifacts, so another workspace answers
+ * something else without a line changing here. The terms each owner decides stay on the
+ * server: the screen names the control, never its values.
+ */
+export interface CommissionScope {
+  slots: { key: string; label: string; example: string }[];
+  owners: { key: string; label: string; where: string }[];
+  facts: { key: string; value: string }[];
+}
+
 export interface Job {
   id: string;
   kind: JobKind;

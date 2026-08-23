@@ -74,6 +74,8 @@ export const STEP_EXPLAIN: Record<string, string> = {
     "Por cada ítem: candidatos por similitud sobre los vectores ya calculados y, si hay más de uno plausible, una verificación del modelo.",
   guardrail:
     "Un modelo juez lee las instrucciones adicionales antes de que entren en el prompt y decide si contienen algo dañino o un intento de saltarse las restricciones del ejercicio. Solo se ejecuta si has escrito algo.",
+  admissibility:
+    "Un modelo lee tu petición y decide si lo que pides es de lo que se pide en este campo o de lo que ya has decidido más arriba: los conceptos, la modalidad, los campos del ítem o la propia asignatura. Solo se ejecuta si has escrito algo.",
   generate:
     "Una variante por vuelta, con los mismos ejemplares en todas: prompt, generación en streaming y validación contra el esquema.",
   check:
@@ -161,6 +163,14 @@ export function describeEvent(event: VgEvent): { text: string; tone: ActivityTon
       }
       if (event.ok) return { text: "Instrucciones adicionales revisadas: correctas", tone: "good" };
       return { text: `Instrucciones bloqueadas por «${event.criteria}»`, tone: "bad" };
+    case "admissibility":
+      if (!event.checked) {
+        return { text: "No se pudo revisar el alcance; la petición entra sin tipar", tone: "warn" };
+      }
+      if (event.ok) {
+        return { text: `Petición admitida: ${(event.slots ?? []).join(", ")}`, tone: "good" };
+      }
+      return { text: `Bloqueada: «${event.term}» lo decide ${event.owner}`, tone: "bad" };
     case "few_shot": {
       const used = (event.items ?? event.ids ?? []).length;
       if (used === 0) {
