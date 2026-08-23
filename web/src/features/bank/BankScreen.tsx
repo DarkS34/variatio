@@ -451,15 +451,32 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     tone={listing.totals.untagged === 0 ? "settled" : "attention"}
                   />
                   {listing.totals.untagged > 0 ? (
-                    <button
-                      onClick={() => {
-                        setUntagged(true);
-                        setPage(1);
-                      }}
-                      className="text-small text-[var(--attention)] hover:underline"
-                    >
-                      Ver los {listing.totals.untagged} sin concepto →
-                    </button>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setUntagged(true);
+                          setPage(1);
+                        }}
+                        className="text-small text-[var(--attention)] hover:underline"
+                      >
+                        Ver los {listing.totals.untagged} sin concepto →
+                      </button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={locked || submit.isPending || Boolean(offline)}
+                        title={
+                          locked
+                            ? LOCKED_HINT
+                            : (offline ??
+                              `Vuelve a pasar el etiquetador por los ${listing.totals.untagged} ítem(s) sin concepto`)
+                        }
+                        onClick={() => submit.mutate({ kind: "tag", params: {} })}
+                      >
+                        {submit.isPending ? <Spinner /> : <RefreshCw />}
+                        Re-etiquetar los {listing.totals.untagged}
+                      </Button>
+                    </div>
                   ) : null}
                 </>
               ) : (
@@ -669,12 +686,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           </div>
         ) : null}
 
-        {/* The only place tagging is done by hand, and it only appears with something selected.
-            There is no «Etiquetar pendientes» in the header any more: extracting and tagging are one
-            job since the extractor tags each document as soon as it comes out, so a button to launch
-            the tagging on its own offered a step that no longer exists. What is left without a
-            concept is what the verifier rejected, and that is corrected on concrete items: «Ver los
-            N sin concepto» filters them, they are selected, and this button runs them again. */}
+        {/* Corrections on concrete items, and it only appears with something selected. There is
+            still no header-level «Etiquetar pendientes»: extracting and tagging are one job since
+            the extractor tags each document as soon as it comes out. The retry for what the
+            verifier rejected lives on the «Etiquetado» card («Re-etiquetar los N», the `tag` job
+            with no ids, which is exactly `pending_ids`); this bar re-runs the tagger over items
+            chosen by hand, whatever their state. */}
         {selected.size > 0 ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
             <span>{selected.size} ítem(s) seleccionados</span>
