@@ -1,4 +1,5 @@
 import {
+  Ban,
   Check,
   ChevronRight,
   Copy,
@@ -20,18 +21,21 @@ import { Tabs } from "@/components/ui/tabs";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
-import { ARTIFACT_STATUS, when } from "@/lib/format";
+import { ARTIFACT_STATUS, JOB_STATUS, when } from "@/lib/format";
 import type {
   AdminAccount,
   AdminOverview,
   AdminWorkspace,
+  Job,
   Role,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ROLE_HINTS, ROLE_LABELS, useSession } from "@/state/auth";
 import {
+  useAdminCancelJob,
   useAdminDeleteWorkspace,
   useAdminInvites,
+  useAdminJobs,
   useAdminOverview,
   useCreateInvite,
   useDeleteAccount,
@@ -659,7 +663,9 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const only = overview.workspaces.length === 1;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      <QueueSection />
+
       <div className="overflow-hidden rounded-lg border border-border">
         <Table minWidth="52rem">
           <THead>
@@ -741,6 +747,121 @@ function WorkspacesTab({ overview }: { overview: AdminOverview }) {
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The one GPU's queue, across every workspace and every account.
+ *
+ * Jobs run strictly in the order they were asked for: the running one first, then the
+ * waiting ones by position. Each member sees only their own workspace's entries from
+ * inside it; this is the only place the whole line is visible, and the only place an
+ * entry of someone else's can be taken out of it.
+ */
+function QueueSection() {
+  const jobs = useAdminJobs();
+  const cancel = useAdminCancelJob();
+  const toast = useToast();
+
+  const running = jobs.data?.running ?? null;
+  const queued = jobs.data?.queued ?? [];
+  const rows = [...(running ? [running] : []), ...queued];
+
+  const confirmCancel = (job: Job) => {
+    const verb = job.status === "running" ? "Detener" : "Quitar de la cola";
+    const message =
+      `¿${verb} «${job.label}» de ${job.workspace}` +
+      `${job.user_name ? `, pedido por ${job.user_name}` : ""}?` +
+      (job.status === "running"
+        ? "\n\nSe cancela en el siguiente punto de control y el siguiente de la cola arranca."
+        : "");
+    if (!window.confirm(message)) return;
+    cancel.mutate(job.id, {
+      onSuccess: () =>
+        toast({
+          title: job.status === "running" ? "Cancelación pedida" : "Quitado de la cola",
+          description: `«${job.label}» de ${job.workspace}`,
+          tone: "attention",
+        }),
+      onError: (error: Error) =>
+        toast({ title: "No se ha podido cancelar", description: error.message, tone: "danger" }),
+    });
+  };
+
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+          Cola de la GPU ({rows.length})
+        </h2>
+        <InfoHint label="Cómo funciona la cola">
+          Hay una GPU y se ejecuta un trabajo cada vez. Lo que se pide mientras está ocupada
+          —construir, generar, evaluar, de cualquier workspace— se apila por orden de llegada
+          y arranca solo cuando termina lo anterior. Cada persona ve desde su instancia solo
+          lo suyo; aquí se ve la fila entera y se puede sacar a cualquiera de ella.
+        </InfoHint>
+      </div>
+
+      {jobs.isLoading ? (
+        <Skeleton className="h-16" />
+      ) : rows.length === 0 ? (
+        <p className="text-small text-muted-foreground">
+          Nada en ejecución ni en espera.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border">
+          <Table minWidth="48rem">
+            <THead>
+              <TR>
+                <TH align="num">#</TH>
+                <TH>Trabajo</TH>
+                <TH>Workspace</TH>
+                <TH>Pedido por</TH>
+                <TH>Pedido</TH>
+                <TH>Estado</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {rows.map((job, index) => {
+                const active = job.status === "running";
+                return (
+                  <TR key={job.id}>
+                    <TD align="num" className="px-3 py-2 nums text-muted-foreground">
+                      {active ? "—" : index + (running ? 0 : 1)}
+                    </TD>
+                    <TD className="px-3 py-2">{job.label}</TD>
+                    <TD className="px-3 py-2 font-mono text-small">{job.workspace}</TD>
+                    <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
+                      {when(new Date(job.created_at * 1000).toISOString())}
+                    </TD>
+                    <TD className="px-3 py-2">
+                      <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
+                        {JOB_STATUS[job.status].label}
+                      </span>
+                    </TD>
+                    <TD align="num" className="whitespace-nowrap px-3 py-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={cancel.isPending}
+                        title={active ? "Detener el trabajo en curso" : "Quitar de la cola"}
+                        onClick={() => confirmCancel(job)}
+                      >
+                        {active ? <Ban /> : <Trash2 />}
+                        {active ? "Detener" : "Quitar"}
+                      </Button>
+                    </TD>
+                  </TR>
+                );
+              })}
+            </TBody>
+          </Table>
+        </div>
+      )}
+      <FormError error={cancel.error} />
+    </section>
   );
 }
 

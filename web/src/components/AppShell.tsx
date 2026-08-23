@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Activity, Play, Scale, ScrollText } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -10,7 +11,7 @@ import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/queries";
+import { keys, useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
 /**
@@ -127,6 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const health = useHealth();
   const stream = useStream();
   const invalidate = useInvalidateChain();
+  const queryClient = useQueryClient();
 
   const openDrawer = (tab: DrawerTab) => {
     setDrawerTab(tab);
@@ -142,6 +144,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // KG it read before the build that just replaced it.
   useEffect(() => {
     if (stream.currentJobId === null) invalidate();
+    else queryClient.invalidateQueries({ queryKey: keys.pipeline });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream.currentJobId]);
 

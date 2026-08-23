@@ -1,6 +1,7 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
+  AdminJobQueue,
   AdminOverview,
   ArtifactName,
   BankListing,
@@ -316,6 +317,10 @@ export const api = {
       `/api/admin/workspaces/${encodeURIComponent(slug)}/artifacts/${artifact}`,
       { method: "DELETE" },
     ),
+
+  adminJobs: () => request<AdminJobQueue>("/api/admin/jobs"),
+  adminCancelJob: (id: string) =>
+    request<{ cancelled: boolean }>(`/api/admin/jobs/${id}`, { method: "DELETE" }),
 
   adminGrantMembership: (userId: number, workspace: string, role: Role) =>
     post<{ user_id: number; workspace: string; role: Role }>(

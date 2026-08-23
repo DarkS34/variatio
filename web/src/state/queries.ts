@@ -35,6 +35,7 @@ export const keys = {
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
   adminInvites: ["admin", "invites"] as const,
+  adminJobs: ["admin", "jobs"] as const,
 };
 
 /** The slug this tab is looking at, as a React value. */
@@ -115,7 +116,11 @@ export function useEngineOffline(): string | null {
 }
 
 export function usePipeline() {
-  return useQuery({ queryKey: keys.pipeline, queryFn: api.pipeline });
+  return useQuery({
+    queryKey: keys.pipeline,
+    queryFn: api.pipeline,
+    refetchInterval: (query) => (query.state.data?.queue_length ? 5_000 : false),
+  });
 }
 
 export function useProfile() {
@@ -325,6 +330,25 @@ export function useDeleteGeneration() {
 
 export function useAdminOverview() {
   return useQuery({ queryKey: keys.adminOverview, queryFn: api.adminOverview });
+}
+
+export function useAdminJobs() {
+  return useQuery({
+    queryKey: keys.adminJobs,
+    queryFn: api.adminJobs,
+    refetchInterval: 3000,
+  });
+}
+
+export function useAdminCancelJob() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminCancelJob(id),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.adminJobs });
+      client.invalidateQueries({ queryKey: keys.adminOverview });
+    },
+  });
 }
 
 export function useSetAccountEnabled() {

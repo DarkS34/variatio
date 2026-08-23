@@ -248,6 +248,28 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
     return {"workspace": slug, **result}
 
 
+# THE QUEUE -------------------------------------------------------------------------------
+
+
+@router.get("/jobs")
+def job_queue() -> dict:
+    running = runtime.runner.current()
+    return {
+        "running": running.to_dict() if running else None,
+        "queued": [
+            {**job.to_dict(), "queue_position": runtime.runner.queue_position(job.id)}
+            for job in runtime.runner.pending()
+        ],
+    }
+
+
+@router.delete("/jobs/{job_id}")
+def cancel_job(job_id: str) -> dict:
+    if runtime.runner.get(job_id) is None:
+        raise HTTPException(404, f"No existe el trabajo '{job_id}'.")
+    return {"cancelled": runtime.runner.cancel(job_id)}
+
+
 # ACCOUNTS --------------------------------------------------------------------------------
 
 

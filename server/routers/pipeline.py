@@ -38,11 +38,17 @@ def pipeline_payload(access: auth.Access) -> dict:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
     current = runtime.runner.current()
     mine = current is not None and current.workspace == access.ws.slug
+    waiting = runtime.runner.pending(access.ws.slug)
+    running = 1 if current is not None else 0
     return {
         "stages": chain,
         "generation_unlocked": all(s["status"] == "approved" for s in chain),
         "current_job": current.to_dict() if mine else None,
-        "queued": len(runtime.runner.pending(access.ws.slug)),
+        "queued": len(waiting),
+        "queue_length": running + len(runtime.runner.pending()),
+        "queue_ahead": (
+            running + runtime.runner.queue_position(waiting[0].id) - 1 if waiting else None
+        ),
         # Somebody else is holding the one GPU: the honest reason a job of yours has not
         # started, and something no per-workspace number can express.
         "engine_busy": current is not None,

@@ -42,6 +42,8 @@ export interface Pipeline {
   /** The running job **of this workspace**; null when the GPU is busy with someone else's. */
   current_job: Job | null;
   queued: number;
+  queue_length: number;
+  queue_ahead: number | null;
   /** Somebody, anybody, is holding the one GPU. The honest reason a job has not started. */
   engine_busy: boolean;
   engine_busy_elsewhere: boolean;
@@ -519,6 +521,11 @@ export interface AdminOverview {
     queued: number;
     warm_contexts: string[];
   };
+}
+
+export interface AdminJobQueue {
+  running: Job | null;
+  queued: (Job & { queue_position: number })[];
 }
 
 export interface InvitePreview {

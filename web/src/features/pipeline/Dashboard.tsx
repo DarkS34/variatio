@@ -360,6 +360,7 @@ function ActivityCard() {
   const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
   const overall = run?.overall ?? null;
   const queued = pipeline.data?.queued ?? 0;
+  const ahead = pipeline.data?.queue_ahead ?? null;
   // Only a build has a phase plan; everything else keeps the plain bar.
   const phases = useBuildPhases(run?.job?.artifact ?? undefined);
 
@@ -429,7 +430,13 @@ function ActivityCard() {
                 <Hourglass className="size-3" />
                 {duration(active ? elapsed : run.job.elapsed_ms)}
               </span>
-              {queued > 0 ? (
+              {status === "queued" && ahead !== null ? (
+                <span className="text-muted-foreground">
+                  {ahead === 0
+                    ? "siguiente en arrancar"
+                    : `${ahead} trabajo${ahead === 1 ? "" : "s"} delante`}
+                </span>
+              ) : queued > 0 ? (
                 <span className="text-muted-foreground">{queued} en cola</span>
               ) : null}
             </div>

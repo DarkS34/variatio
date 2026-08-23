@@ -54,12 +54,14 @@ export function BuildButton({
 
   const missing = stage.status === "missing";
   // The GPU is one machine for the whole installation, so «ocupado» means ocupado by
-  // anyone — not only by this workspace. `current_job` is now scoped to what you may see,
-  // so the global flag beside it is what this button has to read; using the scoped one
-  // would offer a build that then sat in a queue with nothing on screen explaining why.
-  const engineBusy = Boolean(pipeline.data?.engine_busy);
-  const elsewhere = Boolean(pipeline.data?.engine_busy_elsewhere);
-  const busy = engineBusy || submit.isPending;
+  // anyone — not only by this workspace. A busy engine no longer disables the button: the
+  // job is queued FIFO behind whatever is running, so what the button owes the person is
+  // how many jobs theirs will wait behind, not a refusal.
+  const ahead = pipeline.data?.queue_length ?? 0;
+  const queueNote =
+    ahead > 0
+      ? ` Se pondrá en cola: ${ahead === 1 ? "hay 1 trabajo" : `hay ${ahead} trabajos`} delante.`
+      : "";
 
   // The permission goes first: a viewer being told that a raw slot is empty would be
   // reading advice about a button they could not press even after fixing it.
@@ -71,10 +73,8 @@ export function BuildButton({
         ? `Faltan documentos en «${rawMissing}»: impórtalos en el panel antes de construir.`
         : offline
           ? offline
-          : busy
-            ? elsewhere
-              ? "La GPU está ocupada con un trabajo de otro workspace. Solo se ejecuta uno cada vez."
-              : `Hay un trabajo en curso: ${pipeline.data?.current_job?.label ?? "espera a que termine"}.`
+          : submit.isPending
+            ? "Enviando…"
             : null;
 
   const launch = () => {
@@ -91,8 +91,8 @@ export function BuildButton({
       title={
         reason ??
         (missing
-          ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto.`
-          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}.`)
+          ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto.${queueNote}`
+          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}.${queueNote}`)
       }
       onClick={launch}
     >
