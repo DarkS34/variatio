@@ -69,7 +69,8 @@ build-backend = "hatchling.build"
 packages = ["variant_generator", "server", "study"]
 
 [tool.pytest.ini_options]
-addopts = "-m 'not corpus'"
+addopts = "-m 'not corpus and not model'"
 markers = [
     "corpus: measures the built corpus cache; run with -m corpus after rebuilding the graph",
+    "model: measures a judge against a live Ollama; run with -m model, it costs ~20 calls",
 ]
