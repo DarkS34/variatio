@@ -5,7 +5,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import checks, config, guardrail
+from . import admissibility, checks, config, guardrail
 from .concept_tagger import ConceptTagger
 from .core import inference, progress
 from .core.repair import parse_with_repair
@@ -58,6 +58,13 @@ def json_objects(text: str) -> list[str]:
 
 def _public_fields(item: dict) -> dict:
     return {name: value for name, value in item.items() if not name.startswith("_")}
+
+
+# NOT `str.capitalize()`, which lowercases everything after the first letter: an owner's
+# `where` quotes the screen's own control by name — «¿Cómo debe ser?» — and capitalize()
+# turns it into a control nobody can find.
+def _sentence_case(text: str) -> str:
+    return text[:1].upper() + text[1:]
 
 
 def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
@@ -240,12 +247,14 @@ class VariantGenerator:
         instructions: str | None = None,
         think: bool = True,
         check: bool = True,
+        ruling: object | None = None,
     ) -> list[GeneratedVariant]:
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
         instructions = (instructions or "").strip()
         self._validate_input(target_type, concepts, fixed, n, curriculum, instructions)
-        self._screen_instructions(instructions)
+        if ruling is None:
+            ruling = self._screen_instructions(target_type, concepts, instructions)
 
         few_shot = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
@@ -292,6 +301,7 @@ class VariantGenerator:
                     fields_block=fields_block,
                     fixed_values_block=fixed_values_block,
                     instructions=instructions,
+                    requests=ruling.requests if ruling.checked else None,
                 )
 
                 reporter.tick(i + 1)
@@ -330,13 +340,27 @@ class VariantGenerator:
     def _clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
         return clean_fixed(fixed)
 
+    def _screen_instructions_owners(self, item_type, concepts: list[str]) -> list:
+        return admissibility.owners(
+            self.knowledge_graph,
+            item_type,
+            self.exemplars_profile,
+            self.content_context,
+            concepts,
+        )
+
     # The instruction is free text from whoever asks for the item and it is concatenated
     # into a prompt whose pedagogical constraints are the whole point, so it is judged
     # before it gets there. Only when there is something to judge: no text, no model call.
-    @staticmethod
-    def _screen_instructions(instructions: str) -> None:
+    #
+    # The guardrail goes FIRST and the scope judge second, never the other way round: the
+    # guardrail reads the text alone with a 4096 window, and the scope judge is handed the
+    # graph's whole concept list, so a text that should never reach a model at all would
+    # otherwise reach the larger of the two.
+    def _screen_instructions(self, item_type, concepts: list[str], instructions: str):
         if not instructions:
-            return
+            return admissibility.Ruling(requests=(), checked=True)
+
         # The raise stays inside the step so a block marks the step itself failed: a green
         # tick on "reviewing" next to a failed job would read as if something else broke.
         with progress.step("guardrail", "Revisando las instrucciones"):
@@ -345,6 +369,21 @@ class VariantGenerator:
                 raise ValueError(
                     f"Las instrucciones adicionales no han pasado la revisión: el modelo juez ha detectado {verdict.reason}."
                 )
+
+        with progress.step("admissibility", "Revisando el alcance del encargo"):
+            ruling = admissibility.screen(
+                instructions,
+                self._screen_instructions_owners(item_type, concepts),
+                concepts,
+                self.content_context.prompt_block(),
+            )
+            if not ruling.ok:
+                first = ruling.blocked[0]
+                raise ValueError(
+                    f"«{first.text}» no se pide aquí: lo decide {first.owner.label} "
+                    f"(«{first.term}»). {_sentence_case(first.owner.where)}."
+                )
+        return ruling
 
     def _validate_input(
         self,

@@ -1,3 +1,5 @@
+import pytest
+
 from variant_generator import admissibility
 from variant_generator.prompts import generate_content_prompt
 
@@ -34,3 +36,55 @@ def test_the_prompt_labels_match_the_catalog():
     from variant_generator.prompts.generation import _SLOT_LABELS
 
     assert _SLOT_LABELS == {s.key: s.label for s in admissibility.CATALOG}
+
+
+def _bare_generator(context):
+    from variant_generator import variant_generator as vg
+
+    generator = vg.VariantGenerator.__new__(vg.VariantGenerator)
+    generator.content_context = context
+    generator._screen_instructions_owners = lambda item_type, concepts: []
+    return generator
+
+
+def test_generate_screens_the_guardrail_before_the_classifier(context, monkeypatch):
+    from variant_generator import guardrail
+
+    order = []
+    monkeypatch.setattr(
+        guardrail,
+        "check",
+        lambda text, *a, **k: order.append("guardrail") or guardrail.Verdict(None, True),
+    )
+    monkeypatch.setattr(
+        admissibility,
+        "screen",
+        lambda *a, **k: order.append("admissibility") or admissibility.Ruling((), True),
+    )
+    _bare_generator(context)._screen_instructions(None, ["Recursividad"], "que vaya de deporte")
+    assert order == ["guardrail", "admissibility"]
+
+
+def test_generate_raises_naming_the_owner_and_the_term(context, monkeypatch):
+    from variant_generator import guardrail
+
+    owner = admissibility.Owner(
+        key="field:nivel_dificultad",
+        label="nivel_dificultad",
+        where="decídelo en «¿Cómo debe ser?»",
+        terms=("avanzado",),
+    )
+    monkeypatch.setattr(guardrail, "check", lambda text, *a, **k: guardrail.Verdict(None, True))
+    monkeypatch.setattr(
+        admissibility,
+        "screen",
+        lambda *a, **k: admissibility.Ruling(
+            (admissibility.Request("muy difícil", None, owner, "avanzado"),), True
+        ),
+    )
+    with pytest.raises(ValueError) as excinfo:
+        _bare_generator(context)._screen_instructions(None, ["Recursividad"], "muy difícil")
+    message = str(excinfo.value)
+    assert "muy difícil" in message
+    assert "nivel_dificultad" in message
+    assert "¿Cómo debe ser?" in message
