@@ -2,6 +2,11 @@ import json
 
 import pytest
 
+from variant_generator import admissibility
+from variant_generator.instance.content_context import ContentContext
+from variant_generator.instance.exemplars_profile import ExemplarsProfile
+from variant_generator.instance.knowledge_graph import KnowledgeGraph
+
 CHAIN_GRAPH = {
     "concepts_by_domains": {
         "Fundamentos": ["Variable", "Función"],
@@ -34,3 +39,67 @@ def chain_graph_path(tmp_path):
     path = tmp_path / "knowledge_graph.json"
     path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     return path
+
+
+PROFILE = {
+    "item_types": {
+        "ejercicio": {
+            "label": "Ejercicio de programación",
+            "description": "El alumno escribe código.",
+            "primary_field": "enunciado",
+            "embed_fields": ["enunciado"],
+            "general_generation_rules": ["El enunciado especifica la entrada y la salida."],
+            "fields": {
+                "enunciado": {"schema": {"type": "string"}, "description": "El texto del ejercicio."},
+                "nivel_dificultad": {
+                    "schema": {"enum": ["basico", "intermedio", "avanzado"]},
+                    "description": "Grado de exigencia. 'basico': una sola operación.",
+                    "decided_by": "user",
+                },
+            },
+        },
+        "analisis": {
+            "label": "Análisis de código",
+            "description": "El alumno predice la salida.",
+            "primary_field": "enunciado",
+            "embed_fields": ["enunciado"],
+            "general_generation_rules": ["El enunciado usa verbos de análisis."],
+            "fields": {
+                "enunciado": {"schema": {"type": "string"}, "description": "La pregunta."},
+            },
+        },
+    }
+}
+
+CONTEXT = {
+    "subject": "Programación en Python",
+    "educational_level": "primer curso de grado",
+    "language_of_instruction": "castellano",
+}
+
+
+@pytest.fixture
+def profile(tmp_path):
+    path = tmp_path / "exemplars_profile.json"
+    path.write_text(json.dumps(PROFILE, ensure_ascii=False), encoding="utf-8")
+    return ExemplarsProfile(path)
+
+
+@pytest.fixture
+def context():
+    return ContentContext(dict(CONTEXT))
+
+
+@pytest.fixture
+def graph(chain_graph_path):
+    return KnowledgeGraph(chain_graph_path)
+
+
+@pytest.fixture
+def owners_for(graph, profile, context):
+    def build(targets=("Recursividad",), item_type="ejercicio"):
+        return admissibility.owners(
+            graph, profile.item_type(item_type), profile, context, list(targets)
+        )
+
+    return build

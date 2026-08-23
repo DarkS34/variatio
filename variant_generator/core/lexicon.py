@@ -19,15 +19,15 @@ def _singular(word: str) -> str:
 
 
 def _stems(text: str) -> set[str]:
-    return {_singular(w) for w in re.findall(r"\w+", _fold(text))}
+    return {_singular(w) for w in re.findall(r"\w+", fold(text))}
 
 
 def mentions(text: str, concept: str) -> bool:
-    if re.search(rf"(?<!\w){re.escape(_fold(concept))}(?!\w)", _fold(text)):
+    if re.search(rf"(?<!\w){re.escape(fold(concept))}(?!\w)", fold(text)):
         return True
     needles = [
         _singular(w)
-        for w in re.findall(r"\w+", _fold(concept))
+        for w in re.findall(r"\w+", fold(concept))
         if w not in _STOPWORDS and len(w) >= MIN_NEEDLE_LENGTH
     ]
     if not needles:
@@ -42,7 +42,7 @@ def mentions(text: str, concept: str) -> bool:
     )
 
 
-def _fold(text: str) -> str:
+def fold(text: str) -> str:
     lowered = unicodedata.normalize("NFD", text.lower())
     stripped = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", stripped)
