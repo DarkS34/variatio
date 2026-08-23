@@ -17,6 +17,7 @@ from variant_generator.core import json_io
 from variant_generator.core.workspace import Workspace
 
 from . import storage
+from .db import mirror
 
 # The study is optional to this module the way it is to the settings registry: it is
 # reached by name, never by import direction, and its absence costs one derived file.
@@ -180,12 +181,14 @@ class ReviewState:
             "at": datetime.now().isoformat(timespec="seconds"),
         }
         self._save(data)
+        mirror.mirror_approval(self.ws.slug, artifact, True, UPSTREAM[artifact])
         return data[artifact]
 
     def reopen(self, artifact: str) -> None:
         data = self._load()
         data.pop(artifact, None)
         self._save(data)
+        mirror.mirror_approval(self.ws.slug, artifact, False)
 
     def invalidate(self, artifact: str) -> None:
         """Called after an edit: the artifact goes back to draft, gates close behind it."""

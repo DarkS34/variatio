@@ -9,6 +9,8 @@ from pathlib import Path
 from variant_generator.core import json_io
 from variant_generator.core.workspace import Workspace
 
+from .db import mirror
+
 
 def read_json(path: Path) -> dict | list | None:
     if not Path(path).is_file():
@@ -51,7 +53,10 @@ def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | No
     path = Path(path)
     if artifact and ws is not None:
         backup(ws, path, artifact)
-    return json_io.write_json(path, data)
+    written = json_io.write_json(path, data)
+    if artifact and ws is not None:
+        mirror.mirror_file(ws, path)
+    return written
 
 
 def history(ws: Workspace, artifact: str) -> list[dict]:
