@@ -83,13 +83,19 @@ function TunnelCard({
   const { tunnelStart, tunnelStop } = useEngineActions();
   const toast = useToast();
 
-  const state = !tunnel.configured
-    ? { label: "sin configurar", tone: "outline" as const }
-    : tunnel.running
-      ? { label: "conectado", tone: "settled" as const }
-      : tunnel.wanted
-        ? { label: "reconectando", tone: "attention" as const }
-        : { label: "apagado", tone: "outline" as const };
+  // The engine answering on the local port while this process runs no ssh means the port is
+  // reached some other way — a tunnel opened by hand, or Ollama on this machine. That is
+  // not «apagado», and offering «Conectar» would launch an ssh onto a port already taken.
+  const external = available && !tunnel.running && !tunnel.wanted;
+  const state = external
+    ? { label: "conectado fuera de la API", tone: "settled" as const }
+    : !tunnel.configured
+      ? { label: "sin configurar", tone: "outline" as const }
+      : tunnel.running
+        ? { label: "conectado", tone: "settled" as const }
+        : tunnel.wanted
+          ? { label: "reconectando", tone: "attention" as const }
+          : { label: "apagado", tone: "outline" as const };
 
   return (
     <Card>
@@ -107,9 +113,11 @@ function TunnelCard({
           </InfoHint>
         </div>
         <CardDescription>
-          {tunnel.configured
-            ? `${host} → ${tunnel.host}:${tunnel.remote_port}`
-            : "Rellena OLLAMA_SSH_HOST en «Configuración» para poder levantarlo desde aquí."}
+          {external
+            ? `El motor ya responde en ${host} sin que la API haya abierto ssh: un túnel levantado a mano, o un Ollama local.${tunnel.configured ? "" : " Rellena OLLAMA_SSH_HOST en «Configuración» si quieres que lo gestione la API."}`
+            : tunnel.configured
+              ? `${host} → ${tunnel.host}:${tunnel.remote_port}`
+              : "Rellena OLLAMA_SSH_HOST en «Configuración» para poder levantarlo desde aquí."}
           {tunnel.autostart ? " · arranca con la API" : ""}
         </CardDescription>
       </CardHeader>
@@ -128,7 +136,7 @@ function TunnelCard({
               {tunnelStop.isPending ? <Spinner /> : <Unplug />}
               Desconectar
             </Button>
-          ) : (
+          ) : external ? null : (
             <Button
               disabled={!tunnel.configured || tunnelStart.isPending}
               onClick={() =>
@@ -156,6 +164,7 @@ function TunnelCard({
                 ? `${tunnel.attempts} intento(s)`
                 : null}
             {tunnel.running ? (available ? " · el motor responde" : " · el motor no responde aún") : null}
+            {external ? "el motor responde" : null}
           </span>
         </div>
         <FormError error={tunnelStart.error ?? tunnelStop.error} />
