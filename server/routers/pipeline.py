@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variant_generator import taggability
+from variant_generator import admissibility, taggability
+from variant_generator.instance.exemplars_profile import ExemplarsProfile
+from variant_generator.stages import _artifacts
 from variant_generator.stages import build_phases as phases_of
 
 from .. import auth, deps, review, runtime, storage
+from ..editors import kg_edit
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -73,6 +76,55 @@ def build_phases() -> dict:
         "artifacts": {artifact: _plan(phases_of(artifact)) for artifact in review.ARTIFACTS},
         "jobs": {kind: _plan(phases) for kind, phases in JOB_PHASES.items()},
     }
+
+
+def _scope_payload(knowledge_graph, profile, content_context, item_type: str) -> dict:
+    target_type = profile.item_type(item_type)
+    found = admissibility.owners(knowledge_graph, target_type, profile, content_context, [])
+    return {
+        "slots": [
+            {"key": s.key, "label": s.label, "example": s.example} for s in admissibility.CATALOG
+        ],
+        "owners": [
+            {"key": o.key, "label": o.label, "where": o.where} for o in found if o.key != "context"
+        ],
+        "facts": [
+            {"key": key, "value": value}
+            for key, value in (
+                ("subject", content_context.subject),
+                ("educational_level", content_context.educational_level),
+                ("language_of_instruction", content_context.language_of_instruction),
+            )
+            if value
+        ],
+    }
+
+
+# The terms each owner decides never leave the server: the screen says WHO decides a thing,
+# never which values it may take, which is why this takes no `concepts` and its answer does
+# not change with the commission.
+#
+# Deliberately NOT `deps.get_context(access.ws)`: that registry builds a PipelineContext,
+# which raises the embedder, the tagger and the generator and costs minutes. Three file
+# reads are the whole job here.
+@router.get("/scope")
+def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
+    profile_path = _artifacts.exemplars_profile_path(access.ws)
+    if profile_path is None:
+        raise HTTPException(404, "El perfil de ejemplares no está construido")
+    profile = ExemplarsProfile(profile_path)
+    if item_type not in profile.item_types:
+        raise HTTPException(404, f"Modalidad desconocida: '{item_type}'")
+    try:
+        knowledge_graph = kg_edit.load_graph(access.ws)
+    except kg_edit.KGError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return _scope_payload(
+        knowledge_graph,
+        profile,
+        _artifacts.load_content_context(access.ws),
+        item_type,
+    )
 
 
 @router.post("/{artifact}/approve", dependencies=[auth.EDIT])
