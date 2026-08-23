@@ -1,10 +1,16 @@
+import { Trash2 } from "lucide-react";
+import { useMemo } from "react";
+
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/misc";
+import { Checkbox, EmptyState } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { when } from "@/lib/format";
 
 import { ARM_META, letterFor } from "./arms";
+import { useDeleteOwnEvaluations } from "./queries";
 import type { EvaluationSummary } from "./types";
+import { useSelection } from "./useSelection";
 
 /**
  * Your own comparisons, so you can reopen one you left undecided.
@@ -22,11 +28,43 @@ export function SessionsTable({
   sessions,
   total,
   onOpen,
+  onDeleted,
 }: {
   sessions: EvaluationSummary[];
   total: number;
   onOpen: (id: string) => void;
+  onDeleted?: (ids: string[]) => void;
 }) {
+  const toast = useToast();
+  const remove = useDeleteOwnEvaluations();
+  const ids = useMemo(() => sessions.map((session) => session.id), [sessions]);
+  const selection = useSelection(ids);
+
+  const confirmDelete = () => {
+    const chosen = [...selection.selected];
+    const decided = sessions.filter(
+      (session) => selection.selected.has(session.id) && session.chosen_at !== null,
+    ).length;
+    const message =
+      `¿Borrar ${chosen.length} comparación(es)?\n\n` +
+      (decided ? `${decided} de ellas ya tienen elección y dejan de contar en el estudio.\n` : "") +
+      "\nNo se puede deshacer.";
+    if (!window.confirm(message)) return;
+    remove.mutate(chosen, {
+      onSuccess: ({ deleted }) => {
+        selection.clear();
+        onDeleted?.(deleted);
+        toast({
+          title: "Comparaciones borradas",
+          description: `${deleted.length} sesión(es)`,
+          tone: "attention",
+        });
+      },
+      onError: (error: Error) =>
+        toast({ title: "No se ha podido borrar", description: error.message, tone: "danger" }),
+    });
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -34,6 +72,23 @@ export function SessionsTable({
           Tus comparaciones
           <span className="ml-2 font-normal nums text-muted-foreground">{total}</span>
         </h2>
+        {selection.selected.size > 0 ? (
+          <span className="text-small text-muted-foreground">
+            {selection.selected.size} seleccionada(s)
+          </span>
+        ) : null}
+        {sessions.length > 0 ? (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-auto"
+            disabled={selection.selected.size === 0 || remove.isPending}
+            onClick={confirmDelete}
+          >
+            <Trash2 />
+            Borrar selección
+          </Button>
+        ) : null}
       </div>
 
       {sessions.length === 0 ? (
@@ -45,6 +100,18 @@ export function SessionsTable({
           <Table minWidth="36rem">
             <THead>
               <TR>
+                <TH className="w-8">
+                  <Checkbox
+                    checked={selection.all}
+                    indeterminate={selection.some}
+                    onCheckedChange={selection.toggleAll}
+                    label={
+                      selection.all
+                        ? "Deseleccionar todas las comparaciones"
+                        : "Seleccionar todas las comparaciones"
+                    }
+                  />
+                </TH>
                 <TH>Cuándo</TH>
                 <TH>Conceptos</TH>
                 <TH>Elección</TH>
@@ -57,7 +124,14 @@ export function SessionsTable({
               {sessions.map((session) => {
                 const meta = session.choice_arm ? ARM_META[session.choice_arm] : null;
                 return (
-                  <TR key={session.id}>
+                  <TR key={session.id} selected={selection.selected.has(session.id)}>
+                    <TD className="py-2 pl-3">
+                      <Checkbox
+                        checked={selection.selected.has(session.id)}
+                        onCheckedChange={(next) => selection.toggle(session.id, next)}
+                        label={`Seleccionar la comparación ${session.id}`}
+                      />
+                    </TD>
                     <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                       {when(new Date(session.created_at * 1000).toISOString())}
                     </TD>

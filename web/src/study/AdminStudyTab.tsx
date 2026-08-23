@@ -1,17 +1,20 @@
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
-import { EmptyState, Skeleton } from "@/components/ui/misc";
+import { Checkbox, EmptyState, Skeleton } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { BarRows, DayColumns, ShareMeter, type BarRow } from "@/features/admin/charts";
 import { duration, when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { ARM_META } from "./arms";
-import { useAdminEvaluations } from "./queries";
+import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
 import { studyApi } from "./api";
 import type { AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
+import { useSelection } from "./useSelection";
 
 /** A three-way blind choice: what pure chance would produce. Every share is read
  *  against it, and the panel never shows one without drawing the other. */
@@ -422,12 +425,68 @@ function GroupTable({
   );
 }
 
-function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["sessions"] }) {
+type SessionRow = NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["sessions"][number];
+
+function SessionsTable({ rows }: { rows: SessionRow[] }) {
+  const toast = useToast();
+  const remove = useDeleteEvaluations();
+  const ids = useMemo(() => rows.map((row) => row.id), [rows]);
+  const { selected, all: allSelected, some: someSelected, toggle, toggleAll, clear } =
+    useSelection(ids);
+
+  const confirmDelete = () => {
+    const ids = [...selected];
+    const decided = rows.filter((row) => selected.has(row.id) && row.chosen_at !== null).length;
+    const message =
+      `¿Borrar ${ids.length} sesión(es) de evaluación?\n\n` +
+      (decided
+        ? `${decided} de ellas ya tienen elección y dejan de contar en el estudio.\n`
+        : "") +
+      "\nNo se puede deshacer.";
+    if (!window.confirm(message)) return;
+    remove.mutate(ids, {
+      onSuccess: ({ deleted }) => {
+        clear();
+        toast({
+          title: "Sesiones borradas",
+          description: `${deleted.length} sesión(es)`,
+          tone: "attention",
+        });
+      },
+      onError: (error: Error) =>
+        toast({ title: "No se ha podido borrar", description: error.message, tone: "danger" }),
+    });
+  };
+
   return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-small text-muted-foreground">
+          {selected.size > 0 ? `${selected.size} seleccionada(s)` : "Selecciona sesiones para borrarlas"}
+        </span>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="ml-auto"
+          disabled={selected.size === 0 || remove.isPending}
+          onClick={confirmDelete}
+        >
+          <Trash2 />
+          Borrar selección
+        </Button>
+      </div>
     <div className="thin-scroll max-h-[28rem] overflow-y-auto">
       <Table minWidth="48rem">
         <THead>
           <TR>
+            <TH className="w-8">
+              <Checkbox
+                checked={allSelected}
+                indeterminate={someSelected}
+                onCheckedChange={toggleAll}
+                label={allSelected ? "Deseleccionar todas las sesiones" : "Seleccionar todas las sesiones"}
+              />
+            </TH>
             <TH>Cuándo</TH>
             <TH>Evaluador</TH>
             <TH>Workspace</TH>
@@ -441,7 +500,14 @@ function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminE
           {rows.map((row) => {
             const meta = row.choice_arm ? ARM_META[row.choice_arm] : null;
             return (
-              <TR key={row.id}>
+              <TR key={row.id} selected={selected.has(row.id)}>
+                <TD className="py-1.5 pl-3">
+                  <Checkbox
+                    checked={selected.has(row.id)}
+                    onCheckedChange={(next) => toggle(row.id, next)}
+                    label={`Seleccionar la sesión ${row.id}`}
+                  />
+                </TD>
                 <TD className="whitespace-nowrap py-1.5 pr-3 text-muted-foreground">
                   {when(new Date(row.created_at * 1000).toISOString())}
                 </TD>
@@ -476,6 +542,7 @@ function SessionsTable({ rows }: { rows: NonNullable<ReturnType<typeof useAdminE
           })}
         </TBody>
       </Table>
+    </div>
     </div>
   );
 }

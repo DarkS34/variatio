@@ -66,3 +66,18 @@ export function useAdminEvaluations(filters: {
     placeholderData: (previous) => previous,
   });
 }
+
+function useDeletion(call: (ids: string[]) => Promise<{ deleted: string[] }>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: call,
+    onSuccess: ({ deleted }) => {
+      for (const id of deleted) client.removeQueries({ queryKey: studyKeys.evaluation(id) });
+      client.invalidateQueries({ queryKey: ["admin", "evaluations"] });
+      client.invalidateQueries({ queryKey: studyKeys.evaluations });
+    },
+  });
+}
+
+export const useDeleteOwnEvaluations = () => useDeletion(studyApi.deleteEvaluations);
+export const useDeleteEvaluations = () => useDeletion(studyApi.adminDeleteEvaluations);

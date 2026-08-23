@@ -56,6 +56,16 @@ def get_evaluation(session: Session, session_id: str) -> EvalSession | None:
     return session.get(EvalSession, session_id)
 
 
+def delete_evaluations(session: Session, session_ids: list[str]) -> list[str]:
+    if not session_ids:
+        return []
+    rows = list(session.scalars(select(EvalSession).where(EvalSession.id.in_(session_ids))))
+    for row in rows:
+        session.delete(row)
+    session.flush()
+    return [row.id for row in rows]
+
+
 def list_evaluations(
     session: Session,
     workspace_id: int | None = None,

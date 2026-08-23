@@ -30,9 +30,19 @@ export const studyApi = {
     post<EvaluationDetail>(`/api/evaluation/${id}/choice`, { choice, comment }),
   rateEvaluation: (id: string, rating: Partial<EvaluationRating>) =>
     post<EvaluationDetail>(`/api/evaluation/${id}/rating`, rating),
+  deleteEvaluations: (ids: string[]) =>
+    request<{ deleted: string[] }>("/api/evaluation", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }),
 
   adminEvaluations: (filters: { workspace?: string | null; account?: number | null }) =>
     request<AdminEvaluations>(`/api/admin/evaluations${filterQuery(filters)}`),
   adminEvaluationCsvUrl: (filters: { workspace?: string | null; account?: number | null }) =>
     `/api/admin/evaluations/export.csv${filterQuery(filters)}`,
+  adminDeleteEvaluations: (ids: string[]) =>
+    request<{ deleted: string[]; missing: string[] }>("/api/admin/evaluations", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }),
 };

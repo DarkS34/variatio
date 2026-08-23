@@ -6,10 +6,13 @@ the study's, and this is the seam between the two.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from loguru import logger
+from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
 from server.db import repository
+from server.db.models import User
 
 from .. import ARM_LABELS, ARMS
 from . import queries
@@ -18,6 +21,10 @@ from . import store as evaluation_store
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
 )
+
+
+class DeleteBody(BaseModel):
+    ids: list[str]
 
 
 @router.get("/evaluations")
@@ -78,6 +85,22 @@ def session_detail(session_id: str, db: DbSession = Depends(auth.db)) -> dict:
         "workspace": row.workspace.slug if row.workspace else None,
         "account": row.user.username if row.user else None,
     }
+
+
+@router.delete("/evaluations")
+def delete_sessions(
+    body: DeleteBody,
+    db: DbSession = Depends(auth.db),
+    admin: User = Depends(auth.require_admin),
+) -> dict:
+    ids = list(dict.fromkeys(i for i in body.ids if i))
+    if not ids:
+        raise HTTPException(422, "No se ha indicado ninguna sesión.")
+    deleted = queries.delete_evaluations(db, ids)
+    logger.warning(
+        f"[estudio] «{admin.username}» borró {len(deleted)} sesión(es) de evaluación"
+    )
+    return {"deleted": deleted, "missing": [i for i in ids if i not in deleted]}
 
 
 def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:

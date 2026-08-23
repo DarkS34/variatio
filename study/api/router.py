@@ -46,6 +46,10 @@ class ChoiceBody(BaseModel):
     comment: str | None = None
 
 
+class DeleteBody(BaseModel):
+    ids: list[str]
+
+
 class RatingBody(BaseModel):
     originality: int | None = None
     complexity: int | None = None
@@ -124,6 +128,18 @@ def listing(
 
 
 # ONE SESSION -----------------------------------------------------------------------------------
+
+
+@router.delete("", dependencies=[auth.EDIT])
+def delete_sessions(
+    body: DeleteBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
+    ids = list(dict.fromkeys(i for i in body.ids if i))
+    if not ids:
+        raise HTTPException(422, "No se ha indicado ninguna sesión.")
+    owned = [_require(db, session_id, access).id for session_id in ids]
+    deleted = queries.delete_evaluations(db, owned)
+    return {"deleted": deleted}
 
 
 @router.get("/{session_id}")

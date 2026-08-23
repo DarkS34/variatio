@@ -272,6 +272,9 @@ export function EvaluationScreen() {
             setSessionId(id);
             setComposing(false);
           }}
+          onDeleted={(ids) => {
+            if (sessionId && ids.includes(sessionId)) startAnother();
+          }}
         />
       ) : null}
     </div>
