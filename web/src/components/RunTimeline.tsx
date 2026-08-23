@@ -40,11 +40,49 @@ function Insert({ children, last }: { children: ReactNode; last: boolean }) {
   );
 }
 
+interface StepGroup extends StepView {
+  runs: number;
+}
+
+// A build repeats the same step once per document — transcribing, extracting batches,
+// tagging — and a run that processes twenty documents used to draw sixty rows. One row
+// per step id says the same thing in the space of one: the label and bar follow the
+// LATEST occurrence (the document in progress), `runs` counts how many came before, and
+// the duration is the sum of all of them.
+function groupSteps(steps: StepView[]): StepGroup[] {
+  const order: string[] = [];
+  const occurrences = new Map<string, StepView[]>();
+  for (const step of steps) {
+    if (!occurrences.has(step.id)) {
+      occurrences.set(step.id, []);
+      order.push(step.id);
+    }
+    occurrences.get(step.id)!.push(step);
+  }
+  return order.map((id) => {
+    const runs = occurrences.get(id)!;
+    const last = runs[runs.length - 1];
+    const status =
+      last.status === "running"
+        ? "running"
+        : runs.some((s) => s.status === "failed")
+          ? "failed"
+          : last.status;
+    const measured = runs.filter((s) => s.ms !== undefined);
+    const ms =
+      measured.length > 0
+        ? measured.reduce((total, s) => total + (s.ms ?? 0), 0)
+        : undefined;
+    const error = runs.map((s) => s.error).filter(Boolean).at(-1) ?? null;
+    return { ...last, key: id, status, ms, error, runs: runs.length };
+  });
+}
+
 // Evidence a step consumed, shown where it was produced instead of in a pile below the
 // timeline: `slots[id]` is rendered just before the step with that id, and after the
 // last step while that step has not started yet.
 export function RunTimeline({
-  steps,
+  steps: rawSteps,
   className,
   slots,
 }: {
@@ -52,6 +90,7 @@ export function RunTimeline({
   className?: string;
   slots?: Record<string, ReactNode>;
 }) {
+  const steps = groupSteps(rawSteps);
   const pending = Object.entries(slots ?? {}).filter(
     ([id, node]) => node && !steps.some((step) => step.id === id),
   );
@@ -110,7 +149,8 @@ export function RunTimeline({
                     ) : null}
                   </span>
                   <span className="shrink-0 text-small nums text-muted-foreground">
-                    {step.total ? (
+                    {step.runs > 1 ? <span className="mr-2">×{step.runs}</span> : null}
+                    {step.total && (running || step.runs === 1) ? (
                       <>
                         {step.current ?? 0}/{step.total}
                       </>
