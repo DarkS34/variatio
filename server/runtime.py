@@ -10,7 +10,9 @@ instance happened to be read last.
 from variant_generator.core.workspace import Workspace
 
 from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
+from .model_pulls import PullTracker
 from .review import ReviewState
+from .tunnel import SshTunnel
 
 bus = EventBus()
 runner = JobRunner(bus, HANDLERS)
@@ -21,6 +23,11 @@ runner.after_success = chain.advance
 # an hour with nothing to do. Lives here because what it watches is the process, not a
 # request.
 idle_unloader = IdleUnloader(runner)
+# The port forward to the GPU box, owned by this process so the panel can open and close
+# it; and the model downloads, which are network and disk and never the GPU, so they run
+# beside the queue rather than in it.
+tunnel = SshTunnel()
+pulls = PullTracker()
 
 
 def review_state(ws: Workspace) -> ReviewState:

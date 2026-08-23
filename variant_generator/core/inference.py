@@ -10,6 +10,7 @@ from .. import config
 from . import progress
 
 TokenSink = Callable[[str, str], None]
+ProgressSink = Callable[[int, int], None]
 
 THINK_OPEN = "<think>"
 THINK_CLOSE = "</think>"
@@ -381,28 +382,46 @@ class OllamaEngine:
             self.generate(model, "")
 
     def _pull(self, model: str) -> bool:
+        pbar = None
+
+        def on_progress(completed: int, total: int) -> None:
+            nonlocal pbar
+            if total <= 0:
+                return
+            if pbar is None:
+                pbar = tqdm(total=total, unit="B", unit_scale=True, desc=model)
+            pbar.update(completed - pbar.n)
+
         try:
-            logger.info(f"Descargando el modelo '{model}'")
-            download_progress = self._client.pull(model, stream=True)
-
-            pbar = None
-            for partial_progress in download_progress:
-                total = partial_progress.get("total") or 0
-                completed = partial_progress.get("completed") or 0
-
-                if total > 0:
-                    if pbar is None:
-                        pbar = tqdm(total=total, unit="B", unit_scale=True, desc=model)
-                    pbar.update(completed - pbar.n)
-
+            self.pull(model, on_progress)
+        except InferenceError as e:
+            logger.error(str(e))
+            return False
+        finally:
             if pbar is not None:
                 pbar.close()
+        return True
 
-            logger.success(f"Modelo '{model}' descargado")
-            return True
+    def pull(self, model: str, on_progress: ProgressSink | None = None) -> None:
+        logger.info(f"Descargando el modelo '{model}'")
+        try:
+            for partial in self._client.pull(model, stream=True):
+                total = int(partial.get("total") or 0)
+                completed = int(partial.get("completed") or 0)
+                if on_progress is not None:
+                    on_progress(completed, total)
         except (ollama.ResponseError, httpx.RequestError) as e:
-            logger.error(f"Falló la descarga de '{model}': {e}")
-            return False
+            raise InferenceError(f"Falló la descarga de '{model}': {e}") from e
+        self._capabilities.pop(model, None)
+        logger.success(f"Modelo '{model}' descargado")
+
+    def delete(self, model: str) -> None:
+        try:
+            self._client.delete(model)
+        except (ollama.ResponseError, httpx.RequestError) as e:
+            raise InferenceError(f"No se pudo borrar '{model}' del disco: {e}") from e
+        self._capabilities.pop(model, None)
+        logger.info(f"Modelo '{model}' borrado del disco del motor")
 
 
 _ENGINES = {OllamaEngine.name: OllamaEngine}
@@ -515,6 +534,14 @@ def unload(model: str, is_embedding: bool = False) -> bool:
 
 def unload_all() -> list[str]:
     return engine().unload_all()
+
+
+def pull_model(model: str, on_progress: ProgressSink | None = None) -> None:
+    engine().pull(model, on_progress)
+
+
+def delete_model(model: str) -> None:
+    engine().delete(model)
 
 
 def required_models() -> dict[str, str]:

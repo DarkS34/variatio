@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
+from variant_generator import config
+
 from . import jobs, middleware, runtime, settings
 from .routers import ROUTERS
 
@@ -19,6 +21,7 @@ except ImportError:
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     runtime.bus.attach_loop(asyncio.get_running_loop())
+    _autostart_tunnel()
     runtime.runner.start()
     runtime.idle_unloader.start()
     try:
@@ -34,6 +37,16 @@ async def lifespan(app: FastAPI):
             await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
         except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
             logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
+        runtime.tunnel.stop()
+
+
+def _autostart_tunnel() -> None:
+    if not (config.OLLAMA_SSH_AUTOSTART and runtime.tunnel.configured()):
+        return
+    try:
+        runtime.tunnel.start()
+    except Exception as e:  # noqa: BLE001 - a dead tunnel is a panel message, not a crash
+        logger.warning(f"No se pudo abrir el túnel SSH al arrancar: {e}")
 
 
 def create_app() -> FastAPI:

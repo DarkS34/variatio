@@ -67,6 +67,29 @@ def update(patch: dict[str, object]) -> set[Impact]:
     return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
 
 
+def reset(keys: list[str]) -> set[Impact]:
+    unknown = [key for key in keys if key not in BY_KEY]
+    if unknown:
+        raise SettingError(f"Ajustes desconocidos: {', '.join(unknown)}")
+    locked = [key for key in keys if not BY_KEY[key].editable]
+    if locked:
+        raise SettingError(f"No se pueden cambiar en caliente: {', '.join(locked)}")
+    kept = {
+        key: value
+        for key, value in store.read_file(store.CONFIG_PATH).items()
+        if key not in keys and key in BY_KEY
+    }
+    store.write_file(store.CONFIG_PATH, list(REGISTRY), kept)
+    before = dict(_values)
+    load()
+    if _namespace is not None:
+        _write(_namespace)
+    changed = {key for key in keys if _values.get(key) != before.get(key)}
+    for key in sorted(changed):
+        logger.info(f"[config] «{key}» devuelto a su valor por defecto")
+    return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
+
+
 def snapshot() -> list[dict]:
     out = []
     for setting in REGISTRY:
@@ -126,6 +149,7 @@ __all__ = [
     "apply",
     "pipeline",
     "reload",
+    "reset",
     "snapshot",
     "sources",
     "update",

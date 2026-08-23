@@ -34,6 +34,20 @@ class RateLimiter:
             hits.append(now)
             return 0.0
 
+    def wait_for(self, bucket: str, key: str, limit: int, window: float) -> float:
+        """Like `check`, without recording an attempt: how long this key is locked out."""
+        if not key:
+            return 0.0
+        now = time.monotonic()
+        with self._lock:
+            hits = self._hits.get((bucket, key))
+            if not hits:
+                return 0.0
+            live = [hit for hit in hits if now - hit <= window]
+            if len(live) < limit:
+                return 0.0
+            return max(0.0, window - (now - live[0]))
+
     def clear(self, bucket: str, key: str) -> None:
         """Called after a success, so a correct password forgives the failed attempts."""
         with self._lock:
@@ -70,3 +84,17 @@ def throttle(bucket: str, request: Request, account: str) -> None:
                 f"Demasiados intentos. Vuelve a probar en {int(wait) + 1} segundos.",
                 headers={"Retry-After": str(int(wait) + 1)},
             )
+
+
+# The account half of the lock-out, read without touching it: what the panel shows beside
+# a name, and what «Desbloquear» clears. The IP half is not addressed by account and is not
+# what a locked-out person is asking about.
+def locked_seconds(bucket: str, account: str) -> float:
+    from .. import settings
+
+    limit, window = settings.RATE_LIMITS[bucket]
+    return limiter.wait_for(bucket, account, limit, window)
+
+
+def unlock(bucket: str, account: str) -> None:
+    limiter.clear(bucket, account)

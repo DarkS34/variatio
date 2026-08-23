@@ -226,6 +226,22 @@ def revoke_session(session: Session, row: UserSession) -> None:
 # card removed on 2026-08-17. Every remaining caller — logging out everywhere, changing the
 # password, disabling an account — means all of them, and the one that keeps working
 # afterwards does so because it is handed a brand-new session, not because it was spared.
+def count_live_sessions(session: Session, user_id: int) -> int:
+    moment = now()
+    return len(
+        list(
+            session.scalars(
+                select(UserSession.id).where(
+                    UserSession.user_id == user_id,
+                    UserSession.revoked_at.is_(None),
+                    UserSession.expires_at > moment,
+                    UserSession.absolute_expires_at > moment,
+                )
+            )
+        )
+    )
+
+
 def revoke_all_sessions(session: Session, user_id: int) -> int:
     rows = list(
         session.scalars(

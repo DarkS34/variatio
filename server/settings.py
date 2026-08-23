@@ -67,6 +67,49 @@ def destroy(ws: Workspace) -> bool:
     return True
 
 
+def _tree_size(path: Path) -> int:
+    if not path.exists():
+        return 0
+    if path.is_file():
+        return path.stat().st_size
+    return sum(entry.stat().st_size for entry in path.rglob("*") if entry.is_file())
+
+
+# What each part of the tree weighs. `instance` excludes the host state it contains, which
+# is reported on its own: the history is the one thing that grows without a build.
+def disk_usage(ws: Workspace) -> dict[str, int]:
+    history = _tree_size(ws.history_dir)
+    runs = _tree_size(ws.runs_dir)
+    instance = _tree_size(ws.instance_dir) - history - runs
+    usage = {
+        "raw": _tree_size(ws.raw_dir),
+        "instance": max(0, instance),
+        "cache": _tree_size(ws.cache_dir),
+        "history": history + runs,
+    }
+    usage["total"] = sum(usage.values())
+    return usage
+
+
+# The regenerable half of `cache/`: the vectors and the converted markdown, which the next
+# index or build rewrites from the artifacts. The concept descriptions and the corpus
+# anchoring stay — they are written by the model against the corpus and cost a long run,
+# and emptying a stage is where they go when the artifact they describe goes.
+def clear_cache(ws: Workspace) -> dict:
+    targets = [ws.cache_dir / "embeddings", ws.markdown_cache_dir]
+    removed = 0
+    freed = 0
+    for target in targets:
+        if not target.is_dir():
+            continue
+        for entry in target.rglob("*"):
+            if entry.is_file():
+                freed += entry.stat().st_size
+                removed += 1
+        shutil.rmtree(target)
+    return {"files_removed": removed, "bytes_freed": freed}
+
+
 def _flag(name: str, default: bool = False) -> bool:
     raw = os.environ.get(name)
     if raw is None:

@@ -1,5 +1,6 @@
 from . import (
     admin,
+    admin_engine,
     auth,
     bank,
     config,
@@ -28,6 +29,7 @@ ROUTERS = [
     jobs.router,
     generations.router,
     admin.router,
+    admin_engine.router,
     config.router,
     ws.router,
 ]

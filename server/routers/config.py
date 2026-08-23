@@ -23,6 +23,10 @@ class Patch(BaseModel):
     values: dict[str, object]
 
 
+class Reset(BaseModel):
+    keys: list[str]
+
+
 def _payload() -> dict:
     return {
         "groups": list(vg_settings.GROUPS),
@@ -83,6 +87,18 @@ def write(body: Patch) -> dict:
     _refuse_while_busy()
     try:
         impacts = vg_settings.update(body.values)
+    except SettingError as error:
+        raise HTTPException(422, str(error)) from None
+    return {**_payload(), "applied": _act(impacts)}
+
+
+# Back to the registry's default: the key leaves `config.json`, so the panel reports the
+# value as «por defecto» again instead of as a file value that happens to equal it.
+@router.post("/reset")
+def reset(body: Reset) -> dict:
+    _refuse_while_busy()
+    try:
+        impacts = vg_settings.reset(body.keys)
     except SettingError as error:
         raise HTTPException(422, str(error)) from None
     return {**_payload(), "applied": _act(impacts)}
