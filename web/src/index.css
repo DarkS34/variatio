@@ -241,6 +241,20 @@
   color-scheme: dark;
 }
 
+/* The list a <select> drops down is painted by the browser, not by the page: it takes the
+   text colour from the control but the ground from its own scheme, so in dark mode it was
+   white text on a light sheet. Both colours set explicitly, per option, on the app's tokens. */
+select option,
+select optgroup {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
+select option:checked {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
 html,
 body,
 #root {

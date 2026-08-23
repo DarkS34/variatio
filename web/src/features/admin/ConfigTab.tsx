@@ -154,13 +154,13 @@ export function ConfigTab() {
       ) : null}
 
       {payload.groups.map((group) =>
-        group === REASONING_GROUP ? (
-          <ReasoningCard
+        group === REASONING_GROUP ? null : group === MODELS_GROUP ? (
+          <PipelineCard
             key={group}
-            title={group}
             lanes={payload.pipeline ?? []}
             settings={payload.settings}
             draft={draft}
+            models={payload.models ?? null}
             onChange={setValue}
             onReset={(key) => reset.mutate(key)}
           />
@@ -258,68 +258,118 @@ function GroupCard({
 }
 
 const REASONING_GROUP = "Razonamiento";
+const MODELS_GROUP = "Modelos";
+const PHASE_MODEL_PREFIX = "models.phases.";
 
-function ReasoningCard({
-  title,
+// One card for the two groups the pipeline drawing already covers: the three residents as
+// rows, then every phase as a node carrying BOTH its model and its reasoning switch, so a
+// phase's two decisions are taken in one place. What neither the rows nor the nodes show
+// (THINK_EFFORT) keeps its row below; what the nodes do show never gets a second row.
+function PipelineCard({
   lanes,
   settings,
   draft,
+  models,
   onChange,
   onReset,
 }: {
-  title: string;
   lanes: ReasoningLane[];
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
+  models: ConfigPayload["models"] | null;
   onChange: (key: string, value: unknown) => void;
   onReset: (key: string) => void;
 }) {
-  const drawn = new Set(lanes.flatMap((lane) => lane.phases.map((phase) => phase.setting)));
-  const ofGroup = settings.filter((setting) => setting.group === title);
-  const rows = ofGroup.filter((setting) => !drawn.has(setting.key));
-  const switches = ofGroup.filter((setting) => drawn.has(setting.key));
+  const phases = lanes.flatMap((lane) => lane.phases);
+  const drawn = new Set([
+    ...phases.map((phase) => phase.setting),
+    ...phases.map((phase) => phase.model).filter((key) => key.startsWith(PHASE_MODEL_PREFIX)),
+  ]);
+  const ofGroups = settings.filter(
+    (setting) => setting.group === MODELS_GROUP || setting.group === REASONING_GROUP,
+  );
+  const residents = ofGroups.filter(
+    (setting) => setting.group === MODELS_GROUP && !drawn.has(setting.key),
+  );
+  const rest = ofGroups.filter(
+    (setting) => setting.group === REASONING_GROUP && !drawn.has(setting.key),
+  );
+  const inNodes = ofGroups.filter((setting) => drawn.has(setting.key));
   const current = (setting: ConfigSetting) =>
     setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
+  const row = (setting: ConfigSetting) => (
+    <SettingRow
+      key={setting.key}
+      setting={setting}
+      value={current(setting)}
+      onChange={(next) => onChange(setting.key, next)}
+      onReset={() => onReset(setting.key)}
+      models={models}
+    />
+  );
+  const pendingResets = inNodes.filter(
+    (setting) =>
+      setting.source === "file" && !setting.secret && !sameValue(setting.value, setting.default),
+  );
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>Modelos y razonamiento</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {models ? <ResidencySummary settings={ofGroups} current={current} models={models} /> : null}
+        {residents.map(row)}
         <p className="max-w-2xl text-small text-muted-foreground">
-          En qué punto de la cadena el modelo razona antes de contestar. Cada pista es una
-          construcción; cada nodo, una llamada al modelo. Razonar y una gramática no conviven
-          en esta pila, así que encender una fase que hoy responde con gramática se la quita y
-          deja la forma en manos del analizador y de la reparación. Tres nodos no dependen de
-          un ajuste: el guardián no razona, la variante la decide cada encargo y la reparación
-          es su propia gramática.
+          Cada pista es una construcción; cada nodo, una llamada al modelo. Bajo cada nodo,
+          qué modelo la atiende («principal» sigue a {residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN"});
+          el círculo dice si razona antes de contestar. Razonar y una gramática no conviven en
+          esta pila, así que encender una fase que hoy responde con gramática se la quita y deja
+          la forma en manos del analizador y de la reparación. Tres nodos no dependen de un
+          ajuste: el guardián no razona, la variante la decide cada encargo y la reparación es
+          su propia gramática.
         </p>
-        <ReasoningPipeline lanes={lanes} settings={settings} draft={draft} onChange={onChange} />
+        <ReasoningPipeline
+          lanes={lanes}
+          settings={settings}
+          draft={draft}
+          models={models}
+          onChange={onChange}
+        />
         <ReasoningLegend />
-        {switches.length > 0 ? (
+        {pendingResets.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
+            <span>Fijados en el fichero:</span>
+            {pendingResets.map((setting) => (
+              <Button
+                key={setting.key}
+                variant="ghost"
+                size="sm"
+                title={`Volver a ${formatValue(setting.default)}`}
+                onClick={() => onReset(setting.key)}
+              >
+                <Undo2 />
+                {setting.name}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+        {inNodes.length > 0 ? (
           <details className="text-small text-muted-foreground">
-            <summary className="cursor-pointer select-none">Por qué cada interruptor</summary>
+            <summary className="cursor-pointer select-none">Por qué cada nodo</summary>
             <dl className="mt-2 space-y-3">
-              {switches.map((setting) => (
-                <div key={setting.key}>
-                  <dt className="font-mono text-foreground">{setting.name}</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap">{setting.doc}</dd>
-                </div>
-              ))}
+              {inNodes
+                .filter((setting) => setting.doc)
+                .map((setting) => (
+                  <div key={setting.key}>
+                    <dt className="font-mono text-foreground">{setting.name}</dt>
+                    <dd className="mt-0.5 whitespace-pre-wrap">{setting.doc}</dd>
+                  </div>
+                ))}
             </dl>
           </details>
         ) : null}
-        {rows.map((setting) => (
-          <SettingRow
-            key={setting.key}
-            setting={setting}
-            value={current(setting)}
-            onChange={(next) => onChange(setting.key, next)}
-            onReset={() => onReset(setting.key)}
-            models={null}
-          />
-        ))}
+        {rest.map(row)}
       </CardContent>
     </Card>
   );
