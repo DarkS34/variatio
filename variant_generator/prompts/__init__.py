@@ -1,6 +1,9 @@
 from .repair import (
     json_repair_prompt,
 )
+from .admissibility import (
+    classify_instructions_prompt,
+)
 from .sources import (
     CORRECT_ANSWER_MARK,
     EMPTY_PAGE_MARK,
@@ -45,6 +48,7 @@ __all__ = [
     "EXEMPLARS_PROFILE_FIELD_NAMING",
     "EXEMPLARS_PROFILE_SCHEMA_GRAMMAR",
     "assign_leftover_concepts_prompt",
+    "classify_instructions_prompt",
     "concept_description_prompt",
     "consolidate_exemplars_profile_prompt",
     "curate_graph_domains_prompt",
