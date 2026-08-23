@@ -1,3 +1,14 @@
+# A deliberate second copy of the catalog's labels: `admissibility` imports `prompts`, so
+# importing it back here would close a cycle. `test_the_prompt_labels_match_the_catalog`
+# is what keeps the two from drifting apart.
+_SLOT_LABELS = {
+    "ambito": "Ámbito",
+    "elementos": "Elementos del enunciado",
+    "extension": "Extensión",
+    "datos": "Datos concretos",
+}
+
+
 def generate_content_prompt(
     context_block: str,
     item_type_block: str,
@@ -12,6 +23,7 @@ def generate_content_prompt(
     fields_block: str,
     fixed_values_block: str,
     instructions: str = "",
+    requests=None,
 ) -> str:
     # Guarded, unlike before: a workspace has no context until one of the two builders has
     # synthesised one, and that is the state a fresh instance starts in. Unguarded, the
@@ -84,7 +96,15 @@ def generate_content_prompt(
         )
 
     instructions_section = ""
-    if instructions.strip():
+    if requests:
+        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in requests if r.slot)
+        instructions_section = (
+            "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
+            "Preferencias sobre el envoltorio y la superficie del enunciado. Atiéndelas todas; "
+            "no tocan el objetivo, el conocimiento previo ni el currículo:\n"
+            f"{lines}\n"
+        )
+    elif instructions.strip():
         instructions_section = (
             "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
             "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el "
