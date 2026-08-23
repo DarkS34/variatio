@@ -74,6 +74,8 @@ def _allowed(request) -> set[str]:
     if settings.trust_proxy() and forwarded:
         proto = request.headers.get("x-forwarded-proto", request.url.scheme)
         own.add(f"{proto}://{forwarded.split(',')[0].strip()}")
+        own.add(f"http://{request.url.netloc}")
+        own.add(f"https://{request.url.netloc}")
     base = settings.public_base_url()
     if base:
         own.add(base)
