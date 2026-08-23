@@ -19,6 +19,22 @@ def classify_instructions_prompt(
 
     targets_block = ", ".join(f"«{t}»" for t in targets) or "(ninguno)"
 
+    # The owners are derived per instance, so an example about a control that may not
+    # exist teaches the model to attribute the request to the nearest owner it can see.
+    # Measured: with no `field:` owner, «que sea muy difícil» came back as an invasion of
+    # `concepts` («Complejidad asintótica») and «que el nivel de dificultad sea básico» as
+    # one of `item_type` («escritura_codigo»), both nonsense.
+    if any(owner.key.startswith("field:") for owner in owners):
+        difficulty_rule = (
+            "- «que sea muy difícil» fija la exigencia, y arriba hay un control que la "
+            "decide: invade ese control."
+        )
+    else:
+        difficulty_rule = (
+            "- «que sea muy difícil» fija la exigencia, y arriba NO hay ningún control que "
+            "la decida: no invade nada. No se la atribuyas al dueño que más se le parezca."
+        )
+
     return f"""\
 Clasificas la petición que ha escrito quien encarga un ejercicio. No escribes el ejercicio ni opinas sobre él: solo dices, para cada cosa que pide, si es de las que puede pedir aquí o si es de las que ya ha decidido en otro sitio.
 {context_section}
@@ -38,9 +54,12 @@ Pedir algo sobre ellos NO es invadir nada: son el tema del ejercicio. Solo es in
 Un ejercicio USA muchos conceptos y PRACTICA uno o dos. La pregunta, para cada petición, es cuál de las dos cosas pide.
 - «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no el concepto «Lista».
 - «que vaya de una biblioteca que presta libros» es un edificio con libros: es `ambito`.
+- «con un ejemplo de entrada y salida» pide que el enunciado enseñe un caso resuelto: es el hueco `elementos`, aunque el nombre de un concepto aparezca dentro de la frase.
 - «que practique también recursividad» pide PRACTICAR un concepto: invade `concepts`.
-- «que sea muy difícil» fija la exigencia, que ya tiene su propio control: invade el campo correspondiente.
+{difficulty_rule}
 - «hazlo en inglés» cambia el idioma, que lo fija la asignatura: invade `context`.
+Que una palabra del texto coincida con el nombre de un concepto NO es una invasión: solo lo es pedir que ese concepto se PRACTIQUE.
+Un dueño solo se puede invadir si está en la lista de arriba. Si lo que se pide no encaja en ningún hueco y ningún dueño listado lo decide, deja `slot` y `owner` a `null`: no es asunto de esta pantalla ni de ninguna otra.
 Ante la duda entre un hueco y un dueño, gana el hueco: rechazar una petición legítima cuesta más que dejar pasar una dudosa.
 
 # LA PETICIÓN A CLASIFICAR
