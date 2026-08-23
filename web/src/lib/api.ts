@@ -1,7 +1,6 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
-  AdminEvaluations,
   AdminOverview,
   ArtifactName,
   BankListing,
@@ -11,10 +10,6 @@ import type {
   ExemplarsProfile,
   Coverage,
   CurriculumState,
-  EvaluationDetail,
-  EvaluationListing,
-  EvaluationParams,
-  EvaluationRating,
   GenerationDetail,
   GenerationListing,
   GraphView,
@@ -47,7 +42,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
     // The session is an httpOnly cookie, so nothing here ever reads or sends a token by
@@ -82,7 +77,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-const post = <T>(path: string, body?: unknown) =>
+export const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 const put = <T>(path: string, body: unknown) =>
@@ -284,20 +279,6 @@ export const api = {
     request<{ deleted: number }>(`/api/generations/${id}`, { method: "DELETE" }),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),
-  adminEvaluations: (filters: { workspace?: string | null; account?: number | null }) => {
-    const search = new URLSearchParams();
-    if (filters.workspace) search.set("workspace", filters.workspace);
-    if (filters.account != null) search.set("account", String(filters.account));
-    const query = search.toString();
-    return request<AdminEvaluations>(`/api/admin/evaluations${query ? `?${query}` : ""}`);
-  },
-  adminEvaluationCsvUrl: (filters: { workspace?: string | null; account?: number | null }) => {
-    const search = new URLSearchParams();
-    if (filters.workspace) search.set("workspace", filters.workspace);
-    if (filters.account != null) search.set("account", String(filters.account));
-    const query = search.toString();
-    return `/api/admin/evaluations/export.csv${query ? `?${query}` : ""}`;
-  },
   setAccountEnabled: (userId: number, enabled: boolean) =>
     post<{ disabled?: number; enabled?: number }>(
       `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
@@ -345,17 +326,4 @@ export const api = {
   updateAdminConfig: (values: Record<string, unknown>) =>
     put<ConfigPayload>("/api/admin/config", { values }),
   reloadAdminConfig: () => post<ConfigPayload>("/api/admin/config/reload"),
-
-  // No `n` anywhere in here: one item per arm per session is what makes the session the
-  // statistical unit of the study.
-  launchEvaluation: (params: EvaluationParams) =>
-    post<{ job: Job; since: number }>("/api/evaluation", params),
-  evaluations: (limit = 50, offset = 0) =>
-    request<EvaluationListing>(`/api/evaluation?limit=${limit}&offset=${offset}`),
-  evaluation: (id: string) => request<EvaluationDetail>(`/api/evaluation/${id}`),
-  /** The reveal: the response already carries the origins of the three proposals. */
-  chooseEvaluation: (id: string, choice: number | null, comment?: string) =>
-    post<EvaluationDetail>(`/api/evaluation/${id}/choice`, { choice, comment }),
-  rateEvaluation: (id: string, rating: Partial<EvaluationRating>) =>
-    post<EvaluationDetail>(`/api/evaluation/${id}/rating`, rating),
 };

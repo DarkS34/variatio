@@ -7,20 +7,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, GenerateForm, toParams, type FormState } from "@/features/run/GenerateForm";
 import { duration } from "@/lib/format";
-import type { EvaluationParams } from "@/lib/types";
-import {
-  useCancelJob,
-  useChooseProposal,
-  useElapsed,
-  useEvaluation,
-  useEvaluations,
-  useKg,
-  useKgGraph,
-  useLaunchEvaluation,
-  usePipeline,
-  useProfile,
-  useRateSession,
-} from "@/state/queries";
+import { useCancelJob, useElapsed, useKg, useKgGraph, usePipeline, useProfile } from "@/state/queries";
 
 import { ComparisonGrid } from "./ComparisonGrid";
 import { FairnessTable } from "./FairnessTable";
@@ -28,6 +15,8 @@ import { RevealPanel } from "./RevealPanel";
 import { RubricForm } from "./RubricForm";
 import { SessionsTable } from "./SessionsTable";
 import { letterFor } from "./arms";
+import type { EvaluationParams } from "./types";
+import { useChooseProposal, useEvaluation, useEvaluations, useLaunchEvaluation, useRateSession } from "./queries";
 
 const GUARDRAIL_ERROR = "no han pasado la revisión";
 

@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { ItemFields } from "@/features/run/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
-import type { ExemplarsProfile, EvaluationPosition } from "@/lib/types";
+import type { ExemplarsProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
+import type { EvaluationPosition } from "./types";
 
 /**
  * Three proposals, told apart by nothing but a letter.
