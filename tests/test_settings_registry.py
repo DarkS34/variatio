@@ -78,8 +78,8 @@ def test_every_phase_key_is_declared_in_the_registry():
 # 106 since the seventeen per-phase reasoning switches (89 when the generation checks got
 # their retry budget, 88 when the admissibility judge became a phase of its own); the
 # study's six are still declared outside this package and picked up by name. 97 named, not
-# 106: the nine without one are the three context windows and the study's six, which the
+# 107: the ten without one are the four context windows and the study's six, which the
 # study reads through `study.config`, so none of them lands in `variant_generator.config`.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 106
+    assert len(REGISTRY) == 107
     assert len(BY_NAME) == 97

@@ -1,5 +1,3 @@
-from loguru import logger
-
 from ..instance.relations import BUILTIN_SCHEMAS
 
 PHASES = {
@@ -50,9 +48,5 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         values["models.embedding"]: values["context_window.embedding"],
     }
     for name in PHASES.values():
-        if out[name] not in out["LLM_CONTEXT"]:
-            logger.warning(
-                f"[config] '{out[name]}' no declara ventana de contexto: "
-                "la fija Ollama desde su Modelfile"
-            )
+        out["LLM_CONTEXT"].setdefault(out[name], values["context_window.overrides"])
     return out

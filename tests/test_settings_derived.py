@@ -13,6 +13,7 @@ def base():
         "context_window.main": 65536,
         "context_window.guardrail": 4096,
         "context_window.embedding": 4096,
+        "context_window.overrides": 32768,
     }
     for key in derived.PHASES:
         values[key] = None
@@ -44,6 +45,14 @@ def test_llm_context_is_keyed_by_the_resolved_model_names():
         "guardarrail": 4096,
         "embebedor": 4096,
     }
+
+
+def test_a_phase_override_gets_the_overrides_window():
+    values = base()
+    values["models.phases.kg_extract"] = "extractor"
+    out = derived.derive(values)
+    assert out["LLM_CONTEXT"]["extractor"] == 32768
+    assert out["LLM_CONTEXT"]["principal"] == 65536
 
 
 def test_changing_the_main_model_moves_the_context_key():

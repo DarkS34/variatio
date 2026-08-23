@@ -143,6 +143,19 @@ window was never the constraint there; see `KG_DOMAINS_MODEL`.
 Lowering this truncates silently, as always — and now it truncates the reasoning first, so
 the symptom is an empty or half-written answer rather than a missing tail of prompt."""
 
+_CONTEXT_WINDOW_OVERRIDES_DOC = """The window of every phase model that is NOT the main, the guardrail or the embedder. Before
+this existed such a model had no entry in `LLM_CONTEXT` and Ollama sized its KV cache from
+the Modelfile, which for `qwen3.6:35b-a3b-q8_0` (34.88 GiB of weights on its own) is the
+difference between fitting beside the embedder and not. One value and not one per phase: on
+2026-08-23 the only override is that MoE, placed on the build phases that read documents
+(`exemplars_transcribe`, `ep_scan`, `eb_extract`, `kg_extract`, the two `kg_clean_*` and
+the two `kg_link_*`) while `LLM_MAIN` stays `qwen3.8:27b-q4_K_M` for judging and generating.
+The two never need to be resident together — a build loads the MoE once and the 27b comes
+back on the next generation — so the co-residency arithmetic is still three models.
+
+65536 because the same rule as `context_window.main` applies (prompt plus deliberation
+where a phase reasons), and because lowering it truncates silently."""
+
 _EXEMPLARS_TRANSCRIBE_DOC = """Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
 so there is one constant and not two that could drift and produce two different
 markdowns for the same file.
@@ -343,6 +356,16 @@ otro sitio, no aquí.""",
         impact=Impact.REINDEX,
         minimum=512,
         doc=_CONTEXT_WINDOW_DOC,
+    ),
+    Setting(
+        key="context_window.overrides",
+        name="",
+        kind="int",
+        default=65536,
+        group="Ventana de contexto",
+        impact=Impact.CONTEXTS,
+        minimum=2048,
+        doc=_CONTEXT_WINDOW_OVERRIDES_DOC,
     ),
     Setting(
         key="models.phases.exemplars_transcribe",
