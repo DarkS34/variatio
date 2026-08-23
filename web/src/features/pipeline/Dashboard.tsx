@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   ArrowRight,
@@ -14,7 +14,7 @@ import {
   UploadCloud,
   WifiOff,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
@@ -41,6 +41,8 @@ import {
   useElapsed,
   useHealth,
   useInvalidateChain,
+  useJobRunning,
+  keys,
   usePipeline,
   useRaw,
   useStream,
@@ -494,10 +496,15 @@ function ActivityCard() {
 function SystemCard() {
   const health = useHealth();
   const invalidate = useInvalidateChain();
-  const index = useMutation({
-    mutationFn: () => api.submitJob("index", {}, true),
+  const client = useQueryClient();
+  const warm = useMutation({
+    mutationFn: () => api.submitJob("warm_models", {}, true),
     onSuccess: invalidate,
   });
+  const warming = useJobRunning("warm_models");
+  useEffect(() => {
+    if (!warming) client.invalidateQueries({ queryKey: keys.health });
+  }, [warming, client]);
 
   if (health.isLoading) return <Skeleton className="h-40" />;
   if (!health.data) {
@@ -508,7 +515,9 @@ function SystemCard() {
     );
   }
 
-  const { available, engine, host, models, context_ready } = health.data;
+  const { available, engine, host, models } = health.data;
+  const wanted = [...new Set(Object.values(models.required))];
+  const cold = wanted.filter((m) => !models.running.some((entry) => entry.model === m));
 
   return (
     <Card>
@@ -541,24 +550,26 @@ function SystemCard() {
 
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            Índices en memoria
-            <InfoHint label="Qué son los índices en memoria">
-              Los embeddings del grafo y del banco, cargados en RAM. En frío, el primer trabajo
-              que los necesite paga la carga; calentarlos la adelanta.
+            Modelos en memoria
+            <InfoHint label="Qué es calentar los modelos">
+              Cargar en la GPU los modelos que pide la instancia antes de que haga falta. En
+              frío, el primer trabajo que los necesite paga la carga; calentarlos la adelanta.
             </InfoHint>
           </span>
-          {context_ready ? (
+          {cold.length === 0 ? (
             <Badge variant="settled">Calientes</Badge>
           ) : (
             <div className="flex items-center gap-2">
-              <Badge variant="outline">Fríos</Badge>
+              <Badge variant="outline">
+                {cold.length === wanted.length ? "Fríos" : `${cold.length} en frío`}
+              </Badge>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => index.mutate()}
-                disabled={index.isPending || !available}
+                onClick={() => warm.mutate()}
+                disabled={warm.isPending || warming || !available}
               >
-                {index.isPending ? <Spinner /> : <Cpu />}
+                {warm.isPending || warming ? <Spinner /> : <Cpu />}
                 Calentar
               </Button>
             </div>

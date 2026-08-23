@@ -65,9 +65,15 @@ class IdleUnloader:
             return
 
         self._released = True
-        released = inference.unload_all()
-        if released:
-            logger.info(
-                f"{len(released)} modelo(s) descargados de la GPU tras "
-                f"{int(idle // 60)} minuto(s) de inactividad: {', '.join(released)}"
-            )
+        release_gpu(f"tras {int(idle // 60)} minuto(s) de inactividad")
+
+
+def release_gpu(reason: str) -> list[str]:
+    if not inference.is_available():
+        return []
+    released = inference.unload_all()
+    if released:
+        logger.info(
+            f"{len(released)} modelo(s) descargados de la GPU {reason}: {', '.join(released)}"
+        )
+    return released

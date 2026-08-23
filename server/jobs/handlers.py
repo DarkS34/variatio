@@ -9,7 +9,7 @@ from loguru import logger
 
 from variant_generator import config, stages
 from variant_generator.concept_tagger import ConceptTagger
-from variant_generator.core import progress
+from variant_generator.core import inference, progress
 from variant_generator.core.workspace import Workspace
 from variant_generator.instance.exemplars_profile import ExemplarsProfile
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
@@ -94,6 +94,15 @@ def handle_index(job: Job, control: JobControl) -> dict:
         "concepts": len(context.embedder.concepts_index),
         "items": len(context.exemplars_bank),
     }
+
+
+def handle_warm_models(job: Job, control: JobControl) -> dict:
+    deps.require_inference()
+    models = list(dict.fromkeys(inference.required_models().values()))
+    with progress.step("warm_models", "Cargando en memoria los modelos de la instancia"):
+        inference.ensure_models(models, "de la instancia")
+    resident = {info["model"] for info in inference.running_models()}
+    return {"models": models, "loaded": [m for m in models if m in resident]}
 
 
 def handle_tag(job: Job, control: JobControl) -> dict:
@@ -263,6 +272,7 @@ HANDLERS = {
     "build_bank": _build(review.EXEMPLARS_BANK),
     "describe_concepts": handle_describe_concepts,
     "index": handle_index,
+    "warm_models": handle_warm_models,
     "tag": handle_tag,
     "review_taggability": handle_review_taggability,
     "generate": handle_generate,

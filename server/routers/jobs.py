@@ -17,6 +17,7 @@ GATES: dict[str, str | None] = {
     "build_bank": review.EXEMPLARS_BANK,
     "describe_concepts": None,
     "index": None,
+    "warm_models": None,
     "tag": review.EXEMPLARS_BANK,
     "generate": "__all__",
     "evaluate": "__all__",
@@ -81,7 +82,7 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
 
-    # Without an engine no job can succeed: all nine call a model. It used to be accepted,
+    # Without an engine no job can succeed: every kind calls a model. It used to be accepted,
     # enqueued and blow up inside, leaving a failure in the history where there should have
     # been a disabled button. `force` skips the chain's gates — which are the user's decision
     # — and not this, which is an impossibility.

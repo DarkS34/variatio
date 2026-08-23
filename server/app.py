@@ -5,8 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
-from . import middleware, runtime, settings
+from . import jobs, middleware, runtime, settings
 from .routers import ROUTERS
 
 try:
@@ -25,6 +26,14 @@ async def lifespan(app: FastAPI):
     finally:
         runtime.idle_unloader.stop()
         runtime.runner.shutdown()
+        # The process that loaded the models is the one that lets go of them: with
+        # `OLLAMA_KEEP_ALIVE=24h` a stopped API would otherwise leave ~29 GiB resident on a
+        # shared card until tomorrow. Best-effort, in a thread so a slow engine cannot hold
+        # the event loop past uvicorn's own shutdown timeout.
+        try:
+            await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
+        except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
+            logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
 
 
 def create_app() -> FastAPI:
@@ -58,7 +67,7 @@ def create_app() -> FastAPI:
 
     # The study is an installation of this one, not a part of it: it registers its own
     # routers and its own job handler here, and an installation without it simply serves
-    # nine job kinds instead of ten.
+    # one job kind fewer.
     if study_api is not None:
         study_api.install(app)
 

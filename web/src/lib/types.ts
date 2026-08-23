@@ -8,6 +8,7 @@ export type JobKind =
   | "build_bank"
   | "describe_concepts"
   | "index"
+  | "warm_models"
   | "tag"
   | "review_taggability"
   | "generate"
