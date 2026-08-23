@@ -289,6 +289,7 @@ class VariantGenerator:
         think: bool = True,
         check: bool = True,
         ruling: object | None = None,
+        avoid: list[str] | None = None,
         on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
     ) -> list[GeneratedVariant]:
         target_type = self.exemplars_profile.item_type(item_type)
@@ -333,7 +334,9 @@ class VariantGenerator:
         with progress.step("generate", "Generando variantes", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
-                already = self._collect_already_generated(target_type, accepted)
+                already = list(avoid or []) + self._collect_already_generated(
+                    target_type, accepted
+                )
                 reporter.tick(i + 1)
 
                 def attempt(correction: str | None) -> GeneratedVariant | None:

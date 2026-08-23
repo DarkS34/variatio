@@ -49,9 +49,9 @@ def generate_content_prompt(
     if already_generated:
         existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
         already_block = (
-            "\n# ESCENARIOS YA USADOS EN ESTE LOTE\n"
-            "Enunciados ya producidos para este mismo encargo. El tuyo se plantea en un ámbito "
-            "distinto de todos ellos:\n"
+            "\n# ESCENARIOS YA USADOS\n"
+            "Enunciados ya producidos en este mismo encargo o guardados antes en esta asignatura "
+            "sobre estos conceptos. El tuyo se plantea en un ámbito distinto de todos ellos:\n"
             f"{existing_lines}\n"
         )
 
@@ -165,7 +165,7 @@ Convenciones observadas en el material real de la asignatura: cómo escribe esta
 - Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, presentaciones, ánimos ni comentarios tuyos sobre el propio ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
 
 # VARIACIÓN DE CONTEXTO
-El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados en este lote, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
+El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
 {instructions_section}{correction_section}
 # EJEMPLOS DE REFERENCIA
 Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.

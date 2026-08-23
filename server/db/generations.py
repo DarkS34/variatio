@@ -108,6 +108,32 @@ def _searchable(row: Generation) -> str:
     return " ".join(parts).lower()
 
 
+def recent_items(
+    session: Session,
+    workspace_id: int,
+    item_type: str | None = None,
+    concepts: list[str] | None = None,
+    limit: int = 12,
+) -> list[dict]:
+    conditions = [Generation.workspace_id == workspace_id]
+    if item_type:
+        conditions.append(Generation.item_type == item_type)
+    rows = session.scalars(
+        select(Generation)
+        .where(*conditions)
+        .order_by(Generation.created_at.desc(), Generation.id.desc())
+    )
+    wanted = set(concepts or [])
+    items: list[dict] = []
+    for row in rows:
+        if wanted and not wanted.intersection(row.concepts or []):
+            continue
+        items.append(dict(row.item or {}))
+        if len(items) >= limit:
+            break
+    return items
+
+
 def get_generation(session: Session, generation_id: int) -> Generation | None:
     return session.get(Generation, generation_id)
 

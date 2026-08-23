@@ -198,6 +198,12 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         + "; ".join(detail)
     )
 
+    avoid = _recent_scenarios(job, resolved_type, concepts)
+    if avoid:
+        logger.info(
+            f"{len(avoid)} escenario(s) de variantes guardadas entran en el prompt para no repetirse"
+        )
+
     saved_ids: dict[int, int] = {}
 
     def remember(result, index: int) -> None:
@@ -216,6 +222,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         curriculum=curriculum,
         instructions=instructions,
         think=think,
+        avoid=avoid,
         on_accepted=remember,
     )
     if len(results) < n:
@@ -247,6 +254,37 @@ def handle_generate(job: Job, control: JobControl) -> dict:
 # cancelled after the third item keeps three rows. Best-effort on purpose: a database that
 # is briefly away must not turn a minute of GPU into a failed job — the item is already in
 # the event stream and on screen. What is lost is the record, and the log says so.
+def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[str]:
+    limit = int(config.GENERATION_AVOID_RECENT)
+    if limit < 1:
+        return []
+    try:
+        with session_scope() as session:
+            workspace = repository.get_workspace(session, job.workspace)
+            if workspace is None:
+                return []
+            items = generations.recent_items(
+                session,
+                workspace.id,
+                item_type=item_type.key,
+                concepts=concepts,
+                limit=limit,
+            )
+    except Exception as exc:  # noqa: BLE001 - the run matters more than the reminder
+        logger.warning(f"No se pudieron leer las variantes guardadas recientes: {exc}")
+        return []
+
+    texts: list[str] = []
+    for item in items:
+        try:
+            text = item_type.primary_text(item).strip()
+        except (ValueError, AttributeError):
+            continue
+        if text:
+            texts.append(text)
+    return texts
+
+
 def _remember_one(job: Job, result, item_type: str, curriculum: list[str] | None) -> int | None:
     params = job.params
     try:

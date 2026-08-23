@@ -13,6 +13,7 @@ def generate(
     curriculum: list[str] | None = None,
     instructions: str | None = None,
     think: bool = True,
+    avoid: list[str] | None = None,
     on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
 ) -> list[GeneratedVariant]:
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
@@ -28,6 +29,7 @@ def generate(
         curriculum=curriculum,
         instructions=instructions,
         think=think,
+        avoid=avoid,
         on_accepted=on_accepted,
     )
 

@@ -80,7 +80,8 @@ def test_every_phase_key_is_declared_in_the_registry():
 # study's six are still declared outside this package and picked up by name. 97 named, not
 # 111: the ten without one are the four context windows and the study's six, which the
 # study reads through `study.config`, so none of them lands in `variant_generator.config`.
-# The four SSH tunnel settings (2026-08-23) are all named.
+# The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
+# the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23).
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 111
-    assert len(BY_NAME) == 101
+    assert len(REGISTRY) == 112
+    assert len(BY_NAME) == 102
