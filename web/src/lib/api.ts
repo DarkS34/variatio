@@ -1,8 +1,10 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
+  AdminEngine,
   AdminJobQueue,
   AdminOverview,
+  AdminSystem,
   ArtifactName,
   BankListing,
   BuildPlans,
@@ -21,6 +23,8 @@ import type {
   Job,
   KgSummary,
   Pipeline,
+  PullStatus,
+  TunnelStatus,
   ProfilePayload,
   RawKind,
   RawListing,
@@ -321,6 +325,63 @@ export const api = {
   adminJobs: () => request<AdminJobQueue>("/api/admin/jobs"),
   adminCancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/admin/jobs/${id}`, { method: "DELETE" }),
+  adminJobHistory: (limit = 50) =>
+    request<{ jobs: Job[] }>(`/api/admin/jobs/history?limit=${limit}`),
+
+  // The machine and the process: what is resident, what is on disk, the tunnel that reaches
+  // the engine and the contexts this process keeps warm. Every write here is felt by every
+  // workspace, which is why they are the administrator's.
+  adminEngine: () => request<AdminEngine>("/api/admin/engine"),
+  adminReleaseGpu: () => post<{ released: string[] }>("/api/admin/engine/release"),
+  adminPullModel: (model: string) =>
+    post<{ pull: PullStatus }>("/api/admin/engine/models/pull", { model }),
+  adminDeleteModel: (model: string) =>
+    request<{ deleted: string }>(`/api/admin/engine/models/${encodeURIComponent(model)}`, {
+      method: "DELETE",
+    }),
+  adminInvalidateContexts: () =>
+    request<{ invalidated: number }>("/api/admin/engine/contexts", { method: "DELETE" }),
+  adminInvalidateContext: (slug: string) =>
+    request<{ invalidated: string }>(
+      `/api/admin/engine/contexts/${encodeURIComponent(slug)}`,
+      { method: "DELETE" },
+    ),
+  adminTunnelStart: () => post<TunnelStatus>("/api/admin/engine/tunnel/start"),
+  adminTunnelStop: () => post<TunnelStatus>("/api/admin/engine/tunnel/stop"),
+  adminSystem: () => request<AdminSystem>("/api/admin/system"),
+  // The same job the panel's «Calentar» launches, aimed at a chosen workspace rather than the
+  // active one: the header is the request's way of saying which instance it means.
+  adminWarmModels: (slug: string) =>
+    request<{ job: Job; since: number }>("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({ kind: "warm_models", params: {}, force: true }),
+      headers: { "X-Workspace": slug },
+    }),
+
+  adminSetAdmin: (userId: number, isAdmin: boolean) =>
+    post<{ user_id: number; is_admin: boolean }>(`/api/admin/accounts/${userId}/admin`, {
+      is_admin: isAdmin,
+    }),
+  adminResetLink: (userId: number) =>
+    post<{ user_id: number; link: string; expires_in_minutes: number }>(
+      `/api/admin/accounts/${userId}/reset-link`,
+    ),
+  adminRevokeSessions: (userId: number) =>
+    request<{ user_id: number; revoked: number }>(`/api/admin/accounts/${userId}/sessions`, {
+      method: "DELETE",
+    }),
+  adminUnlockLogin: (userId: number) =>
+    post<{ user_id: number; unlocked: boolean }>(`/api/admin/accounts/${userId}/unlock`),
+
+  adminClearCache: (slug: string) =>
+    request<{ workspace: string; files_removed: number; bytes_freed: number }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/cache`,
+      { method: "DELETE" },
+    ),
+  adminExportWorkspace: (slug: string) =>
+    request<{ workspace: string; name: string; exported_at: string; files: Record<string, unknown> }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/export`,
+    ),
 
   adminGrantMembership: (userId: number, workspace: string, role: Role) =>
     post<{ user_id: number; workspace: string; role: Role }>(
@@ -337,4 +398,5 @@ export const api = {
   updateAdminConfig: (values: Record<string, unknown>) =>
     put<ConfigPayload>("/api/admin/config", { values }),
   reloadAdminConfig: () => post<ConfigPayload>("/api/admin/config/reload"),
+  resetAdminConfig: (keys: string[]) => post<ConfigPayload>("/api/admin/config/reset", { keys }),
 };

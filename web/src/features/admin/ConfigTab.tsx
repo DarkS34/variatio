@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +92,23 @@ export function ConfigTab() {
     },
   });
 
+  // Back to the registry's default, one setting at a time: the key leaves the file, so the
+  // row reads «por defecto» again rather than a file value that happens to equal it.
+  const reset = useMutation({
+    mutationFn: (key: string) => api.resetAdminConfig([key]),
+    onSuccess: (payload, key) => {
+      setDraft((prev) => {
+        const { [key]: _dropped, ...rest } = prev;
+        return rest;
+      });
+      setApplied(payload.applied ?? null);
+      invalidate();
+      toast({ title: "Valor por defecto restablecido" });
+    },
+    onError: (error: Error) =>
+      toast({ title: "No se ha podido restablecer", description: error.message, tone: "danger" }),
+  });
+
   if (query.isLoading) return <Skeleton className="h-96" />;
   if (!query.data) return null;
   const payload: ConfigPayload = query.data;
@@ -145,6 +162,7 @@ export function ConfigTab() {
             settings={payload.settings}
             draft={draft}
             onChange={setValue}
+            onReset={(key) => reset.mutate(key)}
           />
         ) : (
           <GroupCard
@@ -153,6 +171,7 @@ export function ConfigTab() {
             settings={payload.settings.filter((setting) => setting.group === group)}
             draft={draft}
             onChange={setValue}
+            onReset={(key) => reset.mutate(key)}
             models={payload.models ?? null}
           />
         ),
@@ -164,6 +183,7 @@ export function ConfigTab() {
           settings={orphans}
           draft={draft}
           onChange={setValue}
+          onReset={(key) => reset.mutate(key)}
           models={payload.models ?? null}
         />
       ) : null}
@@ -195,12 +215,14 @@ function GroupCard({
   settings,
   draft,
   onChange,
+  onReset,
   models,
 }: {
   title: string;
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  onReset: (key: string) => void;
   models: ConfigPayload["models"] | null;
 }) {
   const current = (setting: ConfigSetting) =>
@@ -226,6 +248,7 @@ function GroupCard({
             setting={setting}
             value={current(setting)}
             onChange={(next) => onChange(setting.key, next)}
+            onReset={() => onReset(setting.key)}
             models={models}
           />
         ))}
@@ -242,12 +265,14 @@ function ReasoningCard({
   settings,
   draft,
   onChange,
+  onReset,
 }: {
   title: string;
   lanes: ReasoningLane[];
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  onReset: (key: string) => void;
 }) {
   const drawn = new Set(lanes.flatMap((lane) => lane.phases.map((phase) => phase.setting)));
   const ofGroup = settings.filter((setting) => setting.group === title);
@@ -291,6 +316,7 @@ function ReasoningCard({
             setting={setting}
             value={current(setting)}
             onChange={(next) => onChange(setting.key, next)}
+            onReset={() => onReset(setting.key)}
             models={null}
           />
         ))}
@@ -450,17 +476,23 @@ function SettingRow({
   setting,
   value,
   onChange,
+  onReset,
   models,
 }: {
   setting: ConfigSetting;
   value: unknown;
   onChange: (next: unknown) => void;
+  onReset: () => void;
   models: ConfigPayload["models"] | null;
 }) {
   const label = setting.name || setting.key;
   const id = `config-${setting.key}`;
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
+  // Only a value that actually left the default has anything to go back to; a file value
+  // equal to the default is the same number with a different badge.
+  const resettable =
+    setting.source === "file" && !setting.secret && !sameValue(setting.value, setting.default);
 
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
@@ -562,9 +594,22 @@ function SettingRow({
             </div>
           )}
         </div>
-        <Badge variant={setting.source === "file" ? "secondary" : "outline"}>
-          {SOURCE_LABELS[setting.source]}
-        </Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Badge variant={setting.source === "file" ? "secondary" : "outline"}>
+            {SOURCE_LABELS[setting.source]}
+          </Badge>
+          {resettable ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              title={`Volver a ${formatValue(setting.default)}`}
+              onClick={onReset}
+            >
+              <Undo2 />
+              Por defecto
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {lockedByEnv ? (

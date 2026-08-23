@@ -36,6 +36,9 @@ export const keys = {
   adminOverview: ["admin", "overview"] as const,
   adminInvites: ["admin", "invites"] as const,
   adminJobs: ["admin", "jobs"] as const,
+  adminJobHistory: ["admin", "jobs", "history"] as const,
+  adminEngine: ["admin", "engine"] as const,
+  adminSystem: ["admin", "system"] as const,
 };
 
 /** The slug this tab is looking at, as a React value. */
@@ -347,6 +350,94 @@ export function useAdminCancelJob() {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: keys.adminJobs });
       client.invalidateQueries({ queryKey: keys.adminOverview });
+    },
+  });
+}
+
+export function useAdminJobHistory() {
+  return useQuery({
+    queryKey: keys.adminJobHistory,
+    queryFn: () => api.adminJobHistory(50),
+    refetchInterval: 10_000,
+  });
+}
+
+/**
+ * The engine's reading, polled: residency and the tunnel change on their own, and a model
+ * being pulled moves every second. Five seconds while something is in flight, thirty when
+ * nothing is.
+ */
+export function useAdminEngine() {
+  return useQuery({
+    queryKey: keys.adminEngine,
+    queryFn: api.adminEngine,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const moving =
+        data?.pulls.some((pull) => pull.status === "running") ||
+        (data?.tunnel.wanted && !data.tunnel.running);
+      return moving ? 2_000 : 15_000;
+    },
+  });
+}
+
+export function useAdminSystem() {
+  return useQuery({ queryKey: keys.adminSystem, queryFn: api.adminSystem });
+}
+
+function useEngineMutation<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.adminEngine });
+      client.invalidateQueries({ queryKey: keys.adminOverview });
+      client.invalidateQueries({ queryKey: keys.health });
+    },
+  });
+}
+
+export function useEngineActions() {
+  return {
+    release: useEngineMutation(() => api.adminReleaseGpu()),
+    pull: useEngineMutation((model: string) => api.adminPullModel(model)),
+    remove: useEngineMutation((model: string) => api.adminDeleteModel(model)),
+    invalidateAll: useEngineMutation(() => api.adminInvalidateContexts()),
+    invalidate: useEngineMutation((slug: string) => api.adminInvalidateContext(slug)),
+    tunnelStart: useEngineMutation(() => api.adminTunnelStart()),
+    tunnelStop: useEngineMutation(() => api.adminTunnelStop()),
+  };
+}
+
+/** The account-level controls beyond enable/disable: the flag, the sessions, the lock. */
+export function useAccountActions() {
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: keys.adminOverview });
+  return {
+    setAdmin: useMutation({
+      mutationFn: ({ id, isAdmin }: { id: number; isAdmin: boolean }) =>
+        api.adminSetAdmin(id, isAdmin),
+      onSuccess: refresh,
+    }),
+    resetLink: useMutation({ mutationFn: (id: number) => api.adminResetLink(id) }),
+    revokeSessions: useMutation({
+      mutationFn: (id: number) => api.adminRevokeSessions(id),
+      onSuccess: refresh,
+    }),
+    unlock: useMutation({
+      mutationFn: (id: number) => api.adminUnlockLogin(id),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+export function useClearCache() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => api.adminClearCache(slug),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.adminOverview });
+      client.invalidateQueries({ queryKey: keys.adminEngine });
     },
   });
 }
