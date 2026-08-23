@@ -265,6 +265,18 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useRenameWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
+      api.renameWorkspace(slug, name),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["workspaces"] });
+      client.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
+  });
+}
+
 export function useDeleteWorkspace() {
   const client = useQueryClient();
   return useMutation({
