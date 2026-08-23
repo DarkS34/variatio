@@ -7,12 +7,13 @@ read a process-wide workspace would write one person's build into another's dire
 
 from loguru import logger
 
+from study import ARMS
+from study import run as study_run
+from study.arms import rag as rag_arm
 from variant_generator import config, stages
 from variant_generator.concept_tagger import ConceptTagger
 from variant_generator.core import progress
 from variant_generator.core.workspace import Workspace
-from variant_generator.evaluation import ARMS
-from variant_generator.evaluation import rag as rag_arm
 from variant_generator.instance.exemplars_profile import ExemplarsProfile
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
@@ -293,7 +294,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     rag_arm.index_for(context).ensure()
 
     with control.muted_logs(), progress.emitting(_BlindEmitter(control)):
-        session = stages.evaluate(
+        session = study_run.evaluate(
             context,
             concepts=concepts,
             item_type=resolved_type.key,

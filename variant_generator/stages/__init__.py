@@ -17,7 +17,6 @@ from .build import (
     build_missing,
     build_phases,
 )
-from .evaluate import evaluate
 from .generate import generate
 from .index import (
     describe_concepts,
@@ -42,7 +41,6 @@ __all__ = [
     "build_phases",
     "content_context_path",
     "describe_concepts",
-    "evaluate",
     "exemplars_profile_path",
     "generate",
     "initialize",

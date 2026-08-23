@@ -15,12 +15,13 @@ import time
 
 from loguru import logger
 
-from .. import config
-from ..core import inference, progress
-from ..core.repair import parse_with_repair
+from variant_generator import config
+from variant_generator.core import inference, progress
+from variant_generator.core.repair import parse_with_repair
+from variant_generator.variant_generator import build_few_shot_block, parse_item
+
+from .. import FAILED, OK, ArmResult, Commission
 from ..prompts import rag_generation_prompt
-from ..variant_generator import build_few_shot_block, parse_item
-from . import FAILED, OK, ArmResult, Commission
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatBankIndex
 

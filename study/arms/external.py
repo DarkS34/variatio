@@ -30,8 +30,9 @@ from dataclasses import dataclass
 import httpx
 from loguru import logger
 
-from .. import config
-from . import ArmUnavailable
+from variant_generator import config
+
+from .. import ArmUnavailable
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"

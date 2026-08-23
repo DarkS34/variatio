@@ -22,7 +22,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator.evaluation import ARMS, EvaluationSession
+from study import ARMS, EvaluationSession
 
 from .db import study
 from .db.models import EvalSession

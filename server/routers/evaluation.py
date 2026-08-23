@@ -16,8 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
-from variant_generator.evaluation import external
+from study import ARM_LABELS, ARMS, EvaluationSession
+from study.arms import external
 
 from .. import auth
 from .. import curriculum as curriculum_store

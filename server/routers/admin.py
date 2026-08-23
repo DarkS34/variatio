@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator.evaluation import ARM_LABELS, ARMS
+from study import ARM_LABELS, ARMS
 
 from .. import auth, deps, evaluation_store, review, runtime, settings
 from ..auth.rate_limit import throttle

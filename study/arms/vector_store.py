@@ -21,8 +21,8 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from .. import config
-from ..core import inference, progress
+from variant_generator import config
+from variant_generator.core import inference, progress
 
 # `cache_path` is required, and that is the point: it used to fall back to the default
 # workspace, so every instance that evaluated read and wrote ITS index under
