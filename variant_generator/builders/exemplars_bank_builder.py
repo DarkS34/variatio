@@ -32,6 +32,16 @@ BUILD_PHASES = (
 )
 
 
+def build_models() -> list[str]:
+    return [
+        config.EXEMPLARS_TRANSCRIBE_MODEL,
+        config.EB_EXTRACT_MODEL,
+        config.EMBEDDING_LLM,
+        config.CONCEPT_TAGGER_LLM,
+        config.REPAIR_LLM,
+    ]
+
+
 class ExemplarsBankBuilder:
     ID_RE = re.compile(r"^C(\d+)$")
 
@@ -98,16 +108,7 @@ class ExemplarsBankBuilder:
     # The tagger and the embedder come in here because the build uses them: each document is
     # tagged right after extracting it, inside this same job.
     def bootstrap(self) -> None:
-        ensure_models(
-            [
-                config.EXEMPLARS_TRANSCRIBE_MODEL,
-                config.EB_EXTRACT_MODEL,
-                config.EMBEDDING_LLM,
-                config.CONCEPT_TAGGER_LLM,
-                config.REPAIR_LLM,
-            ],
-            "del banco de ejemplares",
-        )
+        ensure_models(build_models(), "del banco de ejemplares")
 
     # build() persists checkpoints to disk and also returns the bank, so the caller can use it
     # without re-reading it.

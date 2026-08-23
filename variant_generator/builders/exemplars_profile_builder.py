@@ -63,19 +63,29 @@ SCAN_SCHEMA = {
 }
 
 
+def build_models() -> list[str]:
+    return [
+        config.EXEMPLARS_TRANSCRIBE_MODEL,
+        config.EP_SCAN_MODEL,
+        config.EP_CONSOLIDATE_MODEL,
+        config.EP_CONTEXT_MODEL,
+        config.REPAIR_LLM,
+    ]
+
+
 class ExemplarsProfileBuilder:
     def __init__(
         self,
         workspace: Workspace,
-        scan_model: str = config.EP_SCAN_MODEL,
-        consolidate_model: str = config.EP_CONSOLIDATE_MODEL,
-        context_model: str = config.EP_CONTEXT_MODEL,
+        scan_model: str | None = None,
+        consolidate_model: str | None = None,
+        context_model: str | None = None,
         verbose: bool = True,
     ):
         self.workspace = workspace
-        self.scan_model = scan_model
-        self.consolidate_model = consolidate_model
-        self.context_model = context_model
+        self.scan_model = scan_model or config.EP_SCAN_MODEL
+        self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
+        self.context_model = context_model or config.EP_CONTEXT_MODEL
         self.chunk_size = config.EP_CHUNK_SIZE
         self.excerpt_chars = config.EP_SCAN_EXCERPT_CHARS
         self.max_item_types = config.EP_MAX_ITEM_TYPES

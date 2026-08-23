@@ -525,6 +525,20 @@ def required_models() -> dict[str, str]:
     return {name: getattr(config, name) for name in names}
 
 
+def runtime_models() -> list[str]:
+    names = [
+        "LLM_MAIN",
+        "GUARDRAIL_LLM",
+        "EMBEDDING_LLM",
+        "DESCRIPTION_GENERATION_LLM",
+        "CONCEPT_TAGGER_LLM",
+        "VARIANT_GENERATION_LLM",
+        "ADMISSIBILITY_LLM",
+        "REPAIR_LLM",
+    ]
+    return list(dict.fromkeys(getattr(config, name) for name in names))
+
+
 def warmup(model: str, is_embedding: bool = False) -> None:
     engine().warmup(model, is_embedding=is_embedding)
 

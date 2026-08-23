@@ -15,6 +15,7 @@ from .build import (
     build_exemplars_profile,
     build_knowledge_graph,
     build_missing,
+    build_models,
     build_phases,
 )
 from .generate import generate
@@ -38,6 +39,7 @@ __all__ = [
     "build_exemplars_profile",
     "build_knowledge_graph",
     "build_missing",
+    "build_models",
     "build_phases",
     "content_context_path",
     "describe_concepts",

@@ -33,8 +33,8 @@ from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
-    "BUILD_MODELS",
     "BUILD_PHASES",
+    "build_models",
     "KnowledgeGraphBuilder",
     "blocks",
     "cleaning",
@@ -68,18 +68,19 @@ BUILD_PHASES = (
     ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 
-BUILD_MODELS = [
-    config.KG_EXTRACT_MODEL,
-    config.EMBEDDING_LLM,
-    config.KG_CLEAN_MERGE_MODEL,
-    config.KG_CLEAN_DROP_MODEL,
-    config.KG_DOMAINS_MODEL,
-    config.KG_DOMAINS_LEFTOVERS_MODEL,
-    config.KG_LINK_DOMAIN_MODEL,
-    config.KG_LINK_CROSS_DOMAIN_MODEL,
-    config.KG_CONTEXT_MODEL,
-    config.REPAIR_LLM,
-]
+def build_models() -> list[str]:
+    return [
+        config.KG_EXTRACT_MODEL,
+        config.EMBEDDING_LLM,
+        config.KG_CLEAN_MERGE_MODEL,
+        config.KG_CLEAN_DROP_MODEL,
+        config.KG_DOMAINS_MODEL,
+        config.KG_DOMAINS_LEFTOVERS_MODEL,
+        config.KG_LINK_DOMAIN_MODEL,
+        config.KG_LINK_CROSS_DOMAIN_MODEL,
+        config.KG_CONTEXT_MODEL,
+        config.REPAIR_LLM,
+    ]
 
 
 class KnowledgeGraphBuilder:
@@ -112,7 +113,7 @@ class KnowledgeGraphBuilder:
     # PUBLIC API ----------------------------------------------------------------------------------
 
     def bootstrap(self) -> None:
-        ensure_models(BUILD_MODELS, "del grafo de conocimiento")
+        ensure_models(build_models(), "del grafo de conocimiento")
 
     def build(self, input_dir: str | Path) -> dict:
         self.bootstrap()

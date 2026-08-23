@@ -98,11 +98,20 @@ def handle_index(job: Job, control: JobControl) -> dict:
 
 def handle_warm_models(job: Job, control: JobControl) -> dict:
     deps.require_inference()
-    models = list(dict.fromkeys(inference.required_models().values()))
-    with progress.step("warm_models", "Cargando en memoria los modelos de la instancia"):
-        inference.ensure_models(models, "de la instancia")
+    ws = _workspace(job)
+    missing = stages.missing_artifacts(ws)
+    if missing:
+        stage = missing[0]
+        models = stages.build_models(stage)
+        label = f"para construir: {review.LABELS[stage].lower()}"
+    else:
+        stage = None
+        models = inference.runtime_models()
+        label = "de la instancia"
+    with progress.step("warm_models", f"Cargando en memoria los modelos {label}"):
+        inference.ensure_models(models, label)
     resident = {info["model"] for info in inference.running_models()}
-    return {"models": models, "loaded": [m for m in models if m in resident]}
+    return {"stage": stage, "models": models, "loaded": [m for m in models if m in resident]}
 
 
 def handle_tag(job: Job, control: JobControl) -> dict:

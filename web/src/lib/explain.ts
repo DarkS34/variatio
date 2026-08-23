@@ -43,7 +43,7 @@ export const JOB_EXPLAIN: Record<string, JobExplain> = {
     cost: "Minutos en frío; segundos si la caché sigue siendo válida.",
   },
   warm_models: {
-    what: "Descarga, si falta, y carga en la memoria del motor cada modelo que pide la instancia, para que el primer trabajo no pague la carga.",
+    what: "Descarga, si falta, y carga en la memoria del motor los modelos del siguiente paso: los del primer artefacto que queda por construir, o los de generación si la instancia está completa.",
     produces: "Nada en disco: los modelos residentes en el motor.",
     cost: "Segundos por modelo ya en disco; la descarga, si hace falta, tarda minutos.",
   },
@@ -68,7 +68,7 @@ export const STEP_EXPLAIN: Record<string, string> = {
   context:
     "Carga el perfil, el grafo y el banco, y calcula los embeddings que falten. La primera vez es lenta; después se reutiliza la caché.",
   warm_models:
-    "Comprueba que cada modelo que pide la instancia está en disco, lo descarga si falta, y le manda una petición vacía para que el motor lo cargue en memoria.",
+    "Comprueba que cada modelo del siguiente paso está en disco, lo descarga si falta, y le manda una petición vacía para que el motor lo cargue en memoria.",
   load_instance: "Lee de disco los tres artefactos y valida que el perfil y el grafo cargan.",
   descriptions:
     "Escribe con el modelo la descripción de cada concepto contra los párrafos del corpus de teoría en los que aparece, y contrastándola con los conceptos con los que se podría confundir. Después mide cuáles han salido casi idénticas y solo reescribe esas. Se guarda tras cada una, así que cancelar no pierde lo hecho.",

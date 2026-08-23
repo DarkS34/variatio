@@ -148,6 +148,19 @@ def build_phases(artifact: str) -> tuple[tuple[str, str, int], ...]:
     return _PHASES[artifact]
 
 
+_MODELS = {
+    _artifacts.EXEMPLARS_PROFILE: exemplars_profile_builder.build_models,
+    _artifacts.KNOWLEDGE_GRAPH: knowledge_graph_builder.build_models,
+    _artifacts.EXEMPLARS_BANK: exemplars_bank_builder.build_models,
+}
+
+
+def build_models(artifact: str) -> list[str]:
+    if artifact not in _MODELS:
+        raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_MODELS)}")
+    return list(dict.fromkeys(_MODELS[artifact]()))
+
+
 def build_artifact(artifact: str, ws: Workspace | None = None) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
