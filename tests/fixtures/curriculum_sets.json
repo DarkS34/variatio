@@ -1,0 +1,51 @@
+[
+  {
+    "name": "null curriculum narrows nothing",
+    "closure": ["Función", "Variable"],
+    "curriculum": null,
+    "assumed_known": ["Función", "Variable"],
+    "forbidden": ["Función", "Variable"]
+  },
+  {
+    "name": "empty curriculum is a missing one",
+    "closure": ["Función", "Variable"],
+    "curriculum": [],
+    "assumed_known": ["Función", "Variable"],
+    "forbidden": ["Función", "Variable"]
+  },
+  {
+    "name": "full overlap",
+    "closure": ["Función", "Variable"],
+    "curriculum": ["Función", "Variable"],
+    "assumed_known": ["Función", "Variable"],
+    "forbidden": []
+  },
+  {
+    "name": "no overlap",
+    "closure": ["Memoización", "Recursividad"],
+    "curriculum": ["Variable"],
+    "assumed_known": [],
+    "forbidden": ["Memoización", "Recursividad"]
+  },
+  {
+    "name": "partial overlap",
+    "closure": ["Función", "Recursividad", "Variable"],
+    "curriculum": ["Recursividad"],
+    "assumed_known": ["Recursividad"],
+    "forbidden": ["Función", "Variable"]
+  },
+  {
+    "name": "a covered concept outside the closure appears in neither list",
+    "closure": ["Función", "Variable"],
+    "curriculum": ["Variable", "Otro"],
+    "assumed_known": ["Variable"],
+    "forbidden": ["Función"]
+  },
+  {
+    "name": "outputs keep closure order",
+    "closure": ["Variable", "Recursividad", "Función", "Memoización"],
+    "curriculum": ["Memoización", "Variable"],
+    "assumed_known": ["Variable", "Memoización"],
+    "forbidden": ["Recursividad", "Función"]
+  }
+]

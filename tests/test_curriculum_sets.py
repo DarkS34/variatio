@@ -1,30 +1,64 @@
+import json
+from pathlib import Path
+
+import pytest
+
 from variant_generator.variant_generator import assumed_known, forbidden
 
-CLOSURE_UP = ["Función", "Variable"]
-CLOSURE_DOWN = ["Memoización", "Recursividad"]
+FIXTURE = Path(__file__).parent / "fixtures" / "curriculum_sets.json"
+CASES = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-def test_without_curriculum_everything_upstream_is_assumed_known():
-    assert assumed_known(CLOSURE_UP, None) == ["Función", "Variable"]
+def _by_name() -> list:
+    return [pytest.param(case, id=case["name"]) for case in CASES]
 
 
-def test_without_curriculum_everything_downstream_is_forbidden():
-    assert forbidden(CLOSURE_DOWN, None) == ["Memoización", "Recursividad"]
+@pytest.mark.parametrize("case", _by_name())
+def test_assumed_known_matches_the_shared_table(case):
+    assert assumed_known(case["closure"], case["curriculum"]) == case["assumed_known"]
 
 
-def test_assumed_known_INTERSECTS_the_curriculum():
-    assert assumed_known(CLOSURE_UP, ["Variable", "Otro"]) == ["Variable"]
+@pytest.mark.parametrize("case", _by_name())
+def test_forbidden_matches_the_shared_table(case):
+    assert forbidden(case["closure"], case["curriculum"]) == case["forbidden"]
 
 
-def test_forbidden_SUBTRACTS_the_curriculum():
-    assert forbidden(CLOSURE_DOWN, ["Recursividad"]) == ["Memoización"]
+@pytest.mark.parametrize("case", _by_name())
+def test_the_table_only_names_closure_members(case):
+    closure = set(case["closure"])
+    assert set(case["assumed_known"]) <= closure
+    assert set(case["forbidden"]) <= closure
+
+
+@pytest.mark.parametrize("case", _by_name())
+def test_the_table_is_a_partition_whenever_a_curriculum_is_given(case):
+    if not case["curriculum"]:
+        return
+    assert set(case["assumed_known"]).isdisjoint(case["forbidden"])
+    assert set(case["assumed_known"]) | set(case["forbidden"]) == set(case["closure"])
+
+
+def test_the_table_covers_every_shape():
+    names = {case["name"] for case in CASES}
+    assert {
+        "null curriculum narrows nothing",
+        "empty curriculum is a missing one",
+        "full overlap",
+        "no overlap",
+        "partial overlap",
+        "a covered concept outside the closure appears in neither list",
+        "outputs keep closure order",
+    } <= names
+
+
+def test_the_python_side_keeps_closure_order():
+    closure = ["Variable", "Función"]
+    assert assumed_known(closure, None) == ["Variable", "Función"]
+    assert forbidden(closure, None) == ["Variable", "Función"]
 
 
 def test_the_two_operations_are_not_the_same():
+    closure = ["Función", "Variable"]
     curriculum = ["Variable"]
-    assert assumed_known(CLOSURE_UP, curriculum) == ["Variable"]
-    assert forbidden(CLOSURE_UP, curriculum) == ["Función"]
-
-
-def test_an_empty_curriculum_is_not_a_missing_one():
-    assert assumed_known(CLOSURE_UP, []) == ["Función", "Variable"]
+    assert assumed_known(closure, curriculum) == ["Variable"]
+    assert forbidden(closure, curriculum) == ["Función"]
