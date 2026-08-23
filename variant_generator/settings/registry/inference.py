@@ -537,6 +537,22 @@ otro sitio, no aquí.""",
         ),
     ),
     Setting(
+        key="models.phases.admissibility",
+        name="ADMISSIBILITY_LLM",
+        kind="str",
+        default=None,
+        group="Modelos",
+        impact=Impact.CONTEXTS,
+        nullable=True,
+        doc=_phase_doc(
+            "Fase de admisibilidad: juzga si el texto libre del encargo pide algo que ya "
+            "decide otro control de la pantalla. Va sobre el modelo principal por dos "
+            "razones: ya está residente cuando se le llama, así que no cuesta un cambio de "
+            "modelo, y el guardián —que corre antes— tiene 4096 de contexto y no puede leer "
+            "la lista entera de conceptos del grafo."
+        ),
+    ),
+    Setting(
         key="models.phases.repair",
         name="REPAIR_LLM",
         kind="str",

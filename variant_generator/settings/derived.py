@@ -21,6 +21,7 @@ PHASES = {
     "models.phases.concept_tagger": "CONCEPT_TAGGER_LLM",
     "models.phases.variant_generation": "VARIANT_GENERATION_LLM",
     "models.phases.repair": "REPAIR_LLM",
+    "models.phases.admissibility": "ADMISSIBILITY_LLM",
 }
 
 

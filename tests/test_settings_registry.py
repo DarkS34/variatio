@@ -75,9 +75,10 @@ def test_every_phase_key_is_declared_in_the_registry():
         assert key in BY_KEY, f"{key} lo deriva PHASES pero no lo declara nadie"
 
 
-# 87 still, because the study's six are declared outside this package and picked up by
-# name. 78 named, not 80: the study reads its own through `study.config`, so none of the
-# six lands in `variant_generator.config` any more.
+# 88 since the admissibility judge became a phase of its own; the study's six are still
+# declared outside this package and picked up by name. 79 named, not 88: the nine without
+# one are the three context windows and the study's six, which the study reads through
+# `study.config`, so none of them lands in `variant_generator.config`.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 87
-    assert len(BY_NAME) == 78
+    assert len(REGISTRY) == 88
+    assert len(BY_NAME) == 79
