@@ -1,7 +1,9 @@
 import {
+  BookPlus,
   Brain,
   Copy,
   Download,
+  Library,
   Search,
   Sparkles,
   Trash2,
@@ -23,8 +25,13 @@ import { useRouter } from "@/lib/router";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/state/auth";
-import { useDeleteGeneration, useGenerations, useProfile } from "@/state/queries";
+import { useCanEdit, useSession } from "@/state/auth";
+import {
+  useDeleteGeneration,
+  useGenerations,
+  useProfile,
+  usePromoteGeneration,
+} from "@/state/queries";
 
 /**
  * Everything this workspace has generated, kept.
@@ -51,6 +58,8 @@ export function GenerationsPanel() {
 
   const listing = useGenerations({ scope, q: search || undefined, limit: 60 });
   const remove = useDeleteGeneration();
+  const promote = usePromoteGeneration();
+  const canEdit = useCanEdit();
 
   const profile = profileQuery.data?.profile ?? null;
   const rows = listing.data?.generations ?? [];
@@ -168,6 +177,9 @@ export function GenerationsPanel() {
               onToggle={() => setOpen(open === row.id ? null : row.id)}
               canDelete={isOwner || row.author.id === me}
               onDelete={() => remove.mutate(row.id)}
+              canPromote={canEdit}
+              promoting={promote.isPending && promote.variables === row.id}
+              onPromote={() => promote.mutate(row.id)}
               showAuthor={scope === "workspace"}
             />
           ))}
@@ -209,6 +221,9 @@ function GenerationCard({
   onToggle,
   canDelete,
   onDelete,
+  canPromote,
+  promoting,
+  onPromote,
   showAuthor,
 }: {
   row: GenerationRow;
@@ -217,6 +232,9 @@ function GenerationCard({
   onToggle: () => void;
   canDelete: boolean;
   onDelete: () => void;
+  canPromote: boolean;
+  promoting: boolean;
+  onPromote: () => void;
   showAuthor: boolean;
 }) {
   const { navigate } = useRouter();
@@ -248,6 +266,23 @@ function GenerationCard({
           ) : null}
 
           <div className="ml-auto flex gap-1">
+            {row.promoted_item_id ? (
+              <Badge variant="secondary" className="gap-1 self-center">
+                <Library className="size-3" />
+                en el banco · {row.promoted_item_id}
+              </Badge>
+            ) : canPromote ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={promoting}
+                title="Añade esta variante al banco de ejemplares, etiquetada con sus conceptos; el banco quedará pendiente de aprobarse de nuevo"
+                onClick={onPromote}
+              >
+                <BookPlus />
+                {promoting ? "Promoviendo…" : "Promover al banco"}
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="sm"

@@ -6,6 +6,8 @@ and the tagger filters the LLM's answer against the candidate list — so the on
 surface is manual editing, and it is validated here for the same reason.
 """
 
+import re
+
 from variant_generator import config
 from variant_generator.concept_tagger import TRACE_KEY
 from variant_generator.core.workspace import Workspace
@@ -18,6 +20,9 @@ ARTIFACT = review.EXEMPLARS_BANK
 
 # Not part of the content schema, but part of every item on disk.
 META_FIELDS = ("source", "concepts", "primary_concept", ITEM_TYPE_KEY, TRACE_KEY)
+
+PROMOTED_SOURCE = "Variante promovida"
+PROMOTED_ID_RE = re.compile(r"^G(\d+)$")
 
 
 # The listing sorts and searches over items the profile may no longer be able to place —
@@ -243,6 +248,62 @@ def set_concepts(
     result = _persist(ws, bank, f"conceptos de '{item_id}' editados")
     result["item"] = {"id": item_id, **item}
     return result
+
+
+def has_item(ws: Workspace, item_id: str) -> bool:
+    try:
+        return item_id in _load_bank(ws)
+    except BankError:
+        return False
+
+
+def add_item(
+    ws: Workspace,
+    fields: dict,
+    item_type_key: str | None,
+    concepts: list[str],
+    primary_concept: str | None = None,
+) -> dict:
+    bank = _load_bank(ws)
+    profile = _profile(ws)
+    try:
+        item_type = profile.item_type(item_type_key or None)
+    except ValueError as exc:
+        raise BankError(str(exc)) from exc
+
+    schema_fields = set(item_type.field_specs)
+    candidate = {k: v for k, v in fields.items() if k in schema_fields}
+    try:
+        item_type.content_item(**candidate)
+    except Exception as exc:  # noqa: BLE001 - pydantic errors are the message
+        raise BankError(f"El ítem no cumple el esquema: {exc}") from exc
+
+    taggable = set(_graph(ws).taggable_concepts)
+    kept = [c for c in concepts if c in taggable]
+    primary = primary_concept if primary_concept in kept else (kept[0] if kept else None)
+
+    item_id = _next_promoted_id(bank)
+    item = {
+        ITEM_TYPE_KEY: item_type.key,
+        **candidate,
+        "source": PROMOTED_SOURCE,
+        "concepts": kept,
+        "primary_concept": primary,
+        TRACE_KEY: {"method": "promoted"},
+    }
+    bank[item_id] = item
+
+    result = _persist(ws, bank, f"variante promovida como '{item_id}'")
+    result["item"] = {"id": item_id, **item}
+    return result
+
+
+def _next_promoted_id(bank: dict) -> str:
+    highest = max(
+        (int(m.group(1)) for k in bank if (m := PROMOTED_ID_RE.match(k))),
+        default=0,
+    )
+    return f"G{highest + 1:03d}"
 
 
 def delete_item(ws: Workspace, item_id: str) -> dict:

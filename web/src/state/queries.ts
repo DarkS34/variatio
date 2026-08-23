@@ -329,6 +329,14 @@ export function useDeleteGeneration() {
   });
 }
 
+export function usePromoteGeneration() {
+  const invalidate = useInvalidateChain();
+  return useMutation({
+    mutationFn: (id: number) => api.promoteGeneration(id),
+    onSuccess: () => invalidate(),
+  });
+}
+
 /* Administration -------------------------------------------------------------------- */
 
 export function useAdminOverview() {

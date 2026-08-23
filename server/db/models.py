@@ -298,6 +298,7 @@ class Generation(Base):
     item: Mapped[dict] = mapped_column(Json, default=dict)
     thinking: Mapped[str | None] = mapped_column(Text, default=None)
     checks: Mapped[dict | None] = mapped_column(Json, default=None)
+    promoted_item_id: Mapped[str | None] = mapped_column(String(32), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workspace: Mapped[Workspace] = relationship(back_populates="generations")

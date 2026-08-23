@@ -456,6 +456,7 @@ export interface GenerationRow {
   instructions: string;
   think: boolean;
   author: GenerationAuthor;
+  promoted_item_id: string | null;
   item: Record<string, unknown>;
   checks?: ItemChecks | null;
 }

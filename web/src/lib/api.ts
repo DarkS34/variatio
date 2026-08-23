@@ -288,6 +288,10 @@ export const api = {
   generation: (id: number) => request<GenerationDetail>(`/api/generations/${id}`),
   deleteGeneration: (id: number) =>
     request<{ deleted: number }>(`/api/generations/${id}`, { method: "DELETE" }),
+  promoteGeneration: (id: number) =>
+    post<{ generation: number; item: { id: string }; pipeline: Pipeline }>(
+      `/api/generations/${id}/promote`,
+    ),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),
   setAccountEnabled: (userId: number, enabled: boolean) =>

@@ -18,6 +18,9 @@ from sqlalchemy.orm import Session as DbSession
 from .. import auth
 from ..db import generations as db_generations
 from ..db.models import OWNER, Generation
+from ..editors import bank_edit
+from ..editors.bank_edit import BankError
+from .pipeline import pipeline_payload
 
 router = APIRouter(prefix="/api/generations", tags=["generations"], dependencies=[auth.VIEW])
 
@@ -38,6 +41,7 @@ def _view(row: Generation, user, include_item: bool = True) -> dict:
             "name": user.name if user is not None else None,
             "username": user.username if user is not None else None,
         },
+        "promoted_item_id": row.promoted_item_id,
     }
     if include_item:
         payload["item"] = row.item or {}
@@ -89,6 +93,35 @@ def detail(
     row = _require(db, generation_id, access)
     return {
         "generation": {**_view(row, row.user), "thinking": row.thinking},
+    }
+
+
+@router.post("/{generation_id}/promote", dependencies=[auth.EDIT])
+def promote(
+    generation_id: int,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    row = _require(db, generation_id, access)
+    if row.promoted_item_id and bank_edit.has_item(access.ws, row.promoted_item_id):
+        raise HTTPException(
+            409, f"Esta variante ya está en el banco como «{row.promoted_item_id}»."
+        )
+    try:
+        result = bank_edit.add_item(
+            access.ws,
+            dict(row.item or {}),
+            row.item_type or None,
+            list(row.concepts or []),
+        )
+    except BankError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    row.promoted_item_id = result["item"]["id"]
+    db.flush()
+    return {
+        "generation": generation_id,
+        "item": result["item"],
+        "pipeline": pipeline_payload(access),
     }
 
 
