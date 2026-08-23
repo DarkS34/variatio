@@ -137,7 +137,7 @@ def _screen(context, item_type, commission: Commission):
         if verdict.blocked:
             raise ValueError(
                 f"Las instrucciones adicionales no han pasado la revisión: "
-                f"el modelo juez ha detectado {verdict.reason}."
+                f"se ha detectado {verdict.reason}."
             )
 
     with progress.step("eval.admissibility", "Revisando el alcance del encargo"):

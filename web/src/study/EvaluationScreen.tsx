@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, GenerateForm, toParams, type FormState } from "@/features/run/GenerateForm";
+import { ApiError } from "@/lib/api";
 import { duration } from "@/lib/format";
 import { useCancelJob, useElapsed, useKg, useKgGraph, usePipeline, useProfile } from "@/state/queries";
 
@@ -143,6 +144,14 @@ export function EvaluationScreen() {
   useEffect(() => {
     if (blocked) setComposing(true);
   }, [blocked]);
+
+  const gone = detail.error instanceof ApiError && detail.error.status === 404;
+  useEffect(() => {
+    if (gone) {
+      setSessionId(null);
+      setComposing(true);
+    }
+  }, [gone]);
 
   if (profileQuery.isLoading || kg.isLoading || pipeline.isLoading) {
     return <Skeleton className="h-96" />;

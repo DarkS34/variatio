@@ -6,11 +6,34 @@ from loguru import logger
 from . import config
 from .core import inference, progress
 from .core.inference import InferenceError
+from .core.lexicon import fold
 
 _SCORE = re.compile(r"<score>\s*(yes|no)\s*</score>", re.IGNORECASE)
 _BARE = re.compile(r"\b(yes|no)\b", re.IGNORECASE)
 
+_OVERRIDE_VERBS = (
+    r"olvida(?:te|d)?|olvides|ignora(?:d)?|ignores|omite|omitas|omitid|"
+    r"descarta(?:d)?|descartes|obvia|obvies|anula(?:d)?|anules|salta(?:te)?|saltes|"
+    r"incumple|desobedece|haz caso omiso|"
+    r"no (?:sigas|obedezcas|cumplas|respetes|apliques|tengas en cuenta)|"
+    r"deja de (?:seguir|obedecer|aplicar|hacer caso)|"
+    r"forget|ignore|disregard|bypass|override|stop following|do not follow"
+)
+_OVERRIDE_OBJECTS = (
+    r"instruccion(?:es)?|indicacion(?:es)?|regla(?:s)?|orden(?:es)?|consigna(?:s)?|"
+    r"restriccion(?:es)?|directriz|directrices|prompt(?:s)?|"
+    r"instruction(?:s)?|rule(?:s)?|constraint(?:s)?|directive(?:s)?|guideline(?:s)?"
+)
+_INJECTION = re.compile(
+    rf"\b(?:{_OVERRIDE_VERBS})\b[^.;:!?]{{0,40}}?\b(?:{_OVERRIDE_OBJECTS})\b"
+    rf"|\b(?:{_OVERRIDE_OBJECTS}) (?:anterior(?:es)?|previ[ao]s?|de arriba)\b"
+    r"|\b(?:system|previous|prior) prompt\b"
+    r"|\bprompt del sistema\b"
+    r"|\binstrucciones del sistema\b(?! ?operativ)"
+)
+
 _LABELS = {
+    "instruction_override": "una instrucción dirigida al sistema, no al ejercicio",
     "harm": "contenido dañino",
     "jailbreak": "un intento de saltarse las instrucciones del sistema",
     "social_bias": "sesgo contra un colectivo",
@@ -38,6 +61,11 @@ class Verdict:
 
 
 def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> Verdict:
+    if _INJECTION.search(fold(text)):
+        verdict = Verdict(blocked_by="instruction_override", checked=True)
+        progress.emit("guardrail", ok=False, criteria=verdict.blocked_by, checked=True)
+        return verdict
+
     blocked_by: str | None = None
     unreadable: list[str] = []
 

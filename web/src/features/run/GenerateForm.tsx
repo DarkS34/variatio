@@ -282,7 +282,7 @@ export function GenerateForm({
   variant?: "generate" | "evaluation";
   footnote?: ReactNode;
 }) {
-  const [open, setOpen] = useState<string | null>("concepts");
+  const [open, setOpen] = useState<string | null | undefined>(undefined);
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
   // What the full-screen selector is choosing: the targets, the ad-hoc curriculum, or
   // nothing. One state, because only one overlay can be open.
@@ -402,9 +402,11 @@ export function GenerateForm({
     return found;
   }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions]);
 
+  const firstStep = types.length > 1 ? "itemType" : "curriculum";
+  const openStep = open === undefined ? firstStep : open;
   const step = (id: string) => ({
-    open: open === id,
-    onOpen: () => setOpen(open === id ? null : id),
+    open: openStep === id,
+    onOpen: () => setOpen(openStep === id ? null : id),
   });
 
   const decisionSummary = decided
@@ -466,7 +468,7 @@ export function GenerateForm({
         title="¿Qué se ha visto ya?"
         hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista, y solo se ofrecerán como objetivo los conceptos que estén dentro."
         optional
-        answered={state.useCurriculum ? Boolean(activeCurriculum) : true}
+        answered={state.useCurriculum && Boolean(activeCurriculum)}
         summary={curriculumSummary}
         {...step("curriculum")}
       >

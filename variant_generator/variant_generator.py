@@ -430,7 +430,7 @@ class VariantGenerator:
             verdict = guardrail.check(instructions)
             if verdict.blocked:
                 raise ValueError(
-                    f"Las instrucciones adicionales no han pasado la revisión: el modelo juez ha detectado {verdict.reason}."
+                    f"Las instrucciones adicionales no han pasado la revisión: se ha detectado {verdict.reason}."
                 )
 
         with progress.step("admissibility", "Revisando el alcance del encargo"):

@@ -80,7 +80,7 @@ export const STEP_EXPLAIN: Record<string, string> = {
   tagging:
     "Por cada ítem: candidatos por similitud sobre los vectores ya calculados y, si hay más de uno plausible, una verificación del modelo.",
   guardrail:
-    "Un modelo juez lee las instrucciones adicionales antes de que entren en el prompt y decide si contienen algo dañino o un intento de saltarse las restricciones del ejercicio. Solo se ejecuta si has escrito algo.",
+    "Antes de que las instrucciones adicionales entren en el prompt, una comprobación fija bloquea las órdenes de anular instrucciones («olvida lo anterior…») y después un modelo juez decide si contienen algo dañino o un intento de saltarse las restricciones del ejercicio. Solo se ejecuta si has escrito algo.",
   admissibility:
     "Un modelo lee tu petición y decide si lo que pides es de lo que se pide en este campo o de lo que ya has decidido más arriba: los conceptos, la modalidad, los campos del ítem o la propia asignatura. Solo se ejecuta si has escrito algo.",
   generate:

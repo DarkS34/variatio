@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from server.db import mirror
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
 from variant_generator.core.workspace import Workspace
@@ -34,7 +35,8 @@ GRAPH = {
 
 
 @pytest.fixture
-def ws(tmp_path):
+def ws(tmp_path, monkeypatch):
+    monkeypatch.setattr(mirror, "mirror_file", lambda ws, path: None)
     workspace = Workspace(tmp_path, "aula")
     workspace.instance_dir.mkdir(parents=True)
     _write(workspace.exemplars_profile_path, PROFILE)
