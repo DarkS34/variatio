@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
+import { ItemChecks } from "@/features/run/ResultCard";
 import { duration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,12 @@ function Origin({
 
       {position.error ? (
         <p className="px-3 pb-2 text-small text-attention">{position.error}</p>
+      ) : null}
+
+      {position.checks ? (
+        <div className="px-3 pb-2">
+          <ItemChecks checks={position.checks} retried={position.retried} />
+        </div>
       ) : null}
 
       <button
