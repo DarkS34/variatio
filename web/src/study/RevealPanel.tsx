@@ -4,10 +4,10 @@ import { useState } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
 import { duration } from "@/lib/format";
-import type { EvaluationDetail, EvaluationPosition } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
+import type { EvaluationDetail, EvaluationPosition } from "./types";
 
 /**
  * The moment the screen goes from grey to colour.

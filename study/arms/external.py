@@ -9,7 +9,7 @@ whole point of the naive arm.
 `httpx` straight, no SDK — it is already a runtime dependency, so this adds none.
 
 **Still no retries** — a silent second attempt at the *same* provider falsifies the per-arm
-timing and can double a free quota — but `config.EVAL_EXTERNAL_PROVIDER` is a CHAIN, and a
+timing and can double a free quota — but `study.config.EXTERNAL_PROVIDERS` is a CHAIN, and a
 provider that did not answer hands over to the next one. The failure this exists for is
 Gemini's free tier returning 429 in the middle of a data-collection session: recording the
 arm `unavailable` there measures Google's billing, not the commercial baseline.
@@ -30,8 +30,10 @@ from dataclasses import dataclass
 import httpx
 from loguru import logger
 
-from .. import config
-from . import ArmUnavailable
+from variant_generator import config
+
+from .. import ArmUnavailable
+from .. import config as study_config
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -45,16 +47,16 @@ class ExternalAnswer:
 
 
 def _model(provider: str) -> str:
-    return config.EVAL_PROVIDER_MODELS.get(provider, "")
+    return study_config.PROVIDER_MODELS.get(provider, "")
 
 
 def _key(provider: str) -> str:
-    return config.EVAL_PROVIDER_KEYS.get(provider, "")
+    return study_config.PROVIDER_KEYS.get(provider, "")
 
 
 def configured_providers() -> list[str]:
     """The chain, in order, minus the unknown names and the ones with no key."""
-    return [p for p in config.EVAL_EXTERNAL_PROVIDERS if p in _CALLERS and _key(p)]
+    return [p for p in study_config.EXTERNAL_PROVIDERS if p in _CALLERS and _key(p)]
 
 
 def is_configured() -> bool:
@@ -63,7 +65,7 @@ def is_configured() -> bool:
 
 def primary() -> tuple[str, str]:
     """Who the arm tries first — or, with nothing usable, who it was asked to try."""
-    chain = configured_providers() or config.EVAL_EXTERNAL_PROVIDERS
+    chain = configured_providers() or study_config.EXTERNAL_PROVIDERS
     if not chain:
         return "none", ""
     return chain[0], _model(chain[0])
@@ -72,7 +74,7 @@ def primary() -> tuple[str, str]:
 # One usable provider is enough, so an unknown name in the chain is only worth a message
 # when it is the reason nothing can be called at all.
 def unavailable_reason() -> str | None:
-    declared = config.EVAL_EXTERNAL_PROVIDERS
+    declared = study_config.EXTERNAL_PROVIDERS
     if not declared:
         return "El proveedor externo está desactivado (EVAL_EXTERNAL_PROVIDER=none)."
     if configured_providers():
@@ -129,7 +131,7 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
 # `_spec_to_field` does support, so this arm would have decoded under a WEAKER schema than
 # the local two. Parity of parsing is the one thing the comparison must not lose.
 #
-# The temperature goes out explicitly for the same reason `EVAL_RAG_TOP_K` is the pipeline's
+# The temperature goes out explicitly for the same reason `study.config.RAG_TOP_K` is the pipeline's
 # own few-shot k: what the comparison isolates is the graph, so a knob that is not the graph
 # must not be a loose variable between the arms. It is the SAME NUMBER as the local two and
 # not the same sampler — Gemini and Groq scale temperature to 0-2 where Ollama stops at 1 —
@@ -147,7 +149,7 @@ def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> st
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": generation_config,
         },
-        timeout=config.EVAL_EXTERNAL_TIMEOUT,
+        timeout=study_config.EXTERNAL_TIMEOUT,
     )
     response.raise_for_status()
     candidates = response.json().get("candidates") or []
@@ -196,7 +198,7 @@ def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
             "temperature": config.TEMPERATURE_GENERATION,
             **response_format,
         },
-        timeout=config.EVAL_EXTERNAL_TIMEOUT,
+        timeout=study_config.EXTERNAL_TIMEOUT,
     )
     response.raise_for_status()
     choices = response.json().get("choices") or []
@@ -218,5 +220,5 @@ def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
 
 
 # Declared after the callers so the lookup can stay a plain dict. It says which names are
-# callable at all; the ORDER of the attempts is `config.EVAL_EXTERNAL_PROVIDERS`, never this.
+# callable at all; the ORDER of the attempts is `study_config.EXTERNAL_PROVIDERS`, never this.
 _CALLERS = {"gemini": _gemini, "groq": _groq}

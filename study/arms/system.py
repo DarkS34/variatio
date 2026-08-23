@@ -13,9 +13,10 @@ import time
 
 from loguru import logger
 
-from .. import config
-from ..core import inference, progress
-from . import FAILED, OK, ArmResult, Commission
+from variant_generator import config
+from variant_generator.core import inference, progress
+
+from .. import FAILED, OK, ArmResult, Commission
 
 
 class _Capture:

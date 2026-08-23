@@ -1,4 +1,4 @@
-import type { EvaluationArm } from "@/lib/types";
+import type { EvaluationArm } from "./types";
 
 /**
  * What each arm is, in the evaluator's words, and the colour it wears once revealed.

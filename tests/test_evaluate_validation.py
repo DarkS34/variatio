@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from variant_generator.evaluation import Commission
+from study import Commission
+from study.run import _validate
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
-from variant_generator.stages.evaluate import _validate
 
 from .conftest import CHAIN_GRAPH
 

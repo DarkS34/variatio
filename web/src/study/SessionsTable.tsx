@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { when } from "@/lib/format";
-import type { EvaluationSummary } from "@/lib/types";
 
 import { ARM_META, letterFor } from "./arms";
+import type { EvaluationSummary } from "./types";
 
 /**
  * Your own comparisons, so you can reopen one you left undecided.

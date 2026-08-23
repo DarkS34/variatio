@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
-import type { EvaluationRating, Usability } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ARM_META } from "./arms";
+import type { EvaluationRating, Usability } from "./types";
 
 /**
  * Five questions about OUR variant, after the reveal.

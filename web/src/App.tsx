@@ -7,7 +7,7 @@ import { AccountScreen } from "@/features/account/AccountScreen";
 import { AdminScreen } from "@/features/admin/AdminScreen";
 import { BankScreen } from "@/features/bank/BankScreen";
 import { Dashboard } from "@/features/pipeline/Dashboard";
-import { EvaluationScreen } from "@/features/evaluation/EvaluationScreen";
+import { EvaluationScreen } from "@/study/EvaluationScreen";
 import { KgScreen } from "@/features/kg/KgScreen";
 import { ProfileScreen } from "@/features/profile/ProfileEditor";
 import { GenerateScreen } from "@/features/run/GenerateScreen";

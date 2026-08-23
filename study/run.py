@@ -1,6 +1,6 @@
-"""Phase 2b — one commission, three architectures, one blind comparison.
+"""One commission, three architectures, one blind comparison.
 
-Mechanism, not policy, like the rest of `stages/`: it returns an `EvaluationSession`,
+Mechanism, not policy, in the way `variant_generator.stages` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
 `server/evaluation_store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
@@ -12,11 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 
-from .. import config, guardrail
-from ..core import progress
-from ..evaluation import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
-from ..variant_generator import clean_fixed
-from .initialize import PipelineContext
+from variant_generator import config, guardrail
+from variant_generator.core import progress
+from variant_generator.stages.initialize import PipelineContext
+from variant_generator.variant_generator import clean_fixed
+
+from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 
 
 def evaluate(

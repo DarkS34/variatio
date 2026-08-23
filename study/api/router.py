@@ -16,16 +16,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator.evaluation import ARM_LABELS, ARMS, EvaluationSession
-from variant_generator.evaluation import external
+from server import auth
+from server import curriculum as curriculum_store
+from server import runtime
+from server.db.models import EvalSession
+from server.editors import kg_edit
+from server.routers.jobs import gate_error
 
-from .. import auth
-from .. import curriculum as curriculum_store
-from .. import evaluation_store, runtime
-from ..db import study
-from ..db.models import EvalSession
-from ..editors import kg_edit
-from .jobs import gate_error
+from .. import ARM_LABELS, ARMS, EvaluationSession
+from ..arms import external
+from . import queries
+from . import store as evaluation_store
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
 
@@ -180,7 +181,7 @@ def rate(
 # asking. The workspace check alone would let a colleague open a comparison they never ran
 # and read its reveal.
 def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession:
-    row = study.get_evaluation(db, session_id)
+    row = queries.get_evaluation(db, session_id)
     if row is None or row.workspace_id != access.workspace.id:
         raise HTTPException(404, f"No existe la sesión '{session_id}'")
     if row.user_id is not None and row.user_id != access.user.id and not access.user.is_admin:

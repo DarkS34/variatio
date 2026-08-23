@@ -4,11 +4,13 @@
 over the bank, no graph at all) and `system` (this pipeline, untouched). They receive the
 same commission and return the same shape, so a fourth arm is one more file.
 
-Nothing in the pipeline imports this package: the evaluation observes the system, it is
-not part of it.
+This package is not part of the system it measures, and its position says so: `study`
+imports `variant_generator`, never the reverse, and nothing under `variant_generator/`
+names the study at all. The evaluation observes the pipeline from outside it.
 """
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 ARMS: tuple[str, ...] = ("naive", "rag", "system")
 
@@ -17,6 +19,11 @@ ARM_LABELS: dict[str, str] = {
     "rag": "Solo RAG sobre el banco",
     "system": "Este sistema",
 }
+
+def rag_index_path(ws) -> Path:
+    """Where the rag arm's flat index over the bank is cached, inside the workspace."""
+    return ws.cache_dir / "embeddings" / "eval_rag_bank.npz"
+
 
 OK = "ok"
 FAILED = "failed"
@@ -159,7 +166,7 @@ class EvaluationSession:
 
 
 def run_arm(arm: str, commission: Commission, context) -> ArmResult:
-    from . import naive, rag, system
+    from .arms import naive, rag, system
 
     runners = {"naive": naive.run, "rag": rag.run, "system": system.run}
     if arm not in runners:
@@ -177,5 +184,6 @@ __all__ = [
     "FAILED",
     "OK",
     "UNAVAILABLE",
+    "rag_index_path",
     "run_arm",
 ]

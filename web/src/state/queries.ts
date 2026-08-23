@@ -5,9 +5,6 @@ import { api } from "@/lib/api";
 import type {
   ArtifactName,
   BuildPhase,
-  EvaluationDetail,
-  EvaluationParams,
-  EvaluationRating,
   JobKind,
   Role,
 } from "@/lib/types";
@@ -29,15 +26,11 @@ export const keys = {
   // The phase plan of each builder. It is a property of the code, not of the instance, so
   // it is fetched once and never invalidated — nothing a user does can change it.
   phases: ["pipeline", "phases"] as const,
-  evaluations: ["evaluations"] as const,
-  evaluation: (id: string) => ["evaluations", id] as const,
   generations: (params: Record<string, unknown>) => ["generations", params] as const,
   generation: (id: number) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
   adminInvites: ["admin", "invites"] as const,
-  adminEvaluations: (filters: Record<string, unknown>) =>
-    ["admin", "evaluations", filters] as const,
 };
 
 /** The slug this tab is looking at, as a React value. */
@@ -303,17 +296,6 @@ export function useAdminOverview() {
   return useQuery({ queryKey: keys.adminOverview, queryFn: api.adminOverview });
 }
 
-export function useAdminEvaluations(filters: {
-  workspace?: string | null;
-  account?: number | null;
-}) {
-  return useQuery({
-    queryKey: keys.adminEvaluations(filters),
-    queryFn: () => api.adminEvaluations(filters),
-    placeholderData: (previous) => previous,
-  });
-}
-
 export function useSetAccountEnabled() {
   const client = useQueryClient();
   return useMutation({
@@ -459,48 +441,3 @@ export function useCancelJob() {
   return useMutation({ mutationFn: (id: string) => api.cancelJob(id) });
 }
 
-/* Evaluation ----------------------------------------------------------------------- */
-
-export function useEvaluations(limit = 50) {
-  return useQuery({ queryKey: keys.evaluations, queryFn: () => api.evaluations(limit) });
-}
-
-export function useEvaluation(id: string | null) {
-  return useQuery({
-    queryKey: keys.evaluation(id ?? "none"),
-    queryFn: () => api.evaluation(id!),
-    enabled: Boolean(id),
-  });
-}
-
-export function useLaunchEvaluation() {
-  return useMutation({
-    mutationFn: (params: EvaluationParams) => api.launchEvaluation(params),
-    onSuccess: ({ job }) => runStore.setCurrentJob(job.id),
-  });
-}
-
-/** The choice and the rubric both return the whole session, so the cache takes the
- *  response instead of refetching: the reveal must be instant, not a second round trip. */
-function useSessionMutation<T>(call: (id: string, payload: T) => Promise<EvaluationDetail>) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: T }) => call(id, payload),
-    onSuccess: (detail) => {
-      client.setQueryData(keys.evaluation(detail.session.id), detail);
-      client.invalidateQueries({ queryKey: keys.evaluations });
-    },
-  });
-}
-
-export function useChooseProposal() {
-  return useSessionMutation<{ choice: number | null; comment?: string }>((id, payload) =>
-    api.chooseEvaluation(id, payload.choice, payload.comment),
-  );
-}
-
-export function useRateSession() {
-  return useSessionMutation<Partial<EvaluationRating>>((id, payload) =>
-    api.rateEvaluation(id, payload),
-  );
-}

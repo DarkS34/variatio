@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from .. import auth, deps, runtime, settings
-from ..db import identity, repository, study
+from ..db import generations, identity, repository
 from ..db.models import OWNER, VIEWER, User, Workspace
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
@@ -175,5 +175,5 @@ def summary(
             for s in stages
         ],
         "ready": all(s["status"] == "approved" for s in stages),
-        "generations": study.count_generations(db, workspace.id),
+        "generations": generations.count_generations(db, workspace.id),
     }

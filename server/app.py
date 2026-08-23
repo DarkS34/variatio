@@ -9,6 +9,11 @@ from fastapi.staticfiles import StaticFiles
 from . import middleware, runtime, settings
 from .routers import ROUTERS
 
+try:
+    from study import api as study_api
+except ImportError:
+    study_api = None
+
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +55,12 @@ def create_app() -> FastAPI:
 
     for router in ROUTERS:
         app.include_router(router)
+
+    # The study is an installation of this one, not a part of it: it registers its own
+    # routers and its own job handler here, and an installation without it simply serves
+    # nine job kinds instead of ten.
+    if study_api is not None:
+        study_api.install(app)
 
     _mount_web(app)
     return app

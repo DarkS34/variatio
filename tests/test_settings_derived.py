@@ -13,11 +13,6 @@ def base():
         "context_window.main": 65536,
         "context_window.guardrail": 4096,
         "context_window.embedding": 4096,
-        "evaluation.providers": ["gemini", "groq"],
-        "evaluation.models.gemini": "g-model",
-        "evaluation.models.groq": "q-model",
-        "evaluation.keys.gemini": "",
-        "evaluation.keys.groq": "clave-groq",
     }
     for key in derived.PHASES:
         values[key] = None
@@ -80,47 +75,3 @@ def test_the_relation_schema_derives_the_prerequisite_label():
 
 def test_temperature_default_follows_the_deterministic_one():
     assert derive_ok()["TEMPERATURE_DEFAULT"] == 0.0
-
-
-def test_eval_rag_top_k_follows_the_few_shot_budget():
-    assert derive_ok()["EVAL_RAG_TOP_K"] == 4
-
-
-def test_provider_chain_drops_none_and_duplicates():
-    values = base()
-    values["evaluation.providers"] = ["Gemini", "none", "groq", "gemini", ""]
-    out = derived.derive(values)
-    assert out["EVAL_EXTERNAL_PROVIDERS"] == ["gemini", "groq"]
-
-
-def test_provider_models_and_keys_are_paired_by_provider():
-    out = derive_ok()
-    assert out["EVAL_PROVIDER_MODELS"]["groq"] == "q-model"
-    assert out["EVAL_PROVIDER_KEYS"]["groq"] == "clave-groq"
-    assert out["EVAL_PROVIDER_KEYS"]["gemini"] == ""
-
-
-def test_a_legacy_single_key_lands_on_the_first_provider(monkeypatch):
-    monkeypatch.setenv("EVAL_EXTERNAL_API_KEY", "clave-heredada")
-    monkeypatch.setenv("EVAL_EXTERNAL_MODEL_ID", "modelo-heredado")
-    values = base()
-    values["evaluation.keys.gemini"] = ""
-    out = derived.derive(values)
-    assert out["EVAL_PROVIDER_KEYS"]["gemini"] == "clave-heredada"
-    assert out["EVAL_PROVIDER_MODELS"]["gemini"] == "modelo-heredado"
-
-
-def test_a_legacy_key_does_not_displace_a_declared_one(monkeypatch):
-    monkeypatch.setenv("EVAL_EXTERNAL_API_KEY", "clave-heredada")
-    values = base()
-    values["evaluation.keys.gemini"] = "clave-propia"
-    out = derived.derive(values)
-    assert out["EVAL_PROVIDER_KEYS"]["gemini"] == "clave-propia"
-
-
-def test_an_empty_provider_chain_does_not_crash_the_legacy_bridge(monkeypatch):
-    monkeypatch.setenv("EVAL_EXTERNAL_API_KEY", "clave-heredada")
-    values = base()
-    values["evaluation.providers"] = ["none"]
-    out = derived.derive(values)
-    assert out["EVAL_EXTERNAL_PROVIDERS"] == []

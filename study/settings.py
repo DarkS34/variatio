@@ -1,15 +1,16 @@
-from ..types import Impact, Setting
+from variant_generator.settings.types import Impact, Setting
 
 SETTINGS: list[Setting] = [
     Setting(
         key="evaluation.providers",
-        name="EVAL_EXTERNAL_PROVIDERS",
+        name="",
         kind="list[str]",
         default=["gemini", "groq"],
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_EXTERNAL_PROVIDER",
-        doc="""Solo el modo de evaluación lee este bloque; el pipeline nunca importa `evaluation/`.
+        doc="""Este bloque lo declara `study/settings.py` y lo lee `study/config.py`: vive con el código
+que lo consume, fuera del paquete que mide.
 
 Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
 `inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
@@ -100,7 +101,7 @@ por git.""",
     ),
     Setting(
         key="evaluation.timeout",
-        name="EVAL_EXTERNAL_TIMEOUT",
+        name="",
         kind="float",
         default=60.0,
         group="Evaluación",
