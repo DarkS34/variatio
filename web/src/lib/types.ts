@@ -584,8 +584,30 @@ export type ConfigSetting = {
   state?: "configurada" | "ausente";
 };
 
+export interface InstalledModel {
+  model: string;
+  /** Bytes on disk, as Ollama reports them: an approximation of what it will take resident. */
+  size: number | null;
+}
+
+export type ReasoningFixed = "grammar" | "commission" | "model";
+
+export type ReasoningPhase = {
+  key: string;
+  label: string;
+  model: string;
+  setting: string | null;
+  fixed: ReasoningFixed | null;
+  note: string;
+};
+
+export type ReasoningLane = { key: string; label: string; phases: ReasoningPhase[] };
+
 export type ConfigPayload = {
   groups: string[];
   settings: ConfigSetting[];
+  pipeline: ReasoningLane[];
+  /** What the engine offers; both empty when it is unreachable. */
+  models: { installed: InstalledModel[]; running: RunningModel[] };
   applied?: string[];
 };

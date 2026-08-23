@@ -24,7 +24,30 @@ class Patch(BaseModel):
 
 
 def _payload() -> dict:
-    return {"groups": list(vg_settings.GROUPS), "settings": vg_settings.snapshot()}
+    return {
+        "groups": list(vg_settings.GROUPS),
+        "settings": vg_settings.snapshot(),
+        "pipeline": vg_settings.pipeline(),
+        "models": _models(),
+    }
+
+
+# What the engine can offer, so the model fields are a choice and not a string to type
+# without a typo. Both readings fail to an empty list: the configuration must remain
+# editable when the engine is down, which is exactly when one may want to change it.
+def _models() -> dict:
+    installed: list[dict] = []
+    running: list[dict] = []
+    if inference.is_available():
+        try:
+            installed = inference.installed_models_detail()
+        except Exception:  # noqa: BLE001 - no listing, not a broken screen
+            installed = []
+        try:
+            running = inference.running_models()
+        except Exception:  # noqa: BLE001 - idem
+            running = []
+    return {"installed": installed, "running": running}
 
 
 def _refuse_while_busy() -> None:

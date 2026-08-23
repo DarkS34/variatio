@@ -146,9 +146,9 @@ def curate_domains(
     response = inference.generate(
         model=config.KG_DOMAINS_MODEL,
         prompt=prompt,
-        think=False,
-        format=DOMAIN_NAMES_SCHEMA,
-        temperature=config.TEMPERATURE_DETERMINISTIC,
+        think=config.THINK_KG_DOMAINS,
+        format=None if config.THINK_KG_DOMAINS else DOMAIN_NAMES_SCHEMA,
+        temperature=inference.judgement_temperature(config.THINK_KG_DOMAINS),
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts) or {}
 
@@ -245,9 +245,9 @@ def assign_round(
         response = inference.generate(
             model=config.KG_DOMAINS_LEFTOVERS_MODEL,
             prompt=prompt,
-            think=False,
-            format=DOMAINS_SCHEMA,
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            think=config.THINK_KG_DOMAINS_LEFTOVERS,
+            format=None if config.THINK_KG_DOMAINS_LEFTOVERS else DOMAINS_SCHEMA,
+            temperature=inference.judgement_temperature(config.THINK_KG_DOMAINS_LEFTOVERS),
         ).response
         raw = (
             parsing.parse_object(
@@ -367,8 +367,8 @@ def link_domain(
     response = inference.generate(
         model=config.KG_LINK_DOMAIN_MODEL,
         prompt=prompt,
-        think=True,
-        temperature=config.TEMPERATURE_REASONING,
+        think=config.THINK_KG_LINK_DOMAIN,
+        temperature=inference.judgement_temperature(config.THINK_KG_LINK_DOMAIN),
     ).response
     raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts)
     if raw is None:
@@ -391,8 +391,8 @@ def link_cross_domain(
     response = inference.generate(
         model=config.KG_LINK_CROSS_DOMAIN_MODEL,
         prompt=prompt,
-        think=True,
-        temperature=config.TEMPERATURE_REASONING,
+        think=config.THINK_KG_LINK_CROSS_DOMAIN,
+        temperature=inference.judgement_temperature(config.THINK_KG_LINK_CROSS_DOMAIN),
     ).response
     raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts)
     if raw is None:

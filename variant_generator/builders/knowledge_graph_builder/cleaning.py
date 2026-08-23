@@ -146,8 +146,8 @@ def propose_merges(
             response = inference.generate(
                 model=config.KG_CLEAN_MERGE_MODEL,
                 prompt=prompt,
-                think=True,
-                temperature=config.TEMPERATURE_REASONING,
+                think=config.THINK_KG_CLEAN_MERGE,
+                temperature=inference.judgement_temperature(config.THINK_KG_CLEAN_MERGE),
             ).response
             raw = parsing.parse_object(
                 response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA, max_attempts
@@ -282,8 +282,8 @@ def propose_drops(
             response = inference.generate(
                 model=config.KG_CLEAN_DROP_MODEL,
                 prompt=prompt,
-                think=True,
-                temperature=config.TEMPERATURE_REASONING,
+                think=config.THINK_KG_CLEAN_DROP,
+                temperature=inference.judgement_temperature(config.THINK_KG_CLEAN_DROP),
             ).response
             raw = parsing.parse_object(
                 response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA, max_attempts

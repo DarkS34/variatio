@@ -354,9 +354,9 @@ def _ask(
     response = inference.generate(
         model=config.KG_EXTRACT_MODEL,
         prompt=prompt,
-        think=False,
-        format=EXTRACT_SCHEMA,
-        temperature=config.TEMPERATURE_DETERMINISTIC,
+        think=config.THINK_KG_EXTRACT,
+        format=None if config.THINK_KG_EXTRACT else EXTRACT_SCHEMA,
+        temperature=inference.judgement_temperature(config.THINK_KG_EXTRACT),
     ).response
     raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts)
     if raw is None:

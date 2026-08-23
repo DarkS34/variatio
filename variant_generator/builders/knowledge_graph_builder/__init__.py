@@ -151,7 +151,11 @@ class KnowledgeGraphBuilder:
             ]
         )
         _context.synthesize(
-            self.workspace, evidence, "EL GRAFO DEL TEMARIO", config.KG_CONTEXT_MODEL
+            self.workspace,
+            evidence,
+            "EL GRAFO DEL TEMARIO",
+            config.KG_CONTEXT_MODEL,
+            think=config.THINK_KG_CONTEXT,
         )
         progress.advance(1.0)
 

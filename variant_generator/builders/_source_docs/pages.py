@@ -139,7 +139,7 @@ def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -
             response = inference.generate(
                 model=model,
                 prompt=prompt,
-                think=False,
+                think=config.THINK_EXEMPLARS_TRANSCRIBE,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
             ).response

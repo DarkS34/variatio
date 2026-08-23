@@ -3,7 +3,7 @@ import os
 from loguru import logger
 
 from . import derived, store
-from .registry import BY_KEY, BY_NAME, GROUPS, REGISTRY
+from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY
 from .types import Impact, Setting, SettingError
 
 _values: dict[str, object] = {}
@@ -95,13 +95,36 @@ def snapshot() -> list[dict]:
     return out
 
 
+def pipeline() -> list[dict]:
+    return [
+        {
+            "key": lane.key,
+            "label": lane.label,
+            "phases": [
+                {
+                    "key": phase.key,
+                    "label": phase.label,
+                    "model": phase.model,
+                    "setting": phase.setting,
+                    "fixed": phase.fixed,
+                    "note": phase.note,
+                }
+                for phase in lane.phases
+            ],
+        }
+        for lane in PIPELINE
+    ]
+
+
 __all__ = [
     "GROUPS",
     "Impact",
+    "PIPELINE",
     "REGISTRY",
     "Setting",
     "SettingError",
     "apply",
+    "pipeline",
     "reload",
     "snapshot",
     "sources",

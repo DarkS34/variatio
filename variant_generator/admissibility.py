@@ -184,9 +184,9 @@ def screen(text: str, owners: list[Owner], targets: list[str], context_block: st
         response = inference.generate(
             model=config.ADMISSIBILITY_LLM,
             prompt=prompt,
-            think=False,
-            format=_schema(owners),
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            think=config.THINK_ADMISSIBILITY,
+            format=None if config.THINK_ADMISSIBILITY else _schema(owners),
+            temperature=inference.judgement_temperature(config.THINK_ADMISSIBILITY),
         ).response
     except InferenceError as e:
         logger.warning(f"[admisibilidad] El juez no pudo responder: {e}; el encargo sigue adelante")

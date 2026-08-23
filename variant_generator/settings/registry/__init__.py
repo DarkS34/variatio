@@ -1,5 +1,5 @@
 from ..types import Setting
-from . import builders, generation, inference, logging, retrieval
+from . import builders, generation, inference, logging, reasoning, retrieval
 
 # The study declares its own block and lives outside this package: `study` imports
 # `variant_generator` and never the reverse, so the registry reaches it by name rather
@@ -12,6 +12,7 @@ except ImportError:
 
 REGISTRY: tuple[Setting, ...] = tuple(
     inference.SETTINGS
+    + reasoning.SETTINGS
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
@@ -26,6 +27,7 @@ BY_NAME = {setting.name: setting for setting in REGISTRY if setting.name}
 GROUPS = (
     "Motor",
     "Modelos",
+    "Razonamiento",
     "Muestreo",
     "Ventana de contexto",
     "Constructores",
@@ -35,4 +37,6 @@ GROUPS = (
     "Registro",
 )
 
-__all__ = ["BY_KEY", "BY_NAME", "GROUPS", "REGISTRY"]
+PIPELINE = reasoning.PIPELINE
+
+__all__ = ["BY_KEY", "BY_NAME", "GROUPS", "PIPELINE", "REGISTRY"]

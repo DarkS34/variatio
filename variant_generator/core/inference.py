@@ -302,10 +302,17 @@ class OllamaEngine:
             raise InferenceError(f"Ollama batch embedding failed for model '{model}': {e}") from e
 
     def installed_models(self) -> list[str]:
+        return [info["model"] for info in self.installed_models_detail()]
+
+    def installed_models_detail(self) -> list[dict]:
         try:
-            return [info["model"] for info in self._client.list()["models"]]
+            listing = self._client.list()["models"]
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Could not list Ollama models: {e}") from e
+        return [
+            {"model": info["model"], "size": int(info["size"]) if info.get("size") else None}
+            for info in listing
+        ]
 
     # What is loaded NOW, which is the only thing that can actually be measured from here: the
     # session does not run on the GPU machine, so `nvidia-smi` answers about another card and
@@ -466,6 +473,10 @@ def supports_thinking(model: str) -> bool:
     return engine().supports_thinking(model)
 
 
+def judgement_temperature(think: bool) -> float:
+    return config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+
+
 def supports_vision(model: str) -> bool:
     return engine().supports_vision(model)
 
@@ -488,6 +499,10 @@ def ensure_model(model: str) -> bool:
 
 def installed_models() -> list[str]:
     return engine().installed_models()
+
+
+def installed_models_detail() -> list[dict]:
+    return engine().installed_models_detail()
 
 
 def running_models() -> list[dict]:

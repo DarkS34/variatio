@@ -121,7 +121,11 @@ class ConceptTagger:
         )
 
         result = self._verify(prompt, candidate_names, think=False)
-        if self._is_inconclusive(result) and inference.supports_thinking(self.concept_tagger_model):
+        if (
+            self._is_inconclusive(result)
+            and config.THINK_CONCEPT_TAGGER
+            and inference.supports_thinking(self.concept_tagger_model)
+        ):
             logger.debug(f"Etiquetado no concluyente; se reintenta razonando: {statement[:40]}…")
             escalated = self._verify(prompt, candidate_names, think=True)
             if not self._is_inconclusive(escalated):
@@ -141,9 +145,7 @@ class ConceptTagger:
             prompt=prompt,
             think=think,
             format=None if think else schema,
-            temperature=(
-                config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
-            ),
+            temperature=inference.judgement_temperature(think),
         ).response
 
         def parse(text: str) -> tuple[dict | None, str | None]:

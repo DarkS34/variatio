@@ -259,10 +259,10 @@ class ExemplarsBankBuilder:
         )
         response = inference.generate(
             model=config.EB_EXTRACT_MODEL,
-            think=False,
+            think=config.THINK_EB_EXTRACT,
             prompt=prompt,
-            format=self._extraction_schema,
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            format=None if config.THINK_EB_EXTRACT else self._extraction_schema,
+            temperature=inference.judgement_temperature(config.THINK_EB_EXTRACT),
         ).response
 
         items, err = parse_with_repair(

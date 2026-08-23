@@ -10,7 +10,16 @@ import { Alert, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
-import type { ConfigImpact, ConfigPayload, ConfigSetting, ConfigSource } from "@/lib/types";
+import { bytes } from "@/lib/format";
+import { ReasoningLegend, ReasoningPipeline } from "@/features/admin/ReasoningPipeline";
+import type {
+  ConfigImpact,
+  ConfigPayload,
+  ConfigSetting,
+  ConfigSource,
+  InstalledModel,
+  ReasoningLane,
+} from "@/lib/types";
 
 const SOURCE_LABELS: Record<ConfigSource, string> = {
   default: "por defecto",
@@ -35,6 +44,18 @@ const IMPACT_MESSAGES: Partial<Record<ConfigImpact, string>> = {
   reindex: "Invalidará los contextos y volverá a embeber el índice de conceptos.",
   engine: "Reiniciará la conexión con el motor de inferencia.",
 };
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if ((a ?? null) === null || (b ?? null) === null) return (a ?? null) === (b ?? null);
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => sameValue(item, b[index]));
+  }
+  if (typeof a === "object" && typeof b === "object") {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return false;
+}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -77,8 +98,17 @@ export function ConfigTab() {
 
   const named = new Set(payload.groups);
   const orphans = payload.settings.filter((setting) => !named.has(setting.group));
+  const stored = new Map(
+    payload.settings.map((setting) => [setting.key, setting.value ?? setting.default]),
+  );
   const setValue = (key: string, value: unknown) =>
-    setDraft((prev) => ({ ...prev, [key]: value }));
+    setDraft((prev) => {
+      if (sameValue(value, stored.get(key))) {
+        const { [key]: _dropped, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: value };
+    });
   const dirty = Object.keys(draft).length > 0;
 
   return (
@@ -106,18 +136,36 @@ export function ConfigTab() {
         </Alert>
       ) : null}
 
-      {payload.groups.map((group) => (
-        <GroupCard
-          key={group}
-          title={group}
-          settings={payload.settings.filter((setting) => setting.group === group)}
-          draft={draft}
-          onChange={setValue}
-        />
-      ))}
+      {payload.groups.map((group) =>
+        group === REASONING_GROUP ? (
+          <ReasoningCard
+            key={group}
+            title={group}
+            lanes={payload.pipeline ?? []}
+            settings={payload.settings}
+            draft={draft}
+            onChange={setValue}
+          />
+        ) : (
+          <GroupCard
+            key={group}
+            title={group}
+            settings={payload.settings.filter((setting) => setting.group === group)}
+            draft={draft}
+            onChange={setValue}
+            models={payload.models ?? null}
+          />
+        ),
+      )}
 
       {orphans.length > 0 ? (
-        <GroupCard title="Otros" settings={orphans} draft={draft} onChange={setValue} />
+        <GroupCard
+          title="Otros"
+          settings={orphans}
+          draft={draft}
+          onChange={setValue}
+          models={payload.models ?? null}
+        />
       ) : null}
 
       <DiffSummary settings={payload.settings} draft={draft} />
@@ -147,24 +195,38 @@ function GroupCard({
   settings,
   draft,
   onChange,
+  models,
 }: {
   title: string;
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  models: ConfigPayload["models"] | null;
 }) {
+  const current = (setting: ConfigSetting) =>
+    setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
+  const resident = settings.some((s) => s.key === "models.main") && models ? (
+    <ResidencySummary
+      settings={settings}
+      current={current}
+      models={models}
+    />
+  ) : null;
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {resident}
         {settings.map((setting) => (
           <SettingRow
             key={setting.key}
             setting={setting}
-            value={setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default)}
+            value={current(setting)}
             onChange={(next) => onChange(setting.key, next)}
+            models={models}
           />
         ))}
       </CardContent>
@@ -172,14 +234,228 @@ function GroupCard({
   );
 }
 
+const REASONING_GROUP = "Razonamiento";
+
+function ReasoningCard({
+  title,
+  lanes,
+  settings,
+  draft,
+  onChange,
+}: {
+  title: string;
+  lanes: ReasoningLane[];
+  settings: ConfigSetting[];
+  draft: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+}) {
+  const drawn = new Set(lanes.flatMap((lane) => lane.phases.map((phase) => phase.setting)));
+  const ofGroup = settings.filter((setting) => setting.group === title);
+  const rows = ofGroup.filter((setting) => !drawn.has(setting.key));
+  const switches = ofGroup.filter((setting) => drawn.has(setting.key));
+  const current = (setting: ConfigSetting) =>
+    setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="max-w-2xl text-small text-muted-foreground">
+          En qué punto de la cadena el modelo razona antes de contestar. Cada pista es una
+          construcción; cada nodo, una llamada al modelo. Razonar y una gramática no conviven
+          en esta pila, así que encender una fase que hoy responde con gramática se la quita y
+          deja la forma en manos del analizador y de la reparación. Tres nodos no dependen de
+          un ajuste: el guardián no razona, la variante la decide cada encargo y la reparación
+          es su propia gramática.
+        </p>
+        <ReasoningPipeline lanes={lanes} settings={settings} draft={draft} onChange={onChange} />
+        <ReasoningLegend />
+        {switches.length > 0 ? (
+          <details className="text-small text-muted-foreground">
+            <summary className="cursor-pointer select-none">Por qué cada interruptor</summary>
+            <dl className="mt-2 space-y-3">
+              {switches.map((setting) => (
+                <div key={setting.key}>
+                  <dt className="font-mono text-foreground">{setting.name}</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap">{setting.doc}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+        ) : null}
+        {rows.map((setting) => (
+          <SettingRow
+            key={setting.key}
+            setting={setting}
+            value={current(setting)}
+            onChange={(next) => onChange(setting.key, next)}
+            models={null}
+          />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** The settings whose value is a model name: the three residents and every phase override. */
+function isModelSetting(setting: ConfigSetting): boolean {
+  return setting.key.startsWith("models.") && setting.kind === "str";
+}
+
+const OTHER = "__other__";
+
+// The choice is among what the engine has on disk, because a name typed by hand is a typo
+// waiting for the first call. «Otro…» keeps the free text for a model not pulled yet, and
+// a phase keeps «Seguir al principal» (null) as its first option, which is what every
+// override defaults to.
+function ModelSelect({
+  id,
+  label,
+  setting,
+  value,
+  disabled,
+  models,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  setting: ConfigSetting;
+  value: string | null;
+  disabled: boolean;
+  models: ConfigPayload["models"];
+  onChange: (next: unknown) => void;
+}) {
+  const installed = models.installed;
+  const known = installed.some((m) => m.model === value);
+  const [other, setOther] = useState(() => Boolean(value) && !known);
+  const residentVram = new Map(models.running.map((m) => [m.model, m.size_vram]));
+
+  const describe = (model: InstalledModel) => {
+    const vram = residentVram.get(model.model);
+    if (vram) return `${model.model} — cargado, ${bytes(vram)} en VRAM`;
+    return model.size ? `${model.model} — en disco, ${bytes(model.size)}` : model.model;
+  };
+
+  const selectValue = other ? OTHER : value ?? "";
+
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id}>{label}</Label>
+      <Select
+        id={id}
+        value={selectValue}
+        disabled={disabled}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (next === OTHER) {
+            setOther(true);
+            return;
+          }
+          setOther(false);
+          onChange(next === "" ? null : next);
+        }}
+      >
+        {setting.nullable ? <option value="">Seguir al principal</option> : null}
+        {value && !known && !other ? <option value={value}>{value} — sin instalar</option> : null}
+        {installed.map((model) => (
+          <option key={model.model} value={model.model}>
+            {describe(model)}
+          </option>
+        ))}
+        <option value={OTHER}>Otro…</option>
+      </Select>
+      {other ? (
+        <Input
+          aria-label={`${label}: nombre del modelo`}
+          placeholder="nombre:etiqueta, tal como lo conoce Ollama"
+          disabled={disabled}
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value || null)}
+        />
+      ) : null}
+      {installed.length === 0 ? (
+        <p className="text-small text-muted-foreground">
+          El motor no responde: no se puede listar lo instalado, pero el nombre se puede escribir.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+// The co-residency arithmetic, on screen: the three models the process keeps loaded, with
+// what each one measures now (`/api/ps`, the only true reading) or, failing that, its size
+// on disk, which is an approximation and is labelled as one. It is a sum and not a verdict:
+// the VRAM total of the machine is not something this process can read from here.
+function ResidencySummary({
+  settings,
+  current,
+  models,
+}: {
+  settings: ConfigSetting[];
+  current: (setting: ConfigSetting) => unknown;
+  models: ConfigPayload["models"];
+}) {
+  const residents = ["models.main", "models.guardrail", "models.embedding"]
+    .map((key) => settings.find((s) => s.key === key))
+    .filter((s): s is ConfigSetting => Boolean(s))
+    .map((s) => String(current(s) ?? ""))
+    .filter(Boolean);
+  const vram = new Map(models.running.map((m) => [m.model, m.size_vram]));
+  const disk = new Map(models.installed.map((m) => [m.model, m.size]));
+
+  let total = 0;
+  let estimated = false;
+  let unknown = 0;
+  const rows = residents.map((name) => {
+    const measured = vram.get(name);
+    if (measured) {
+      total += measured;
+      return { name, text: `${bytes(measured)} en VRAM` };
+    }
+    const onDisk = disk.get(name);
+    if (onDisk) {
+      total += onDisk;
+      estimated = true;
+      return { name, text: `≈ ${bytes(onDisk)} (tamaño en disco)` };
+    }
+    unknown += 1;
+    return { name, text: "sin instalar" };
+  });
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 text-small">
+      <p className="font-medium uppercase tracking-wide text-muted-foreground">
+        Residentes a la vez
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {rows.map((row) => (
+          <li key={row.name} className="flex flex-wrap justify-between gap-2">
+            <span className="font-mono">{row.name}</span>
+            <span className="text-muted-foreground nums">{row.text}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 nums">
+        Suma: <strong>{bytes(total)}</strong>
+        {estimated ? " — parte estimada por el tamaño en disco; el KV cache va aparte" : ""}
+        {unknown > 0 ? ` — ${unknown} modelo(s) sin tamaño conocido` : ""}
+      </p>
+    </div>
+  );
+}
+
 function SettingRow({
   setting,
   value,
   onChange,
+  models,
 }: {
   setting: ConfigSetting;
   value: unknown;
   onChange: (next: unknown) => void;
+  models: ConfigPayload["models"] | null;
 }) {
   const label = setting.name || setting.key;
   const id = `config-${setting.key}`;
@@ -207,6 +483,16 @@ function SettingRow({
                 label={label}
               />
             </div>
+          ) : models && isModelSetting(setting) ? (
+            <ModelSelect
+              id={id}
+              label={label}
+              setting={setting}
+              value={value as string | null}
+              disabled={disabled}
+              models={models}
+              onChange={onChange}
+            />
           ) : setting.choices ? (
             <div className="space-y-1">
               <Label htmlFor={id}>{label}</Label>

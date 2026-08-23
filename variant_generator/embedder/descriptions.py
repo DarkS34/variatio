@@ -337,10 +337,10 @@ class ConceptDescriber:
         )
         response = inference.generate(
             model=config.DESCRIPTION_GENERATION_LLM,
-            think=False,
+            think=config.THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
-            format=DESCRIPTION_SCHEMA,
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            format=None if config.THINK_DESCRIPTION_GENERATION else DESCRIPTION_SCHEMA,
+            temperature=inference.judgement_temperature(config.THINK_DESCRIPTION_GENERATION),
         ).response
         parsed, error = parse_with_repair(
             response,
@@ -450,10 +450,10 @@ class ConceptDescriber:
         )
         response = inference.generate(
             model=config.DESCRIPTION_GENERATION_LLM,
-            think=False,
+            think=config.THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
-            format=_batch_schema(concepts),
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            format=None if config.THINK_DESCRIPTION_GENERATION else _batch_schema(concepts),
+            temperature=inference.judgement_temperature(config.THINK_DESCRIPTION_GENERATION),
         ).response
         parsed, error = parse_with_repair(
             response,

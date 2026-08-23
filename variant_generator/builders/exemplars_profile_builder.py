@@ -166,7 +166,11 @@ class ExemplarsProfileBuilder:
             lines.extend(f"---\n{excerpt}" for excerpt in excerpts)
 
         _context.synthesize(
-            self.workspace, "\n".join(lines), "EL PERFIL DE EJEMPLARES", self.context_model
+            self.workspace,
+            "\n".join(lines),
+            "EL PERFIL DE EJEMPLARES",
+            self.context_model,
+            think=config.THINK_EP_CONTEXT,
         )
         progress.advance(1.0)
 
@@ -240,10 +244,10 @@ class ExemplarsProfileBuilder:
         prompt = scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
             model=self.scan_model,
-            think=False,
+            think=config.THINK_EP_SCAN,
             prompt=prompt,
-            format=SCAN_SCHEMA,
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            format=None if config.THINK_EP_SCAN else SCAN_SCHEMA,
+            temperature=inference.judgement_temperature(config.THINK_EP_SCAN),
         ).response
 
         entries, err = parse_with_repair(
@@ -334,7 +338,9 @@ class ExemplarsProfileBuilder:
 
     def _infer(self, findings: str) -> dict:
         prompt = consolidate_exemplars_profile_prompt(findings, self.max_item_types)
-        think = inference.supports_thinking(self.consolidate_model)
+        think = config.THINK_EP_CONSOLIDATE and inference.supports_thinking(
+            self.consolidate_model
+        )
         logger.info(
             f"Consolidando con '{self.consolidate_model}' "
             f"(razonamiento {'activado' if think else 'desactivado'})"
@@ -343,9 +349,7 @@ class ExemplarsProfileBuilder:
             model=self.consolidate_model,
             think=think,
             prompt=prompt,
-            temperature=(
-                config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
-            ),
+            temperature=inference.judgement_temperature(think),
         ).response
         profile = self._parse(response)
         err = self._validate(profile)

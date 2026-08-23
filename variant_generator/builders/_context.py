@@ -28,6 +28,8 @@ def synthesize(
     evidence_block: str,
     source_label: str,
     model: str,
+    *,
+    think: bool = False,
 ) -> ContentContext | None:
     current = load_for(ws)
     prompt = synthesize_content_context_prompt(
@@ -39,9 +41,9 @@ def synthesize(
     response = inference.generate(
         model=model,
         prompt=prompt,
-        think=False,
-        temperature=config.TEMPERATURE_DETERMINISTIC,
-        format=CONTENT_CONTEXT_SCHEMA,
+        think=think,
+        temperature=inference.judgement_temperature(think),
+        format=None if think else CONTENT_CONTEXT_SCHEMA,
     ).response
     parsed, error = parse_with_repair(
         response,
