@@ -50,6 +50,10 @@ class Commission:
     curriculum: list[str] = field(default_factory=list)
     instructions: str = ""
     think: bool = True
+    # The scope ruling, screened ONCE for the session and carried here so the `system` arm
+    # reuses it instead of paying the judge a second time. Untyped on purpose: naming
+    # `admissibility.Ruling` would put a pipeline type in the study's own contract.
+    ruling: object | None = None
 
 
 @dataclass

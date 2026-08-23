@@ -9,13 +9,14 @@ import random
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 
 from loguru import logger
 
-from variant_generator import config, guardrail
+from variant_generator import admissibility, config, guardrail
 from variant_generator.core import progress
 from variant_generator.stages.initialize import PipelineContext
-from variant_generator.variant_generator import clean_fixed
+from variant_generator.variant_generator import _sentence_case, clean_fixed
 
 from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 
@@ -59,8 +60,10 @@ def evaluate(
     _validate(context, target_type, commission)
 
     # Once, before the commission is handed out: it judges the user's text, not the arm.
-    # If it blocks, the session never comes into existence.
-    _screen(commission.instructions)
+    # If it blocks, the session never comes into existence. The ruling travels ON the
+    # commission so the `system` arm does not screen the same text a second time.
+    ruling = _screen(context, target_type, commission)
+    commission = replace(commission, ruling=ruling)
 
     results: dict[str, ArmResult] = {}
     # The external arm is network, not GPU: it overlaps with the local ones for free,
@@ -125,16 +128,38 @@ def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
         )
 
 
-def _screen(instructions: str) -> None:
-    if not instructions:
-        return
+def _screen(context, item_type, commission: Commission):
+    if not commission.instructions:
+        return admissibility.Ruling(requests=(), checked=True)
+
     with progress.step("eval.guardrail", "Revisando el encargo"):
-        verdict = guardrail.check(instructions)
+        verdict = guardrail.check(commission.instructions)
         if verdict.blocked:
             raise ValueError(
                 f"Las instrucciones adicionales no han pasado la revisión: "
                 f"el modelo juez ha detectado {verdict.reason}."
             )
+
+    with progress.step("eval.admissibility", "Revisando el alcance del encargo"):
+        ruling = admissibility.screen(
+            commission.instructions,
+            admissibility.owners(
+                context.knowledge_graph,
+                item_type,
+                context.exemplars_profile,
+                context.content_context,
+                commission.concepts,
+            ),
+            commission.concepts,
+            context.content_context.prompt_block(),
+        )
+        if not ruling.ok:
+            first = ruling.blocked[0]
+            raise ValueError(
+                f"«{first.text}» no se pide aquí: lo decide {first.owner.label} "
+                f"(«{first.term}»). {_sentence_case(first.owner.where)}."
+            )
+    return ruling
 
 
 # Checked here rather than inside the arms: an invalid commission must fail the whole
