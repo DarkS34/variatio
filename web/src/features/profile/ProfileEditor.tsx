@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
+import { DraftDriftNotice } from "./DraftDriftNotice";
 import { FieldEditor, baseType, fieldNameError, nameError } from "./FieldEditor";
 
 function AddInline({
@@ -362,6 +363,8 @@ export function ProfileEditor() {
           <p>{(save.error as Error).message}</p>
         </Alert>
       ) : null}
+
+      <DraftDriftNotice pending={query.data.pending_draft} />
 
       {tab === "raw" ? (
         <div className="space-y-2">

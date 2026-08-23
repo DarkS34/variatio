@@ -1,4 +1,11 @@
 from .common import PROG, database_hint
+from .lock import LockHeld, hold
+
+
+def serve_lock_path():
+    from variant_generator.core.paths import WORKSPACES_DIR
+
+    return WORKSPACES_DIR / ".serve.lock"
 
 
 # `serve` used to start with no database on purpose, because nothing on the request path
@@ -10,6 +17,16 @@ def serve(args) -> int:
 
     from ..db import is_available, session_scope
     from ..db.identity import count_users
+
+    try:
+        hold(serve_lock_path())
+    except LockHeld as exc:
+        print(f"Ya hay un `{PROG} serve` en marcha: el bloqueo {exc.path} está ocupado.")
+        print(
+            "Solo puede ejecutarse uno a la vez — la cola de trabajos, el límite de peticiones "
+            "y la descarga de la GPU viven en memoria de un único proceso."
+        )
+        return 1
 
     if not is_available():
         database_hint()

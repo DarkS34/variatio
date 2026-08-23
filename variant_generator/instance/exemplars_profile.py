@@ -12,6 +12,63 @@ ITEM_TYPE_KEY = "item_type"
 
 RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_concept")
 
+DRIFT_ASPECTS = ("type", "enum", "decided_by")
+
+
+def _fields_by_type(raw: dict) -> dict[str, dict]:
+    item_types = raw.get("item_types") if isinstance(raw, dict) else None
+    if not isinstance(item_types, dict):
+        return {}
+    return {
+        key: dict(spec.get("fields") or {})
+        for key, spec in item_types.items()
+        if isinstance(spec, dict)
+    }
+
+
+def _field_aspects(spec: dict) -> dict:
+    schema = spec.get("schema") if isinstance(spec, dict) else None
+    schema = schema if isinstance(schema, dict) else {}
+    decided_by = spec.get("decided_by") if isinstance(spec, dict) else None
+    return {
+        "type": schema.get("type"),
+        "enum": list(schema["enum"]) if isinstance(schema.get("enum"), list) else None,
+        "decided_by": decided_by or "model",
+    }
+
+
+def profile_drift(curated: dict, draft: dict) -> dict:
+    before = _fields_by_type(curated)
+    after = _fields_by_type(draft)
+    added: dict[str, list[str]] = {}
+    removed: dict[str, dict] = {}
+    changed: dict[str, dict] = {}
+
+    for type_key in sorted(set(before) | set(after)):
+        old_fields = before.get(type_key, {})
+        new_fields = after.get(type_key, {})
+        for name in new_fields:
+            if name not in old_fields:
+                added.setdefault(name, []).append(type_key)
+        for name, spec in old_fields.items():
+            aspects = _field_aspects(spec)
+            if name not in new_fields:
+                entry = removed.setdefault(name, {"item_types": [], "decided_by": aspects["decided_by"]})
+                entry["item_types"].append(type_key)
+                continue
+            fresh = _field_aspects(new_fields[name])
+            diffs = [aspect for aspect in DRIFT_ASPECTS if aspects[aspect] != fresh[aspect]]
+            if diffs:
+                entry = changed.setdefault(name, {"item_types": [], "aspects": []})
+                entry["item_types"].append(type_key)
+                entry["aspects"] = sorted(set(entry["aspects"]) | set(diffs), key=DRIFT_ASPECTS.index)
+
+    return {
+        "added": [{"field": name, "item_types": types} for name, types in added.items()],
+        "removed": [{"field": name, **entry} for name, entry in removed.items()],
+        "changed": [{"field": name, **entry} for name, entry in changed.items()],
+    }
+
 
 class ItemType:
     def __init__(self, key: str, raw: dict):
