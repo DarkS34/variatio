@@ -1,12 +1,21 @@
 from ..types import Setting
-from . import builders, evaluation, generation, inference, logging, retrieval
+from . import builders, generation, inference, logging, retrieval
+
+# The study declares its own block and lives outside this package: `study` imports
+# `variant_generator` and never the reverse, so the registry reaches it by name rather
+# than by import direction. Without the study installed the panel simply shows one group
+# fewer, and `config.json` round-trips one section fewer.
+try:
+    from study.settings import SETTINGS as STUDY_SETTINGS
+except ImportError:
+    STUDY_SETTINGS: list[Setting] = []
 
 REGISTRY: tuple[Setting, ...] = tuple(
     inference.SETTINGS
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
-    + evaluation.SETTINGS
+    + STUDY_SETTINGS
     + logging.SETTINGS
 )
 

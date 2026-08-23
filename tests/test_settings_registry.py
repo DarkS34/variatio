@@ -7,11 +7,7 @@ DERIVED_ONLY = {
     "KG_PREREQUISITE_RELATION",
     "EMBEDDING_MODELS",
     "TEMPERATURE_DEFAULT",
-    "EVAL_RAG_TOP_K",
     "LLM_CONTEXT",
-    "EVAL_EXTERNAL_PROVIDERS",
-    "EVAL_PROVIDER_MODELS",
-    "EVAL_PROVIDER_KEYS",
 }
 
 # A schema without a prerequisite relation is legitimate, and an empty document prefix is
@@ -79,6 +75,9 @@ def test_every_phase_key_is_declared_in_the_registry():
         assert key in BY_KEY, f"{key} lo deriva PHASES pero no lo declara nadie"
 
 
+# 87 still, because the study's six are declared outside this package and picked up by
+# name. 78 named, not 80: the study reads its own through `study.config`, so none of the
+# six lands in `variant_generator.config` any more.
 def test_the_registry_holds_what_this_work_transcribed():
     assert len(REGISTRY) == 87
-    assert len(BY_NAME) == 80
+    assert len(BY_NAME) == 78

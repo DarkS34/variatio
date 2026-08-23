@@ -6,7 +6,7 @@ the `rag → system` step measures what the GRAPH is worth, and that second one 
 contribution being defended.
 
 Same local model as the system arm (`VARIANT_GENERATION_LLM`), the same number of examples
-(`EVAL_RAG_TOP_K`) and the same reasoning mode (`commission.think`, drawn per session), so
+(`study.config.RAG_TOP_K`) and the same reasoning mode (`commission.think`, drawn per session), so
 neither the model, nor the prompt budget, nor whether it deliberated is a loose variable
 between them.
 """
@@ -21,6 +21,7 @@ from variant_generator.core.repair import parse_with_repair
 from variant_generator.variant_generator import build_few_shot_block, parse_item
 
 from .. import FAILED, OK, ArmResult, Commission
+from .. import config as study_config
 from ..prompts import rag_generation_prompt
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatBankIndex
@@ -63,7 +64,7 @@ def run(commission: Commission, context) -> ArmResult:
     started = time.perf_counter()
 
     query = build_query(commission)
-    retrieved = index_for(context).search(query, config.EVAL_RAG_TOP_K, item_type.key)
+    retrieved = index_for(context).search(query, study_config.RAG_TOP_K, item_type.key)
     exemplar_ids = [item_id for item_id, _ in retrieved]
     logger.info(
         f"RAG plano: {len(exemplar_ids)} ejemplar(es) por coseno — "
