@@ -10,6 +10,7 @@ names the study at all. The evaluation observes the pipeline from outside it.
 """
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 ARMS: tuple[str, ...] = ("naive", "rag", "system")
 
@@ -18,6 +19,11 @@ ARM_LABELS: dict[str, str] = {
     "rag": "Solo RAG sobre el banco",
     "system": "Este sistema",
 }
+
+def rag_index_path(ws) -> Path:
+    """Where the rag arm's flat index over the bank is cached, inside the workspace."""
+    return ws.cache_dir / "embeddings" / "eval_rag_bank.npz"
+
 
 OK = "ok"
 FAILED = "failed"
@@ -178,5 +184,6 @@ __all__ = [
     "FAILED",
     "OK",
     "UNAVAILABLE",
+    "rag_index_path",
     "run_arm",
 ]

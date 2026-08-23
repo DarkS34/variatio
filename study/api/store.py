@@ -22,10 +22,10 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
-from study import ARMS, EvaluationSession
+from server.db.models import EvalSession
 
-from .db import study
-from .db.models import EvalSession
+from .. import ARMS, EvaluationSession
+from . import queries
 
 RATING_SCALES = ("originality", "complexity", "concept_fit", "soundness")
 USABILITY_VALUES = ("as_is", "with_edits", "no")
@@ -37,11 +37,11 @@ USABILITY_VALUES = ("as_is", "with_edits", "no")
 def save(
     db: DbSession, workspace_id: int, user_id: int | None, session: EvaluationSession
 ) -> EvalSession:
-    return study.upsert_evaluation(db, session.id, workspace_id, user_id, session.to_dict())
+    return queries.upsert_evaluation(db, session.id, workspace_id, user_id, session.to_dict())
 
 
 def load(db: DbSession, session_id: str) -> EvaluationSession | None:
-    row = study.get_evaluation(db, session_id)
+    row = queries.get_evaluation(db, session_id)
     if row is None:
         return None
     return EvaluationSession.from_dict(row.trace)
@@ -60,7 +60,7 @@ def record_choice(
     session.choice_arm = session.arm_at(choice) if choice is not None else None
     session.chosen_at = time.time()
     session.evaluator_note = (note or "").strip() or None
-    study.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
+    queries.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
     return session
 
 
@@ -70,7 +70,7 @@ def record_rating(db: DbSession, row: EvalSession, rating: dict) -> EvaluationSe
         raise ValueError("not-chosen-yet")
 
     session.rating = _clean_rating(rating)
-    study.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
+    queries.upsert_evaluation(db, session.id, row.workspace_id, row.user_id, session.to_dict())
     return session
 
 
@@ -137,7 +137,7 @@ def listing(
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[dict], int]:
-    rows, total = study.list_evaluations(
+    rows, total = queries.list_evaluations(
         db, workspace_id=workspace_id, author=author, limit=limit, offset=offset
     )
     return [header(row) for row in rows], total
@@ -149,6 +149,13 @@ def listing(
 # Everything per-arm is counted over DECIDED sessions only, and that is a blinding
 # requirement, not a statistical preference: with a session still waiting to be judged,
 # "naive: unavailable 1" next to a card that shows no exercise names the card.
+def headers(db: DbSession, workspace_id: int | None = None) -> list[dict]:
+    return [
+        header(row, user, row.workspace.slug if row.workspace else None)
+        for row, user in queries.all_evaluations(db, workspace_id)
+    ]
+
+
 def aggregates(headers: list[dict]) -> dict:
     decided = [h for h in headers if h.get("chosen_at")]
 

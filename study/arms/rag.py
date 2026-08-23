@@ -20,7 +20,7 @@ from variant_generator.core import inference, progress
 from variant_generator.core.repair import parse_with_repair
 from variant_generator.variant_generator import build_few_shot_block, parse_item
 
-from .. import FAILED, OK, ArmResult, Commission
+from .. import FAILED, OK, ArmResult, Commission, rag_index_path
 from .. import config as study_config
 from ..prompts import rag_generation_prompt
 from .naive import build_prompt as build_naive_prompt
@@ -42,7 +42,7 @@ def index_for(context) -> FlatBankIndex:
             bank=context.exemplars_bank,
             primary_text=context.exemplars_profile.primary_text,
             type_key_of=context.exemplars_profile.type_key_of_safe,
-            cache_path=context.workspace.eval_rag_bank_embeddings_path,
+            cache_path=rag_index_path(context.workspace),
         )
     return _indices[slug]
 

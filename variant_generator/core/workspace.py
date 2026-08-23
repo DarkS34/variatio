@@ -105,10 +105,6 @@ class Workspace:
     def exemplars_bank_embeddings_path(self) -> Path:
         return self.cache_dir / "embeddings" / "exemplars_bank_embeddings.npz"
 
-    @property
-    def eval_rag_bank_embeddings_path(self) -> Path:
-        return self.cache_dir / "embeddings" / "eval_rag_bank.npz"
-
     # HOST STATE --------------------------------------------------------------------------
 
     @property
@@ -122,10 +118,6 @@ class Workspace:
     @property
     def review_state_path(self) -> Path:
         return self.instance_dir / ".review_state.json"
-
-    @property
-    def eval_sessions_dir(self) -> Path:
-        return self.instance_dir / ".evaluations"
 
     # The curriculum considered covered in this instance. It is host state, not an
     # artifact: no builder produces it, it does not come from `raw/`, and it is not part

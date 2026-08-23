@@ -7,7 +7,9 @@ the UI can offer to redo that step. Nothing repairs itself behind the user's bac
 """
 
 import json
+from collections.abc import Callable
 from datetime import datetime
+from operator import attrgetter
 from pathlib import Path
 
 from variant_generator import stages
@@ -15,6 +17,15 @@ from variant_generator.core import json_io
 from variant_generator.core.workspace import Workspace
 
 from . import storage
+
+# The study is optional to this module the way it is to the settings registry: it is
+# reached by name, never by import direction, and its absence costs one derived file.
+try:
+    from study import rag_index_path
+
+    _STUDY_DERIVED: tuple[Callable[[Workspace], Path], ...] = (rag_index_path,)
+except ImportError:
+    _STUDY_DERIVED = ()
 
 EXEMPLARS_PROFILE = stages.EXEMPLARS_PROFILE
 KNOWLEDGE_GRAPH = stages.KNOWLEDGE_GRAPH
@@ -82,14 +93,18 @@ def current_path(ws: Workspace, artifact: str) -> Path | None:
 # derivations, not user data: the `.npz` are rebuilt by indexing and the descriptions are
 # written again. Deleting them is what keeps the next build from starting on the cache of
 # a graph that no longer exists.
-DERIVED: dict[str, tuple[str, ...]] = {
+#
+# Resolvers rather than attribute names, because not every derivation belongs to the
+# workspace any more: the rag arm's index is the study's file, derived by the study, and
+# `Workspace` no longer names it. An installation without the study lists one file fewer.
+DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
     KNOWLEDGE_GRAPH: (
-        "concept_descriptions_path",
-        "concept_sources_path",
-        "concepts_embeddings_path",
+        attrgetter("concept_descriptions_path"),
+        attrgetter("concept_sources_path"),
+        attrgetter("concepts_embeddings_path"),
     ),
     EXEMPLARS_PROFILE: (),
-    EXEMPLARS_BANK: ("exemplars_bank_embeddings_path", "eval_rag_bank_embeddings_path"),
+    EXEMPLARS_BANK: (attrgetter("exemplars_bank_embeddings_path"),) + _STUDY_DERIVED,
 }
 
 
@@ -102,8 +117,8 @@ def artifact_files(ws: Workspace, artifact: str) -> list[Path]:
 
 def _derived_files(ws: Workspace, artifact: str) -> list[Path]:
     paths: list[Path] = []
-    for attribute in DERIVED[artifact]:
-        path = getattr(ws, attribute)
+    for resolve in DERIVED[artifact]:
+        path = resolve(ws)
         # `concept_descriptions.fingerprints.json` lives beside the file it describes and only
         # the describer names it; it is collected by adjacency so that rule is not duplicated.
         paths += [path, path.with_suffix(f".fingerprints{path.suffix}")]

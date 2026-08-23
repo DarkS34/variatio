@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DbSession
 
 from .. import auth
-from ..db import study
+from ..db import generations as db_generations
 from ..db.models import OWNER, Generation
 
 router = APIRouter(prefix="/api/generations", tags=["generations"], dependencies=[auth.VIEW])
@@ -57,7 +57,7 @@ def listing(
     db: DbSession = Depends(auth.db),
 ) -> dict:
     author = access.user.id if scope == "mine" else None
-    rows, total = study.list_generations(
+    rows, total = db_generations.list_generations(
         db,
         access.workspace.id,
         author=author,
@@ -73,7 +73,7 @@ def listing(
         # whole instance, so «mías: 3» can be read against «aquí hay 40» without a second
         # request.
         "total": total,
-        "workspace_total": study.count_generations(db, access.workspace.id),
+        "workspace_total": db_generations.count_generations(db, access.workspace.id),
         "limit": limit,
         "offset": offset,
         "scope": scope,
@@ -103,12 +103,12 @@ def remove(
     row = _require(db, generation_id, access)
     if row.user_id != access.user.id and access.role != OWNER:
         raise HTTPException(403, "Solo quien la generó, o el propietario, puede borrarla.")
-    study.delete_generation(db, row)
+    db_generations.delete_generation(db, row)
     return {"deleted": generation_id}
 
 
 def _require(db: DbSession, generation_id: int, access: auth.Access) -> Generation:
-    row = study.get_generation(db, generation_id)
+    row = db_generations.get_generation(db, generation_id)
     if row is None or row.workspace_id != access.workspace.id:
         raise HTTPException(404, "Esa variante no existe.")
     return row
