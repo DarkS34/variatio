@@ -118,6 +118,8 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     context = context_for(job)
     ids = job.params.get("ids") or None
+    if job.params.get("all"):
+        ids = list(context.exemplars_bank)
     pending = ids if ids is not None else ConceptTagger.pending_ids(context.exemplars_bank)
     logger.info(
         f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s), "

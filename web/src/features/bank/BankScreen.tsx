@@ -450,8 +450,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     max={listing.totals.items}
                     tone={listing.totals.untagged === 0 ? "settled" : "attention"}
                   />
-                  {listing.totals.untagged > 0 ? (
-                    <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    {listing.totals.untagged > 0 ? (
                       <button
                         onClick={() => {
                           setUntagged(true);
@@ -461,23 +461,53 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                       >
                         Ver los {listing.totals.untagged} sin concepto →
                       </button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={locked || submit.isPending || Boolean(offline)}
-                        title={
-                          locked
-                            ? LOCKED_HINT
-                            : (offline ??
-                              `Vuelve a pasar el etiquetador por los ${listing.totals.untagged} ítem(s) sin concepto`)
-                        }
-                        onClick={() => submit.mutate({ kind: "tag", params: {} })}
-                      >
-                        {submit.isPending ? <Spinner /> : <RefreshCw />}
-                        Re-etiquetar los {listing.totals.untagged}
-                      </Button>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex gap-2">
+                      {listing.totals.untagged > 0 ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked || submit.isPending || Boolean(offline)}
+                          title={
+                            locked
+                              ? LOCKED_HINT
+                              : (offline ??
+                                `Vuelve a pasar el etiquetador por los ${listing.totals.untagged} ítem(s) sin concepto`)
+                          }
+                          onClick={() => submit.mutate({ kind: "tag", params: {} })}
+                        >
+                          {submit.isPending ? <Spinner /> : <RefreshCw />}
+                          Re-etiquetar los {listing.totals.untagged}
+                        </Button>
+                      ) : null}
+                      {hasItems ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked || submit.isPending || Boolean(offline)}
+                          title={
+                            locked
+                              ? LOCKED_HINT
+                              : (offline ??
+                                `Vuelve a etiquetar los ${listing.totals.items} ítem(s) del banco desde cero`)
+                          }
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Re-etiquetar todo vuelve a pasar el etiquetador por los ${listing.totals.items} ítem(s) del banco y sobrescribe las etiquetas actuales, incluidas las corregidas a mano. ¿Continuar?`,
+                              )
+                            )
+                              submit.mutate({ kind: "tag", params: { all: true } });
+                          }}
+                        >
+                          {submit.isPending ? <Spinner /> : <RefreshCw />}
+                          Re-etiquetar todo
+                        </Button>
+                      ) : null}
                     </div>
-                  ) : null}
+                  </div>
                 </>
               ) : (
                 <Skeleton className="h-12" />
