@@ -61,7 +61,9 @@ class ExemplarsBankBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        self._docling = _source_docs.default_converter(ocr=config.EXEMPLARS_OCR)
+        # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
+        # plain text needs no conversion, so on the usual corpus Docling is never built.
+        self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
         self._type_keys = exemplars_profile.type_keys
         self._types_block = self._build_types_block(exemplars_profile)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)

@@ -97,18 +97,10 @@ class KnowledgeGraphBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        self._converter = None
-
-    # Docling is built on first use and never at import: the runtime pipeline does not
-    # install the `builders` extra, and a converter costs ~540 MB of imports.
-    @property
-    def converter(self):
-        if self._converter is None:
-            # Lecture PDFs do not need Docling's table model, and it is slow over a whole
-            # corpus; the bank and profile builders keep the default, since exercise
-            # documents do carry tables.
-            self._converter = _source_docs.default_converter(table_structure=False)
-        return self._converter
+        # Lecture PDFs do not need Docling's table model, and it is slow over a whole corpus;
+        # the bank and profile builders keep the default, since exercise documents do carry
+        # tables. `LazyConverter` is what keeps Docling out of the import.
+        self.converter = _source_docs.LazyConverter(table_structure=False)
 
     # PUBLIC API ----------------------------------------------------------------------------------
 

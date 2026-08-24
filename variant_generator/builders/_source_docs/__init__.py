@@ -4,6 +4,7 @@ from .files import (
     CONVERTED_EXTS,
     PLAIN_TEXT_EXTS,
     SUPPORTED_EXTS,
+    LazyConverter,
     default_converter,
     list_source_files,
 )
@@ -24,6 +25,7 @@ from .pages import (
 
 __all__ = [
     "CONVERTED_EXTS",
+    "LazyConverter",
     "PLAIN_TEXT_EXTS",
     "SUPPORTED_EXTS",
     "chunk_markdown",

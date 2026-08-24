@@ -4,7 +4,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from .files import CONVERTED_EXTS, PLAIN_TEXT_EXTS, required_cache_dir
+from .files import CONVERTED_EXTS, PLAIN_TEXT_EXTS, required_cache_dir, resolve_converter
 
 CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
@@ -67,7 +67,10 @@ def to_markdown(
             return _refresh(cached, tidy_markdown(cached.read_text(encoding="utf-8")))
         logger.info(f"[{input_path.name}] el origen es más nuevo que su markdown; reconvirtiendo")
 
-    text = tidy_markdown(converter.convert(str(input_path)).document.export_to_markdown())
+    # The one place a converter is ever used, and therefore the only place a lazy one has to
+    # be resolved: everything above returns without Docling — plain text, and a cache hit.
+    document = resolve_converter(converter).convert(str(input_path)).document
+    text = tidy_markdown(document.export_to_markdown())
     if cached is not None:
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")

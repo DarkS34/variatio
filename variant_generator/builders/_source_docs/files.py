@@ -34,6 +34,28 @@ def default_converter(ocr: bool = False, table_structure: bool = True):
     )
 
 
+# Docling is built on first real USE and never at import: the runtime pipeline does not
+# install the `builders` extra, and a converter costs ~700 MB of imports. Holding it behind a
+# callable rather than an attribute is what makes that reach the cases a lazy property could
+# not — a corpus of PDFs goes through the page-transcription route and never converts
+# anything, and a corpus whose markdown is already cached does not either.
+class LazyConverter:
+    def __init__(self, **options):
+        self._options = options
+        self._converter = None
+
+    def __call__(self):
+        if self._converter is None:
+            self._converter = default_converter(**self._options)
+        return self._converter
+
+
+# A converter, or something that builds one on demand. `DocumentConverter` exposes `convert`
+# and no `__call__`, so the two cannot be confused.
+def resolve_converter(converter):
+    return converter() if callable(converter) else converter
+
+
 def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Path]:
     root = Path(input_dir)
     candidates = root.rglob("*") if recursive else root.iterdir()
