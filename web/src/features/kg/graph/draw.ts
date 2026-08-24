@@ -76,6 +76,8 @@ const LABEL_SCALE = 1.05;
 const CURVE = 0.14;
 const ARROW = 7;
 const DIM = 0.12;
+const FONT_SANS = '"IBM Plex Sans Variable", ui-sans-serif, system-ui';
+const FONT_DISPLAY = '"Archivo Variable", "Archivo", ui-sans-serif, system-ui';
 
 export function radiusOf(degree: number) {
   return 4 + Math.min(9, Math.sqrt(degree) * 2.2);
@@ -168,12 +170,13 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     context.fill();
 
     // A non-taggable concept is in the graph for its relations only: nothing is ever
-    // labelled with it. Drawn hollow, so it reads as structure rather than as a target.
+    // labelled with it. Drawn hollow and slightly faded, so it reads as structure
+    // rather than as a target — the filled, taggable nodes are the ones that lead.
     if (nonTaggable) {
-      context.globalAlpha = dimmed ? DIM : 1;
+      context.globalAlpha = dimmed ? DIM : 0.9;
       context.fillStyle = palette.background;
       context.beginPath();
-      context.arc(body.x, body.y, Math.max(1.5, radius - 2.4), 0, Math.PI * 2);
+      context.arc(body.x, body.y, Math.max(1.5, radius - 1.7), 0, Math.PI * 2);
       context.fill();
     }
 
@@ -231,7 +234,7 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
       .filter((label) => label.strong === strong)
       .sort((a, b) => b.weight - a.weight);
     if (chosen.length === 0) return;
-    context.font = `${strong ? 600 : 400} ${11 / scale}px ui-sans-serif, system-ui`;
+    context.font = `${strong ? 600 : 400} ${11 / scale}px ${FONT_SANS}`;
     for (const label of chosen) {
       const halfWidth = context.measureText(label.text).width / 2;
       const box: [number, number, number, number] = [
@@ -285,11 +288,31 @@ function drawEdges(
   // edge. The focused node's own edges are held back and drawn on top, opaque.
   const focused: [number, number, number][] = [];
 
+  // Ink follows meaning: the prerequisite relation is the one the whole pedagogy runs
+  // on, so it gets more ink than the rest; the catch-all gets less. In the curriculum
+  // view — which IS the prerequisite order — the relations that do not order anything
+  // fade to a whisper instead of crossing every band as spaghetti.
+  const inkOf = (relation: number): { alpha: number; width: number } => {
+    const meta = graph.relations[relation];
+    let alpha = restAlpha;
+    let width = 1;
+    if (meta?.prerequisite) {
+      alpha = Math.min(0.62, restAlpha * 1.5);
+      width = 1.4;
+    } else if (meta && !meta.directed) {
+      alpha = restAlpha * 0.7;
+      width = 0.8;
+    }
+    if (scene.mode === "curriculum" && !meta?.prerequisite) alpha *= 0.28;
+    return { alpha, width };
+  };
+
   for (let relation = 0; relation < graph.relations.length; relation += 1) {
     if (hidden?.has(relation)) continue;
+    const ink = inkOf(relation);
     context.strokeStyle = model.relationColours[relation] ?? palette.border;
-    context.globalAlpha = focus >= 0 ? 0.07 : restAlpha;
-    context.lineWidth = 1 / scale;
+    context.globalAlpha = focus >= 0 ? 0.07 : ink.alpha;
+    context.lineWidth = ink.width / scale;
     context.beginPath();
     let drawn = 0;
     for (const link of graph.links) {
@@ -314,7 +337,7 @@ function drawEdges(
     for (let relation = 0; relation < graph.relations.length; relation += 1) {
       if (hidden?.has(relation) || !graph.relations[relation].directed) continue;
       context.fillStyle = model.relationColours[relation] ?? palette.border;
-      context.globalAlpha = restAlpha;
+      context.globalAlpha = inkOf(relation).alpha;
       for (const [source, target, kind] of graph.links) {
         if (kind !== relation) continue;
         arrowhead(context, scene, source, target);
@@ -404,15 +427,16 @@ function drawHulls(
   if (focus >= 0) return [];
 
   // The discs grow as you zoom out, so a blob keeps roughly the same weight on screen
-  // instead of dissolving into the background at low scale.
-  const radius = 26 / Math.max(0.6, view.scale) + 16;
+  // instead of dissolving into the background at low scale. Kept tight and faint on
+  // purpose: the tint is ambient signage behind the drawing, never a layer over it.
+  const radius = 20 / Math.max(0.6, view.scale) + 13;
   const labels: HullLabel[] = [];
 
   for (let group = 0; group < model.groupCount; group += 1) {
     const nodes = model.domainMembers[group];
     if (!nodes || nodes.length < 3) continue;
 
-    context.globalAlpha = 0.09;
+    context.globalAlpha = 0.055;
     context.fillStyle = model.domainColours[group] ?? "transparent";
     context.beginPath();
     let sumX = 0;
@@ -463,30 +487,49 @@ function drawHullLabels(
 ) {
   if (labels.length === 0) return;
   const { view, palette } = scene;
-  const size = Math.min(22, 13 / view.scale);
+  const size = Math.min(17, 11.5 / view.scale);
 
+  // Ambient signage, not headline: the display face with tracking, at reduced weight
+  // and alpha, so the names locate the neighbourhoods without shouting over them.
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.font = `700 ${size}px ui-sans-serif, system-ui`;
+  context.font = `600 ${size}px ${FONT_DISPLAY}`;
+  const spaced = context as CanvasRenderingContext2D & { letterSpacing?: string };
+  if (spaced.letterSpacing !== undefined) {
+    spaced.letterSpacing = `${(size * 0.14).toFixed(2)}px`;
+  }
   context.lineJoin = "round";
   for (const label of labels) {
-    const halfWidth = context.measureText(label.text).width / 2;
-    placed.push([
-      label.x - halfWidth,
-      label.y - size * 0.6,
-      label.x + halfWidth,
-      label.y + size * 0.6,
-    ]);
+    const text = label.text;
+    const halfWidth = context.measureText(text).width / 2;
+    // Two neighbourhoods can meet exactly where both their names want to sit; the
+    // second one steps down instead of overprinting the first.
+    let y = label.y;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const box: [number, number, number, number] = [
+        label.x - halfWidth,
+        y - size * 0.6,
+        label.x + halfWidth,
+        y + size * 0.6,
+      ];
+      const collides = placed.some(
+        (r) => box[0] < r[2] && box[2] > r[0] && box[1] < r[3] && box[3] > r[1],
+      );
+      if (!collides) break;
+      y += size * 1.35;
+    }
+    placed.push([label.x - halfWidth, y - size * 0.6, label.x + halfWidth, y + size * 0.6]);
     // A wider, more opaque halo than the concept labels get: this one is over the nodes
     // and their edges now, not over an empty tint, so it has to cut its own hole.
-    context.globalAlpha = 0.75;
-    context.lineWidth = 5 / view.scale;
+    context.globalAlpha = 0.6;
+    context.lineWidth = 4.5 / view.scale;
     context.strokeStyle = palette.background;
-    context.strokeText(label.text, label.x, label.y);
-    context.globalAlpha = 0.9;
+    context.strokeText(text, label.x, y);
+    context.globalAlpha = 0.62;
     context.fillStyle = label.colour;
-    context.fillText(label.text, label.x, label.y);
+    context.fillText(text, label.x, y);
   }
+  if (spaced.letterSpacing !== undefined) spaced.letterSpacing = "0px";
   context.globalAlpha = 1;
 }
 
@@ -523,16 +566,16 @@ function drawParkedLane(context: CanvasRenderingContext2D, scene: Scene) {
   context.lineTo(rule, maxY + 22);
   context.stroke();
 
-  context.save();
-  context.translate(rule - 10, (minY + maxY) / 2);
-  context.rotate(-Math.PI / 2);
+  // Horizontal, above the lane: rotated text next to one or two dots read as a layout
+  // accident, not as a caption.
   context.globalAlpha = 0.75;
   context.fillStyle = palette.muted;
-  context.font = `600 ${Math.min(18, 10 / view.scale)}px ui-sans-serif, system-ui`;
-  context.textAlign = "center";
+  context.font = `600 ${Math.min(16, 10 / view.scale)}px ${FONT_SANS}`;
+  context.textAlign = "left";
   context.textBaseline = "alphabetic";
-  context.fillText(`${model.isolated.length} SIN RELACIONES`, 0, 0);
-  context.restore();
+  const caption =
+    model.isolated.length === 1 ? "1 sin relaciones" : `${model.isolated.length} sin relaciones`;
+  context.fillText(caption, rule, minY - 30);
   context.globalAlpha = 1;
 }
 
@@ -575,7 +618,7 @@ function drawLevels(context: CanvasRenderingContext2D, scene: Scene) {
 
   context.globalAlpha = 0.8;
   context.fillStyle = palette.muted;
-  context.font = `600 ${11 / view.scale}px ui-sans-serif, system-ui`;
+  context.font = `600 ${11 / view.scale}px ${FONT_SANS}`;
   context.textAlign = "right";
   context.textBaseline = "middle";
   for (let level = 0; level < model.levelCount; level += 1) {
@@ -634,7 +677,7 @@ export function drawMinimap(
     const body = bodies[index];
     const group = graph.nodes[index]?.[1] ?? 0;
     context.fillStyle = model.domainColours[group] ?? palette.muted;
-    context.fillRect(originX + body.x * scale - 0.75, originY + body.y * scale - 0.75, 1.5, 1.5);
+    context.fillRect(originX + body.x * scale - 1, originY + body.y * scale - 1, 2, 2);
   }
 
   // The viewport in world units, mapped through the same transform.
