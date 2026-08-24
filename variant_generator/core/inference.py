@@ -1,3 +1,4 @@
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -15,6 +16,13 @@ ProgressSink = Callable[[int, int], None]
 THINK_OPEN = "<think>"
 THINK_CLOSE = "</think>"
 _MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
+
+# `/api/tags` was asked for three times per `ensure_models` and once per health poll — every
+# 15 s, per open tab — and all of it goes over the SSH tunnel to the GPU box. The listing only
+# changes when something is pulled or deleted: this process invalidates on both, and the TTL
+# is what still notices an `ollama pull` someone ran by hand on the box itself. Deliberately
+# not a setting: residency (`/api/ps`) is the live measurement and is never cached.
+_INSTALLED_TTL_SECONDS = 30.0
 
 
 class InferenceError(Exception):
@@ -118,6 +126,7 @@ class OllamaEngine:
     def __init__(self):
         self._client = ollama.Client(host=config.OLLAMA_HOST)
         self._capabilities: dict[str, list[str]] = {}
+        self._installed: tuple[float, list[dict]] | None = None
 
     def is_available(self) -> bool:
         # Every failure is the same answer, "no", and the caller is a health check: catching
@@ -306,14 +315,19 @@ class OllamaEngine:
         return [info["model"] for info in self.installed_models_detail()]
 
     def installed_models_detail(self) -> list[dict]:
+        cached = self._installed
+        if cached is not None and time.monotonic() - cached[0] < _INSTALLED_TTL_SECONDS:
+            return cached[1]
         try:
             listing = self._client.list()["models"]
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Could not list Ollama models: {e}") from e
-        return [
+        detail = [
             {"model": info["model"], "size": int(info["size"]) if info.get("size") else None}
             for info in listing
         ]
+        self._installed = (time.monotonic(), detail)
+        return detail
 
     # What is loaded NOW, which is the only thing that can actually be measured from here: the
     # session does not run on the GPU machine, so `nvidia-smi` answers about another card and
@@ -413,6 +427,7 @@ class OllamaEngine:
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"Falló la descarga de '{model}': {e}") from e
         self._capabilities.pop(model, None)
+        self._installed = None
         logger.success(f"Modelo '{model}' descargado")
 
     def delete(self, model: str) -> None:
@@ -421,6 +436,7 @@ class OllamaEngine:
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(f"No se pudo borrar '{model}' del disco: {e}") from e
         self._capabilities.pop(model, None)
+        self._installed = None
         logger.info(f"Modelo '{model}' borrado del disco del motor")
 
 
