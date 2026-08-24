@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   ArrowRight,
   FolderPlus,
   Link2,
@@ -406,7 +407,7 @@ function GraphExplorer() {
   const totals = kg.data.totals;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
@@ -454,31 +455,119 @@ function GraphExplorer() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-small text-muted-foreground">
-        <span>{totals.concepts} conceptos</span>
-        <span>{totals.taggable} etiquetables</span>
-        <span className={totals.described < totals.taggable ? "text-attention" : undefined}>
-          {totals.described} con descripción
-        </span>
-      </div>
-
       {error ? (
         <Alert tone="danger" title="Error al editar el grafo">
           <p>{error}</p>
         </Alert>
       ) : null}
 
-      {/* The graph rules: full width and viewport height. The lists go below, where they fit
-          horizontally instead of strangling the canvas. */}
-      <div className="h-[clamp(26rem,60vh,46rem)] w-full">
-        <GraphCanvas
-          graph={graph.data}
-          selected={selected}
-          onSelect={setSelected}
-          highlight={highlight}
-          hiddenRelations={hiddenRelations}
-          curriculum={curriculumSet}
-        />
+      {/* The canvas is the map and the inspector is the reading: editing happens beside the
+          picture, not below the fold. On narrow screens the pair stacks and nothing is lost. */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,23rem)]">
+        <div className="h-[clamp(28rem,66vh,50rem)] min-w-0">
+          <GraphCanvas
+            graph={graph.data}
+            selected={selected}
+            onSelect={setSelected}
+            highlight={highlight}
+            hiddenRelations={hiddenRelations}
+            curriculum={curriculumSet}
+          />
+        </div>
+
+        <Card className="flex max-h-[36rem] min-h-0 flex-col overflow-hidden xl:max-h-[clamp(28rem,66vh,50rem)]">
+          {selectedConcept ? (
+            <>
+              <CardHeader className="flex-row items-center gap-1.5 space-y-0 pb-2">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setSelected(null)}
+                  aria-label="Volver a la lista de conceptos"
+                >
+                  <ArrowLeft />
+                </Button>
+                <CardTitle className="min-w-0 truncate">{selectedConcept.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto">
+                <ConceptDetail
+                  key={selectedConcept.name}
+                  concept={selectedConcept}
+                  domains={domains}
+                  relations={relations}
+                  concepts={concepts}
+                  onChanged={refresh}
+                />
+              </CardContent>
+            </>
+          ) : (
+            <>
+              <CardHeader className="pb-2">
+                <CardTitle>Conceptos ({filtered.length})</CardTitle>
+                <p className="text-small text-muted-foreground">
+                  {totals.taggable} etiquetables ·{" "}
+                  <span className={totals.described < totals.taggable ? "text-attention" : undefined}>
+                    {totals.described} con descripción
+                  </span>
+                </p>
+              </CardHeader>
+              <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto p-0">
+                <Table minWidth="16rem">
+                  <TBody>
+                    {filtered.map((concept) => {
+                      const groupIndex = graph.data!.groups.findIndex(
+                        (g) => g.name === concept.domain,
+                      );
+                      const colour = domainColour(
+                        Math.max(0, groupIndex),
+                        graph.data!.groups.length,
+                      );
+                      return (
+                        <TR
+                          key={concept.name}
+                          selected={selected === concept.name}
+                          onSelect={() => setSelected(concept.name)}
+                        >
+                          <TD className="w-1 pr-0">
+                            {/* The same code as the canvas: filled is a taggable target,
+                                hollow is structure. */}
+                            <span
+                              className="block size-2 rounded-full"
+                              style={
+                                concept.taggable
+                                  ? { background: colour }
+                                  : { border: `1.5px solid ${colour}` }
+                              }
+                            />
+                          </TD>
+                          <TD className="min-w-0">
+                            <span
+                              className={cn(!concept.taggable && "text-muted-foreground")}
+                              title={concept.taggable ? undefined : "No etiquetable"}
+                            >
+                              {concept.name}
+                            </span>
+                          </TD>
+                          <TD align="num" className="whitespace-nowrap">
+                            {!concept.description ? (
+                              <TriangleAlert
+                                className="inline size-3.5 text-attention"
+                                aria-label="Sin descripción"
+                              />
+                            ) : null}
+                          </TD>
+                        </TR>
+                      );
+                    })}
+                    {filtered.length === 0 ? (
+                      <TableEmpty colSpan={3}>Ningún concepto coincide con el filtro.</TableEmpty>
+                    ) : null}
+                  </TBody>
+                </Table>
+              </CardContent>
+            </>
+          )}
+        </Card>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
@@ -524,27 +613,69 @@ function GraphExplorer() {
             </button>
           ))}
         </span>
+
+        {/* One home for the domains: the chip filters the canvas and the list, and carries
+            its own rename and delete, so the screen stops repeating them in a card below. */}
         <span className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted-foreground">Dominios:</span>
           {graph.data.groups.map((group, index) => (
-            <button
+            <span
               key={group.name}
-              onClick={() => setDomainFilter(domainFilter === group.name ? "" : group.name)}
-              title="Filtrar por este dominio"
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
                 domainFilter === group.name
                   ? "border-primary text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground",
+                  : "border-border text-muted-foreground",
               )}
             >
-              <span
-                className="size-2 rounded-full"
-                style={{ background: domainColour(index, graph.data!.groups.length) }}
-              />
-              {group.name}
-              <span className="nums">{group.count}</span>
-            </button>
+              <button
+                onClick={() => setDomainFilter(domainFilter === group.name ? "" : group.name)}
+                title="Filtrar por este dominio"
+                className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ background: domainColour(index, graph.data!.groups.length) }}
+                />
+                {group.name}
+                <span className="nums">{group.count}</span>
+              </button>
+              {locked ? null : (
+                <>
+                  <button
+                    aria-label={`Renombrar ${group.name}`}
+                    title="Renombrar"
+                    onClick={() => {
+                      const next = window.prompt("Nuevo nombre del dominio", group.name);
+                      if (next?.trim() && next !== group.name)
+                        api
+                          .renameDomain(group.name, next.trim())
+                          .then(refresh)
+                          .catch((e) => setError(e.message));
+                    }}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                  <button
+                    aria-label={`Eliminar ${group.name}`}
+                    title={`Eliminar el dominio y sus ${group.count} concepto(s)`}
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          `¿Eliminar "${group.name}"? Sus ${group.count} concepto(s) se eliminarán también.`,
+                        )
+                      )
+                        return;
+                      api.deleteDomain(group.name).then(refresh).catch((e) => setError(e.message));
+                    }}
+                    className="text-muted-foreground transition-colors hover:text-destructive"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </>
+              )}
+            </span>
           ))}
         </span>
       </div>
@@ -565,135 +696,6 @@ function GraphExplorer() {
           </p>
         </Alert>
       ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <Card className="flex min-h-0 flex-col overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle>Conceptos ({filtered.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto p-0">
-            <Table minWidth="18rem">
-              <TBody>
-                {filtered.map((concept) => {
-                  const groupIndex = graph.data!.groups.findIndex((g) => g.name === concept.domain);
-                  return (
-                    <TR
-                      key={concept.name}
-                      selected={selected === concept.name}
-                      onSelect={() => setSelected(concept.name)}
-                    >
-                      <TD className="w-1 pr-0">
-                        <span
-                          className="block size-2 rounded-full"
-                          style={{
-                            background: domainColour(
-                              Math.max(0, groupIndex),
-                              graph.data!.groups.length,
-                            ),
-                          }}
-                        />
-                      </TD>
-                      <TD className="min-w-0">
-                        <span className={cn(!concept.taggable && "text-muted-foreground line-through")}>
-                          {concept.name}
-                        </span>
-                      </TD>
-                      <TD align="num" className="whitespace-nowrap">
-                        {!concept.description ? (
-                          <TriangleAlert
-                            className="inline size-3.5 text-attention"
-                            aria-label="Sin descripción"
-                          />
-                        ) : null}
-                      </TD>
-                    </TR>
-                  );
-                })}
-                {filtered.length === 0 ? (
-                  <TableEmpty colSpan={3}>Ningún concepto coincide con el filtro.</TableEmpty>
-                ) : null}
-              </TBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card className="flex min-h-0 flex-col overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle>{selectedConcept ? selectedConcept.name : "Detalle"}</CardTitle>
-          </CardHeader>
-          <CardContent className="thin-scroll max-h-[26rem] min-h-0 flex-1 overflow-y-auto">
-            {selectedConcept ? (
-              <ConceptDetail
-                key={selectedConcept.name}
-                concept={selectedConcept}
-                domains={domains}
-                relations={relations}
-                concepts={concepts}
-                onChanged={refresh}
-              />
-            ) : (
-              <p className="text-body text-muted-foreground">
-                Selecciona un concepto en el grafo o en la lista para editarlo.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Dominios ({(kg.data.domains ?? []).length})</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {(kg.data.domains ?? []).map((domain, index) => (
-            <div
-              key={domain.name}
-              className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-body"
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ background: domainColour(index, kg.data!.domains.length) }}
-              />
-              {domain.name}
-              <span className="text-small text-muted-foreground">{domain.concepts.length}</span>
-              <button
-                aria-label={`Renombrar ${domain.name}`}
-                disabled={locked}
-                title={locked ? LOCKED_HINT : "Renombrar"}
-                onClick={() => {
-                  const next = window.prompt("Nuevo nombre del dominio", domain.name);
-                  if (next?.trim() && next !== domain.name)
-                    api.renameDomain(domain.name, next.trim()).then(refresh).catch((e) => setError(e.message));
-                }}
-                className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-              >
-                <Pencil className="size-3.5" />
-              </button>
-              <button
-                aria-label={`Eliminar ${domain.name}`}
-                disabled={locked}
-                title={
-                  locked
-                    ? LOCKED_HINT
-                    : `Eliminar el dominio y sus ${domain.concepts.length} concepto(s)`
-                }
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      `¿Eliminar "${domain.name}"? Sus ${domain.concepts.length} concepto(s) se eliminarán también.`,
-                    )
-                  )
-                    return;
-                  api.deleteDomain(domain.name).then(refresh).catch((e) => setError(e.message));
-                }}
-                className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
 
       <AddConceptDialog
         open={addingConcept}
