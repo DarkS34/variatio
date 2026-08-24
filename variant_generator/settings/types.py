@@ -16,6 +16,8 @@ class Impact(str, Enum):
 
 KINDS = ("str", "int", "float", "bool", "list[str]", "dict[str,int]")
 
+SCOPES = ("global", "engine")
+
 
 class SettingError(ValueError):
     pass
@@ -37,12 +39,23 @@ class Setting:
     choices: tuple | None = None
     minimum: float | None = None
     maximum: float | None = None
+    scope: str = "global"
+    engine_defaults: tuple[tuple[str, object], ...] | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in KINDS:
             raise SettingError(f"'{self.name or self.key}': tipo desconocido '{self.kind}'")
+        if self.scope not in SCOPES:
+            raise SettingError(f"'{self.name or self.key}': ámbito desconocido '{self.scope}'")
         if not self.doc.strip():
             raise SettingError(f"'{self.name or self.key}': falta la documentación")
+
+    def default_for(self, engine: str | None) -> object:
+        if engine and self.engine_defaults:
+            for name, value in self.engine_defaults:
+                if name == engine:
+                    return value
+        return self.default
 
 
 def coerce(setting: Setting, raw: object) -> object:

@@ -125,6 +125,8 @@ export interface Health {
     required: Record<string, string>;
     installed: string[];
     missing: string[];
+    /** Required models a remote provider serves: never on this disk, never «sin instalar». */
+    remote: string[];
     running: RunningModel[];
   };
   context_ready: boolean;
@@ -572,7 +574,7 @@ export interface PullStatus {
   user: string | null;
 }
 
-export type ModelResidency = "cargado" | "en disco" | "sin instalar";
+export type ModelResidency = "cargado" | "en disco" | "sin instalar" | "remoto";
 
 export interface AdminEngine {
   engine: string;
@@ -664,6 +666,8 @@ export type ConfigSetting = {
 
 export interface InstalledModel {
   model: string;
+  /** Served by a remote provider (Cerebras): listable and selectable, never on this disk. */
+  remote?: boolean;
   /** Bytes on disk, as Ollama reports them: an approximation of what it will take resident. */
   size: number | null;
 }

@@ -207,10 +207,72 @@ SETTINGS: list[Setting] = [
         default="ollama",
         group="Motor",
         impact=Impact.ENGINE,
-        choices=("ollama",),
+        choices=("ollama", "cerebras+ollama"),
         doc="""Qué implementación de motor de inferencia respalda generate()/embed()/embed_batch().
-Solo 'ollama' está implementado; `config.INFERENCE_ENGINE` lo selecciona y la lógica de
-negocio nunca llama a un SDK directamente — todo pasa por `variant_generator.core.inference`.""",
+`config.INFERENCE_ENGINE` la selecciona y la lógica de negocio nunca llama a un SDK
+directamente — todo pasa por `variant_generator.core.inference`.
+
+'ollama' es el motor local de siempre. 'cerebras+ollama' es un motor compuesto: los modelos
+listados en CEREBRAS_MODELS van a la API de Cerebras (api.cerebras.ai, OpenAI-compatible) y
+todo lo demás —el guardián y el embedder incluidos— sigue en Ollama. La residencia, la
+descarga de la GPU y el pull/borrado de modelos son siempre de la mitad Ollama: en Cerebras
+no hay nada que cargar ni descargar.
+
+CADA MOTOR TIENE SU PERFIL DE CONFIGURACIÓN. Los ajustes de ámbito «engine» (los modelos,
+las fases, las ventanas de contexto, los interruptores de razonamiento y THINK_EFFORT) se
+guardan en `config.json` bajo `profiles.<motor>`, así que cambiar de motor cambia de perfil
+completo y volver atrás recupera el anterior tal cual se dejó.
+
+Elegir 'cerebras+ollama' saca los prompts y el corpus de la máquina hacia un servicio
+externo: es una decisión explícita del 2026-08-24 que revoca, solo para quien lo active, el
+«open-source only / stack local» del registro de decisiones. El motor por defecto sigue
+siendo 'ollama'.""",
+    ),
+    Setting(
+        key="engine.cerebras_base_url",
+        name="CEREBRAS_BASE_URL",
+        kind="str",
+        default="https://api.cerebras.ai/v1",
+        group="Motor",
+        impact=Impact.ENGINE,
+        env="CEREBRAS_BASE_URL",
+        doc="""La raíz OpenAI-compatible de la API de Cerebras. Solo la usa el motor 'cerebras+ollama';
+existe como ajuste porque es lo que permite apuntar a un proxy o a un mock en pruebas sin
+tocar código.""",
+    ),
+    Setting(
+        key="engine.cerebras_api_key",
+        name="CEREBRAS_API_KEY",
+        kind="str",
+        default="",
+        group="Motor",
+        impact=Impact.ENGINE,
+        env="CEREBRAS_API_KEY",
+        secret=True,
+        editable=False,
+        doc="""La clave de la API de Cerebras. Como las claves de la evaluación: viene del entorno (o
+del `.env` ignorado por git), nunca se serializa en `config.json` y nunca sale de la API —
+`snapshot()` solo dice «configurada» o «ausente». Sin clave, el motor 'cerebras+ollama'
+falla en la primera llamada remota con un error legible; las llamadas a la mitad Ollama no
+la necesitan.""",
+    ),
+    Setting(
+        key="engine.cerebras_models",
+        name="CEREBRAS_MODELS",
+        kind="list[str]",
+        default=["gemma-4-31b"],
+        group="Motor",
+        impact=Impact.ENGINE,
+        doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama'; todo lo que no esté aquí va a
+Ollama. La pertenencia a esta lista ES la decisión de enrutado — explícita a propósito, en
+vez de adivinar por la forma del nombre («gemma-4-31b» contra «qwen3.8:27b-q4_K_M»).
+
+`gemma-4-31b` por defecto: es el id exacto del catálogo de Cerebras (~1.850 tok/s medidos
+por Artificial Analysis, ventana de 65k en el nivel gratuito y 131k en los de pago, salida
+máxima 32k/40k, structured outputs con `strict` y razonamiento vía `reasoning_effort`).
+Los límites del nivel gratuito son 5 peticiones/min, 30k tokens de entrada/min y 1M de
+tokens al día — un build entero puede no caber en ellos; el motor reintenta los 429 con
+espera, pero el presupuesto diario no se reintenta.""",
     ),
     Setting(
         key="engine.ollama_host",
@@ -253,6 +315,8 @@ otro sitio, no aquí.""",
         default="qwen3.8:27b-q4_K_M",
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
+        engine_defaults=(("cerebras+ollama", "gemma-4-31b"),),
         doc=_MODELS_MAIN_DOC,
     ),
     Setting(
@@ -262,6 +326,7 @@ otro sitio, no aquí.""",
         default="granite4.1-guardian:8b-q4_K_M",
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         doc=_MODELS_MAIN_DOC,
     ),
     Setting(
@@ -271,6 +336,7 @@ otro sitio, no aquí.""",
         default="qwen3-embedding:4b",
         group="Modelos",
         impact=Impact.REINDEX,
+        scope="engine",
         doc=_MODELS_MAIN_DOC,
     ),
     Setting(
@@ -280,6 +346,7 @@ otro sitio, no aquí.""",
         default="low",
         group="Razonamiento",
         impact=Impact.NONE,
+        scope="engine",
         choices=("low", "medium", "high", "max"),
         doc=_THINK_EFFORT_DOC,
     ),
@@ -333,6 +400,7 @@ otro sitio, no aquí.""",
         kind="int",
         default=65536,
         group="Ventana de contexto",
+        scope="engine",
         impact=Impact.CONTEXTS,
         minimum=2048,
         doc=_CONTEXT_WINDOW_DOC,
@@ -343,6 +411,7 @@ otro sitio, no aquí.""",
         kind="int",
         default=4096,
         group="Ventana de contexto",
+        scope="engine",
         impact=Impact.CONTEXTS,
         minimum=2048,
         doc=_CONTEXT_WINDOW_DOC,
@@ -353,6 +422,7 @@ otro sitio, no aquí.""",
         kind="int",
         default=4096,
         group="Ventana de contexto",
+        scope="engine",
         impact=Impact.REINDEX,
         minimum=512,
         doc=_CONTEXT_WINDOW_DOC,
@@ -363,6 +433,7 @@ otro sitio, no aquí.""",
         kind="int",
         default=65536,
         group="Ventana de contexto",
+        scope="engine",
         impact=Impact.CONTEXTS,
         minimum=2048,
         doc=_CONTEXT_WINDOW_OVERRIDES_DOC,
@@ -374,6 +445,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_EXEMPLARS_TRANSCRIBE_DOC + "\n\n" + _VACIO_SENTINEL,
     ),
@@ -384,6 +456,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de escaneo del generador de perfil de ejemplares (exemplars_profile_builder)."
@@ -396,6 +469,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de consolidación del generador de perfil de ejemplares."),
     ),
@@ -406,6 +480,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de contexto del generador de perfil de ejemplares."),
     ),
@@ -416,6 +491,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de extracción del generador del banco de ejemplares."),
     ),
@@ -426,6 +502,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de extracción del constructor del grafo de conocimiento."),
     ),
@@ -436,6 +513,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de fusión de la limpieza del grafo de conocimiento."),
     ),
@@ -446,6 +524,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc("Fase de descarte de la limpieza del grafo de conocimiento."),
     ),
@@ -456,6 +535,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_KG_DOMAINS_DOC + "\n\n" + _VACIO_SENTINEL,
     ),
@@ -466,6 +546,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de colocación de los conceptos sobrantes de la asignación de dominios "
@@ -479,6 +560,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de enlace de relaciones dentro de un mismo dominio del grafo de conocimiento."
@@ -491,6 +573,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de enlace de relaciones entre dominios distintos del grafo de conocimiento."
@@ -503,6 +586,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de revisión de etiquetabilidad de los conceptos del grafo de conocimiento."
@@ -515,6 +599,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de síntesis del contexto de la materia a partir del grafo de conocimiento."
@@ -527,6 +612,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de generación de descripciones de conceptos, en el pipeline en tiempo de "
@@ -540,6 +626,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de etiquetado de conceptos sobre el banco de ejemplares, en el pipeline en "
@@ -553,6 +640,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de generación de variantes de contenido, en el pipeline en tiempo de "
@@ -566,6 +654,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_phase_doc(
             "Fase de admisibilidad: juzga si el texto libre del encargo pide algo que ya "
@@ -582,6 +671,7 @@ otro sitio, no aquí.""",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
+        scope="engine",
         nullable=True,
         doc=_REPAIR_DOC + "\n\n" + _VACIO_SENTINEL,
     ),

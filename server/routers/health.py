@@ -27,13 +27,18 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             running = []
 
     # Ollama reports "name:tag"; config asks for the same form, but be lenient about
-    # a missing tag so a manually pulled model is not reported as absent.
+    # a missing tag so a manually pulled model is not reported as absent. A remotely
+    # served model is never "missing": there is no disk for it to be missing from.
+    remote = inference.remote_models()
     installed_names = {m.split(":")[0] for m in installed}
     missing = sorted(
         {
             model
             for model in required.values()
-            if installed and model not in installed and model.split(":")[0] not in installed_names
+            if installed
+            and model not in remote
+            and model not in installed
+            and model.split(":")[0] not in installed_names
         }
     )
 
@@ -45,6 +50,7 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             "required": required,
             "installed": installed,
             "missing": missing,
+            "remote": sorted(remote & set(required.values())),
             # What the engine has resident right now, with its VRAM and until when. It is the only
             # real measure of what the machine is using: `required` only says what `config.py` names,
             # and a named constant is not a loaded model.

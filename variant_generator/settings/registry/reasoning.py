@@ -117,6 +117,7 @@ def _toggle(phase: str) -> Setting:
         default=default,
         group=GROUP,
         impact=Impact.NONE,
+        scope="engine",
         doc=doc + "\n\n" + _SHARED_DOC,
     )
 

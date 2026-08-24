@@ -335,8 +335,11 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
           </InfoHint>
         </div>
         <CardDescription>
-          {engine.installed.length} en disco ·{" "}
+          {engine.installed.filter((m) => !m.remote).length} en disco ·{" "}
           {bytes(engine.installed.reduce((sum, m) => sum + (m.size ?? 0), 0))}
+          {engine.installed.some((m) => m.remote)
+            ? ` · ${engine.installed.filter((m) => m.remote).length} remoto(s) en Cerebras`
+            : ""}
           {missing.length > 0 ? ` · ${missing.length} que la configuración pide y faltan` : ""}
         </CardDescription>
       </CardHeader>
@@ -409,7 +412,9 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         {model.size ? bytes(model.size) : "—"}
                       </TD>
                       <TD className="px-3 py-2">
-                        {resident.has(model.model) ? (
+                        {model.remote ? (
+                          <Badge variant="outline">remoto</Badge>
+                        ) : resident.has(model.model) ? (
                           <Badge variant="settled">cargado</Badge>
                         ) : (
                           <Badge variant="outline">en disco</Badge>
@@ -422,13 +427,15 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          disabled={asked || remove.isPending || engine.busy}
+                          disabled={Boolean(model.remote) || asked || remove.isPending || engine.busy}
                           title={
-                            asked
-                              ? "Lo pide la configuración: cambia esos ajustes antes"
-                              : engine.busy
-                                ? "Hay un trabajo en curso"
-                                : "Borrar del disco del motor"
+                            model.remote
+                              ? "Se sirve en Cerebras: aquí no hay nada que borrar"
+                              : asked
+                                ? "Lo pide la configuración: cambia esos ajustes antes"
+                                : engine.busy
+                                  ? "Hay un trabajo en curso"
+                                  : "Borrar del disco del motor"
                           }
                           onClick={() => confirmDelete(model.model)}
                         >

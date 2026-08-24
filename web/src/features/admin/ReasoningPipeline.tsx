@@ -176,6 +176,7 @@ function NodeModel({
   const label = `${phase.label}: modelo`;
 
   const describe = (model: InstalledModel) => {
+    if (model.remote) return `${model.model} — remoto (Cerebras)`;
     const vram = residentVram.get(model.model);
     if (vram) return `${model.model} — cargado, ${bytes(vram)} en VRAM`;
     return model.size ? `${model.model} — en disco, ${bytes(model.size)}` : model.model;

@@ -440,20 +440,34 @@ class OllamaEngine:
         logger.info(f"Modelo '{model}' borrado del disco del motor")
 
 
-_ENGINES = {OllamaEngine.name: OllamaEngine}
+_ENGINE_NAMES = ("ollama", "cerebras+ollama")
 
 _engine = None
+
+
+# The hybrid engine lives in its own module and imports this one, so it is reached lazily
+# here rather than at import time — same trick, other direction, as the registry's optional
+# study import.
+def _engine_class(name: str):
+    if name == OllamaEngine.name:
+        return OllamaEngine
+    if name == "cerebras+ollama":
+        from .cerebras import HybridEngine
+
+        return HybridEngine
+    return None
 
 
 def engine():
     global _engine
     if _engine is None:
-        if config.INFERENCE_ENGINE not in _ENGINES:
+        cls = _engine_class(config.INFERENCE_ENGINE)
+        if cls is None:
             raise InferenceError(
                 f"Unknown inference engine '{config.INFERENCE_ENGINE}'. "
-                f"Available: {', '.join(sorted(_ENGINES))}"
+                f"Available: {', '.join(_ENGINE_NAMES)}"
             )
-        _engine = _ENGINES[config.INFERENCE_ENGINE]()
+        _engine = cls()
     return _engine
 
 
@@ -542,6 +556,13 @@ def installed_models_detail() -> list[dict]:
 
 def running_models() -> list[dict]:
     return engine().running_models()
+
+
+# Which of the engine's models are served remotely — empty on a purely local engine. It is
+# what lets a screen say «remoto» instead of pretending a hosted model sits on the disk.
+def remote_models() -> frozenset[str]:
+    remote = getattr(engine(), "remote_models", None)
+    return remote() if callable(remote) else frozenset()
 
 
 def unload(model: str, is_embedding: bool = False) -> bool:

@@ -409,6 +409,7 @@ function ModelSelect({
   const residentVram = new Map(models.running.map((m) => [m.model, m.size_vram]));
 
   const describe = (model: InstalledModel) => {
+    if (model.remote) return `${model.model} — remoto (Cerebras)`;
     const vram = residentVram.get(model.model);
     if (vram) return `${model.model} — cargado, ${bytes(vram)} en VRAM`;
     return model.size ? `${model.model} — en disco, ${bytes(model.size)}` : model.model;

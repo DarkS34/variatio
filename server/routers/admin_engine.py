@@ -56,6 +56,7 @@ def engine() -> dict:
         asked_by.setdefault(model, []).append(name)
     on_disk = {info["model"] for info in installed}
     resident = {info["model"] for info in running}
+    remote = inference.remote_models()
 
     return {
         "engine": inference.engine_name(),
@@ -70,7 +71,9 @@ def engine() -> dict:
             {
                 "model": model,
                 "asked_by": names,
-                "state": "cargado"
+                "state": "remoto"
+                if model in remote
+                else "cargado"
                 if model in resident
                 else "en disco"
                 if model in on_disk
@@ -107,6 +110,8 @@ def release(admin: User = Depends(auth.require_admin)) -> dict:
 
 @router.post("/engine/models/pull", status_code=202)
 def pull_model(body: ModelBody, admin: User = Depends(auth.require_admin)) -> dict:
+    if body.model in inference.remote_models():
+        raise HTTPException(422, f"'{body.model}' se sirve en Cerebras; no hay nada que descargar.")
     if not inference.is_available():
         raise HTTPException(503, "El motor no responde: no puede descargar nada.")
     try:

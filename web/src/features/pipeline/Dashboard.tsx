@@ -224,6 +224,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
         model,
         settings: settings.sort(),
         missing: models.missing.includes(model),
+        remote: (models.remote ?? []).includes(model),
         loaded: resident.some((entry) => entry.model === model),
       }))
       .sort((a, b) => b.settings.length - a.settings.length || a.model.localeCompare(b.model));
@@ -306,11 +307,13 @@ function ModelsRow({ models }: { models: Health["models"] }) {
               Los que pide la instancia ({required.length})
             </h3>
             <ul className="space-y-2">
-              {required.map(({ model, settings, missing, loaded }) => (
+              {required.map(({ model, settings, missing, remote, loaded }) => (
                 <li key={model} className="rounded-lg border border-border p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-mono text-body">{model}</code>
-                    {missing ? (
+                    {remote ? (
+                      <Badge variant="outline">remoto</Badge>
+                    ) : missing ? (
                       <Badge variant="danger">sin instalar</Badge>
                     ) : loaded ? (
                       <Badge variant="settled">cargado</Badge>

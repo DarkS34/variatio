@@ -81,7 +81,8 @@ def test_every_phase_key_is_declared_in_the_registry():
 # 111: the ten without one are the four context windows and the study's six, which the
 # study reads through `study.config`, so none of them lands in `variant_generator.config`.
 # The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
-# the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23).
+# the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23). 115 since
+# the hybrid Cerebras engine (2026-08-24): base URL, API key and routing list, all named.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 112
-    assert len(BY_NAME) == 102
+    assert len(REGISTRY) == 115
+    assert len(BY_NAME) == 105
