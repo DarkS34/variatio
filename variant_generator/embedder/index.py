@@ -115,9 +115,15 @@ class Embedder:
             self.concept_descriptions,
         )
 
-    def _exemplars_bank_fingerprint(self) -> str:
+    # `embed_text` renders every indexed field of an item, so its hash is computed once for
+    # the whole bank and threaded through the fingerprint, the reuse test and the cache file,
+    # which used to run four separate passes over the same items.
+    def _text_fingerprints(self, bank: dict) -> dict[str, str]:
+        return {ex_id: self._text_fingerprint(self.embed_text(ex)) for ex_id, ex in bank.items()}
+
+    def _exemplars_bank_fingerprint(self, text_fingerprints: dict[str, str]) -> str:
         return cache.bank_fingerprint(
-            self._embedding_fingerprint(), self.exemplars_bank, self.embed_text
+            self._embedding_fingerprint(), self.exemplars_bank, text_fingerprints
         )
 
     # INDICES -------------------------------------------------------------------------------
@@ -137,7 +143,8 @@ class Embedder:
         cached_texts = self._cached_text_fingerprints
 
         self.exemplars_bank = annotated_bank
-        new_fingerprint = self._exemplars_bank_fingerprint()
+        text_fingerprints = self._text_fingerprints(annotated_bank)
+        new_fingerprint = self._exemplars_bank_fingerprint(text_fingerprints)
 
         if self._cached_exemplars_bank_fingerprint == new_fingerprint and cached_vectors:
             logger.info("Índice del banco al día; no hay nada que vectorizar")
@@ -145,9 +152,8 @@ class Embedder:
 
         reusable = {
             ex_id: cached_vectors[ex_id]
-            for ex_id, ex in annotated_bank.items()
-            if ex_id in cached_vectors
-            and cached_texts.get(ex_id) == self._text_fingerprint(self.embed_text(ex))
+            for ex_id in annotated_bank
+            if ex_id in cached_vectors and cached_texts.get(ex_id) == text_fingerprints[ex_id]
         }
         pending = [ex_id for ex_id in annotated_bank if ex_id not in reusable]
 
@@ -171,13 +177,10 @@ class Embedder:
             self.exemplars_bank_cache_path,
             self.exemplars_bank_index,
             annotated_bank,
-            self.embed_text,
-            self._exemplars_bank_fingerprint(),
+            text_fingerprints,
+            new_fingerprint,
         )
-        self._cached_text_fingerprints = {
-            ex_id: self._text_fingerprint(self.embed_text(ex))
-            for ex_id, ex in annotated_bank.items()
-        }
+        self._cached_text_fingerprints = text_fingerprints
         self._cached_exemplars_bank_fingerprint = new_fingerprint
         self._merge_into_index()
         self._rebuild_matrices()
@@ -235,9 +238,6 @@ class Embedder:
     @staticmethod
     def _prefix(kind: str) -> str:
         return prefix_for(kind)
-
-    def _l2_normalize(self, vec: np.ndarray) -> np.ndarray:
-        return l2_normalize(vec)
 
     # Memoised by PREFIXED text, so the same statement embedded for tagging and for the bank
     # index costs one call.

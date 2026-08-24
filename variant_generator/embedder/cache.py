@@ -40,11 +40,11 @@ def concept_fingerprint(
     return hashlib.md5(f"{embedding}::{payload}".encode()).hexdigest()
 
 
-def bank_fingerprint(embedding: str, bank: dict, embed_text) -> str:
+def bank_fingerprint(embedding: str, bank: dict, text_fingerprints: dict[str, str]) -> str:
     entries = sorted(
         (
             ex_id,
-            text_fingerprint(embed_text(ex)),
+            text_fingerprints[ex_id],
             sorted(ex.get("concepts", [])),
             ex.get("primary_concept") or "",
         )
@@ -108,7 +108,7 @@ def save_bank_cache(
     path: Path,
     index: dict[str, np.ndarray],
     bank: dict,
-    embed_text,
+    text_fingerprints: dict[str, str],
     fingerprint: str,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +116,7 @@ def save_bank_cache(
         ex_id: {
             "concepts": sorted(ex.get("concepts", [])),
             "primary_concept": ex.get("primary_concept"),
-            "text": text_fingerprint(embed_text(ex)),
+            "text": text_fingerprints[ex_id],
         }
         for ex_id, ex in bank.items()
     }
