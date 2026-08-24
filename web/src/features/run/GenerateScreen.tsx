@@ -22,7 +22,14 @@ import {
 } from "@/state/queries";
 
 import { takeDraft } from "./draft";
-import { EMPTY_FORM, GenerateForm, summarize, toParams, type FormState } from "./GenerateForm";
+import {
+  EMPTY_FORM,
+  GenerateForm,
+  fromParams,
+  summarize,
+  toParams,
+  type FormState,
+} from "./GenerateForm";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 
@@ -50,9 +57,12 @@ export function GenerateScreen() {
   const client = useQueryClient();
 
   // A draft left by «Generar más como esta» in «Mis variantes» is the form's starting point;
-  // it is read once and consumed, so a reload starts clean.
-  const [form, setForm] = useState<FormState>(() => takeDraft() ?? EMPTY_FORM);
-  const [editing, setEditing] = useState(false);
+  // it is read once and consumed, so a reload starts clean. It also opens the form: a run
+  // from before is still in the store, and its collapsed bar would hide the very commission
+  // one came here to launch.
+  const [draft] = useState(takeDraft);
+  const [form, setForm] = useState<FormState>(draft ?? EMPTY_FORM);
+  const [editing, setEditing] = useState(Boolean(draft));
 
   const profile = profileQuery.data?.profile ?? null;
   const conceptList = kg.data?.concepts ?? [];
@@ -77,6 +87,14 @@ export function GenerateScreen() {
 
   const savedCount = results.filter((r) => r.saved_id).length;
 
+  // What the run below actually asked for, read off the job and not off the form: the form
+  // is only what is on screen right now, and a reload or a trip to another screen restarts
+  // it at its defaults while the run survives in the store.
+  const commission = useMemo(
+    () => (isGenerate && run?.job ? fromParams(run.job.params) : null),
+    [isGenerate, run],
+  );
+
   // Each item becomes a row of «Mis variantes» the moment it validates; the archive is
   // told so that opening it during a run already lists what arrived.
   useEffect(() => {
@@ -91,8 +109,12 @@ export function GenerateScreen() {
     return error.includes(GUARDRAIL_ERROR) ? error.replace(/^\w+Error:\s*/, "") : null;
   }, [isGenerate, run]);
 
+  // The form has to come back holding the text that was blocked, which it no longer does on
+  // its own once the state and the run have drifted apart: the commission is the run's.
   useEffect(() => {
-    if (blocked) setEditing(true);
+    if (!blocked) return;
+    if (commission) setForm(commission);
+    setEditing(true);
   }, [blocked]);
 
   useEffect(() => {
@@ -105,9 +127,14 @@ export function GenerateScreen() {
 
   const launch = () => submit.mutate({ kind: "generate", params: { ...toParams(form) } });
 
+  // The bar describes and repeats the commission that ran; only with no job to read it from
+  // does it fall back to the form.
+  const again = commission ?? form;
+  const relaunch = () => submit.mutate({ kind: "generate", params: { ...toParams(again) } });
+
   // The collapsed bar re-runs the same parameters without reopening the form, so it has to
   // repeat the one precondition the form checks before it enables its own button.
-  const canLaunch = unlocked && !offline && form.concepts.length > 0;
+  const canLaunch = unlocked && !offline && again.concepts.length > 0;
 
   const hasRun = isGenerate && (running || results.length > 0 || run?.job?.status === "failed");
   const collapsed = hasRun && !editing;
@@ -194,7 +221,7 @@ export function GenerateScreen() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
             <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
-              {summarize(form, profile)}
+              {summarize(again, profile)}
             </p>
             {running ? (
               <Button
@@ -208,18 +235,25 @@ export function GenerateScreen() {
               </Button>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setForm(again);
+                    setEditing(true);
+                  }}
+                >
                   <Pencil />
                   Cambiar el encargo
                 </Button>
                 <Button
                   size="sm"
-                  onClick={launch}
+                  onClick={relaunch}
                   disabled={!canLaunch || submit.isPending}
                   title={offline ?? undefined}
                 >
                   {submit.isPending ? <Spinner /> : <Sparkles />}
-                  {form.n === 1 ? "Generar otra" : `Generar otras ${form.n}`}
+                  {again.n === 1 ? "Generar otra" : `Generar otras ${again.n}`}
                 </Button>
               </>
             )}

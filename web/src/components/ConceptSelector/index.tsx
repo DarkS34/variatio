@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { GraphView, KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,12 @@ export interface ConceptSelectorProps {
   restrictTo?: string[] | null;
   onlyWithExemplars?: boolean;
   /**
+   * The modality being generated. Given, every exemplar count on screen is the count of
+   * THAT modality, because it is the only one the few-shot block may draw from. Null when
+   * the profile declares a single one, where the total already says it.
+   */
+  exemplarType?: string | null;
+  /**
    * Choosing TARGETS keeps this false: a target is what an item is about, and only a
    * taggable concept can be that. Declaring COVERAGE passes it, because a curriculum may
    * legitimately contain non-taggable concepts.
@@ -37,7 +44,14 @@ export interface ConceptSelectorProps {
   showExemplarCount?: boolean;
   title: string;
   open: boolean;
+  /** Dismissing: the X and Escape. The selection is applied as it is made, so it keeps it. */
   onClose: () => void;
+  /**
+   * Being done. It defaults to `onClose` and exists because a caller that is a step in a
+   * form wants the next step opened, which dismissing must not do.
+   */
+  onConfirm?: () => void;
+  confirmLabel?: string;
 }
 
 type ViewMode = "board" | "graph";
@@ -50,11 +64,14 @@ export function ConceptSelector({
   implied,
   restrictTo,
   onlyWithExemplars = false,
+  exemplarType = null,
   allowNonTaggable = false,
   showExemplarCount = true,
   title,
   open,
   onClose,
+  onConfirm,
+  confirmLabel = "Hecho",
 }: ConceptSelectorProps) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("board");
@@ -87,13 +104,21 @@ export function ConceptSelector({
       if (!chosen.has(name)) {
         if (allowed && !allowed.has(name)) continue;
         if (!concept.taggable && !allowNonTaggable) continue;
-        if (onlyWithExemplars && concept.exemplars === 0) continue;
+        if (onlyWithExemplars && !hasExemplars(concept, exemplarType)) continue;
       }
       visible.push(concept);
       selectable.add(name);
     }
     return { visible, selectable, impliedNames };
-  }, [concepts, restrictTo, onlyWithExemplars, allowNonTaggable, chosen, implied]);
+  }, [
+    concepts,
+    restrictTo,
+    onlyWithExemplars,
+    exemplarType,
+    allowNonTaggable,
+    chosen,
+    implied,
+  ]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -274,6 +299,7 @@ export function ConceptSelector({
             selectable={state.selectable}
             colours={colours}
             showExemplarCount={showExemplarCount}
+            exemplarType={exemplarType}
             activeName={flat[cursor] ?? null}
             onToggle={toggle}
             onToggleDomain={toggleDomain}
@@ -288,6 +314,8 @@ export function ConceptSelector({
         colourFor={(name) => colours.get(domainOf.get(name) ?? "")}
         onRemove={toggle}
         onClear={() => onChange([])}
+        onConfirm={onConfirm ?? onClose}
+        confirmLabel={confirmLabel}
       />
     </div>,
     document.body,

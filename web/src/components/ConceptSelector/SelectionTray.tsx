@@ -1,4 +1,4 @@
-import { Lock, X } from "lucide-react";
+import { Check, Lock, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ export function SelectionTray({
   colourFor,
   onRemove,
   onClear,
+  onConfirm,
+  confirmLabel,
 }: {
   selected: string[];
   implied: string[];
@@ -17,6 +19,8 @@ export function SelectionTray({
   colourFor: (concept: string) => string | undefined;
   onRemove: (concept: string) => void;
   onClear: () => void;
+  onConfirm: () => void;
+  confirmLabel: string;
 }) {
   // `total` counts what is on offer, which for every current caller includes everything
   // selected; a caller that broke that invariant would otherwise be announced as having
@@ -25,7 +29,7 @@ export function SelectionTray({
   return (
     <footer className="shrink-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-[110rem] flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-small text-muted-foreground">
             <span className="text-body font-semibold nums text-foreground">
               {selected.length}
@@ -35,15 +39,21 @@ export function SelectionTray({
               <span className="text-primary"> · {implied.length} por prerrequisito</span>
             ) : null}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            disabled={selected.length === 0}
-            title="Quitar todos los conceptos elegidos"
-          >
-            Limpiar
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              disabled={selected.length === 0}
+              title="Quitar todos los conceptos elegidos"
+            >
+              Limpiar
+            </Button>
+            <Button size="sm" onClick={onConfirm}>
+              <Check />
+              {confirmLabel}
+            </Button>
+          </div>
         </div>
 
         <div className="thin-scroll max-h-24 overflow-y-auto">

@@ -110,6 +110,32 @@ export function toParams(state: FormState): GenerateParams {
   return params;
 }
 
+// The exact inverse of `toParams`, and it has to stay its mirror: it is what lets a screen
+// describe the commission that RAN instead of the one on screen. A job carries its own
+// parameters; the form state does not survive a reload or a visit to another screen, so the
+// two drift apart and the collapsed bar ends up quoting the empty form's defaults over the
+// results of a run that asked for something else.
+export function fromParams(params: Record<string, unknown>): FormState {
+  const curriculum = Array.isArray(params.curriculum)
+    ? (params.curriculum as string[])
+    : undefined;
+  return {
+    ...EMPTY_FORM,
+    // `int(params.get("n") or 1)`, as the handler reads it.
+    n: Number(params.n) || 1,
+    concepts: Array.isArray(params.concepts) ? [...(params.concepts as string[])] : [],
+    itemType: (params.item_type as string) || null,
+    // Absent is the workspace's own and `[]` is «sin restricción», exactly as the server
+    // resolves them.
+    useCurriculum: curriculum === undefined || curriculum.length > 0,
+    usePresetCurriculum: curriculum === undefined,
+    curriculum: curriculum ? [...curriculum] : [],
+    decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },
+    instructions: (params.instructions as string) ?? "",
+    think: params.think !== false,
+  };
+}
+
 // The curriculum in force, in words: the form step reads it and so does the one line that
 // replaces the whole form once it is collapsed. One derivation, because two of them drifted
 // apart exactly where it mattered — «currículo de 0» over a request that carries `[]`, which
@@ -316,6 +342,10 @@ export function GenerateForm({
   const typeKey = activeTypeKey(state, profile);
   const typeSpec = activeTypeSpec(state, profile);
   const decided = userDecidedFields(typeSpec);
+  // What every exemplar count on this screen is about. With one modality declared there is
+  // nothing to narrow: the total already counts exactly what the few-shot may draw from.
+  const exemplarType = types.length > 1 ? typeKey : null;
+  const typeLabel = typeSpec?.label || typeKey || "";
   // The resolved key, not `state.itemType`: null there means the profile's first modality,
   // and that is the state the form starts in, so the raw value would leave the query off
   // in the commonest case of all.
@@ -363,8 +393,11 @@ export function GenerateForm({
   const colourFor = (name: string) => colours.get(byName.get(name)?.domain ?? "");
 
   const zeroShot = useMemo(
-    () => state.concepts.filter((name) => !byName.has(name) || !hasExemplars(byName.get(name)!)),
-    [state.concepts, byName],
+    () =>
+      state.concepts.filter(
+        (name) => !byName.has(name) || !hasExemplars(byName.get(name)!, exemplarType),
+      ),
+    [state.concepts, byName, exemplarType],
   );
 
   // The bank is searched with the whole set at once, so one concept with exemplars is
@@ -373,8 +406,10 @@ export function GenerateForm({
   const wholeBatchZeroShot = chosen && zeroShot.length === state.concepts.length;
 
   const withoutExemplars = useMemo(
-    () => concepts.filter((concept) => concept.taggable && !hasExemplars(concept)).length,
-    [concepts],
+    () =>
+      concepts.filter((concept) => concept.taggable && !hasExemplars(concept, exemplarType))
+        .length,
+    [concepts, exemplarType],
   );
   // Anything already chosen stays on screen, so it is not part of what the filter hides.
   const hidden = withoutExemplars - zeroShot.length;
@@ -384,6 +419,20 @@ export function GenerateForm({
     if (next && zeroShot.length > 0) {
       patch({ concepts: state.concepts.filter((name) => !zeroShot.includes(name)) });
     }
+  };
+
+  // Changing modality changes which concepts have exemplars at all, so what was chosen
+  // under the previous one has to pass the filter again — the same pruning `applyFilter`
+  // does when it is switched on. With the filter off nothing is dropped: choosing a
+  // concept the bank cannot illustrate is then a deliberate answer.
+  const chooseType = (key: string) => {
+    const kept = onlyWithExemplars
+      ? state.concepts.filter((name) => {
+          const concept = byName.get(name);
+          return Boolean(concept && hasExemplars(concept, key));
+        })
+      : state.concepts;
+    patch({ itemType: key, decisions: {}, concepts: kept });
   };
 
   // Same rules the generator enforces server-side; failing here is just faster.
@@ -415,6 +464,11 @@ export function GenerateForm({
 
   const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null);
 
+  const filterLabel = exemplarType
+    ? `Solo conceptos con ejemplares de «${typeLabel}»`
+    : "Solo conceptos con ejemplares en el banco";
+  const nextAfterConcepts = decided.length > 0 ? "decisions" : "instructions";
+
   let index = 0;
 
   return (
@@ -436,7 +490,7 @@ export function GenerateForm({
                 <button
                   key={key}
                   type="button"
-                  onClick={() => patch({ itemType: key, decisions: {} })}
+                  onClick={() => chooseType(key)}
                   className={cn(
                     "rounded-lg border p-2.5 text-left transition-colors",
                     active
@@ -523,9 +577,9 @@ export function GenerateForm({
             <Switch
               checked={onlyWithExemplars}
               onCheckedChange={applyFilter}
-              label="Solo conceptos con ejemplares en el banco"
+              label={filterLabel}
             />
-            <span className="text-small font-medium">Solo conceptos con ejemplares en el banco</span>
+            <span className="text-small font-medium">{filterLabel}</span>
             <span className="ml-auto text-[11px] nums text-muted-foreground">
               {onlyWithExemplars
                 ? `${hidden} oculto${hidden === 1 ? "" : "s"} sin ejemplares`
@@ -558,21 +612,23 @@ export function GenerateForm({
         {!onlyWithExemplars && withoutExemplars > 0 ? (
           <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-            Con el filtro apagado puedes elegir conceptos sin ningún ítem en el banco. Si
-            ninguno de los elegidos tiene ejemplares, la generación será zero-shot y la
-            calidad del resultado puede empeorar.
+            {exemplarType
+              ? `Con el filtro apagado puedes elegir conceptos sin ningún ítem de «${typeLabel}» en el banco. Si ninguno de los elegidos tiene ejemplares de esa modalidad, la generación será zero-shot y la calidad del resultado puede empeorar.`
+              : "Con el filtro apagado puedes elegir conceptos sin ningún ítem en el banco. Si ninguno de los elegidos tiene ejemplares, la generación será zero-shot y la calidad del resultado puede empeorar."}
           </p>
         ) : null}
 
         {wholeBatchZeroShot ? (
           <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-            Ningún concepto elegido tiene ejemplares en el banco: se generará en zero-shot.
+            {exemplarType
+              ? `Ningún concepto elegido tiene ejemplares de «${typeLabel}». El few-shot solo toma ejemplares de la modalidad elegida, así que el lote irá en zero-shot salvo que aporte alguno un prerrequisito.`
+              : "Ningún concepto elegido tiene ejemplares en el banco: se generará en zero-shot."}
           </p>
         ) : zeroShot.length > 0 ? (
           <p className="text-small text-muted-foreground">
-            Sin ejemplares propios, pero el lote sí tendrá ejemplos de los demás conceptos:{" "}
-            {zeroShot.join(", ")}.
+            {exemplarType ? "Sin ejemplares de esta modalidad" : "Sin ejemplares propios"}, pero
+            el lote sí tendrá ejemplos de los demás conceptos: {zeroShot.join(", ")}.
           </p>
         ) : null}
 
@@ -772,8 +828,14 @@ export function GenerateForm({
         implied={implied}
         restrictTo={activeCurriculum}
         onlyWithExemplars={onlyWithExemplars}
+        exemplarType={exemplarType}
         open={picking === "concepts"}
         onClose={() => setPicking(null)}
+        onConfirm={() => {
+          setPicking(null);
+          setOpen(state.concepts.length > 0 ? nextAfterConcepts : "concepts");
+        }}
+        confirmLabel="Confirmar y continuar"
       />
 
       {/* Neither `implied` nor `restrictTo`: a curriculum is declared whole and nothing
@@ -790,6 +852,11 @@ export function GenerateForm({
         showExemplarCount={false}
         open={picking === "curriculum"}
         onClose={() => setPicking(null)}
+        onConfirm={() => {
+          setPicking(null);
+          setOpen("concepts");
+        }}
+        confirmLabel="Confirmar y continuar"
       />
     </div>
   );

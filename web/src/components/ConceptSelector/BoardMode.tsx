@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { exemplarCount } from "@/lib/concepts";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,7 @@ export function BoardMode({
   selectable,
   colours,
   showExemplarCount,
+  exemplarType,
   activeName,
   onToggle,
   onToggleDomain,
@@ -20,6 +22,7 @@ export function BoardMode({
   selectable: Set<string>;
   colours: Map<string, string>;
   showExemplarCount: boolean;
+  exemplarType: string | null;
   activeName: string | null;
   onToggle: (concept: string) => void;
   onToggleDomain: (items: KgConcept[], allChosen: boolean) => void;
@@ -92,7 +95,8 @@ export function BoardMode({
                     ? "selected"
                     : "free";
                 const isActive = activeName === concept.name;
-                const zeroShot = showExemplarCount && concept.exemplars === 0;
+                const count = exemplarCount(concept, exemplarType);
+                const zeroShot = showExemplarCount && count === 0;
                 return (
                   <button
                     key={concept.name}
@@ -105,8 +109,10 @@ export function BoardMode({
                         ? "Viene incluido por prerrequisito de lo que ya has elegido"
                         : showExemplarCount
                           ? zeroShot
-                            ? "Sin ejemplos en el banco: se generará en zero-shot"
-                            : `${concept.exemplars} ejemplo(s) en el banco`
+                            ? exemplarType
+                              ? "Sin ejemplos de esta modalidad en el banco"
+                              : "Sin ejemplos en el banco: se generará en zero-shot"
+                            : `${count} ejemplo(s) ${exemplarType ? "de esta modalidad " : ""}en el banco`
                           : undefined
                     }
                     className={cn(
@@ -140,7 +146,7 @@ export function BoardMode({
                               : "text-muted-foreground",
                           )}
                         >
-                          {concept.exemplars}
+                          {count}
                         </span>
                       )
                     ) : null}
