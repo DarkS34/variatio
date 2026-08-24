@@ -118,8 +118,9 @@ RELATION_SCHEMA_EN = RelationSchema(
             key="prerequisite",
             verbose="has as a prerequisite",
             definition=(
-                "the SOURCE presupposes or needs the TARGET; the TARGET must be mastered "
-                "BEFORE the SOURCE."
+                "the SOURCE presupposes or needs the TARGET: the TARGET must be mastered "
+                "BEFORE the SOURCE. It states teaching order, never containment — if the "
+                "SOURCE is a case or a component of the TARGET, this is not the relation."
             ),
             reading="to learn SOURCE you must first know TARGET",
             examples=(
@@ -132,30 +133,20 @@ RELATION_SCHEMA_EN = RelationSchema(
             use_in_embedding=False,
         ),
         RelationType(
-            key="is_a",
-            verbose="is a kind of",
-            definition="the SOURCE is a TYPE, case or subclass of the TARGET.",
-            reading="SOURCE is a kind of TARGET",
-            examples=(
-                ("Whale", "Mammal"),
-                ("Sonnet", "Poem"),
-                ("Equilateral triangle", "Triangle"),
-            ),
-            directed=True,
-            acyclic=False,
-            use_in_embedding=True,
-        ),
-        RelationType(
-            key="part_of",
-            verbose="is part of",
+            key="falls_under",
+            verbose="falls under",
             definition=(
-                "the SOURCE is a COMPONENT of the TARGET; the TARGET is the whole that contains it."
+                "the SOURCE falls under the TARGET: it is a type, a case or a component of "
+                "it, and the TARGET is the category or the whole that subsumes it. Do not "
+                "agonise over type versus part — what matters is the direction, from the "
+                "specific to the general, between two DISTINCT concepts."
             ),
-            reading="SOURCE is part of TARGET",
+            reading="SOURCE is a kind or a part of TARGET",
             examples=(
+                ("Equilateral triangle", "Triangle"),
                 ("Nucleus", "Cell"),
+                ("Sonnet", "Poem"),
                 ("Chorus", "Song"),
-                ("Engine", "Car"),
             ),
             directed=True,
             acyclic=False,
@@ -165,7 +156,9 @@ RELATION_SCHEMA_EN = RelationSchema(
             key="related_to",
             verbose="is related to",
             definition=(
-                "a genuine semantic association that does not cleanly fit any of the types above."
+                "a genuine semantic association that does not cleanly fit any of the types "
+                "above. It is the last resort: never use it to restate a fact another "
+                "relation already expresses between the same two concepts."
             ),
             reading="SOURCE and TARGET are semantically associated",
             examples=(
@@ -192,8 +185,9 @@ RELATION_SCHEMA_ES = RelationSchema(
             key="prerrequisito",
             verbose="tiene como prerrequisito",
             definition=(
-                "el ORIGEN presupone o necesita el DESTINO; el DESTINO debe dominarse "
-                "ANTES que el ORIGEN."
+                "el ORIGEN presupone o necesita el DESTINO: el DESTINO debe dominarse "
+                "ANTES que el ORIGEN. Expresa orden de aprendizaje, nunca pertenencia — "
+                "si el ORIGEN es un caso o un componente del DESTINO, la relación no es esta."
             ),
             reading="para aprender ORIGEN hay que saber antes DESTINO",
             examples=(
@@ -206,30 +200,20 @@ RELATION_SCHEMA_ES = RelationSchema(
             use_in_embedding=False,
         ),
         RelationType(
-            key="es_un",
-            verbose="es un tipo de",
-            definition="el ORIGEN es un TIPO, caso o subclase del DESTINO.",
-            reading="ORIGEN es un tipo de DESTINO",
-            examples=(
-                ("Ballena", "Mamífero"),
-                ("Soneto", "Poema"),
-                ("Triángulo equilátero", "Triángulo"),
-            ),
-            directed=True,
-            acyclic=False,
-            use_in_embedding=True,
-        ),
-        RelationType(
-            key="parte_de",
-            verbose="es parte de",
+            key="se_engloba_en",
+            verbose="se engloba en",
             definition=(
-                "el ORIGEN es un COMPONENTE del DESTINO; el DESTINO es el todo que lo contiene."
+                "el ORIGEN se engloba en el DESTINO: es un tipo, un caso o un componente "
+                "suyo, y el DESTINO es la categoría o el todo que lo abarca. No te "
+                "detengas en si es tipo o parte — lo que importa es la dirección, de lo "
+                "concreto a lo general, entre dos conceptos DISTINTOS."
             ),
-            reading="ORIGEN es parte de DESTINO",
+            reading="ORIGEN es un tipo o una parte de DESTINO",
             examples=(
+                ("Triángulo equilátero", "Triángulo"),
                 ("Núcleo", "Célula"),
+                ("Soneto", "Poema"),
                 ("Estribillo", "Canción"),
-                ("Motor", "Automóvil"),
             ),
             directed=True,
             acyclic=False,
@@ -239,8 +223,9 @@ RELATION_SCHEMA_ES = RelationSchema(
             key="relacionado",
             verbose="se relaciona con",
             definition=(
-                "una asociación semántica genuina que no encaja limpiamente en ninguno de los "
-                "tipos anteriores."
+                "una asociación semántica genuina que no encaja limpiamente en ninguno de "
+                "los tipos anteriores. Es el último recurso: nunca la uses para repetir un "
+                "hecho que otra relación ya expresa entre los mismos dos conceptos."
             ),
             reading="ORIGEN y DESTINO están asociados semánticamente",
             examples=(
