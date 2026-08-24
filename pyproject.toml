@@ -9,14 +9,21 @@ dependencies = [
     "networkx>=3.4.2",
     "numpy>=2.2.6",
     "ollama>=0.4.7",
-    "scipy>=1.15.3",
     "tqdm>=4.67.3",
     "json-repair>=0.59.5",
     "pydantic>=2.11.2",
 ]
 
-# Authoring-only. Docling drags ~540 MB (torch, transformers, docling-parse) that the
-# runtime pipeline never touches; it is imported lazily in builders/_source_docs.py.
+# The runtime core above measures 57.4 MB in a clean venv, of which numpy is 44. It was 172.9
+# until scipy left it on 2026-08-24: added by `1641d9b` with the embedding system and imported
+# by nothing in the repository since — the whole 115 MB paid for an import that never happened.
+# Docling still depends on it, so a `builders` install is unchanged; re-measure before adding
+# anything back.
+#
+# Authoring-only. Docling drags ~700 MB (torch, transformers, opencv, rapidocr, scipy, pandas,
+# docling-parse) that the runtime pipeline never touches; it is imported lazily in
+# builders/_source_docs/files.py, behind a `LazyConverter` that resolves at the one point a
+# converter is used — so a PDF corpus (page transcription) or a cached one never builds it.
 
 [project.optional-dependencies]
 # pypdfium2 arrives with Docling anyway, but `_source_docs.page_images` imports it
