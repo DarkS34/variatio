@@ -5,7 +5,6 @@ import warnings
 from loguru import logger
 
 from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES
-from .core import inference
 
 for name in NOISY_LOGGERS:
     logging.getLogger(name).setLevel(logging.ERROR)
@@ -31,7 +30,12 @@ logger.add(
     colorize=True,
 )
 
+# Imported here and not at module scope: `core.inference` pulls in the ollama SDK, httpx and
+# tqdm, which is 364 ms of the 510 ms `import variant_generator` used to cost — paid by every
+# CLI invocation, every test collection and every module that only wanted a loader.
 def bootstrap() -> None:
+    from .core import inference
+
     if not inference.is_available():
         msg = f"Cannot connect to inference engine '{inference.engine_name()}'. Make sure it is running before initializing the agent."
         logger.critical(msg)
