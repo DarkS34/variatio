@@ -227,6 +227,8 @@ export interface KgConcept {
   degree: number;
   description: string | null;
   exemplars: number;
+  /** Only the modalities the bank's items declare; an untyped item is in `exemplars` alone. */
+  exemplars_by_type: Record<string, number>;
 }
 
 export interface KgSummary {

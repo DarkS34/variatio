@@ -12,6 +12,7 @@ from pathlib import Path
 
 from variant_generator import stages
 from variant_generator.core.workspace import Workspace
+from variant_generator.instance.exemplars_profile import ITEM_TYPE_KEY
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
@@ -43,9 +44,18 @@ def summary(ws: Workspace) -> dict:
     descriptions = stages.load_concept_descriptions(ws)
 
     exemplars: dict[str, int] = {}
+    # Keyed by the modality the item DECLARES, so this stays a fact about the bank alone:
+    # the graph screen has no upstreams and must not start reading the exemplars profile.
+    # An item with no `item_type` is counted in the total and in no modality, which is what
+    # `VariantGenerator._is_type` does whenever the profile declares more than one.
+    by_type: dict[str, dict[str, int]] = {}
     for item in _bank(ws).values():
+        declared = item.get(ITEM_TYPE_KEY)
         for concept in item.get("concepts") or []:
             exemplars[concept] = exemplars.get(concept, 0) + 1
+            if declared:
+                counts = by_type.setdefault(concept, {})
+                counts[declared] = counts.get(declared, 0) + 1
 
     degrees: dict[str, int] = dict.fromkeys(graph.all_concepts, 0)
     for nx_graph in graph.graphs.values():
@@ -61,6 +71,7 @@ def summary(ws: Workspace) -> dict:
             "degree": degrees.get(name, 0),
             "description": descriptions.get(name),
             "exemplars": exemplars.get(name, 0),
+            "exemplars_by_type": by_type.get(name, {}),
         }
         for name in graph.all_concepts
     ]
