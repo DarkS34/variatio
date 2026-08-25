@@ -45,6 +45,17 @@ def test_the_outline_block_names_the_document_only_when_there_is_more_than_one()
     assert "apuntes.pdf" in many
 
 
+def test_every_number_the_block_prints_resolves_back_to_that_same_entry():
+    lines = blocks.outline_block(OUTLINE, []).splitlines()
+    assert len(lines) == len(OUTLINE)
+    proposed = [
+        {"name": f"U{line.split('.', 1)[0]}", "opens_at": int(line.split(".", 1)[0])}
+        for line in lines
+    ]
+    accepted = curation.accept_units(proposed, OUTLINE)
+    assert [unit["heading"] for unit in accepted] == [entry["heading"] for entry in OUTLINE]
+
+
 # VERIFICATION --------------------------------------------------------------------------
 
 

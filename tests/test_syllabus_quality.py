@@ -51,13 +51,6 @@ def test_the_number_of_units_is_a_syllabus_and_not_a_table_of_contents():
     assert MIN_UNITS <= len(units) <= MAX_UNITS, [u["name"] for u in units]
 
 
-def test_every_opening_heading_appears_verbatim_in_the_outline():
-    stored = sources()
-    headings = {entry["heading"] for entry in stored["outline"]}
-    invented = [u for u in stored["units"] if u["heading"] not in headings]
-    assert invented == [], invented
-
-
 def test_no_unit_of_the_graph_ends_up_empty():
     empty = [d for d, members in graph()["concepts_by_domains"].items() if not members]
     assert empty == []
