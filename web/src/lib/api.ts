@@ -226,6 +226,8 @@ export const api = {
     patch<{ pipeline: Pipeline }>("/api/kg/domains", { name, new_name: newName }),
   deleteDomain: (name: string, moveTo?: string) =>
     post<{ pipeline: Pipeline }>("/api/kg/domains/delete", { name, move_to: moveTo ?? null }),
+  reorderDomains: (order: string[]) =>
+    put<{ pipeline: Pipeline }>("/api/kg/domains/order", { order }),
 
   addConcept: (name: string, domain: string, taggable = true) =>
     post<{ pipeline: Pipeline }>("/api/kg/concepts", { name, domain, taggable }),

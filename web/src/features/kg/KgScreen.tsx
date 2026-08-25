@@ -2,6 +2,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   FolderPlus,
   Link2,
   ListChecks,
@@ -382,6 +384,15 @@ function GraphExplorer() {
   const domains = (kg.data?.domains ?? []).map((d) => d.name);
   const relations = (kg.data?.relations ?? []).map((r) => r.name);
 
+  const moveDomain = (name: string, delta: number) => {
+    const from = domains.indexOf(name);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= domains.length) return;
+    const next = [...domains];
+    next.splice(to, 0, ...next.splice(from, 1));
+    api.reorderDomains(next).then(refresh).catch((e) => setError(e.message));
+  };
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return concepts.filter(
@@ -617,7 +628,7 @@ function GraphExplorer() {
         {/* One home for the domains: the chip filters the canvas and the list, and carries
             its own rename and delete, so the screen stops repeating them in a card below. */}
         <span className="flex flex-wrap items-center gap-1">
-          <span className="mr-1 text-muted-foreground">Dominios:</span>
+          <span className="mr-1 text-muted-foreground">Unidades del temario:</span>
           {graph.data.groups.map((group, index) => (
             <span
               key={group.name}
@@ -642,6 +653,24 @@ function GraphExplorer() {
               </button>
               {locked ? null : (
                 <>
+                  <button
+                    aria-label={`Mover ${group.name} hacia atrás en el temario`}
+                    title="Antes en el temario"
+                    disabled={domains.indexOf(group.name) <= 0}
+                    onClick={() => moveDomain(group.name, -1)}
+                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronLeft className="size-3" />
+                  </button>
+                  <button
+                    aria-label={`Mover ${group.name} hacia adelante en el temario`}
+                    title="Después en el temario"
+                    disabled={domains.indexOf(group.name) >= domains.length - 1}
+                    onClick={() => moveDomain(group.name, 1)}
+                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronRight className="size-3" />
+                  </button>
                   <button
                     aria-label={`Renombrar ${group.name}`}
                     title="Renombrar"
