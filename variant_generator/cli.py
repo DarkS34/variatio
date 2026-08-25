@@ -127,7 +127,8 @@ def main(argv: list[str] | None = None) -> int:
     ws = paths.workspace(args.workspace)
 
     try:
-        bootstrap()
+        if args.command != "restamp-descriptions":
+            bootstrap()
         if args.command == "build":
             built = stages.build_missing(ws)
             if built:
