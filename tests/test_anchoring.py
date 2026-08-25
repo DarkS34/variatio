@@ -252,3 +252,58 @@ def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
     assert loaded["definitions"] == {"A": "una idea"}
     assert loaded["units"] == [{"name": "Uno", "heading": "Tema I", "chunk": 2}]
     assert loaded["documents"] == ["d.pdf"]
+
+
+def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path, monkeypatch):
+    from variant_generator.embedder import ConceptDescriber, load_descriptions
+    from variant_generator.instance.content_context import ContentContext
+    from variant_generator.instance.knowledge_graph import KnowledgeGraph
+
+    graph_path = tmp_path / "kg.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "concepts_by_domains": {"Viejo": ["A", "B"]},
+                "generic_non_taggable_concepts": [],
+                "relations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    descriptions_path = tmp_path / "concept_descriptions.json"
+    descriptions_path.write_text(
+        json.dumps({"A": "texto de A", "B": "texto de B"}), encoding="utf-8"
+    )
+    context = ContentContext(
+        {"subject": "X", "educational_level": "Y", "language_of_instruction": "es"}
+    )
+
+    def describer(path):
+        return ConceptDescriber(
+            KnowledgeGraph(str(path)),
+            context,
+            path=descriptions_path,
+            sources_path=tmp_path / "concept_sources.json",
+        )
+
+    changed, total = describer(graph_path).restamp()
+    assert (changed, total) == (2, 2)
+
+    graph_path.write_text(
+        json.dumps(
+            {
+                "concepts_by_domains": {"Tema I": ["A"], "Tema II": ["B"]},
+                "generic_non_taggable_concepts": [],
+                "relations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dry = describer(graph_path)
+    assert dry.restamp(dry_run=True) == (2, 2)
+    assert dry.restamp(dry_run=True) == (2, 2)
+
+    assert describer(graph_path).restamp() == (2, 2)
+    assert describer(graph_path).restamp() == (0, 2)
+    assert load_descriptions(descriptions_path) == {"A": "texto de A", "B": "texto de B"}

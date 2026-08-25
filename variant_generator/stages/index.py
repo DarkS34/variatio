@@ -41,6 +41,24 @@ def describe_concepts(
     return descriptions
 
 
+def restamp_descriptions(
+    ws: Workspace | None = None, dry_run: bool = False
+) -> tuple[int, int]:
+    changed, total = _describer(ws).restamp(dry_run=dry_run)
+    if dry_run:
+        logger.info(
+            f"{changed} de {total} descripción(es) se reescribirían con el grafo actual"
+        )
+    elif changed:
+        logger.success(
+            f"{changed} de {total} descripción(es) resselladas contra el grafo actual; "
+            "no se ha reescrito ningún texto"
+        )
+    else:
+        logger.info(f"{total} descripción(es) ya estaban selladas contra el grafo actual")
+    return changed, total
+
+
 # Writing descriptions requires the graph and the profile, because they have to be
 # composed; READING them requires neither, and routing it through `_describer` tied the
 # graph screen to the exemplars profile — an artifact the graph does not have as an

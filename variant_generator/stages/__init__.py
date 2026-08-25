@@ -23,6 +23,7 @@ from .index import (
     describe_concepts,
     load_concept_descriptions,
     load_concept_sources,
+    restamp_descriptions,
     save_concept_descriptions,
 )
 from .initialize import PipelineContext, initialize
@@ -51,6 +52,7 @@ __all__ = [
     "load_concept_sources",
     "load_content_context",
     "missing_artifacts",
+    "restamp_descriptions",
     "save_bank",
     "save_concept_descriptions",
     "tag_bank",

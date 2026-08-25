@@ -29,6 +29,17 @@ def build_parser() -> argparse.ArgumentParser:
         "init", parents=[common], help="load the instance, tag the exemplars bank and warm the indices"
     )
 
+    restamp = subparsers.add_parser(
+        "restamp-descriptions",
+        parents=[common],
+        help="re-stamp the description fingerprints against the current graph, keeping every text",
+    )
+    restamp.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="only count how many descriptions the current graph would rewrite",
+    )
+
     generate = subparsers.add_parser(
         "generate", parents=[common], help="initialize, then generate new items"
     )
@@ -125,6 +136,9 @@ def main(argv: list[str] | None = None) -> int:
                 logger.info("Todos los artefactos de la instancia ya existen")
         elif args.command == "init":
             stages.initialize(tag=True, ws=ws)
+        elif args.command == "restamp-descriptions":
+            changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+            print(f"{changed} de {total} descripción(es) {'se reescribirían' if args.dry_run else 'resselladas'}")
         elif args.command == "generate":
             _generate_and_report(args, ws)
         elif args.command == "all":

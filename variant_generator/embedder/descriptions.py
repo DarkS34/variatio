@@ -205,6 +205,16 @@ class ConceptDescriber:
         merged = {**self._load_fingerprints(), **fingerprints}
         write_json(self.fingerprints_path, merged, sort_keys=True)
 
+    def restamp(self, dry_run: bool = False) -> tuple[int, int]:
+        descriptions = self.load()
+        written = [c for c in self.knowledge_graph.taggable_concepts if descriptions.get(c)]
+        current = {c: self._fingerprint(c) for c in written}
+        stored = self._load_fingerprints()
+        changed = sum(1 for c in written if stored.get(c) != current[c])
+        if not dry_run:
+            self._save_fingerprints(current)
+        return changed, len(written)
+
     def _pending(
         self, targets: list[str], descriptions: dict[str, str], current: dict[str, str]
     ) -> list[str]:
