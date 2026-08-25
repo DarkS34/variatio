@@ -43,6 +43,7 @@ import {
   effortWarning,
   type EffortLevel,
 } from "./effort";
+import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
 
@@ -452,6 +453,31 @@ export function GenerateForm({
     }
   };
 
+  // The steps actually on screen, in order. It is derived and not a constant because which
+  // of them exist depends on the state: with a single modality declared there is nothing to
+  // ask first, and the last two only appear once something has been chosen. It is also the
+  // one place that order is written down — before this, the step after the concepts was
+  // hardcoded in two more.
+  const steps = [
+    types.length > 1 ? "itemType" : null,
+    "curriculum",
+    "concepts",
+    chosen && decided.length > 0 ? "decisions" : null,
+    chosen ? "instructions" : null,
+  ].filter((id): id is string => id !== null);
+
+  const openStep = open === undefined ? steps[0] : open;
+  const step = (id: string) => ({
+    open: openStep === id,
+    onOpen: () => setOpen(openStep === id ? null : id),
+  });
+
+  // Answering a step opens the next one. The rule is narrow on purpose: only a gesture that
+  // leaves NOTHING else to decide in that step calls this, because collapsing a question the
+  // person is still in the middle of is worse than the click it saves. Turning the curriculum
+  // on is the case that proves it — it is not an answer, it opens two more.
+  const advance = (from: string) => setOpen(steps[steps.indexOf(from) + 1] ?? null);
+
   // Changing modality changes which concepts have exemplars at all, so what was chosen
   // under the previous one has to pass the filter again — the same pruning `applyFilter`
   // does when it is switched on. With the filter off nothing is dropped: choosing a
@@ -464,6 +490,7 @@ export function GenerateForm({
         })
       : state.concepts;
     patch({ itemType: key, decisions: {}, concepts: kept });
+    advance("itemType");
   };
 
   // Same rules the generator enforces server-side; failing here is just faster.
@@ -482,13 +509,6 @@ export function GenerateForm({
     return found;
   }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions]);
 
-  const firstStep = types.length > 1 ? "itemType" : "curriculum";
-  const openStep = open === undefined ? firstStep : open;
-  const step = (id: string) => ({
-    open: openStep === id,
-    onOpen: () => setOpen(openStep === id ? null : id),
-  });
-
   const decisionSummary = decided
     .map((field) => describeDecision(field, state.decisions[field]))
     .join(" · ");
@@ -498,7 +518,6 @@ export function GenerateForm({
   const filterLabel = exemplarType
     ? `Solo conceptos con ejemplares de «${typeLabel}»`
     : "Solo conceptos con ejemplares en el banco";
-  const nextAfterConcepts = decided.length > 0 ? "decisions" : "instructions";
 
   let index = 0;
 
@@ -560,7 +579,11 @@ export function GenerateForm({
         <div className="flex flex-wrap items-center gap-2">
           <Switch
             checked={state.useCurriculum}
-            onCheckedChange={(useCurriculum) => patch({ useCurriculum })}
+            onCheckedChange={(useCurriculum) => {
+              patch({ useCurriculum });
+              // Only switching it OFF closes the question. On, it opens the two below.
+              if (!useCurriculum) advance("curriculum");
+            }}
             label="Restringir a un currículo"
           />
           <span className="text-body font-medium">Restringir a un currículo</span>
@@ -572,7 +595,12 @@ export function GenerateForm({
               <div className="flex flex-wrap items-center gap-2">
                 <Switch
                   checked={state.usePresetCurriculum}
-                  onCheckedChange={(usePresetCurriculum) => patch({ usePresetCurriculum })}
+                  onCheckedChange={(usePresetCurriculum) => {
+                    patch({ usePresetCurriculum });
+                    // Taking the preset decides the whole curriculum; refusing it uncovers
+                    // the button that picks one by hand, so only the first way is an answer.
+                    if (usePresetCurriculum) advance("curriculum");
+                  }}
                   label={`Usar el currículo preestablecido (${preset.concepts.length} conceptos)`}
                 />
                 <span className="text-body">
@@ -803,29 +831,12 @@ export function GenerateForm({
                 </span>
               </div>
               {state.think ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <div
-                    role="group"
-                    aria-label="Esfuerzo de razonamiento"
-                    className="flex overflow-hidden rounded-md border border-border"
-                  >
-                    {policy.levels.map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        aria-pressed={level === effort}
-                        onClick={() => patch({ effort: level })}
-                        className={cn(
-                          "px-2.5 py-1 text-small transition-colors",
-                          level === effort
-                            ? "bg-primary font-medium text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {EFFORT_LABELS[level]}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <EffortSlider
+                    levels={policy.levels}
+                    value={effort}
+                    onChange={(level) => patch({ effort: level })}
+                  />
                   {generationModel ? (
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {generationModel}
@@ -903,7 +914,9 @@ export function GenerateForm({
         onClose={() => setPicking(null)}
         onConfirm={() => {
           setPicking(null);
-          setOpen(state.concepts.length > 0 ? nextAfterConcepts : "concepts");
+          // Confirming an empty selection answers nothing: the step stays open, which is
+          // where it already was.
+          if (state.concepts.length > 0) advance("concepts");
         }}
         confirmLabel="Confirmar y continuar"
       />
@@ -924,7 +937,7 @@ export function GenerateForm({
         onClose={() => setPicking(null)}
         onConfirm={() => {
           setPicking(null);
-          setOpen("concepts");
+          advance("curriculum");
         }}
         confirmLabel="Confirmar y continuar"
       />
