@@ -10,6 +10,7 @@ PHASES = {
     "models.phases.kg_extract": "KG_EXTRACT_MODEL",
     "models.phases.kg_clean_merge": "KG_CLEAN_MERGE_MODEL",
     "models.phases.kg_clean_drop": "KG_CLEAN_DROP_MODEL",
+    "models.phases.kg_units": "KG_UNITS_MODEL",
     "models.phases.kg_domains": "KG_DOMAINS_MODEL",
     "models.phases.kg_domains_leftovers": "KG_DOMAINS_LEFTOVERS_MODEL",
     "models.phases.kg_link_domain": "KG_LINK_DOMAIN_MODEL",

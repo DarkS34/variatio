@@ -494,6 +494,20 @@ otro sitio, no aquí.""",
         doc=_phase_doc("Fase de descarte de la limpieza del grafo de conocimiento."),
     ),
     Setting(
+        key="models.phases.kg_units",
+        name="KG_UNITS_MODEL",
+        kind="str",
+        default=None,
+        group="Modelos",
+        impact=Impact.CONTEXTS,
+        scope="engine",
+        nullable=True,
+        doc=_phase_doc(
+            "Fase de segmentación del temario del grafo de conocimiento: lee el índice de "
+            "encabezados del corpus y dice cuáles abren unidad didáctica."
+        ),
+    ),
+    Setting(
         key="models.phases.kg_domains",
         name="KG_DOMAINS_MODEL",
         kind="str",

@@ -49,6 +49,15 @@ limpios pasó de 1 descarte a 20, llevándose «Cohesión», «El método de la 
 descartado aquí desaparece del grafo para siempre. Apagarlo es aceptar esa pérdida a cambio
 del tiempo."""
 
+_KG_UNITS_DOC = """Segmentar el índice de encabezados del corpus en unidades didácticas es una lectura acotada
+—unas pocas decenas de líneas numeradas, y la respuesta son un puñado de nombres con su
+posición— así que va con gramática y apagado por defecto, como el resto de las llamadas
+acotadas del constructor. La verificación posterior es lo que sostiene la respuesta: cada
+`opens_at` se comprueba contra el índice antes de creerlo, porque una gramática fija las
+claves y no los valores. Encenderlo quita la gramática y deja la forma en manos del
+analizador; con menos de dos unidades supervivientes la fase entera cae al camino anterior,
+que nombra los dominios sin mirar la estructura del material."""
+
 _KG_DOMAINS_DOC = """LA FASE QUE TUVO QUE RENUNCIAR AL RAZONAMIENTO, y está medido: pedida la partición del
 inventario entero, el modelo enumeró dentro del canal de razonamiento durante 36 929
 caracteres, llegó a su token de parada en el concepto 60 y devolvió una respuesta VACÍA
@@ -96,6 +105,7 @@ _DEFAULTS = {
     "kg_extract": (False, _KG_EXTRACT_DOC),
     "kg_clean_merge": (True, _KG_CLEAN_MERGE_DOC),
     "kg_clean_drop": (True, _KG_CLEAN_DROP_DOC),
+    "kg_units": (False, _KG_UNITS_DOC),
     "kg_domains": (False, _KG_DOMAINS_DOC),
     "kg_domains_leftovers": (False, _KG_DOMAINS_LEFTOVERS_DOC),
     "kg_link_domain": (True, _KG_LINK_DOC),
@@ -227,6 +237,11 @@ PIPELINE: tuple[Lane, ...] = (
             _switch("kg_extract", "Extracción"),
             _switch("kg_clean_merge", "Fusión"),
             _switch("kg_clean_drop", "Descarte"),
+            _switch(
+                "kg_units",
+                "Temario",
+                "Segmenta el índice del corpus; sin él se nombran los dominios como antes.",
+            ),
             _switch(
                 "kg_domains",
                 "Dominios",

@@ -86,7 +86,9 @@ def test_every_phase_key_is_declared_in_the_registry():
 # 132 since each reasoning switch gained a per-phase effort (2026-08-24), seventeen unnamed
 # `reasoning.effort.*` keys that only `derived` reads to resolve each `THINK_<FASE>`. 131
 # later the same day: the global THINK_EFFORT left, replaced by those per-phase efforts —
-# the boolean callers now map `True` to `inference.DEFAULT_THINK_EFFORT`.
+# the boolean callers now map `True` to `inference.DEFAULT_THINK_EFFORT`. 134 since kg_units
+# (2026-08-25), a phase of its own for segmenting the syllabus: a named model setting, a
+# named reasoning switch and its unnamed per-phase effort.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 131
-    assert len(BY_NAME) == 104
+    assert len(REGISTRY) == 134
+    assert len(BY_NAME) == 106

@@ -74,6 +74,7 @@ def build_models() -> list[str]:
         config.EMBEDDING_LLM,
         config.KG_CLEAN_MERGE_MODEL,
         config.KG_CLEAN_DROP_MODEL,
+        config.KG_UNITS_MODEL,
         config.KG_DOMAINS_MODEL,
         config.KG_DOMAINS_LEFTOVERS_MODEL,
         config.KG_LINK_DOMAIN_MODEL,
