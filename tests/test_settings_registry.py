@@ -83,6 +83,10 @@ def test_every_phase_key_is_declared_in_the_registry():
 # The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
 # the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23). 115 since
 # the hybrid Cerebras engine (2026-08-24): base URL, API key and routing list, all named.
+# 132 since each reasoning switch gained a per-phase effort (2026-08-24), seventeen unnamed
+# `reasoning.effort.*` keys that only `derived` reads to resolve each `THINK_<FASE>`. 131
+# later the same day: the global THINK_EFFORT left, replaced by those per-phase efforts —
+# the boolean callers now map `True` to `inference.DEFAULT_THINK_EFFORT`.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 115
-    assert len(BY_NAME) == 105
+    assert len(REGISTRY) == 131
+    assert len(BY_NAME) == 104

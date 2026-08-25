@@ -286,7 +286,7 @@ class VariantGenerator:
         fixed: dict[str, object] | None = None,
         curriculum: list[str] | None = None,
         instructions: str | None = None,
-        think: bool = True,
+        think: bool | str = True,
         check: bool = True,
         ruling: object | None = None,
         avoid: list[str] | None = None,
@@ -737,7 +737,7 @@ class VariantGenerator:
         return "\n".join(lines)
 
     def _generate_one(
-        self, prompt: str, fixed: dict[str, object], item_type: ItemType, think: bool = True
+        self, prompt: str, fixed: dict[str, object], item_type: ItemType, think: bool | str = True
     ) -> GeneratedVariant | None:
         resp = inference.generate_stream(
             model=self.generator_model,

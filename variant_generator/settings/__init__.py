@@ -167,6 +167,7 @@ def pipeline() -> list[dict]:
                     "label": phase.label,
                     "model": phase.model,
                     "setting": phase.setting,
+                    "effort": phase.effort,
                     "fixed": phase.fixed,
                     "note": phase.note,
                 }

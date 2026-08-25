@@ -208,8 +208,9 @@ export interface GenerateParams {
   fixed?: Record<string, unknown>;
   curriculum?: string[];
   instructions?: string;
-  /** Whether the model deliberates before writing. Absent means yes, as it always did. */
-  think?: boolean;
+  /** Whether the model deliberates before writing: `false` is off, a string names the
+   *  effort level, and absent means yes at the default level, as it always did. */
+  think?: boolean | string;
 }
 
 export interface ProfilePayload {
@@ -679,6 +680,7 @@ export type ReasoningPhase = {
   label: string;
   model: string;
   setting: string | null;
+  effort: string | null;
   fixed: ReasoningFixed | null;
   note: string;
 };
@@ -692,4 +694,10 @@ export type ConfigPayload = {
   /** What the engine offers; both empty when it is unreachable. */
   models: { installed: InstalledModel[]; running: RunningModel[] };
   applied?: string[];
+};
+
+export type CerebrasCatalog = {
+  models: string[];
+  source: "api" | "config";
+  error: string | null;
 };

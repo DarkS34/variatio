@@ -57,6 +57,38 @@ def test_response_format_maps_the_three_shapes():
     assert shaped["json_schema"]["strict"] is True
 
 
+def test_strict_schema_keeps_an_open_map_typed():
+    schema = {
+        "type": "object",
+        "properties": {
+            "domains": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            }
+        },
+        "required": ["domains"],
+    }
+    adapted = cerebras.strict_schema(schema)
+    assert adapted["additionalProperties"] is False
+    assert adapted["properties"]["domains"]["additionalProperties"] == {
+        "type": "array",
+        "items": {"type": "string"},
+    }
+
+
+def test_an_open_map_loses_strict_but_not_the_shape():
+    schema = {
+        "type": "object",
+        "properties": {"drop": {"type": "object", "additionalProperties": {"type": "string"}}},
+        "required": ["drop"],
+    }
+    shaped = cerebras.response_format(schema)
+    assert shaped["json_schema"]["strict"] is False
+    assert shaped["json_schema"]["schema"]["properties"]["drop"]["additionalProperties"] == {
+        "type": "string"
+    }
+
+
 def test_an_oversized_schema_loses_strict_but_not_the_shape():
     huge = {
         "type": "object",
@@ -66,13 +98,41 @@ def test_an_oversized_schema_loses_strict_but_not_the_shape():
     assert shaped["json_schema"]["strict"] is False
 
 
-def test_reasoning_effort_speaks_cerebras(monkeypatch):
-    assert cerebras.reasoning_effort(None) is None
-    assert cerebras.reasoning_effort(False) == "none"
-    monkeypatch.setattr(config, "THINK_EFFORT", "low")
-    assert cerebras.reasoning_effort(True) == "low"
-    monkeypatch.setattr(config, "THINK_EFFORT", "max")
-    assert cerebras.reasoning_effort(True) == "high"
+def test_reasoning_effort_speaks_cerebras():
+    assert cerebras.reasoning_effort(None, "gemma-4-31b") is None
+    assert cerebras.reasoning_effort(False, "gemma-4-31b") == "none"
+    assert cerebras.reasoning_effort(True, "gemma-4-31b") == "low"
+
+
+def test_think_false_floors_at_low_where_reasoning_has_no_off_switch():
+    assert cerebras.reasoning_effort(False, "gpt-oss-120b") == "low"
+
+
+def test_a_per_phase_effort_travels_as_itself():
+    assert cerebras.reasoning_effort("medium", "gemma-4-31b") == "medium"
+    assert cerebras.reasoning_effort("max", "gemma-4-31b") == "high"
+
+
+def test_the_shared_catalog_reuses_one_engine_per_base_url(monkeypatch):
+    built = []
+
+    class Fake:
+        def __init__(self):
+            built.append(self)
+
+        def catalog(self):
+            return ["gemma-4-31b"]
+
+    monkeypatch.setattr(cerebras, "CerebrasEngine", Fake)
+    monkeypatch.setattr(cerebras, "_shared", None)
+    monkeypatch.setattr(cerebras, "_shared_base", None)
+    monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
+    assert cerebras.catalog() == ["gemma-4-31b"]
+    assert cerebras.catalog() == ["gemma-4-31b"]
+    assert len(built) == 1
+    monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "http://localhost:9999/v1")
+    cerebras.catalog()
+    assert len(built) == 2
 
 
 @pytest.fixture
@@ -118,8 +178,7 @@ def _engine_with(handler) -> CerebrasEngine:
     return engine
 
 
-def test_generate_sends_the_translated_call_and_splits_the_reasoning(monkeypatch):
-    monkeypatch.setattr(config, "THINK_EFFORT", "low")
+def test_generate_sends_the_translated_call_and_splits_the_reasoning():
     seen: dict = {}
 
     def handler(request: httpx.Request) -> httpx.Response:

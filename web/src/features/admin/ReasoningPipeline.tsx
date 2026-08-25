@@ -62,6 +62,7 @@ export function ReasoningPipeline({
                 key={phase.key}
                 phase={phase}
                 setting={phase.setting ? byKey.get(phase.setting) ?? null : null}
+                effortSetting={phase.effort ? byKey.get(phase.effort) ?? null : null}
                 modelSetting={byKey.get(phase.model) ?? null}
                 mainName={mainName}
                 draft={draft}
@@ -81,6 +82,7 @@ export function ReasoningPipeline({
 function PhaseNode({
   phase,
   setting,
+  effortSetting,
   modelSetting,
   mainName,
   draft,
@@ -91,6 +93,7 @@ function PhaseNode({
 }: {
   phase: ReasoningPhase;
   setting: ConfigSetting | null;
+  effortSetting: ConfigSetting | null;
   modelSetting: ConfigSetting | null;
   mainName: string | null;
   draft: Record<string, unknown>;
@@ -102,6 +105,9 @@ function PhaseNode({
   const line = <span aria-hidden className="mt-[17px] h-px min-w-3 flex-1 bg-border" />;
   const lead = first ? <span className="min-w-3 flex-1" /> : line;
   const trail = last ? <span className="min-w-3 flex-1" /> : line;
+  const thinks = setting
+    ? Boolean(setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default))
+    : false;
   const residentName = modelSetting
     ? String(
         (modelSetting.key in draft ? draft[modelSetting.key] : modelSetting.value ?? modelSetting.default) ?? "",
@@ -120,6 +126,9 @@ function PhaseNode({
         <span className="text-center text-micro font-condensed uppercase leading-tight text-foreground">
           {phase.label}
         </span>
+        {effortSetting && thinks ? (
+          <NodeEffort phase={phase} setting={effortSetting} draft={draft} onChange={onChange} />
+        ) : null}
         {modelSetting && !modelSetting.key.startsWith("models.phases.") ? (
           <span
             className="max-w-full truncate font-mono text-micro text-muted-foreground"
@@ -140,6 +149,50 @@ function PhaseNode({
       </span>
       {trail}
     </li>
+  );
+}
+
+function NodeEffort({
+  phase,
+  setting,
+  draft,
+  onChange,
+}: {
+  phase: ReasoningPhase;
+  setting: ConfigSetting;
+  draft: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+}) {
+  const pending = setting.key in draft;
+  const raw = pending ? draft[setting.key] : (setting.value ?? setting.default);
+  const value = typeof raw === "string" && raw ? raw : "low";
+  const lockedByEnv = setting.source === "env";
+  const disabled = !setting.editable || lockedByEnv;
+  const title = [
+    `${phase.label}: esfuerzo de razonamiento ${value}`,
+    lockedByEnv ? `lo fija ${setting.env}` : null,
+  ]
+    .filter(Boolean)
+    .join(" — ");
+
+  return (
+    <Select
+      aria-label={`${phase.label}: esfuerzo de razonamiento`}
+      title={title}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(setting.key, event.target.value)}
+      className={cn(
+        "h-7 w-full px-1.5 text-micro",
+        pending && "border-attention ring-1 ring-attention",
+      )}
+    >
+      {(setting.choices ?? []).map((choice) => (
+        <option key={choice} value={choice}>
+          {choice}
+        </option>
+      ))}
+    </Select>
   );
 }
 
@@ -320,7 +373,7 @@ export function ReasoningLegend() {
         </span>
         fija: no depende de un ajuste
       </li>
-      <li>bajo cada nodo, el modelo que atiende esa llamada</li>
+      <li>bajo cada nodo que razona, su esfuerzo y el modelo que atiende la llamada</li>
     </ul>
   );
 }

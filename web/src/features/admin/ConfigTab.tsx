@@ -1,16 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Save, Undo2 } from "lucide-react";
+import {
+  Brain,
+  Cpu,
+  FlaskConical,
+  Hammer,
+  RefreshCw,
+  Save,
+  ScanSearch,
+  ScrollText,
+  SlidersHorizontal,
+  Tags,
+  Undo2,
+  Wrench,
+} from "lucide-react";
 import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner, Switch } from "@/components/ui/misc";
+import { Alert, Checkbox, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { ReasoningLegend, ReasoningPipeline } from "@/features/admin/ReasoningPipeline";
 import type {
   ConfigImpact,
@@ -64,12 +79,102 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+const REASONING_GROUP = "Razonamiento";
+const MODELS_GROUP = "Modelos";
+const PHASE_MODEL_PREFIX = "models.phases.";
+const OTHERS_KEY = "__otros__";
+const CEREBRAS_KEYS = [
+  "engine.cerebras_base_url",
+  "engine.cerebras_api_key",
+  "engine.cerebras_models",
+];
+
+type Section = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  description: string;
+  groups: string[];
+};
+
+// The registry's groups, folded into destinations a person can hold in their head: one
+// sub-page per question the configuration answers, not one flat list of 132 rows. The
+// group names are the server's; a group nobody claims below still gets a page of its own,
+// so a registry addition never disappears from the screen.
+const SECTIONS: Section[] = [
+  {
+    key: "motor",
+    label: "Motor",
+    icon: Cpu,
+    description:
+      "El motor de inferencia, su anfitrión y el túnel SSH hasta la máquina de la GPU.",
+    groups: ["Motor", "Túnel SSH"],
+  },
+  {
+    key: "modelos",
+    label: "Modelos y razonamiento",
+    icon: Brain,
+    description:
+      "El recorrido completo, llamada a llamada: qué modelo atiende cada fase, si razona antes de contestar y con qué esfuerzo.",
+    groups: [MODELS_GROUP, REASONING_GROUP],
+  },
+  {
+    key: "muestreo",
+    label: "Muestreo y contexto",
+    icon: SlidersHorizontal,
+    description:
+      "Las temperaturas de cada tipo de llamada y la ventana de contexto (el KV cache) que se reserva a cada modelo.",
+    groups: ["Muestreo", "Ventana de contexto"],
+  },
+  {
+    key: "constructores",
+    label: "Constructores",
+    icon: Hammer,
+    description:
+      "Cómo se construyen el grafo, el perfil y el banco a partir del corpus en bruto: troceado, fusión, dominios y anclaje.",
+    groups: ["Constructores"],
+  },
+  {
+    key: "recuperacion",
+    label: "Recuperación",
+    icon: ScanSearch,
+    description:
+      "El índice de conceptos: prefijos de embedding, pesos, umbrales y cuántos candidatos se recuperan.",
+    groups: ["Recuperación"],
+  },
+  {
+    key: "generacion",
+    label: "Etiquetado y generación",
+    icon: Tags,
+    description:
+      "El etiquetador del banco y la generación de variantes: ejemplos few-shot, reintentos y el guardián.",
+    groups: ["Etiquetado y generación"],
+  },
+  {
+    key: "evaluacion",
+    label: "Evaluación",
+    icon: FlaskConical,
+    description:
+      "El estudio comparativo: los proveedores externos de los brazos de referencia y el estado de sus claves.",
+    groups: ["Evaluación"],
+  },
+  {
+    key: "registro",
+    label: "Registro",
+    icon: ScrollText,
+    description: "Qué escribe el proceso en su registro y desde qué nivel.",
+    groups: ["Registro"],
+  },
+];
+
 export function ConfigTab() {
   const client = useQueryClient();
   const toast = useToast();
   const query = useQuery({ queryKey: ["admin", "config"], queryFn: api.adminConfig });
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [applied, setApplied] = useState<string[] | null>(null);
+  const [active, setActive] = useState("motor");
+  const [search, setSearch] = useState("");
 
   const invalidate = () => client.invalidateQueries({ queryKey: ["admin", "config"] });
 
@@ -113,11 +218,48 @@ export function ConfigTab() {
   if (!query.data) return null;
   const payload: ConfigPayload = query.data;
 
-  const named = new Set(payload.groups);
-  const orphans = payload.settings.filter((setting) => !named.has(setting.group));
   const stored = new Map(
     payload.settings.map((setting) => [setting.key, setting.value ?? setting.default]),
   );
+  const engineName = String(
+    ("engine.name" in draft ? draft["engine.name"] : stored.get("engine.name")) ?? "ollama",
+  );
+  const hidden = new Set(engineName === "cerebras+ollama" ? [] : CEREBRAS_KEYS);
+  const named = new Set(payload.groups);
+  const orphans = payload.settings.filter((setting) => !named.has(setting.group));
+  const byGroup = (group: string) =>
+    payload.settings.filter((setting) => setting.group === group && !hidden.has(setting.key));
+  const claimed = new Set(SECTIONS.flatMap((section) => section.groups));
+  const sections: Section[] = [
+    ...SECTIONS,
+    ...payload.groups
+      .filter((group) => !claimed.has(group))
+      .map((group) => ({
+        key: `grupo:${group}`,
+        label: group,
+        icon: Wrench,
+        description: "",
+        groups: [group],
+      })),
+    ...(orphans.length > 0
+      ? [
+          {
+            key: OTHERS_KEY,
+            label: "Otros",
+            icon: Wrench,
+            description: "Ajustes cuyo grupo no tiene sitio propio en el panel.",
+            groups: [],
+          },
+        ]
+      : []),
+  ].filter((section) =>
+    section.key === OTHERS_KEY
+      ? true
+      : section.groups.some((group) => byGroup(group).length > 0),
+  );
+  const settingsOf = (section: Section) =>
+    section.key === OTHERS_KEY ? orphans : section.groups.flatMap(byGroup);
+
   const setValue = (key: string, value: unknown) =>
     setDraft((prev) => {
       if (sameValue(value, stored.get(key))) {
@@ -127,6 +269,29 @@ export function ConfigTab() {
       return { ...prev, [key]: value };
     });
   const dirty = Object.keys(draft).length > 0;
+  const pendingOf = (section: Section) => {
+    const keys = new Set(settingsOf(section).map((setting) => setting.key));
+    return Object.keys(draft).filter((key) => keys.has(key)).length;
+  };
+
+  const activeSection = sections.find((section) => section.key === active) ?? sections[0];
+  const term = search.trim().toLowerCase();
+  const matches = term
+    ? payload.settings.filter((setting) =>
+        `${setting.name} ${setting.key} ${setting.group}`.toLowerCase().includes(term),
+      )
+    : null;
+
+  const row = (setting: ConfigSetting) => (
+    <SettingRow
+      key={setting.key}
+      setting={setting}
+      value={setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default)}
+      onChange={(next) => setValue(setting.key, next)}
+      onReset={() => reset.mutate(setting.key)}
+      models={payload.models ?? null}
+    />
+  );
 
   return (
     <div className="space-y-4">
@@ -153,42 +318,113 @@ export function ConfigTab() {
         </Alert>
       ) : null}
 
-      {payload.groups.map((group) =>
-        group === REASONING_GROUP ? null : group === MODELS_GROUP ? (
-          <PipelineCard
-            key={group}
-            lanes={payload.pipeline ?? []}
-            settings={payload.settings}
-            draft={draft}
-            models={payload.models ?? null}
-            onChange={setValue}
-            onReset={(key) => reset.mutate(key)}
+      <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <nav aria-label="Secciones de la configuración" className="space-y-2 lg:sticky lg:top-4">
+          <Input
+            aria-label="Buscar un ajuste"
+            placeholder="Buscar un ajuste…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
           />
-        ) : (
-          <GroupCard
-            key={group}
-            title={group}
-            settings={payload.settings.filter((setting) => setting.group === group)}
-            draft={draft}
-            onChange={setValue}
-            onReset={(key) => reset.mutate(key)}
-            models={payload.models ?? null}
-          />
-        ),
-      )}
+          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+            {sections.map((section) => {
+              const pending = pendingOf(section);
+              const current = !matches && section.key === activeSection.key;
+              return (
+                <li key={section.key} className="shrink-0 lg:shrink">
+                  <button
+                    type="button"
+                    aria-current={current ? "true" : undefined}
+                    onClick={() => {
+                      setSearch("");
+                      setActive(section.key);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
+                      current
+                        ? "border-border bg-card text-foreground shadow-raised"
+                        : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    )}
+                  >
+                    <section.icon className="size-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                    {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-      {orphans.length > 0 ? (
-        <GroupCard
-          title="Otros"
-          settings={orphans}
-          draft={draft}
-          onChange={setValue}
-          onReset={(key) => reset.mutate(key)}
-          models={payload.models ?? null}
-        />
-      ) : null}
+        <div className="min-w-0 space-y-4">
+          {matches ? (
+            <div className="space-y-3">
+              <p className="text-small text-muted-foreground">
+                {matches.length} ajuste(s) para «{search.trim()}»
+              </p>
+              {matches.map(row)}
+            </div>
+          ) : (
+            <section key={activeSection.key} className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
+                  <activeSection.icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-expanded text-heading">{activeSection.label}</h2>
+                  {activeSection.description ? (
+                    <p className="text-small text-muted-foreground">{activeSection.description}</p>
+                  ) : null}
+                </div>
+              </div>
 
-      <DiffSummary settings={payload.settings} draft={draft} />
+              {activeSection.groups.includes(MODELS_GROUP) ? (
+                <PipelineCard
+                  lanes={payload.pipeline ?? []}
+                  settings={payload.settings}
+                  draft={draft}
+                  models={payload.models ?? null}
+                  onChange={setValue}
+                  onReset={(key) => reset.mutate(key)}
+                />
+              ) : activeSection.key === OTHERS_KEY ? (
+                <GroupCard
+                  title={null}
+                  settings={orphans}
+                  draft={draft}
+                  onChange={setValue}
+                  onReset={(key) => reset.mutate(key)}
+                  models={payload.models ?? null}
+                />
+              ) : (
+                activeSection.groups
+                  .filter((group) => byGroup(group).length > 0)
+                  .map((group) => (
+                    <GroupCard
+                      key={group}
+                      title={activeSection.groups.length > 1 ? group : null}
+                      settings={byGroup(group)}
+                      draft={draft}
+                      onChange={setValue}
+                      onReset={(key) => reset.mutate(key)}
+                      models={payload.models ?? null}
+                    />
+                  ))
+              )}
+            </section>
+          )}
+
+          {"engine.name" in draft ? (
+            <Alert tone="attention" title="Cambio de motor">
+              Al guardar, los ajustes de ámbito motor (modelos, fases, ventanas de contexto y
+              razonamiento) pasarán al perfil de «{String(draft["engine.name"])}». El perfil de
+              «{String(stored.get("engine.name"))}» se conserva tal cual para cuando se vuelva.
+            </Alert>
+          ) : null}
+
+          <DiffSummary settings={payload.settings} draft={draft} />
+        </div>
+      </div>
 
       <FormError error={save.error} />
 
@@ -218,7 +454,7 @@ function GroupCard({
   onReset,
   models,
 }: {
-  title: string;
+  title: string | null;
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
@@ -227,21 +463,15 @@ function GroupCard({
 }) {
   const current = (setting: ConfigSetting) =>
     setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
-  const resident = settings.some((s) => s.key === "models.main") && models ? (
-    <ResidencySummary
-      settings={settings}
-      current={current}
-      models={models}
-    />
-  ) : null;
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {resident}
+      {title ? (
+        <CardHeader className="pb-2">
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      ) : null}
+      <CardContent className={cn("space-y-3", !title && "pt-4")}>
         {settings.map((setting) => (
           <SettingRow
             key={setting.key}
@@ -257,14 +487,10 @@ function GroupCard({
   );
 }
 
-const REASONING_GROUP = "Razonamiento";
-const MODELS_GROUP = "Modelos";
-const PHASE_MODEL_PREFIX = "models.phases.";
-
 // One card for the two groups the pipeline drawing already covers: the three residents as
-// rows, then every phase as a node carrying BOTH its model and its reasoning switch, so a
-// phase's two decisions are taken in one place. What neither the rows nor the nodes show
-// (THINK_EFFORT) keeps its row below; what the nodes do show never gets a second row.
+// rows, then every phase as a node carrying its model, its reasoning switch AND, while it
+// reasons, its effort — a phase's three decisions are taken in one place. What no node
+// shows keeps its row below; what the nodes do show never gets a second row.
 function PipelineCard({
   lanes,
   settings,
@@ -283,6 +509,7 @@ function PipelineCard({
   const phases = lanes.flatMap((lane) => lane.phases);
   const drawn = new Set([
     ...phases.map((phase) => phase.setting),
+    ...phases.map((phase) => phase.effort),
     ...phases.map((phase) => phase.model).filter((key) => key.startsWith(PHASE_MODEL_PREFIX)),
   ]);
   const ofGroups = settings.filter(
@@ -314,18 +541,15 @@ function PipelineCard({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>Modelos y razonamiento</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {models ? <ResidencySummary settings={ofGroups} current={current} models={models} /> : null}
+      <CardContent className="space-y-4 pt-4">
         {residents.map(row)}
         <p className="max-w-2xl text-small text-muted-foreground">
           Cada pista es una construcción; cada nodo, una llamada al modelo. Bajo cada nodo,
           qué modelo la atiende («principal» sigue a {residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN"});
-          el círculo dice si razona antes de contestar. Razonar y una gramática no conviven en
-          esta pila, así que encender una fase que hoy responde con gramática se la quita y deja
-          la forma en manos del analizador y de la reparación. Tres nodos no dependen de un
+          el círculo dice si razona antes de contestar y, mientras razona, el selector fija su
+          esfuerzo. Razonar y una gramática no conviven en esta
+          pila, así que encender una fase que hoy responde con gramática se la quita y deja la
+          forma en manos del analizador y de la reparación. Tres nodos no dependen de un
           ajuste: el guardián no razona, la variante la decide cada encargo y la reparación es
           su propia gramática.
         </p>
@@ -349,7 +573,7 @@ function PipelineCard({
                 onClick={() => onReset(setting.key)}
               >
                 <Undo2 />
-                {setting.name}
+                {setting.name || setting.key}
               </Button>
             ))}
           </div>
@@ -359,7 +583,7 @@ function PipelineCard({
             <summary className="cursor-pointer select-none">Por qué cada nodo</summary>
             <dl className="mt-2 space-y-3">
               {inNodes
-                .filter((setting) => setting.doc)
+                .filter((setting) => setting.doc && setting.name)
                 .map((setting) => (
                   <div key={setting.key}>
                     <dt className="font-mono text-foreground">{setting.name}</dt>
@@ -461,63 +685,97 @@ function ModelSelect({
   );
 }
 
-// The co-residency arithmetic, on screen: the three models the process keeps loaded, with
-// what each one measures now (`/api/ps`, the only true reading) or, failing that, its size
-// on disk, which is an approximation and is labelled as one. It is a sum and not a verdict:
-// the VRAM total of the machine is not something this process can read from here.
-function ResidencySummary({
-  settings,
-  current,
-  models,
+function CerebrasModelsField({
+  id,
+  label,
+  value,
+  disabled,
+  onChange,
 }: {
-  settings: ConfigSetting[];
-  current: (setting: ConfigSetting) => unknown;
-  models: ConfigPayload["models"];
+  id: string;
+  label: string;
+  value: unknown;
+  disabled: boolean;
+  onChange: (next: unknown) => void;
 }) {
-  const residents = ["models.main", "models.guardrail", "models.embedding"]
-    .map((key) => settings.find((s) => s.key === key))
-    .filter((s): s is ConfigSetting => Boolean(s))
-    .map((s) => String(current(s) ?? ""))
-    .filter(Boolean);
-  const vram = new Map(models.running.map((m) => [m.model, m.size_vram]));
-  const disk = new Map(models.installed.map((m) => [m.model, m.size]));
-
-  let total = 0;
-  let estimated = false;
-  let unknown = 0;
-  const rows = residents.map((name) => {
-    const measured = vram.get(name);
-    if (measured) {
-      total += measured;
-      return { name, text: `${bytes(measured)} en VRAM` };
-    }
-    const onDisk = disk.get(name);
-    if (onDisk) {
-      total += onDisk;
-      estimated = true;
-      return { name, text: `≈ ${bytes(onDisk)} (tamaño en disco)` };
-    }
-    unknown += 1;
-    return { name, text: "sin instalar" };
+  const catalog = useQuery({
+    queryKey: ["admin", "config", "cerebras-catalog"],
+    queryFn: api.adminCerebrasModels,
+    staleTime: 60_000,
   });
+  const selected = Array.isArray(value) ? value.map(String) : [];
+  const listed = catalog.data?.source === "api" ? catalog.data.models : null;
+  const toggle = (model: string, next: boolean) =>
+    onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
 
+  if (catalog.isLoading) {
+    return (
+      <div className="space-y-1">
+        <span className="text-body">{label}</span>
+        <p className="flex items-center gap-2 text-small text-muted-foreground">
+          <Spinner />
+          Leyendo el catálogo de Cerebras…
+        </p>
+      </div>
+    );
+  }
+
+  if (!listed) {
+    return (
+      <div className="space-y-1">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          disabled={disabled}
+          value={selected.join(", ")}
+          onChange={(event) =>
+            onChange(
+              event.target.value
+                .split(",")
+                .map((part) => part.trim())
+                .filter(Boolean),
+            )
+          }
+        />
+        <p className="text-small text-muted-foreground">
+          {catalog.data?.error ?? "El catálogo de Cerebras no responde."} Sepáralos con comas.
+        </p>
+      </div>
+    );
+  }
+
+  const extras = selected.filter((name) => !listed.includes(name));
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3 text-small">
-      <p className="font-medium uppercase tracking-wide text-muted-foreground">
-        Residentes a la vez
-      </p>
-      <ul className="mt-1 space-y-0.5">
-        {rows.map((row) => (
-          <li key={row.name} className="flex flex-wrap justify-between gap-2">
-            <span className="font-mono">{row.name}</span>
-            <span className="text-muted-foreground nums">{row.text}</span>
+    <div className="space-y-1.5">
+      <span className="text-body">{label}</span>
+      <ul className="space-y-1.5">
+        {listed.map((model) => (
+          <li key={model} className="flex items-center gap-2">
+            <Checkbox
+              checked={selected.includes(model)}
+              disabled={disabled}
+              onCheckedChange={(next) => toggle(model, next)}
+              label={`Enrutar ${model} a Cerebras`}
+            />
+            <span className="font-mono text-body">{model}</span>
+          </li>
+        ))}
+        {extras.map((model) => (
+          <li key={model} className="flex items-center gap-2">
+            <Checkbox
+              checked
+              disabled={disabled}
+              onCheckedChange={(next) => toggle(model, next)}
+              label={`Enrutar ${model} a Cerebras`}
+            />
+            <span className="font-mono text-body">{model}</span>
+            <Badge variant="outline">fuera del catálogo</Badge>
           </li>
         ))}
       </ul>
-      <p className="mt-2 nums">
-        Suma: <strong>{bytes(total)}</strong>
-        {estimated ? " — parte estimada por el tamaño en disco; el KV cache va aparte" : ""}
-        {unknown > 0 ? ` — ${unknown} modelo(s) sin tamaño conocido` : ""}
+      <p className="text-small text-muted-foreground">
+        La lista viene de la propia API de Cerebras. Lo marcado se sirve en remoto; todo lo demás
+        sigue en Ollama.
       </p>
     </div>
   );
@@ -566,6 +824,14 @@ function SettingRow({
                 label={label}
               />
             </div>
+          ) : setting.key === "engine.cerebras_models" ? (
+            <CerebrasModelsField
+              id={id}
+              label={label}
+              value={value}
+              disabled={disabled}
+              onChange={onChange}
+            />
           ) : models && isModelSetting(setting) ? (
             <ModelSelect
               id={id}
@@ -583,8 +849,11 @@ function SettingRow({
                 id={id}
                 value={String(value ?? "")}
                 disabled={disabled}
-                onChange={(event) => onChange(event.target.value)}
+                onChange={(event) =>
+                  onChange(event.target.value === "" && setting.nullable ? null : event.target.value)
+                }
               >
+                {setting.nullable ? <option value="">— sin fijar —</option> : null}
                 {setting.choices.map((choice) => (
                   <option key={choice} value={choice}>
                     {choice}

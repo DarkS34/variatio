@@ -32,7 +32,8 @@ is a PREDICTION, not a measurement, and it is the first thing to re-check on a r
 `qwen3.8:27b-q4_K_M` since 2026-08-18, replacing `qwen3.6:35b-a3b-q8_0` and reversing the
 2026-08-16 revert, by explicit user request. What reopened the question is that Ollama can
 now cap how much a reasoning model deliberates: `think` takes an EFFORT LEVEL, not just a
-boolean, and `THINK_EFFORT` below pins every reasoning call to the cheapest one.
+boolean, and the per-phase `reasoning.effort.*` settings pin every reasoning call to the
+cheapest one by default.
 
 The revert's reasons were real and are only PARTLY answered, so the numbers are here in
 full. All of them on the A40, on the same call — `link_domain_relations_prompt` over the
@@ -55,34 +56,9 @@ Three things to read off that table before touching any of this:
    Accepted knowingly on 2026-08-18.
 3. THE QUANTISATION IS NOT INTERCHANGEABLE HERE. The q4_K_M is 53 % faster than the q8_0
    (29.1 vs 19.0 tok/s) and 16.5 GB against 27.9, and it obeys the effort level exactly
-   the same — measured, not assumed, in the token table under `THINK_EFFORT`. Unlike
+   the same — measured, not assumed, in the token table under `reasoning.effort.*`. Unlike
    `qwen3.6:35b-a3b-q4_K_M`, which is broken on this box above ~4 490 characters, this q4
    answered the 5 441-character prompt with valid JSON. Do not "upgrade" it to the q8."""
-
-_THINK_EFFORT_DOC = """HOW HARD A REASONING CALL THINKS. `think` stays a BOOLEAN everywhere above this line —
-at the call sites, in the study's `Commission`, in the `generations.think` column and in
-the UI switch — and `inference` translates the `True` into this level at the very last
-hop. That split is the decision of 2026-08-18: the effort is a property of the engine, not
-a second axis for a call site or an evaluator to choose, and making it one would have
-meant a migration plus a study whose older sessions sat on a different scale.
-
-`low` and not something higher, measured on the A40 with `/api/generate`:
-
-    modelo                prompt_eval_count con think = true / low / medium / high
-    qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57
-    qwen3.8:27b-q8_0                            15 /  45 /  15 /  57
-    qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15
-
-Read it in three parts. `medium` IS the default — same token count as `true`, so it is not
-a rung, it is the absence of one. `high` costs 58 953 characters of deliberation on the
-real curation prompt and came back with an EMPTY response, which is the failure this
-model was reverted for in the first place. And the old MoE ignored the parameter outright:
-all four values produced a byte-identical answer, so the level is implemented per model by
-Ollama's renderer and CANNOT be assumed to exist — which is exactly why it is one constant
-here and not thirteen strings spread over the call sites.
-
-Ollama 0.32.13 accepts `high`, `medium`, `low`, `max`, `true`, `false` and 400s on anything
-else. `xhigh` does NOT exist. `max` is deliberately unused: it over-reasons."""
 
 _TEMPERATURE_DOC = """HOW FAR THE SAMPLER MAY WANDER. Ollama's own default is 0.8, and a handful of Modelfiles
 declare 1.0 — a WRITING temperature, applied indiscriminately to calls that are not writing
@@ -219,7 +195,7 @@ descarga de la GPU y el pull/borrado de modelos son siempre de la mitad Ollama: 
 no hay nada que cargar ni descargar.
 
 CADA MOTOR TIENE SU PERFIL DE CONFIGURACIÓN. Los ajustes de ámbito «engine» (los modelos,
-las fases, las ventanas de contexto, los interruptores de razonamiento y THINK_EFFORT) se
+las fases, las ventanas de contexto y los interruptores de razonamiento con sus esfuerzos) se
 guardan en `config.json` bajo `profiles.<motor>`, así que cambiar de motor cambia de perfil
 completo y volver atrás recupera el anterior tal cual se dejó.
 
@@ -338,17 +314,6 @@ otro sitio, no aquí.""",
         impact=Impact.REINDEX,
         scope="engine",
         doc=_MODELS_MAIN_DOC,
-    ),
-    Setting(
-        key="sampling.think_effort",
-        name="THINK_EFFORT",
-        kind="str",
-        default="low",
-        group="Razonamiento",
-        impact=Impact.NONE,
-        scope="engine",
-        choices=("low", "medium", "high", "max"),
-        doc=_THINK_EFFORT_DOC,
     ),
     Setting(
         key="sampling.temperature_deterministic",

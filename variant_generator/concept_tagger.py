@@ -127,7 +127,7 @@ class ConceptTagger:
             and inference.supports_thinking(self.concept_tagger_model)
         ):
             logger.debug(f"Etiquetado no concluyente; se reintenta razonando: {statement[:40]}…")
-            escalated = self._verify(prompt, candidate_names, think=True)
+            escalated = self._verify(prompt, candidate_names, think=config.THINK_CONCEPT_TAGGER)
             if not self._is_inconclusive(escalated):
                 return escalated, f"{method}_thinking"
         return result, method
@@ -136,7 +136,7 @@ class ConceptTagger:
     def _is_inconclusive(result: dict | None) -> bool:
         return result is None or result["primary_concept"] is None
 
-    def _verify(self, prompt: str, candidate_names: list[str], think: bool) -> dict | None:
+    def _verify(self, prompt: str, candidate_names: list[str], think: bool | str) -> dict | None:
         schema = tagging_schema(candidate_names)
         # The escalation exists to buy DELIBERATION on an item the first pass could not
         # place, and the grammar would take exactly that away, so it goes unconstrained.

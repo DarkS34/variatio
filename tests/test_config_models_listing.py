@@ -1,5 +1,6 @@
 from server.routers import config as config_router
-from variant_generator.core import inference
+from variant_generator import config as vg_config
+from variant_generator.core import cerebras, inference
 
 
 def test_an_unreachable_engine_offers_no_models_and_no_error(monkeypatch):
@@ -26,3 +27,32 @@ def test_the_payload_carries_what_the_engine_has(monkeypatch):
     payload = config_router._payload()
     assert payload["models"] == {"installed": installed, "running": running}
     assert {"groups", "settings"} <= set(payload)
+
+
+def test_the_cerebras_catalog_needs_a_key(monkeypatch):
+    monkeypatch.setattr(vg_config, "CEREBRAS_API_KEY", "")
+    monkeypatch.setattr(vg_config, "CEREBRAS_MODELS", ["gemma-4-31b"])
+    out = config_router.cerebras_models()
+    assert out["source"] == "config"
+    assert out["models"] == ["gemma-4-31b"]
+    assert "CEREBRAS_API_KEY" in out["error"]
+
+
+def test_the_cerebras_catalog_comes_from_the_api_when_there_is_a_key(monkeypatch):
+    monkeypatch.setattr(vg_config, "CEREBRAS_API_KEY", "sk-prueba")
+    monkeypatch.setattr(cerebras, "catalog", lambda: ["gemma-4-31b", "qwen-3-235b"])
+    out = config_router.cerebras_models()
+    assert out == {"models": ["gemma-4-31b", "qwen-3-235b"], "source": "api", "error": None}
+
+
+def test_an_unreachable_cerebras_falls_back_to_the_declared_routing(monkeypatch):
+    def boom():
+        raise inference.InferenceError("sin red")
+
+    monkeypatch.setattr(vg_config, "CEREBRAS_API_KEY", "sk-prueba")
+    monkeypatch.setattr(vg_config, "CEREBRAS_MODELS", ["gemma-4-31b"])
+    monkeypatch.setattr(cerebras, "catalog", boom)
+    out = config_router.cerebras_models()
+    assert out["source"] == "config"
+    assert out["models"] == ["gemma-4-31b"]
+    assert "sin red" in out["error"]

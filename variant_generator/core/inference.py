@@ -13,6 +13,8 @@ from . import progress
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]
 
+DEFAULT_THINK_EFFORT = "low"
+
 THINK_OPEN = "<think>"
 THINK_CLOSE = "</think>"
 _MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
@@ -141,23 +143,25 @@ class OllamaEngine:
     # Asking a model that has no reasoning mode to think is a hard error in Ollama, so
     # the request is only made of models that advertise the capability.
     #
-    # THIS IS THE ONE PLACE THAT KNOWS ABOUT EFFORT LEVELS. Callers pass a boolean — and so
-    # do the study's `Commission`, the `generations.think` column and the UI switch — because
-    # how hard the model thinks is a property of the engine, not a second axis for a call
-    # site to pick. `True` becomes `config.THINK_EFFORT`; `False` stays `False`, which is a
-    # different thing entirely (no reasoning at all) and is what the constrained-decoding
-    # call sites depend on.
+    # THIS IS WHERE `True` BECOMES AN EFFORT LEVEL. The study's `Commission`, the
+    # `generations.think` column and the UI switch still pass a boolean; a pipeline phase
+    # passes what `settings.derived` resolved for it — `False`, or its own per-phase level
+    # as a string, which travels through unchanged. `True` becomes the fixed
+    # `DEFAULT_THINK_EFFORT` (the global THINK_EFFORT setting was removed 2026-08-24, per-
+    # phase efforts replaced it; "low" stays the measured cap for the boolean callers).
+    # `False` stays `False`, which is a different thing entirely (no reasoning at all) and
+    # is what the constrained-decoding call sites depend on.
     #
     # A model whose renderer does not implement levels silently ignores the string and
     # reasons as it always did, so this is safe to send at any model that thinks: measured,
     # `qwen3.6:35b-a3b-q8_0` returns a byte-identical answer for `true`, `low` and `high`.
-    def _think_option(self, model: str, think: bool | None) -> dict:
+    def _think_option(self, model: str, think: bool | str | None) -> dict:
         if think is None:
             return {}
         if not self.supports_thinking(model):
             logger.debug(f"'{model}' no tiene modo de razonamiento; se ignora think={think}")
             return {}
-        return {"think": config.THINK_EFFORT if think is True else think}
+        return {"think": DEFAULT_THINK_EFFORT if think is True else think}
 
     # Constrained decoding: `"json"` guarantees the syntax, a JSON Schema guarantees the
     # keys and their types. It is NOT compatible with reasoning on this stack — measured on
@@ -200,7 +204,7 @@ class OllamaEngine:
         self,
         model: str,
         prompt: str,
-        think: bool | None = None,
+        think: bool | str | None = None,
         system: str | None = None,
         images: list[str] | None = None,
         temperature: float | None = None,
@@ -235,7 +239,7 @@ class OllamaEngine:
         self,
         model: str,
         prompt: str,
-        think: bool | None = None,
+        think: bool | str | None = None,
         on_token: TokenSink | None = None,
         temperature: float | None = None,
     ) -> GenerationResponse:
@@ -485,7 +489,7 @@ def reset_engine() -> None:
 def generate(
     model: str,
     prompt: str,
-    think: bool | None = None,
+    think: bool | str | None = None,
     system: str | None = None,
     images: list[str] | None = None,
     temperature: float | None = None,
@@ -505,7 +509,7 @@ def generate(
 def generate_stream(
     model: str,
     prompt: str,
-    think: bool | None = None,
+    think: bool | str | None = None,
     on_token: TokenSink | None = None,
     temperature: float | None = None,
 ) -> GenerationResponse:
@@ -522,7 +526,7 @@ def supports_thinking(model: str) -> bool:
     return engine().supports_thinking(model)
 
 
-def judgement_temperature(think: bool) -> float:
+def judgement_temperature(think: bool | str) -> float:
     return config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
 
 

@@ -1,4 +1,5 @@
 from ..instance.relations import BUILTIN_SCHEMAS
+from .registry.reasoning import PHASE_KEYS
 
 PHASES = {
     "models.phases.exemplars_transcribe": "EXEMPLARS_TRANSCRIBE_MODEL",
@@ -41,6 +42,10 @@ def derive(values: dict[str, object]) -> dict[str, object]:
 
     for key, name in PHASES.items():
         out[name] = values.get(key) or main
+
+    for phase in PHASE_KEYS:
+        on = values[f"reasoning.phases.{phase}"]
+        out[f"THINK_{phase.upper()}"] = values[f"reasoning.effort.{phase}"] if on else False
 
     out["LLM_CONTEXT"] = {
         main: values["context_window.main"],

@@ -350,8 +350,10 @@ class ExemplarsProfileBuilder:
 
     def _infer(self, findings: str) -> dict:
         prompt = consolidate_exemplars_profile_prompt(findings, self.max_item_types)
-        think = config.THINK_EP_CONSOLIDATE and inference.supports_thinking(
-            self.consolidate_model
+        think = (
+            config.THINK_EP_CONSOLIDATE
+            if inference.supports_thinking(self.consolidate_model)
+            else False
         )
         logger.info(
             f"Consolidando con '{self.consolidate_model}' "

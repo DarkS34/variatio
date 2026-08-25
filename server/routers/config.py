@@ -8,8 +8,10 @@ with, since the GPU co-residency arithmetic is one for the whole process.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from variant_generator import config as vg_config
 from variant_generator import settings as vg_settings
-from variant_generator.core import inference
+from variant_generator.core import cerebras, inference
+from variant_generator.core.inference import InferenceError
 from variant_generator.settings import Impact, SettingError
 
 from .. import auth, deps, runtime
@@ -80,6 +82,21 @@ def _act(impacts: set) -> list[str]:
 @router.get("")
 def read() -> dict:
     return _payload()
+
+
+@router.get("/cerebras-models")
+def cerebras_models() -> dict:
+    declared = [str(model) for model in vg_config.CEREBRAS_MODELS]
+    if not vg_config.CEREBRAS_API_KEY:
+        return {
+            "models": declared,
+            "source": "config",
+            "error": "Sin CEREBRAS_API_KEY en el entorno: se listan los modelos ya declarados.",
+        }
+    try:
+        return {"models": cerebras.catalog(), "source": "api", "error": None}
+    except InferenceError as error:
+        return {"models": declared, "source": "config", "error": str(error)}
 
 
 @router.put("")

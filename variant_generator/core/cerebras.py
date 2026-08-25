@@ -6,7 +6,14 @@ from loguru import logger
 
 from .. import config
 from . import progress
-from .inference import GenerationResponse, InferenceError, OllamaEngine, TokenSink, split_thinking
+from .inference import (
+    DEFAULT_THINK_EFFORT,
+    GenerationResponse,
+    InferenceError,
+    OllamaEngine,
+    TokenSink,
+    split_thinking,
+)
 
 STRICT_SCHEMA_MAX_CHARS = 5000
 
@@ -14,15 +21,24 @@ _UNSUPPORTED_KEYWORDS = ("pattern", "format", "minItems", "maxItems", "minLength
 _SUBSCHEMA_KEYS = ("items", "prefixItems", "anyOf", "allOf", "oneOf", "additionalProperties")
 _SCHEMA_MAPS = ("properties", "$defs", "definitions")
 _VISION_PREFIXES = ("gemma-4",)
+_NO_REASONING_OFF_PREFIXES = ("gpt-oss",)
 _RETRY_STATUSES = (429, 503)
 _MAX_ATTEMPTS = 5
 _CATALOG_TTL_SECONDS = 300.0
 
 
 # Cerebras' strict mode refuses the keywords Ollama's grammar simply ignores, and demands
-# `additionalProperties: false` on every object. The transform is lossy on purpose: what a
-# dropped `pattern` or `maxItems` used to guarantee is exactly what `parse_with_repair` and
-# each component's own parser already re-check.
+# `additionalProperties: false` on every object that does not declare one. The transform is
+# lossy on purpose: what a dropped `pattern` or `maxItems` used to guarantee is exactly what
+# `parse_with_repair` and each component's own parser already re-check.
+#
+# An object that DOES declare an `additionalProperties` schema is an open-ended map — the KG
+# builder's `domains`, `drop` and `non_taggable` — and closing it there is not lossy but
+# wrong: it rewrote the value's type as `false`, leaving an object that can hold no field at
+# all. Cerebras answered 400 «Object fields require at least one of: 'properties' or
+# 'anyOf'», which is what killed a build in `kg_domains`. Measured against the API: the
+# typed map is refused under `strict: true` just the same, so what the map costs is strict
+# mode itself, not its shape.
 def strict_schema(schema: dict) -> dict:
     return _walk(schema)
 
@@ -42,11 +58,34 @@ def _walk(node: object) -> object:
             out[key] = _walk(value)
         else:
             out[key] = value
+    if "additionalProperties" in node:
+        return out
     if out.get("type") == "object" or "properties" in out:
         out["additionalProperties"] = False
     return out
 
 
+def _open_map(node: object) -> bool:
+    if isinstance(node, list):
+        return any(_open_map(part) for part in node)
+    if not isinstance(node, dict):
+        return False
+    if node.get("type") == "object" and "properties" not in node and "anyOf" not in node:
+        return True
+    for key, value in node.items():
+        if key in _SCHEMA_MAPS and isinstance(value, dict):
+            if any(_open_map(sub) for sub in value.values()):
+                return True
+        elif key in _SUBSCHEMA_KEYS and _open_map(value):
+            return True
+    return False
+
+
+# Dropping `strict` is the same degradation the character cap already performs, for the same
+# reason: the shape still travels and still guides — measured on the assignment schema, the
+# typed map answered `{"domains": {"Salud": ["Telemedicina"]}}` while the same call with the
+# value left untyped answered strings instead of arrays. What is lost is the decoder's
+# guarantee, which is `parse_with_repair`'s job from there.
 def response_format(format: dict | str | None) -> dict | None:
     if format is None:
         return None
@@ -54,12 +93,19 @@ def response_format(format: dict | str | None) -> dict | None:
         return {"type": "json_object"}
     adapted = strict_schema(format)
     compact = json.dumps(adapted, ensure_ascii=False, separators=(",", ":"))
-    strict = len(compact) <= STRICT_SCHEMA_MAX_CHARS
-    if not strict:
+    strict = True
+    if _open_map(adapted):
+        logger.warning(
+            "[cerebras] El esquema declara un objeto de claves abiertas, que el modo "
+            "estricto rechaza; se pide sin 'strict'"
+        )
+        strict = False
+    if len(compact) > STRICT_SCHEMA_MAX_CHARS:
         logger.warning(
             f"[cerebras] El esquema mide {len(compact)} caracteres (límite del modo "
             f"estricto: {STRICT_SCHEMA_MAX_CHARS}); se pide sin 'strict'"
         )
+        strict = False
     return {
         "type": "json_schema",
         "json_schema": {"name": "respuesta", "strict": strict, "schema": adapted},
@@ -68,13 +114,19 @@ def response_format(format: dict | str | None) -> dict | None:
 
 # The same last-hop translation `OllamaEngine._think_option` does, in Cerebras' dialect:
 # `reasoning_effort` takes "none"/"low"/"medium"/"high", with "none" as gemma-4's default.
-# Cerebras has no "max", so the one level Ollama has above "high" maps down to it.
-def reasoning_effort(think: bool | None) -> str | None:
+# Cerebras has no "max", so the one level Ollama has above "high" maps down to it. A string
+# is a per-phase effort already resolved by `settings.derived`; `True` comes only from the
+# boolean callers (the study's `Commission`, the UI switch) and maps to the fixed
+# `DEFAULT_THINK_EFFORT`, exactly as in Ollama's dialect. Not every model has an off
+# switch: gpt-oss answers 400 «Unsupported reasoning effort: none. Supported values are
+# 'low', 'medium', and 'high'» (measured 2026-08-24, the RAG arm's `think=False`), so
+# `False` floors at its minimum instead.
+def reasoning_effort(think: bool | str | None, model: str) -> str | None:
     if think is None:
         return None
     if think is False:
-        return "none"
-    effort = str(config.THINK_EFFORT)
+        return "low" if model.startswith(_NO_REASONING_OFF_PREFIXES) else "none"
+    effort = think if isinstance(think, str) else DEFAULT_THINK_EFFORT
     return "high" if effort == "max" else effort
 
 
@@ -126,7 +178,7 @@ class CerebrasEngine:
         self,
         model: str,
         prompt: str,
-        think: bool | None = None,
+        think: bool | str | None = None,
         system: str | None = None,
         images: list[str] | None = None,
         temperature: float | None = None,
@@ -142,7 +194,7 @@ class CerebrasEngine:
         self,
         model: str,
         prompt: str,
-        think: bool | None = None,
+        think: bool | str | None = None,
         on_token: TokenSink | None = None,
         temperature: float | None = None,
     ) -> GenerationResponse:
@@ -200,7 +252,7 @@ class CerebrasEngine:
         self,
         model: str,
         prompt: str,
-        think: bool | None,
+        think: bool | str | None,
         system: str | None,
         images: list[str] | None,
         temperature: float | None,
@@ -231,7 +283,7 @@ class CerebrasEngine:
         body: dict = {"model": model, "messages": messages}
         if temperature is not None:
             body["temperature"] = temperature
-        effort = reasoning_effort(think)
+        effort = reasoning_effort(think, model)
         if effort is not None:
             body["reasoning_effort"] = effort
         shaped = response_format(format)
@@ -273,6 +325,19 @@ def _retry_wait(response: httpx.Response, attempt: int) -> float:
     except ValueError:
         wait = float(2**attempt)
     return min(max(wait, 1.0), 60.0)
+
+
+_shared: CerebrasEngine | None = None
+_shared_base: str | None = None
+
+
+def catalog() -> list[str]:
+    global _shared, _shared_base
+    base = str(config.CEREBRAS_BASE_URL)
+    if _shared is None or _shared_base != base:
+        _shared = CerebrasEngine()
+        _shared_base = base
+    return _shared.catalog()
 
 
 # One engine, two backends: the models named in `CEREBRAS_MODELS` are served remotely and

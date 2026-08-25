@@ -525,7 +525,7 @@ function SystemCard() {
     );
   }
 
-  const { available, engine, host, models } = health.data;
+  const { available, engine, models } = health.data;
   const wanted = [...new Set(Object.values(models.required))];
   const cold = wanted.filter((m) => !models.running.some((entry) => entry.model === m));
 
@@ -549,7 +549,6 @@ function SystemCard() {
               <CircleAlert className="size-3.5 shrink-0 text-destructive" />
             )}
             <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
-            <span className="font-mono text-small text-muted-foreground">{host}</span>
             {available ? null : (
               <span className="text-small text-destructive">sin conexión</span>
             )}

@@ -23,6 +23,9 @@ from .models import Job
 from .runner import JobControl
 
 
+_EFFORT_LEVELS = ("low", "medium", "high", "max")
+
+
 def _workspace(job: Job) -> Workspace:
     return settings.workspace_for(job.workspace)
 
@@ -180,8 +183,10 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         context.workspace, context.knowledge_graph, params.get("curriculum")
     )
     instructions = params.get("instructions") or None
-    # Absent means "as it always was": every caller that predates the switch reasons.
-    think = bool(params.get("think", True))
+    # Absent means "as it always was": every caller that predates the switch reasons at the
+    # default effort. A recognised level travels as itself; anything else collapses to bool.
+    raw_think = params.get("think", True)
+    think = raw_think if raw_think in _EFFORT_LEVELS else bool(raw_think)
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     detail = []
@@ -191,7 +196,10 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         detail.append(f"currículo de {len(curriculum)} concepto(s)")
     if instructions:
         detail.append(f"instrucciones «{instructions}»")
-    detail.append("con razonamiento" if think else "sin razonamiento")
+    if isinstance(think, str):
+        detail.append(f"con razonamiento ({think})")
+    else:
+        detail.append("con razonamiento" if think else "sin razonamiento")
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
         f"'{config.VARIANT_GENERATION_LLM}' sobre "

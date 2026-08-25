@@ -17,6 +17,9 @@ def base():
     }
     for key in derived.PHASES:
         values[key] = None
+    for phase in derived.PHASE_KEYS:
+        values[f"reasoning.phases.{phase}"] = False
+        values[f"reasoning.effort.{phase}"] = "low"
     return values
 
 

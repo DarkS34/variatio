@@ -1,11 +1,12 @@
 {
   "engine": {
-    "name": "ollama",
-    "ollama_host": "localhost:13434",
+    "name": "cerebras+ollama",
     "cerebras_base_url": "https://api.cerebras.ai/v1",
     "cerebras_models": [
-      "gemma-4-31b"
+      "gemma-4-31b",
+      "gpt-oss-120b"
     ],
+    "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
     "idle_unload_poll_seconds": 60
   },
@@ -71,6 +72,7 @@
     "max_json_repair_tries": 3,
     "check_similarity_threshold": 0.85,
     "check_max_retries": 1,
+    "avoid_recent": 12,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
@@ -103,6 +105,44 @@
     ]
   },
   "profiles": {
+    "cerebras+ollama": {
+      "models": {
+        "main": "qwen3.8:27b-q4_K_M",
+        "guardrail": "granite4.1-guardian:8b-q4_K_M",
+        "embedding": "qwen3-embedding:4b",
+        "phases": {
+          "exemplars_transcribe": null,
+          "ep_scan": null,
+          "ep_context": null,
+          "eb_extract": null,
+          "kg_extract": null,
+          "kg_domains": null,
+          "kg_domains_leftovers": null,
+          "kg_context": null,
+          "description_generation": null,
+          "concept_tagger": null,
+          "admissibility": null,
+          "repair": null,
+          "ep_consolidate": "gpt-oss-120b",
+          "kg_clean_merge": "gpt-oss-120b",
+          "kg_clean_drop": "gpt-oss-120b",
+          "kg_link_domain": "gpt-oss-120b",
+          "kg_link_cross_domain": "gpt-oss-120b",
+          "kg_taggable": "gpt-oss-120b",
+          "variant_generation": null
+        }
+      },
+      "reasoning": {
+        "effort": {
+          "ep_consolidate": "high",
+          "kg_clean_merge": "high",
+          "kg_clean_drop": "high",
+          "kg_link_domain": "high",
+          "kg_link_cross_domain": "high",
+          "kg_taggable": "high"
+        }
+      }
+    },
     "ollama": {
       "models": {
         "main": "qwen3.8:27b-q4_K_M",
@@ -130,9 +170,6 @@
           "repair": null
         }
       },
-      "sampling": {
-        "think_effort": "low"
-      },
       "context_window": {
         "main": 65536,
         "guardrail": 4096,
@@ -159,37 +196,6 @@
           "concept_tagger": true,
           "admissibility": false
         }
-      }
-    },
-    "cerebras+ollama": {
-      "models": {
-        "main": "gemma-4-31b",
-        "guardrail": "granite4.1-guardian:8b-q4_K_M",
-        "embedding": "qwen3-embedding:4b",
-        "phases": {
-          "exemplars_transcribe": null,
-          "ep_scan": null,
-          "ep_consolidate": null,
-          "ep_context": null,
-          "eb_extract": null,
-          "kg_extract": null,
-          "kg_clean_merge": null,
-          "kg_clean_drop": null,
-          "kg_domains": null,
-          "kg_domains_leftovers": null,
-          "kg_link_domain": null,
-          "kg_link_cross_domain": null,
-          "kg_taggable": null,
-          "kg_context": null,
-          "description_generation": null,
-          "concept_tagger": null,
-          "variant_generation": null,
-          "admissibility": null,
-          "repair": null
-        }
-      },
-      "sampling": {
-        "think_effort": "low"
       }
     }
   }

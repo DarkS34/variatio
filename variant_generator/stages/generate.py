@@ -12,7 +12,7 @@ def generate(
     fixed: dict[str, object] | None = None,
     curriculum: list[str] | None = None,
     instructions: str | None = None,
-    think: bool = True,
+    think: bool | str = True,
     avoid: list[str] | None = None,
     on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
 ) -> list[GeneratedVariant]:

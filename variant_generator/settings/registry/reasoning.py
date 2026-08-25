@@ -4,8 +4,8 @@ from ..types import Impact, Setting
 
 GROUP = "Razonamiento"
 
-_SHARED_DOC = """Si esta fase razona antes de contestar. `think` sigue siendo un booleano en el punto de
-llamada y `THINK_EFFORT` decide cuánto razona; esto solo decide SI razona.
+_SHARED_DOC = """Si esta fase razona antes de contestar. Esto solo decide SI razona; cuánto razona lo
+decide el esfuerzo de la propia fase (`reasoning.effort.*`).
 
 Una llamada con gramática (`format=`) no puede razonar en esta pila: la gramática se aplica
 desde el primer token, el modelo nunca cierra el canal y la respuesta vuelve vacía. Por eso
@@ -122,7 +122,53 @@ def _toggle(phase: str) -> Setting:
     )
 
 
-SETTINGS: list[Setting] = [_toggle(phase) for phase in _DEFAULTS]
+_EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta
+nada. Sustituye al THINK_EFFORT global desde el 2026-08-24 (petición explícita del
+usuario) y hereda su medición entera; los booleanos que quedan (el `think` del encargo,
+la columna `generations.think`, el interruptor de la UI) se traducen al «low» fijo de
+`inference.DEFAULT_THINK_EFFORT`.
+
+`low` por defecto y no algo más alto, medido en la A40 con /api/generate:
+
+    modelo                prompt_eval_count con think = true / low / medium / high
+    qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57
+    qwen3.8:27b-q8_0                            15 /  45 /  15 /  57
+    qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15
+
+Léase en tres partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
+un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en la llamada
+de curación real (777 s) y devolvió una respuesta VACÍA; `low` sigue emitiendo ~41 000 ahí
+— el nivel mueve el TECHO de la deliberación, no el suelo — así que subir de `low` en una
+fase que corre en local es reabrir esa medición, no un ajuste fino. Y el nivel lo
+implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro (cuatro
+valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
+
+Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa
+(`xhigh` NO existe). Cerebras no tiene `max` (`reasoning_effort` lo baja a «high»); en
+`gemma-4-31b` los tres niveles activos son equivalentes y gpt-oss no puede apagarse
+(`False` queda en su mínimo, «low»)."""
+
+
+def _effort(phase: str) -> Setting:
+    return Setting(
+        key=f"reasoning.effort.{phase}",
+        name="",
+        kind="str",
+        default="low",
+        group=GROUP,
+        impact=Impact.NONE,
+        scope="engine",
+        choices=("low", "medium", "high", "max"),
+        doc=_EFFORT_DOC,
+    )
+
+
+PHASE_KEYS = tuple(_DEFAULTS)
+
+SETTINGS: list[Setting] = [
+    *(_toggle(phase) for phase in _DEFAULTS),
+    *(_effort(phase) for phase in _DEFAULTS),
+]
 
 
 GRAMMAR = "grammar"
@@ -136,6 +182,7 @@ class Phase:
     label: str
     model: str
     setting: str | None = None
+    effort: str | None = None
     fixed: str | None = None
     note: str = ""
 
@@ -153,6 +200,7 @@ def _switch(key: str, label: str, note: str = "") -> Phase:
         label=label,
         model=f"models.phases.{key}",
         setting=f"reasoning.phases.{key}",
+        effort=f"reasoning.effort.{key}",
         note=note,
     )
 

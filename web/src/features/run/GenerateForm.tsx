@@ -32,9 +32,17 @@ import type {
   KgConcept,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useScope } from "@/state/queries";
+import { useHealth, useScope } from "@/state/queries";
 
 import { DecisionField, describeDecision } from "./DecisionField";
+import {
+  EFFORT_LABELS,
+  EFFORT_ORDER,
+  clampEffort,
+  effortPolicy,
+  effortWarning,
+  type EffortLevel,
+} from "./effort";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
 
@@ -58,6 +66,8 @@ export interface FormState {
   instructions: string;
   /** Only the "generate" variant reads it: an evaluation draws its own, at random. */
   think: boolean;
+  /** Only counts with `think` on; what the engine receives as reasoning effort. */
+  effort: EffortLevel;
 }
 
 export const EMPTY_FORM: FormState = {
@@ -70,6 +80,7 @@ export const EMPTY_FORM: FormState = {
   decisions: {},
   instructions: "",
   think: true,
+  effort: "low",
 };
 
 /** The modality actually in force: what the form shows and what the run will produce. */
@@ -91,7 +102,13 @@ export function activeTypeSpec(
 }
 
 export function toParams(state: FormState): GenerateParams {
-  const params: GenerateParams = { n: state.n, concepts: state.concepts, think: state.think };
+  const params: GenerateParams = {
+    n: state.n,
+    concepts: state.concepts,
+    // Off travels as `false`; on travels as the level itself, which the engine boundary
+    // forwards untouched (`_think_option` / `reasoning_effort`).
+    think: state.think ? state.effort : false,
+  };
   if (state.itemType) params.item_type = state.itemType;
   const fixed: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(state.decisions)) {
@@ -133,6 +150,10 @@ export function fromParams(params: Record<string, unknown>): FormState {
     decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },
     instructions: (params.instructions as string) ?? "",
     think: params.think !== false,
+    effort:
+      typeof params.think === "string" && EFFORT_ORDER.includes(params.think as EffortLevel)
+        ? (params.think as EffortLevel)
+        : "low",
   };
 }
 
@@ -167,6 +188,8 @@ export function summarize(state: FormState, profile: ExemplarsProfile | null): s
   parts.push(label.charAt(0).toLowerCase() + label.slice(1));
   if (state.instructions.trim()) parts.push("con instrucciones");
   if (!state.think) parts.push("sin razonamiento previo");
+  else if (state.effort !== "low")
+    parts.push(`razonamiento ${EFFORT_LABELS[state.effort].toLowerCase()}`);
   return parts.join(" · ");
 }
 
@@ -352,6 +375,14 @@ export function GenerateForm({
   const scope = useScope(typeKey);
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
+
+  // Which model will serve the generation decides which effort levels make sense and what
+  // to warn about; the policy table in `effort.ts` is where a new model gets its entry.
+  const health = useHealth();
+  const generationModel = health.data?.models.required.VARIANT_GENERATION_LLM;
+  const policy = effortPolicy(generationModel);
+  const effort = clampEffort(state.effort, policy);
+  const warning = effortWarning(effort, policy);
 
   // The curriculum that will actually be in force, resolved exactly as the server resolves
   // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
@@ -768,14 +799,53 @@ export function GenerateForm({
                   Razonamiento previo
                 </span>
                 <span className="ml-auto text-[11px] nums text-muted-foreground">
-                  {state.think ? "activado" : "desactivado"}
+                  {state.think ? `activado · ${EFFORT_LABELS[effort].toLowerCase()}` : "desactivado"}
                 </span>
               </div>
+              {state.think ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    role="group"
+                    aria-label="Esfuerzo de razonamiento"
+                    className="flex overflow-hidden rounded-md border border-border"
+                  >
+                    {policy.levels.map((level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        aria-pressed={level === effort}
+                        onClick={() => patch({ effort: level })}
+                        className={cn(
+                          "px-2.5 py-1 text-small transition-colors",
+                          level === effort
+                            ? "bg-primary font-medium text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {EFFORT_LABELS[level]}
+                      </button>
+                    ))}
+                  </div>
+                  {generationModel ? (
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {generationModel}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <p className="text-small text-muted-foreground">
                 {state.think
-                  ? "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Por eso tarda bastante más —hasta varios minutos por ítem— y ese razonamiento queda visible junto al resultado."
+                  ? "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Más esfuerzo es más deliberación, y ese razonamiento queda visible junto al resultado."
                   : "El modelo responde directamente, sin deliberar. Va mucho más rápido, pero suele ajustarse peor al concepto objetivo y respetar peor lo que el grafo marca como todavía no impartido."}
               </p>
+              {state.think && policy.note ? (
+                <p className="text-small text-muted-foreground">{policy.note}</p>
+              ) : null}
+              {state.think && warning ? (
+                <Alert tone="attention" title="Esfuerzo elevado">
+                  <p>{warning}</p>
+                </Alert>
+              ) : null}
             </div>
           ) : (
             <p className="flex items-start gap-1.5 text-small text-muted-foreground">

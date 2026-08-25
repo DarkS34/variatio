@@ -31,7 +31,9 @@ def test_every_toggle_is_a_bool_setting_of_the_reasoning_group():
 
 def test_every_reasoning_switch_has_a_place_in_the_pipeline():
     declared = {s.key for s in reasoning.SETTINGS}
-    drawn = {phase.setting for phase in PHASES if phase.setting}
+    drawn = {phase.setting for phase in PHASES if phase.setting} | {
+        phase.effort for phase in PHASES if phase.effort
+    }
     assert declared == drawn
 
 
@@ -74,4 +76,35 @@ def test_the_serialised_pipeline_carries_the_same_shape():
     assert [lane["key"] for lane in lanes] == [lane.key for lane in PIPELINE]
     for lane in lanes:
         for phase in lane["phases"]:
-            assert set(phase) == {"key", "label", "model", "setting", "fixed", "note"}
+            assert set(phase) == {"key", "label", "model", "setting", "effort", "fixed", "note"}
+
+
+def test_every_toggle_carries_an_effort_setting_and_fixed_phases_none():
+    for phase in PHASES:
+        if phase.setting is None:
+            assert phase.effort is None, phase.key
+            continue
+        assert phase.effort == f"reasoning.effort.{phase.key}"
+        setting = BY_KEY[phase.effort]
+        assert setting.kind == "str"
+        assert not setting.nullable
+        assert setting.default == "low"
+        assert setting.choices == ("low", "medium", "high", "max")
+        assert setting.scope == "engine"
+        assert setting.group == reasoning.GROUP
+        assert not setting.name
+
+
+def test_derived_resolves_the_effort_only_when_the_phase_reasons():
+    from variant_generator.settings.registry import REGISTRY
+
+    values = {setting.key: setting.default for setting in REGISTRY}
+    values["reasoning.phases.kg_extract"] = False
+    values["reasoning.effort.kg_extract"] = "medium"
+    values["reasoning.phases.kg_taggable"] = True
+    values["reasoning.phases.kg_link_domain"] = True
+    values["reasoning.effort.kg_link_domain"] = "medium"
+    out = derived.derive(values)
+    assert out["THINK_KG_EXTRACT"] is False
+    assert out["THINK_KG_TAGGABLE"] == "low"
+    assert out["THINK_KG_LINK_DOMAIN"] == "medium"

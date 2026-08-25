@@ -10,6 +10,7 @@ import type {
   BuildPlans,
   CommissionScope,
   ConceptSource,
+  CerebrasCatalog,
   ConfigPayload,
   ExemplarsProfile,
   Coverage,
@@ -403,4 +404,5 @@ export const api = {
     put<ConfigPayload>("/api/admin/config", { values }),
   reloadAdminConfig: () => post<ConfigPayload>("/api/admin/config/reload"),
   resetAdminConfig: (keys: string[]) => post<ConfigPayload>("/api/admin/config/reset", { keys }),
+  adminCerebrasModels: () => request<CerebrasCatalog>("/api/admin/config/cerebras-models"),
 };
