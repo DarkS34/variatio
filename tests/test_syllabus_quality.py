@@ -41,8 +41,8 @@ def test_the_build_recorded_a_syllabus_at_all():
         "del temario. Reconstruye el grafo."
     )
     assert stored.get("units"), (
-        "Hay índice pero no unidades: la segmentación cayó al camino anterior. Mira el "
-        "aviso de «[units]» en el registro del build."
+        "Hay índice pero no unidades: la segmentación cayó al camino anterior. Busca en "
+        "el registro del build el aviso «El modelo no segmentó el temario»."
     )
 
 

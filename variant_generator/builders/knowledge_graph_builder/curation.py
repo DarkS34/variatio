@@ -138,6 +138,10 @@ def segment_syllabus(
     outline: list[dict], documents: list[dict], *, max_attempts: int
 ) -> list[dict]:
     if not outline:
+        logger.info(
+            "El corpus no tiene índice de encabezados; los dominios se nombran sin mirar "
+            "la estructura del material"
+        )
         return []
     prompt = segment_syllabus_prompt(blocks.outline_block(outline, documents))
     response = inference.generate(
