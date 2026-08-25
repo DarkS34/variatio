@@ -64,7 +64,7 @@ def convert_corpus(
     converter,
     chunk_size: int,
     markdown_cache_dir: Path,
-) -> list[tuple[str, list[str], list[tuple[str, str]]]]:
+) -> list[tuple[str, list[str], list[tuple[str, list[str], str]]]]:
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
         logger.error(f"Ningún documento admitido en {input_dir}")
@@ -73,7 +73,7 @@ def convert_corpus(
     logger.info(f"{len(files)} documento(s) en el corpus; convirtiendo a markdown")
     progress.phase("convert", f"0/{len(files)} documento(s)")
 
-    converted: list[tuple[str, dict[int, list[str]], list[tuple[str, str]]]] = []
+    converted: list[tuple[str, dict[int, list[str]], list[tuple[str, list[str], str]]]] = []
     with progress.step(
         "kg_convert", "Convirtiendo los documentos del corpus", len(files)
     ) as reporter:
@@ -91,7 +91,7 @@ def convert_corpus(
                 logger.exception(f"[{file_path.name}] omitido: {e}")
                 continue
 
-            chunks = _source_docs.chunk_markdown(text, chunk_size)
+            chunks = _source_docs.chunk_sections(text, chunk_size)
             if not chunks:
                 logger.warning(f"[{file_path.name}] no produjo texto")
                 continue
@@ -132,7 +132,7 @@ def select_titles(levels_per_doc: list[dict[int, list[str]]]) -> list[list[str]]
 
 
 def extract_documents(
-    documents: list[tuple[str, list[str], list[tuple[str, str]]]],
+    documents: list[tuple[str, list[str], list[tuple[str, list[str], str]]]],
     *,
     schema,
     max_attempts: int,
@@ -144,15 +144,19 @@ def extract_documents(
     origins: dict[str, set[int]] = defaultdict(set)
     passages: dict[str, list[dict]] = defaultdict(list)
     positions: dict[str, int] = {}
+    occurrences: dict[str, list[int]] = defaultdict(list)
+    outline: list[dict] = []
     definitions: dict[str, str] = {}
     relations: set[tuple[str, str, str]] = set()
     done = 0
 
     with progress.step("kg_extract", "Extrayendo conceptos y relaciones", total) as reporter:
         for di, (name, _, chunks) in enumerate(documents):
-            for ci, (location, chunk) in enumerate(chunks, 1):
+            for ci, (location, headings, chunk) in enumerate(chunks, 1):
                 progress.checkpoint()
                 done += 1
+                for heading in headings:
+                    outline.append({"document": di, "heading": heading, "chunk": done})
                 reporter.tick(
                     done,
                     detail=(
@@ -185,6 +189,7 @@ def extract_documents(
                     origins[concept].add(di)
                     positions.setdefault(concept, done)
                 for concept in sorted(set(chunk_concepts)):
+                    occurrences[concept].append(done)
                     remember_passage(passages[concept], concept, chunk, name, location)
                     if concept not in definitions and chunk_definitions.get(concept):
                         definitions[concept] = chunk_definitions[concept]
@@ -201,6 +206,8 @@ def extract_documents(
         "origins": dict(origins),
         "passages": dict(passages),
         "positions": positions,
+        "occurrences": dict(occurrences),
+        "outline": outline,
         "definitions": definitions,
         "relations": relations,
     }
@@ -372,11 +379,14 @@ def _ask(
 # What DOES survive is where each concept was first seen (`positions`, the running chunk
 # count) and the definition written there: the material introduces a concept once, and
 # both the order and the definition are read from that introduction.
-def assemble(found: dict, documents: list[tuple[str, list[str], list[tuple[str, str]]]]) -> dict:
+def assemble(
+    found: dict, documents: list[tuple[str, list[str], list[tuple[str, list[str], str]]]]
+) -> dict:
     origins = found["origins"]
     rels = sorted(list(r) for r in found["relations"])
     names = sorted(origins)
     positions = found.get("positions") or {}
+    occurrences = found.get("occurrences") or {}
     definitions = found.get("definitions") or {}
     return {
         "entities": names,
@@ -386,5 +396,7 @@ def assemble(found: dict, documents: list[tuple[str, list[str], list[tuple[str, 
         "origins": {name: sorted(origins[name]) for name in names},
         "passages": {name: found["passages"].get(name, []) for name in names},
         "positions": {name: positions[name] for name in names if name in positions},
+        "occurrences": {name: occurrences[name] for name in names if name in occurrences},
+        "outline": found.get("outline") or [],
         "definitions": {name: definitions[name] for name in names if definitions.get(name)},
     }

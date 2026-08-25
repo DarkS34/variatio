@@ -71,7 +71,7 @@ def test_positions_record_the_first_chunk_a_concept_is_seen_in(monkeypatch):
         }
     )
     answers(monkeypatch, first, second)
-    documents = [("doc.md", [], [("Tema 1", "texto uno"), ("Tema 2", "texto dos")])]
+    documents = [("doc.md", [], [("Tema 1", [], "texto uno"), ("Tema 2", [], "texto dos")])]
 
     found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
 
@@ -87,7 +87,7 @@ def test_positions_run_across_documents(monkeypatch):
         json.dumps({"concepts": [concept("A")], "relations": []}),
         json.dumps({"concepts": [concept("B")], "relations": []}),
     )
-    documents = [("uno.md", [], [("", "x")]), ("dos.md", [], [("", "y")])]
+    documents = [("uno.md", [], [("", [], "x")]), ("dos.md", [], [("", [], "y")])]
     found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
     assert found["positions"] == {"A": 1, "B": 2}
 
@@ -129,6 +129,54 @@ def test_gleaning_is_skipped_when_the_first_reading_found_nothing(monkeypatch):
     prompts = answers(monkeypatch)
     extraction.glean_chunk("texto", "[t] ", "", [], [], {}, schema=SCHEMA, max_attempts=1)
     assert prompts == []
+
+
+def test_occurrences_record_only_extractions_and_not_relation_endpoints(monkeypatch):
+    monkeypatch.setattr(config, "KG_EXTRACT_GLEANING_PASSES", 0)
+    first = json.dumps(
+        {
+            "concepts": [concept("Bucle")],
+            "relations": [["Bucle", "prerrequisito", "Recursividad"]],
+        }
+    )
+    second = json.dumps({"concepts": [concept("Recursividad")], "relations": []})
+    answers(monkeypatch, first, second)
+    documents = [("doc.md", [], [("", [], "uno"), ("", [], "dos")])]
+
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+
+    assert found["positions"]["Recursividad"] == 1
+    assert found["occurrences"]["Recursividad"] == [2]
+    assert found["occurrences"]["Bucle"] == [1]
+
+
+def test_occurrences_accumulate_every_chunk_a_concept_is_extracted_from(monkeypatch):
+    monkeypatch.setattr(config, "KG_EXTRACT_GLEANING_PASSES", 0)
+    body = json.dumps({"concepts": [concept("Lista")], "relations": []})
+    answers(monkeypatch, body, body, body)
+    documents = [("doc.md", [], [("", [], "a"), ("", [], "b"), ("", [], "c")])]
+
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+
+    assert found["occurrences"]["Lista"] == [1, 2, 3]
+
+
+def test_the_outline_keeps_duplicates_and_the_order_of_the_corpus(monkeypatch):
+    monkeypatch.setattr(config, "KG_EXTRACT_GLEANING_PASSES", 0)
+    answers(monkeypatch)
+    documents = [
+        ("uno.md", [], [("", ["Tema I", "Ejemplo"], "a"), ("", ["Tema II"], "b")]),
+        ("dos.md", [], [("", ["Ejemplo"], "c")]),
+    ]
+
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+
+    assert found["outline"] == [
+        {"document": 0, "heading": "Tema I", "chunk": 1},
+        {"document": 0, "heading": "Ejemplo", "chunk": 1},
+        {"document": 0, "heading": "Tema II", "chunk": 2},
+        {"document": 1, "heading": "Ejemplo", "chunk": 3},
+    ]
 
 
 # CLEANING ----------------------------------------------------------------------------------
