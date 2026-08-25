@@ -42,6 +42,21 @@ def test_all_concepts_walks_the_domains_in_that_order(graph_path):
     assert first_seen == ["Zeta primero", "Alfa segundo", "Media tercero"]
 
 
+def test_the_view_emits_the_groups_in_the_syllabus_order(graph_path):
+    from server import kg_view
+
+    kg = KnowledgeGraph(str(graph_path))
+    payload = kg_view.build(GRAPH, kg)
+
+    assert [group["name"] for group in payload["groups"]] == [
+        "Zeta primero",
+        "Alfa segundo",
+        "Media tercero",
+    ]
+    assert [group["count"] for group in payload["groups"]] == [3, 1, 2]
+    assert payload["nodes"][3][1] == 1
+
+
 @pytest.fixture
 def ws(tmp_path, monkeypatch):
     from server.db import mirror

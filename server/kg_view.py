@@ -41,12 +41,11 @@ def build(graph_raw: dict, kg: KnowledgeGraph, title: str = "Grafo de conocimien
     names = list(kg.all_concepts)
     node_index = {name: i for i, name in enumerate(names)}
 
-    sizes: dict[str, int] = defaultdict(int)
+    counts: dict[str, int] = defaultdict(int)
     for name in names:
-        sizes[kg.concept_domain[name]] += 1
+        counts[kg.concept_domain[name]] += 1
     groups = [
-        {"name": name, "count": count}
-        for name, count in sorted(sizes.items(), key=lambda kv: (-kv[1], kv[0]))
+        {"name": domain, "count": counts[domain]} for domain in kg.domains if counts[domain]
     ]
     group_index = {group["name"]: i for i, group in enumerate(groups)}
 
