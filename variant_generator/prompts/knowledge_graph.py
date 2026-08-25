@@ -331,6 +331,41 @@ Un único objeto JSON exactamente con esta forma:
 JSON:"""
 
 
+def segment_syllabus_prompt(outline_block: str) -> str:
+    return f"""\
+Se te da el ÍNDICE de un corpus de material docente de una sola asignatura: todos sus encabezados, en el orden exacto en que aparecen en el material y numerados desde 1.
+
+Tu tarea: decir qué encabezados ABREN una UNIDAD DIDÁCTICA — un tema, un módulo, un bloque grande del temario — y cómo se llama cada una.
+
+# QUÉ ES UNA UNIDAD
+- Es un divisor GRANDE del contenido: lo que el docente llamaría tema, módulo o bloque. No es un apartado, ni un ejemplo, ni un ejercicio, ni una subsección.
+- Un encabezado que ya lleva un ordinal en el nombre («Tema I», «Unidad 3», «Módulo II») casi siempre abre una, y es la señal más fiable que hay en el índice.
+- POCAS: entre 3 y 12 en total. Si estás nombrando más de una docena, estás partiendo por apartados y no por temas.
+- La portada, el índice, la bibliografía, los agradecimientos, los anexos y las notas de la asignatura NO abren unidad.
+
+# EL ORDEN ES EL QUE SE TE DA
+- El índice ya viene en el orden del material, que es el orden en que se imparte. NO lo reordenes, no lo reorganices por dificultad y no lo agrupes por afinidad temática. Tu salida se ordena por `opens_at`, así que cualquier reordenación que intentes se descarta.
+- Todo lo que va desde el encabezado que abre una unidad hasta el que abre la siguiente PERTENECE a esa unidad. Por eso solo hace falta decir dónde empieza cada una.
+
+# NOMBRES
+- El nombre de la unidad puede ser el propio encabezado, limpio: sin el ordinal, sin dos puntos ni guiones sueltos al final. Si el encabezado no dice de qué trata, escribe tú un nombre corto y descriptivo, EN EL MISMO IDIOMA que el índice.
+- No repitas un nombre y no escribas dos nombres para el mismo bloque.
+- PROHIBIDO un nombre genérico de descarte del tipo «Otros», «Varios», «Miscelánea» o «Sin clasificar»: todo lo que hay entre dos unidades ya pertenece a la primera.
+
+# SALIDA
+Un único objeto JSON exactamente con esta forma:
+{{
+  "units": [{{"name": "<nombre de la unidad>", "opens_at": <número de línea del índice>}}, "..."]
+}}
+- `opens_at` es el NÚMERO que lleva delante el encabezado en el índice de abajo. No inventes números y no escribas el encabezado en su lugar.
+- Nada de texto antes ni después, sin backticks, sin comentarios.
+
+# ÍNDICE DEL CORPUS
+{outline_block}
+
+JSON:"""
+
+
 def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> str:
     sources_block = ""
     sources_rule = ""

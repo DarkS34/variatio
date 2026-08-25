@@ -40,6 +40,7 @@ from .knowledge_graph import (
     link_domain_relations_prompt,
     merge_candidate_groups_prompt,
     review_taggable_concepts_prompt,
+    segment_syllabus_prompt,
 )
 
 __all__ = [
@@ -65,6 +66,7 @@ __all__ = [
     "repair_exemplars_profile_prompt",
     "review_taggable_concepts_prompt",
     "scan_item_types_prompt",
+    "segment_syllabus_prompt",
     "synthesize_content_context_prompt",
     "tag_concepts_prompt",
     "transcribe_page_prompt",

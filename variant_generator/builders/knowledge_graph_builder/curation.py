@@ -18,9 +18,10 @@ from ...prompts import (
     curate_graph_domains_prompt,
     link_cross_domain_relations_prompt,
     link_domain_relations_prompt,
+    segment_syllabus_prompt,
 )
 from . import blocks, parsing
-from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA
+from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA, UNITS_SCHEMA
 
 
 def run(
@@ -112,6 +113,70 @@ def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
         f"Anclaje al corpus: {len(anchored)} de {len(universe)} concepto(s) con cita "
         f"en {Path(path).name}"
     )
+
+
+MIN_UNITS = 2
+
+
+def segment_syllabus(
+    outline: list[dict], documents: list[dict], *, max_attempts: int
+) -> list[dict]:
+    if not outline:
+        return []
+    prompt = segment_syllabus_prompt(blocks.outline_block(outline, documents))
+    response = inference.generate(
+        model=config.KG_UNITS_MODEL,
+        prompt=prompt,
+        think=config.THINK_KG_UNITS,
+        format=None if config.THINK_KG_UNITS else UNITS_SCHEMA,
+        temperature=inference.judgement_temperature(config.THINK_KG_UNITS),
+    ).response
+    raw = parsing.parse_object(response, "[units] ", UNITS_SCHEMA, max_attempts) or {}
+    units = accept_units(raw.get("units") or [], outline)
+    if not units:
+        logger.warning(
+            f"El modelo no segmentó el temario sobre {len(outline)} encabezado(s); "
+            "se nombran los dominios sin mirar la estructura del material"
+        )
+        return []
+    logger.success(
+        f"Temario: {len(units)} unidad(es) sobre {len(outline)} encabezado(s) — "
+        + " · ".join(unit["name"] for unit in units)
+    )
+    return units
+
+
+def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
+    unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
+    units: list[dict] = []
+    seen_positions: set[int] = set()
+    seen_names: set[str] = set()
+    seen_chunks: set[int] = set()
+
+    for entry in proposed:
+        if not isinstance(entry, dict):
+            continue
+        raw_name = entry.get("name")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
+        position = entry.get("opens_at")
+        if not name or name == unclassified:
+            continue
+        if not isinstance(position, int) or isinstance(position, bool):
+            continue
+        if not 1 <= position <= len(outline):
+            continue
+        if position in seen_positions or name.casefold() in seen_names:
+            continue
+        anchor = outline[position - 1]
+        if anchor["chunk"] in seen_chunks:
+            continue
+        seen_positions.add(position)
+        seen_names.add(name.casefold())
+        seen_chunks.add(anchor["chunk"])
+        units.append({"name": name, "heading": anchor["heading"], "chunk": anchor["chunk"]})
+
+    units.sort(key=lambda unit: unit["chunk"])
+    return units if len(units) >= MIN_UNITS else []
 
 
 # DOMAINS ---------------------------------------------------------------------------------

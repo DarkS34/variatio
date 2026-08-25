@@ -75,6 +75,17 @@ def documents_block(documents: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def outline_block(outline: list[dict], documents: list[dict] | None = None) -> str:
+    names = [d.get("name", "") for d in (documents or [])]
+    lines = []
+    for index, entry in enumerate(outline, 1):
+        position = entry.get("document")
+        document = names[position] if isinstance(position, int) and position < len(names) else ""
+        suffix = f"  ({document})" if len(names) > 1 and document else ""
+        lines.append(f"{index}. {entry.get('heading', '')}{suffix}")
+    return "\n".join(lines)
+
+
 def domains_block(concepts_by_domains: dict, definitions: dict[str, str] | None = None) -> str:
     return "\n\n".join(
         f"## {domain}\n" + "\n".join(node_line(c, definitions) for c in members)

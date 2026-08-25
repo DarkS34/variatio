@@ -87,6 +87,24 @@ DOMAINS_SCHEMA = {
     "required": ["domains"],
 }
 
+UNITS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "units": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "opens_at": {"type": "integer"},
+                },
+                "required": ["name", "opens_at"],
+            },
+        }
+    },
+    "required": ["units"],
+}
+
 TAGGABLE_SCHEMA = {
     "type": "object",
     "properties": {
