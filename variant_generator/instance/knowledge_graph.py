@@ -10,6 +10,8 @@ class KnowledgeGraph:
             data = json.load(f)
 
         self.concepts_by_domains: dict[str, list[str]] = data["concepts_by_domains"]
+        self.domains: list[str] = list(self.concepts_by_domains)
+        self.domain_index: dict[str, int] = {d: i for i, d in enumerate(self.domains)}
         self.concept_domain: dict[str, str] = {
             c: d for d, cs in self.concepts_by_domains.items() for c in cs
         }

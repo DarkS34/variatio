@@ -186,12 +186,35 @@ def _bank_references(ws: Workspace, concept: str) -> int:
 # Domains -------------------------------------------------------------------------------------
 
 
-def add_domain(ws: Workspace, name: str) -> dict:
+def add_domain(ws: Workspace, name: str, after: str | None = None) -> dict:
     graph_raw = raw(ws)
-    if name in graph_raw["concepts_by_domains"]:
+    domains = graph_raw["concepts_by_domains"]
+    if name in domains:
         raise KGError(f"El dominio '{name}' ya existe")
-    graph_raw["concepts_by_domains"][name] = []
+    if after is not None and after not in domains:
+        raise KGError(f"El dominio '{after}' no existe")
+    if after is None:
+        domains[name] = []
+    else:
+        rebuilt: dict[str, list[str]] = {}
+        for key, value in domains.items():
+            rebuilt[key] = value
+            if key == after:
+                rebuilt[name] = []
+        graph_raw["concepts_by_domains"] = rebuilt
     return _save(ws, graph_raw, f"dominio '{name}' añadido")
+
+
+def reorder_domains(ws: Workspace, order: list[str]) -> dict:
+    graph_raw = raw(ws)
+    domains = graph_raw["concepts_by_domains"]
+    if sorted(order) != sorted(domains):
+        raise KGError(
+            "El orden tiene que nombrar exactamente los dominios que existen, "
+            "una sola vez cada uno"
+        )
+    graph_raw["concepts_by_domains"] = {name: domains[name] for name in order}
+    return _save(ws, graph_raw, "orden de las unidades cambiado")
 
 
 def rename_domain(ws: Workspace, name: str, new_name: str) -> dict:

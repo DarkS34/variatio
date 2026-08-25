@@ -17,6 +17,11 @@ class DomainBody(BaseModel):
     name: str
     new_name: str | None = None
     move_to: str | None = None
+    after: str | None = None
+
+
+class DomainOrderBody(BaseModel):
+    order: list[str]
 
 
 class ConceptBody(BaseModel):
@@ -115,7 +120,7 @@ def write_description(body: DescriptionBody, access: auth.Access = auth.VIEW) ->
 
 @router.post("/domains", dependencies=[auth.EDIT])
 def add_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
-    return _handle(access, lambda: kg_edit.add_domain(access.ws, body.name))
+    return _handle(access, lambda: kg_edit.add_domain(access.ws, body.name, body.after))
 
 
 @router.patch("/domains", dependencies=[auth.EDIT])
@@ -128,6 +133,11 @@ def patch_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
 @router.post("/domains/delete", dependencies=[auth.EDIT])
 def delete_domain(body: DomainBody, access: auth.Access = auth.VIEW) -> dict:
     return _handle(access, lambda: kg_edit.delete_domain(access.ws, body.name, body.move_to))
+
+
+@router.put("/domains/order", dependencies=[auth.EDIT])
+def reorder_domains(body: DomainOrderBody, access: auth.Access = auth.VIEW) -> dict:
+    return _handle(access, lambda: kg_edit.reorder_domains(access.ws, body.order))
 
 
 # CONCEPTS ------------------------------------------------------------------------------------
