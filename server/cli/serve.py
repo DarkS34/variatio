@@ -17,6 +17,7 @@ def serve(args) -> int:
 
     from ..db import is_available, session_scope
     from ..db.identity import count_users
+    from .access_log import access_log_config, access_log_path
 
     try:
         hold(serve_lock_path())
@@ -48,5 +49,6 @@ def serve(args) -> int:
         port=args.port,
         reload=args.reload,
         log_level="info",
+        log_config=access_log_config(access_log_path()),
     )
     return 0

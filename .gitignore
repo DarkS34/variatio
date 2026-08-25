@@ -3,6 +3,7 @@
 __pycache__
 .env
 /raw*
+/logs/
 web/node_modules
 web/dist
 web/tsconfig.tsbuildinfo
