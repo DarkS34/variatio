@@ -2,16 +2,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   FolderPlus,
   Link2,
   ListChecks,
-  Pencil,
+  Maximize2,
   Plus,
   Search,
   Trash2,
-  TriangleAlert,
+  Waypoints,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -25,11 +23,10 @@ import { InfoHint } from "@/components/ui/hint";
 import { Field } from "@/components/ui/field";
 import { Input, Select } from "@/components/ui/input";
 import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
-import { Table, TableEmpty, TBody, TD, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
-import { domainColour, relationColour } from "@/lib/format";
+import { relationColour, when } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -44,9 +41,11 @@ import {
   usePipeline,
   useSubmitJob,
 } from "@/state/queries";
+import { ConceptOutline, FrontierKey, type CurriculumPlace } from "./ConceptOutline";
 import { CurriculumTab } from "./CurriculumTab";
 import { DescriptionReview } from "./DescriptionReview";
 import { GraphCanvas } from "./GraphCanvas";
+import { buildModel, frontierOf } from "./graph/model";
 
 function ConceptDetail({
   concept,
@@ -107,7 +106,7 @@ function ConceptDetail({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        <Field label="Dominio">
+        <Field label="Unidad">
           <Select
             value={domain}
             disabled={locked}
@@ -288,15 +287,19 @@ function AddConceptDialog({
   open,
   onClose,
   domains,
+  initialDomain,
   onDone,
 }: {
   open: boolean;
   onClose: () => void;
   domains: string[];
+  /** The unit the dialog was opened from. Adding a concept is nearly always adding it to
+   *  the unit you are looking at, and the outline is the one screen that knows which. */
+  initialDomain?: string;
   onDone: () => void;
 }) {
   const [name, setName] = useState("");
-  const [domain, setDomain] = useState(domains[0] ?? "");
+  const [domain, setDomain] = useState(initialDomain ?? domains[0] ?? "");
   const [taggable, setTaggable] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
@@ -334,7 +337,7 @@ function AddConceptDialog({
         <Field label="Nombre">
           <Input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
         </Field>
-        <Field label="Dominio">
+        <Field label="Unidad">
           <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
             {domains.map((option) => (
               <option key={option} value={option}>
@@ -353,7 +356,15 @@ function AddConceptDialog({
   );
 }
 
-function GraphExplorer() {
+/**
+ * The syllabus, with the map beside it.
+ *
+ * Curating a graph is a list of decisions taken concept by concept — is this a usable label,
+ * does it have a description, has the course got here yet — and a force layout can show none
+ * of them: it answers "what is near what", which is a question you ask once. So the outline
+ * is the screen and the drawing is the reference, one click from filling the window.
+ */
+function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
@@ -369,9 +380,9 @@ function GraphExplorer() {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [domainFilter, setDomainFilter] = useState("");
   const [hiddenRelations, setHiddenRelations] = useState<Set<number>>(new Set());
-  const [addingConcept, setAddingConcept] = useState(false);
+  const [addingIn, setAddingIn] = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = () => {
@@ -384,6 +395,43 @@ function GraphExplorer() {
   const domains = (kg.data?.domains ?? []).map((d) => d.name);
   const relations = (kg.data?.relations ?? []).map((r) => r.name);
 
+  const model = useMemo(() => (graph.data ? buildModel(graph.data) : null), [graph.data]);
+
+  // Where each concept falls relative to the frontier — the same three sets the generator
+  // derives when it writes a prompt. Computed over indices because that is what the graph
+  // model speaks, and handed back by name because that is what a row has.
+  const frontierNames = useMemo(() => {
+    if (!graph.data || !model || !curriculumSet) return null;
+    const indices = new Set<number>();
+    for (const name of curriculumSet) {
+      const index = model.nameIndex.get(name);
+      if (index !== undefined) indices.add(index);
+    }
+    return new Set(
+      [...frontierOf(graph.data, model, indices)].map((index) => graph.data!.nodes[index][0]),
+    );
+  }, [graph.data, model, curriculumSet]);
+
+  const place = (name: string): CurriculumPlace | null => {
+    if (!curriculumSet) return null;
+    if (curriculumSet.has(name)) return "covered";
+    return frontierNames?.has(name) ? "frontier" : "ahead";
+  };
+
+  // Built from the whole graph, never from the filtered list: what a unit contains does not
+  // change because a search is narrowing what is drawn, and «eliminar la unidad y sus N»
+  // has to name the number that will actually be deleted.
+  const unitStats = useMemo(() => {
+    const stats = new Map<string, { total: number; covered: number }>();
+    for (const concept of concepts) {
+      const entry = stats.get(concept.domain) ?? { total: 0, covered: 0 };
+      entry.total += 1;
+      if (curriculumSet?.has(concept.name)) entry.covered += 1;
+      stats.set(concept.domain, entry);
+    }
+    return stats;
+  }, [concepts, curriculumSet]);
+
   const moveDomain = (name: string, delta: number) => {
     const from = domains.indexOf(name);
     const to = from + delta;
@@ -395,18 +443,17 @@ function GraphExplorer() {
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
+    if (!needle) return concepts;
     return concepts.filter(
       (concept) =>
-        (!domainFilter || concept.domain === domainFilter) &&
-        (!needle ||
-          concept.name.toLowerCase().includes(needle) ||
-          (concept.description ?? "").toLowerCase().includes(needle)),
+        concept.name.toLowerCase().includes(needle) ||
+        (concept.description ?? "").toLowerCase().includes(needle),
     );
-  }, [concepts, query, domainFilter]);
+  }, [concepts, query]);
 
   const highlight = useMemo(
-    () => (query.trim() || domainFilter ? new Set(filtered.map((c) => c.name)) : undefined),
-    [filtered, query, domainFilter],
+    () => (query.trim() ? new Set(filtered.map((c) => c.name)) : undefined),
+    [filtered, query],
   );
 
   const selectedConcept = concepts.find((c) => c.name === selected) ?? null;
@@ -416,297 +463,259 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
+  const covered = curriculumSet
+    ? concepts.filter((concept) => curriculumSet.has(concept.name)).length
+    : 0;
+
+  const canvas = (compact: boolean) => (
+    <GraphCanvas
+      graph={graph.data!}
+      selected={selected}
+      onSelect={setSelected}
+      highlight={highlight}
+      hiddenRelations={hiddenRelations}
+      curriculum={curriculumSet}
+      compact={compact}
+    />
+  );
+
+  const detail = (concept: KgConcept) => (
+    <ConceptDetail
+      key={concept.name}
+      concept={concept}
+      domains={domains}
+      relations={relations}
+      concepts={concepts}
+      onChanged={refresh}
+    />
+  );
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            aria-label="Buscar concepto o descripción"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar concepto o descripción…"
-            className="pl-8"
-          />
-        </div>
-        <Select
-          aria-label="Filtrar por dominio"
-          value={domainFilter}
-          onChange={(event) => setDomainFilter(event.target.value)}
-          className="max-w-56"
-        >
-          <option value="">Todos los dominios</option>
-          {domains.map((domain) => (
-            <option key={domain} value={domain}>
-              {domain}
-            </option>
-          ))}
-        </Select>
-        <Button
-          variant="outline"
-          disabled={locked}
-          title={locked ? LOCKED_HINT : undefined}
-          onClick={() => setAddingConcept(true)}
-        >
-          <Plus />
-          Concepto
-        </Button>
-        <Button
-          variant="outline"
-          disabled={locked}
-          title={locked ? LOCKED_HINT : undefined}
-          onClick={() => {
-            const name = window.prompt("Nombre del nuevo dominio");
-            if (name?.trim()) api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
-          }}
-        >
-          <FolderPlus />
-          Dominio
-        </Button>
-      </div>
-
       {error ? (
         <Alert tone="danger" title="Error al editar el grafo">
           <p>{error}</p>
         </Alert>
       ) : null}
 
-      {/* The canvas is the map and the inspector is the reading: editing happens beside the
-          picture, not below the fold. On narrow screens the pair stacks and nothing is lost. */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,23rem)]">
-        <div className="h-[clamp(28rem,66vh,50rem)] min-w-0">
-          <GraphCanvas
-            graph={graph.data}
-            selected={selected}
-            onSelect={setSelected}
-            highlight={highlight}
-            hiddenRelations={hiddenRelations}
-            curriculum={curriculumSet}
-          />
-        </div>
-
-        <Card className="flex max-h-[36rem] min-h-0 flex-col overflow-hidden xl:max-h-[clamp(28rem,66vh,50rem)]">
-          {selectedConcept ? (
-            <>
-              <CardHeader className="flex-row items-center gap-1.5 space-y-0 pb-2">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setSelected(null)}
-                  aria-label="Volver a la lista de conceptos"
-                >
-                  <ArrowLeft />
-                </Button>
-                <CardTitle className="min-w-0 truncate">{selectedConcept.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-                <ConceptDetail
-                  key={selectedConcept.name}
-                  concept={selectedConcept}
-                  domains={domains}
-                  relations={relations}
-                  concepts={concepts}
-                  onChanged={refresh}
-                />
-              </CardContent>
-            </>
-          ) : (
-            <>
-              <CardHeader className="pb-2">
-                <CardTitle>Conceptos ({filtered.length})</CardTitle>
-                <p className="text-small text-muted-foreground">
-                  {totals.taggable} etiquetables ·{" "}
-                  <span className={totals.described < totals.taggable ? "text-attention" : undefined}>
-                    {totals.described} con descripción
-                  </span>
-                </p>
-              </CardHeader>
-              <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto p-0">
-                <Table minWidth="16rem">
-                  <TBody>
-                    {filtered.map((concept) => {
-                      const groupIndex = graph.data!.groups.findIndex(
-                        (g) => g.name === concept.domain,
-                      );
-                      const colour = domainColour(
-                        Math.max(0, groupIndex),
-                        graph.data!.groups.length,
-                      );
-                      return (
-                        <TR
-                          key={concept.name}
-                          selected={selected === concept.name}
-                          onSelect={() => setSelected(concept.name)}
-                        >
-                          <TD className="w-1 pr-0">
-                            {/* The same code as the canvas: filled is a taggable target,
-                                hollow is structure. */}
-                            <span
-                              className="block size-2 rounded-full"
-                              style={
-                                concept.taggable
-                                  ? { background: colour }
-                                  : { border: `1.5px solid ${colour}` }
-                              }
-                            />
-                          </TD>
-                          <TD className="min-w-0">
-                            <span
-                              className={cn(!concept.taggable && "text-muted-foreground")}
-                              title={concept.taggable ? undefined : "No etiquetable"}
-                            >
-                              {concept.name}
-                            </span>
-                          </TD>
-                          <TD align="num" className="whitespace-nowrap">
-                            {!concept.description ? (
-                              <TriangleAlert
-                                className="inline size-3.5 text-attention"
-                                aria-label="Sin descripción"
-                              />
-                            ) : null}
-                          </TD>
-                        </TR>
-                      );
-                    })}
-                    {filtered.length === 0 ? (
-                      <TableEmpty colSpan={3}>Ningún concepto coincide con el filtro.</TableEmpty>
-                    ) : null}
-                  </TBody>
-                </Table>
-              </CardContent>
-            </>
-          )}
-        </Card>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
-        <span className="flex flex-wrap items-center gap-1">
-          <span className="mr-1 text-muted-foreground">Relaciones:</span>
-          {graph.data.relations.map((relation, index) => (
-            <button
-              key={relation.key}
-              title={
-                hiddenRelations.has(index)
-                  ? "Mostrar esta relación"
-                  : "Ocultar esta relación del grafo"
-              }
-              onClick={() =>
-                setHiddenRelations((current) => {
-                  const next = new Set(current);
-                  if (next.has(index)) next.delete(index);
-                  else next.add(index);
-                  return next;
-                })
-              }
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
-                hiddenRelations.has(index)
-                  ? "border-border text-muted-foreground/50 line-through"
-                  : "border-border text-foreground hover:bg-accent",
-              )}
-            >
-              {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
-              <span
-                className="h-0.5 w-3 rounded-full"
-                style={{
-                  background: relationColour(relation.type ?? relation.key, index),
-                  opacity: hiddenRelations.has(index) ? 0.3 : 1,
-                }}
-              />
-              {relation.verbose ?? relation.key} · {relation.count}
-              {relation.prerequisite ? (
-                <span className="text-muted-foreground" title="Ordena la vista de currículo">
-                  ↕
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </span>
-
-        {/* One home for the domains: the chip filters the canvas and the list, and carries
-            its own rename and delete, so the screen stops repeating them in a card below. */}
-        <span className="flex flex-wrap items-center gap-1">
-          <span className="mr-1 text-muted-foreground">Unidades del temario:</span>
-          {graph.data.groups.map((group, index) => (
-            <span
-              key={group.name}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
-                domainFilter === group.name
-                  ? "border-primary text-foreground"
-                  : "border-border text-muted-foreground",
-              )}
-            >
-              <button
-                onClick={() => setDomainFilter(domainFilter === group.name ? "" : group.name)}
-                title="Filtrar por este dominio"
-                className="flex items-center gap-1.5 transition-colors hover:text-foreground"
-              >
-                <span
-                  className="size-2 rounded-full"
-                  style={{ background: domainColour(index, graph.data!.groups.length) }}
-                />
-                {group.name}
-                <span className="nums">{group.count}</span>
-              </button>
-              {locked ? null : (
-                <>
-                  <button
-                    aria-label={`Mover ${group.name} hacia atrás en el temario`}
-                    title="Antes en el temario"
-                    disabled={domains.indexOf(group.name) <= 0}
-                    onClick={() => moveDomain(group.name, -1)}
-                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
-                  >
-                    <ChevronLeft className="size-3" />
-                  </button>
-                  <button
-                    aria-label={`Mover ${group.name} hacia adelante en el temario`}
-                    title="Después en el temario"
-                    disabled={domains.indexOf(group.name) >= domains.length - 1}
-                    onClick={() => moveDomain(group.name, 1)}
-                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
-                  >
-                    <ChevronRight className="size-3" />
-                  </button>
-                  <button
-                    aria-label={`Renombrar ${group.name}`}
-                    title="Renombrar"
-                    onClick={() => {
-                      const next = window.prompt("Nuevo nombre del dominio", group.name);
-                      if (next?.trim() && next !== group.name)
-                        api
-                          .renameDomain(group.name, next.trim())
-                          .then(refresh)
-                          .catch((e) => setError(e.message));
-                    }}
-                    className="text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <Pencil className="size-3" />
-                  </button>
-                  <button
-                    aria-label={`Eliminar ${group.name}`}
-                    title={`Eliminar el dominio y sus ${group.count} concepto(s)`}
-                    onClick={() => {
-                      if (
-                        !window.confirm(
-                          `¿Eliminar "${group.name}"? Sus ${group.count} concepto(s) se eliminarán también.`,
-                        )
-                      )
-                        return;
-                      api.deleteDomain(group.name).then(refresh).catch((e) => setError(e.message));
-                    }}
-                    className="text-muted-foreground transition-colors hover:text-destructive"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </>
-              )}
+      {/* The list is the work and the map is the reference, so the list gets the width.
+          `grid-cols-1` is not redundant with the single implicit track it replaces: an
+          undeclared track is sized `auto`, i.e. to its item's MAX-content, and every row in
+          the outline truncates — `white-space: nowrap` — so below `xl` the card grew to the
+          width of the longest concept name and scrolled the whole page sideways. `grid-cols-1`
+          is `minmax(0, 1fr)`, which is the cap, and `min-w-0` on the card is what then lets
+          it take it. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]">
+        {/* `min-w-0` is load-bearing, not tidiness: a grid item defaults to `min-width: auto`,
+            and every row in here truncates — which means `white-space: nowrap`, which means a
+            min-content width of the longest concept name in the graph. Without it the card
+            grew to 2 940 px and put a horizontal scrollbar on the whole page. */}
+        <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 p-3">
+            <span className="text-micro font-condensed uppercase text-muted-foreground">
+              Temario · {totals.concepts} conceptos · {totals.taggable} etiquetables
             </span>
-          ))}
-        </span>
+            <span className="flex-1" />
+            <div className="relative min-w-56">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                aria-label="Buscar concepto o descripción"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar concepto o descripción…"
+                className="h-8 pl-8"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={locked}
+              title={locked ? LOCKED_HINT : undefined}
+              onClick={() => {
+                const name = window.prompt("Nombre de la nueva unidad");
+                if (name?.trim())
+                  api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
+              }}
+            >
+              <FolderPlus />
+              Unidad
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={locked}
+              title={locked ? LOCKED_HINT : undefined}
+              onClick={() => setAddingIn(domains[0] ?? "")}
+            >
+              <Plus />
+              Concepto
+            </Button>
+          </div>
+
+          <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
+            <ConceptOutline
+              concepts={filtered}
+              units={domains}
+              groups={graph.data.groups.map((group) => group.name)}
+              place={place}
+              unitStats={(unit) => unitStats.get(unit) ?? { total: 0, covered: 0 }}
+              hasCurriculum={Boolean(curriculumSet)}
+              selected={selected}
+              onSelect={setSelected}
+              onTaggable={(name, next) =>
+                api
+                  .updateConcept({ name, taggable: next })
+                  .then(refresh)
+                  .catch((e) => setError(e.message))
+              }
+              onRenameUnit={(name) => {
+                const next = window.prompt("Nuevo nombre de la unidad", name);
+                if (next?.trim() && next !== name)
+                  api
+                    .renameDomain(name, next.trim())
+                    .then(refresh)
+                    .catch((e) => setError(e.message));
+              }}
+              onMoveUnit={moveDomain}
+              onDeleteUnit={(name, count) => {
+                if (
+                  !window.confirm(
+                    `¿Eliminar "${name}"? Sus ${count} concepto(s) se eliminarán también.`,
+                  )
+                )
+                  return;
+                api.deleteDomain(name).then(refresh).catch((e) => setError(e.message));
+              }}
+              onAddConcept={setAddingIn}
+            />
+          </div>
+        </Card>
+
+        {selectedConcept ? (
+          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
+            <CardHeader className="flex-row items-center gap-1.5 space-y-0 pb-2">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setSelected(null)}
+                aria-label="Volver al mapa"
+              >
+                <ArrowLeft />
+              </Button>
+              <CardTitle className="min-w-0 truncate">{selectedConcept.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto">
+              {detail(selectedConcept)}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            <Card className="overflow-hidden">
+              <div className="flex items-center justify-between gap-2 p-3 pb-2">
+                <span className="text-micro font-condensed uppercase text-muted-foreground">
+                  Mapa
+                </span>
+                <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
+                  <Maximize2 />
+                  Ampliar
+                </Button>
+              </div>
+              <div className="h-72 border-y border-border">{canvas(true)}</div>
+
+              {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
+              <div className="p-1">
+                {graph.data.relations.map((relation, index) => {
+                  const hidden = hiddenRelations.has(index);
+                  return (
+                    <button
+                      key={relation.key}
+                      title={hidden ? "Mostrar esta relación" : "Ocultar esta relación del mapa"}
+                      onClick={() =>
+                        setHiddenRelations((current) => {
+                          const next = new Set(current);
+                          if (next.has(index)) next.delete(index);
+                          else next.add(index);
+                          return next;
+                        })
+                      }
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors hover:bg-accent",
+                        hidden && "opacity-45",
+                      )}
+                    >
+                      <span
+                        className="h-0.5 w-3.5 shrink-0 rounded-full"
+                        style={{ background: relationColour(relation.type ?? relation.key, index) }}
+                      />
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-small",
+                          hidden && "line-through",
+                        )}
+                      >
+                        {relation.verbose ?? relation.key}
+                      </span>
+                      {relation.prerequisite ? (
+                        <Waypoints
+                          className="size-3 shrink-0 text-muted-foreground"
+                          aria-label="Ordena la vista de currículo"
+                        />
+                      ) : null}
+                      <span className="nums shrink-0 text-small text-muted-foreground">
+                        {relation.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {curriculumSet ? (
+              <Card>
+                <div className="space-y-2 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-micro font-condensed uppercase text-muted-foreground">
+                      Currículo del curso
+                    </span>
+                    <span className="nums text-small text-muted-foreground">
+                      {covered}/{totals.concepts}
+                    </span>
+                  </div>
+                  <span className="block h-1 w-full bg-muted">
+                    <span
+                      className="block h-full bg-settled"
+                      style={{
+                        width: `${Math.round((covered / Math.max(1, totals.concepts)) * 100)}%`,
+                      }}
+                    />
+                  </span>
+                  <p className="text-small text-muted-foreground">
+                    {covered === 0
+                      ? "Sin currículo: la generación puede usar cualquier concepto."
+                      : `Guardado ${when(curriculum.data?.updated_at ?? null)} · ${
+                          frontierNames?.size ?? 0
+                        } concepto(s) en la frontera.`}
+                  </p>
+                  <Button size="sm" variant="outline" onClick={onGoToCurriculum}>
+                    <Waypoints />
+                    Editar el currículo
+                  </Button>
+                </div>
+              </Card>
+            ) : null}
+
+            {curriculumSet ? (
+              <Card>
+                <div className="space-y-2 p-3">
+                  <span className="text-micro font-condensed uppercase text-muted-foreground">
+                    Frontera del currículo
+                  </span>
+                  <FrontierKey />
+                </div>
+              </Card>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* The flag is absent from every graph written before it existed, so it reads `false`
@@ -726,10 +735,51 @@ function GraphExplorer() {
         </Alert>
       ) : null}
 
+      {/* The expanded map carries the inspector with it. Without it, choosing a concept here
+          answered with a card in the rail underneath — behind the scrim, invisible — so the
+          big view was the one place you could see the whole graph and change nothing in it. */}
+      <Dialog
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        title="Mapa del grafo"
+        description="Arrastra para mover, rueda para acercar. Al elegir un concepto se edita aquí mismo."
+        className="max-w-[100rem]"
+      >
+        <div className="flex h-[68vh] gap-4">
+          <div className="min-w-0 flex-1">{canvas(false)}</div>
+          <div className="flex w-[23rem] shrink-0 flex-col overflow-hidden rounded-lg border border-border">
+            {selectedConcept ? (
+              <>
+                <header className="flex items-center gap-1.5 border-b border-border p-3">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setSelected(null)}
+                    aria-label="Quitar la selección"
+                  >
+                    <ArrowLeft />
+                  </Button>
+                  <h3 className="min-w-0 truncate text-heading">{selectedConcept.name}</h3>
+                </header>
+                <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
+                  {detail(selectedConcept)}
+                </div>
+              </>
+            ) : (
+              <p className="m-auto max-w-56 p-4 text-center text-small text-muted-foreground">
+                Elige un concepto en el mapa y aparecerá aquí para editarlo.
+              </p>
+            )}
+          </div>
+        </div>
+      </Dialog>
+
       <AddConceptDialog
-        open={addingConcept}
-        onClose={() => setAddingConcept(false)}
+        open={addingIn !== null}
+        onClose={() => setAddingIn(null)}
         domains={domains}
+        initialDomain={addingIn ?? undefined}
+        key={addingIn ?? "none"}
         onDone={refresh}
       />
     </div>
@@ -801,7 +851,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
           </Button>
           <Tabs
             items={[
-              { value: "graph", label: "Grafo y conceptos" },
+              { value: "graph", label: "Temario" },
               {
                 value: "descriptions",
                 label: "Descripciones",
@@ -830,7 +880,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
       ) : null}
 
       {tab === "graph" ? (
-        <GraphExplorer />
+        <GraphExplorer onGoToCurriculum={() => setTab("curriculum")} />
       ) : tab === "curriculum" ? (
         <CurriculumTab />
       ) : kg.data ? (

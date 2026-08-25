@@ -54,6 +54,11 @@ interface Props {
    *  is in force and the graph keeps its domain colours; an empty set is a course that has
    *  covered nothing yet, which is a different statement and is drawn as one. */
   curriculum?: Set<string>;
+  /** Drop the toolbars and keep the drawing. A preview a few hundred pixels tall has room
+   *  for the graph or for the controls, not both, and the controls are the half that has
+   *  somewhere else to live — the expanded view, which is one click away. Panning, zooming,
+   *  hovering and selecting all still work here; only the chrome goes. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -73,6 +78,7 @@ export function GraphCanvas({
   highlight,
   hiddenRelations,
   curriculum,
+  compact = false,
   className,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -103,7 +109,11 @@ export function GraphCanvas({
   hoveredRef.current = hovered;
 
   const [mode, setMode] = useState<LayoutMode>(initialMode ?? "force");
-  const [labels, setLabels] = useState<LabelMode>("auto");
+  // A label is drawn at a fixed pixel size, so shrinking the frame does not shrink the text:
+  // at preview size the 120 names collide into one grey mass and hide the shape they were
+  // supposed to annotate. What a preview shows is the constellation; the names are one click
+  // away, in the expanded view, where there is room for them.
+  const [labels, setLabels] = useState<LabelMode>(compact ? "none" : "auto");
   const [arrows, setArrows] = useState(true);
 
   const model = useMemo(() => buildModel(graph), [graph]);
@@ -148,6 +158,7 @@ export function GraphCanvas({
     mode,
     labels,
     arrows,
+    compact,
     curriculum: curriculumIndices,
     frontier,
   });
@@ -159,6 +170,7 @@ export function GraphCanvas({
     mode,
     labels,
     arrows,
+    compact,
     curriculum: curriculumIndices,
     frontier,
   };
@@ -309,6 +321,7 @@ export function GraphCanvas({
         labels: props.labels,
         arrows: props.arrows,
         hulls: true,
+        hullLabels: !props.compact,
         selected: current,
         picked: props.picked,
         focused: hoveredRef.current ?? -1,
@@ -352,12 +365,16 @@ export function GraphCanvas({
       if (dirty.current) {
         const current = scene();
         draw(context, current);
-        drawMinimap(context, current, {
-          x: size.current.width - MINIMAP.width - MINIMAP.margin,
-          y: size.current.height - MINIMAP.height - MINIMAP.margin,
-          width: MINIMAP.width,
-          height: MINIMAP.height,
-        });
+        // The minimap is a map of the map, and at preview size it would cover a fifth of
+        // the thing it summarises.
+        if (!viewProps.current.compact) {
+          drawMinimap(context, current, {
+            x: size.current.width - MINIMAP.width - MINIMAP.margin,
+            y: size.current.height - MINIMAP.height - MINIMAP.margin,
+            width: MINIMAP.width,
+            height: MINIMAP.height,
+          });
+        }
         dirty.current = false;
       }
       if (moving) frame.current = requestAnimationFrame(() => loopRef.current());
@@ -551,6 +568,11 @@ export function GraphCanvas({
         }}
       />
 
+      {/* `contents` and not a wrapper with a box: the chrome below is positioned against the
+          canvas itself, so anything that generated one would become its containing block and
+          move all of it. `hidden` takes the whole subtree out, tab order included. */}
+      <div className={compact ? "hidden" : "contents"}>
+
       <div className="pointer-events-auto absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border bg-card/90 p-0.5 shadow-sm backdrop-blur">
         {(
           [
@@ -667,6 +689,8 @@ export function GraphCanvas({
           concepto para que esta vista diga algo.
         </p>
       ) : null}
+
+      </div>
 
       {hoveredNode ? (
         <div

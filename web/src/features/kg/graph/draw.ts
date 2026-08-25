@@ -36,6 +36,11 @@ export interface Scene {
   labels: LabelMode;
   arrows: boolean;
   hulls: boolean;
+  /** The domain names over the blobs. Separate from `hulls` because the two answer different
+   *  questions: the blob says where a unit IS, which survives any amount of shrinking, while
+   *  its name is set in pixels and so grows relative to the frame as the frame gets smaller —
+   *  at preview size the names cover the very regions they label. */
+  hullLabels: boolean;
   selected: number;
   picked?: Set<number>;
   focused: number;
@@ -219,7 +224,7 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     }
   }
 
-  drawHullLabels(context, scene, hullLabels, placed);
+  if (scene.hullLabels) drawHullLabels(context, scene, hullLabels, placed);
 
   // Labels last and grouped by weight: `context.font` is a parsed string, and setting
   // it per node was most of the per-frame cost at this node count. The ones the user
@@ -542,7 +547,7 @@ function drawHullLabels(
  * missing edge.
  */
 function drawParkedLane(context: CanvasRenderingContext2D, scene: Scene) {
-  const { model, bodies, view, palette } = scene;
+  const { model, bodies, view, palette, labels } = scene;
   if (model.isolated.length === 0) return;
 
   let minX = Infinity;
@@ -566,16 +571,21 @@ function drawParkedLane(context: CanvasRenderingContext2D, scene: Scene) {
   context.lineTo(rule, maxY + 22);
   context.stroke();
 
-  // Horizontal, above the lane: rotated text next to one or two dots read as a layout
-  // accident, not as a caption.
-  context.globalAlpha = 0.75;
-  context.fillStyle = palette.muted;
-  context.font = `600 ${Math.min(16, 10 / view.scale)}px ${FONT_SANS}`;
-  context.textAlign = "left";
-  context.textBaseline = "alphabetic";
-  const caption =
-    model.isolated.length === 1 ? "1 sin relaciones" : `${model.isolated.length} sin relaciones`;
-  context.fillText(caption, rule, minY - 30);
+  // The rule is structure and stays; the caption is text, and text is what `labels: "none"`
+  // is asking to be rid of — at preview size it is also the one fragment left over, since
+  // its size is capped in pixels and the lane it names shrinks away from under it.
+  if (labels !== "none") {
+    // Horizontal, above the lane: rotated text next to one or two dots read as a layout
+    // accident, not as a caption.
+    context.globalAlpha = 0.75;
+    context.fillStyle = palette.muted;
+    context.font = `600 ${Math.min(16, 10 / view.scale)}px ${FONT_SANS}`;
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    const caption =
+      model.isolated.length === 1 ? "1 sin relaciones" : `${model.isolated.length} sin relaciones`;
+    context.fillText(caption, rule, minY - 30);
+  }
   context.globalAlpha = 1;
 }
 
