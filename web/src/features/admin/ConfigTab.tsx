@@ -534,10 +534,6 @@ function PipelineCard({
       models={models}
     />
   );
-  const pendingResets = inNodes.filter(
-    (setting) =>
-      setting.source === "file" && !setting.secret && !sameValue(setting.value, setting.default),
-  );
 
   return (
     <Card>
@@ -561,23 +557,6 @@ function PipelineCard({
           onChange={onChange}
         />
         <ReasoningLegend />
-        {pendingResets.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
-            <span>Fijados en el fichero:</span>
-            {pendingResets.map((setting) => (
-              <Button
-                key={setting.key}
-                variant="ghost"
-                size="sm"
-                title={`Volver a ${formatValue(setting.default)}`}
-                onClick={() => onReset(setting.key)}
-              >
-                <Undo2 />
-                {setting.name || setting.key}
-              </Button>
-            ))}
-          </div>
-        ) : null}
         {inNodes.length > 0 ? (
           <details className="text-small text-muted-foreground">
             <summary className="cursor-pointer select-none">Por qué cada nodo</summary>
