@@ -245,7 +245,7 @@ PIPELINE: tuple[Lane, ...] = (
             _switch(
                 "kg_domains",
                 "Dominios",
-                "Razonando devolvió una respuesta vacía sobre 203 conceptos.",
+                "Solo si el corpus no da un temario; razonando devolvió una respuesta vacía sobre 203 conceptos.",
             ),
             _switch("kg_domains_leftovers", "Sobrantes"),
             _switch("kg_link_domain", "Enlace interno"),
