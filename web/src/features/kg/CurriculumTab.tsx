@@ -16,6 +16,8 @@ import { useKg, useKgGraph } from "@/state/queries";
 
 const sorted = (names: string[]) => [...names].sort((a, b) => a.localeCompare(b, "es"));
 
+const UNCLASSIFIED_DOMAIN = "Sin clasificar";
+
 // `adjacency()` returns null for two unrelated reasons — the graph declares no prerequisite
 // relation, or there is no graph payload to read — and only the first one means that what
 // is on screen is what will be saved. The server closes the prerequisites regardless, so
@@ -92,7 +94,11 @@ export function CurriculumTab() {
   if (curriculum.isLoading || kg.isLoading) return <Skeleton className="h-96" />;
 
   const concepts = kg.data?.concepts ?? [];
-  const units = kg.data?.domains ?? [];
+  const units = (kg.data?.domains ?? []).filter(
+    (unit) =>
+      unit.concepts.length > 0 &&
+      unit.name.toLowerCase() !== UNCLASSIFIED_DOMAIN.toLowerCase(),
+  );
   const dirty = draft !== null && !same(draft, stored);
   const canSave = dirty || implied.length > 0 || dropped.length > 0;
 
