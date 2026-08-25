@@ -6,6 +6,8 @@ import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/input";
 import { Alert, Skeleton, Switch } from "@/components/ui/misc";
 import { adjacency, priors } from "@/features/run/prerequisites";
 import { getCurriculum, putCurriculum } from "@/lib/api";
@@ -90,6 +92,7 @@ export function CurriculumTab() {
   if (curriculum.isLoading || kg.isLoading) return <Skeleton className="h-96" />;
 
   const concepts = kg.data?.concepts ?? [];
+  const units = kg.data?.domains ?? [];
   const dirty = draft !== null && !same(draft, stored);
   const canSave = dirty || implied.length > 0 || dropped.length > 0;
 
@@ -103,6 +106,41 @@ export function CurriculumTab() {
           cobertura, no objetivos.
         </p>
       </Alert>
+
+      {units.length > 1 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>Hasta dónde ha llegado el curso</CardTitle>
+            <p className="mt-1 text-small text-muted-foreground">
+              Las unidades salen en el orden del temario. Elegir una mete en el currículo
+              los conceptos de ésa y de todas las anteriores; después puedes seguir
+              ajustándolo a mano, y no se guarda nada hasta que pulses «Guardar currículo».
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Field label="Hemos llegado hasta…" className="max-w-md">
+              {(injected) => (
+                <Select
+                  {...injected}
+                  value=""
+                  onChange={(event) => {
+                    const upTo = Number(event.target.value);
+                    if (!upTo) return;
+                    setDraft([...new Set(units.slice(0, upTo).flatMap((u) => u.concepts))]);
+                  }}
+                >
+                  <option value="">Elige una unidad</option>
+                  {units.map((unit, index) => (
+                    <option key={unit.name} value={index + 1}>
+                      {index + 1} · {unit.name} ({unit.concepts.length} concepto(s))
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
