@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
             stages.initialize(tag=True, ws=ws)
         elif args.command == "restamp-descriptions":
             changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
-            print(f"{changed} de {total} descripción(es) {'se reescribirían' if args.dry_run else 'resselladas'}")
+            print(f"{changed} de {total} descripción(es) {'se reescribirían' if args.dry_run else 'reselladas'}")
         elif args.command == "generate":
             _generate_and_report(args, ws)
         elif args.command == "all":

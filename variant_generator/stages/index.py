@@ -51,7 +51,7 @@ def restamp_descriptions(
         )
     elif changed:
         logger.success(
-            f"{changed} de {total} descripción(es) resselladas contra el grafo actual; "
+            f"{changed} de {total} descripción(es) reselladas contra el grafo actual; "
             "no se ha reescrito ningún texto"
         )
     else:
