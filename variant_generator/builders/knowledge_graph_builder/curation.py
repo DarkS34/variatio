@@ -4,7 +4,7 @@ The result is still a DRAFT. The final curation into `instance/knowledge_graph.j
 (draining the unclassified bucket, fixing dubious directions) is manual.
 """
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import networkx as nx
@@ -36,23 +36,28 @@ def run(
     relations = cleaned["relations"]
     logger.info(f"Curando {len(concepts)} concepto(s) y {len(relations)} relación(es)")
 
+    positions = cleaned.get("positions") or {}
+    definitions = cleaned.get("definitions") or {}
+
     progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
     with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
         progress.checkpoint()
-        concepts_by_domains = curate_domains(
-            concepts,
-            relations,
-            cleaned.get("documents") or [],
-            cleaned.get("origins") or {},
-            cleaned.get("definitions") or {},
-            max_attempts=max_attempts,
-        )
+        concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts)
+        if not concepts_by_domains:
+            concepts_by_domains = order_domains(
+                curate_domains(
+                    concepts,
+                    relations,
+                    cleaned.get("documents") or [],
+                    cleaned.get("origins") or {},
+                    definitions,
+                    max_attempts=max_attempts,
+                ),
+                positions,
+            )
         logger.info(f"Dominios: {len(concepts_by_domains)}")
     progress.advance(1.0, f"{len(concepts_by_domains)} dominio(s)")
 
-    positions = cleaned.get("positions") or {}
-    definitions = cleaned.get("definitions") or {}
-    concepts_by_domains = order_domains(concepts_by_domains, positions)
     relations = link_relations(
         concepts_by_domains,
         relations,
@@ -79,7 +84,7 @@ def run(
         "relations": typed,
     }
     write_json(output_path, curated)
-    write_sources(sources_path, cleaned, universe)
+    write_sources(sources_path, cleaned, universe, units)
     logger.success(
         f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
         f"{len(typed)} grupo(s) de relación; falta revisar la etiquetabilidad"
@@ -187,6 +192,68 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
 
     units.sort(key=lambda unit: unit["chunk"])
     return units if len(units) >= MIN_UNITS else []
+
+
+def unit_at(units: list[dict], chunk: int) -> str | None:
+    found = None
+    for unit in units:
+        if unit["chunk"] > chunk:
+            break
+        found = unit["name"]
+    return found
+
+
+def unit_of(units: list[dict], chunks: list[int]) -> str | None:
+    order = {unit["name"]: index for index, unit in enumerate(units)}
+    votes: Counter = Counter()
+    for chunk in chunks:
+        name = unit_at(units, chunk)
+        if name is not None:
+            votes[name] += 1
+    if not votes:
+        return None
+    return min(votes, key=lambda name: (-votes[name], order[name]))
+
+
+def assign_to_units(
+    units: list[dict], concepts: list[str], occurrences: dict
+) -> tuple[dict, list[str]]:
+    by_unit: dict[str, list[str]] = {unit["name"]: [] for unit in units}
+    leftovers: list[str] = []
+    for concept in concepts:
+        name = unit_of(units, occurrences.get(concept) or [])
+        if name is None:
+            leftovers.append(concept)
+        else:
+            by_unit[name].append(concept)
+    return by_unit, leftovers
+
+
+def curate_units(cleaned: dict, *, max_attempts: int) -> tuple[dict, list[dict]]:
+    outline = cleaned.get("outline") or []
+    units = segment_syllabus(
+        outline, cleaned.get("documents") or [], max_attempts=max_attempts
+    )
+    if not units:
+        return {}, []
+
+    concepts = sorted(cleaned["entities"])
+    by_unit, leftovers = assign_to_units(units, concepts, cleaned.get("occurrences") or {})
+    logger.info(
+        f"Temario: {len(concepts) - len(leftovers)} de {len(concepts)} concepto(s) "
+        f"colocados por el corpus; {len(leftovers)} para la repesca"
+    )
+    if leftovers:
+        by_unit[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(leftovers)
+
+    placed = place_leftovers(
+        by_unit,
+        cleaned.get("relations") or [],
+        cleaned.get("definitions") or {},
+        max_attempts=max_attempts,
+    )
+    positions = cleaned.get("positions") or {}
+    return {d: blocks.ordered(m, positions) for d, m in placed.items()}, units
 
 
 # DOMAINS ---------------------------------------------------------------------------------
