@@ -12,86 +12,142 @@
    forbidden — and the same state machine the interface already has. The semantics have
    never moved; the MATERIAL has, three times.
 
-   The material now is MOSS AND MARIGOLD: a forest green for everything structural, a
-   marigold orange as the single "act here" colour, a wine for the correction, on a stock
-   with a touch of lime in it. It replaces the duplicator's violet and ochre on cool grey,
-   which replaced warm paper and indigo, which replaced a cool cyanotype. It is the first
-   of the four whose structural colour is a green, which is what makes it read as a
-   different thing rather than as the same thing re-inked.
+   The material now is THE GRID: black ink on white, one ultramarine as the single "act
+   here" colour, a signal red for the correction, and a grey for what is settled. It
+   replaces moss and marigold on limed stock, which replaced the duplicator's violet and
+   ochre on cool grey, which replaced warm paper and indigo, which replaced a cool
+   cyanotype.
+
+   What makes it read as a different thing is not a new hue, it is that THE STRUCTURE STOPS
+   SPENDING COLOUR. In the four earlier materials `--primary` was a hue — green, violet,
+   indigo, blue — so every border, every button and every heading was tinted by it. Here
+   `--primary` is the ink itself, and the hierarchy is carried by type, weight, width and
+   rule instead. The consequence is the point: with structure achromatic, the only coloured
+   things on a screen are the ones that MEAN something, so a colour is now evidence rather
+   than decoration.
+
+   It also buys measurable room. Taking the structural role out of the colour budget frees
+   a whole family, and the five semantic colours end up further apart than in any previous
+   material: the tightest pair is destructive/study under deuteranopia at ΔE 17.2 in light
+   and 19.8 in dark, against a floor of 15.
 
    Every value here is MEASURED, not picked: `pnpm check:color` reads them out of this file
    and re-derives the tables. Lowering a lightness or raising a chroma without running it
    again is undoing the work in silence. */
 :root {
-  /* Limed stock, not cream and not grey. The chroma sits at 95° so the ground carries a
-     hint of the green's own yellow, and 0.008 is the ceiling: above it a card stops
-     looking white against the page. The ink is a very dark green (150°), not black. */
-  --background: oklch(0.975 0.008 95);
-  --foreground: oklch(0.24 0.02 150);
-  --card: oklch(0.995 0.004 95);
-  --card-foreground: oklch(0.24 0.02 150);
-  --popover: oklch(0.995 0.004 95);
-  --popover-foreground: oklch(0.24 0.02 150);
-  /* The violet is not free to be any violet, and it is constrained from two sides at once:
-     it has to stay separable from --arm-system, which is blue and collapses towards it
-     under deuteranopia, and from --arm-naive, which is plum and collapses towards it under
-     protanopia. A first draft at oklch(0.44 0.185 305) measured ΔE 13.2 deutan against
-     arm-system, under the floor of 15. Dropping the lightness and RAISING the chroma is
-     what buys the margin — 21.5 deutan / 17.6 protan — and it lifts the text contrast at
-     the same time (8.90 against the ground). */
-  --primary: oklch(0.42 0.11 150);
-  --primary-foreground: oklch(0.985 0.01 110);
-  --secondary: oklch(0.945 0.012 100);
-  --secondary-foreground: oklch(0.3 0.02 150);
-  --muted: oklch(0.945 0.012 100);
-  --muted-foreground: oklch(0.5 0.02 150);
-  --accent: oklch(0.915 0.02 110);
-  --accent-foreground: oklch(0.3 0.02 150);
+  /* The ground is paper, not a tinted stock: chroma 0.002 at 265° is a cool white that
+     reads as white rather than as a colour, and the CARD IS PURE WHITE — the one surface
+     in four materials that carries no tint at all. That inversion is deliberate. In the
+     earlier materials the card was the tinted thing and the page around it was lighter;
+     here the card is the brightest surface on screen and the page recedes behind it, which
+     is what lets a card be bounded by contrast instead of by a border. */
+  --background: oklch(0.985 0.002 265);
+  --foreground: oklch(0.18 0.008 265);
+  --card: oklch(1 0 265);
+  --card-foreground: oklch(0.18 0.008 265);
+  --popover: oklch(1 0 265);
+  --popover-foreground: oklch(0.18 0.008 265);
+  /* THE STRUCTURAL COLOUR IS THE INK, AND THAT IS THE WHOLE IDEA OF THIS MATERIAL.
+     `--primary` is not a hue any more: it is a near-black at chroma 0.010, which is enough
+     to keep it from going dead flat against the cool ground and far too little to read as
+     a colour. Everything structural — buttons, links, rules, the mark — is therefore
+     black, and colour is left to mean something.
+
+     It is also what makes the arms free. `--primary` has to clear ΔE 15 against
+     --arm-system (blue, the same family every previous primary belonged to) and 10 against
+     the other two; the earlier greens and violets bought that margin with chroma and hue,
+     and it was the binding constraint on the whole palette. An ink primary clears it on
+     LIGHTNESS instead, by 50.3 / 54.6 / 51.7 normal / deutan / protan — three times the
+     floor, with nothing spent. */
+  --primary: oklch(0.20 0.010 265);
+  --primary-foreground: oklch(0.99 0.002 265);
+  --secondary: oklch(0.955 0.003 265);
+  --secondary-foreground: oklch(0.24 0.008 265);
+  --muted: oklch(0.955 0.003 265);
+  --muted-foreground: oklch(0.47 0.012 265);
+  --accent: oklch(0.925 0.005 265);
+  --accent-foreground: oklch(0.24 0.008 265);
 
   /* These replace --success/--warning/--info BY MEANING, not by name: what they report is
      where something falls relative to the frontier, not whether it is going well. --info
      is retired outright — "building" becomes --primary plus motion, which is what already
      means "alive", and a fourth family of blue next to the primary distinguished nothing. */
-  --settled: oklch(0.5 0.07 235);
-  /* Marigold: the complement of the moss, which is what makes it the one colour that
-     commands where it appears. It has to clear 4.5 on its OWN 8 % tint, the badge case,
-     and that is what pins the lightness at 0.535: at 0.56 the tint measured 4.30. */
-  --attention: oklch(0.535 0.15 62);
-  /* Wine at hue 350, not the brick 28 a first draft used: under deuteranopia a brick red
-     sits ΔE 11.0 from the marigold and 9.4 from the moss, both under the floor of 15.
-     Pulling it to the magenta end keeps it a red on screen and clears both. */
-  --destructive: oklch(0.52 0.2 350);
-  --destructive-foreground: oklch(0.985 0.004 350);
+  /* Settled stops being a hue. What "behind you, resolved" needs to do is RECEDE, and in
+     the earlier materials that was said with a blue that still competed for attention;
+     here it is said by draining the colour out and leaving the value. It is the only
+     semantic token below chroma 0.02, and it still clears the text floor comfortably
+     (5.28 on the ground, 5.51 on the card) and its own 8 % badge tint at 4.96. */
+  --settled: oklch(0.52 0.012 265);
+  /* Ultramarine, and this is the one place the material's own instinct was WRONG and the
+     measurement said so. The obvious accent for black-on-white is a signal red, so the
+     first draft made --attention red 27 and pushed --destructive to a wine at 352. It
+     fails twice: settled against destructive collapses to ΔE 6.1 under deuteranopia, and
+     attention against study to 13.1 under protanopia. Giving "act here" the blue and
+     leaving red to mean damage clears everything — and it also puts the two apart in the
+     one way that survives every deficiency, since blue and red separate on the axis
+     dichromats keep. */
+  --attention: oklch(0.48 0.19 262);
+  /* Signal red, a true red at 25 rather than the wine at 350 that the marigold forced.
+     With attention on the blue there is nothing warm left for it to collide with, so the
+     correction can finally look like a correction. Chroma is 0.20 and not 0.21 for a
+     boring reason: 0.21 sits 0.005 outside sRGB, so the browser would gamut-map it and the
+     colour on screen would stop being the colour this file was verified at. */
+  --destructive: oklch(0.50 0.20 25);
+  --destructive-foreground: oklch(0.99 0.004 25);
 
   /* The evaluation is the one destination the frontier metaphor does not describe: it is
      not before, at, or after the frontier — it is where the frontier is MEASURED. So it
      gets a colour outside the moss / marigold / wine story rather than a state token.
-     Orchid, and at chroma 0.16 rather than the 0.12 of a first draft: at less it measured
-     ΔE 6.2 from the slate of --settled under deuteranopia. It is deliberately NOT one of
-     the arms: those are per-entity slots in the comparison, and spending one on the
-     navigation would claim the destination belongs to an arm. */
-  --study: oklch(0.45 0.16 315);
+     A deep green here, because with the ink structural and the blue spent on attention it
+     is the one family left that survives beside the signal red: an ochre first draft at
+     oklch(0.50 0.12 95) measured ΔE 5.8 from --destructive under deuteranopia.
 
-  --border: oklch(0.86 0.014 100);
-  /* --input stops being the same value as --border. They were, at 1.23:1 against the
-     ground, against the 3:1 WCAG demands of the outline of a control that conveys
-     information: every form field in this app was literally almost invisible. */
-  --input: oklch(0.62 0.02 140);
-  --ring: oklch(0.55 0.12 150);
+     THE LIGHTNESS IS THE MEASURED PART, AND IT WAS FOUND BY A CHECK `check:color` DOES NOT
+     MAKE. The script compares --study against the other four semantic colours and compares
+     --primary against the arms, but it never compares --study against the arms — and
+     --arm-rag is also a green (0.57 0.125 158). A first draft at oklch(0.48 0.14 150)
+     passed the whole gate while sitting ΔE 15.0 from it, so on the evaluation screen the
+     «Evaluar» pill would have been very nearly the colour of the rag arm's own bars: not a
+     contrast failure, but exactly the claim this token exists to avoid — that the
+     destination belongs to an arm. Dropping the lightness to 0.40 is what fixes it, at
+     27.6 in light and 28.5 in dark against the nearest arm in the worst of the three
+     visions. Chroma 0.13 rather than more keeps it inside sRGB; the greens that measured
+     best were all outside it, which makes their measurement fiction. */
+  --study: oklch(0.40 0.13 140);
 
-  --radius: 0.375rem;
+  --border: oklch(0.87 0.004 265);
+  /* --input is not the same value as --border, and the reason has not changed with the
+     material: a separator carries no information and WCAG asks nothing of it, while the
+     outline of a control does and has to clear 3:1. Measured here: 1.42 for the border and
+     3.78 for the input, against the ground. */
+  --input: oklch(0.60 0.008 265);
+  /* The ring is the ink, which is the strongest thing available against this ground. It
+     works on a black button too, and not by accident: the `:where()` focus floor below
+     draws the outline at `outline-offset: 2px`, so on a filled primary the ring lands on
+     the white outside the button rather than inside it. */
+  --ring: oklch(0.20 0.010 265);
 
-  /* Syntax highlighting has its own pair so that the ochre keeps meaning "act here" rather
-     than "string literal". The number used to be violet, which is the primary now, so it
-     moves to a blue no state token speaks for. */
-  --code-string: oklch(0.47 0.1 150);
-  --code-number: oklch(0.5 0.12 300);
+  /* Zero. The corner is where the grid either holds or does not, and a 6 px radius on
+     every card, button, field and badge was the single largest softening of it. The four
+     steps below are pinned to 0 individually rather than derived with calc(), because
+     `calc(0rem - 4px)` is a negative radius: an invalid declaration, silently dropped. */
+  --radius: 0rem;
 
-  /* Two steps of elevation and no more: the border does the rest of the work. The shadow
-     is tinted with the ink rather than pure black, or the stock gets its shadow from
-     another printer. */
-  --elevation-raised: 0 1px 2px oklch(0.24 0.02 150 / 0.08), 0 2px 8px oklch(0.24 0.02 150 / 0.08);
-  --elevation-overlay: 0 8px 32px oklch(0.24 0.02 150 / 0.16);
+  /* Syntax highlighting keeps its own pair so that the ultramarine goes on meaning "act
+     here" rather than "string literal". The string moves to a teal at 200 — no state token
+     speaks for it, and it deliberately avoids --study's green, which is the same mistake
+     one hue over. */
+  --code-string: oklch(0.45 0.07 200);
+  --code-number: oklch(0.46 0.13 295);
+
+  /* The raised step is nearly gone: with a white card on a grey ground the contrast does
+     the separating, and a lift would be the shadow of a card this material does not have.
+     The OVERLAY step is deliberately NOT removed, and that is a reasoned exception rather
+     than an inconsistency — a dialog or the run drawer lands on top of arbitrary content,
+     so it is the one surface whose separation cannot come from the layout underneath it.
+     Both are tinted with the ink rather than pure black. */
+  --elevation-raised: 0 1px 2px oklch(0.18 0.008 265 / 0.05), 0 1px 3px oklch(0.18 0.008 265 / 0.05);
+  --elevation-overlay: 0 8px 32px oklch(0.18 0.008 265 / 0.18);
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-micro: 120ms;
@@ -119,38 +175,54 @@
 }
 
 :root[data-theme="dark"] {
-  /* The stock survives the inversion: the dark ground keeps the hue of the ink (150°,
-     peat rather than grey), which is what makes the two modes read as one material. */
-  --background: oklch(0.17 0.012 150);
-  --foreground: oklch(0.93 0.012 100);
-  --card: oklch(0.21 0.014 150);
-  --card-foreground: oklch(0.93 0.012 100);
-  --popover: oklch(0.21 0.014 150);
-  --popover-foreground: oklch(0.93 0.012 100);
-  --primary: oklch(0.76 0.13 150);
-  --primary-foreground: oklch(0.17 0.012 150);
-  --secondary: oklch(0.255 0.016 150);
-  --secondary-foreground: oklch(0.93 0.012 100);
-  --muted: oklch(0.255 0.016 150);
-  --muted-foreground: oklch(0.67 0.02 120);
-  --accent: oklch(0.29 0.02 150);
-  --accent-foreground: oklch(0.93 0.012 100);
+  /* The ground stays neutral through the inversion, at the same 265° the light mode uses:
+     with the structure achromatic there is no ink hue left to carry over, so what makes
+     the two modes read as one material is the RELATIONSHIP — ink against paper — and not a
+     shared tint. */
+  --background: oklch(0.16 0.004 265);
+  --foreground: oklch(0.96 0.002 265);
+  --card: oklch(0.20 0.005 265);
+  --card-foreground: oklch(0.96 0.002 265);
+  --popover: oklch(0.20 0.005 265);
+  --popover-foreground: oklch(0.96 0.002 265);
+  /* THE INK INVERTS. In every earlier material --primary was the same hue in both modes,
+     lightened for the dark one; here it is the ink, so in dark it becomes the near-white
+     and a filled primary button is white with dark text. That is the honest translation of
+     "structure is the ink" and not a special case: the pair --primary / --primary-foreground
+     simply swaps ends. */
+  --primary: oklch(0.95 0.004 265);
+  --primary-foreground: oklch(0.16 0.004 265);
+  --secondary: oklch(0.245 0.005 265);
+  --secondary-foreground: oklch(0.96 0.002 265);
+  --muted: oklch(0.245 0.005 265);
+  --muted-foreground: oklch(0.68 0.008 265);
+  --accent: oklch(0.285 0.006 265);
+  --accent-foreground: oklch(0.96 0.002 265);
 
-  --settled: oklch(0.74 0.07 235);
-  --attention: oklch(0.8 0.14 70);
-  --destructive: oklch(0.7 0.17 350);
-  --destructive-foreground: oklch(0.17 0.012 350);
+  --settled: oklch(0.68 0.010 265);
+  --attention: oklch(0.68 0.16 262);
+  --destructive: oklch(0.68 0.19 25);
+  /* Light red on a dark ground means the button's own label goes DARK, which is the
+     opposite of the light mode and correct: the token names the text that sits on the
+     colour, not a fixed brightness. */
+  --destructive-foreground: oklch(0.16 0.004 25);
 
-  --study: oklch(0.75 0.16 315);
+  /* 0.84 and not the 0.80 a first pass used: the arms are lighter in dark mode (the band
+     is 0.56-0.63), so the lightness gap that keeps --study clear of --arm-rag has to be
+     opened at the top here rather than at the bottom. Measured at 28.5 against the nearest
+     arm in the worst vision, against 23.0 at 0.80. */
+  --study: oklch(0.84 0.13 140);
 
-  --border: oklch(0.315 0.016 150);
-  --input: oklch(0.52 0.02 140);
-  --ring: oklch(0.68 0.12 150);
+  --border: oklch(0.30 0.005 265);
+  --input: oklch(0.50 0.008 265);
+  --ring: oklch(0.95 0.004 265);
 
-  --code-string: oklch(0.76 0.1 150);
-  --code-number: oklch(0.76 0.1 300);
+  --code-string: oklch(0.74 0.08 200);
+  --code-number: oklch(0.74 0.11 295);
 
-  --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.32), 0 2px 8px oklch(0 0 0 / 0.3);
+  /* Same reasoning as in light, one step stronger: on a dark ground a shadow has less to
+     work with, so the overlay keeps its weight while the raised step stays almost flat. */
+  --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.24), 0 1px 3px oklch(0 0 0 / 0.22);
   --elevation-overlay: 0 8px 32px oklch(0 0 0 / 0.52);
 
   /* Re-stepped for the dark surface, not flipped: the band is 0.48-0.67 here. */
@@ -184,11 +256,17 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  /* ONE SUPERFAMILY FOR THE WHOLE APPLICATION, plus the mono. `sans` and `display` are the
+     same stack on purpose: the role is separated by the width axis and the weight, not by
+     a second family, which is the same idea the six steps below already encode taken to
+     its end. IBM Plex Sans leaves with this change — it was the body face and Archivo does
+     that job at the widths declared here — so this is the rare palette change that REMOVES
+     a dependency instead of adding one. */
+  --font-sans: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -199,14 +277,19 @@
      The body stays at 14 px on purpose — the app is dense and raising it would push the
      layout around. The problem was never that 14 was small, it was that 12 was used 247
      times. */
-  --text-display: 2.25rem;
-  --text-display--line-height: 1.15;
-  --text-display--letter-spacing: -0.02em;
-  --text-display--font-weight: 600;
+  /* The display step grows and gets heavier, and that is the material talking: with the
+     structure achromatic, the hierarchy that colour used to help carry has to be carried
+     by the type alone. 40 px at 700 with -0.03em, against 36 at 600 with -0.02. It is the
+     only step whose SIZE moves — the other five keep their measured values, because the
+     density of the app did not change. */
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
 
   --text-title: 1.5rem;
   --text-title--line-height: 1.25;
-  --text-title--letter-spacing: -0.01em;
+  --text-title--letter-spacing: -0.015em;
   --text-title--font-weight: 600;
 
   --text-heading: 1.125rem;
@@ -219,10 +302,14 @@
   --text-small: 0.8125rem;
   --text-small--line-height: 1.5;
 
+  /* The micro step keeps its size and gains tracking and weight (0.12em at 600, against
+     0.08 at 500). At 11 px condensed it is the label of a rail stop, a table header or a
+     badge, and in a material with no tinted structure those are read as marks rather than
+     as words — the extra letterspacing is what makes them hold that job. */
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.35;
-  --text-micro--letter-spacing: 0.08em;
-  --text-micro--font-weight: 500;
+  --text-micro--letter-spacing: 0.12em;
+  --text-micro--font-weight: 600;
 }
 
 * {

@@ -2,14 +2,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-// The `wdth` sheets and not `index.css`: they are the ones that publish the width axis,
-// which is what lets the type scale encode a ROLE with the width of the letter rather than
-// with yet another size. Of the three families only two ship a variable build — Fontsource
-// publishes no @fontsource-variable/ibm-plex-mono — so the mono is the static one.
+// The `wdth` sheet and not `index.css`: it is the one that publishes the width axis, which
+// is what lets the type scale encode a ROLE with the width of the letter rather than with
+// yet another size. Archivo now serves BOTH `--font-sans` and `--font-display`, so this is
+// the whole text face of the application and the axis stopped being a detail of two steps.
+// Of the two families only Archivo ships a variable build — Fontsource publishes no
+// @fontsource-variable/ibm-plex-mono — so the mono is the static one.
 // These must be imported BEFORE ./index.css, or the @font-face rules land after the app's
 // own cascade and the first paint falls back to the system stack.
 import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/ibm-plex-sans/wdth.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
