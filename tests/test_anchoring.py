@@ -1,3 +1,5 @@
+import json
+
 from variant_generator.builders.knowledge_graph_builder import extraction
 
 
@@ -197,3 +199,56 @@ Este párrafo no habla del tema buscado en absoluto.
 def test_excerpt_returns_nothing_for_an_all_navigation_chunk():
     chunk = f"{TOC_LINE}\n\n{TOC_LINE}"
     assert extraction.excerpt(chunk, "Bucle for", 900) == ""
+
+
+def test_write_sources_records_the_outline_and_the_units(tmp_path):
+    from variant_generator.builders.knowledge_graph_builder import curation
+
+    path = tmp_path / "concept_sources.json"
+    outline = [{"document": 0, "heading": "Tema I", "chunk": 2}]
+    units = [{"name": "Uno", "heading": "Tema I", "chunk": 2}]
+    cleaned = {
+        "passages": {"A": [{"document": "d.pdf", "location": "", "text": "t"}]},
+        "definitions": {},
+        "documents": [{"name": "d.pdf"}],
+        "outline": outline,
+    }
+    curation.write_sources(path, cleaned, {"A"}, units)
+
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    assert stored["outline"] == outline
+    assert stored["units"] == units
+
+
+def test_write_sources_omits_the_two_keys_when_there_is_no_syllabus(tmp_path):
+    from variant_generator.builders.knowledge_graph_builder import curation
+
+    path = tmp_path / "concept_sources.json"
+    curation.write_sources(path, {"passages": {}, "definitions": {}, "documents": []}, set())
+
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    assert "outline" not in stored
+    assert "units" not in stored
+
+
+def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
+    from variant_generator.embedder import load_sources
+
+    path = tmp_path / "concept_sources.json"
+    path.write_text(
+        json.dumps(
+            {
+                "documents": ["d.pdf"],
+                "concepts": {"A": []},
+                "definitions": {"A": "una idea"},
+                "units": [{"name": "Uno", "heading": "Tema I", "chunk": 2}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_sources(path)
+
+    assert loaded["definitions"] == {"A": "una idea"}
+    assert loaded["units"] == [{"name": "Uno", "heading": "Tema I", "chunk": 2}]
+    assert loaded["documents"] == ["d.pdf"]

@@ -98,13 +98,20 @@ def run(
 #
 # `documents` keeps the whole corpus list because a prompt decision comes from it: naming
 # each passage's document only makes sense when there is more than one.
-def write_sources(path: str | Path, cleaned: dict, universe: set) -> None:
+def write_sources(
+    path: str | Path, cleaned: dict, universe: set, units: list[dict] | None = None
+) -> None:
     passages = cleaned.get("passages") or {}
     definitions = cleaned.get("definitions") or {}
     documents = [d.get("name", "") for d in (cleaned.get("documents") or [])]
     anchored = {c: passages[c] for c in sorted(universe) if passages.get(c)}
     defined = {c: definitions[c] for c in sorted(universe) if definitions.get(c)}
-    write_json(path, {"documents": documents, "concepts": anchored, "definitions": defined})
+    payload = {"documents": documents, "concepts": anchored, "definitions": defined}
+    if cleaned.get("outline"):
+        payload["outline"] = cleaned["outline"]
+    if units:
+        payload["units"] = units
+    write_json(path, payload)
 
     orphans = len(universe) - len(anchored)
     if orphans:

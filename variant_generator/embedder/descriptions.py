@@ -97,14 +97,18 @@ def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
 # that is not an error: it is described from the relations, as before it existed.
 def load_sources(path: str | Path) -> dict:
     path = Path(path)
+    empty = {"documents": [], "concepts": {}}
     if not path.exists():
-        return {"documents": [], "concepts": {}}
+        return empty
     try:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return {"documents": [], "concepts": {}}
+        return empty
+    if not isinstance(data, dict):
+        return empty
     return {
+        **data,
         "documents": data.get("documents") or [],
         "concepts": data.get("concepts") or {},
     }
