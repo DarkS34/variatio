@@ -340,6 +340,8 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
         "origins": {name: sorted(origins[name]) for name in sorted(origins)},
         "passages": merge_passages(graph.get("passages") or {}, node_map, ents),
         "positions": positions,
+        "occurrences": merge_occurrences(graph.get("occurrences") or {}, node_map, ents),
+        "outline": graph.get("outline") or [],
         "definitions": merge_definitions(
             graph.get("definitions") or {}, graph.get("positions") or {}, node_map, ents
         ),
@@ -355,6 +357,15 @@ def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
         if canonical in surviving:
             merged[canonical] = min(position, merged.get(canonical, position))
     return {name: merged[name] for name in sorted(merged)}
+
+
+def merge_occurrences(occurrences: dict, node_map: dict, surviving: set) -> dict:
+    merged: dict[str, set[int]] = defaultdict(set)
+    for name, chunks in occurrences.items():
+        canonical = node_map.get(name)
+        if canonical in surviving:
+            merged[canonical].update(chunks)
+    return {name: sorted(merged[name]) for name in sorted(merged)}
 
 
 def merge_definitions(

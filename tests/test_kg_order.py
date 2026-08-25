@@ -210,6 +210,50 @@ def test_a_dropped_node_takes_its_position_and_definition_with_it():
     assert cleaned["definitions"] == {"A": "a"}
 
 
+def test_merging_unions_the_occurrences_rather_than_keeping_the_earliest():
+    graph = {
+        "entities": ["Lista", "Listas"],
+        "relations": [],
+        "origins": {},
+        "passages": {},
+        "positions": {"Lista": 7, "Listas": 2},
+        "occurrences": {"Lista": [7, 9], "Listas": [2, 7]},
+        "definitions": {},
+    }
+    cleaned = cleaning.apply_node_map(graph, {"Lista": "Lista", "Listas": "Lista"})
+    assert cleaned["positions"] == {"Lista": 2}
+    assert cleaned["occurrences"] == {"Lista": [2, 7, 9]}
+
+
+def test_a_dropped_node_takes_its_occurrences_with_it():
+    graph = {
+        "entities": ["A", "Ruido"],
+        "relations": [],
+        "origins": {},
+        "passages": {},
+        "positions": {},
+        "occurrences": {"A": [1], "Ruido": [2]},
+        "definitions": {},
+    }
+    cleaned = cleaning.apply_node_map(graph, {"A": "A", "Ruido": None})
+    assert cleaned["occurrences"] == {"A": [1]}
+
+
+def test_the_outline_passes_through_the_cleaning_untouched():
+    outline = [{"document": 0, "heading": "Tema I", "chunk": 1}]
+    graph = {
+        "entities": ["A"],
+        "relations": [],
+        "origins": {},
+        "passages": {},
+        "positions": {},
+        "occurrences": {},
+        "definitions": {},
+        "outline": outline,
+    }
+    assert cleaning.apply_node_map(graph, {"A": "A"})["outline"] == outline
+
+
 # BLOCKS ------------------------------------------------------------------------------------
 
 
