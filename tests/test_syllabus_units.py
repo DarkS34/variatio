@@ -115,6 +115,23 @@ def test_fewer_than_two_units_is_a_failed_segmentation():
     assert curation.accept_units([{"name": "", "opens_at": 2}, 7, None], OUTLINE) == []
 
 
+def test_two_units_opening_in_the_same_chunk_keep_only_the_first():
+    outline = [
+        {"document": 0, "heading": "Tema I", "chunk": 2},
+        {"document": 0, "heading": "Subapartado", "chunk": 2},
+        {"document": 0, "heading": "Tema II", "chunk": 7},
+    ]
+    accepted = curation.accept_units(
+        [
+            {"name": "Primera", "opens_at": 1},
+            {"name": "Colisión", "opens_at": 2},
+            {"name": "Segunda", "opens_at": 3},
+        ],
+        outline,
+    )
+    assert [u["name"] for u in accepted] == ["Primera", "Segunda"]
+
+
 # THE CALL ------------------------------------------------------------------------------
 
 
