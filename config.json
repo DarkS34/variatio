@@ -115,7 +115,7 @@
           "ep_scan": null,
           "ep_context": null,
           "eb_extract": null,
-          "kg_extract": null,
+          "kg_extract": "gemma-4-31b",
           "kg_domains": null,
           "kg_domains_leftovers": null,
           "kg_context": null,
@@ -123,12 +123,12 @@
           "concept_tagger": null,
           "admissibility": null,
           "repair": null,
-          "ep_consolidate": "gpt-oss-120b",
-          "kg_clean_merge": "gpt-oss-120b",
-          "kg_clean_drop": "gpt-oss-120b",
-          "kg_link_domain": "gpt-oss-120b",
-          "kg_link_cross_domain": "gpt-oss-120b",
-          "kg_taggable": "gpt-oss-120b",
+          "ep_consolidate": "gemma-4-31b",
+          "kg_clean_merge": "gemma-4-31b",
+          "kg_clean_drop": "gemma-4-31b",
+          "kg_link_domain": "gemma-4-31b",
+          "kg_link_cross_domain": "gemma-4-31b",
+          "kg_taggable": "gemma-4-31b",
           "variant_generation": null
         }
       },
@@ -136,10 +136,13 @@
         "effort": {
           "ep_consolidate": "high",
           "kg_clean_merge": "high",
-          "kg_clean_drop": "high",
+          "kg_clean_drop": "medium",
           "kg_link_domain": "high",
           "kg_link_cross_domain": "high",
           "kg_taggable": "high"
+        },
+        "phases": {
+          "kg_extract": true
         }
       }
     },
