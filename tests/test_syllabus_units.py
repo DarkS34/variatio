@@ -262,12 +262,13 @@ def test_curate_units_gives_up_when_the_segmentation_fails(monkeypatch):
 
 def test_members_of_a_unit_follow_the_order_of_the_material(monkeypatch):
     answer(monkeypatch, units(("Uno", 2), ("Dos", 4)))
+    # Alfa/Zeta reverse alphabetical order on purpose: a plain sorted() would fail here.
     by_domain, _ = curation.curate_units(
         cleaned_corpus(
-            entities=["Tarde", "Pronto"],
-            positions={"Tarde": 8, "Pronto": 3},
-            occurrences={"Tarde": [6], "Pronto": [6]},
+            entities=["Alfa", "Zeta"],
+            positions={"Alfa": 8, "Zeta": 3},
+            occurrences={"Alfa": [6], "Zeta": [6]},
         ),
         max_attempts=1,
     )
-    assert by_domain["Dos"] == ["Pronto", "Tarde"]
+    assert by_domain["Dos"] == ["Zeta", "Alfa"]
