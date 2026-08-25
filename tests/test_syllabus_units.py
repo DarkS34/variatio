@@ -111,6 +111,15 @@ def test_the_catch_all_sentinel_is_refused_as_a_unit_name():
     assert [u["name"] for u in accepted] == ["A", "B"]
 
 
+def test_the_catch_all_sentinel_is_refused_whatever_its_case():
+    accepted = curation.accept_units(
+        [{"name": config.KG_BUILDER_UNCLASSIFIED_DOMAIN.lower(), "opens_at": 2},
+         {"name": "A", "opens_at": 4}, {"name": "B", "opens_at": 5}],
+        OUTLINE,
+    )
+    assert [u["name"] for u in accepted] == ["A", "B"]
+
+
 def test_a_repeated_name_is_kept_once():
     accepted = curation.accept_units(
         [{"name": "Bucles", "opens_at": 2}, {"name": " bucles ", "opens_at": 4},

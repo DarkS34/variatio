@@ -13,6 +13,7 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.json_io import write_json
+from ...core.lexicon import fold
 from ...prompts import (
     assign_leftover_concepts_prompt,
     curate_graph_domains_prompt,
@@ -174,7 +175,7 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
         raw_name = entry.get("name")
         name = raw_name.strip() if isinstance(raw_name, str) else ""
         position = entry.get("opens_at")
-        if not name or name == unclassified:
+        if not name or fold(name) == fold(unclassified):
             continue
         if not isinstance(position, int) or isinstance(position, bool):
             continue
@@ -297,7 +298,7 @@ def curate_domains(
     named: list[str] = []
     for domain in raw.get("domains") or []:
         name = domain.strip() if isinstance(domain, str) else ""
-        if name and name != config.KG_BUILDER_UNCLASSIFIED_DOMAIN and name not in named:
+        if name and fold(name) != fold(config.KG_BUILDER_UNCLASSIFIED_DOMAIN) and name not in named:
             named.append(name)
     if not named:
         logger.warning("El modelo no nombró ningún dominio; todo queda sin clasificar")
