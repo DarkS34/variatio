@@ -135,7 +135,7 @@ export function ConceptSelector({
       bucket.push(concept);
       byDomain.set(concept.domain, bucket);
     }
-    return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+    return [...byDomain.entries()];
   }, [state, query]);
 
   const flat = useMemo(

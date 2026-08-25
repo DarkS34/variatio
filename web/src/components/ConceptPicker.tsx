@@ -81,7 +81,7 @@ export function ConceptPicker({
       bucket.push(concept);
       byDomain.set(concept.domain, bucket);
     }
-    return [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+    return [...byDomain.entries()];
   }, [concepts, query, onlyWithExemplars, chosen]);
 
   const toggle = (name: string) => {

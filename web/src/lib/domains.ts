@@ -1,14 +1,21 @@
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 
-/** Reproduces `server/kg_view.build`'s group order (-size, name), which fixes the colours. */
+/**
+ * Colour by the domain's place in the syllabus. `KnowledgeGraph.all_concepts` walks
+ * `concepts_by_domains`, and `kg_edit.summary` walks that, so a domain's FIRST appearance
+ * in this array is its position in the temario — nothing is re-sorted here. It used to be
+ * sorted by size, which meant that a rebuild moving one concept could swap two domains'
+ * colours, and that "consecutive in the legend" meant "of similar size" rather than
+ * "Tema I next to Tema II", which is the pair the ramp was measured to separate.
+ */
 export function domainColours(concepts: KgConcept[]): Map<string, string> {
-  const sizes = new Map<string, number>();
+  const order: string[] = [];
+  const seen = new Set<string>();
   for (const concept of concepts) {
-    sizes.set(concept.domain, (sizes.get(concept.domain) ?? 0) + 1);
+    if (seen.has(concept.domain)) continue;
+    seen.add(concept.domain);
+    order.push(concept.domain);
   }
-  const ordered = [...sizes.entries()].sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"),
-  );
-  return new Map(ordered.map(([name], index) => [name, domainColour(index, ordered.length)]));
+  return new Map(order.map((name, index) => [name, domainColour(index, order.length)]));
 }
