@@ -1,5 +1,5 @@
 from . import chunking, files, markdown, pages
-from .chunking import chunk_markdown, chunk_text
+from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (
     CONVERTED_EXTS,
     PLAIN_TEXT_EXTS,
@@ -29,6 +29,7 @@ __all__ = [
     "PLAIN_TEXT_EXTS",
     "SUPPORTED_EXTS",
     "chunk_markdown",
+    "chunk_sections",
     "chunk_text",
     "chunking",
     "default_converter",

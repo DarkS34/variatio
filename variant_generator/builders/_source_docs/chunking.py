@@ -18,51 +18,63 @@ def chunk_text(text: str, max_chars: int) -> list[str]:
     return chunks
 
 
+def chunk_markdown(text: str, max_chars: int) -> list[tuple[str, str]]:
+    return [(path, body) for path, _headings, body in chunk_sections(text, max_chars)]
+
+
 # A chunk that starts mid-section is a fragment nobody can name consistently: the extractor
 # sees prose with no idea which part of the syllabus it belongs to, and the same idea comes
 # out named differently from two neighbouring chunks. Cutting on headings instead, and
 # handing the heading path over with the text, is what lets the naming canon be applied.
 # Sections are PACKED up to the budget rather than emitted one per heading, because a
 # heavily subdivided document would otherwise multiply the number of model calls.
-def chunk_markdown(text: str, max_chars: int) -> list[tuple[str, str]]:
+def chunk_sections(text: str, max_chars: int) -> list[tuple[str, list[str], str]]:
     sections = split_sections(text)
     if not sections:
-        return [("", chunk) for chunk in chunk_text(text, max_chars)]
+        return [("", [], chunk) for chunk in chunk_text(text, max_chars)]
 
-    chunks: list[tuple[str, str]] = []
+    chunks: list[tuple[str, list[str], str]] = []
     buffer: list[str] = []
     paths: list[str] = []
+    headings: list[str] = []
 
     def flush() -> None:
         if buffer:
-            chunks.append((common_path(paths), "\n\n".join(buffer)))
+            chunks.append((common_path(paths), list(headings), "\n\n".join(buffer)))
             buffer.clear()
             paths.clear()
+            headings.clear()
 
-    for path, body in sections:
+    for path, heading, body in sections:
         if len(body) > max_chars:
             flush()
-            chunks.extend((path, piece) for piece in chunk_text(body, max_chars))
+            chunks.extend(
+                (path, [heading] if index == 0 and heading else [], piece)
+                for index, piece in enumerate(chunk_text(body, max_chars))
+            )
             continue
         pending = sum(len(b) + 2 for b in buffer)
         if buffer and pending + len(body) > max_chars:
             flush()
         buffer.append(body)
         paths.append(path)
+        if heading:
+            headings.append(heading)
     flush()
     return chunks
 
 
-def split_sections(text: str) -> list[tuple[str, str]]:
+def split_sections(text: str) -> list[tuple[str, str, str]]:
     masked, fences = mask_fences(text)
     stack: list[str] = []
-    sections: list[tuple[str, list[str]]] = []
+    sections: list[tuple[str, str, list[str]]] = []
     current: list[str] = []
     path = ""
+    title = ""
 
     def close() -> None:
         if any(line.strip() for line in current):
-            sections.append((path, list(current)))
+            sections.append((path, title, list(current)))
         current.clear()
 
     for line in masked.splitlines():
@@ -76,12 +88,13 @@ def split_sections(text: str) -> list[tuple[str, str]]:
         stack.extend([""] * (level - 1 - len(stack)))
         stack.append(heading.group(2).strip())
         path = " > ".join(part for part in stack if part)
+        title = stack[-1]
         current.append(line)
     close()
 
     return [
-        (p, body)
-        for p, lines in sections
+        (p, t, body)
+        for p, t, lines in sections
         if (body := restore_fences("\n".join(lines), fences).strip())
     ]
 
