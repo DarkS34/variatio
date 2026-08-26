@@ -13,7 +13,8 @@ import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, when } from "@/lib/format";
 import { Link } from "@/lib/router";
 import type { StageState } from "@/lib/types";
-import { useInvalidateChain, useRawMissingFor } from "@/state/queries";
+import { isRebuild } from "@/lib/progress";
+import { useArtifactRun, useInvalidateChain, useRawMissingFor } from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
 
 // Approving closes the stage. What is approved is the file's hash, so editing it underneath
@@ -73,6 +74,7 @@ export function StageGate({
 }) {
   const invalidate = useInvalidateChain();
   const rawMissing = useRawMissingFor(stage?.artifact);
+  const busyRun = useArtifactRun(stage?.artifact);
   const toast = useToast();
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
   // changed the state of the whole chain and said nothing, and invalidating a query does
@@ -219,13 +221,28 @@ export function StageGate({
             it is said here instead of left to be assumed. */}
         {building ? (
           <>
-            <Alert tone="info" title="Construyendo una versión nueva">
-              <p>
-                {stage.label} deja de mostrarse mientras dura la construcción. El que hay
-                ahora sigue guardado: si cancelas, vuelve tal cual. Solo se reemplaza cuando
-                el nuevo termina.
-              </p>
-            </Alert>
+            {/* Two jobs land in the same «building» state and they are not the same thing.
+                A rebuild throws the previous artifact away and cancelling brings it back
+                untouched; a job that patches in place — tagging — rewrites the items one by
+                one and saves after each, so «si cancelas, vuelve tal cual» was flatly false
+                for it: what it had already decided stays decided. */}
+            {isRebuild(busyRun?.job?.kind) ? (
+              <Alert tone="info" title="Construyendo una versión nueva">
+                <p>
+                  {stage.label} deja de mostrarse mientras dura la construcción. El que hay
+                  ahora sigue guardado: si cancelas, vuelve tal cual. Solo se reemplaza cuando
+                  el nuevo termina.
+                </p>
+              </Alert>
+            ) : (
+              <Alert tone="info" title="Trabajando sobre lo que ya hay">
+                <p>
+                  {stage.label} deja de mostrarse mientras dura el trabajo, porque el fichero
+                  se está reescribiendo. Nada se descarta: lo ya decidido queda guardado sobre
+                  la marcha, así que cancelar detiene lo que falta y no deshace lo hecho.
+                </p>
+              </Alert>
+            )}
             <BuildProgress artifact={stage.artifact} />
             {livePreview}
           </>

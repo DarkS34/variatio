@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
 import { duration } from "@/lib/format";
+import { isRebuild, stepPercent } from "@/lib/progress";
 import type { ArtifactName, BuildPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
@@ -31,7 +32,10 @@ export function BuildProgress({
   className?: string;
 }) {
   const run = useArtifactRun(artifact);
-  const phases = useBuildPhases(artifact);
+  // The plan belongs to the BUILDER, not to the artifact: a `tag` job is filed under
+  // the bank too, declares no phases and emits no `build.progress`, so handing it the
+  // extractor's segments drew a five-segment bar stuck at zero for the whole run.
+  const phases = useBuildPhases(isRebuild(run?.job?.kind) ? artifact : undefined);
   return (
     <JobProgress
       run={run}
@@ -80,6 +84,13 @@ export function JobProgress({
   const overall = run.overall;
   const step = run.steps.filter((s) => s.status === "running").at(-1);
   const position = phases.findIndex((phase) => phase.key === overall?.key);
+  // With no plan the running step is the only thing that knows how far this is, and it
+  // does know: it counts what it is iterating over. `null` is «todavía no medible».
+  //
+  // The two measures never mix. A build that has a plan but has not emitted its first
+  // `build.progress` yet keeps saying «—»: taking the step's number there would print a
+  // percentage beside a segmented bar still drawn at zero, and the two would disagree.
+  const percent = overall?.percent ?? (phases.length === 0 ? stepPercent(step) : null);
 
   return (
     <Card className={className}>
@@ -131,7 +142,7 @@ export function JobProgress({
               {overall?.label ?? step?.label ?? "Preparando el proceso…"}
             </p>
             <span className="shrink-0 text-body font-medium nums">
-              {overall ? `${overall.percent} %` : "—"}
+              {percent === null ? "—" : `${percent} %`}
             </span>
           </div>
 
@@ -143,11 +154,13 @@ export function JobProgress({
               live={active}
             />
           ) : (
-            <Progress value={overall?.percent ?? 0} max={overall ? 100 : null} />
+            <Progress value={percent ?? 0} max={percent === null ? null : 100} />
           )}
 
-          {overall?.detail ? (
-            <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
+          {overall?.detail ?? step?.detail ? (
+            <p className="truncate text-small text-muted-foreground">
+              {overall?.detail ?? step?.detail}
+            </p>
           ) : null}
         </div>
 
