@@ -122,14 +122,14 @@
           "description_generation": null,
           "concept_tagger": null,
           "admissibility": null,
-          "repair": null,
+          "repair": "gemma-4-31b",
           "ep_consolidate": "gemma-4-31b",
           "kg_clean_merge": "gemma-4-31b",
           "kg_clean_drop": "gemma-4-31b",
           "kg_link_domain": "gemma-4-31b",
           "kg_link_cross_domain": "gemma-4-31b",
           "kg_taggable": "gemma-4-31b",
-          "variant_generation": null
+          "variant_generation": "gemma-4-31b"
         }
       },
       "reasoning": {
