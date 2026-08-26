@@ -3,8 +3,7 @@
     "name": "cerebras+ollama",
     "cerebras_base_url": "https://api.cerebras.ai/v1",
     "cerebras_models": [
-      "gemma-4-31b",
-      "gpt-oss-120b"
+      "gemma-4-31b"
     ],
     "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
