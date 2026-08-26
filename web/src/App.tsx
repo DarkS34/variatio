@@ -1,17 +1,38 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
-import { AccountScreen } from "@/features/account/AccountScreen";
-import { AdminScreen } from "@/features/admin/AdminScreen";
-import { BankScreen } from "@/features/bank/BankScreen";
 import { Dashboard } from "@/features/pipeline/Dashboard";
-import { EvaluationScreen } from "@/study/EvaluationScreen";
-import { KgScreen } from "@/features/kg/KgScreen";
-import { ProfileScreen } from "@/features/profile/ProfileEditor";
-import { GenerateScreen } from "@/features/run/GenerateScreen";
 import { usePipeline } from "@/state/queries";
+
+// Every screen except the panel loads on demand: the router is ours, so the split
+// happens here rather than in a route table. The panel stays static because «/» is
+// where a session lands, and a fallback flash on the landing route helps nobody.
+const AccountScreen = lazy(() =>
+  import("@/features/account/AccountScreen").then((m) => ({ default: m.AccountScreen })),
+);
+const AdminScreen = lazy(() =>
+  import("@/features/admin/AdminScreen").then((m) => ({ default: m.AdminScreen })),
+);
+const BankScreen = lazy(() =>
+  import("@/features/bank/BankScreen").then((m) => ({ default: m.BankScreen })),
+);
+const GuideScreen = lazy(() =>
+  import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
+);
+const EvaluationScreen = lazy(() =>
+  import("@/study/EvaluationScreen").then((m) => ({ default: m.EvaluationScreen })),
+);
+const KgScreen = lazy(() =>
+  import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
+);
+const ProfileScreen = lazy(() =>
+  import("@/features/profile/ProfileEditor").then((m) => ({ default: m.ProfileScreen })),
+);
+const GenerateScreen = lazy(() =>
+  import("@/features/run/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
+);
 
 export function App() {
   const { path } = useRouter();
@@ -19,6 +40,10 @@ export function App() {
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
+    if (path === "/guia" || path.startsWith("/guia/")) {
+      return <GuideScreen slug={path.slice("/guia/".length)} />;
+    }
+
     switch (path) {
       case "/":
         return <Dashboard />;
@@ -60,7 +85,19 @@ export function App() {
     }
   };
 
-  return <AppShell>{screen()}</AppShell>;
+  return (
+    <AppShell>
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        }
+      >
+        {screen()}
+      </Suspense>
+    </AppShell>
+  );
 }
 
 function Redirect({ to }: { to: string }) {

@@ -51,12 +51,14 @@ export function Link({
   children,
   onClick,
   title,
+  "aria-current": current,
 }: {
   to: string;
   className?: string;
   children: ReactNode;
   onClick?: () => void;
   title?: string;
+  "aria-current"?: "page";
 }) {
   const { navigate } = useRouter();
   return (
@@ -64,6 +66,7 @@ export function Link({
       href={to}
       className={className}
       title={title}
+      aria-current={current}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey) return;
         event.preventDefault();

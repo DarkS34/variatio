@@ -1,4 +1,13 @@
-import { LogOut, Monitor, Moon, ShieldCheck, Sparkles, Sun, UserRound } from "lucide-react";
+import {
+  BookOpen,
+  LogOut,
+  Monitor,
+  Moon,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +103,11 @@ export function AccountMenu() {
                 onClick={() => go("/administracion")}
               />
             ) : null}
+            <MenuItem
+              icon={<BookOpen className="size-4" />}
+              label="Guía"
+              onClick={() => go("/guia")}
+            />
           </div>
 
           <Separator />
