@@ -82,7 +82,7 @@ def listing(
     query: str | None = None,
     source: str | None = None,
     item_type: str | None = None,
-    order: str = "suspicion",
+    order: str = "id",
     page: int = 1,
     page_size: int = 50,
 ) -> dict:

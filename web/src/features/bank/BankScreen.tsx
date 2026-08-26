@@ -341,7 +341,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const [concept, setConcept] = useState("");
   const [source, setSource] = useState("");
   const [untagged, setUntagged] = useState<boolean | undefined>(undefined);
-  const [order, setOrder] = useState<"suspicion" | "id">("suspicion");
+  const [order, setOrder] = useState<"suspicion" | "id">("id");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
 
@@ -427,9 +427,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       title="Banco de ejemplares"
       description={
         <>
-          Los ítems extraídos de los documentos y etiquetados con conceptos del grafo. Se revisan
-          por sospecha: primero los que se quedaron sin concepto, después las decisiones que se
-          ganaron por poco margen.
+          Los ítems extraídos de los documentos y etiquetados con conceptos del grafo. Salen en el
+          orden en que se extrajeron; «Ordenar por sospecha» pone delante los que se quedaron sin
+          concepto y las decisiones que se ganaron por poco margen.
         </>
       }
       livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
@@ -639,8 +639,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             onChange={(event) => setOrder(event.target.value as "suspicion" | "id")}
             className="max-w-56"
           >
-            <option value="suspicion">Ordenar por sospecha</option>
             <option value="id">Ordenar por id</option>
+            <option value="suspicion">Ordenar por sospecha</option>
           </Select>
         </div>
 
