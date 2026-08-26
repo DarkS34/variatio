@@ -8,15 +8,17 @@ context, opening or closing the tunnel) each change something every workspace fe
 that is the reason they are the administrator's.
 """
 
+import csv
+import io
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session as DbSession
 
 from variant_generator import config
-from variant_generator.core import inference
+from variant_generator.core import cerebras_budget, inference
 
 from .. import auth, deps, jobs, runtime
 from ..db import Base, database_url
@@ -90,7 +92,74 @@ def engine() -> dict:
         "contexts": deps.warm_slugs(),
         "pulls": runtime.pulls.all(),
         "tunnel": runtime.tunnel.status(),
+        "cerebras": cerebras_state(),
     }
+
+
+# THE REMOTE HALF -------------------------------------------------------------------------
+#
+# Read from the ledger on disk and from nothing else: this endpoint is polled every 15 s by
+# every open tab, and `HybridEngine.is_available` already refuses to cross to Cerebras on
+# that schedule for the same reason. The catalogue has its own cached route.
+#
+# The ledger is a file because a build runs in `server.jobs.build_worker`, a separate
+# process — the half of the work that actually empties a daily budget. Reading it here is
+# what lets the panel show a build's spending while it happens.
+
+
+# `routed` and `usage` are deliberately two keys: the first is what the configuration sends
+# to Cerebras, the second what has actually been spent. A model can be in one and not the
+# other — routed but never called yet, or called before somebody took it off the list — and
+# collapsing them into one «models» loses exactly that difference.
+def cerebras_state() -> dict:
+    budget = cerebras_budget.shared().snapshot()
+    return {
+        "active": inference.engine_name() == "cerebras+ollama",
+        "configured": bool(config.CEREBRAS_API_KEY),
+        "routed": sorted(config.CEREBRAS_MODELS),
+        "max_wait": config.CEREBRAS_MAX_WAIT_SECONDS,
+        "usage": budget["models"],
+        "inflight": budget["inflight"],
+    }
+
+
+# The breakdown is a supporting table on screen and a spreadsheet off it: «qué fase se está
+# comiendo el presupuesto» is a question you answer once and then want beside the memoria's
+# own numbers. Semicolons and a BOM rather than the study's plain commas, because this one
+# is opened in Excel by hand and a Spanish locale puts a comma-separated file in one column.
+@router.get("/engine/cerebras/export.csv")
+def cerebras_export() -> Response:
+    columns = [
+        "modelo",
+        "fase",
+        "peticiones",
+        "tokens_entrada",
+        "tokens_salida",
+        "tokens",
+        "porcentaje_del_dia",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=columns, delimiter=";", extrasaction="ignore")
+    writer.writeheader()
+    for entry in cerebras_budget.shared().snapshot()["models"]:
+        ceiling = entry["windows"]["day"]["tokens_limit"] or 1
+        for row in entry["phases"]:
+            writer.writerow(
+                {
+                    "modelo": entry["model"],
+                    "fase": row["phase"],
+                    "peticiones": row["requests"],
+                    "tokens_entrada": row["prompt_tokens"],
+                    "tokens_salida": row["completion_tokens"],
+                    "tokens": row["tokens"],
+                    "porcentaje_del_dia": f"{row['tokens'] * 100 / ceiling:.2f}".replace(".", ","),
+                }
+            )
+    return Response(
+        content="﻿" + buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="cerebras-por-fase.csv"'},
+    )
 
 
 @router.post("/engine/release")

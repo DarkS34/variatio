@@ -577,6 +577,52 @@ export interface PullStatus {
 
 export type ModelResidency = "cargado" | "en disco" | "sin instalar" | "remoto";
 
+/** One rolling window of one model's Cerebras quota. `resets_in` is when the oldest call
+ *  inside it ages out — the API sends no `reset` header, so the window is reconstructed
+ *  from our own timestamps. */
+export interface CerebrasWindow {
+  requests_used: number;
+  requests_limit: number;
+  requests_remaining: number;
+  tokens_used: number;
+  tokens_limit: number;
+  tokens_remaining: number;
+  resets_in: number;
+}
+
+export interface CerebrasPhase {
+  phase: string;
+  requests: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  tokens: number;
+}
+
+export interface CerebrasModel {
+  model: string;
+  windows: { minute: CerebrasWindow; day: CerebrasWindow };
+  phases: CerebrasPhase[];
+}
+
+export interface CerebrasState {
+  /** The active engine routes to Cerebras; false means the card is history, not live. */
+  active: boolean;
+  configured: boolean;
+  /** What the configuration sends to Cerebras. */
+  routed: string[];
+  max_wait: number;
+  /** What has actually been spent — empty until the first call, and not the same set. */
+  usage: CerebrasModel[];
+  inflight: {
+    model: string;
+    phase: string | null;
+    since: number;
+    elapsed: number;
+    /** Set only while the throttle is holding the call back. */
+    waiting_until: number | null;
+  } | null;
+}
+
 export interface AdminEngine {
   engine: string;
   host: string;
@@ -589,6 +635,8 @@ export interface AdminEngine {
   contexts: string[];
   pulls: PullStatus[];
   tunnel: TunnelStatus;
+  /** Absent when the API is older than this client: version skew must not blank the tab. */
+  cerebras?: CerebrasState;
 }
 
 export interface AdminSystem {

@@ -22,10 +22,18 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { CerebrasCard } from "@/features/admin/CerebrasCard";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
 import { bytes, duration, JOB_STATUS, when } from "@/lib/format";
-import type { AdminEngine, AdminOverview, Job, PullStatus, TunnelStatus } from "@/lib/types";
+import type {
+  AdminEngine,
+  AdminOverview,
+  Job,
+  PullStatus,
+  RunningModel,
+  TunnelStatus,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   keys,
@@ -52,19 +60,63 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
   if (!engine.data) return null;
   const data = engine.data;
 
+  // THE TAB IS ABOUT ONE ENGINE, AND THE ENGINE DECIDES HOW MANY HALVES IT HAS. Until
+  // 2026-08-26 every card here spoke about the GPU, while the installation could be routing
+  // its heaviest phases to Cerebras with nothing on screen saying so.
+  //
+  // What makes the two one subject rather than two lists is the question they both answer —
+  // what limits the work here — so «Local» leads with the VRAM three models have to share
+  // and «Remoto» with the quota, drawn with the same meters at a very different magnitude.
+  //
+  // THE SPLIT IS DRAWN ONLY WHEN THERE ARE TWO HALVES (2026-08-26, explicit user request).
+  // On the plain `ollama` engine the tab goes back to being one panel about one machine,
+  // headings included: «Local» with no «Remoto» beside it divides nothing, and a Cerebras
+  // card kept alive by yesterday's spending would describe an engine this installation is
+  // no longer running. The ledger keeps that history either way — switching back brings it
+  // straight back, and `GET /engine/cerebras/export.csv` never stopped serving it.
+  //
+  // `cerebras` is read defensively because it can genuinely be absent: an API older than
+  // this bundle does not send it, and a bare `data.cerebras.active` took the WHOLE tab down
+  // with a blank screen — the failure this project already refuses elsewhere («un panel que
+  // no puede cargar sus datos lo dice; nunca renderiza null»). Missing simply means no
+  // remote half, which is the same thing the plain `ollama` engine means.
+  const remote = data.cerebras?.active ?? false;
+
   return (
     <div className="space-y-5">
+      {remote ? <Half title="Local" note="la máquina, sus pesos y la VRAM en la que caben" /> : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <TunnelCard tunnel={data.tunnel} available={data.available} host={data.host} />
         <ResidencyCard engine={data} overview={overview} />
       </div>
-      <QueueSection />
       <ModelsCard engine={data} />
+
+      {remote ? (
+        <>
+          <Half title="Remoto" note="nada que cargar; lo que limita es la cuota" />
+          <CerebrasCard cerebras={data.cerebras!} />
+        </>
+      ) : null}
+
+      {remote ? (
+        <Half title="Este proceso" note="la cola, los contextos en memoria y la base de datos" />
+      ) : null}
+      <QueueSection />
       <div className="grid gap-4 lg:grid-cols-2">
         <ContextsCard engine={data} overview={overview} />
         <SystemCard />
       </div>
       <HistorySection />
+    </div>
+  );
+}
+
+/** A rule under a display-width word, drawn only while the tab has more than one subject. */
+function Half({ title, note }: { title: string; note: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-3 border-b border-primary pb-2">
+      <h2 className="font-expanded text-title">{title}</h2>
+      <p className="text-small text-muted-foreground">{note}</p>
     </div>
   );
 }
@@ -225,20 +277,7 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {engine.running.length > 0 ? (
-          <ul className="divide-y divide-border rounded-md border border-border text-small">
-            {engine.running.map((model) => (
-              <li key={model.model} className="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5">
-                <span className="font-mono">{model.model}</span>
-                <span className="nums text-muted-foreground">
-                  {model.size_vram ? bytes(model.size_vram) : "—"}
-                  {model.context_length ? ` · ctx ${model.context_length.toLocaleString("es-ES")}` : ""}
-                  {model.expires_at ? ` · hasta ${when(model.expires_at)}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {engine.running.length > 0 ? <Vram running={engine.running} total={vram} /> : null}
         <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
@@ -290,6 +329,62 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
         <FormError error={release.error ?? warm.error} />
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * What the GPU is holding, as one bar plus its legend.
+ *
+ * IT IS A PROPORTION AND NOT A FRACTION, and that is the whole reason it has no «de 45 GB»:
+ * `/api/ps` reports how much each resident model occupies and never how much the card has,
+ * and `nvidia-smi` here answers about a different machine — the engine is reached through a
+ * forwarded port. So the bar divides the resident total between the models and the total is
+ * given in absolute terms. Inventing a denominator would make every percentage on it a
+ * claim nothing measured.
+ *
+ * What it is worth seeing is the shape: the main model is two thirds of the residency and
+ * the guardrail's context window was capped at 4096 precisely so the three of them fit at
+ * once. That is legible in a bar and invisible in a list of three numbers.
+ */
+function Vram({ running, total }: { running: RunningModel[]; total: number }) {
+  const shares = [...running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0));
+  const tint = ["bg-primary", "bg-primary/55", "bg-primary/30", "bg-primary/18"];
+
+  return (
+    <div className="space-y-2">
+      {total > 0 ? (
+        <div className="flex h-2.5 gap-0.5" role="img" aria-label={`${bytes(total)} de VRAM en uso`}>
+          {shares.map((model, index) => (
+            <span
+              key={model.model}
+              className={cn("h-full", tint[Math.min(index, tint.length - 1)])}
+              style={{ width: `${((model.size_vram ?? 0) * 100) / total}%` }}
+            />
+          ))}
+        </div>
+      ) : null}
+      <ul className="divide-y divide-border border border-border text-small">
+        {shares.map((model, index) => (
+          <li key={model.model} className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+            <span
+              className={cn("size-2.5 shrink-0", tint[Math.min(index, tint.length - 1)])}
+              aria-hidden="true"
+            />
+            <span className="font-mono">{model.model}</span>
+            <span className="grow" />
+            <span className="nums text-muted-foreground">
+              {model.size_vram ? bytes(model.size_vram) : "—"}
+              {model.context_length ? ` · ctx ${model.context_length.toLocaleString("es-ES")}` : ""}
+              {model.expires_at ? ` · hasta ${when(model.expires_at)}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-micro text-muted-foreground">
+        Proporción entre los residentes, no fracción del total: «/api/ps» dice cuánto ocupa
+        cada modelo y no cuánta VRAM tiene la tarjeta.
+      </p>
+    </div>
   );
 }
 
