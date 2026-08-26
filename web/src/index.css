@@ -416,6 +416,28 @@ body {
   }
 }
 
+@keyframes vg-row-in {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes vg-row-out {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
 @keyframes vg-progress-sweep {
   from {
     transform: translateX(-100%);
@@ -444,6 +466,12 @@ body {
 .animate-pulse-soft {
   animation: vg-pulse-soft 1.6s ease-in-out infinite;
 }
+.animate-row-in {
+  animation: vg-row-in var(--motion-overlay) var(--ease) both;
+}
+.animate-row-out {
+  animation: vg-row-out var(--motion-overlay) var(--ease) both;
+}
 .animate-progress-sweep {
   animation: vg-progress-sweep 1.4s var(--ease) infinite;
   will-change: transform;
@@ -456,8 +484,12 @@ body {
    what triggers a vestibular disorder; displacement is. */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
-  .animate-slide-up {
+  .animate-slide-up,
+  .animate-row-in {
     animation: none;
+  }
+  .animate-row-out {
+    animation: vg-row-out 1ms linear both;
   }
   .animate-progress-sweep {
     animation: vg-pulse-soft 1.6s ease-in-out infinite;

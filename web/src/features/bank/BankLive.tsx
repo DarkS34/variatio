@@ -4,10 +4,8 @@ import { Tags } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { truncate } from "@/lib/format";
 import type { BankItem, BankItemType } from "@/lib/types";
-
-const VISIBLE = 8;
+import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
 
 /**
  * What the builder has written so far, while it writes it.
@@ -20,7 +18,8 @@ const VISIBLE = 8;
  * It is asked over REST and not through the event stream on purpose: a long build overruns
  * the event buffer, so a browser reloaded halfway would be left with nothing; the file, on
  * the other hand, is always there. And it comes sorted by id descending, which is the
- * extraction order reversed: the last thing written, on top.
+ * extraction order reversed: the last thing written, on top — which is what makes the
+ * window slide as the extractor works.
  */
 export function BankLive() {
   const query = useQuery({
@@ -31,7 +30,7 @@ export function BankLive() {
   });
 
   const listing = query.data;
-  const items = listing?.items ?? [];
+  const rows = useSlidingWindow(listing?.items);
 
   const primaryFieldOf = (item: BankItem): string => {
     const types: BankItemType[] = listing?.item_types ?? [];
@@ -54,45 +53,36 @@ export function BankLive() {
           ) : null}
         </div>
 
-        {items.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="text-body text-muted-foreground">
             Todavía no ha salido ningún ítem. Aparecerán aquí en cuanto el primer documento
             termine de extraerse.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {items.map((item) => {
-              const text = String(item[primaryFieldOf(item)] ?? "");
+          <SlidingList rows={rows}>
+            {(item) => {
               const concepts = item.concepts ?? [];
               return (
-                <li key={item.id} className="rounded-lg border border-border p-2.5">
-                  <div className="flex items-baseline gap-2">
-                    <code className="shrink-0 font-mono text-small text-muted-foreground">
-                      {item.id}
-                    </code>
-                    <p className="min-w-0 flex-1 text-body">{truncate(text, 180)}</p>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                    {concepts.length === 0 ? (
-                      <span className="flex items-center gap-1 text-small text-muted-foreground">
-                        <Tags className="size-3" />
-                        etiquetando…
-                      </span>
-                    ) : (
-                      concepts.map((concept) => (
-                        <Badge
-                          key={concept}
-                          variant={concept === item.primary_concept ? "default" : "secondary"}
-                        >
-                          {concept}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                </li>
+                <FeedRow id={item.id} text={String(item[primaryFieldOf(item)] ?? "")}>
+                  {concepts.length === 0 ? (
+                    <span className="flex items-center gap-1 text-small text-muted-foreground">
+                      <Tags className="size-3" />
+                      etiquetando…
+                    </span>
+                  ) : (
+                    concepts.map((concept) => (
+                      <Badge
+                        key={concept}
+                        variant={concept === item.primary_concept ? "default" : "secondary"}
+                      >
+                        {concept}
+                      </Badge>
+                    ))
+                  )}
+                </FeedRow>
               );
-            })}
-          </ul>
+            }}
+          </SlidingList>
         )}
       </CardContent>
     </Card>
