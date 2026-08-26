@@ -6,7 +6,7 @@ from study import Commission
 from study.run import _validate
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
-from .conftest import CHAIN_GRAPH
+from ..conftest import CHAIN_GRAPH
 
 
 class _FakeItemType:

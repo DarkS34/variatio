@@ -1,6 +1,6 @@
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
-from .conftest import PREREQUISITE
+from ..conftest import PREREQUISITE
 
 
 def test_chain_graph_loads(chain_graph_path):

@@ -5,7 +5,7 @@ import pytest
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 from variant_generator.variant_generator import VariantGenerator
 
-from .conftest import CHAIN_GRAPH
+from ..conftest import CHAIN_GRAPH
 
 
 class _FakeItemType:

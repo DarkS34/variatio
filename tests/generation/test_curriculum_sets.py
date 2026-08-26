@@ -5,7 +5,7 @@ import pytest
 
 from variant_generator.variant_generator import assumed_known, forbidden
 
-FIXTURE = Path(__file__).parent / "fixtures" / "curriculum_sets.json"
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "curriculum_sets.json"
 CASES = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 

@@ -4,7 +4,7 @@ from server import curriculum
 from variant_generator.core.workspace import Workspace
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
-from .conftest import CHAIN_GRAPH
+from ..conftest import CHAIN_GRAPH
 
 
 def workspace(tmp_path):

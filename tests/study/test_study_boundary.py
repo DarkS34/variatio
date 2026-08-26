@@ -3,7 +3,7 @@ import pathlib
 import subprocess
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 # The one deliberate exception, taken by explicit user request: the settings registry
 # reaches `study.settings` by name so the six declarations live beside the code that reads

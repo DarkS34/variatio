@@ -1,6 +1,6 @@
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
-from .conftest import PREREQUISITE
+from ..conftest import PREREQUISITE
 
 
 def graph(path):

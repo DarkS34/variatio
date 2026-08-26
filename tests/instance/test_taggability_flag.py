@@ -2,7 +2,7 @@ import json
 
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
 
-from .conftest import CHAIN_GRAPH
+from ..conftest import CHAIN_GRAPH
 
 
 def write(tmp_path, data):
