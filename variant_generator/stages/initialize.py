@@ -55,6 +55,7 @@ def make_tagger(
         embedder,
         config.CONCEPT_TAGGER_LLM,
         embed_text=_embed_text(exemplars_profile),
+        primary_text=exemplars_profile.primary_text,
         context=content_context if content_context is not None else ContentContext(),
     )
 

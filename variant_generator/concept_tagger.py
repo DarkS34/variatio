@@ -36,6 +36,7 @@ class ConceptTagger:
         embedder: Embedder,
         concept_tagger_model: str,
         embed_text: Callable[[dict], str],
+        primary_text: Callable[[dict], str] | None = None,
         context: ContentContext | None = None,
         top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
         fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
@@ -43,6 +44,10 @@ class ConceptTagger:
         self.concept_tagger_model = concept_tagger_model
         self.embedder = embedder
         self.embed_text = embed_text
+        # What the tagger READS is every indexed field; what a person reading the live feed
+        # wants is the statement, which is what the bank screen shows everywhere else. The
+        # fallback keeps a caller that names neither working as it did.
+        self.primary_text = primary_text or embed_text
         self.context = context if context is not None else ContentContext()
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.top_k_candidates = top_k_candidates
@@ -255,12 +260,14 @@ class ConceptTagger:
             for idx, c_id in enumerate(pending, 1):
                 progress.checkpoint()
                 content = exemplars_bank[c_id]
+                statement = self.embed_text(content)
                 reporter.tick(idx, detail=c_id)
-                annotation = self.tag(self.embed_text(content))
+                annotation = self.tag(statement)
                 annotated[c_id] = {**content, **annotation}
                 progress.emit(
                     "item.tagged",
                     id=c_id,
+                    text=self.primary_text(content)[:200],
                     concepts=annotation["concepts"],
                     primary_concept=annotation["primary_concept"],
                     method=annotation[TRACE_KEY]["method"],

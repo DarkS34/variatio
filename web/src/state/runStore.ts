@@ -45,6 +45,21 @@ export interface ProducedItem {
   saved_id?: number | null;
 }
 
+/**
+ * One bank item the tagger has just annotated.
+ *
+ * The count alone answered «cuántos van» and nothing else. Re-tagging is minutes of a
+ * screen with nothing on it, and the event already carries what was decided; keeping the
+ * last few is what lets the bank draw the same live feed a build draws.
+ */
+export interface TaggedItem {
+  id: string;
+  text: string;
+  concepts: string[];
+  primary_concept: string | null;
+  method: string;
+}
+
 /** Which side of the stream the model is writing on right now. */
 export type StreamPhase = "idle" | "thinking" | "answering";
 
@@ -81,6 +96,7 @@ export interface RunView {
   fewShot: FewShotExemplar[] | null;
   prompt: string | null;
   taggedCount: number;
+  tagged: TaggedItem[];
   startedAt: number | null;
   finishedAt: number | null;
 }
@@ -90,6 +106,7 @@ const MAX_LOGS = 3_000;
 const MAX_SESSION_LOGS = 8_000;
 const MAX_ACTIVITY = 600;
 const MAX_RUNS = 12;
+const MAX_TAGGED = 24;
 
 /** The close code `server/routers/ws.py` uses when the handshake carries no session. */
 const UNAUTHORISED = 4401;
@@ -124,6 +141,7 @@ function emptyRun(jobId: string): RunView {
     fewShot: null,
     prompt: null,
     taggedCount: 0,
+    tagged: [],
     startedAt: null,
     finishedAt: null,
   };
@@ -509,7 +527,20 @@ class RunStore {
           ),
         };
       case "item.tagged":
-        return { ...run, taggedCount: run.taggedCount + 1 };
+        return {
+          ...run,
+          taggedCount: run.taggedCount + 1,
+          tagged: [
+            {
+              id: event.id,
+              text: event.text ?? "",
+              concepts: event.concepts ?? [],
+              primary_concept: event.primary_concept ?? null,
+              method: event.method,
+            },
+            ...run.tagged,
+          ].slice(0, MAX_TAGGED),
+        };
 
       case "log": {
         const logs = [...run.logs, toLogLine(event)];

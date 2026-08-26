@@ -12,6 +12,7 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
 import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { BankLive } from "./BankLive";
+import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import {
   useCoverage,
   useEngineOffline,
   useInvalidateChain,
+  useJobRun,
   useKg,
   useSubmitJob,
 } from "@/state/queries";
@@ -343,6 +345,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
 
+  // Re-tagging puts the bank into «building» like a rebuild does, so StageGate hides the
+  // whole screen and only the live preview survives. What belongs there is NOT the file
+  // — re-tagging rewrites labels on the same items, so `order=recent` returns the
+  // same eight rows from beginning to end — but the order the tagger works in, which
+  // only the event stream knows.
+  const tagRun = useJobRun("tag");
+  const tagStatus = tagRun?.job?.status;
+  const tagging = tagStatus === "running" || tagStatus === "queued";
+
   const params = { q: query, concept, source, untagged, order, page, page_size: 40 };
   const bank = useQuery({
     queryKey: ["bank", params],
@@ -421,7 +432,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           ganaron por poco margen.
         </>
       }
-      livePreview={<BankLive />}
+      livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
       buildLabels={{
         create: "Extraer",
         redo: "Volver a extraer",
@@ -565,6 +576,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             </CardContent>
           </Card>
         </div>
+
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
