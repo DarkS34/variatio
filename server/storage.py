@@ -74,6 +74,8 @@ def history(ws: Workspace, artifact: str) -> list[dict]:
 
 
 def restore(ws: Workspace, artifact: str, snapshot_id: str, target: Path) -> Path:
+    if snapshot_id != Path(snapshot_id).name:
+        raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")
     source = ws.history_dir / artifact / snapshot_id
     if not source.is_file():
         raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")

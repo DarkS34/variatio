@@ -98,12 +98,13 @@ def _mount_web(app: FastAPI) -> None:
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
+    root = dist.resolve()
     index = dist / "index.html"
 
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
-        candidate = dist / path
-        if path and candidate.is_file():
+        candidate = (root / path).resolve()
+        if path and candidate.is_relative_to(root) and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(index)
 
