@@ -98,3 +98,14 @@ def locked_seconds(bucket: str, account: str) -> float:
 
 def unlock(bucket: str, account: str) -> None:
     limiter.clear(bucket, account)
+
+
+# The success path's counterpart to `throttle`, and it forgives ONE of the two keys on
+# purpose. Clearing the IP half as well is what the login route used to do, and it handed
+# the whole IP leg to anyone holding a single valid account: eight guesses against every
+# other name, then a login of one's own, then eight more, from the same address. The IP
+# half is not a punishment to be lifted by proving one account — it is the thing that
+# stops a spray across many, exactly as the header of this module says. It expires on its
+# own with the window.
+def forgive(bucket: str, account: str) -> None:
+    limiter.clear(bucket, account)

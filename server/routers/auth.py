@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from .. import settings
 from ..auth import deps, mail, passwords, tokens
-from ..auth.rate_limit import limiter, throttle
+from ..auth.rate_limit import forgive, throttle
 from ..db import identity
 from ..db.models import OWNER, Invite, User, Workspace
 
@@ -97,8 +97,7 @@ def login(
     if passwords.needs_rehash(user.password_hash):
         identity.set_password(session, user, passwords.hash_password(body.password))
 
-    limiter.clear("login", username)
-    limiter.clear("login", deps.client_ip(request))
+    forgive("login", username)
     _issue_session(session, user, request, response)
     return _me(session, user)
 
