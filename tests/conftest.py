@@ -3,6 +3,7 @@ import json
 import pytest
 
 from variant_generator import admissibility
+from variant_generator.core import cerebras_budget
 from variant_generator.instance.content_context import ContentContext
 from variant_generator.instance.exemplars_profile import ExemplarsProfile
 from variant_generator.instance.knowledge_graph import KnowledgeGraph
@@ -32,6 +33,17 @@ CHAIN_GRAPH = {
 }
 
 PREREQUISITE = "tiene como prerrequisito"
+
+
+# THE ONE AUTOUSE FIXTURE, and it exists to stop a test spending real money's worth of
+# budget. `CerebrasEngine` records every call in a ledger at the project root, so the engine
+# tests — which answer a simulated transport — charged six phantom requests to the
+# installation's own Cerebras budget and the panel then reported them as spent.
+@pytest.fixture(autouse=True)
+def _isolated_cerebras_ledger(tmp_path):
+    cerebras_budget.use(tmp_path / "cerebras_budget.json")
+    yield
+    cerebras_budget.use(None)
 
 
 @pytest.fixture

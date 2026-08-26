@@ -5,7 +5,7 @@ import httpx
 from loguru import logger
 
 from .. import config
-from . import progress
+from . import cerebras_budget, progress
 from .inference import (
     DEFAULT_THINK_EFFORT,
     GenerationResponse,
@@ -203,12 +203,24 @@ class CerebrasEngine:
 
         body = self._body(model, prompt, think, None, None, temperature, None)
         body["stream"] = True
+        # A streamed answer carries no `usage` unless it is asked for, and without it the
+        # ledger would charge a whole generation zero tokens — the one call of the pipeline
+        # that streams is the variant generator's, which is not the cheap one.
+        body["stream_options"] = {"include_usage": True}
+
+        ledger = cerebras_budget.shared()
+        phase = progress.current_activity()
+        ledger.wait(model, cerebras_budget.estimate_tokens(prompt), phase)
+        ledger.begin(model, phase)
+
         answer: list[str] = []
         thinking: list[str] = []
+        prompt_tokens = completion_tokens = 0
         try:
             with self._client.stream("POST", "/chat/completions", json=body) as response:
                 if response.status_code != 200:
                     response.read()
+                    ledger.record(model, phase, 0, 0, response.headers)
                     raise InferenceError(
                         f"Cerebras respondió {response.status_code} para '{model}': "
                         f"{response.text[:300]}"
@@ -219,7 +231,12 @@ class CerebrasEngine:
                     payload = line[len("data: ") :].strip()
                     if not payload or payload == "[DONE]":
                         continue
-                    delta = (json.loads(payload).get("choices") or [{}])[0].get("delta") or {}
+                    chunk = json.loads(payload)
+                    usage = chunk.get("usage")
+                    if usage:
+                        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+                        completion_tokens = int(usage.get("completion_tokens") or 0)
+                    delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
                     thought = delta.get("reasoning") or delta.get("reasoning_content")
                     if thought:
                         thinking.append(thought)
@@ -229,8 +246,11 @@ class CerebrasEngine:
                         answer.append(text)
                         on_token(text, "answer")
                     progress.checkpoint()
+                ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers)
         except httpx.HTTPError as e:
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
+        finally:
+            ledger.finish()
 
         return GenerationResponse(
             response="".join(answer).strip(), thinking="".join(thinking).strip() or None
@@ -295,12 +315,16 @@ class CerebrasEngine:
     # retried with the wait the server asks for; anything else non-200 is an answer, and
     # the daily token budget in particular comes back as an error worth reading, not
     # worth retrying.
+    #
+    # The throttle in front of it is what makes the 429 rare rather than routine: the
+    # ledger holds the call until the window has room, so the retry loop stays what it was
+    # meant to be — the answer to somebody ELSE spending the same account's budget.
     def _post(self, model: str, body: dict) -> httpx.Response:
+        ledger = cerebras_budget.shared()
+        phase = progress.current_activity()
+        estimate = cerebras_budget.estimate_tokens(_prompt_text(body))
         for attempt in range(1, _MAX_ATTEMPTS + 1):
-            try:
-                response = self._client.post("/chat/completions", json=body)
-            except httpx.HTTPError as e:
-                raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
+            response = self._send(ledger, model, phase, estimate, body)
             if response.status_code in _RETRY_STATUSES and attempt < _MAX_ATTEMPTS:
                 wait = _retry_wait(response, attempt)
                 logger.warning(
@@ -317,6 +341,46 @@ class CerebrasEngine:
                 )
             return response
         raise InferenceError(f"Cerebras agotó los reintentos para '{model}'")
+
+    # Every response is recorded, a 429 included: it spent a request whether or not it
+    # produced an answer, and a ledger that only counted successes would walk straight
+    # back into the limit it just hit.
+    def _send(self, ledger, model: str, phase: str | None, estimate: int, body: dict):
+        ledger.wait(model, estimate, phase)
+        ledger.begin(model, phase)
+        try:
+            response = self._client.post("/chat/completions", json=body)
+        except httpx.HTTPError as e:
+            raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
+        finally:
+            ledger.finish()
+        prompt_tokens, completion_tokens = _usage(response)
+        ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers)
+        return response
+
+
+# What the ledger charges the call, taken from the answer rather than guessed: `usage` is
+# exact and immediate, while the server's own `remaining-tokens-*` headers were measured to
+# lag (a 74-token call and a 20-token call each moved the daily counter by 6).
+def _usage(response: httpx.Response) -> tuple[int, int]:
+    try:
+        usage = response.json().get("usage") or {}
+    except (ValueError, AttributeError):
+        return 0, 0
+    return int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
+
+
+# Only to size the call BEFORE it goes out; `record` replaces it with the exact figure the
+# moment the answer lands, so an error here never accumulates across calls.
+def _prompt_text(body: dict) -> str:
+    parts: list[str] = []
+    for message in body.get("messages") or []:
+        content = message.get("content")
+        if isinstance(content, str):
+            parts.append(content)
+        elif isinstance(content, list):
+            parts.extend(str(p.get("text", "")) for p in content if isinstance(p, dict))
+    return "\n".join(parts)
 
 
 def _retry_wait(response: httpx.Response, attempt: int) -> float:

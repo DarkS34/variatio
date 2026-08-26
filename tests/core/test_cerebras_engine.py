@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from variant_generator import config
-from variant_generator.core import cerebras
+from variant_generator.core import cerebras, cerebras_budget, progress
 from variant_generator.core.cerebras import CerebrasEngine, HybridEngine
 from variant_generator.core.inference import InferenceError
 
@@ -257,3 +257,108 @@ def test_generate_stream_splits_the_two_channels():
     assert resp.thinking == "pienso"
     assert ("thinking", "pienso") in tokens
     assert ("answer", "res") in tokens
+
+
+# THE THROTTLE IS WIRED INTO THE ENGINE ----------------------------------------------------
+#
+# The ledger's own arithmetic is pinned in `test_cerebras_budget.py`; what these check is
+# the wiring, which is the part that silently does nothing if a call site is missed.
+
+
+def test_a_call_is_charged_to_the_ledger_with_its_usage_and_phase(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "hola"}}],
+                "usage": {"prompt_tokens": 640, "completion_tokens": 60},
+            },
+            headers={"x-ratelimit-remaining-requests-minute": "4"},
+        )
+
+    with progress.step("kg_extract", "Extrayendo"):
+        _engine_with(handler).generate("gemma-4-31b", "texto")
+
+    entry = cerebras_budget.shared().snapshot()["models"][0]
+    assert entry["model"] == "gemma-4-31b"
+    assert entry["windows"]["minute"]["requests_used"] == 1
+    assert entry["phases"] == [
+        {
+            "phase": "kg_extract",
+            "requests": 1,
+            "prompt_tokens": 640,
+            "completion_tokens": 60,
+            "tokens": 700,
+        }
+    ]
+
+
+# A 429 spent a request whether or not it produced an answer. A ledger that only counted
+# successes would walk straight back into the limit it had just hit.
+def test_a_refused_call_is_charged_too(monkeypatch):
+    monkeypatch.setattr(cerebras, "_MAX_ATTEMPTS", 1)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": "slow down"})
+
+    with pytest.raises(InferenceError):
+        _engine_with(handler).generate("gemma-4-31b", "texto")
+
+    assert cerebras_budget.shared().snapshot()["models"][0]["windows"]["day"]["requests_used"] == 1
+
+
+def test_the_engine_holds_the_call_until_the_window_has_room(monkeypatch):
+    held: list[tuple] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    monkeypatch.setattr(
+        cerebras_budget.Budget, "wait", lambda self, model, tokens, phase=None: held.append((model, tokens))
+    )
+    _engine_with(handler).generate("gemma-4-31b", "x" * 4_000)
+
+    assert len(held) == 1
+    assert held[0][0] == "gemma-4-31b"
+    # Sized from the prompt before it goes out; `record` replaces it with the exact usage.
+    assert held[0][1] > 900
+
+
+def test_an_exhausted_day_stops_the_call_from_leaving(monkeypatch):
+    sent = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    # A ceiling the call would fit under, already spent: that is «agotado». A ceiling
+    # SMALLER than the call is the other refusal, «no cabe», pinned in the budget's tests.
+    monkeypatch.setattr(config, "CEREBRAS_MAX_TOKENS_DAY", 2_000)
+    cerebras_budget.shared().record(
+        "gemma-4-31b", "kg_extract", prompt_tokens=1_900, completion_tokens=0, headers={}
+    )
+
+    with pytest.raises(cerebras_budget.BudgetExhausted, match="agotado"):
+        _engine_with(handler).generate("gemma-4-31b", "x" * 4_000)
+
+    assert sent == []
+
+
+def test_a_streamed_call_asks_for_its_usage():
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        body = (
+            'data: {"choices":[{"delta":{"content":"hola"}}]}\n'
+            'data: {"choices":[],"usage":{"prompt_tokens":90,"completion_tokens":10}}\n'
+            "data: [DONE]\n"
+        )
+        return httpx.Response(200, text=body)
+
+    _engine_with(handler).generate_stream("gemma-4-31b", "texto", on_token=lambda text, channel: None)
+
+    # Without `include_usage` a streamed answer carries none, and the generator — the one
+    # call of the pipeline that streams — would be charged zero tokens.
+    assert seen["stream_options"] == {"include_usage": True}
+    assert cerebras_budget.shared().snapshot()["models"][0]["phases"][0]["tokens"] == 100

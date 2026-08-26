@@ -15,11 +15,7 @@ web/tsconfig.tsbuildinfo
 # and its vectors travel with the repository as they did when they lived in instance/ and
 # cache/.
 workspaces/*
-!workspaces/default/
-workspaces/default/raw/
-workspaces/default/cache/markdown/
-workspaces/default/instance/.history/
-workspaces/default/instance/.runs/
-workspaces/default/instance/.review_state.json
-workspaces/default/instance/.evaluations/
-workspaces/default/instance/.curriculum.json
+# What is left of the Cerebras rate limit, as a rolling ledger of this installation's own
+# calls. Installation state like `.env`, never versioned: a checkout inherits nobody's
+# spending, and the file is rebuilt from the first call.
+/.cerebras_budget.json

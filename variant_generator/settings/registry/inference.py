@@ -244,11 +244,101 @@ Ollama. La pertenencia a esta lista ES la decisión de enrutado — explícita a
 vez de adivinar por la forma del nombre («gemma-4-31b» contra «qwen3.8:27b-q4_K_M»).
 
 `gemma-4-31b` por defecto: es el id exacto del catálogo de Cerebras (~1.850 tok/s medidos
-por Artificial Analysis, ventana de 65k en el nivel gratuito y 131k en los de pago, salida
-máxima 32k/40k, structured outputs con `strict` y razonamiento vía `reasoning_effort`).
-Los límites del nivel gratuito son 5 peticiones/min, 30k tokens de entrada/min y 1M de
-tokens al día — un build entero puede no caber en ellos; el motor reintenta los 429 con
-espera, pero el presupuesto diario no se reintenta.""",
+por Artificial Analysis, ventana de 131.072, salida máxima 40.000, structured outputs con
+`strict` y razonamiento vía `reasoning_effort`).
+
+LAS CUOTAS SON POR MODELO, y las de la cuenta no son las que anuncia la página del modelo.
+Medido contra la API el 2026-08-26: `gemma-4-31b` declara 500 peticiones/min y 250.000
+tokens uncached/min, pero los `remaining-*` de esta cuenta van contra 5 peticiones/min,
+30.000 tokens/min, 2.400 peticiones/día y 1.000.000 de tokens/día. Un build entero no cabe
+ahí. Quien lo administra son los CEREBRAS_MAX_* de más abajo, no esta lista.""",
+    ),
+    # Los cuatro techos que de verdad atan, con los números del nivel gratuito medidos el
+    # 2026-08-26. No se leen de los headers `limit-*` porque esos reportan la cuota del
+    # MODELO (gemma: 500/min y 250.000 tok/min) y no la de la cuenta, que solo asoma en los
+    # `remaining-*`. El limitador sí los sube solo si alguna vez ve un `remaining` por
+    # encima de ellos: eso solo puede significar que la cuenta es mayor de lo que dicen.
+    Setting(
+        key="engine.cerebras_max_requests_minute",
+        name="CEREBRAS_MAX_REQUESTS_MINUTE",
+        kind="int",
+        default=5,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántas peticiones por minuto admite la cuenta para CADA modelo enrutado a Cerebras.
+
+5 en el nivel gratuito (medido 2026-08-26: la primera llamada dejó
+`x-ratelimit-remaining-requests-minute` en 4, mientras el header `limit-` anunciaba 1000).
+Es el techo que más ata: 5/min es un suelo de 12 segundos entre llamadas, así que un build
+con cientos de llamadas pasa a durar horas. El limitador espera a que ruede la ventana en
+vez de comerse un 429, y lo dice en «Motor».
+
+No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
+    ),
+    Setting(
+        key="engine.cerebras_max_tokens_minute",
+        name="CEREBRAS_MAX_TOKENS_MINUTE",
+        kind="int",
+        default=30_000,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos tokens por minuto admite la cuenta para cada modelo enrutado a Cerebras. 30.000 en
+el nivel gratuito (medido 2026-08-26).
+
+Se cuentan con el `usage` exacto que trae cada respuesta, no con los headers: medido, el
+contador de tokens del servidor va con retraso — una llamada de 74 tokens y otra de 20
+movieron `remaining-tokens-day` exactamente 6 las dos veces. El header solo se usa para
+BAJAR lo que creemos que queda, nunca para subirlo.""",
+    ),
+    Setting(
+        key="engine.cerebras_max_requests_day",
+        name="CEREBRAS_MAX_REQUESTS_DAY",
+        kind="int",
+        default=2_400,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántas peticiones al día admite la cuenta para cada modelo enrutado a Cerebras. 2.400 en el
+nivel gratuito (medido 2026-08-26: `remaining-requests-day` en 2399 tras una llamada,
+mientras el header `limit-` anunciaba 720.000).
+
+La ventana es deslizante de 24 h, no un día natural: la API no manda ningún header de
+`reset`, así que la única ventana reconstruible es la que sale de nuestras propias marcas
+de tiempo. Ser deslizante es lo conservador — nunca gasta de más.""",
+    ),
+    Setting(
+        key="engine.cerebras_max_tokens_day",
+        name="CEREBRAS_MAX_TOKENS_DAY",
+        kind="int",
+        default=1_000_000,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos tokens al día admite la cuenta para cada modelo enrutado a Cerebras. 1.000.000 en el
+nivel gratuito (medido 2026-08-26).
+
+Es el techo que decide si un build cabe: con prompts de ~8.000 tokens salen unas 125
+llamadas al día. El desglose por fase de «Motor» existe para responder a la pregunta que
+sigue — QUÉ fase se lo está comiendo — y se descarga en CSV.""",
+    ),
+    Setting(
+        key="engine.cerebras_max_wait_seconds",
+        name="CEREBRAS_MAX_WAIT_SECONDS",
+        kind="int",
+        default=90,
+        minimum=0,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuánto puede quedarse una llamada esperando a que se libere presupuesto antes de rendirse
+con un error legible.
+
+Una regla, dos efectos: la ventana de minuto se libera en 60 s como mucho, así que se
+espera; la de día tarda horas, así que se rechaza diciendo cuándo se libera. Esperar veinte
+horas no es esperar — es un build colgado sin explicación. La espera es cancelable
+(`progress.checkpoint()` entre rebanadas de un segundo), así que el botón de Cancelar sigue
+respondiendo mientras se aguanta.""",
     ),
     Setting(
         key="engine.ollama_host",

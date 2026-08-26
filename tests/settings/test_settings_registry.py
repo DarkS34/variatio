@@ -88,7 +88,11 @@ def test_every_phase_key_is_declared_in_the_registry():
 # later the same day: the global THINK_EFFORT left, replaced by those per-phase efforts —
 # the boolean callers now map `True` to `inference.DEFAULT_THINK_EFFORT`. 134 since kg_units
 # (2026-08-25), a phase of its own for segmenting the syllabus: a named model setting, a
-# named reasoning switch and its unnamed per-phase effort.
+# named reasoning switch and its unnamed per-phase effort. 139 since the Cerebras throttle
+# (2026-08-26): the four measured ceilings of the account's rate limit — requests and tokens,
+# per minute and per day — plus how long a call may wait for one to roll. All five named,
+# and all five Impact.NONE, because the limiter reads them on every call: changing a ceiling
+# has to take effect without resetting the engine or invalidating a single warm context.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 134
-    assert len(BY_NAME) == 106
+    assert len(REGISTRY) == 139
+    assert len(BY_NAME) == 111

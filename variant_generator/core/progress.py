@@ -20,6 +20,7 @@ __all__ = [
     "Emitter",
     "advance",
     "checkpoint",
+    "current_activity",
     "current_emitter",
     "emit",
     "overall",
@@ -111,11 +112,17 @@ class _StepHandle:
         emit("step.total", id=self.id, total=total)
 
 
+_step: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "variant_generator_step", default=None
+)
+
+
 @contextmanager
 def step(step_id: str, label: str, total: int | None = None):
     started = time.perf_counter()
     emit("step.started", id=step_id, label=label, total=total)
     handle = _StepHandle(step_id, total)
+    token = _step.set(step_id)
     try:
         yield handle
     except Cancelled:
@@ -126,6 +133,8 @@ def step(step_id: str, label: str, total: int | None = None):
         raise
     else:
         _finish(step_id, "ok", started)
+    finally:
+        _step.reset(token)
 
 
 def _finish(step_id: str, status: str, started: float, error: str | None = None) -> None:
@@ -215,6 +224,18 @@ def advance(fraction: float, detail: str | None = None) -> None:
     bar = _overall.get()
     if bar is not None:
         bar.at(fraction, detail)
+
+
+# Who is spending, in the vocabulary each caller already has: a build's phase key
+# (`kg_extract`, `kg_clean_merge`) while a plan is installed, and the running step's id
+# otherwise — which is what the tagger, the describer and the generator have. Read by the
+# Cerebras ledger to attribute every remote call to a phase; nothing else depends on it, so
+# `None` outside both is an answer and not a failure.
+def current_activity() -> str | None:
+    bar = _overall.get()
+    if bar is not None and bar._key is not None:
+        return bar._key
+    return _step.get()
 
 
 def token_sink(stream: str) -> Callable[[str, str], None] | None:
