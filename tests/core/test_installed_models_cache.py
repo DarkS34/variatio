@@ -1,6 +1,6 @@
 import pytest
 
-from variant_generator.core import inference
+from variatio.core import inference
 
 
 class FakeClient:

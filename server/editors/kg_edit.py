@@ -10,10 +10,10 @@ import json
 import tempfile
 from pathlib import Path
 
-from variant_generator import stages
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.exemplars_profile import ITEM_TYPE_KEY
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio import stages
+from variatio.core.workspace import Workspace
+from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
 

@@ -51,7 +51,7 @@ __all__ = [
 # deterministic and takes milliseconds, so it only carries a weight to avoid a bar that
 # jumps. Conversion keeps a real share for the first build and simply flies past on later
 # ones, where the markdown cache answers instead of Docling. Taggability moved out of the
-# build entirely (see `variant_generator/taggability.py`) and carries no weight here.
+# build entirely (see `variatio/taggability.py`) and carries no weight here.
 # Extraction's 8 is the measured share of ONE reading per chunk; the gleaning pass
 # (`KG_EXTRACT_GLEANING_PASSES`) reads each chunk a second time with the same model and a
 # slightly longer prompt, so its weight is that measurement doubled, not a new timing.

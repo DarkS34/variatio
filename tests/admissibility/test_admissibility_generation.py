@@ -1,7 +1,7 @@
 import pytest
 
-from variant_generator import admissibility
-from variant_generator.prompts import generate_content_prompt
+from variatio import admissibility
+from variatio.prompts import generate_content_prompt
 
 BLOCKS = dict(
     context_block="", item_type_block="t", target_concepts_block="c",
@@ -33,13 +33,13 @@ def test_the_prompt_has_no_petition_section_without_instructions():
 
 
 def test_the_prompt_labels_match_the_catalog():
-    from variant_generator.prompts.generation import _SLOT_LABELS
+    from variatio.prompts.generation import _SLOT_LABELS
 
     assert _SLOT_LABELS == {s.key: s.label for s in admissibility.CATALOG}
 
 
 def _bare_generator(context):
-    from variant_generator import variant_generator as vg
+    from variatio import variatio as vg
 
     generator = vg.VariantGenerator.__new__(vg.VariantGenerator)
     generator.content_context = context
@@ -48,7 +48,7 @@ def _bare_generator(context):
 
 
 def test_generate_screens_the_guardrail_before_the_classifier(context, monkeypatch):
-    from variant_generator import guardrail
+    from variatio import guardrail
 
     order = []
     monkeypatch.setattr(
@@ -66,7 +66,7 @@ def test_generate_screens_the_guardrail_before_the_classifier(context, monkeypat
 
 
 def test_generate_raises_naming_the_owner_and_the_term(context, monkeypatch):
-    from variant_generator import guardrail
+    from variatio import guardrail
 
     owner = admissibility.Owner(
         key="field:nivel_dificultad",

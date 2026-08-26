@@ -1,6 +1,6 @@
 import pytest
 
-from variant_generator import guardrail
+from variatio import guardrail
 
 
 class _Reply:

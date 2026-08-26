@@ -15,12 +15,6 @@
     "temperature_generation": 0.3,
     "temperature_repair": 0.2
   },
-  "tunnel": {
-    "host": "[eliminado]",
-    "remote_port": 13434,
-    "key_path": "",
-    "autostart": false
-  },
   "builders": {
     "transcribe_dpi": 200,
     "transcribe_temperature": 0.0,

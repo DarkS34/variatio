@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from ..variant_generator import GeneratedVariant
+from ..variatio import GeneratedVariant
 from .initialize import PipelineContext
 
 

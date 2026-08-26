@@ -1,5 +1,5 @@
 def import_instance(args) -> int:
-    from variant_generator.core import paths
+    from variatio.core import paths
 
     from ..db import session_scope
     from ..db.instance_io import import_instance as load
@@ -16,7 +16,7 @@ def import_instance(args) -> int:
 
 
 def export_instance(args) -> int:
-    from variant_generator.core import paths
+    from variatio.core import paths
 
     from ..db import session_scope
     from ..db.instance_io import export_instance as dump

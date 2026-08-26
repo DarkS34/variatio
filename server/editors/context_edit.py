@@ -7,8 +7,8 @@ file, which is what wins on read -- that pair is what stops a rebuild from parap
 somebody's words one more time.
 """
 
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.content_context import ContentContext
+from variatio.core.workspace import Workspace
+from variatio.instance.content_context import ContentContext
 
 from .. import storage
 

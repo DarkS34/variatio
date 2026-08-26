@@ -1,4 +1,4 @@
-from variant_generator.settings import derived
+from variatio.settings import derived
 
 
 def base():

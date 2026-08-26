@@ -1,6 +1,6 @@
 import json
 
-from variant_generator import admissibility
+from variatio import admissibility
 
 
 class _Reply:
@@ -81,7 +81,7 @@ def test_screen_fails_open_when_every_entry_is_discarded(owners_for, monkeypatch
 
 
 def test_screen_fails_open_when_the_engine_raises(owners_for, monkeypatch):
-    from variant_generator.core.inference import InferenceError
+    from variatio.core.inference import InferenceError
 
     monkeypatch.setattr(
         admissibility.inference, "generate", _fake_generate(InferenceError("motor caído"))

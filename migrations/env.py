@@ -3,11 +3,17 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from variatio.core.dotenv import load_dotenv
+from variatio.core.paths import PROJECT_ROOT
+
+load_dotenv(PROJECT_ROOT / ".env")
+
 from server.db.models import Base
 from server.db.session import database_url
 
 config = context.config
-config.set_main_option("sqlalchemy.url", database_url())
+# The url passes through configparser, where % means interpolation; the password may carry one.
+config.set_main_option("sqlalchemy.url", database_url().replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

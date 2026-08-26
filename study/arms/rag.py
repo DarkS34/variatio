@@ -15,10 +15,10 @@ import time
 
 from loguru import logger
 
-from variant_generator import config
-from variant_generator.core import inference, progress
-from variant_generator.core.repair import parse_with_repair
-from variant_generator.variant_generator import build_few_shot_block, parse_item
+from variatio import config
+from variatio.core import inference, progress
+from variatio.core.repair import parse_with_repair
+from variatio.variatio import build_few_shot_block, parse_item
 
 from .. import FAILED, OK, ArmResult, Commission, rag_index_path
 from .. import config as study_config

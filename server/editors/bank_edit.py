@@ -8,11 +8,11 @@ surface is manual editing, and it is validated here for the same reason.
 
 import re
 
-from variant_generator import config
-from variant_generator.concept_tagger import TRACE_KEY
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio import config
+from variatio.concept_tagger import TRACE_KEY
+from variatio.core.workspace import Workspace
+from variatio.instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from .. import deps, review, storage
 

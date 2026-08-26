@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from variant_generator.settings import store
-from variant_generator.settings.types import Impact, Setting, SettingError
+from variatio.settings import store
+from variatio.settings.types import Impact, Setting, SettingError
 
 
 def make(key, name, kind, default, **kw):
@@ -21,7 +21,7 @@ def make(key, name, kind, default, **kw):
 
 SETTINGS = [
     make("models.main", "LLM_MAIN", "str", "modelo-por-defecto"),
-    make("engine.idle", "IDLE", "int", 1800, env="VG_IDLE"),
+    make("engine.idle", "IDLE", "int", 1800, env="VARIATIO_IDLE"),
     make("evaluation.keys.groq", "", "str", "", secret=True, env="GROQ_KEY"),
     make("models.phases.repair", "REPAIR_LLM", "str", None, nullable=True),
 ]
@@ -55,7 +55,7 @@ def test_precedence_default_then_file_then_env():
     values, sources = store.resolve(
         SETTINGS,
         {"models.main": "del fichero", "engine.idle": 900},
-        {"VG_IDLE": "60"},
+        {"VARIATIO_IDLE": "60"},
     )
     assert values["models.main"] == "del fichero"
     assert sources["models.main"] == "file"
@@ -78,7 +78,7 @@ def test_an_invalid_value_in_the_file_falls_back_to_the_default():
 
 
 def test_an_empty_environment_variable_does_not_override():
-    values, sources = store.resolve(SETTINGS, {"engine.idle": 900}, {"VG_IDLE": ""})
+    values, sources = store.resolve(SETTINGS, {"engine.idle": 900}, {"VARIATIO_IDLE": ""})
     assert values["engine.idle"] == 900
     assert sources["engine.idle"] == "file"
 

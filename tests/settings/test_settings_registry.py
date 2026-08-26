@@ -1,6 +1,6 @@
-from variant_generator import config
-from variant_generator.settings import derived
-from variant_generator.settings.registry import BY_KEY, BY_NAME, GROUPS, REGISTRY
+from variatio import config
+from variatio.settings import derived
+from variatio.settings.registry import BY_KEY, BY_NAME, GROUPS, REGISTRY
 
 DERIVED_ONLY = {
     "RELATION_SCHEMA",
@@ -79,7 +79,7 @@ def test_every_phase_key_is_declared_in_the_registry():
 # their retry budget, 88 when the admissibility judge became a phase of its own); the
 # study's six are still declared outside this package and picked up by name. 97 named, not
 # 111: the ten without one are the four context windows and the study's six, which the
-# study reads through `study.config`, so none of them lands in `variant_generator.config`.
+# study reads through `study.config`, so none of them lands in `variatio.config`.
 # The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
 # the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23). 115 since
 # the hybrid Cerebras engine (2026-08-24): base URL, API key and routing list, all named.

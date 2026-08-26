@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from server import app as app_module
 from server import settings, storage
-from variant_generator.core.workspace import Workspace
+from variatio.core.workspace import Workspace
 
 
 def _spa_client(dist: Path, monkeypatch) -> TestClient:

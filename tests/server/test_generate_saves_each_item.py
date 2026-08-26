@@ -9,8 +9,8 @@ from sqlalchemy.pool import StaticPool
 from server.db import Base, Generation, repository
 from server.jobs import handlers
 from server.jobs.models import Job
-from variant_generator.core import progress
-from variant_generator.core.progress import Cancelled
+from variatio.core import progress
+from variatio.core.progress import Cancelled
 
 
 class _Item:

@@ -1,4 +1,4 @@
-from variant_generator import admissibility
+from variatio import admissibility
 
 
 def test_accept_takes_a_valid_slot(owners_for):

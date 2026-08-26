@@ -1,4 +1,4 @@
-from variant_generator import admissibility
+from variatio import admissibility
 
 
 def test_the_scope_payload_carries_slots_owners_and_facts(graph, profile, context):

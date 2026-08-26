@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from variant_generator import stages
-from variant_generator.core.workspace import Workspace as FsWorkspace
+from variatio import stages
+from variatio.core.workspace import Workspace as FsWorkspace
 
 from .models import CURATED, DRAFT
 

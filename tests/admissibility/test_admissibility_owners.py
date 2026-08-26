@@ -1,5 +1,5 @@
-from variant_generator import admissibility
-from variant_generator.core.lexicon import fold
+from variatio import admissibility
+from variatio.core.lexicon import fold
 
 
 def _owner(owners, key):

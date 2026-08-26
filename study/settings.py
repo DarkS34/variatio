@@ -1,4 +1,4 @@
-from variant_generator.settings.types import Impact, Setting
+from variatio.settings.types import Impact, Setting
 
 SETTINGS: list[Setting] = [
     Setting(

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from variant_generator.core.workspace import Workspace as FsWorkspace
+from variatio.core.workspace import Workspace as FsWorkspace
 
 from . import repository as repo
 from .layout import locate

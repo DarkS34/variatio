@@ -2,7 +2,7 @@ from ..types import Setting
 from . import builders, generation, inference, logging, reasoning, retrieval, tunnel
 
 # The study declares its own block and lives outside this package: `study` imports
-# `variant_generator` and never the reverse, so the registry reaches it by name rather
+# `variatio` and never the reverse, so the registry reaches it by name rather
 # than by import direction. Without the study installed the panel simply shows one group
 # fewer, and `config.json` round-trips one section fewer.
 try:

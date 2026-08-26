@@ -1,8 +1,8 @@
 import json
 
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.content_context import ContentContext
-from variant_generator.stages import _artifacts
+from variatio.core.workspace import Workspace
+from variatio.instance.content_context import ContentContext
+from variatio.stages import _artifacts
 
 
 def write(path, data):

@@ -25,7 +25,7 @@ from fastapi import Depends, HTTPException, Request, WebSocket
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator.core.workspace import Workspace as PathWorkspace
+from variatio.core.workspace import Workspace as PathWorkspace
 
 from .. import settings
 from ..db import identity, repository, session_scope

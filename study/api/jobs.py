@@ -11,7 +11,7 @@ from server.db import repository, session_scope
 from server.jobs.handlers import context_for
 from server.jobs.models import Job
 from server.jobs.runner import JobControl
-from variant_generator.core import progress
+from variatio.core import progress
 
 from .. import ARMS
 from .. import run as study_run

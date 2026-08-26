@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from variant_generator import config
-from variant_generator.builders import _context
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.content_context import ContentContext
+from variatio import config
+from variatio.builders import _context
+from variatio.core.workspace import Workspace
+from variatio.instance.content_context import ContentContext
 
 
 class FakeResponse:

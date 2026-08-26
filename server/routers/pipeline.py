@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variant_generator import admissibility, taggability
-from variant_generator.instance.exemplars_profile import ExemplarsProfile
-from variant_generator.stages import _artifacts
-from variant_generator.stages import build_phases as phases_of
+from variatio import admissibility, taggability
+from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.stages import _artifacts
+from variatio.stages import build_phases as phases_of
 
 from .. import auth, deps, review, runtime, storage
 from ..editors import kg_edit

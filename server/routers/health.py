@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from variant_generator import config
-from variant_generator.core import inference
+from variatio import config
+from variatio.core import inference
 
 from .. import auth, deps, runtime
 

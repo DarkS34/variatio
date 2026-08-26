@@ -4,7 +4,7 @@ import pytest
 
 from study import Commission
 from study.run import _validate
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from ..conftest import CHAIN_GRAPH
 

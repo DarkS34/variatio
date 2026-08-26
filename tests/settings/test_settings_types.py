@@ -1,6 +1,6 @@
 import pytest
 
-from variant_generator.settings.types import Impact, Setting, SettingError, coerce
+from variatio.settings.types import Impact, Setting, SettingError, coerce
 
 
 def make(kind, default, **kw):

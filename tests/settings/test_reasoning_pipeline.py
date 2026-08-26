@@ -1,7 +1,7 @@
-from variant_generator import config, settings
-from variant_generator.settings import derived
-from variant_generator.settings.registry import BY_KEY, PIPELINE
-from variant_generator.settings.registry import reasoning
+from variatio import config, settings
+from variatio.settings import derived
+from variatio.settings.registry import BY_KEY, PIPELINE
+from variatio.settings.registry import reasoning
 
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
@@ -96,7 +96,7 @@ def test_every_toggle_carries_an_effort_setting_and_fixed_phases_none():
 
 
 def test_derived_resolves_the_effort_only_when_the_phase_reasons():
-    from variant_generator.settings.registry import REGISTRY
+    from variatio.settings.registry import REGISTRY
 
     values = {setting.key: setting.default for setting in REGISTRY}
     values["reasoning.phases.kg_extract"] = False

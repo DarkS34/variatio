@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from variant_generator import config
+from variatio import config
 
 pytestmark = pytest.mark.corpus
 

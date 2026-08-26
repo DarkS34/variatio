@@ -4,8 +4,8 @@ import io
 import pytest
 
 from server.routers import admin_engine
-from variant_generator import config
-from variant_generator.core import cerebras_budget
+from variatio import config
+from variatio.core import cerebras_budget
 
 
 @pytest.fixture

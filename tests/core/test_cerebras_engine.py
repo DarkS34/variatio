@@ -3,10 +3,10 @@ import json
 import httpx
 import pytest
 
-from variant_generator import config
-from variant_generator.core import cerebras, cerebras_budget, progress
-from variant_generator.core.cerebras import CerebrasEngine, HybridEngine
-from variant_generator.core.inference import InferenceError
+from variatio import config
+from variatio.core import cerebras, cerebras_budget, progress
+from variatio.core.cerebras import CerebrasEngine, HybridEngine
+from variatio.core.inference import InferenceError
 
 
 def test_strict_schema_closes_every_object():

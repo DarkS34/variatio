@@ -1,6 +1,6 @@
 from server.routers import config as config_router
-from variant_generator import config as vg_config
-from variant_generator.core import cerebras, inference
+from variatio import config as vg_config
+from variatio.core import cerebras, inference
 
 
 def test_an_unreachable_engine_offers_no_models_and_no_error(monkeypatch):

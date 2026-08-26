@@ -1,4 +1,4 @@
-from variant_generator.builders._source_docs import chunking
+from variatio.builders._source_docs import chunking
 
 DOC = """\
 # Basura

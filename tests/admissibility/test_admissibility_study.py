@@ -1,4 +1,4 @@
-from variant_generator import admissibility
+from variatio import admissibility
 
 
 def test_the_commission_accepts_a_ruling():

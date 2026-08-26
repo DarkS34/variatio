@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 # The domains are deliberately NOT in size order, NOT alphabetical and NOT in the order
 # the concepts sort in: any test that passes by accident here proves nothing.
@@ -60,7 +60,7 @@ def test_the_view_emits_the_groups_in_the_syllabus_order(graph_path):
 @pytest.fixture
 def ws(tmp_path, monkeypatch):
     from server.db import mirror
-    from variant_generator.core.workspace import Workspace
+    from variatio.core.workspace import Workspace
 
     monkeypatch.setattr(mirror, "mirror_file", lambda ws, path: None)
     workspace = Workspace(tmp_path, "aula")

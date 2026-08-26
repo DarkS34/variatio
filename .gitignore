@@ -10,11 +10,10 @@ web/tsconfig.tsbuildinfo
 *.md
 *.pdf
 
-# A workspace holds the data of whoever created it and is not versioned. `default` is the
-# deliberate exception: it is the project's reference instance, and its curated artifacts
-# and its vectors travel with the repository as they did when they lived in instance/ and
-# cache/.
-workspaces/*
+# A workspace holds the data of whoever created it and is never versioned — `default`
+# included, since 2026-08-26: user data lives in the database and on each installation's
+# disk, not in the repository.
+workspaces/
 # What is left of the Cerebras rate limit, as a rolling ledger of this installation's own
 # calls. Installation state like `.env`, never versioned: a checkout inherits nobody's
 # spending, and the file is rebuilt from the first call.

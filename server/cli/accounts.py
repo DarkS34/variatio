@@ -9,7 +9,7 @@ def _ask_password(args) -> str | None:
 
     if args.password:
         return args.password
-    from_env = os.environ.get("VG_PASSWORD")
+    from_env = os.environ.get("VARIATIO_PASSWORD")
     if from_env:
         return from_env
     try:

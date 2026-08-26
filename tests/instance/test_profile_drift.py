@@ -1,6 +1,6 @@
 import copy
 
-from variant_generator.instance.exemplars_profile import profile_drift
+from variatio.instance.exemplars_profile import profile_drift
 
 EMPTY = {"added": [], "removed": [], "changed": []}
 

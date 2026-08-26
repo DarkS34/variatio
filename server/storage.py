@@ -6,8 +6,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from variant_generator.core import json_io
-from variant_generator.core.workspace import Workspace
+from variatio.core import json_io
+from variatio.core.workspace import Workspace
 
 from .db import mirror
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variant_generator import config
+from variatio import config
 
 from .. import auth, curriculum, kg_view
 from ..editors import kg_edit

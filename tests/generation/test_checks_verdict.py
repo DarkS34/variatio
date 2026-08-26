@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from variant_generator import checks, config
-from variant_generator.concept_tagger import TRACE_KEY
+from variatio import checks, config
+from variatio.concept_tagger import TRACE_KEY
 
 
 class _FakeEmbedder:

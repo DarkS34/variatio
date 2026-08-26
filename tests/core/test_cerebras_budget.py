@@ -1,6 +1,6 @@
 import pytest
 
-from variant_generator.core.cerebras_budget import (
+from variatio.core.cerebras_budget import (
     Budget,
     BudgetExhausted,
     Limits,

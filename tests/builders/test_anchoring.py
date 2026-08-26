@@ -1,6 +1,6 @@
 import json
 
-from variant_generator.builders.knowledge_graph_builder import extraction
+from variatio.builders.knowledge_graph_builder import extraction
 
 
 def test_mentions_matches_literally():
@@ -202,7 +202,7 @@ def test_excerpt_returns_nothing_for_an_all_navigation_chunk():
 
 
 def test_write_sources_records_the_outline_and_the_units(tmp_path):
-    from variant_generator.builders.knowledge_graph_builder import curation
+    from variatio.builders.knowledge_graph_builder import curation
 
     path = tmp_path / "concept_sources.json"
     outline = [{"document": 0, "heading": "Tema I", "chunk": 2}]
@@ -221,7 +221,7 @@ def test_write_sources_records_the_outline_and_the_units(tmp_path):
 
 
 def test_write_sources_omits_the_two_keys_when_there_is_no_syllabus(tmp_path):
-    from variant_generator.builders.knowledge_graph_builder import curation
+    from variatio.builders.knowledge_graph_builder import curation
 
     path = tmp_path / "concept_sources.json"
     curation.write_sources(path, {"passages": {}, "definitions": {}, "documents": []}, set())
@@ -232,7 +232,7 @@ def test_write_sources_omits_the_two_keys_when_there_is_no_syllabus(tmp_path):
 
 
 def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
-    from variant_generator.embedder import load_sources
+    from variatio.embedder import load_sources
 
     path = tmp_path / "concept_sources.json"
     path.write_text(
@@ -255,9 +255,9 @@ def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
 
 
 def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path):
-    from variant_generator.embedder import ConceptDescriber, load_descriptions
-    from variant_generator.instance.content_context import ContentContext
-    from variant_generator.instance.knowledge_graph import KnowledgeGraph
+    from variatio.embedder import ConceptDescriber, load_descriptions
+    from variatio.instance.content_context import ContentContext
+    from variatio.instance.knowledge_graph import KnowledgeGraph
 
     graph_path = tmp_path / "kg.json"
     graph_path.write_text(

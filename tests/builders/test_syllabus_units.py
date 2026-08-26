@@ -1,9 +1,9 @@
 import json
 from types import SimpleNamespace
 
-from variant_generator import config
-from variant_generator.builders.knowledge_graph_builder import blocks, curation
-from variant_generator.prompts import segment_syllabus_prompt
+from variatio import config
+from variatio.builders.knowledge_graph_builder import blocks, curation
+from variatio.prompts import segment_syllabus_prompt
 
 OUTLINE = [
     {"document": 0, "heading": "Índice", "chunk": 1},

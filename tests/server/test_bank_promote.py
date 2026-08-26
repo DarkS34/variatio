@@ -5,8 +5,8 @@ import pytest
 from server.db import mirror
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.exemplars_profile import ITEM_TYPE_KEY
+from variatio.core.workspace import Workspace
+from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
 
 PROFILE = {
     "item_types": {

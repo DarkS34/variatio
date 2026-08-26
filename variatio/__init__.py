@@ -31,7 +31,7 @@ logger.add(
 )
 
 # Imported here and not at module scope: `core.inference` pulls in the ollama SDK, httpx and
-# tqdm, which is 364 ms of the 510 ms `import variant_generator` used to cost — paid by every
+# tqdm, which is 364 ms of the 510 ms `import variatio` used to cost — paid by every
 # CLI invocation, every test collection and every module that only wanted a loader.
 def bootstrap() -> None:
     from .core import inference

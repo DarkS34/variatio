@@ -5,10 +5,10 @@ import pytest
 from server import settings as server_settings
 from server import tunnel
 from server.auth.rate_limit import RateLimiter
-from variant_generator import config
-from variant_generator import settings as vg_settings
-from variant_generator.core.workspace import Workspace
-from variant_generator.settings import store
+from variatio import config
+from variatio import settings as vg_settings
+from variatio.core.workspace import Workspace
+from variatio.settings import store
 
 
 # THE TUNNEL ------------------------------------------------------------------------------

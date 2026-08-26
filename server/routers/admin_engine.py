@@ -17,8 +17,8 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session as DbSession
 
-from variant_generator import config
-from variant_generator.core import cerebras_budget, inference
+from variatio import config
+from variatio.core import cerebras_budget, inference
 
 from .. import auth, deps, jobs, runtime
 from ..db import Base, database_url
@@ -309,7 +309,7 @@ def _head_revision() -> str | None:
         from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        from variant_generator.core.paths import PROJECT_ROOT
+        from variatio.core.paths import PROJECT_ROOT
 
         script = ScriptDirectory.from_config(Config(str(PROJECT_ROOT / "alembic.ini")))
         return script.get_current_head()

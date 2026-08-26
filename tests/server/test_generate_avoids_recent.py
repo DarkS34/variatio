@@ -10,7 +10,7 @@ from server.db import Base, repository
 from server.db import generations as db_generations
 from server.jobs import handlers
 from server.jobs.models import Job
-from variant_generator.core import progress
+from variatio.core import progress
 
 
 class _Type:

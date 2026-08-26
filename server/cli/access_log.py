@@ -8,7 +8,7 @@ ACCESS_LOG_BACKUPS = 3
 
 
 def access_log_path() -> Path:
-    from variant_generator.core.paths import PROJECT_ROOT
+    from variatio.core.paths import PROJECT_ROOT
 
     return PROJECT_ROOT / "logs" / "access.log"
 

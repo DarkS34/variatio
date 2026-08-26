@@ -1,10 +1,10 @@
 import pytest
 
-from variant_generator import admissibility
-from variant_generator.core import paths
-from variant_generator.instance.exemplars_profile import ExemplarsProfile
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
-from variant_generator.stages import _artifacts
+from variatio import admissibility
+from variatio.core import paths
+from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.stages import _artifacts
 
 ITEM_TYPE = "escritura_codigo"
 TARGETS = ["Recursividad"]

@@ -6,8 +6,8 @@ from server import review
 from server.db import mirror
 from server.jobs import handlers
 from server.jobs.models import Job
-from variant_generator import stages
-from variant_generator.core.workspace import Workspace
+from variatio import stages
+from variatio.core.workspace import Workspace
 
 CURATED = {"concepts_by_domains": {"Dominio inventado": ["A"]}, "relations": {}}
 DRAFT = {"concepts_by_domains": {"Tema I": ["A"], "Tema II": ["B"]}, "relations": {}}

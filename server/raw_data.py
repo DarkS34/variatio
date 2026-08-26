@@ -12,8 +12,8 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from variant_generator.builders._source_docs import SUPPORTED_EXTS
-from variant_generator.core.workspace import Workspace
+from variatio.builders._source_docs import SUPPORTED_EXTS
+from variatio.core.workspace import Workspace
 
 from . import review
 

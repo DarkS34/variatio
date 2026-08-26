@@ -49,9 +49,9 @@ def main(argv: list[str] | None = None) -> int:
 
     from loguru import logger
 
-    import variant_generator
-    from variant_generator import config, stages
-    from variant_generator.core import paths, progress
+    import variatio
+    from variatio import config, stages
+    from variatio.core import paths, progress
 
     emitter = StdoutEmitter()
     signal.signal(signal.SIGTERM, emitter.request_cancel)
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
 
     progress.set_emitter(emitter)
     try:
-        variant_generator.bootstrap()
+        variatio.bootstrap()
         result = stages.build_artifact(args.artifact, paths.workspace(args.workspace))
     except progress.Cancelled:
         send("worker.cancelled")

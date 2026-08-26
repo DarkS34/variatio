@@ -13,7 +13,7 @@ from ..embedder import Embedder
 from ..instance.content_context import ContentContext
 from ..instance.exemplars_profile import ExemplarsProfile
 from ..instance.knowledge_graph import KnowledgeGraph
-from ..variant_generator import VariantGenerator
+from ..variatio import VariantGenerator
 from . import _artifacts
 
 

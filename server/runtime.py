@@ -7,7 +7,7 @@ built where it is used. A shared one would have answered "approved" for whicheve
 instance happened to be read last.
 """
 
-from variant_generator.core.workspace import Workspace
+from variatio.core.workspace import Workspace
 
 from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
 from .model_pulls import PullTracker

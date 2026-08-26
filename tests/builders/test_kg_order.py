@@ -1,15 +1,15 @@
 import json
 from types import SimpleNamespace
 
-from variant_generator import config
-from variant_generator.builders.knowledge_graph_builder import (
+from variatio import config
+from variatio.builders.knowledge_graph_builder import (
     blocks,
     cleaning,
     curation,
     extraction,
     parsing,
 )
-from variant_generator.instance.relations import RELATION_SCHEMA_ES as SCHEMA
+from variatio.instance.relations import RELATION_SCHEMA_ES as SCHEMA
 
 PREREQ = SCHEMA.prerequisite_verbose
 EMPTY = '{"concepts": [], "relations": []}'

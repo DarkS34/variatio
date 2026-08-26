@@ -13,8 +13,8 @@ import time
 
 from loguru import logger
 
-from variant_generator import config
-from variant_generator.core import inference, progress
+from variatio import config
+from variatio.core import inference, progress
 
 from .. import FAILED, OK, ArmResult, Commission
 

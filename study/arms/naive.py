@@ -12,9 +12,9 @@ import time
 
 from loguru import logger
 
-from variant_generator import config
-from variant_generator.core.repair import parse_with_repair
-from variant_generator.variant_generator import parse_item
+from variatio import config
+from variatio.core.repair import parse_with_repair
+from variatio.variatio import parse_item
 
 from .. import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission
 from ..prompts import naive_generation_prompt

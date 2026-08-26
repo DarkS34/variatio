@@ -10,7 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 # them. It is optional (`try/except ImportError`) and it is the ONLY place. Everywhere else
 # the direction is absolute — the study imports the pipeline, the pipeline does not know it
 # exists.
-ALLOWED = {pathlib.Path("variant_generator/settings/registry/__init__.py")}
+ALLOWED = {pathlib.Path("variatio/settings/registry/__init__.py")}
 
 
 def _imported_modules(path: pathlib.Path) -> set[str]:
@@ -25,7 +25,7 @@ def _imported_modules(path: pathlib.Path) -> set[str]:
 
 def test_the_pipeline_does_not_import_the_study():
     offenders = []
-    for path in sorted((ROOT / "variant_generator").rglob("*.py")):
+    for path in sorted((ROOT / "variatio").rglob("*.py")):
         relative = path.relative_to(ROOT)
         if relative in ALLOWED:
             continue
@@ -35,7 +35,7 @@ def test_the_pipeline_does_not_import_the_study():
 
 
 def test_the_registry_exception_is_optional():
-    source = (ROOT / "variant_generator/settings/registry/__init__.py").read_text(encoding="utf-8")
+    source = (ROOT / "variatio/settings/registry/__init__.py").read_text(encoding="utf-8")
     assert "try:" in source and "except ImportError" in source
 
 

@@ -30,7 +30,7 @@ from dataclasses import dataclass
 import httpx
 from loguru import logger
 
-from variant_generator import config
+from variatio import config
 
 from .. import ArmUnavailable
 from .. import config as study_config

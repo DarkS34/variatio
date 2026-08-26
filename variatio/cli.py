@@ -9,7 +9,7 @@ from .core import paths
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="variant-generator",
+        prog="variatio",
         description="Knowledge graph-guided generation of educational items: exercises grounded in a curriculum graph.",
     )
 
@@ -146,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
             stages.build_missing(ws)
             _generate_and_report(args, ws)
     except stages.MissingArtifactError as e:
-        logger.error(f"{e}; ejecuta antes `variant-generator build`")
+        logger.error(f"{e}; ejecuta antes `variatio build`")
         return 1
     except (RuntimeError, ImportError, OSError, ValueError) as e:
         logger.error(str(e))

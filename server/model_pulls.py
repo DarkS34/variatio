@@ -3,7 +3,7 @@ import time
 
 from loguru import logger
 
-from variant_generator.core import inference
+from variatio.core import inference
 
 KEEP_FINISHED = 10
 

@@ -1,6 +1,6 @@
 """One commission, three architectures, one blind comparison.
 
-Mechanism, not policy, in the way `variant_generator.stages` is: it returns an `EvaluationSession`,
+Mechanism, not policy, in the way `variatio.stages` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
 `server/evaluation_store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
@@ -13,10 +13,10 @@ from dataclasses import replace
 
 from loguru import logger
 
-from variant_generator import admissibility, config, guardrail
-from variant_generator.core import progress
-from variant_generator.stages.initialize import PipelineContext
-from variant_generator.variant_generator import _sentence_case, clean_fixed
+from variatio import admissibility, config, guardrail
+from variatio.core import progress
+from variatio.stages.initialize import PipelineContext
+from variatio.variatio import _sentence_case, clean_fixed
 
 from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 

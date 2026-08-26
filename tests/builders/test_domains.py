@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
-from variant_generator import config
-from variant_generator.builders.knowledge_graph_builder import curation
-from variant_generator.prompts import curate_graph_domains_prompt
+from variatio import config
+from variatio.builders.knowledge_graph_builder import curation
+from variatio.prompts import curate_graph_domains_prompt
 
 CONCEPTS = ["Bucle while", "Función", "Lista", "Variable"]
 RELATIONS = [["Función", "tiene como prerrequisito", "Variable"]]

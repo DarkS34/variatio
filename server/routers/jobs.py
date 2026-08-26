@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from variant_generator.core import inference
-from variant_generator.core.workspace import Workspace
+from variatio.core import inference
+from variatio.core.workspace import Workspace
 
 from .. import auth, review, runtime
 from ..jobs.models import JOB_LABELS

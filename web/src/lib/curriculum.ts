@@ -1,4 +1,4 @@
-// Mirrors `variant_generator.assumed_known` / `forbidden`. The server narrows both closures
+// Mirrors `variatio.assumed_known` / `forbidden`. The server narrows both closures
 // by the curriculum in force BEFORE writing them into the prompt, so a panel that drew the
 // bare closures would name one set of prerequisites while the prompt named another. The two
 // operations are not interchangeable — intersection on the permissive side, subtraction on

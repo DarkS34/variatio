@@ -1,5 +1,5 @@
-from variant_generator.prompts import generate_content_prompt
-from variant_generator.variant_generator import GeneratedVariant, generate_with_retries
+from variatio.prompts import generate_content_prompt
+from variatio.variatio import GeneratedVariant, generate_with_retries
 
 
 def _prompt(correction=None) -> str:

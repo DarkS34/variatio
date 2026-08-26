@@ -45,7 +45,7 @@ class Emitter(Protocol):
 
 
 _emitter: contextvars.ContextVar["Emitter | None"] = contextvars.ContextVar(
-    "variant_generator_emitter", default=None
+    "variatio_emitter", default=None
 )
 
 
@@ -113,7 +113,7 @@ class _StepHandle:
 
 
 _step: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "variant_generator_step", default=None
+    "variatio_step", default=None
 )
 
 
@@ -196,7 +196,7 @@ class _Overall:
 
 
 _overall: contextvars.ContextVar["_Overall | None"] = contextvars.ContextVar(
-    "variant_generator_overall", default=None
+    "variatio_overall", default=None
 )
 
 

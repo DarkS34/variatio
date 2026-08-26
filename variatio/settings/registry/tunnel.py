@@ -23,6 +23,9 @@ disco.
 el panel. Si el proceso de `ssh` muere el vigilante lo relanza con espera creciente (5 s a
 60 s) mientras el túnel siga pedido."""
 
+# The four are `secret`: not because a port is confidential, but because the whole block
+# is installation state — the address of *this* deployment's GPU — and `secret` is what
+# keeps a setting out of the versioned config.json. They live in `.env`, like DATABASE_URL.
 SETTINGS: list[Setting] = [
     Setting(
         key="tunnel.host",
@@ -32,6 +35,8 @@ SETTINGS: list[Setting] = [
         group="Túnel SSH",
         impact=Impact.NONE,
         env="OLLAMA_SSH_HOST",
+        secret=True,
+        editable=False,
         doc=_TUNNEL_DOC,
     ),
     Setting(
@@ -41,6 +46,9 @@ SETTINGS: list[Setting] = [
         default=11434,
         group="Túnel SSH",
         impact=Impact.NONE,
+        env="OLLAMA_SSH_REMOTE_PORT",
+        secret=True,
+        editable=False,
         minimum=1,
         maximum=65535,
         doc=_TUNNEL_DOC,
@@ -53,6 +61,8 @@ SETTINGS: list[Setting] = [
         group="Túnel SSH",
         impact=Impact.NONE,
         env="OLLAMA_SSH_KEY_PATH",
+        secret=True,
+        editable=False,
         doc=_TUNNEL_DOC,
     ),
     Setting(
@@ -62,6 +72,9 @@ SETTINGS: list[Setting] = [
         default=False,
         group="Túnel SSH",
         impact=Impact.NONE,
+        env="OLLAMA_SSH_AUTOSTART",
+        secret=True,
+        editable=False,
         doc=_TUNNEL_DOC,
     ),
 ]

@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from variant_generator import config
+from variatio import config
 
 from . import jobs, middleware, runtime, settings
 from .routers import ROUTERS
@@ -62,7 +62,7 @@ def create_app() -> FastAPI:
 
     # Gone from the default configuration: with a session cookie, a permissive CORS policy
     # is what turns another origin's page into a logged-in client. Vite proxies `/api` and
-    # `/ws`, so development is same-origin too and needs nothing here; VG_DEV_CORS=1 is for
+    # `/ws`, so development is same-origin too and needs nothing here; VARIATIO_DEV_CORS=1 is for
     # the rare case of pointing the SPA straight at the API, and never applies in
     # production.
     origins = settings.dev_cors_origins()

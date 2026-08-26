@@ -186,7 +186,7 @@ SETTINGS: list[Setting] = [
         choices=("ollama", "cerebras+ollama"),
         doc="""Qué implementación de motor de inferencia respalda generate()/embed()/embed_batch().
 `config.INFERENCE_ENGINE` la selecciona y la lógica de negocio nunca llama a un SDK
-directamente — todo pasa por `variant_generator.core.inference`.
+directamente — todo pasa por `variatio.core.inference`.
 
 'ollama' es el motor local de siempre. 'cerebras+ollama' es un motor compuesto: los modelos
 listados en CEREBRAS_MODELS van a la API de Cerebras (api.cerebras.ai, OpenAI-compatible) y
@@ -360,7 +360,7 @@ otro sitio, no aquí.""",
         default=1800,
         group="Motor",
         impact=Impact.NONE,
-        env="VG_IDLE_UNLOAD_SECONDS",
+        env="VARIATIO_IDLE_UNLOAD_SECONDS",
         minimum=0,
         doc=_IDLE_DOC,
     ),

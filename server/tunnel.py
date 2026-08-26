@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from loguru import logger
 
-from variant_generator import config
+from variatio import config
 
 BACKOFF_MIN = 5.0
 BACKOFF_MAX = 60.0

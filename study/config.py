@@ -1,7 +1,7 @@
 import os
 
-from variant_generator import config as pipeline
-from variant_generator import settings
+from variatio import config as pipeline
+from variatio import settings
 
 EXTERNAL_PROVIDERS: list[str]
 PROVIDER_MODELS: dict[str, str]
@@ -53,9 +53,9 @@ def derive(
 
 
 # Resolved on every read rather than written into the module once. `settings.reload()`
-# rewrites `variant_generator.config`'s globals through the namespace it was handed, and
+# rewrites `variatio.config`'s globals through the namespace it was handed, and
 # this module is not that namespace: caching here would serve the value the panel just
-# replaced. The annotations above stay the readable index, as in `variant_generator`.
+# replaced. The annotations above stay the readable index, as in `variatio`.
 def __getattr__(name: str):
     values = derive(settings.values(), dict(os.environ), pipeline.MAX_FEW_SHOT_EXAMPLES)
     if name in values:

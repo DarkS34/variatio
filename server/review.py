@@ -14,9 +14,9 @@ from pathlib import Path
 
 from loguru import logger
 
-from variant_generator import stages
-from variant_generator.core import json_io
-from variant_generator.core.workspace import Workspace
+from variatio import stages
+from variatio.core import json_io
+from variatio.core.workspace import Workspace
 
 from . import storage
 from .db import mirror

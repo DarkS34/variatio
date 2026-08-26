@@ -5,7 +5,7 @@ over the bank, no graph at all) and `system` (this pipeline, untouched). They re
 same commission and return the same shape, so a fourth arm is one more file.
 
 This package is not part of the system it measures, and its position says so: `study`
-imports `variant_generator`, never the reverse, and nothing under `variant_generator/`
+imports `variatio`, never the reverse, and nothing under `variatio/`
 names the study at all. The evaluation observes the pipeline from outside it.
 """
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.exemplars_profile import profile_drift
+from variatio.core.workspace import Workspace
+from variatio.instance.exemplars_profile import profile_drift
 
 from .. import auth, review, storage
 from ..editors import profile_edit

@@ -8,11 +8,11 @@ with, since the GPU co-residency arithmetic is one for the whole process.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from variant_generator import config as vg_config
-from variant_generator import settings as vg_settings
-from variant_generator.core import cerebras, inference
-from variant_generator.core.inference import InferenceError
-from variant_generator.settings import Impact, SettingError
+from variatio import config as vg_config
+from variatio import settings as vg_settings
+from variatio.core import cerebras, inference
+from variatio.core.inference import InferenceError
+from variatio.settings import Impact, SettingError
 
 from .. import auth, deps, runtime
 

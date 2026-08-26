@@ -6,8 +6,8 @@ import shutil
 from datetime import timedelta
 from pathlib import Path
 
-from variant_generator.core import paths
-from variant_generator.core.workspace import DEFAULT_SLUG, Workspace
+from variatio.core import paths
+from variatio.core.workspace import DEFAULT_SLUG, Workspace
 
 # One process now serves MANY workspaces, so there is no `workspace()` any more: a
 # function with no argument is exactly the process-global that made two users overwrite
@@ -121,12 +121,12 @@ def _flag(name: str, default: bool = False) -> bool:
 # switch to get wrong rather than five. Anything other than "development" is production:
 # an unset or misspelled value must not be the permissive one.
 def is_production() -> bool:
-    return os.environ.get("VG_ENV", "development").strip().lower() not in ("development", "dev")
+    return os.environ.get("VARIATIO_ENV", "development").strip().lower() not in ("development", "dev")
 
 
 # Vite's dev server. It proxies `/api` and `/ws`, so the browser is already same-origin in
 # development and CORS is not needed at all: the middleware is only mounted when someone
-# explicitly asks for it with VG_DEV_CORS=1, and never in production.
+# explicitly asks for it with VARIATIO_DEV_CORS=1, and never in production.
 DEV_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -134,7 +134,7 @@ DEV_ORIGINS = [
 
 
 def dev_cors_origins() -> list[str]:
-    if is_production() or not _flag("VG_DEV_CORS"):
+    if is_production() or not _flag("VARIATIO_DEV_CORS"):
         return []
     return list(DEV_ORIGINS)
 
@@ -156,7 +156,7 @@ RESET_TTL = timedelta(minutes=45)
 # `Secure` would make the browser drop the cookie over plain http, which is how the app is
 # served in local development; in production Caddy terminates TLS and it goes on.
 def cookie_secure() -> bool:
-    return _flag("VG_COOKIE_SECURE", default=is_production())
+    return _flag("VARIATIO_COOKIE_SECURE", default=is_production())
 
 
 # Where the links in an invitation or a reset mail point. Unset means "derive it from the
@@ -170,7 +170,7 @@ def public_base_url() -> str | None:
 # unconditionally would let anyone pick their own key for the per-IP rate limit, which is
 # the same as having no per-IP limit at all.
 def trust_proxy() -> bool:
-    return _flag("VG_TRUST_PROXY", default=is_production())
+    return _flag("VARIATIO_TRUST_PROXY", default=is_production())
 
 
 # Attempts allowed per window, as (limit, seconds). Two keys are checked against each of

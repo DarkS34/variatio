@@ -3,7 +3,7 @@ from .lock import LockHeld, hold
 
 
 def serve_lock_path():
-    from variant_generator.core.paths import WORKSPACES_DIR
+    from variatio.core.paths import WORKSPACES_DIR
 
     return WORKSPACES_DIR / ".serve.lock"
 

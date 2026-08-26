@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-DEFAULT_URL = "postgresql+psycopg://variant:variant@localhost:5432/variant_generator"
+DEFAULT_URL = "postgresql+psycopg://variatio:variatio@localhost:5432/variatio"
 
 _engine = None
 _factory: sessionmaker | None = None
@@ -16,7 +16,7 @@ def database_url() -> str:
 
 
 # Created on first use, not at import: `import server` must keep working with no database
-# reachable, exactly as importing `variant_generator` works with no Ollama.
+# reachable, exactly as importing `variatio` works with no Ollama.
 def engine():
     global _engine
     if _engine is None:

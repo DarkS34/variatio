@@ -7,12 +7,12 @@ read a process-wide workspace would write one person's build into another's dire
 
 from loguru import logger
 
-from variant_generator import config, stages
-from variant_generator.concept_tagger import ConceptTagger
-from variant_generator.core import inference, progress
-from variant_generator.core.workspace import Workspace
-from variant_generator.instance.exemplars_profile import ExemplarsProfile
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio import config, stages
+from variatio.concept_tagger import ConceptTagger
+from variatio.core import inference, progress
+from variatio.core.workspace import Workspace
+from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from .. import curriculum as curriculum_store
 from .. import deps, review, settings, storage
@@ -156,7 +156,7 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     if graph_path is None:
         raise ValueError("No hay grafo de conocimiento que revisar.")
 
-    from variant_generator import taggability
+    from variatio import taggability
 
     profile = ExemplarsProfile(profile_path)
     graph = KnowledgeGraph(graph_path)

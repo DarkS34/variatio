@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from variant_generator.instance.content_context import CANONICAL_KEYS
+from variatio.instance.content_context import CANONICAL_KEYS
 
 from .. import auth
 from ..editors import context_edit

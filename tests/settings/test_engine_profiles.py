@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from variant_generator import settings as vg_settings
-from variant_generator.settings import store
-from variant_generator.settings.types import Impact, Setting
+from variatio import settings as vg_settings
+from variatio.settings import store
+from variatio.settings.types import Impact, Setting
 
 
 def make(key, name, kind, default, **kw):

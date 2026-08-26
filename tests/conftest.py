@@ -2,11 +2,11 @@ import json
 
 import pytest
 
-from variant_generator import admissibility
-from variant_generator.core import cerebras_budget
-from variant_generator.instance.content_context import ContentContext
-from variant_generator.instance.exemplars_profile import ExemplarsProfile
-from variant_generator.instance.knowledge_graph import KnowledgeGraph
+from variatio import admissibility
+from variatio.core import cerebras_budget
+from variatio.instance.content_context import ContentContext
+from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.instance.knowledge_graph import KnowledgeGraph
 
 CHAIN_GRAPH = {
     "concepts_by_domains": {

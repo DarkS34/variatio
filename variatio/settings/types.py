@@ -69,7 +69,7 @@ def coerce(setting: Setting, raw: object) -> object:
 
 
 # A `choices` list is a closed vocabulary, so it is matched without regard to case and the
-# declared spelling is what comes back. This is what keeps `VG_LOG_LEVEL=debug` working the
+# declared spelling is what comes back. This is what keeps `VARIATIO_LOG_LEVEL=debug` working the
 # way `config.LOG_LEVEL`'s `.upper()` used to make it work.
 def _canonical(setting: Setting, value: object) -> object:
     if not setting.choices or not isinstance(value, str):

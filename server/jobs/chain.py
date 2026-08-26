@@ -17,8 +17,8 @@ that finished well.
 
 from loguru import logger
 
-from variant_generator import stages
-from variant_generator.core.workspace import Workspace
+from variatio import stages
+from variatio.core.workspace import Workspace
 
 from .. import review, settings
 from .models import JOB_LABELS, Job

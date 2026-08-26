@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from variant_generator import config
-from variant_generator.builders.knowledge_graph_builder import extraction
+from variatio import config
+from variatio.builders.knowledge_graph_builder import extraction
 
 SOURCES = Path("workspaces/default/cache/concept_sources.json")
 

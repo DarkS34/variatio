@@ -1,7 +1,7 @@
 import pytest
 
-from variant_generator import config
-from variant_generator.variant_generator import NEIGHBOUR, VariantGenerator, build_few_shot_block
+from variatio import config
+from variatio.variatio import NEIGHBOUR, VariantGenerator, build_few_shot_block
 
 
 class _FakeEmbedder:

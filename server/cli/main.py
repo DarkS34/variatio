@@ -1,6 +1,11 @@
 import argparse
 import sys
 
+from variatio.core.dotenv import load_dotenv
+from variatio.core.paths import PROJECT_ROOT
+
+load_dotenv(PROJECT_ROOT / ".env")
+
 from . import accounts, diagnostics, instances
 from .common import PROG, guarded
 from .serve import serve
@@ -69,7 +74,7 @@ def build_parser():
     creator.add_argument(
         "--password",
         default="",
-        help="contraseña; si se omite se pregunta (o se lee de VG_PASSWORD)",
+        help="contraseña; si se omite se pregunta (o se lee de VARIATIO_PASSWORD)",
     )
     creator.add_argument(
         "--profile",

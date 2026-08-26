@@ -8,7 +8,7 @@ from server.jobs.handlers import HANDLERS
 from server.jobs.models import JOB_ARTIFACT, Job
 from server.jobs.runner import JobRunner
 from server.review import ReviewState
-from variant_generator.core.workspace import Workspace
+from variatio.core.workspace import Workspace
 
 BANK = {"C001": {"enunciado": "Suma dos números.", "item_type": "ejercicio"}}
 

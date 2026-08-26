@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 
-from variant_generator.core import paths, progress
+from variatio.core import paths, progress
 
 from .protocol import MARKER
 from .runner import JobControl
