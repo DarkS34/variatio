@@ -1,10 +1,19 @@
+import json
 import re
 import unicodedata
 from pathlib import Path
 
 from loguru import logger
 
-from .files import CONVERTED_EXTS, PLAIN_TEXT_EXTS, required_cache_dir, resolve_converter
+from .files import (
+    CONVERTED_EXTS,
+    PLAIN_TEXT_EXTS,
+    required_cache_dir,
+    resolve_converter,
+    source_hash,
+)
+
+META_SUFFIX = ".source.json"
 
 CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
@@ -32,12 +41,47 @@ TEX_ACCENT_RE = re.compile(f"([{''.join(SPACING_ACCENTS)}])([a-zA-Z{''.join(DOTL
 # The markdown is the real input of every builder, so it is materialised instead of being
 # rebuilt in memory on each run: Docling is the slowest and most fragile step, and once the
 # text is on disk a rebuild needs no Docling at all and a failed extraction can be blamed on
-# the right stage by reading the file. Freshness is make-style — the cache is used while it
-# is newer than its source — which also means a hand-fixed markdown survives until the
-# original document itself changes.
+# the right stage by reading the file. Freshness is the SOURCE'S BYTES, recorded beside the
+# markdown: a hand-fixed markdown survives until the original document itself changes, and
+# a document that was merely copied or restored has not changed. Make-style mtime is kept
+# only for a cache written before the sidecar existed, which has nothing else to go on.
 def markdown_cache_path(source: str | Path, cache_dir: str | Path) -> Path:
     source = Path(source)
     return Path(cache_dir) / source.parent.name / f"{source.name}.md"
+
+
+def markdown_meta_path(cached: str | Path) -> Path:
+    cached = Path(cached)
+    return cached.with_name(cached.name + META_SUFFIX)
+
+
+def _recorded_source(cached: Path) -> str | None:
+    meta_path = markdown_meta_path(cached)
+    if not meta_path.exists():
+        return None
+    try:
+        recorded = json.loads(meta_path.read_text(encoding="utf-8")).get("source_sha256")
+    except (json.JSONDecodeError, OSError):
+        return None
+    return recorded if isinstance(recorded, str) else None
+
+
+def _record_source(cached: Path, source: Path, digest: str) -> None:
+    markdown_meta_path(cached).write_text(
+        json.dumps(
+            {"source": source.name, "source_sha256": digest},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _is_current(cached: Path, input_path: Path, digest: str) -> bool:
+    recorded = _recorded_source(cached)
+    if recorded is not None:
+        return recorded == digest
+    return cached.stat().st_mtime >= input_path.stat().st_mtime
 
 
 def to_markdown(
@@ -58,14 +102,16 @@ def to_markdown(
         if use_cache
         else None
     )
+    digest = source_hash(input_path) if cached is not None else ""
     if cached is not None and cached.exists():
-        if cached.stat().st_mtime >= input_path.stat().st_mtime:
+        if _is_current(cached, input_path, digest):
             logger.debug(f"[{input_path.name}] markdown reutilizado de {cached}")
+            _record_source(cached, input_path, digest)
             # Re-tidied on the way out, and rewritten when that changes anything: Docling is
             # the expensive half and its output does not change, so an improvement to the
             # cleanup must not cost a reconversion of the whole corpus to take effect.
             return _refresh(cached, tidy_markdown(cached.read_text(encoding="utf-8")))
-        logger.info(f"[{input_path.name}] el origen es más nuevo que su markdown; reconvirtiendo")
+        logger.info(f"[{input_path.name}] el documento ha cambiado; reconvirtiendo")
 
     # The one place a converter is ever used, and therefore the only place a lazy one has to
     # be resolved: everything above returns without Docling — plain text, and a cache hit.
@@ -74,6 +120,7 @@ def to_markdown(
     if cached is not None:
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
+        _record_source(cached, input_path, digest)
         logger.debug(f"[{input_path.name}] markdown escrito en {cached}")
     return text
 

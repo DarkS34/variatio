@@ -1,8 +1,20 @@
+import hashlib
 from pathlib import Path
 
 SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
 PLAIN_TEXT_EXTS = (".md", ".txt")
 CONVERTED_EXTS = (".pdf", ".docx")
+
+
+# The identity of a source document is its CONTENT. A timestamp is not: copying a
+# workspace, restoring a backup or checking the tree out again rewrites every mtime without
+# changing a byte, and a cached page costs one model call per page to rebuild.
+def source_hash(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def default_converter(ocr: bool = False, table_structure: bool = True):

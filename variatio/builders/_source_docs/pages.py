@@ -10,7 +10,7 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...prompts import EMPTY_PAGE_MARK, transcribe_page_prompt
-from .files import SUPPORTED_EXTS, required_cache_dir
+from .files import SUPPORTED_EXTS, required_cache_dir, source_hash
 from .markdown import tidy_markdown, to_markdown
 
 # Docling reads these exercise PDFs as text and loses three things at once: it detaches a
@@ -37,12 +37,14 @@ def _page_path(cache_dir: Path, index: int) -> Path:
 
 
 # Everything that decides what the pages CONTAIN, so that changing any of it invalidates
-# them. Timestamps alone cannot see a new model, a new DPI or an edited prompt.
+# them: the document itself cannot see a new model, a new DPI or an edited prompt. The
+# document is identified by its bytes and not by its mtime — a copied or restored workspace
+# moves every timestamp and would throw away a whole corpus of transcriptions.
 def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) -> dict:
     stat = source.stat()
     return {
         "source": source.name,
-        "source_mtime": round(stat.st_mtime, 3),
+        "source_sha256": source_hash(source),
         "source_bytes": stat.st_size,
         "mode": mode,
         "model": model,
@@ -64,6 +66,18 @@ def _fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
     )
 
 
+# Pages written before the fingerprint stopped believing timestamps are adopted instead of
+# re-transcribed: everything else about them still matches, and the mtime they recorded is
+# exactly the field that cannot be trusted.
+def _same_document(stored: dict, fingerprint: dict) -> bool:
+    if stored == fingerprint:
+        return True
+    if "source_sha256" in stored or "source_mtime" not in stored:
+        return False
+    adopted = {k: v for k, v in stored.items() if k != "source_mtime"}
+    return {**adopted, "source_sha256": fingerprint["source_sha256"]} == fingerprint
+
+
 def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
     meta_path = cache_dir / META_NAME
     if not meta_path.exists():
@@ -72,7 +86,8 @@ def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
-    if {k: v for k, v in meta.items() if k != "pages"} != fingerprint:
+    stored = {k: v for k, v in meta.items() if k != "pages"}
+    if not _same_document(stored, fingerprint):
         return None
 
     count = meta.get("pages")
@@ -81,6 +96,8 @@ def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
     paths = [_page_path(cache_dir, i) for i in range(1, count + 1)]
     if not all(path.exists() for path in paths):
         return None
+    if stored != fingerprint:
+        _write_meta(cache_dir, fingerprint, count)
     # Read back rather than returning what was produced: a page a human corrected by hand
     # is the whole point of writing them out, and it must win over what the model said.
     return [path.read_text(encoding="utf-8") for path in paths]
@@ -95,8 +112,12 @@ def _write_pages(cache_dir: Path, pages: list[str], fingerprint: dict) -> None:
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
+    _write_meta(cache_dir, fingerprint, len(pages))
+
+
+def _write_meta(cache_dir: Path, fingerprint: dict, count: int) -> None:
     (cache_dir / META_NAME).write_text(
-        json.dumps({**fingerprint, "pages": len(pages)}, ensure_ascii=False, indent=2),
+        json.dumps({**fingerprint, "pages": count}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
