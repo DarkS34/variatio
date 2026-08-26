@@ -50,7 +50,13 @@ class EventBus:
     # The forensic record still lives next to the instance it belongs to, so a workspace's
     # `.runs/` holds its own runs and nobody else's — which is also what makes deleting a
     # workspace delete its history.
-    def run_dir(self, workspace: str | None) -> Path:
+    #
+    # `None` is `None` and no longer the default instance: an event that belongs to no
+    # workspace has no `.runs/` to be written into, and until 2026-08-26 it was filed under
+    # `workspaces/default/` — somebody else's history, for events that were nobody's.
+    def run_dir(self, workspace: str | None) -> Path | None:
+        if not workspace:
+            return None
         return Path(settings.workspace_for(workspace).runs_dir)
 
     # PUBLISH -------------------------------------------------------------------------------
@@ -81,6 +87,11 @@ class EventBus:
 
     def _append_jsonl(self, workspace: str | None, job_id: str, event: Event) -> None:
         directory = self.run_dir(workspace)
+        # Live only, then: the buffer still has it and the browser still sees it. Nothing
+        # here may raise — it runs on the runner's thread, and a job that cannot write its
+        # own log is not a job that failed.
+        if directory is None:
+            return
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"{job_id}.jsonl"
         with (contextlib.suppress(OSError), path.open("a", encoding="utf-8") as f):
@@ -127,8 +138,9 @@ class EventBus:
         self, workspace: str | None, job_id: str, since: int = 0, limit: int = 5000
     ) -> list[dict]:
         """The full on-disk record for one job — the forensic view, not the live one."""
-        path = self.run_dir(workspace) / f"{job_id}.jsonl"
-        if not path.is_file():
+        directory = self.run_dir(workspace)
+        path = directory / f"{job_id}.jsonl" if directory else None
+        if path is None or not path.is_file():
             return [e.to_dict() for e in self._buffer if e.job_id == job_id and e.seq > since]
         out: list[dict] = []
         with path.open(encoding="utf-8") as f:

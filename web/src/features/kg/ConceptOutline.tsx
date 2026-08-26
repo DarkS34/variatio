@@ -36,8 +36,17 @@ export type CurriculumPlace = "covered" | "frontier" | "ahead";
 
 /** The grid, declared once: the header and every row read from the same string, so a column
  *  cannot drift from its own heading. */
+//
+// Below `md` it is FOUR columns and not seven, and the three that go are chosen rather
+// than truncated: where a concept falls in the curriculum, whether it has a description
+// and its degree are all things you read while comparing rows on a wide screen. What is
+// left is the row's identity and the one control that acts on it — the taggability
+// switch — because a column you cannot press is worth less on a phone than one you can.
+// The cells themselves carry `hidden md:…`, so a hidden cell occupies no track and the
+// four that remain land on the four the narrow template declares.
 const COLUMNS =
-  "grid grid-cols-[1.5rem_minmax(0,1fr)_7rem_5.5rem_5.5rem_3rem_1.25rem] items-center gap-x-2 px-3";
+  "grid grid-cols-[1.25rem_minmax(0,1fr)_2.5rem_1rem] items-center gap-x-2 px-2 " +
+  "md:grid-cols-[1.5rem_minmax(0,1fr)_7rem_5.5rem_5.5rem_3rem_1.25rem] md:px-3";
 
 // `hint` is what a row says on hover, `means` what the key says under the map. They are
 // deliberately two fields and not one split in half: the row explains the state, the key
@@ -264,7 +273,7 @@ function ConceptRow({
       </span>
 
       {place ? (
-        <span className="flex items-center gap-1.5" title={PLACE[place].hint}>
+        <span className="hidden items-center gap-1.5 md:flex" title={PLACE[place].hint}>
           <PlaceMark place={place} />
           <span
             className={cn(
@@ -278,10 +287,10 @@ function ConceptRow({
           </span>
         </span>
       ) : (
-        <span />
+        <span className="hidden md:block" />
       )}
 
-      <span>
+      <span className="hidden md:block">
         {concept.description ? (
           <Check className="size-3.5 text-settled" aria-label="Con descripción" />
         ) : (
@@ -302,7 +311,9 @@ function ConceptRow({
         />
       </span>
 
-      <span className="nums text-right text-small text-muted-foreground">{concept.degree}</span>
+      <span className="nums hidden text-right text-small text-muted-foreground md:block">
+        {concept.degree}
+      </span>
 
       <ChevronRight className="size-3.5 text-muted-foreground" />
     </div>
@@ -373,10 +384,10 @@ export function ConceptOutline({
       <div className={cn(COLUMNS, "h-8 text-micro font-condensed uppercase text-muted-foreground")}>
         <span />
         <span>Concepto</span>
-        <span>{hasCurriculum ? "Currículo" : ""}</span>
-        <span>Descr.</span>
+        <span className="hidden md:block">{hasCurriculum ? "Currículo" : ""}</span>
+        <span className="hidden md:block">Descr.</span>
         <span>Etiquet.</span>
-        <span className="text-right">Grado</span>
+        <span className="hidden text-right md:block">Grado</span>
         <span />
       </div>
 

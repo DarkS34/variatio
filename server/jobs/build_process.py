@@ -15,11 +15,12 @@ MAX_LOG_CHARS = 500
 def run_build(artifact: str, control: JobControl) -> dict:
     command = [sys.executable, "-u", "-m", "server.jobs.build_worker", artifact]
     # The child resolves its own paths from the slug, exactly as the CLI's `--workspace`
-    # does. Passed always: now that `default` lives in `workspaces/default/` there is no
-    # instance resolved any other way, and omitting it left a branch that depended on the
-    # two resolutions never drifting apart.
-    if control.job.workspace:
-        command += ["--workspace", control.job.workspace]
+    # does, and the slug is not optional on either side: there is no instance a build
+    # could mean without being told, so a job without a workspace is a bug here and not a
+    # build of something else.
+    if not control.job.workspace:
+        raise ValueError("El trabajo no dice en qué workspace construir.")
+    command += ["--workspace", control.job.workspace]
     process = subprocess.Popen(
         command,
         cwd=str(paths.PROJECT_ROOT),

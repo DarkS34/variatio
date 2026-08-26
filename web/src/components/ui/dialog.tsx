@@ -86,7 +86,7 @@ export function Dialog({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 animate-fade-in" onClick={onClose} />
       <div
         ref={panel}
@@ -95,11 +95,15 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-overlay animate-fade-in",
+          // On a phone it is a sheet off the bottom edge and not a card floating in the
+          // middle: with 16 px of margin either side there is nothing to float over, and
+          // the bottom is where the thumb already is. `max-h` leaves the top of the screen
+          // visible so it still reads as something laid ON the page.
+          "relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-lg border border-border bg-card shadow-overlay animate-fade-in sm:max-h-[85vh] sm:max-w-2xl sm:rounded-lg",
           className,
         )}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-border p-4">
+        <header className="flex items-start justify-between gap-3 border-b border-border p-3 sm:gap-4 sm:p-4">
           <div className="min-w-0">
             <h2 id={titleId} className="text-title">
               {title}
@@ -112,9 +116,9 @@ export function Dialog({
             <X />
           </Button>
         </header>
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">{children}</div>
         {footer ? (
-          <footer className="flex items-center justify-end gap-2 border-t border-border p-4">
+          <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border p-3 sm:p-4">
             {footer}
           </footer>
         ) : null}

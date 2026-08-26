@@ -164,7 +164,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   const [touched, setTouched] = useState(false);
 
   const effective = touched ? slug : slugify(name);
-  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(effective) && effective !== "default";
+  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(effective);
 
   return (
     <form

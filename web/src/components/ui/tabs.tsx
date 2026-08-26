@@ -30,7 +30,13 @@ export function Tabs({
   return (
     <div
       role="tablist"
-      className={cn("inline-flex items-center gap-1 rounded-lg bg-muted p-1", className)}
+      // `max-w-full` plus the scroller is what keeps five tabs usable on a phone without
+      // making the pill span the width of a desktop: it still shrinks to its content, it
+      // simply stops growing past the parent and scrolls sideways from there.
+      className={cn(
+        "inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-muted p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
       // The roles were here without any of the behaviour they promise. Someone navigating
       // by keyboard expects the arrows to move between tabs, and instead had to Tab
       // through all of them to reach the content: a role that lies is worse than no role,
@@ -62,7 +68,7 @@ export function Tabs({
           tabIndex={value === item.value ? 0 : -1}
           onClick={() => onChange(item.value)}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             value === item.value
               ? "bg-background text-foreground shadow-raised"
               : "text-muted-foreground hover:text-foreground",

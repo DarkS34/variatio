@@ -4,7 +4,7 @@ def import_instance(args) -> int:
     from ..db import session_scope
     from ..db.instance_io import import_instance as load
 
-    ws = paths.workspace(args.from_workspace)
+    ws = paths.workspace(args.from_workspace or args.slug)
     with session_scope() as session:
         summary = load(session, ws, slug=args.slug, name=args.name)
     print(
@@ -21,7 +21,7 @@ def export_instance(args) -> int:
     from ..db import session_scope
     from ..db.instance_io import export_instance as dump
 
-    ws = paths.workspace(args.to_workspace)
+    ws = paths.workspace(args.to_workspace or args.slug)
     with session_scope() as session:
         summary = dump(session, args.slug, ws)
     print(f"{summary['workspace']} → {summary['root']}: {len(summary['artifacts'])} artefacto(s)")

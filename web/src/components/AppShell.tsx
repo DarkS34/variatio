@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Play, Scale, ScrollText } from "lucide-react";
+import { Activity, Play, Scale, ScrollText, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
@@ -11,7 +11,15 @@ import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { keys, useHealth, useInvalidateChain, usePipeline, useStream } from "@/state/queries";
+import { useHasWorkspace } from "@/state/auth";
+import {
+  keys,
+  useHealth,
+  useInvalidateChain,
+  useMaintenance,
+  usePipeline,
+  useStream,
+} from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
 /**
@@ -120,13 +128,77 @@ function NavRule() {
   return <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />;
 }
 
+/**
+ * The three blocks, once, rendered in one of two places.
+ *
+ * Above `lg` it sits on the header's centre line, between the two flanks. Below it, the
+ * flanks alone fill the row — a workspace name plus an avatar is already most of a phone's
+ * width — so the same navigation moves to a line of its own underneath and scrolls
+ * sideways there. What it deliberately does NOT do is collapse into a menu: the rail IS
+ * the state of the chain, and hiding it behind a button hides the one thing this bar is
+ * for. A strip you can push with a thumb keeps it readable at 360 px and identical at
+ * 1600.
+ */
+function MainNav({
+  path,
+  stages,
+  locked,
+  className,
+}: {
+  path: string;
+  stages: StageState[];
+  locked: string | null;
+  className?: string;
+}) {
+  return (
+    <nav
+      className={cn(
+        "min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
+    >
+      <NavPill to="/" label="Panel" icon={Activity} active={path === "/"} />
+
+      <NavRule />
+
+      {/* The rail gets a surface of its own so the three stages read as ONE object
+          with three parts rather than as three pills that happen to be adjacent.
+          That is the whole point of separating it: the line between the marks means
+          a dependency, and it only means that if it is visibly bounded. */}
+      <div className="shrink-0 rounded-lg border border-border/70 bg-secondary/50 px-2 py-1 sm:px-3">
+        <Rail stops={stageStops(stages, path)} size="sm" className="min-w-[12.5rem] sm:min-w-[15rem]" />
+      </div>
+
+      <NavRule />
+
+      <NavPill
+        to="/generar"
+        label="Generar"
+        icon={Play}
+        active={path === "/generar"}
+        disabledReason={locked}
+      />
+      <NavPill
+        to="/evaluar"
+        label="Evaluar"
+        icon={Scale}
+        active={path === "/evaluar"}
+        tone="study"
+        disabledReason={locked}
+      />
+    </nav>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>("progress");
   const pipeline = usePipeline();
   const health = useHealth();
+  const maintenance = useMaintenance();
   const stream = useStream();
+  const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
 
@@ -135,9 +207,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     setDrawerOpen(true);
   };
 
+  // Not opened while the account is in no workspace: the handshake resolves a membership
+  // like every route does, so it would only be refused — and a refusal reads as «la
+  // sesión ha caducado», which is the one thing that is not happening here.
   useEffect(() => {
-    runStore.connect();
-  }, []);
+    if (hasWorkspace) runStore.connect();
+  }, [hasWorkspace]);
 
   // A build rewrites the artifact behind every screen, so a finished job invalidates
   // the whole chain, not just the pipeline: otherwise the graph tab keeps showing the
@@ -173,8 +248,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             The nav keeps its own scroll for the narrow case, and it is the only item that
             can shrink: a flank with `basis-0` has a shrink weight of zero, so the squeeze
             lands where there is a scroller to absorb it. */}
-        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-4 px-4">
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-4">
+        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-4">
             <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
               <Logo className="size-5 text-primary" />
               <span className="hidden 2xl:inline">Generador de variantes</span>
@@ -183,42 +258,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             <WorkspaceSwitcher />
           </div>
 
-          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <NavPill to="/" label="Panel" icon={Activity} active={path === "/"} />
+          <MainNav
+            path={path}
+            stages={stages}
+            locked={locked}
+            className="hidden lg:flex"
+          />
 
-            <NavRule />
-
-            {/* The rail gets a surface of its own so the three stages read as ONE object
-                with three parts rather than as three pills that happen to be adjacent.
-                That is the whole point of separating it: the line between the marks means
-                a dependency, and it only means that if it is visibly bounded. */}
-            <div className="shrink-0 rounded-lg border border-border/70 bg-secondary/50 px-3 py-1">
-              <Rail stops={stageStops(stages, path)} size="sm" className="min-w-[15rem]" />
-            </div>
-
-            <NavRule />
-
-            <NavPill
-              to="/generar"
-              label="Generar"
-              icon={Play}
-              active={path === "/generar"}
-              disabledReason={locked}
-            />
-            <NavPill
-              to="/evaluar"
-              label="Evaluar"
-              icon={Scale}
-              active={path === "/evaluar"}
-              tone="study"
-              disabledReason={locked}
-            />
-          </nav>
-
-          <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-3">
+          <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
             <Button
               variant="ghost"
               size="sm"
+              // Below `sm` the button is the icon and the count: the word is the first
+              // thing to give up when the row is 360 px wide and the workspace name is
+              // the one piece of it nobody can guess.
+              className="px-2 sm:px-3"
               onClick={() => openDrawer("logs")}
               title="Ver el registro completo de la sesión"
             >
@@ -232,10 +286,33 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
+        {/* The same navigation, on its own line, for everything narrower than a laptop. */}
+        <MainNav
+          path={path}
+          stages={stages}
+          locked={locked}
+          className="flex border-t border-border px-3 py-1.5 lg:hidden"
+        />
+
+        {/* Whoever is seeing this while the door is closed is the account that closed it —
+            everybody else is looking at the notice — so the strip is a reminder rather than
+            a warning: the risk is forgetting it is on, not failing to notice. */}
+        {maintenance.data?.active ? (
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-small sm:px-4">
+            <Wrench className="size-3.5 shrink-0" />
+            <span>
+              La instalación está en mantenimiento: nadie más puede entrar.
+            </span>
+            <Link to="/administracion" className="font-medium underline underline-offset-4">
+              Reabrirla
+            </Link>
+          </div>
+        ) : null}
+
         {/* The consequence goes in the sentence itself: it was all the (i) beside it said, and a
             warning one has to open in order to understand is not a warning. */}
         {offline || missingModels.length > 0 ? (
-          <div className="flex items-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-4 py-1.5 text-small">
+          <div className="flex items-start gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-3 py-1.5 text-small sm:items-center sm:px-4">
             {offline ? (
               <span>
                 Ollama no responde en <code className="font-mono">{health.data?.host}</code>:
@@ -254,7 +331,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         className={cn(
-          "mx-auto w-full max-w-[1600px] flex-1 px-4 py-6",
+          // The bottom padding is not symmetric with the top on a phone, and that is the
+          // floating «Ver ejecución» pill: fixed to the corner, it would otherwise cover
+          // the last control of every screen at exactly the width where there is no room
+          // to scroll past it.
+          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-20 pt-4 sm:px-4 sm:pb-6 sm:pt-6",
           // scroll-pb as well as pb: without it a control focused while the drawer is open
           // gets scrolled to a position underneath the drawer.
           drawerOpen && "pb-[56vh] scroll-pb-[56vh]",
@@ -271,7 +352,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
 
       {!drawerOpen ? (
-        <div className="fixed bottom-4 right-4 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised">
+        <div className="fixed bottom-3 right-3 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised sm:bottom-4 sm:right-4">
           <button
             onClick={() => openDrawer("progress")}
             className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"

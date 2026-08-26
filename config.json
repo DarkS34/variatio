@@ -5,6 +5,11 @@
     "cerebras_models": [
       "gemma-4-31b"
     ],
+    "cerebras_max_requests_minute": 5,
+    "cerebras_max_tokens_minute": 30000,
+    "cerebras_max_requests_day": 2400,
+    "cerebras_max_tokens_day": 1000000,
+    "cerebras_max_wait_seconds": 90,
     "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
     "idle_unload_poll_seconds": 60
@@ -107,7 +112,7 @@
           "exemplars_transcribe": null,
           "ep_scan": null,
           "ep_context": null,
-          "eb_extract": null,
+          "eb_extract": "gemma-4-31b",
           "kg_extract": "gemma-4-31b",
           "kg_domains": null,
           "kg_domains_leftovers": null,
@@ -132,7 +137,8 @@
           "kg_clean_drop": "medium",
           "kg_link_domain": "high",
           "kg_link_cross_domain": "high",
-          "kg_taggable": "high"
+          "kg_taggable": "high",
+          "concept_tagger": "low"
         },
         "phases": {
           "kg_extract": true

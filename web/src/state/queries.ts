@@ -8,7 +8,9 @@ import type {
   CommissionScope,
   JobKind,
   Role,
+  WorkspaceRow,
 } from "@/lib/types";
+import { authKeys, useHasWorkspace } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
 
@@ -38,6 +40,8 @@ export const keys = {
   adminJobs: ["admin", "jobs"] as const,
   adminJobHistory: ["admin", "jobs", "history"] as const,
   adminEngine: ["admin", "engine"] as const,
+  maintenance: ["maintenance"] as const,
+  adminMaintenance: ["admin", "maintenance"] as const,
   adminSystem: ["admin", "system"] as const,
 };
 
@@ -100,8 +104,61 @@ export function useElapsed(startedAt: number | null | undefined, live: boolean) 
   return Math.max(0, (now - startedAt) * 1000);
 }
 
+// `enabled` on both of the shell's queries, and on nothing else: with no workspace every
+// route that reads an instance answers 403, and these two are the ones that fire from the
+// header on every screen — polled, at that. The screens' own queries stay as they are,
+// because a screen that reads an instance is not reached in that state.
 export function useHealth() {
-  return useQuery({ queryKey: keys.health, queryFn: api.health, refetchInterval: 15_000 });
+  return useQuery({
+    queryKey: keys.health,
+    queryFn: api.health,
+    refetchInterval: 15_000,
+    enabled: useHasWorkspace(),
+  });
+}
+
+/**
+ * Is the installation closed?
+ *
+ * Asked without a session and by every tab, because the state can change while somebody is
+ * working: the poll is what turns a screen into the notice a couple of dozen seconds after
+ * the switch is thrown, instead of at the next reload. `retry: false` for the same reason
+ * the session query has it — a server that is not answering is not the same statement as a
+ * closed door, and the gate treats a failure here as «open», never as «closed».
+ */
+export function useMaintenance() {
+  return useQuery({
+    queryKey: keys.maintenance,
+    queryFn: api.maintenance,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * The same door, read by the account that can close it.
+ *
+ * A second query rather than a parameter on the first, because the two answers are not the
+ * same answer: the public one deliberately omits WHO closed it, and the panel is the one
+ * place that gets to say so. No poll — the panel is where it changes.
+ */
+export function useAdminMaintenance() {
+  return useQuery({ queryKey: keys.adminMaintenance, queryFn: api.adminMaintenance });
+}
+
+export function useSetMaintenance() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ active, message }: { active: boolean; message: string | null }) =>
+      api.setMaintenance(active, message),
+    // Both copies at once: the panel's own row and the one every screen's gate reads.
+    onSuccess: (state) => {
+      client.setQueryData(keys.adminMaintenance, state);
+      client.setQueryData(keys.maintenance, state);
+    },
+  });
 }
 
 /**
@@ -123,6 +180,7 @@ export function usePipeline() {
     queryKey: keys.pipeline,
     queryFn: api.pipeline,
     refetchInterval: (query) => (query.state.data?.queue_length ? 5_000 : false),
+    enabled: useHasWorkspace(),
   });
 }
 
@@ -241,36 +299,57 @@ export function useWorkspaces() {
 }
 
 /**
- * Move this tab to another instance.
+ * Land this tab in an instance — another one, a new one, or none at all.
  *
- * Three things have to happen together and in this order: the server records the
- * preference, the tab starts sending the new header, and everything cached under the old
- * one is dropped. Doing the last one first would refetch with the old header; skipping it
- * would leave the previous graph on screen under the new name.
+ * Three things have to happen together and in this order: the tab starts sending the new
+ * header, everything cached under the old one is dropped, and `me` is asked again. Doing
+ * the second one first would refetch with the old header; skipping it would leave the
+ * previous graph on screen under the new name.
+ *
+ * `removeQueries` and NEVER `client.clear()`, which is the part that had to change when
+ * the default workspace went away. Clearing does not empty a query, it DESTROYS it and
+ * drops it from the cache, so the observers of `["auth","me"]` — the gate and
+ * `useHasWorkspace` — stay bound to a dead object and never hear the fresh answer. That
+ * did not show while every account always had an instance and `role` never changed as one
+ * moved between them. Now it does: entering the first workspace turns `null` into a role
+ * and deleting the last one turns it back, and a screen that misses that either keeps
+ * offering «crea el tuyo» over a workspace that already exists or the reverse.
+ *
+ * What survives is what is not about an instance: the session, and the state of the
+ * installation's door. `["maintenance"]` is read by the gate itself, so dropping it puts
+ * the whole app back on its loading spinner for as long as the poll takes — a blink of
+ * «cargando» over a change that only concerns which graph is on screen.
  */
-export function useSwitchWorkspace() {
+const NOT_ABOUT_AN_INSTANCE = ["auth", "maintenance"];
+
+function useLandIn<TInput, TResult extends object>(
+  mutationFn: (input: TInput) => Promise<TResult>,
+) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (slug: string) => api.activateWorkspace(slug),
-    onSuccess: ({ workspace }) => {
-      workspaceStore.set(workspace.slug);
-      client.clear();
+    mutationFn,
+    onSuccess: (data) => {
+      // No `workspace` in the answer is a deletion: the tab is left pointing at nothing,
+      // and where it lands next is `me`'s to say.
+      const landed = (data as { workspace?: WorkspaceRow }).workspace;
+      workspaceStore.set(landed?.slug ?? null);
+      client.removeQueries({
+        predicate: (query) => !NOT_ABOUT_AN_INSTANCE.includes(query.queryKey[0] as string),
+      });
+      client.invalidateQueries({ queryKey: authKeys.me });
       runStore.reset();
     },
   });
 }
 
+export function useSwitchWorkspace() {
+  return useLandIn((slug: string) => api.activateWorkspace(slug));
+}
+
 export function useCreateWorkspace() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
-      api.createWorkspace(slug, name),
-    onSuccess: ({ workspace }) => {
-      workspaceStore.set(workspace.slug);
-      client.clear();
-      runStore.reset();
-    },
-  });
+  return useLandIn(({ slug, name }: { slug: string; name: string }) =>
+    api.createWorkspace(slug, name),
+  );
 }
 
 export function useRenameWorkspace() {
@@ -286,15 +365,9 @@ export function useRenameWorkspace() {
 }
 
 export function useDeleteWorkspace() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (slug: string) => api.deleteWorkspace(slug),
-    onSuccess: () => {
-      workspaceStore.set(null);
-      client.clear();
-      runStore.reset();
-    },
-  });
+  // Through the same door as entering one: leaving your last workspace is what turns the
+  // panel back into the offer to create one, and only a re-read of `me` says so.
+  return useLandIn((slug: string) => api.deleteWorkspace(slug));
 }
 
 /* Saved variants -------------------------------------------------------------------- */

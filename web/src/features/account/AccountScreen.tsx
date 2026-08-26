@@ -328,8 +328,8 @@ function AccessTab() {
       {!listing.isLoading && mine.length === 0 ? (
         <Alert tone="attention" title="Tu cuenta no es miembro de ningún workspace">
           <p>
-            Puedes entrar en la aplicación, pero no verás ninguna instancia hasta que te
-            den acceso a una — o hasta que crees la tuya desde el selector de arriba.
+            Es un estado normal, no una cuenta a medio hacer: el panel te ofrece crear tu
+            propia instancia, y quien administra puede darte acceso a una que ya exista.
           </p>
         </Alert>
       ) : null}

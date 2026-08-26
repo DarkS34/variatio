@@ -749,3 +749,14 @@ export type CerebrasCatalog = {
   source: "api" | "config";
   error: string | null;
 };
+
+/**
+ * The installation's door. `since` is an ISO stamp, `by` only ever arrives on the
+ * administrator's own reading of it — the public route deliberately omits it.
+ */
+export type MaintenanceState = {
+  active: boolean;
+  message: string;
+  since: string | null;
+  by?: string | null;
+};

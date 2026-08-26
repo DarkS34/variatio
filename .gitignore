@@ -12,9 +12,14 @@ web/tsconfig.tsbuildinfo
 
 # A workspace holds the data of whoever created it and is never versioned — `default`
 # included, since 2026-08-26: user data lives in the database and on each installation's
-# disk, not in the repository.
-workspaces/
+# disk, not in the repository. Anchored at the root: unanchored it also swallowed
+# `web/src/features/workspaces/`, and a screen that git cannot see is a screen a fresh
+# checkout builds without.
+/workspaces/
 # What is left of the Cerebras rate limit, as a rolling ledger of this installation's own
 # calls. Installation state like `.env`, never versioned: a checkout inherits nobody's
 # spending, and the file is rebuilt from the first call.
 /.cerebras_budget.json
+# The maintenance switch is this installation's own state, like `.env`: a checkout
+# inherits nobody's closed door.
+/.maintenance.json

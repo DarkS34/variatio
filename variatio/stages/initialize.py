@@ -82,15 +82,13 @@ class PipelineContext:
         self.generator.exemplars_bank = bank
 
 
-def initialize(tag: bool = False, ws: Workspace | None = None) -> PipelineContext:
+def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
     """Load the instance and warm the indices.
 
     Read-only by default: tagging is a separate, explicit act (`stages.tag_bank`)
     because it rewrites the exemplars bank. `tag=True` restores the old all-in-one
     behaviour the CLI relies on.
     """
-    ws = _artifacts.resolve(ws)
-
     profile_path = _artifacts.exemplars_profile_path(ws)
     if profile_path is None:
         raise _artifacts.MissingArtifactError(_artifacts.EXEMPLARS_PROFILE)

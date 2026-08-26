@@ -36,7 +36,7 @@ def test_the_spa_still_serves_a_real_asset(tmp_path, monkeypatch):
 
 
 def test_a_snapshot_id_may_not_leave_its_history_directory(tmp_path):
-    ws = Workspace(tmp_path / "ws")
+    ws = Workspace(tmp_path / "ws", slug="ws")
     outside = tmp_path / "outside.json"
     outside.write_text('{"leaked": true}', encoding="utf-8")
     escape = os.path.relpath(outside, ws.history_dir / "knowledge_graph")

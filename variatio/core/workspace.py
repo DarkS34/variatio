@@ -5,17 +5,19 @@ INSTANCE_DIRNAME = "instance"
 CACHE_DIRNAME = "cache"
 RAW_DIRNAME = "raw"
 
-DEFAULT_SLUG = "default"
-
 
 # `raw_dirname` was a constructor field until 2026-08-17, and it existed for exactly one
-# value: the raw directory of the repo's old single-user layout. With `default` moved into
-# `workspaces/`, every instance names that directory `raw`, so what looked like
-# configurability is one more way for two workspaces to disagree about where a corpus lives.
+# value: the raw directory of the repo's old single-user layout. Every instance names that
+# directory `raw`, so what looked like configurability is one more way for two workspaces
+# to disagree about where a corpus lives.
+#
+# `slug` carries no default either, since 2026-08-26: it used to fall back to `"default"`,
+# and that is what made an unnamed `Workspace()` mean one particular instance. A workspace
+# always belongs to somebody, so its name is asked for and never assumed.
 @dataclass(frozen=True)
 class Workspace:
     root: Path
-    slug: str = DEFAULT_SLUG
+    slug: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root", Path(self.root).resolve())

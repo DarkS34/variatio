@@ -324,7 +324,7 @@ def accept_invite(
 # before it has asked for anything.
 def _me(session: DbSession, user: User) -> dict:
     rows = identity.memberships_for(session, user.id)
-    current = deps.default_workspace_for(session, user)
+    current = deps.current_workspace_for(session, user)
     active = current.slug if current else None
     mine = {w.id: m.role for m, w in rows}
 
@@ -333,8 +333,10 @@ def _me(session: DbSession, user: User) -> dict:
         for m, w in rows
     ]
     if current is not None and current.id not in mine:
-        # An administrator with no membership still lands somewhere, and the switcher has
-        # to list it or the app would open on a workspace it does not show.
+        # An administrator whose last choice was somebody else's instance still lands
+        # there, and the switcher has to list it or the app would open on a workspace it
+        # does not show. What no longer happens is landing there without having chosen it:
+        # nothing picks a workspace for an account that belongs to none.
         workspaces.append(
             {"slug": current.slug, "name": current.name, "role": OWNER, "active": True}
         )
@@ -353,7 +355,7 @@ def _me(session: DbSession, user: User) -> dict:
         "workspaces": workspaces,
         "active_workspace": active,
         # Matches what `access_for` will decide on the next request, administrator bypass
-        # included: a `null` here makes the gate show «todavía no tienes acceso», so it
+        # included: a `null` here is what makes the panel offer «crea tu workspace», so it
         # must not say that to someone every route is about to let through.
         "role": _role_here(user, current, mine),
     }

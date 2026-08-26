@@ -14,10 +14,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     common = argparse.ArgumentParser(add_help=False)
+    # Required: there is no default instance to fall back to, and a build that guesses
+    # which one it meant is a build that rewrites somebody else's graph.
     common.add_argument(
         "--workspace",
         metavar="SLUG",
-        help="operate on WORKSPACES_DIR/SLUG instead of WORKSPACES_DIR/default",
+        required=True,
+        help="operate on WORKSPACES_DIR/SLUG",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

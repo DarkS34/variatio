@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from study.api import store as evaluation_store
 
-from .. import auth, deps, review, runtime, settings, storage
+from .. import auth, deps, maintenance, review, runtime, settings, storage
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import generations, identity, repository
 from ..db.models import EDITOR, ROLES, Invite, User
@@ -58,6 +58,11 @@ class AdminBody(BaseModel):
 
 class ProfileBody(BaseModel):
     evaluator_profile: str | None = None
+
+
+class MaintenanceBody(BaseModel):
+    active: bool
+    message: str | None = None
 
 
 # WHO AND WHAT ----------------------------------------------------------------------------
@@ -453,6 +458,24 @@ def unlock_login(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
         raise HTTPException(404, "Esa cuenta no existe.")
     unlock("login", user.username)
     return {"user_id": user.id, "unlocked": True}
+
+
+# THE DOOR --------------------------------------------------------------------------------
+
+
+# Closing the installation is written here and nowhere else, like everything that decides
+# who gets in. Reading it does NOT go through here: `GET /api/maintenance` asks for no
+# session, because the notice has to reach whoever has not got in yet.
+@router.get("/maintenance")
+def read_maintenance() -> dict:
+    return maintenance.state()
+
+
+@router.post("/maintenance")
+def set_maintenance(
+    body: MaintenanceBody, admin: User = Depends(auth.require_admin)
+) -> dict:
+    return maintenance.set_state(body.active, body.message, admin.username)
 
 
 # HELPERS ---------------------------------------------------------------------------------

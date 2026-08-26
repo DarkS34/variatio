@@ -1,13 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { FolderPlus } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { useRouter } from "@/lib/router";
-import { authKeys, useIsUnauthenticated, useLogout, useSession } from "@/state/auth";
-import { useCreateWorkspace, useStream } from "@/state/queries";
+import { authKeys, useIsUnauthenticated, useSession } from "@/state/auth";
+import { useMaintenance, useStream } from "@/state/queries";
+import { MaintenanceScreen } from "@/features/maintenance/MaintenanceScreen";
 
 import { AcceptInvite } from "./AcceptInvite";
 import { AuthLayout } from "./AuthLayout";
@@ -42,6 +41,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 function Guarded({ children }: { children: ReactNode }) {
   const session = useSession();
   const unauthenticated = useIsUnauthenticated(session);
+  const maintenance = useMaintenance();
   const client = useQueryClient();
   const stream = useStream();
 
@@ -51,11 +51,31 @@ function Guarded({ children }: { children: ReactNode }) {
     if (stream.unauthorised) client.invalidateQueries({ queryKey: authKeys.me });
   }, [stream.unauthorised, client]);
 
-  if (session.isLoading) {
+  if (session.isLoading || maintenance.isLoading) {
     return (
       <div className="flex min-h-full items-center justify-center">
         <Spinner className="size-6 text-muted-foreground" />
       </div>
+    );
+  }
+
+  // The door, and it is asked BEFORE the session is: a closed installation is a closed
+  // installation whether or not the person looking at it has an account. The one
+  // exception is the account that administers it, because the server lets that one
+  // through and a notice it could not get past would leave nothing to reopen from. A
+  // maintenance query that FAILED is not a closed door — `data` is undefined and the app
+  // renders — because a server that is not answering says something else entirely, and
+  // the screens behind this already know how to say it.
+  if (maintenance.data?.active && !session.data?.user.is_admin) {
+    return (
+      <MaintenanceScreen
+        state={maintenance.data}
+        onRetry={() => {
+          maintenance.refetch();
+          session.refetch();
+        }}
+        canLogIn={unauthenticated}
+      />
     );
   }
 
@@ -74,73 +94,12 @@ function Guarded({ children }: { children: ReactNode }) {
     );
   }
 
-  // Authenticated, but a member of nothing at all. A real state — an account can exist
-  // before anyone grants it access — and not the same as being logged out, so it does not
-  // send them back to the login form. Since a workspace is just an instance and any
-  // account may open one, the honest offer here is «créate el tuyo», not «espera».
-  if (session.data && session.data.role === null) return <NoWorkspace />;
-
+  // Authenticated but a member of nothing at all used to be stopped here, with a
+  // full-page notice outside the shell. It is not a question about the session, so it
+  // stopped being the gate's: `App` renders the offer to create one in the middle of the
+  // panel, and the guide, the account and the administration panel — none of which needs
+  // an instance — stay reachable while there is no workspace.
   return <>{children}</>;
-}
-
-function NoWorkspace() {
-  const session = useSession();
-  const logout = useLogout();
-  const create = useCreateWorkspace();
-  const [name, setName] = useState("");
-  const slug = slugify(name);
-  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug) && slug !== "default";
-
-  return (
-    <AuthLayout
-      title="Todavía no tienes ningún workspace"
-      description="Un workspace es una instancia entera: su corpus, su grafo, su perfil y su banco."
-    >
-      <p className="text-body text-muted-foreground">
-        Puedes esperar a que te inviten a uno existente, o empezar el tuyo ahora mismo.
-        Entraste como{" "}
-        <span className="font-medium text-foreground">{session.data?.user.username}</span>.
-      </p>
-
-      <form
-        className="mt-4 space-y-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (valid) create.mutate({ slug, name: name.trim() });
-        }}
-      >
-        <Input
-          aria-label="Nombre de la asignatura"
-          placeholder="Nombre de la asignatura"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        {create.isError ? (
-          <p className="text-small text-destructive">{(create.error as Error).message}</p>
-        ) : slug ? (
-          <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
-        ) : null}
-        <Button type="submit" className="w-full" disabled={!valid || create.isPending}>
-          <FolderPlus />
-          Crear mi workspace
-        </Button>
-      </form>
-
-      <Button variant="outline" className="mt-2 w-full" onClick={() => logout.mutate()}>
-        Salir
-      </Button>
-    </AuthLayout>
-  );
-}
-
-function slugify(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
 }
 
 function MissingToken({ kind }: { kind: string }) {

@@ -9,6 +9,7 @@ from . import (
     health,
     jobs,
     kg,
+    maintenance,
     pipeline,
     profile,
     raw,
@@ -18,6 +19,7 @@ from . import (
 
 ROUTERS = [
     auth.router,
+    maintenance.router,
     workspaces.router,
     health.router,
     pipeline.router,

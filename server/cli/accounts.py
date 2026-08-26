@@ -68,13 +68,19 @@ def create_user(args) -> int:
             email_verified=bool(args.email),
             evaluator_profile=getattr(args, "profile", None),
         )
-        workspace = ensure_workspace(session, args.workspace)
-        grant(session, workspace.id, user.id, args.role)
+        # An account with no workspace is a normal account since 2026-08-26: there is no
+        # instance to attach it to by default, and the first thing the panel offers it is
+        # to create its own. Naming one still attaches it, as it always did.
+        membership = "sin workspace"
+        if args.workspace:
+            workspace = ensure_workspace(session, args.workspace)
+            grant(session, workspace.id, user.id, args.role)
+            membership = f"{args.role} de '{workspace.slug}'"
         profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil de evaluador")
         print(
             f"Cuenta creada: {user.username} "
             f"({'administrador' if user.is_admin else 'usuario'}), "
-            f"{args.role} de '{workspace.slug}', {profile}."
+            f"{membership}, {profile}."
         )
     return 0
 

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from .dotenv import load_dotenv
-from .workspace import DEFAULT_SLUG, Workspace
+from .workspace import Workspace
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,19 +14,16 @@ load_dotenv(PROJECT_ROOT / ".env")
 # instances hang off.
 WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
 
-# `default` is a workspace like any other and lives where the others live. It used to be
-# the single-user layout this repo always had, hanging off PROJECT_ROOT, which made the
-# first instance a special case in every listing and put it somewhere no other instance
-# could be. Moved into the tree on 2026-08-17 by explicit user request: one shape for every
-# instance, and `workspaces/` as the only directory holding user data. The move is byte for
-# byte — the `.npz` and the markdown cache are fingerprinted by content and not by path, so
-# nothing was re-embedded.
+# There is no default instance. Until 2026-08-26 an omitted slug resolved to `default`, a
+# workspace the repository shipped and every entry point fell back to, so «no dijo cuál»
+# and «dijo `default`» were the same request — and an installation with no workspaces at
+# all was not a state the code could express. It is one now: having none is normal, an
+# account creates its own, and a caller that does not name one is a caller with nothing to
+# read. `default` survives as an ordinary slug with no privileges, like `aula` or `cs101`.
 
 
-def default_workspace() -> Workspace:
-    return workspace(DEFAULT_SLUG)
-
-
-def workspace(slug: str | None = None) -> Workspace:
-    slug = slug or DEFAULT_SLUG
+def workspace(slug: str) -> Workspace:
+    slug = (slug or "").strip()
+    if not slug:
+        raise ValueError("Un workspace se nombra: no hay instancia por defecto.")
     return Workspace(WORKSPACES_DIR / slug, slug=slug)

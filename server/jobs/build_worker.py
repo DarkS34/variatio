@@ -44,7 +44,7 @@ class StdoutEmitter:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="build-worker")
     parser.add_argument("artifact", choices=["exemplars_profile", "knowledge_graph", "exemplars_bank"])
-    parser.add_argument("--workspace", default=None, help="Workspace slug; omitted means the default one")
+    parser.add_argument("--workspace", required=True, help="Workspace slug")
     args = parser.parse_args(argv)
 
     from loguru import logger

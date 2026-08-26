@@ -1,6 +1,7 @@
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, ChevronDown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/misc";
 import { Link } from "@/lib/router";
@@ -25,6 +26,7 @@ function grouped(sections: GuideSection[]): { title: string; sections: GuideSect
 
 export function GuideScreen({ slug }: { slug: string }) {
   const [query, setQuery] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
 
   const position = GUIDE_SECTIONS.findIndex((section) => section.slug === slug);
   const active = GUIDE_SECTIONS[position] ?? GUIDE_SECTIONS[0];
@@ -54,7 +56,7 @@ export function GuideScreen({ slug }: { slug: string }) {
           </p>
         </div>
 
-        <div className="relative w-64">
+        <div className="relative w-full sm:w-64">
           <Search
             aria-hidden
             className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground"
@@ -71,8 +73,28 @@ export function GuideScreen({ slug }: { slug: string }) {
 
       <Separator />
 
-      <div className="grid items-start gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <nav aria-label="Secciones de la guía" className="space-y-4 lg:sticky lg:top-20">
+      {/* The index is a column beside the text on a laptop and a folded list on a phone.
+          Folded rather than merely stacked: fourteen rows of navigation above the first
+          paragraph turns «leer la guía» into «pasar la guía», and the section you are on
+          is already named on the button that opens it. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
+        <Button
+          variant="outline"
+          className="w-full justify-between lg:hidden"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen((was) => !was)}
+        >
+          <span className="min-w-0 truncate">Secciones · {active.label}</span>
+          <ChevronDown className={cn("transition-transform", navOpen && "rotate-180")} />
+        </Button>
+
+        <nav
+          aria-label="Secciones de la guía"
+          className={cn(
+            "space-y-4 lg:sticky lg:top-20 lg:block",
+            navOpen ? "block" : "hidden",
+          )}
+        >
           {groups.map((group) => (
             <div key={group.title} className="space-y-0.5">
               <p className="px-2.5 pb-1 text-micro font-condensed uppercase text-muted-foreground">
@@ -86,6 +108,7 @@ export function GuideScreen({ slug }: { slug: string }) {
                     key={section.slug}
                     to={`/guia/${section.slug}`}
                     aria-current={on ? "page" : undefined}
+                    onClick={() => setNavOpen(false)}
                     className={cn(
                       "flex items-center gap-2 border-l-2 border-transparent px-2.5 py-1.5 text-body text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                       on && "border-primary bg-accent font-medium text-foreground",

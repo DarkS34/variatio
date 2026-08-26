@@ -4,6 +4,8 @@ import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { Dashboard } from "@/features/pipeline/Dashboard";
+import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
+import { useHasWorkspace } from "@/state/auth";
 import { usePipeline } from "@/state/queries";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
@@ -34,15 +36,27 @@ const GenerateScreen = lazy(() =>
   import("@/features/run/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
 );
 
+// Which destinations need an instance to mean anything. Everything not listed here is
+// about the person or the installation and works with no workspace at all: the guide is
+// reading, «Mi perfil» is the account, and administration is where an administrator hands
+// out access in the first place — locking them behind a workspace would leave the state
+// with no way out of itself.
+const NEEDS_WORKSPACE = ["/", "/preparar/perfil", "/preparar/grafo", "/preparar/banco", "/generar", "/evaluar"];
+
 export function App() {
   const { path } = useRouter();
   const pipeline = usePipeline();
+  const hasWorkspace = useHasWorkspace();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
     if (path === "/guia" || path.startsWith("/guia/")) {
       return <GuideScreen slug={path.slice("/guia/".length)} />;
     }
+
+    // One message rather than six 403s. It is drawn as the panel whatever the route was,
+    // because the panel is where the one thing to do here lives.
+    if (!hasWorkspace && NEEDS_WORKSPACE.includes(path)) return <NoWorkspace />;
 
     switch (path) {
       case "/":

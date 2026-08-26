@@ -9,7 +9,9 @@ Which workspace a request means comes from, in order: the `X-Workspace` header (
 browser tabs can sit in two different instances), then the account's `active_workspace`,
 then its first membership. The header is a *request* for a workspace, never a permission
 to enter one — the membership lookup below is what decides, and it runs identically
-whichever way the slug arrived.
+whichever way the slug arrived. When none of the three answers there is no fourth: an
+account with no workspace is a normal account, and every route that reads instance data
+tells it so with `NO_WORKSPACE` instead of picking an instance on its behalf.
 
 The one exception is the installation's administrator, who since phase 3 passes through
 `require_member` for any workspace. That is a deliberate departure from phase 2's «no
@@ -27,7 +29,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core.workspace import Workspace as PathWorkspace
 
-from .. import settings
+from .. import maintenance, settings
 from ..db import identity, repository, session_scope
 from ..db.models import OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
@@ -40,8 +42,8 @@ DB_UNREACHABLE = (
 WORKSPACE_HEADER = "x-workspace"
 
 NO_WORKSPACE = (
-    "Tu cuenta no es miembro de ningún workspace. Pide acceso a quien administra la "
-    "instalación, o crea uno nuevo."
+    "Todavía no tienes ningún workspace. Crea el tuyo desde el panel, o pide acceso a "
+    "uno existente a quien administra la instalación."
 )
 
 
@@ -145,10 +147,28 @@ def require_admin(user: User = Depends(current_user)) -> User:
     return user
 
 
+# The two routes that write without resolving a membership — creating a workspace and
+# activating one — are the only ones the door in `access_for` cannot see, because there is
+# no instance yet to be a member of. They declare this instead, so «the installation is
+# closed» is true rather than nearly true.
+def require_open(user: User = Depends(current_user)) -> User:
+    if not user.is_admin and maintenance.active():
+        raise HTTPException(503, maintenance.CLOSED)
+    return user
+
+
 # WORKSPACE -----------------------------------------------------------------------------
 
 
-def default_workspace_for(session: DbSession, user: User) -> Workspace | None:
+# Which instance this account lands in when the request does not name one. It is the
+# account's own last choice, or the first workspace it belongs to, and nothing else:
+# «the default workspace» stopped existing on 2026-08-26, so an account that belongs
+# nowhere lands nowhere, and the panel says so and offers to create one. That used to
+# have one exception — an administrator with no membership was dropped into the first
+# workspace of the installation — and it went with the rest: entering somebody else's
+# instance because it happened to be first is not landing anywhere on purpose, and the
+# switcher already lists every one of them for an administrator to open by hand.
+def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
     if user.active_workspace_id is not None:
         workspace = session.get(Workspace, user.active_workspace_id)
         # The preference only counts while the access behind it does. Since the
@@ -161,12 +181,6 @@ def default_workspace_for(session: DbSession, user: User) -> Workspace | None:
     rows = identity.memberships_for(session, user.id)
     if rows:
         return rows[0][1]
-    # An administrator with no membership anywhere still has to be able to enter and fix
-    # that. Anyone else is told plainly that they have no workspace, which is a real
-    # state and not an error.
-    if user.is_admin:
-        workspaces = repository.list_workspaces(session)
-        return workspaces[0] if workspaces else None
     return None
 
 
@@ -177,13 +191,21 @@ def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Works
             raise HTTPException(404, f"No existe el workspace '{slug}'.")
         return workspace
 
-    workspace = default_workspace_for(session, user)
+    workspace = current_workspace_for(session, user)
     if workspace is None:
         raise HTTPException(403, NO_WORKSPACE)
     return workspace
 
 
 def access_for(session: DbSession, user: User, workspace: Workspace, minimum: str) -> Access:
+    # The installation's door, here for the same reason the administrator bypass is: this
+    # is the one place every route that touches an instance goes through, so closing it is
+    # one `if` in a diff and not a habit spread over forty routes. The administrator gets
+    # in anyway — they are the one applying the change, and a door that shuts on them too
+    # has nothing left to reopen it from.
+    if not user.is_admin and maintenance.active():
+        raise HTTPException(503, maintenance.CLOSED)
+
     row = identity.membership(session, workspace.id, user.id)
     as_admin = False
 
@@ -237,7 +259,7 @@ def authenticate_socket(websocket: WebSocket) -> Access | None:
             workspace = (
                 repository.get_workspace(session, slug)
                 if slug
-                else default_workspace_for(session, user)
+                else current_workspace_for(session, user)
             )
             if workspace is None:
                 return None

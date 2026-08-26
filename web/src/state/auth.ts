@@ -37,6 +37,19 @@ export function useIsUnauthenticated(query: ReturnType<typeof useSession>) {
   return query.isError && query.error instanceof ApiError && query.error.status === 401;
 }
 
+/**
+ * Whether this account is in any instance at all.
+ *
+ * A `null` role is a real state since 2026-08-26, when the default workspace stopped
+ * existing: nothing picks an instance for an account that belongs to none, so «ninguno»
+ * is what the server answers rather than somebody else's. Everything that reads instance
+ * data hangs off this — the panel offers to create one, the queries do not fire, and the
+ * socket is not opened, because all three would only earn the same 403.
+ */
+export function useHasWorkspace() {
+  return useSession().data?.role != null;
+}
+
 const isSessionKey = (key: readonly unknown[]) =>
   key.length === authKeys.me.length && key.every((part, index) => part === authKeys.me[index]);
 

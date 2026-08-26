@@ -113,7 +113,7 @@ export function StageGate({
       <div className="space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-title">{title}</h1>
               <InfoHint label={`Qué es ${title}`}>{description}</InfoHint>
               <StageBadge stage={stage} />
@@ -136,7 +136,10 @@ export function StageGate({
               artifact, and with no artifact there is nothing to do them on: they rendered anyway,
               disabled, so the first step of the chain presented itself as three controls of which only
               one could be pressed. They come back as soon as something is built. */}
-          <div className="flex shrink-0 items-center gap-2">
+          {/* `shrink-0` only once there is a second column to shrink against: below `sm`
+              the header is one column and these are the whole of it, so they wrap among
+              themselves instead of pushing the page sideways. */}
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             {missing ? null : actions}
             {building ? null : <BuildButton stage={stage} labels={buildLabels} />}
             {ready && !blocked ? (

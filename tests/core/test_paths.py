@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+import pytest
+
 from variatio.core import paths
 from variatio.core.dotenv import load_dotenv
 
@@ -29,9 +31,18 @@ def test_load_dotenv_on_a_missing_file_is_silent(tmp_path):
     load_dotenv(tmp_path / "no-existe")
 
 
-def test_default_workspace_is_the_default_slug():
-    assert paths.default_workspace().slug == "default"
-    assert paths.default_workspace().root == (paths.WORKSPACES_DIR / "default").resolve()
+# There is no default instance any more, and this is what pins it: a caller that does not
+# name a workspace is a caller with nothing to read, not a caller who meant `default`.
+def test_a_workspace_has_to_be_named():
+    with pytest.raises(ValueError):
+        paths.workspace("")
+    assert not hasattr(paths, "default_workspace")
+
+
+def test_default_is_an_ordinary_slug():
+    ws = paths.workspace("default")
+    assert ws.slug == "default"
+    assert ws.root == (paths.WORKSPACES_DIR / "default").resolve()
 
 
 def test_workspace_resolves_under_workspaces_dir():

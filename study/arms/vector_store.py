@@ -24,9 +24,9 @@ from loguru import logger
 from variatio import config
 from variatio.core import inference, progress
 
-# `cache_path` is required, and that is the point: it used to fall back to the default
-# workspace, so every instance that evaluated read and wrote ITS index under
-# `workspaces/default/cache/`. Two workspaces with different banks produce different
+# `cache_path` is required, and that is the point: it used to fall back to the workspace
+# the whole system defaulted to, so every instance that evaluated read and wrote ITS index
+# under that one's `cache/`. Two workspaces with different banks produce different
 # fingerprints, so each run found the other's file stale, rebuilt, and overwrote it — a
 # workspace paying for the other's re-embedding, in a directory it may not even belong to.
 # The fingerprint deliberately does not name the workspace; the PATH is what separates them.

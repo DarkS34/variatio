@@ -88,7 +88,7 @@ function Empezar() {
       </SectionHead>
 
       <Block title="El recorrido, de un vistazo">
-        <div className="flex flex-wrap items-end gap-6 rounded-lg border border-border bg-card p-6">
+        <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4 sm:gap-6 sm:p-6">
           <div className="flex flex-col items-center gap-2">
             <Pill icon={Activity} label="Panel" />
             <span className="text-small text-muted-foreground">observar</span>
@@ -96,7 +96,7 @@ function Empezar() {
 
           <span aria-hidden className="w-px self-stretch bg-border" />
 
-          <div className="flex min-w-[20rem] flex-1 flex-col items-center gap-2">
+          <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-2 sm:w-auto sm:min-w-[20rem]">
             <Rail stops={CHAIN} className="max-w-[26rem]" />
             <span className="text-small text-muted-foreground">
               preparar la instancia, en este orden
@@ -152,8 +152,9 @@ function Empezar() {
         <Steps
           items={[
             <>
-              Elige o crea un workspace en el selector de arriba a la izquierda. Todo lo demás
-              vive dentro de uno.
+              Ponte en un <strong>workspace</strong>. Si aún no tienes ninguno, el panel te
+              ofrece crear el tuyo; si tienes varios, se cambia en el selector de arriba a la
+              izquierda. Todo lo demás vive dentro de uno.
             </>,
             <>
               Desde el <strong>Panel</strong>, sube el material en bruto: los documentos con
@@ -211,9 +212,25 @@ function Workspace() {
         items={[
           { label: "Dónde se cambia", value: "El selector de arriba a la izquierda, junto a la marca." },
           { label: "Quién puede crear uno", value: "Cualquier cuenta, y queda como su propietaria." },
+          { label: "Si no tienes ninguno", value: "El panel te ofrece crearlo. No hay ninguno por defecto." },
           { label: "Qué se lleva al cambiar", value: "Nada. Cada workspace tiene lo suyo, incluida su caché." },
         ]}
       />
+
+      <Block title="Entrar sin ninguno es normal">
+        <Paragraph>
+          No hay un workspace inicial en el que caiga quien no tiene otro: una cuenta recién
+          creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra el{" "}
+          <strong>Panel</strong> pidiéndole que cree el suyo. Basta con el nombre de la
+          asignatura. Las dos salidas son igual de válidas: créalo tú y serás su propietario, o
+          espera a que quien administra te dé acceso a uno que ya existe.
+        </Paragraph>
+        <Paragraph>
+          Mientras tanto la aplicación no se queda bloqueada: esta guía, «Mi perfil» y —si
+          administras la instalación— «Administración» funcionan sin ningún workspace. Lo que
+          espera es todo lo que lee una instancia: las tres etapas, «Generar» y «Evaluar».
+        </Paragraph>
+      </Block>
 
       <Block title="Una pestaña, un workspace">
         <Paragraph>
@@ -995,6 +1012,11 @@ function Cuenta() {
           al abrirlo. Ese enlace <em>es</em> la invitación: no está atado a ningún correo, así que
           no lo dejes en un sitio compartido.
         </Paragraph>
+        <Paragraph>
+          La invitación puede traer ya un workspace y un papel dentro de él, o no traer ninguno:
+          en ese caso entras igual y el panel te ofrece crear el tuyo. Una cuenta sin workspace
+          es una cuenta normal, no una cuenta a medio hacer.
+        </Paragraph>
       </Block>
 
       <Block title="Tema claro, oscuro o como el sistema">
@@ -1018,11 +1040,46 @@ function Cuenta() {
           con lo que invalidará al guardarlo).
         </Paragraph>
       </Block>
+
+      <Block title="Cerrar la instalación mientras se toca">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">solo administradores</Badge>
+        </div>
+        <Paragraph>
+          Arriba del todo de Administración hay un interruptor de <strong>mantenimiento</strong>.
+          Cerrado, cualquier otra cuenta ve una pantalla de aviso en lugar de la aplicación —
+          con el texto que se escriba ahí— y la API rechaza sus peticiones; quien administra
+          sigue entrando, que es lo que permite volver a abrirla.
+        </Paragraph>
+        <Paragraph>
+          Sirve para aplicar cambios sin que nadie se quede a medias: actualizar el servidor,
+          migrar la base de datos, cambiar de motor. Mientras esté cerrada, la cabecera lo
+          recuerda en rojo en todas tus pantallas, porque el riesgo real no es no enterarse: es
+          olvidarse de reabrirla.
+        </Paragraph>
+      </Block>
     </div>
   );
 }
 
 const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
+  {
+    key: "mantenimiento",
+    question: "«En mantenimiento»",
+    answer: (
+      <>
+        <p>
+          No es un fallo: quien administra la instalación la ha cerrado a propósito para
+          aplicar cambios. El aviso dice desde cuándo, y lo tuyo sigue donde estaba —
+          artefactos, variantes y evaluaciones se leen igual cuando vuelva a abrirse.
+        </p>
+        <p>
+          No hay hora prevista de vuelta, y no la hay porque nadie la sabe. «Comprobar de
+          nuevo» vuelve a preguntar; la pantalla también lo hace sola cada pocos segundos.
+        </p>
+      </>
+    ),
+  },
   {
     key: "ollama",
     question: "«Ollama no responde en …»",

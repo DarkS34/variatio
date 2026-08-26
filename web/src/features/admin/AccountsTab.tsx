@@ -410,8 +410,8 @@ function MembershipEditor({
     <div className="space-y-3">
       {account.workspaces.length === 0 ? (
         <p className="text-small text-muted-foreground">
-          Esta cuenta no es miembro de ningún workspace: puede entrar, pero no verá nada
-          hasta que le des acceso a alguno.
+          Esta cuenta no es miembro de ningún workspace. Entra igual: el panel le ofrece
+          crear la suya, y aquí puedes darle acceso a una que ya exista.
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border bg-background">

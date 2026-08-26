@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from variatio.core import paths
-from variatio.core.workspace import DEFAULT_SLUG, Workspace
+from variatio.core.workspace import Workspace
 
 # One process now serves MANY workspaces, so there is no `workspace()` any more: a
 # function with no argument is exactly the process-global that made two users overwrite
@@ -15,19 +15,18 @@ from variatio.core.workspace import DEFAULT_SLUG, Workspace
 # once per request from the header or the account's active workspace — and passes the
 # resulting `Workspace` down. A module that needs a path takes it as an argument.
 #
-# `default` is no longer a special case: now that its tree lives in `workspaces/default/`,
-# resolution is the same for every instance, and all this function still contributes is
-# that the server translates "no header" into the initial instance and into nothing else.
+# There is no reserved slug either, since 2026-08-26: `default` used to be the instance
+# every entry point fell back to, so the panel had to refuse the name to keep somebody
+# from creating a second thing that answered to it. With the fallback gone the name is
+# free, and one workspace fewer is a special case.
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 
 
-def workspace_for(slug: str | None) -> Workspace:
+def workspace_for(slug: str) -> Workspace:
     return paths.workspace(slug)
 
 
 def slug_error(slug: str) -> str | None:
-    if slug == DEFAULT_SLUG:
-        return f"'{DEFAULT_SLUG}' es el nombre reservado del workspace inicial."
     if not SLUG_PATTERN.match(slug):
         return (
             "El identificador admite minúsculas, cifras y guiones, entre 3 y 64 "

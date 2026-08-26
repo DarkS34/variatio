@@ -17,9 +17,7 @@ from . import _artifacts
 from .initialize import make_embedder, make_tagger
 
 
-def build_exemplars_profile(ws: Workspace | None = None) -> dict:
-    ws = _artifacts.resolve(ws)
-
+def build_exemplars_profile(ws: Workspace) -> dict:
     logger.info("Construyendo el borrador del perfil de ejemplares")
 
     profile = ExemplarsProfileBuilder(workspace=ws).build(
@@ -32,8 +30,7 @@ def build_exemplars_profile(ws: Workspace | None = None) -> dict:
     return profile
 
 
-def build_knowledge_graph(ws: Workspace | None = None) -> dict:
-    ws = _artifacts.resolve(ws)
+def build_knowledge_graph(ws: Workspace) -> dict:
     logger.info("Construyendo el borrador del grafo de conocimiento")
     return KnowledgeGraphBuilder(workspace=ws).build(ws.raw_corpus_dir)
 
@@ -45,10 +42,9 @@ def build_knowledge_graph(ws: Workspace | None = None) -> dict:
 # the end also has the effect the warm start already exploited between runs: document 3's
 # items are tagged against an index that already holds those of documents 1 and 2.
 def build_exemplars_bank(
+    ws: Workspace,
     exemplars_profile: ExemplarsProfile | None = None,
-    ws: Workspace | None = None,
 ) -> dict:
-    ws = _artifacts.resolve(ws)
     if exemplars_profile is None:
         path = _artifacts.exemplars_profile_path(ws)
         if path is None:
@@ -161,7 +157,7 @@ def build_models(artifact: str) -> list[str]:
     return list(dict.fromkeys(_MODELS[artifact]()))
 
 
-def build_artifact(artifact: str, ws: Workspace | None = None) -> dict:
+def build_artifact(artifact: str, ws: Workspace) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
 
@@ -169,8 +165,7 @@ def build_artifact(artifact: str, ws: Workspace | None = None) -> dict:
         return _BUILDERS[artifact](ws=ws)
 
 
-def build_missing(ws: Workspace | None = None) -> list[str]:
-    ws = _artifacts.resolve(ws)
+def build_missing(ws: Workspace) -> list[str]:
     missing = _artifacts.missing_artifacts(ws)
     for artifact in missing:
         progress.checkpoint()

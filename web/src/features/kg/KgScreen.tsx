@@ -516,7 +516,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               Temario · {totals.concepts} conceptos · {totals.taggable} etiquetables
             </span>
             <span className="flex-1" />
-            <div className="relative min-w-56">
+            <div className="relative min-w-56 flex-1 sm:flex-none">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 aria-label="Buscar concepto o descripción"
@@ -743,11 +743,14 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
         onClose={() => setMapOpen(false)}
         title="Mapa del grafo"
         description="Arrastra para mover, rueda para acercar. Al elegir un concepto se edita aquí mismo."
-        className="max-w-[100rem]"
+        className="sm:max-w-[100rem]"
       >
-        <div className="flex h-[68vh] gap-4">
-          <div className="min-w-0 flex-1">{canvas(false)}</div>
-          <div className="flex w-[23rem] shrink-0 flex-col overflow-hidden rounded-lg border border-border">
+        {/* Side by side once there is room for both, stacked below it — and the map keeps
+            the larger half either way, because the inspector is what you read AFTER
+            choosing a node on it. */}
+        <div className="flex h-[70vh] flex-col gap-3 lg:h-[68vh] lg:flex-row lg:gap-4">
+          <div className="min-h-0 min-w-0 flex-1">{canvas(false)}</div>
+          <div className="flex max-h-[45%] w-full shrink-0 flex-col overflow-hidden rounded-lg border border-border lg:max-h-none lg:w-[23rem]">
             {selectedConcept ? (
               <>
                 <header className="flex items-center gap-1.5 border-b border-border p-3">

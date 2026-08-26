@@ -23,6 +23,7 @@ import type {
   InviteRow,
   Job,
   KgSummary,
+  MaintenanceState,
   Pipeline,
   PullStatus,
   TunnelStatus,
@@ -172,6 +173,11 @@ export const api = {
     request<WorkspaceSummary>(`/api/workspaces/${encodeURIComponent(slug)}/summary`),
 
   health: () => request<Health>("/api/health"),
+
+  // The one call in this file that works with no session, and it has to stay that way:
+  // whoever is looking at the login form is exactly who needs to be told the installation
+  // is closed.
+  maintenance: () => request<MaintenanceState>("/api/maintenance"),
 
   pipeline: () => request<Pipeline>("/api/pipeline"),
   buildPhases: () => request<BuildPlans>("/api/pipeline/phases"),
@@ -400,6 +406,10 @@ export const api = {
       `/api/admin/accounts/${userId}/memberships/${encodeURIComponent(workspace)}`,
       { method: "DELETE" },
     ),
+
+  adminMaintenance: () => request<MaintenanceState>("/api/admin/maintenance"),
+  setMaintenance: (active: boolean, message: string | null) =>
+    post<MaintenanceState>("/api/admin/maintenance", { active, message }),
 
   adminConfig: () => request<ConfigPayload>("/api/admin/config"),
   updateAdminConfig: (values: Record<string, unknown>) =>

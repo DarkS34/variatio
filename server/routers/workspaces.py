@@ -50,7 +50,7 @@ def listing(
 ) -> dict:
     rows = identity.memberships_for(db, user.id)
     mine = {workspace.id: membership.role for membership, workspace in rows}
-    current = auth.default_workspace_for(db, user)
+    current = auth.current_workspace_for(db, user)
     active_id = current.id if current else None
 
     workspaces = [workspace for _, workspace in rows]
@@ -73,7 +73,7 @@ def listing(
     }
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(auth.require_open)])
 def create(
     body: CreateBody,
     user: User = Depends(auth.current_user),
@@ -96,7 +96,7 @@ def create(
     return {"workspace": _view(workspace, OWNER, active=True)}
 
 
-@router.post("/{slug}/activate")
+@router.post("/{slug}/activate", dependencies=[Depends(auth.require_open)])
 def activate(
     slug: str,
     user: User = Depends(auth.current_user),

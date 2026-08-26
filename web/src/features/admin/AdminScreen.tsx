@@ -15,6 +15,7 @@ import { AccountsTab } from "./AccountsTab";
 import { StatTile } from "./charts";
 import { ConfigTab } from "./ConfigTab";
 import { EngineTab } from "./EngineTab";
+import { MaintenanceSwitch } from "./MaintenanceSwitch";
 import { WorkspacesTab } from "./WorkspacesTab";
 
 /**
@@ -56,6 +57,8 @@ export function AdminScreen() {
           se dan accesos.
         </InfoHint>
       </header>
+
+      <MaintenanceSwitch />
 
       {overview.data ? <Totals overview={overview.data} /> : null}
 

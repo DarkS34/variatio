@@ -54,7 +54,7 @@ export function RunDrawer({
 
   return (
     <aside className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-border bg-card shadow-overlay">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2 sm:px-4">
         <ListTree className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-body font-medium">{run?.job?.label ?? "Ejecución"}</p>
@@ -125,7 +125,7 @@ export function RunDrawer({
 
       <div
         className={cn(
-          "thin-scroll overflow-y-auto p-4",
+          "thin-scroll overflow-y-auto p-3 sm:p-4",
           tall ? "max-h-[78vh]" : "max-h-[52vh]",
         )}
       >
