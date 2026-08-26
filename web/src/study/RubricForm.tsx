@@ -7,49 +7,26 @@ import { Spinner } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
 import { ARM_META } from "./arms";
-import type { EvaluationRating, Usability } from "./types";
+import type { EvaluationRating, Instruments } from "./types";
 
 /**
- * Five questions about OUR variant, after the reveal.
+ * Four questions about OUR variant, after the reveal, and deliberately OPTIONAL.
  *
  * Each dimension answers to a clause the system's prompt claims to enforce — «practicar
  * no es usar» becomes `concept_fit`, self-sufficiency becomes `soundness`, context
  * variation becomes `originality`, calibration becomes `complexity`. That is what
  * connects the numbers to the design chapter instead of to a generic quality survey.
+ *
+ * The WORDING comes from the server and is not written here: a teacher and a student are
+ * asked the same four things in different words, and the wording is the instrument — one
+ * edit in `study/api/instruments.py`, never two copies drifting apart.
+ *
+ * Optional is the point. Everything blind was collected before the reveal, so somebody in
+ * a hurry has already left a complete datum and this is depth for whoever has the appetite
+ * for it. The usability question is gone from here: it moved to the blind per-card triage,
+ * and asking it twice about the same item in one session asks somebody to contradict
+ * themselves.
  */
-const SCALES: { key: keyof EvaluationRating; label: string; question: string; ends: [string, string] }[] = [
-  {
-    key: "originality",
-    label: "Originalidad",
-    question: "¿El escenario es original, o es el típico de libro de texto?",
-    ends: ["de libro de texto", "muy original"],
-  },
-  {
-    key: "complexity",
-    label: "Exigencia",
-    question: "¿La exigencia encaja con el nivel del curso?",
-    ends: ["trivial", "desbordado"],
-  },
-  {
-    key: "concept_fit",
-    label: "Ajuste al concepto",
-    question: "¿Practica de verdad los conceptos pedidos, o solo los menciona?",
-    ends: ["solo los menciona", "los practica"],
-  },
-  {
-    key: "soundness",
-    label: "Buen planteamiento",
-    question: "¿Está bien planteado: autosuficiente, sin ambigüedad y resoluble?",
-    ends: ["flojo", "impecable"],
-  },
-];
-
-const USABILITY: { value: Usability; label: string }[] = [
-  { value: "as_is", label: "Tal cual" },
-  { value: "with_edits", label: "Con retoques" },
-  { value: "no", label: "No" },
-];
-
 function Scale({
   value,
   onChange,
@@ -59,7 +36,7 @@ function Scale({
   value: number | undefined;
   onChange: (next: number) => void;
   ends: [string, string];
-  target?: number;
+  target?: number | null;
 }) {
   return (
     <div className="space-y-1">
@@ -72,13 +49,14 @@ function Scale({
             aria-label={`${score} de 5`}
             aria-pressed={value === score}
             className={cn(
-              "h-8 flex-1 rounded-md border text-body nums transition-colors",
+              "h-8 flex-1 border text-body nums transition-colors",
               value === score
                 ? "border-primary bg-primary text-primary-foreground font-medium"
-                : "border-border hover:bg-accent/60",
+                : "border-input hover:bg-accent/60",
               // The target of `complexity` is 3, not 5. Marking it is the only way the
-              // scale reads as "aim for the middle" instead of "more is better".
-              target === score && value !== score && "border-dashed border-primary/60",
+              // scale reads as "aim for the middle" instead of "more is better" — and it
+              // disappears once 3 IS the answer, because then there is nothing to point out.
+              target === score && value !== score && "border-dashed border-attention",
             )}
           >
             {score}
@@ -87,7 +65,7 @@ function Scale({
       </div>
       <div className="flex justify-between text-[11px] text-muted-foreground">
         <span>{ends[0]}</span>
-        {target ? <span className="text-primary/80">{target} = justo</span> : null}
+        {target ? <span className="text-attention">{target} = justo</span> : null}
         <span>{ends[1]}</span>
       </div>
     </div>
@@ -96,28 +74,33 @@ function Scale({
 
 export function RubricForm({
   rating,
+  instruments,
   onSave,
+  onSkip,
   pending,
 }: {
   rating: EvaluationRating | null;
+  instruments: Instruments;
   onSave: (rating: Partial<EvaluationRating>) => void;
+  onSkip: () => void;
   pending: boolean;
 }) {
   const [draft, setDraft] = useState<Partial<EvaluationRating>>(rating ?? {});
   const saved = Boolean(rating);
   const patch = (fields: Partial<EvaluationRating>) => setDraft({ ...draft, ...fields });
-  const complete = SCALES.every((scale) => draft[scale.key] !== undefined) && Boolean(draft.usability);
+  const key = (name: string) => name as keyof EvaluationRating;
+  const complete = instruments.rubric.every((scale) => draft[key(scale.key)] !== undefined);
 
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <section className="space-y-3 border border-border bg-card p-3 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-2">
         <h2 className="text-body font-semibold">
-          Sobre la variante de{" "}
-          <span style={{ color: ARM_META.system.colour }}>este sistema</span>
+          Si te apetece afinar la del{" "}
+          <span style={{ color: ARM_META.system.colour }}>sistema</span>
         </h2>
-        <p className="text-small text-muted-foreground">
-          Da igual cuál elegiste: esto describe lo que produjo el sistema.
-        </p>
+        <span className="bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          opcional
+        </span>
         {saved ? (
           <span className="ml-auto flex items-center gap-1 text-small text-settled">
             <Check className="size-3.5" />
@@ -126,41 +109,25 @@ export function RubricForm({
         ) : null}
       </header>
 
+      <p className="text-small text-muted-foreground">
+        Da igual cuál elegiste: esto describe lo que produjo el sistema.
+      </p>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        {SCALES.map((scale) => (
-          <div key={String(scale.key)} className="space-y-1.5">
+        {instruments.rubric.map((scale) => (
+          <div key={scale.key} className="space-y-1.5">
             <p className="text-small font-medium">{scale.label}</p>
             <p className="text-[11px] leading-snug text-muted-foreground">{scale.question}</p>
             <Scale
-              value={draft[scale.key] as number | undefined}
-              onChange={(next) => patch({ [scale.key]: next } as Partial<EvaluationRating>)}
+              value={draft[key(scale.key)] as number | undefined}
+              onChange={(next) =>
+                patch({ [scale.key]: next } as unknown as Partial<EvaluationRating>)
+              }
               ends={scale.ends}
-              target={scale.key === "complexity" ? 3 : undefined}
+              target={scale.target}
             />
           </div>
         ))}
-      </div>
-
-      <div className="space-y-1.5">
-        <p className="text-small font-medium">¿Lo usarías en clase?</p>
-        <div className="flex gap-1.5">
-          {USABILITY.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => patch({ usability: option.value })}
-              aria-pressed={draft.usability === option.value}
-              className={cn(
-                "h-8 flex-1 rounded-md border px-2 text-body transition-colors",
-                draft.usability === option.value
-                  ? "border-primary bg-primary text-primary-foreground font-medium"
-                  : "border-border hover:bg-accent/60",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <Textarea
@@ -171,10 +138,18 @@ export function RubricForm({
         className="min-h-16"
       />
 
-      <Button className="w-full" disabled={!complete || pending} onClick={() => onSave(draft)}>
-        {pending ? <Spinner /> : null}
-        {saved ? "Actualizar la valoración" : "Guardar la valoración"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-small text-muted-foreground">
+          Puedes saltarte esto: la comparación ya está registrada.
+        </p>
+        <Button variant="outline" onClick={onSkip}>
+          Saltar
+        </Button>
+        <Button disabled={!complete || pending} onClick={() => onSave(draft)}>
+          {pending ? <Spinner /> : null}
+          {saved ? "Actualizar la valoración" : "Guardar la valoración"}
+        </Button>
+      </div>
     </section>
   );
 }

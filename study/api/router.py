@@ -25,7 +25,7 @@ from server.routers.jobs import gate_error
 
 from .. import ARM_LABELS, ARMS, EvaluationSession
 from ..arms import external
-from . import queries
+from . import instruments, queries
 from . import store as evaluation_store
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
@@ -56,6 +56,15 @@ class RatingBody(BaseModel):
     concept_fit: int | None = None
     soundness: int | None = None
     usability: str | None = None
+    comment: str | None = None
+
+
+class TriageBody(BaseModel):
+    position: int
+    value: str
+
+
+class DeclineBody(BaseModel):
     comment: str | None = None
 
 
@@ -112,18 +121,52 @@ def listing(
     # The head of the chain, not the whole of it: this block is the "is the commercial arm
     # usable at all" banner, and which provider ends up answering is recorded per session.
     provider, model = external.primary()
+    assigned = queries.assigned_to(db, access.workspace.id, access.user.id)
     return {
         "sessions": [_summary(header) for header in sessions],
         "total": total,
         "limit": limit,
         "offset": offset,
         "arms": [{"key": arm, "label": ARM_LABELS[arm]} for arm in ARMS],
+        # The queue, which is what the screen opens on: what somebody handed this evaluator,
+        # oldest first, pending ones ahead of the ones already judged.
+        "queue": _queue(assigned),
+        # How this account is asked things. Served rather than hard-coded in the browser
+        # because it IS the instrument: rewording it changes what was measured.
+        "instruments": instruments.for_profile(access.user.evaluator_profile),
         "external": {
             "provider": provider,
             "model": model,
             "configured": external.is_configured(),
             "reason": external.unavailable_reason(),
         },
+    }
+
+
+# Pending first and oldest first inside each half: a queue is worked from the front, and
+# «la siguiente» has to mean the same thing on every reload.
+def _queue(rows: list) -> dict:
+    pending = [row for row in rows if row.chosen_at is None and row.declined_at is None]
+    done = [row for row in rows if row.chosen_at is not None or row.declined_at is not None]
+    return {
+        "total": len(rows),
+        "pending": len(pending),
+        "items": [
+            {
+                "id": row.id,
+                "created_at": row.created_at.timestamp() if row.created_at else 0.0,
+                "concepts": list(row.concepts or []),
+                "item_type": row.item_type or "",
+                "instructions": row.instructions or "",
+                # Who assigned it is recorded and the administration panel reads it; it is
+                # deliberately absent here. On the evaluator's own screen it would invite
+                # reading the judgement as owed to a person rather than to the study.
+                "decided": row.chosen_at is not None,
+                "declined": row.declined_at is not None,
+                "rated": bool(row.rating),
+            }
+            for row in [*pending, *done]
+        ],
     }
 
 
@@ -147,7 +190,53 @@ def detail(
     session_id: str, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
 ) -> dict:
     row = _require(db, session_id, access)
+    # The clock starts when the cards first reach the person who has to judge them. Since
+    # `_require` became an equality this row IS theirs, so the ownership half is a floor
+    # rather than the check it used to be — what is left to decide is only whether the
+    # session is still open.
+    if row.user_id == access.user.id and row.chosen_at is None and row.declined_at is None:
+        evaluation_store.mark_opened(db, row)
+        db.refresh(row)
     return _payload(EvaluationSession.from_dict(row.trace))
+
+
+# One card, one answer, blind. It has to arrive before the choice, which is the entire
+# reason it exists: a score given after the reveal is a score about a name.
+@router.post("/{session_id}/triage", dependencies=[auth.EDIT])
+def triage(
+    session_id: str,
+    body: TriageBody,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    row = _require(db, session_id, access)
+    try:
+        session = evaluation_store.record_triage(db, row, body.position, body.value)
+    except ValueError as e:
+        if str(e) == "already-chosen":
+            raise HTTPException(409, "Esta sesión ya está cerrada.") from None
+        raise HTTPException(422, str(e)) from None
+    return _payload(session)
+
+
+# «No me veo capacitado para juzgar esto», which with evaluators drawn from different
+# subjects is a real answer and not an escape hatch. It closes the session without ever
+# entering a preference count.
+@router.post("/{session_id}/decline", dependencies=[auth.EDIT])
+def decline(
+    session_id: str,
+    body: DeclineBody,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    row = _require(db, session_id, access)
+    try:
+        session = evaluation_store.record_decline(db, row, body.comment)
+    except ValueError as e:
+        if str(e) == "already-chosen":
+            raise HTTPException(409, "Esta sesión ya está cerrada.") from None
+        raise HTTPException(422, str(e)) from None
+    return _payload(session)
 
 
 @router.post("/{session_id}/choice", dependencies=[auth.EDIT])
@@ -196,11 +285,17 @@ def rate(
 # Two conditions, not one: the session has to belong to this workspace *and* to whoever is
 # asking. The workspace check alone would let a colleague open a comparison they never ran
 # and read its reveal.
+#
+# THE SECOND CONDITION IS AN EQUALITY, AND ITS TWO LOOPHOLES WERE THE SAME BUG. It used to
+# read «not mine AND not an administrator», which let an administrator ANSWER somebody
+# else's session — recorded under that somebody, because no answer rewrites `user_id` — and
+# it let a session with no evaluator through for everyone, which is what stock is. Reading
+# another account's session is the administration panel's own route, and it does not write.
 def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession:
     row = queries.get_evaluation(db, session_id)
     if row is None or row.workspace_id != access.workspace.id:
         raise HTTPException(404, f"No existe la sesión '{session_id}'")
-    if row.user_id is not None and row.user_id != access.user.id and not access.user.is_admin:
+    if row.user_id != access.user.id:
         raise HTTPException(404, f"No existe la sesión '{session_id}'")
     return row
 
@@ -214,9 +309,11 @@ def _summary(header: dict) -> dict:
         "concepts": header.get("concepts") or [],
         "item_type": header.get("item_type"),
         "instructions": header.get("instructions") or "",
+        "assigned": bool(header.get("assigned")),
         "choice": header.get("choice"),
         "choice_arm": header.get("choice_arm"),
         "chosen_at": header.get("chosen_at"),
+        "declined_at": header.get("declined_at"),
         "rated": bool(header.get("rating")),
         # Like `arm_status`: history of a judged session, withheld while it is pending.
         "think": bool(header.get("think", True)) if decided else None,
@@ -229,7 +326,10 @@ def _summary(header: dict) -> dict:
 
 
 def _payload(session: EvaluationSession) -> dict:
-    revealed = session.decided
+    # A declined session reveals too: it is over, nobody will judge it, and withholding the
+    # answer from someone who just said they could not judge it would be a punishment for
+    # having said so.
+    revealed = session.finished
     return {
         "session": {
             "id": session.id,
@@ -241,9 +341,12 @@ def _payload(session: EvaluationSession) -> dict:
             "curriculum": session.curriculum,
             "instructions": session.instructions,
             "revealed": revealed,
+            "assigned": session.assigned_by is not None,
+            "triage": dict(session.triage),
             "choice": session.choice,
             "choice_arm": session.choice_arm,
             "chosen_at": session.chosen_at,
+            "declined_at": session.declined_at,
             "evaluator_note": session.evaluator_note,
             "rating": session.rating,
             # Only after the reveal: the seed is the shuffle, and the reasoning mode is

@@ -44,6 +44,19 @@ class _BlindEmitter:
         return self._inner.should_cancel()
 
 
+# WHO HAS TO JUDGE WHAT THIS PRODUCES ----------------------------------------------------
+#
+# A comparison ordered from the administration panel is STOCK: three items nobody has been
+# handed yet, waiting for somebody to be judged competent for them. Recording it under
+# whoever pressed the button put it in that person's own «Mis sesiones» and let them answer,
+# unassigned, what they had prepared for somebody else — and since no answer ever rewrites
+# `user_id`, the judgement would have been filed under that name too.
+#
+# So stock has no evaluator, and `store.assign` is the only thing that gives a set one.
+def evaluator_of(job: Job) -> int | None:
+    return None if job.params.get("stock") else job.user_id
+
+
 def handle_evaluate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     context = context_for(job)
@@ -84,7 +97,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
                 f"El workspace '{job.workspace}' ya no está en la base de datos: "
                 "la sesión de evaluación no se puede guardar."
             )
-        evaluation_store.save(db_session, workspace.id, job.user_id, session)
+        evaluation_store.save(db_session, workspace.id, evaluator_of(job), session)
 
     produced = sum(1 for result in session.arms.values() if result.status == "ok")
     logger.success(

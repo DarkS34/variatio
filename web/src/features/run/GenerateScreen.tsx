@@ -21,15 +21,9 @@ import {
   useSubmitJob,
 } from "@/state/queries";
 
+import { EMPTY_FORM, fromParams, toParams, type FormState } from "./commission";
 import { takeDraft } from "./draft";
-import {
-  EMPTY_FORM,
-  GenerateForm,
-  fromParams,
-  summarize,
-  toParams,
-  type FormState,
-} from "./GenerateForm";
+import { GenerateForm, summarize } from "./GenerateForm";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 

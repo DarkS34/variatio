@@ -3,11 +3,20 @@ import type { Job } from "@/lib/types";
 
 import type {
   AdminEvaluations,
+  AdminSets,
+  AssignableAccount,
   EvaluationDetail,
   EvaluationListing,
   EvaluationParams,
   EvaluationRating,
+  TriageValue,
 } from "./types";
+
+/** The commission, plus where it runs and how many separate comparisons to prepare. */
+export interface AdminGenerateParams extends EvaluationParams {
+  workspace: string;
+  n: number;
+}
 
 const filterQuery = (filters: { workspace?: string | null; account?: number | null }) => {
   const search = new URLSearchParams();
@@ -25,9 +34,16 @@ export const studyApi = {
   evaluations: (limit = 50, offset = 0) =>
     request<EvaluationListing>(`/api/evaluation?limit=${limit}&offset=${offset}`),
   evaluation: (id: string) => request<EvaluationDetail>(`/api/evaluation/${id}`),
+  /** One card, one answer, BEFORE the choice: a score given after the reveal is a score
+   *  about a name. The server refuses it once the session is closed. */
+  triageProposal: (id: string, position: number, value: TriageValue) =>
+    post<EvaluationDetail>(`/api/evaluation/${id}/triage`, { position, value }),
   /** The reveal: the response already carries the origins of the three proposals. */
   chooseEvaluation: (id: string, choice: number | null, comment?: string) =>
     post<EvaluationDetail>(`/api/evaluation/${id}/choice`, { choice, comment }),
+  /** «No tengo criterio»: closes the session without ever recording a preference. */
+  declineEvaluation: (id: string, comment?: string) =>
+    post<EvaluationDetail>(`/api/evaluation/${id}/decline`, { comment }),
   rateEvaluation: (id: string, rating: Partial<EvaluationRating>) =>
     post<EvaluationDetail>(`/api/evaluation/${id}/rating`, rating),
   deleteEvaluations: (ids: string[]) =>
@@ -45,4 +61,18 @@ export const studyApi = {
       method: "DELETE",
       body: JSON.stringify({ ids }),
     }),
+
+  // Handing sets out. By hand and not by rule: the administrator is the one who knows
+  // which subject each evaluator teaches.
+  adminAssignableAccounts: () =>
+    request<{ accounts: AssignableAccount[] }>("/api/admin/evaluations/accounts"),
+  adminGenerateEvaluations: (body: AdminGenerateParams) =>
+    post<{ jobs: Job[]; since: number }>("/api/admin/evaluations/generate", body),
+  adminSets: (workspace: string) =>
+    request<AdminSets>(`/api/admin/evaluations/sets?workspace=${encodeURIComponent(workspace)}`),
+  adminAssignSet: (setId: string, accounts: number[], repeat = false) =>
+    post<{ set_id: string; assigned: { session_id: string; account: string }[]; already_had_it: string[] }>(
+      `/api/admin/evaluations/sets/${setId}/assign`,
+      { accounts, repeat },
+    ),
 };

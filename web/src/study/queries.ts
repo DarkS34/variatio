@@ -2,14 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { runStore } from "@/state/runStore";
 
-import { studyApi } from "./api";
-import type { EvaluationDetail, EvaluationParams, EvaluationRating } from "./types";
+import { studyApi, type AdminGenerateParams } from "./api";
+import type {
+  EvaluationDetail,
+  EvaluationParams,
+  EvaluationRating,
+  TriageValue,
+} from "./types";
 
 export const studyKeys = {
   evaluations: ["evaluations"] as const,
   evaluation: (id: string) => ["evaluations", id] as const,
   adminEvaluations: (filters: Record<string, unknown>) =>
     ["admin", "evaluations", filters] as const,
+  adminSets: (workspace: string) => ["admin", "evaluations", "sets", workspace] as const,
 };
 
 export function useEvaluations(limit = 50) {
@@ -50,6 +56,18 @@ export function useChooseProposal() {
   );
 }
 
+export function useTriageProposal() {
+  return useSessionMutation<{ position: number; value: TriageValue }>((id, payload) =>
+    studyApi.triageProposal(id, payload.position, payload.value),
+  );
+}
+
+export function useDeclineSession() {
+  return useSessionMutation<{ comment?: string }>((id, payload) =>
+    studyApi.declineEvaluation(id, payload.comment),
+  );
+}
+
 export function useRateSession() {
   return useSessionMutation<Partial<EvaluationRating>>((id, payload) =>
     studyApi.rateEvaluation(id, payload),
@@ -81,3 +99,43 @@ function useDeletion(call: (ids: string[]) => Promise<{ deleted: string[] }>) {
 
 export const useDeleteOwnEvaluations = () => useDeletion(studyApi.deleteEvaluations);
 export const useDeleteEvaluations = () => useDeletion(studyApi.adminDeleteEvaluations);
+
+export function useAssignableAccounts() {
+  return useQuery({
+    queryKey: ["admin", "evaluations", "accounts"] as const,
+    queryFn: () => studyApi.adminAssignableAccounts(),
+  });
+}
+
+export function useGenerateEvaluations() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AdminGenerateParams) => studyApi.adminGenerateEvaluations(body),
+    onSuccess: ({ jobs }) => {
+      // The last one is what the run drawer follows; the queue behind it is the runner's.
+      if (jobs.length > 0) runStore.setCurrentJob(jobs[jobs.length - 1].id);
+      client.invalidateQueries({ queryKey: ["admin", "evaluations"] });
+    },
+  });
+}
+
+export function useEvaluationSets(workspace: string | null) {
+  return useQuery({
+    queryKey: studyKeys.adminSets(workspace ?? "none"),
+    queryFn: () => studyApi.adminSets(workspace!),
+    enabled: Boolean(workspace),
+  });
+}
+
+export function useAssignSet() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ setId, accounts, repeat }: { setId: string; accounts: number[]; repeat?: boolean }) =>
+      studyApi.adminAssignSet(setId, accounts, repeat),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["admin", "evaluations"] });
+      // The assignees' own queues change too, and one of them may be this browser.
+      client.invalidateQueries({ queryKey: studyKeys.evaluations });
+    },
+  });
+}

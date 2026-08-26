@@ -1,6 +1,6 @@
 import type { GenerationRow } from "@/lib/types";
 
-import { EMPTY_FORM, type FormState } from "./GenerateForm";
+import { EMPTY_FORM, type FormState } from "./commission";
 
 const KEY = "vg.generate.draft";
 

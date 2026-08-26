@@ -36,9 +36,14 @@ def upsert_evaluation(
     row.seed = int(payload.get("seed") or 0)
     row.shuffle = list(payload.get("shuffle") or [])
     row.think = bool(payload.get("think", True))
+    row.set_id = payload.get("set_id") or session_id
+    row.assigned_by = payload.get("assigned_by")
+    row.triage = dict(payload.get("triage") or {})
     row.choice = payload.get("choice")
     row.choice_arm = payload.get("choice_arm")
     row.chosen_at = payload.get("chosen_at")
+    row.opened_at = payload.get("opened_at")
+    row.declined_at = payload.get("declined_at")
     row.evaluator_note = payload.get("evaluator_note")
     row.rating = payload.get("rating")
     row.arm_status = {
@@ -105,3 +110,48 @@ def all_evaluations(
     if workspace_id is not None:
         query = query.where(EvalSession.workspace_id == workspace_id)
     return [(row, user) for row, user in session.execute(query)]
+
+
+# Every session that shares these three items, whoever it belongs to. This is the query the
+# agreement between evaluators is computed from, and the only one that deliberately ignores
+# who is asking — which is why it is never reachable from the evaluator's own router.
+def sessions_in_set(session: Session, set_id: str) -> list[EvalSession]:
+    return list(
+        session.scalars(
+            select(EvalSession)
+            .where(EvalSession.set_id == set_id)
+            .order_by(EvalSession.created_at.asc())
+        )
+    )
+
+
+# What an evaluator has been handed and has not finished. Ordered oldest first: a queue is
+# worked from the front, and «la siguiente» has to mean the same thing on every reload.
+def assigned_to(
+    session: Session, workspace_id: int, user_id: int, pending_only: bool = False
+) -> list[EvalSession]:
+    query = select(EvalSession).where(
+        EvalSession.workspace_id == workspace_id,
+        EvalSession.user_id == user_id,
+        EvalSession.assigned_by.is_not(None),
+    )
+    if pending_only:
+        query = query.where(
+            EvalSession.chosen_at.is_(None), EvalSession.declined_at.is_(None)
+        )
+    return list(session.scalars(query.order_by(EvalSession.created_at.asc())))
+
+
+# The distinct sets of a workspace with one representative row each, for the panel that
+# hands them out. `created_at` of the earliest row is when those three items came into
+# existence, which is what the administrator is choosing between.
+def sets_in_workspace(session: Session, workspace_id: int) -> list[EvalSession]:
+    rows = session.scalars(
+        select(EvalSession)
+        .where(EvalSession.workspace_id == workspace_id)
+        .order_by(EvalSession.created_at.asc())
+    )
+    seen: dict[str, EvalSession] = {}
+    for row in rows:
+        seen.setdefault(row.set_id or row.id, row)
+    return list(seen.values())

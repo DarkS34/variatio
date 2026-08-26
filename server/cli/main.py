@@ -71,6 +71,12 @@ def build_parser():
         default="",
         help="contraseña; si se omite se pregunta (o se lee de VG_PASSWORD)",
     )
+    creator.add_argument(
+        "--profile",
+        default=None,
+        choices=("teacher", "student"),
+        help="perfil de evaluador: decide qué se le pregunta al comparar propuestas",
+    )
     creator.set_defaults(func=guarded(accounts.create_user))
 
     users = subparsers.add_parser("users", help="lista las cuentas y sus roles")
@@ -85,6 +91,12 @@ def build_parser():
     inviter = subparsers.add_parser("invite", help="crea una invitación de un solo uso")
     inviter.add_argument("--workspace", default="default", help="workspace al que suma; '' para ninguno")
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
+    inviter.add_argument(
+        "--profile",
+        default=None,
+        choices=("teacher", "student"),
+        help="perfil con el que nacerá la cuenta que canjee el enlace",
+    )
     inviter.set_defaults(func=guarded(accounts.invite))
 
     check = subparsers.add_parser("db-check", help="comprueba la conexión con la base de datos")

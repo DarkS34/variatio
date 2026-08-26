@@ -26,7 +26,6 @@ import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
 import type {
   CurriculumState,
   ExemplarsProfile,
-  GenerateParams,
   GraphView,
   ItemTypeSpec,
   KgConcept,
@@ -34,15 +33,9 @@ import type {
 import { cn } from "@/lib/utils";
 import { useHealth, useScope } from "@/state/queries";
 
+import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
-import {
-  EFFORT_LABELS,
-  EFFORT_ORDER,
-  clampEffort,
-  effortPolicy,
-  effortWarning,
-  type EffortLevel,
-} from "./effort";
+import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effort";
 import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
@@ -50,39 +43,6 @@ import { adjacency, posteriors, priors } from "./prerequisites";
 const MAX_ITEMS = 20;
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
 const MAX_INSTRUCTIONS = 600;
-
-export interface FormState {
-  n: number;
-  concepts: string[];
-  /** null means "not chosen yet"; it resolves on its own only when the profile declares a
-   *  single modality, because then there is nothing to choose. */
-  itemType: string | null;
-  /** Off = no restriction. */
-  useCurriculum: boolean;
-  /** Only counts with `useCurriculum`. On = the workspace's own. */
-  usePresetCurriculum: boolean;
-  /** The ad-hoc one; only counts with `useCurriculum` on and `usePresetCurriculum` off. */
-  curriculum: string[];
-  decisions: Record<string, unknown>;
-  instructions: string;
-  /** Only the "generate" variant reads it: an evaluation draws its own, at random. */
-  think: boolean;
-  /** Only counts with `think` on; what the engine receives as reasoning effort. */
-  effort: EffortLevel;
-}
-
-export const EMPTY_FORM: FormState = {
-  n: 2,
-  concepts: [],
-  itemType: null,
-  useCurriculum: false,
-  usePresetCurriculum: true,
-  curriculum: [],
-  decisions: {},
-  instructions: "",
-  think: true,
-  effort: "low",
-};
 
 /** The modality actually in force: what the form shows and what the run will produce. */
 export function activeTypeKey(
@@ -100,62 +60,6 @@ export function activeTypeSpec(
 ): ItemTypeSpec | null {
   const key = activeTypeKey(state, profile);
   return key && profile ? profile.item_types[key] : null;
-}
-
-export function toParams(state: FormState): GenerateParams {
-  const params: GenerateParams = {
-    n: state.n,
-    concepts: state.concepts,
-    // Off travels as `false`; on travels as the level itself, which the engine boundary
-    // forwards untouched (`_think_option` / `reasoning_effort`).
-    think: state.think ? state.effort : false,
-  };
-  if (state.itemType) params.item_type = state.itemType;
-  const fixed: Record<string, unknown> = {};
-  for (const [field, value] of Object.entries(state.decisions)) {
-    if (value === undefined || value === null) continue;
-    if (typeof value === "string" && !value.trim()) continue;
-    fixed[field] = value;
-  }
-  if (Object.keys(fixed).length > 0) params.fixed = fixed;
-  // Absent and `[]` are NOT the same request: `server/curriculum.resolve` returns the
-  // parameter unchanged whenever it is given — the empty list included, which is how one
-  // says "no restriction" — and only falls back to the workspace's stored curriculum when
-  // nothing arrives at all. So the preset case sends no field, not an empty one.
-  if (!state.useCurriculum) params.curriculum = [];
-  else if (!state.usePresetCurriculum) params.curriculum = state.curriculum;
-  if (state.instructions.trim()) params.instructions = state.instructions.trim();
-  return params;
-}
-
-// The exact inverse of `toParams`, and it has to stay its mirror: it is what lets a screen
-// describe the commission that RAN instead of the one on screen. A job carries its own
-// parameters; the form state does not survive a reload or a visit to another screen, so the
-// two drift apart and the collapsed bar ends up quoting the empty form's defaults over the
-// results of a run that asked for something else.
-export function fromParams(params: Record<string, unknown>): FormState {
-  const curriculum = Array.isArray(params.curriculum)
-    ? (params.curriculum as string[])
-    : undefined;
-  return {
-    ...EMPTY_FORM,
-    // `int(params.get("n") or 1)`, as the handler reads it.
-    n: Number(params.n) || 1,
-    concepts: Array.isArray(params.concepts) ? [...(params.concepts as string[])] : [],
-    itemType: (params.item_type as string) || null,
-    // Absent is the workspace's own and `[]` is «sin restricción», exactly as the server
-    // resolves them.
-    useCurriculum: curriculum === undefined || curriculum.length > 0,
-    usePresetCurriculum: curriculum === undefined,
-    curriculum: curriculum ? [...curriculum] : [],
-    decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },
-    instructions: (params.instructions as string) ?? "",
-    think: params.think !== false,
-    effort:
-      typeof params.think === "string" && EFFORT_ORDER.includes(params.think as EffortLevel)
-        ? (params.think as EffortLevel)
-        : "low",
-  };
 }
 
 // The curriculum in force, in words: the form step reads it and so does the one line that
@@ -276,10 +180,18 @@ function ChosenConcepts({
   );
 }
 
-function Count({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+export function Count({
+  value,
+  onChange,
+  max = MAX_ITEMS,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  max?: number;
+}) {
   // A stepper rather than a number box: emptying the box yields NaN, which compares
   // false against every bound and used to travel all the way to the server as null.
-  const clamp = (next: number) => onChange(Math.min(MAX_ITEMS, Math.max(1, next)));
+  const clamp = (next: number) => onChange(Math.min(max, Math.max(1, next)));
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border p-1">
       <Button variant="ghost" size="icon-sm" onClick={() => clamp(value - 1)} disabled={value <= 1}>
@@ -290,7 +202,7 @@ function Count({ value, onChange }: { value: number; onChange: (next: number) =>
         variant="ghost"
         size="icon-sm"
         onClick={() => clamp(value + 1)}
-        disabled={value >= MAX_ITEMS}
+        disabled={value >= max}
       >
         <Plus />
       </Button>
@@ -313,6 +225,7 @@ export function GenerateForm({
   onCancel,
   variant = "generate",
   footnote,
+  launchLabel,
 }: {
   state: FormState;
   onChange: (next: FormState) => void;
@@ -331,6 +244,9 @@ export function GenerateForm({
    *  guarantees the commission is the same one on both screens. */
   variant?: "generate" | "evaluation";
   footnote?: ReactNode;
+  /** Overrides the launch button's text. The panel commissions a BATCH of comparisons,
+   *  which «Comparar tres propuestas» would misreport as one. */
+  launchLabel?: string;
 }) {
   const [open, setOpen] = useState<string | null | undefined>(undefined);
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
@@ -892,9 +808,10 @@ export function GenerateForm({
               onClick={onLaunch}
             >
               {pending ? <Spinner /> : variant === "evaluation" ? <Scale /> : <Play />}
-              {variant === "evaluation"
-                ? "Comparar tres propuestas"
-                : `Generar ${state.n} ítem${state.n === 1 ? "" : "s"}`}
+              {launchLabel ??
+                (variant === "evaluation"
+                  ? "Comparar tres propuestas"
+                  : `Generar ${state.n} ítem${state.n === 1 ? "" : "s"}`)}
             </Button>
           )}
         </div>

@@ -3,17 +3,18 @@ import { useMemo } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
-import { Checkbox, EmptyState, Skeleton } from "@/components/ui/misc";
+import { Checkbox, Skeleton } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { BarRows, DayColumns, ShareMeter, type BarRow } from "@/features/admin/charts";
 import { duration, when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+import { AdminSetsPanel } from "./AdminSetsPanel";
 import { ARM_META } from "./arms";
 import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
 import { studyApi } from "./api";
-import type { AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
+import type { AdminEvaluations, AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
 import { useSelection } from "./useSelection";
 
 /** A three-way blind choice: what pure chance would produce. Every share is read
@@ -53,101 +54,341 @@ export function StudyTab({
   const csv = studyApi.adminEvaluationCsvUrl({ workspace, account });
 
   return (
-    <div className="space-y-5">
-      {/* Filters in one row above the charts, so what is being looked at is stated
-          before the numbers rather than inferred from them. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Select
-          aria-label="Filtrar el estudio por workspace"
-          value={workspace ?? ""}
-          onChange={(event) => onWorkspace(event.target.value || null)}
-          className="w-56"
-        >
-          <option value="">Todos los workspaces</option>
-          {data.filters.workspaces.map((slug) => (
-            <option key={slug} value={slug}>
-              {slug}
-            </option>
-          ))}
-        </Select>
+    <div className="space-y-8">
+      {/* Handing comparisons out comes FIRST, before any number: it is the only thing on
+          this screen that is work rather than a reading, and it is what makes the numbers
+          below exist at all. It carries its own person-and-workspace choice, and the
+          filter that now sits BELOW it does not reach it — the two used to run together
+          in one column, with the reading filter on top, where it read as if it governed
+          the reparto as well. */}
+      <Section
+        eyebrow="Reparto"
+        title="Repartir comparaciones"
+        description="La cuenta, la instancia y el conjunto se eligen aquí dentro. El filtro de abajo no afecta a este bloque."
+      >
+        <Card>
+          <AdminSetsPanel />
+        </Card>
+      </Section>
 
-        {account !== null ? (
-          <Button variant="outline" size="sm" onClick={() => onAccount(null)}>
-            Quitar el filtro de cuenta
-          </Button>
-        ) : null}
+      <Section
+        eyebrow="Resultados"
+        title="Lo que ya se ha evaluado"
+        description="Solo lectura. El filtro acota lo que muestran las tarjetas y lo que descarga el CSV; no cambia nada de lo repartido."
+      >
+        {/* The filter stays above the numbers inside its own section, so what is being
+            looked at is stated before the numbers rather than inferred from them. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            aria-label="Filtrar el estudio por workspace"
+            value={workspace ?? ""}
+            onChange={(event) => onWorkspace(event.target.value || null)}
+            className="w-56"
+          >
+            <option value="">Todos los workspaces</option>
+            {data.filters.workspaces.map((slug) => (
+              <option key={slug} value={slug}>
+                {slug}
+              </option>
+            ))}
+          </Select>
 
-        {filtered ? (
-          <span className="text-small text-muted-foreground">
-            {data.aggregates.sessions} sesión(es) en el filtro
-          </span>
-        ) : null}
+          {account !== null ? (
+            <Button variant="outline" size="sm" onClick={() => onAccount(null)}>
+              Quitar el filtro de cuenta
+            </Button>
+          ) : null}
 
-        <a
-          href={csv}
-          download
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}
-        >
-          <Download />
-          CSV{filtered ? " (filtrado)" : ""}
-        </a>
-      </div>
+          {filtered ? (
+            <span className="text-small text-muted-foreground">
+              {data.aggregates.sessions} sesión(es) en el filtro
+            </span>
+          ) : null}
 
-      {data.aggregates.sessions === 0 ? (
-        <EmptyState title="Todavía no hay comparaciones registradas">
-          En cuanto alguien evalúe, aquí aparecerá el marcador y podrás descargarlo.
-        </EmptyState>
-      ) : (
-        <>
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            <Card title="Cuántas veces ganó cada propuesta">
-              <Preferences aggregates={data.aggregates} />
-            </Card>
-            <Card title="Ritmo del estudio">
-              <DayColumns points={data.per_day} />
-            </Card>
-          </div>
+          <a
+            href={csv}
+            download
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}
+          >
+            <Download />
+            CSV{filtered ? " (filtrado)" : ""}
+          </a>
+        </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <Card title="Rúbrica sobre la variante del sistema">
-              <Rubric aggregates={data.aggregates} />
-            </Card>
-            <Card title="¿Aporta algo el razonamiento previo?">
-              <ThinkEffect aggregates={data.aggregates} />
-            </Card>
-          </div>
-
-          <Card title="Por cuenta">
-            <GroupTable
-              groups={data.by_account}
-              firstHeader="Evaluador"
-              onSelect={(group) => onAccount(Number(group.key) || null)}
-            />
+        {/* Not an `EmptyState`: its title sits at the same type step as the section
+            heading right above it, and two titles of one level nested inside each other
+            is the hierarchy this split exists to fix. Here it is a state of the section,
+            so it is written at the level of what it replaces — the cards. */}
+        {data.aggregates.sessions === 0 ? (
+          <Card>
+            <p className="text-small text-muted-foreground">
+              {filtered
+                ? "Hay comparaciones registradas, pero ninguna encaja con este filtro. Quítalo para verlas todas."
+                : "Todavía no hay ninguna comparación evaluada. En cuanto alguien evalúe, aquí aparecerá el marcador y podrás descargarlo."}
+            </p>
           </Card>
+        ) : (
+          <>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+              <Card title="Cuántas veces ganó cada propuesta">
+                <Preferences aggregates={data.aggregates} />
+              </Card>
+              <Card title="Ritmo del estudio">
+                <DayColumns points={data.per_day} />
+              </Card>
+            </div>
 
-          <Card title="Por workspace">
-            <GroupTable
-              groups={data.by_workspace}
-              firstHeader="Workspace"
-              onSelect={(group) => onWorkspace(String(group.key) || null)}
-            />
-          </Card>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <Card title="¿Usarían cada propuesta? (a ciegas, por tarjeta)">
+                <Triage aggregates={data.aggregates} />
+              </Card>
+              <Card title="Calidad de la medición">
+                <Measurement data={data} />
+              </Card>
+            </div>
 
-          <Card title={`Sesiones (${data.sessions.length})`}>
-            <SessionsTable rows={data.sessions} />
-          </Card>
-        </>
-      )}
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <Card title="Rúbrica sobre la variante del sistema">
+                <Rubric aggregates={data.aggregates} />
+              </Card>
+              <Card title="¿Aporta algo el razonamiento previo?">
+                <ThinkEffect aggregates={data.aggregates} />
+              </Card>
+            </div>
+
+            <Card title="Por perfil">
+              <GroupTable groups={data.by_profile} firstHeader="Perfil" />
+            </Card>
+
+            <Card title="Por cuenta">
+              <GroupTable
+                groups={data.by_account}
+                firstHeader="Evaluador"
+                onSelect={(group) => onAccount(Number(group.key) || null)}
+              />
+            </Card>
+
+            <Card title="Por workspace">
+              <GroupTable
+                groups={data.by_workspace}
+                firstHeader="Workspace"
+                onSelect={(group) => onWorkspace(String(group.key) || null)}
+              />
+            </Card>
+
+            <Card title={`Sesiones (${data.sessions.length})`}>
+              <SessionsTable rows={data.sessions} />
+            </Card>
+          </>
+        )}
+      </Section>
     </div>
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * The two halves of this screen, told apart by structure rather than by colour: an
+ * eyebrow at the condensed micro step, a title two steps above the cards' own, and a rule
+ * under both. What separates them is the verb — the first WRITES (it generates and hands
+ * out), the second only READS — and that is what the description line says, because the
+ * mistake it exists to stop is reading the reparto as something the filter governs.
+ */
+function Section({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
-      <h2 className="text-small font-medium">{title}</h2>
+    <section className="space-y-4">
+      <header className="space-y-1 border-b border-border pb-2">
+        <p className="text-micro font-condensed uppercase text-muted-foreground">{eyebrow}</p>
+        <h2 className="font-display font-expanded text-title">{title}</h2>
+        <p className="text-small text-muted-foreground">{description}</p>
+      </header>
       {children}
     </section>
+  );
+}
+
+function Card({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+      {title ? <h3 className="text-small font-medium">{title}</h3> : null}
+      {children}
+    </section>
+  );
+}
+
+const percent = (value: number | null | undefined) =>
+  value == null ? "—" : `${Math.round(value * 100)} %`;
+
+/** A p-value is written as a threshold, not as a verdict: the panel reports, it does not
+ *  conclude. `< 0.001` rather than a wall of zeros, and never a "significativo" label. */
+function pValue(p: number | null | undefined): string {
+  if (p == null) return "—";
+  if (p < 0.001) return "p < 0,001";
+  return `p = ${p.toFixed(3).replace(".", ",")}`;
+}
+
+/**
+ * The blind per-card answer, and the only quality signal the study has for ALL THREE
+ * architectures — the rubric below describes the system's variant alone.
+ *
+ * «Usaría» folds «tal cual» and «con retoques» together, because that is the question a
+ * teacher is really answering: would this save me work. The stricter reading sits beside
+ * it rather than instead of it.
+ */
+function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const rows = ARMS.filter((arm) => aggregates.triage?.[arm]);
+  if (rows.length === 0) {
+    return (
+      <p className="text-small text-muted-foreground">
+        Todavía sin respuestas de triaje. Se recogen a ciegas, una por tarjeta, antes de
+        elegir.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <BarRows
+        rows={rows.map((arm) => {
+          const slice = aggregates.triage[arm]!;
+          return {
+            key: arm,
+            label: ARM_META[arm].label,
+            value: slice.counts.yes + slice.counts.partly,
+            colour: ARM_META[arm].colour,
+            detail: `${ARM_META[arm].short} · ${slice.counts.yes} tal cual, ${slice.counts.partly} con retoques, ${slice.counts.no} no`,
+          };
+        })}
+        total={Math.max(...rows.map((arm) => aggregates.triage[arm]!.n))}
+      />
+      {/* Three rows of four short figures: a list, not a table. `ui/table.tsx` is for
+          things that are actually tabular and scroll. */}
+      <dl className="space-y-1 text-small">
+        {rows.map((arm) => {
+          const slice = aggregates.triage[arm]!;
+          return (
+            <div key={arm} className="flex flex-wrap items-baseline gap-x-3 border-t border-border pt-1">
+              <dt className="min-w-20 text-muted-foreground">{ARM_META[arm].short}</dt>
+              <dd className="nums font-medium">{percent(slice.usable)} la usarían</dd>
+              <dd className="nums text-muted-foreground">{percent(slice.outright)} tal cual</dd>
+              <dd className="ml-auto nums text-muted-foreground">
+                {slice.ci95_usable
+                  ? `IC95 ${percent(slice.ci95_usable[0])}–${percent(slice.ci95_usable[1])}`
+                  : "—"}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
+
+/**
+ * Whether the study's own instrument can be trusted, which is the question the literature
+ * asks hardest and the one this panel could not answer before.
+ *
+ * The agreement is POOLED over evaluator pairs sharing a set rather than computed for a
+ * fixed pair of raters, because this panel is not one — evaluators teach different
+ * subjects and overlap where an administrator decided. That makes it Scott's π rather than
+ * Cohen's κ proper, and the memoria has to say so instead of calling the number κ.
+ */
+function Measurement({ data }: { data: AdminEvaluations }) {
+  const { agreement, aggregates } = data;
+  const position = aggregates.position;
+  const duration = aggregates.duration;
+
+  return (
+    <div className="space-y-3 text-small">
+      <div className="space-y-1">
+        <p className="font-medium">Acuerdo entre evaluadores</p>
+        {agreement.choice.pairs > 0 ? (
+          <p className="text-muted-foreground">
+            {agreement.choice.pairs} par(es) sobre {agreement.sets_shared} comparación(es)
+            repartida(s) a más de una persona. Coinciden en la elección el{" "}
+            <span className="nums text-foreground">{percent(agreement.choice.observed)}</span>{" "}
+            de las veces
+            {agreement.choice.kappa != null ? (
+              <>
+                {" "}
+                (π ={" "}
+                <span className="nums text-foreground">
+                  {agreement.choice.kappa.toFixed(2).replace(".", ",")}
+                </span>
+                )
+              </>
+            ) : null}
+            {agreement.triage.pairs > 0 ? (
+              <>
+                ; en el triaje, {percent(agreement.triage.observed)} sobre{" "}
+                {agreement.triage.pairs} pares.
+              </>
+            ) : (
+              "."
+            )}
+          </p>
+        ) : (
+          <p className="text-muted-foreground">
+            Ninguna comparación la han juzgado dos personas todavía. Reparte alguna arriba a
+            más de un evaluador y aquí aparecerá el acuerdo.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <p className="font-medium">¿Decidió algo la posición de la tarjeta?</p>
+        {position.n > 0 ? (
+          <p className="text-muted-foreground">
+            A: <span className="nums text-foreground">{position.counts["1"] ?? 0}</span> · B:{" "}
+            <span className="nums text-foreground">{position.counts["2"] ?? 0}</span> · C:{" "}
+            <span className="nums text-foreground">{position.counts["3"] ?? 0}</span> ·{" "}
+            <span className="nums">{pValue(position.p)}</span> frente al reparto uniforme.
+          </p>
+        ) : (
+          <p className="text-muted-foreground">Sin elecciones todavía.</p>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <p className="font-medium">Cuánto se tarda en juzgar</p>
+        {duration.n > 0 ? (
+          <p className="text-muted-foreground">
+            Mediana <span className="nums text-foreground">{duration.median} s</span> sobre{" "}
+            {duration.n} sesión(es)
+            {duration.under_20s ? (
+              <>
+                {" "}
+                · <span className="nums">{duration.under_20s}</span> por debajo de 20 s, que
+                no da para leer tres enunciados
+              </>
+            ) : null}
+            .
+          </p>
+        ) : (
+          <p className="text-muted-foreground">Sin medidas todavía.</p>
+        )}
+      </div>
+
+      {aggregates.declined > 0 ? (
+        <div className="space-y-1">
+          <p className="font-medium">Sin criterio</p>
+          <p className="text-muted-foreground">
+            <span className="nums text-foreground">{aggregates.declined}</span> sesión(es) las
+            saltó quien no daba esa asignatura. No cuentan como preferencia, y son un dato
+            sobre la composición del panel.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -366,6 +607,9 @@ function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
  * twenty comparisons and judged three has contributed three data points, and a single
  * count would say the opposite.
  */
+/** `onSelect` is optional because not every grouping is a filter: the panel filters by
+ *  workspace and by account, and there is nothing to narrow to when the rows are the two
+ *  evaluator profiles. A row that is not a filter must not look clickable. */
 function GroupTable({
   groups,
   firstHeader,
@@ -373,7 +617,7 @@ function GroupTable({
 }: {
   groups: AdminGroup[];
   firstHeader: string;
-  onSelect: (group: AdminGroup) => void;
+  onSelect?: (group: AdminGroup) => void;
 }) {
   if (groups.length === 0) {
     return <p className="text-small text-muted-foreground">Nada que agrupar todavía.</p>;
@@ -394,7 +638,7 @@ function GroupTable({
         </THead>
         <TBody>
           {groups.map((group) => (
-            <TR key={String(group.key)} onSelect={() => onSelect(group)}>
+            <TR key={String(group.key)} onSelect={onSelect ? () => onSelect(group) : undefined}>
               <TD className="max-w-56 truncate py-1.5 pr-3">
                 {group.label}
                 {group.name && group.name !== group.label ? (

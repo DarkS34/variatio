@@ -37,6 +37,17 @@ OWNER = "owner"
 ROLE_RANK: dict[str, int] = {VIEWER: 0, EDITOR: 1, OWNER: 2}
 ROLES: tuple[str, ...] = (VIEWER, EDITOR, OWNER)
 
+# Who an account is when it judges, which decides the one question it is asked about each
+# proposal. It is NOT an authorisation — a profile grants and withholds nothing, and
+# `require_member` never reads it. Set when the account comes into existence (the CLI, the
+# panel, or pre-assigned on the invitation link) rather than asked for mid-comparison,
+# because a question between the evaluator and the judgement is a question that gets
+# answered at random. NULL means nobody said: the teacher's wording is used and the panel
+# reports it as unset, which is what makes it fixable.
+TEACHER = "teacher"
+STUDENT = "student"
+EVALUATOR_PROFILES: tuple[str, ...] = (TEACHER, STUDENT)
+
 
 class Base(DeclarativeBase):
     pass
@@ -165,6 +176,9 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(Text)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    # `teacher` / `student` / NULL. A stratification variable for the study and nothing
+    # else: it changes the wording of one question and how the panel groups the results.
+    evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
@@ -240,6 +254,10 @@ class Invite(Base):
         ForeignKey("workspaces.id", ondelete="CASCADE"), default=None, index=True
     )
     role: Mapped[str] = mapped_column(String(16), default=EDITOR)
+    # Carried on the link so whoever redeems it is already classified. Whoever issues the
+    # invitation knows which subject the person teaches; the person redeeming it should not
+    # have to be asked, and an unanswered question here would be answered by a shrug.
+    evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
@@ -327,6 +345,20 @@ class EvalSession(Base):
     job_id: Mapped[str | None] = mapped_column(String(32), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Which three items these are. A session generated on its own is its own set; a session
+    # an administrator assigned to somebody carries the set of the one it was copied from,
+    # and that is what makes agreement between two evaluators computable at all.
+    #
+    # Each copy keeps its OWN seed and shuffle. Sharing the order would let one position
+    # bias act on both evaluators at once and inflate their agreement — the copies have to
+    # agree about the exercises, not about where they were sitting.
+    set_id: Mapped[str | None] = mapped_column(String(32), default=None, index=True)
+    # NULL means the evaluator commissioned it themselves. Set means somebody handed it to
+    # them, which is what the queue lists and what «asignada» means on screen.
+    assigned_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+
     item_type: Mapped[str] = mapped_column(String(64), default="")
     concepts: Mapped[list] = mapped_column(Json, default=list)
     curriculum: Mapped[list] = mapped_column(Json, default=list)
@@ -336,15 +368,34 @@ class EvalSession(Base):
     shuffle: Mapped[list] = mapped_column(Json, default=list)
     think: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    # One answer per POSITION, given before the reveal: `{"1": "as_is", "2": "no", ...}`.
+    # Stored by position and never by arm, exactly as `choice` is, so what the file holds is
+    # what the evaluator actually saw; the arm behind each one is derived from `shuffle`,
+    # which keeps the mapping auditable from the seed months later.
+    triage: Mapped[dict] = mapped_column(Json, default=dict)
+
     choice: Mapped[int | None] = mapped_column(Integer, default=None)
     choice_arm: Mapped[str | None] = mapped_column(String(16), default=None, index=True)
     chosen_at: Mapped[float | None] = mapped_column(Float, default=None)
     evaluator_note: Mapped[str | None] = mapped_column(Text, default=None)
     rating: Mapped[dict | None] = mapped_column(Json, default=None)
 
+    # When the three cards first reached the evaluator, so «cuánto tardó» is a fact rather
+    # than an impression. A comparison decided in eight seconds was not read, and being able
+    # to say so — or to exclude it, declaring the rule beforehand — is worth one timestamp.
+    opened_at: Mapped[float | None] = mapped_column(Float, default=None)
+    # «No me veo capacitado para juzgar esto»: an evaluator outside the subject of these
+    # items. Deliberately NOT `chosen_at` with a null choice — that already means "none of
+    # the three convinces me", which is a judgement. This one is the absence of one, it
+    # never enters the preference counts, and it is a datum about the panel's composition.
+    declined_at: Mapped[float | None] = mapped_column(Float, default=None)
+
     arm_status: Mapped[dict] = mapped_column(Json, default=dict)
     arm_elapsed_ms: Mapped[dict] = mapped_column(Json, default=dict)
     trace: Mapped[dict] = mapped_column(Json, default=dict)
 
     workspace: Mapped[Workspace] = relationship(back_populates="evaluations")
-    user: Mapped[User | None] = relationship()
+    # Spelled out because `assigned_by` is a second path to `users` and SQLAlchemy will not
+    # guess between the two: `user` is who judges, `assigner` is who handed it over.
+    user: Mapped[User | None] = relationship(foreign_keys=[user_id])
+    assigner: Mapped[User | None] = relationship(foreign_keys=[assigned_by])

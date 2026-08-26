@@ -1,3 +1,8 @@
+# What the two profiles are called when a command prints one. The web has its own copy in
+# Spanish for the same reason every other label does: this one is read in a terminal.
+PROFILE_LABELS = {"teacher": "docente", "student": "alumno"}
+
+
 def _ask_password(args) -> str | None:
     import getpass
     import os
@@ -61,13 +66,15 @@ def create_user(args) -> int:
             email=args.email or None,
             is_admin=args.admin,
             email_verified=bool(args.email),
+            evaluator_profile=getattr(args, "profile", None),
         )
         workspace = ensure_workspace(session, args.workspace)
         grant(session, workspace.id, user.id, args.role)
+        profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil de evaluador")
         print(
             f"Cuenta creada: {user.username} "
             f"({'administrador' if user.is_admin else 'usuario'}), "
-            f"{args.role} de '{workspace.slug}'."
+            f"{args.role} de '{workspace.slug}', {profile}."
         )
     return 0
 
@@ -85,7 +92,11 @@ def list_users(_args) -> int:
             roles = ", ".join(f"{w.slug}:{m.role}" for m, w in memberships_for(session, user.id))
             flags = " [admin]" if user.is_admin else ""
             flags += " [desactivada]" if not user.active else ""
-            print(f"{user.id:>4}  {user.username:<24} {roles or '(sin workspaces)'}{flags}")
+            profile = PROFILE_LABELS.get(user.evaluator_profile, "—")
+            print(
+                f"{user.id:>4}  {user.username:<24} {profile:<8} "
+                f"{roles or '(sin workspaces)'}{flags}"
+            )
     return 0
 
 
@@ -131,8 +142,11 @@ def invite(args) -> int:
             ttl=INVITE_TTL,
             workspace_id=workspace_id,
             role=args.role,
+            evaluator_profile=getattr(args, "profile", None),
         )
 
     base = public_base_url() or "http://localhost:8000"
     print(f"{base}/invitacion?token={token}")
+    if getattr(args, "profile", None):
+        print(f"La cuenta que lo canjee nacerá como {PROFILE_LABELS[args.profile]}.")
     return 0

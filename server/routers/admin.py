@@ -39,10 +39,12 @@ router = APIRouter(
 class InviteBody(BaseModel):
     """`workspace` is a slug, or nothing: an invitation that grants no membership creates
     an account and no access, which is the honest way to add someone who will be given a
-    workspace later."""
+    workspace later. `evaluator_profile` rides along so the account is already classified
+    the moment it exists."""
 
     workspace: str | None = None
     role: str = EDITOR
+    evaluator_profile: str | None = None
 
 
 class MembershipBody(BaseModel):
@@ -52,6 +54,10 @@ class MembershipBody(BaseModel):
 
 class AdminBody(BaseModel):
     is_admin: bool
+
+
+class ProfileBody(BaseModel):
+    evaluator_profile: str | None = None
 
 
 # WHO AND WHAT ----------------------------------------------------------------------------
@@ -80,6 +86,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
                 "username": user.username,
                 "name": user.name,
                 "is_admin": user.is_admin,
+                "evaluator_profile": user.evaluator_profile,
                 "disabled": not user.active,
                 "created_at": user.created_at.isoformat() if user.created_at else None,
                 "workspaces": [
@@ -144,6 +151,9 @@ def create_invite(
     throttle("invite", request, admin.username)
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
+    error = identity.profile_error(body.evaluator_profile)
+    if error:
+        raise HTTPException(422, error)
 
     workspace = None
     if body.workspace:
@@ -159,6 +169,7 @@ def create_invite(
         workspace_id=workspace.id if workspace else None,
         role=body.role,
         created_by=admin.id,
+        evaluator_profile=body.evaluator_profile,
     )
 
     # The link IS the invitation: single-use, expiring, and handed over by whoever issued
@@ -193,6 +204,22 @@ def grant_membership(
 
     identity.grant(db, workspace.id, user.id, body.role)
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
+
+
+# Correcting a profile after the fact, for the accounts that predate it and for the ones
+# invited with the wrong one. It changes the wording of one question and how the study
+# groups the results; it grants and withholds nothing, which is why it is not `MembershipBody`.
+@router.post("/accounts/{user_id}/profile")
+def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db)) -> dict:
+    error = identity.profile_error(body.evaluator_profile)
+    if error:
+        raise HTTPException(422, error)
+    user = identity.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(404, "Esa cuenta no existe.")
+
+    identity.set_evaluator_profile(db, user, body.evaluator_profile)
+    return {"user_id": user.id, "evaluator_profile": user.evaluator_profile}
 
 
 @router.delete("/accounts/{user_id}/memberships/{slug}")
@@ -450,6 +477,7 @@ def _invite(db: DbSession, invite: Invite) -> dict:
     return {
         "id": invite.id,
         "role": invite.role,
+        "evaluator_profile": invite.evaluator_profile,
         "workspace": workspace.name if workspace else None,
         "workspace_slug": workspace.slug if workspace else None,
         "created_at": invite.created_at.isoformat(),

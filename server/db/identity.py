@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from .models import (
     EDITOR,
+    EVALUATOR_PROFILES,
     Invite,
     Membership,
     PasswordReset,
@@ -51,6 +52,15 @@ def username_error(username: str) -> str | None:
     return None
 
 
+# The same single boundary `username_error` is, for the same reason: the command line, the
+# panel and the invitation all set this, and three places deciding what a profile may be is
+# three ways for them to drift. `None` is valid and means nobody said.
+def profile_error(profile: str | None) -> str | None:
+    if profile is None or profile in EVALUATOR_PROFILES:
+        return None
+    return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
+
+
 # USERS ---------------------------------------------------------------------------------
 
 
@@ -82,6 +92,7 @@ def create_user(
     email: str | None = None,
     is_admin: bool = False,
     email_verified: bool = False,
+    evaluator_profile: str | None = None,
 ) -> User:
     username = normalise_username(username)
     user = User(
@@ -91,8 +102,15 @@ def create_user(
         password_hash=password_hash,
         is_admin=is_admin,
         email_verified_at=now() if email_verified and email else None,
+        evaluator_profile=evaluator_profile,
     )
     session.add(user)
+    session.flush()
+    return user
+
+
+def set_evaluator_profile(session: Session, user: User, profile: str | None) -> User:
+    user.evaluator_profile = profile
     session.flush()
     return user
 
@@ -267,12 +285,14 @@ def create_invite(
     workspace_id: int | None = None,
     role: str = EDITOR,
     created_by: int | None = None,
+    evaluator_profile: str | None = None,
 ) -> Invite:
     invite = Invite(
         token_hash=token_hash,
         workspace_id=workspace_id,
         role=role,
         created_by=created_by,
+        evaluator_profile=evaluator_profile,
         expires_at=now() + ttl,
     )
     session.add(invite)

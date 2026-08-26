@@ -268,6 +268,7 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
     return {
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
+        "evaluator_profile": invite.evaluator_profile,
         "expires_at": invite.expires_at.isoformat(),
     }
 
@@ -298,11 +299,15 @@ def accept_invite(
     if error:
         raise HTTPException(422, error)
 
+    # The profile travels on the link and is not asked for here: whoever issued the
+    # invitation knows which subject this person teaches, and the person redeeming it has no
+    # reason to classify themselves for a study they have not seen yet.
     user = identity.create_user(
         session,
         username=username,
         name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
+        evaluator_profile=invite.evaluator_profile,
     )
     _apply_membership(session, invite, user)
     identity.consume_invite(session, invite, user.id)
@@ -341,6 +346,9 @@ def _me(session: DbSession, user: User) -> dict:
             "email": user.email,
             "name": user.name,
             "is_admin": user.is_admin,
+            # The evaluation screen asks a teacher and a student different things, and it
+            # has to know which before it draws the first card.
+            "evaluator_profile": user.evaluator_profile,
         },
         "workspaces": workspaces,
         "active_workspace": active,

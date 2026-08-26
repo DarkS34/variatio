@@ -110,15 +110,36 @@ class EvaluationSession:
     arms: dict[str, ArmResult]
     think: bool = True
     job_id: str | None = None
+    # Which three items these are, and who handed them over. A session generated on its own
+    # is its own set; a copy an administrator assigned carries the source's, which is the
+    # only way two people's judgements of the same exercises can ever be compared.
+    set_id: str | None = None
+    assigned_by: int | None = None
+    # One answer per POSITION, given blind, before anything is revealed.
+    triage: dict[str, str] = field(default_factory=dict)
     choice: int | None = None
     choice_arm: str | None = None
     chosen_at: float | None = None
+    opened_at: float | None = None
+    declined_at: float | None = None
     evaluator_note: str | None = None
     rating: dict | None = None
 
+    # Two different questions, and collapsing them is what would corrupt the counts.
+    # `decided` is «hay una preferencia registrada» and is what every per-arm number is
+    # computed over; `finished` is «esta sesión ya no admite juicio», which a decline also
+    # satisfies without ever having expressed a preference.
     @property
     def decided(self) -> bool:
         return self.chosen_at is not None
+
+    @property
+    def declined(self) -> bool:
+        return self.declined_at is not None
+
+    @property
+    def finished(self) -> bool:
+        return self.decided or self.declined
 
     def arm_at(self, position: int) -> str:
         return self.shuffle[position - 1]
@@ -126,11 +147,22 @@ class EvaluationSession:
     def position_of(self, arm: str) -> int:
         return self.shuffle.index(arm) + 1
 
+    # What the evaluator answered, re-keyed by architecture. Derived and never stored: the
+    # stored form is by position, because that is what they actually saw.
+    def triage_by_arm(self) -> dict[str, str]:
+        return {
+            self.arm_at(int(position)): value
+            for position, value in self.triage.items()
+            if 1 <= int(position) <= len(self.shuffle)
+        }
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "created_at": self.created_at,
             "job_id": self.job_id,
+            "set_id": self.set_id or self.id,
+            "assigned_by": self.assigned_by,
             "concepts": list(self.concepts),
             "item_type": self.item_type,
             "fixed": dict(self.fixed),
@@ -140,9 +172,12 @@ class EvaluationSession:
             "shuffle": list(self.shuffle),
             "think": self.think,
             "arms": {name: result.to_dict() for name, result in self.arms.items()},
+            "triage": dict(self.triage),
             "choice": self.choice,
             "choice_arm": self.choice_arm,
             "chosen_at": self.chosen_at,
+            "opened_at": self.opened_at,
+            "declined_at": self.declined_at,
             "evaluator_note": self.evaluator_note,
             "rating": self.rating,
         }
@@ -165,9 +200,16 @@ class EvaluationSession:
                 name: ArmResult(**payload) for name, payload in (data.get("arms") or {}).items()
             },
             job_id=data.get("job_id"),
+            # A session recorded before sets existed is its own: nobody had been handed a
+            # copy of anybody else's, because there was no way to hand one over.
+            set_id=data.get("set_id") or data["id"],
+            assigned_by=data.get("assigned_by"),
+            triage=dict(data.get("triage") or {}),
             choice=data.get("choice"),
             choice_arm=data.get("choice_arm"),
             chosen_at=data.get("chosen_at"),
+            opened_at=data.get("opened_at"),
+            declined_at=data.get("declined_at"),
             evaluator_note=data.get("evaluator_note"),
             rating=data.get("rating"),
         )
