@@ -9,12 +9,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        // Amber is the one colour in this palette that outranks the ground's own warmth,
-        // and it means one thing: act here. It belongs to frontier actions — approving a
-        // draft, launching the taggability review — never to an ordinary one; the moment
-        // it is used for "save" it stops meaning anything.
+        // The ultramarine is the one colour this palette spends on «act here», and it
+        // belongs to frontier actions — going to the stage that is holding the chain up,
+        // approving a draft, launching the taggability review — never to an ordinary one;
+        // the moment it is used for "save" it stops meaning anything.
+        //
+        // The foreground is the ground's own hue at 262, not the 70 it carried until now:
+        // that literal was the marigold's, left behind when the material changed, and it
+        // sits outside `index.css` where `check:color` cannot see it. The file's own
+        // convention is that a foreground matches its ground — `--destructive-foreground`
+        // is 25, the red's.
         attention:
-          "bg-attention text-[oklch(0.99_0.003_70)] hover:bg-[color-mix(in_oklch,var(--attention)_88%,black)]",
+          "bg-attention text-[oklch(0.99_0.003_262)] hover:bg-[color-mix(in_oklch,var(--attention)_88%,black)]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
