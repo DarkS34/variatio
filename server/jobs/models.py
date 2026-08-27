@@ -7,6 +7,7 @@ JobKind = Literal[
     "build_profile",
     "build_kg",
     "build_bank",
+    "transcribe",
     "describe_concepts",
     "index",
     "warm_models",
@@ -22,6 +23,7 @@ JOB_LABELS: dict[str, str] = {
     "build_profile": "Construir el perfil de ejemplares",
     "build_kg": "Construir el grafo de conocimiento",
     "build_bank": "Extraer el banco de ejemplos",
+    "transcribe": "Transcribir los documentos",
     "describe_concepts": "Generar descripciones de conceptos",
     "index": "Indexar conceptos y banco",
     "warm_models": "Calentar los modelos",
@@ -49,10 +51,15 @@ JOB_ARTIFACT: dict[str, str] = {
 }
 
 
-# The queue is one deep because there is one GPU, but the jobs in it now belong to
-# different instances and different people. `workspace` is what every handler resolves its
-# paths from — a handler that read a process-wide workspace would write one user's build
-# into another's directory — and `user_id` is what attributes the variants a run produces.
+# The queue serialises per backend rather than one job at a time, so several of these can
+# be running side by side and they belong to different instances and different people.
+# `workspace` is what every handler resolves its paths from — a handler that read a
+# process-wide workspace would write one user's build into another's directory — and
+# `user_id` is what attributes the variants a run produces.
+#
+# `backends` and `queue_position` are the runner's, written into the job so that every
+# event carrying `to_dict()` says which lanes this job holds and how many jobs are still
+# in front of it. Both are stamped at submission and restamped whenever the queue moves.
 @dataclass
 class Job:
     kind: str
@@ -67,6 +74,8 @@ class Job:
     finished_at: float | None = None
     error: str | None = None
     result: dict | None = None
+    backends: list[str] = field(default_factory=list)
+    queue_position: int = 0
 
     @property
     def label(self) -> str:

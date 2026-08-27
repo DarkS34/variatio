@@ -233,12 +233,12 @@ def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> 
 
 
 def _refuse_while_running(slug: str | None = None) -> None:
-    job = runtime.runner.current()
-    if job is not None and (slug is None or job.workspace == slug):
-        raise HTTPException(
-            409,
-            f"«{job.label}» está en curso sobre ese contexto: espera o cancélalo antes.",
-        )
+    for job in runtime.runner.running():
+        if slug is None or job.workspace == slug:
+            raise HTTPException(
+                409,
+                f"«{job.label}» está en curso sobre ese contexto: espera o cancélalo antes.",
+            )
 
 
 # THE TUNNEL ------------------------------------------------------------------------------

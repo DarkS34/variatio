@@ -71,6 +71,26 @@ def context_for(job: Job, reload: bool = False):
     return context
 
 
+_SLOTS = ("corpus", "exemplars")
+
+
+# Transcribing is an accelerator and never a gate: it fills the markdown cache the three
+# builders read, so a build that follows finds its pages already written. Nothing is
+# chained after it, and nothing waits for it — a build with no cache transcribes on its own
+# exactly as it always did.
+def handle_transcribe(job: Job, control: JobControl) -> dict:
+    deps.require_inference()
+    ws = _workspace(job)
+    slot = job.params.get("slot") or ""
+    if slot not in _SLOTS:
+        raise ValueError(f"Ranura desconocida: '{slot}'; esperaba una de {list(_SLOTS)}")
+
+    from variatio.stages import transcribe_slot
+
+    logger.info(f"Transcribiendo los documentos de «{slot}» en «{ws.slug}»")
+    return transcribe_slot(ws, slot)
+
+
 def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     ws = _workspace(job)
@@ -328,6 +348,7 @@ HANDLERS = {
     "build_profile": _build(review.EXEMPLARS_PROFILE),
     "build_kg": _build(review.KNOWLEDGE_GRAPH),
     "build_bank": _build(review.EXEMPLARS_BANK),
+    "transcribe": handle_transcribe,
     "describe_concepts": handle_describe_concepts,
     "index": handle_index,
     "warm_models": handle_warm_models,

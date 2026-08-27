@@ -5,6 +5,7 @@ from variatio.core import inference
 from variatio.core.workspace import Workspace
 
 from .. import auth, review, runtime
+from ..jobs import lanes
 from ..jobs.models import JOB_LABELS
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
@@ -119,19 +120,24 @@ def listing(limit: int = Query(50, ge=1, le=200), access: auth.Access = auth.VIE
     }
 
 
+# `job` is the oldest run of YOUR workspace, not the oldest run of the installation: with
+# one job per lane there can be two at once, and blanking yours because somebody else's
+# started first on the other lane would report «nada en ejecución» while your build runs.
+# What stays global is whether a lane is held at all, and by what.
 @router.get("/jobs/current")
 def current(access: auth.Access = auth.VIEW) -> dict:
-    running = runtime.runner.current()
-    mine = running is not None and running.workspace == access.ws.slug
-    queued = runtime.runner.pending(access.ws.slug)
+    running = runtime.runner.running()
+    ours = [j for j in running if j.workspace == access.ws.slug]
+    holders = [runtime.runner.current_in(backend) for backend in lanes.BACKENDS]
+    held = [job for job in holders if job is not None]
     return {
-        "job": running.to_dict() if mine else None,
+        "job": ours[0].to_dict() if ours else None,
         "queued": [
             {**j.to_dict(), "queue_position": runtime.runner.queue_position(j.id)}
-            for j in queued
+            for j in runtime.runner.pending(access.ws.slug)
         ],
-        "engine_busy": running is not None,
-        "engine_busy_elsewhere": running is not None and not mine,
+        "engine_busy": bool(held),
+        "engine_busy_elsewhere": any(j.workspace != access.ws.slug for j in held),
         "last_seq": runtime.bus.last_seq,
     }
 

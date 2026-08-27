@@ -1,11 +1,17 @@
-"""One job at a time, in order.
+"""One job at a time per backend, in order.
 
-Not a limitation to be lifted later: Ollama serves these from a single GPU, and
-running a 35B extraction next to a 31B tagger would do nothing but swap weights.
-The queue makes the contention explicit instead of accidental.
+Not a limitation to be lifted later, and not one queue either: Ollama serves from a single
+GPU, so two local jobs would do nothing but swap weights, and Cerebras serves under one
+rolling quota, so two remote jobs would do nothing but race for the same budget. Between
+the two there is no contention at all, and a single queue made every job wait for a
+machine it was never going to use.
+
+So a job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs
+as soon as all of them are free. Within a lane the order of arrival is kept, and a job
+that cannot start holds its lanes against everything behind it — otherwise a job needing
+both would never get them. A job that calls no model reserves nothing and never waits.
 """
 
-import queue
 import subprocess
 import threading
 import time
@@ -17,10 +23,13 @@ from loguru import logger
 from variatio import config
 from variatio.core import progress
 
+from . import lanes
 from .bus import EventBus
 from .models import SUBPROCESS_KINDS, Job
 
 Handler = Callable[[Job, "JobControl"], "dict | None"]
+
+_DISPATCH_TICK_SECONDS = 0.5
 
 
 class JobControl:
@@ -86,14 +95,16 @@ class JobRunner:
         # What gets enqueued by itself when a job finishes well. The queue stays generic: who
         # follows whom is decided by `jobs/chain.py`, which `runtime.py` installs.
         self.after_success: Callable[["JobRunner", Job], None] | None = None
-        self._queue: queue.Queue[str] = queue.Queue()
         self._jobs: dict[str, Job] = {}
         self._controls: dict[str, JobControl] = {}
         self._order: list[str] = []
-        self._current: str | None = None
+        # Which job holds each backend right now. A lane with no entry is free; a running
+        # job that reserves nothing appears in neither.
+        self._holders: dict[str, str] = {}
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._stopping = threading.Event()
+        self._wake = threading.Event()
         self._last_activity = time.time()
 
     # LIFECYCLE -----------------------------------------------------------------------------
@@ -101,16 +112,16 @@ class JobRunner:
     def start(self) -> None:
         if self._thread is not None:
             return
-        self._thread = threading.Thread(target=self._run, name="job-runner", daemon=True)
+        self._thread = threading.Thread(target=self._dispatch, name="job-dispatch", daemon=True)
         self._thread.start()
 
     def shutdown(self, timeout: float = 5.0) -> None:
         self._stopping.set()
         with self._lock:
-            current = self._controls.get(self._current) if self._current else None
-        if current is not None:
-            current.request_cancel()
-        self._queue.put("")
+            controls = [self._controls[j.id] for j in self._running_locked()]
+        for control in controls:
+            control.request_cancel()
+        self._wake.set()
         if self._thread is not None:
             self._thread.join(timeout=timeout)
 
@@ -133,13 +144,17 @@ class JobRunner:
             user_id=user_id,
             user_name=user_name,
         )
+        # Resolved here rather than at dispatch: the engine can be switched from the panel
+        # mid-queue, and a job has to wait for the lanes it was accepted against.
+        job.backends = sorted(lanes.backends_for(kind, job.params))
         with self._lock:
             self._jobs[job.id] = job
             self._controls[job.id] = JobControl(self.bus, job)
             self._order.append(job.id)
             self._last_activity = time.time()
+            self._restamp()
         self.bus.publish(job.workspace, job.id, "job.queued", {"job": job.to_dict()})
-        self._queue.put(job.id)
+        self._wake.set()
         return job
 
     def cancel(self, job_id: str) -> bool:
@@ -150,10 +165,13 @@ class JobRunner:
                 return False
             if job.status == "queued":
                 job.status = "cancelled"
+                job.queue_position = 0
                 job.finished_at = time.time()
+                self._restamp()
                 self.bus.publish(
                     job.workspace, job_id, "job.cancelled", {"job": job.to_dict()}
                 )
+                self._wake.set()
                 return True
             if job.status != "running" or control is None:
                 return False
@@ -166,7 +184,7 @@ class JobRunner:
             return self._jobs.get(job_id)
 
     # Every listing narrows by workspace, and `None` means "the whole queue" — used only
-    # where the caller has already established the right to see it. The GPU is shared, so
+    # where the caller has already established the right to see it. The machine is shared, so
     # "something is running" is legitimately global; *what* is running is not.
     def all(self, limit: int = 50, workspace: str | None = None) -> list[Job]:
         with self._lock:
@@ -175,9 +193,25 @@ class JobRunner:
             jobs = [j for j in jobs if j.workspace == workspace]
         return jobs[-limit:][::-1]
 
-    def current(self) -> Job | None:
+    def running(self, workspace: str | None = None) -> list[Job]:
         with self._lock:
-            return self._jobs.get(self._current) if self._current else None
+            jobs = self._running_locked()
+        if workspace is not None:
+            jobs = [j for j in jobs if j.workspace == workspace]
+        return jobs
+
+    # The oldest job still running. Kept because a caller that only asks «is the machine
+    # doing something, and what» has one honest answer and does not want a list.
+    def current(self) -> Job | None:
+        jobs = self.running()
+        if not jobs:
+            return None
+        return min(jobs, key=lambda j: (j.started_at or j.created_at))
+
+    def current_in(self, backend: str) -> Job | None:
+        with self._lock:
+            job_id = self._holders.get(backend)
+            return self._jobs.get(job_id) if job_id else None
 
     def pending(self, workspace: str | None = None) -> list[Job]:
         with self._lock:
@@ -188,15 +222,12 @@ class JobRunner:
             if j.status == "queued" and (workspace is None or j.workspace == workspace)
         ]
 
-    # Where in the shared queue a job is, counting from 1, or 0 when it is already
-    # running. One GPU means the wait is everyone's jobs ahead of yours, not just yours.
+    # Where in ITS OWN lane a job is, counting from 1, or 0 when it is already running.
+    # What is ahead of a job is only what could be holding a lane it needs, so a remote job
+    # queued behind an hour of local building reports 1 and starts at once.
     def queue_position(self, job_id: str) -> int:
         with self._lock:
-            queued = [self._jobs[i] for i in self._order if self._jobs[i].status == "queued"]
-        for index, job in enumerate(queued, start=1):
-            if job.id == job_id:
-                return index
-        return 0
+            return self._position(job_id)
 
     def building_artifacts(self, workspace: str | None = None) -> set[str]:
         """Artifacts a running or queued job is about to (re)write, in this workspace."""
@@ -210,38 +241,94 @@ class JobRunner:
 
     def is_busy(self) -> bool:
         with self._lock:
-            return self._current is not None or bool(self.pending())
+            return bool(self._running_locked()) or bool(self.pending())
 
-    # Seconds since the last job enqueued or finished. It is the only measure of idleness that
-    # exists here, and it is enough: on this server everything that talks to Ollama goes
-    # through the queue, so «nobody has asked for anything» and «the GPU is not needed» are
-    # the same thing. Returns 0 while something runs, so nothing reads it as idleness.
+    # Seconds since the last job enqueued or finished, counting EVERY lane. It is the only
+    # measure of idleness that exists here, and it is enough: everything this process asks a
+    # model for goes through the queue, so «nobody has asked for anything» and «the GPU is
+    # not needed» are the same thing. Returns 0 while anything runs or waits.
+    #
+    # Deliberately not narrowed to the local lane. A job that reserves only `remote` still
+    # embeds and still screens with the guardrail, and those two are exactly the models the
+    # lane calculation leaves out — so «no local lane reserved» is not «the GPU is free»,
+    # and releasing it under a remote job would unload the embedder that job is calling.
     def idle_seconds(self) -> float:
         with self._lock:
-            if self._current is not None or bool(self.pending()):
+            if self._running_locked() or self.pending():
                 return 0.0
             return max(0.0, time.time() - self._last_activity)
 
+    # INTERNAL STATE ------------------------------------------------------------------------
+
+    def _running_locked(self) -> list[Job]:
+        return [self._jobs[i] for i in self._order if self._jobs[i].status == "running"]
+
+    def _position(self, job_id: str) -> int:
+        job = self._jobs.get(job_id)
+        if job is None or job.status != "queued":
+            return 0
+        mine = set(job.backends)
+        position = 1
+        for other_id in self._order:
+            if other_id == job_id:
+                break
+            other = self._jobs[other_id]
+            if other.status == "queued" and mine & set(other.backends):
+                position += 1
+        return position
+
+    def _restamp(self) -> None:
+        for job_id in self._order:
+            job = self._jobs[job_id]
+            if job.status == "queued":
+                job.queue_position = self._position(job_id)
+
     # WORKER --------------------------------------------------------------------------------
 
-    def _run(self) -> None:
+    def _dispatch(self) -> None:
         while not self._stopping.is_set():
-            job_id = self._queue.get()
-            if not job_id:
-                continue
+            self._wake.wait(_DISPATCH_TICK_SECONDS)
+            self._wake.clear()
+            if self._stopping.is_set():
+                return
+            self._launch_ready()
+
+    # FIFO over the whole queue, skipping what cannot start. A blocked job CLAIMS its lanes
+    # for the rest of the pass so nothing behind it takes one: without that, a job needing
+    # both lanes would be overtaken for ever by single-lane jobs arriving after it.
+    def _launch_ready(self) -> None:
+        while True:
             with self._lock:
-                job = self._jobs.get(job_id)
-                control = self._controls.get(job_id)
-            if job is None or control is None or job.status != "queued":
-                continue
-            self._execute(job, control)
+                claimed = set(self._holders)
+                chosen: tuple[Job, JobControl] | None = None
+                for job_id in self._order:
+                    job = self._jobs[job_id]
+                    if job.status != "queued":
+                        continue
+                    reserved = set(job.backends)
+                    if reserved & claimed:
+                        claimed |= reserved
+                        continue
+                    chosen = (job, self._controls[job_id])
+                    break
+                if chosen is None:
+                    return
+                job, control = chosen
+                job.status = "running"
+                job.started_at = time.time()
+                job.queue_position = 0
+                for backend in job.backends:
+                    self._holders[backend] = job.id
+                self._restamp()
+
+            threading.Thread(
+                target=self._execute,
+                args=(job, control),
+                name=f"job-{job.id}",
+                daemon=True,
+            ).start()
 
     def _execute(self, job: Job, control: JobControl) -> None:
-        with self._lock:
-            self._current = job.id
-            job.status = "running"
-            job.started_at = time.time()
-
         self.bus.publish(job.workspace, job.id, "job.started", {"job": job.to_dict()})
         sink_id = self._attach_log_sink(control)
         token = progress.set_emitter(control)
@@ -262,8 +349,15 @@ class JobRunner:
         finally:
             progress.reset_emitter(token)
             logger.remove(sink_id)
-            with self._lock:
-                self._current = None
+            self._release(job)
+
+    def _release(self, job: Job) -> None:
+        with self._lock:
+            for backend in job.backends:
+                if self._holders.get(backend) == job.id:
+                    del self._holders[backend]
+            self._restamp()
+        self._wake.set()
 
     # Chaining is a convenience, not part of the result: if it fails, the job that just
     # finished is still finished and only the next link is lost.
@@ -277,6 +371,7 @@ class JobRunner:
 
     def _settle(self, job: Job, status: str) -> None:
         job.status = status
+        job.queue_position = 0
         job.finished_at = time.time()
         with self._lock:
             self._last_activity = job.finished_at
@@ -289,6 +384,10 @@ class JobRunner:
 
     # The core logs with loguru and knows nothing about us. Mirroring its output into
     # the stream gives the UI a raw console for free — no changes to the pipeline.
+    #
+    # The filter is what keeps two concurrent jobs from writing into each other's drawer:
+    # each job runs on its own thread, so each sink only ever sees the records of the one
+    # it was attached for.
     def _attach_log_sink(self, control: JobControl) -> int:
         worker_id = threading.get_ident()
 

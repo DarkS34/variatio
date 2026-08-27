@@ -11,6 +11,12 @@ is where ALL of this process's model traffic goes through — and once it has go
 replacement for the keep-alive nor a shorter timer: the models stay warm for the whole
 session, and are released once, when the session is actually over.
 
+It reads the WHOLE queue's clock and not the local lane's, which looks like the obvious
+refinement now that a job can be purely remote and is not one: the embedder and the
+guardrail are excluded from the lane calculation on purpose, and both are local, so a job
+holding only the remote lane is still calling Ollama every few seconds. Releasing under it
+would unload the very models it is using.
+
 Unloading is free to undo: the next call loads them again by itself.
 """
 

@@ -8,6 +8,7 @@ from variatio.stages import build_phases as phases_of
 
 from .. import auth, deps, review, runtime, storage
 from ..editors import kg_edit
+from ..jobs import lanes as jobs_lanes
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -28,31 +29,67 @@ def _check(artifact: str) -> None:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'")
 
 
-# The chain of one workspace. `current_job` is deliberately the *global* one: there is a
-# single GPU, so "somebody is building something" is true for everyone and hiding it would
-# leave a queued job looking stuck. Which artifacts are marked as building is scoped,
-# because that is a statement about this instance's files.
+# What each lane is doing, globally. The machine and the quota belong to the whole
+# installation, so «busy» and the label of what is holding it are said to everyone — a
+# queued job of yours that looks stuck has an honest reason, and no per-workspace number
+# can express it. What is scoped is `mine`, `queued` and `ahead`: those are statements
+# about your own work.
+def _lane_payload(backend: str, slug: str) -> dict:
+    holder = runtime.runner.current_in(backend)
+    waiting = [j for j in runtime.runner.pending() if backend in j.backends]
+    mine = [j for j in waiting if j.workspace == slug]
+    ahead = None
+    if mine:
+        first = [j.id for j in waiting].index(mine[0].id)
+        ahead = first + (1 if holder is not None else 0)
+    return {
+        "busy": holder is not None,
+        "mine": holder is not None and holder.workspace == slug,
+        "label": holder.label if holder is not None else None,
+        "queued": len(mine),
+        "ahead": ahead,
+    }
+
+
+# The chain of one workspace, and what the machine is doing behind it. The two halves are
+# scoped differently on purpose: whether a lane is held, and by which job, is said to
+# everyone — the machine is shared, so "somebody is building something" is true for
+# everyone and hiding it would leave a queued job looking stuck — while `current_job`, the
+# waiting counts and the artifacts marked as building are statements about this instance
+# and never leave it.
 def pipeline_payload(access: auth.Access) -> dict:
     chain = runtime.pipeline_snapshot(access.ws)
     for stage in chain:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
-    current = runtime.runner.current()
-    mine = current is not None and current.workspace == access.ws.slug
-    waiting = runtime.runner.pending(access.ws.slug)
-    running = 1 if current is not None else 0
+    slug = access.ws.slug
+    waiting = runtime.runner.pending(slug)
+    running = runtime.runner.running()
+    # The oldest running job of THIS workspace. It used to be the oldest running job full
+    # stop, blanked when it belonged elsewhere — which with two lanes would blank your own
+    # run for as long as somebody else's older one is on the other lane.
+    ours = [j for j in running if j.workspace == slug]
+    current = ours[0] if ours else None
+    lanes = {backend: _lane_payload(backend, slug) for backend in jobs_lanes.BACKENDS}
+    ahead = None
+    if waiting:
+        first = set(waiting[0].backends)
+        blocking = sum(1 for j in running if first & set(j.backends))
+        ahead = blocking + runtime.runner.queue_position(waiting[0].id) - 1
     return {
         "stages": chain,
         "generation_unlocked": all(s["status"] == "approved" for s in chain),
-        "current_job": current.to_dict() if mine else None,
+        "current_job": current.to_dict() if current is not None else None,
         "queued": len(waiting),
-        "queue_length": running + len(runtime.runner.pending()),
-        "queue_ahead": (
-            running + runtime.runner.queue_position(waiting[0].id) - 1 if waiting else None
+        "queue_length": len(running) + len(runtime.runner.pending()),
+        "queue_ahead": ahead,
+        "lanes": lanes,
+        # Somebody else is holding a lane: the honest reason a job of yours has not
+        # started. Read off the lanes and not off `current`, because a job that reserves
+        # nothing occupies neither and is holding nobody back.
+        "engine_busy": any(lane["busy"] for lane in lanes.values()),
+        "engine_busy_elsewhere": any(
+            lane["busy"] and not lane["mine"] for lane in lanes.values()
         ),
-        # Somebody else is holding the one GPU: the honest reason a job of yours has not
-        # started, and something no per-workspace number can express.
-        "engine_busy": current is not None,
-        "engine_busy_elsewhere": current is not None and not mine,
     }
 
 
