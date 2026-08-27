@@ -540,10 +540,10 @@ function PipelineCard({
       <CardContent className="space-y-4 pt-4">
         {residents.map(row)}
         <p className="max-w-2xl text-small text-muted-foreground">
-          Cada pista es una construcción; cada nodo, una llamada al modelo. Bajo cada nodo,
-          qué modelo la atiende («principal» sigue a {residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN"});
-          el círculo dice si razona antes de contestar y, mientras razona, el selector fija su
-          esfuerzo. Razonar y una gramática no conviven en esta
+          Cada columna es una construcción y se lee de arriba abajo; cada parada, una llamada
+          al modelo. Bajo el nombre, qué modelo la atiende («principal» sigue a {residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN"});
+          el círculo dice si razona antes de contestar y, mientras razona, el selector de al
+          lado fija su esfuerzo. Razonar y una gramática no conviven en esta
           pila, así que encender una fase que hoy responde con gramática se la quita y deja la
           forma en manos del analizador y de la reparación. Tres nodos no dependen de un
           ajuste: el guardián no razona, la variante la decide cada encargo y la reparación es

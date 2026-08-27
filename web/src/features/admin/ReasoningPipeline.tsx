@@ -50,13 +50,13 @@ export function ReasoningPipeline({
   const mainName = typeof main === "string" && main ? main : null;
 
   return (
-    <ol className="space-y-5">
+    <ol className="grid items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-4">
       {lanes.map((lane) => (
-        <li key={lane.key} className="grid gap-2 md:grid-cols-[10rem_1fr] md:gap-4">
-          <p className="pt-2 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
+        <li key={lane.key} className="min-w-0">
+          <p className="border-b border-border pb-1.5 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
             {lane.label}
           </p>
-          <ol className="flex w-full items-start overflow-x-auto pb-1">
+          <ol className="pt-3">
             {lane.phases.map((phase, index) => (
               <PhaseNode
                 key={phase.key}
@@ -67,7 +67,6 @@ export function ReasoningPipeline({
                 mainName={mainName}
                 draft={draft}
                 models={models}
-                first={index === 0}
                 last={index === lane.phases.length - 1}
                 onChange={onChange}
               />
@@ -79,6 +78,17 @@ export function ReasoningPipeline({
   );
 }
 
+/**
+ * One call to the model, drawn as a stop on its lane.
+ *
+ * The lane runs DOWN and not across, and that is the whole of the layout. Across, the mark
+ * was a fixed width and the spacing between marks was elastic, so how the drawing looked
+ * was a function of how many stops a lane happened to have — and they have 5, 12, 4 and 5.
+ * The long one overflowed into a scroller with every label clipped to «TRANSCRIPCI» and
+ * every select to «gemm», and the short ones were left with holes. Down the page each stop
+ * is the width of its column whatever its neighbours do, a model name fits without being
+ * cut, and nothing has to scroll sideways to be read.
+ */
 function PhaseNode({
   phase,
   setting,
@@ -87,7 +97,6 @@ function PhaseNode({
   mainName,
   draft,
   models,
-  first,
   last,
   onChange,
 }: {
@@ -98,13 +107,9 @@ function PhaseNode({
   mainName: string | null;
   draft: Record<string, unknown>;
   models: Models | null;
-  first: boolean;
   last: boolean;
   onChange: (key: string, value: unknown) => void;
 }) {
-  const line = <span aria-hidden className="mt-[17px] h-px min-w-3 flex-1 bg-border" />;
-  const lead = first ? <span className="min-w-3 flex-1" /> : line;
-  const trail = last ? <span className="min-w-3 flex-1" /> : line;
   const thinks = setting
     ? Boolean(setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default))
     : false;
@@ -113,41 +118,51 @@ function PhaseNode({
         (modelSetting.key in draft ? draft[modelSetting.key] : modelSetting.value ?? modelSetting.default) ?? "",
       )
     : "";
+  const ownModel = Boolean(modelSetting?.key.startsWith("models.phases."));
 
   return (
-    <li className="flex min-w-0 basis-0 flex-1 items-start">
-      {lead}
-      <span className="flex w-28 flex-col items-center gap-1">
-        {setting ? (
-          <Toggle phase={phase} setting={setting} draft={draft} onChange={onChange} />
-        ) : (
-          <Fixed phase={phase} />
-        )}
-        <span className="text-center text-micro font-condensed uppercase leading-tight text-foreground">
+    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2.5 pb-3">
+      {/* The stretch between this stop and the next one. Behind the mark rather than
+          between two of them, so a lane of twelve draws one line and not eleven. */}
+      {last ? null : (
+        <span aria-hidden className="absolute bottom-0 left-[1.0625rem] top-9 w-px bg-border" />
+      )}
+      {setting ? (
+        <Toggle phase={phase} setting={setting} draft={draft} onChange={onChange} />
+      ) : (
+        <Fixed phase={phase} />
+      )}
+      <span className="flex min-w-0 flex-col gap-1 pt-1.5">
+        <span className="truncate font-condensed uppercase leading-tight text-small text-foreground">
           {phase.label}
         </span>
-        {effortSetting && thinks ? (
-          <NodeEffort phase={phase} setting={effortSetting} draft={draft} onChange={onChange} />
-        ) : null}
-        {modelSetting && !modelSetting.key.startsWith("models.phases.") ? (
-          <span
-            className="max-w-full truncate font-mono text-micro text-muted-foreground"
-            title={`Modelo: ${residentName}`}
-          >
-            {residentName}
-          </span>
-        ) : modelSetting ? (
-          <NodeModel
-            phase={phase}
-            setting={modelSetting}
-            mainName={mainName}
-            draft={draft}
-            models={models}
-            onChange={onChange}
-          />
-        ) : null}
+        {/* Effort and model share one line and the label has its own. The other way round
+            left «ETIQUETABILIDAD» 83px at the narrowest column, which is the clipping this
+            layout exists to end — and a node is identified by its name long before it is
+            identified by how hard it thinks. */}
+        <span className="flex items-center gap-1.5">
+          {effortSetting && thinks ? (
+            <NodeEffort phase={phase} setting={effortSetting} draft={draft} onChange={onChange} />
+          ) : null}
+          {modelSetting && !ownModel ? (
+            <span
+              className="min-w-0 flex-1 truncate font-mono text-micro text-muted-foreground"
+              title={`Modelo: ${residentName}`}
+            >
+              {residentName}
+            </span>
+          ) : modelSetting ? (
+            <NodeModel
+              phase={phase}
+              setting={modelSetting}
+              mainName={mainName}
+              draft={draft}
+              models={models}
+              onChange={onChange}
+            />
+          ) : null}
+        </span>
       </span>
-      {trail}
     </li>
   );
 }
@@ -183,7 +198,7 @@ function NodeEffort({
       disabled={disabled}
       onChange={(event) => onChange(setting.key, event.target.value)}
       className={cn(
-        "h-7 w-full px-1.5 text-micro",
+        "h-7 w-[4.75rem] shrink-0 px-1 text-micro",
         pending && "border-attention ring-1 ring-attention",
       )}
     >
@@ -242,7 +257,7 @@ function NodeModel({
     .join(" — ");
 
   return (
-    <span className="flex w-full flex-col items-stretch gap-1">
+    <span className="flex min-w-0 flex-1 flex-col items-stretch gap-1">
       <Select
         aria-label={label}
         title={title}
@@ -373,7 +388,7 @@ export function ReasoningLegend() {
         </span>
         fija: no depende de un ajuste
       </li>
-      <li>bajo cada nodo que razona, su esfuerzo y el modelo que atiende la llamada</li>
+      <li>en cada parada, el modelo que atiende la llamada; y si razona, su esfuerzo al lado</li>
     </ul>
   );
 }
