@@ -1,11 +1,13 @@
-<!-- The mark, in the ink of the LIGHT palette: `primary`, oklch(0.20 0.010 265). Its twin
-     `favicon-dark.svg` is the same five shapes in the dark one, and `theme.js` decides
-     which of the two the tab carries. Edit them together, and keep the geometry the same
-     as `ui/logo.tsx`. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#14161B" stroke-width="1.6">
-  <rect x="1.8" y="9.1" width="5.8" height="5.8" fill="#14161B" stroke="none"/>
-  <path d="M11.4 2.4V21.6"/>
-  <rect x="14.8" y="2.4" width="5.4" height="5.4"/>
-  <rect x="14.8" y="9.3" width="5.4" height="5.4"/>
-  <rect x="14.8" y="16.2" width="5.4" height="5.4"/>
+<!-- The mark's single-tone version, in the ink of the LIGHT palette: `primary`,
+     oklch(0.20 0.010 265). Its twin `favicon-dark.svg` is the same five shapes in the
+     dark one, and `theme.js` decides which of the two the tab carries. Edit them
+     together, and keep the geometry the same as `ui/logo.tsx` — only the colour
+     collapses to one tone here: fill against outline and the dotted stretch carry
+     the frontier. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <path d="M6.6 12H9.7" stroke="#14161B" stroke-width="1.6"/>
+  <path d="M14.3 12H17.4" stroke="#14161B" stroke-width="1.6" stroke-dasharray="1.1 1.6"/>
+  <rect x="2" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
+  <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
+  <rect x="17.4" y="9.7" width="4.6" height="4.6" stroke="#14161B" stroke-width="1.6"/>
 </svg>
