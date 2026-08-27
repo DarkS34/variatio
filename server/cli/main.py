@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+from variatio.core import languages
 from variatio.core.dotenv import load_dotenv
 from variatio.core.paths import PROJECT_ROOT
 
@@ -56,6 +57,14 @@ def build_parser():
     maker.add_argument("slug", help="identificador en minúsculas, cifras y guiones")
     maker.add_argument("--name", default="", help="nombre legible; por defecto, el slug")
     maker.add_argument("--owner", default=None, metavar="USUARIO", help="cuenta que lo poseerá")
+    # El idioma de sus PROMPTS, no el de quien lo usa. Se elige aquí porque queda cocido en
+    # los artefactos que construya, y después ya no se puede cambiar.
+    maker.add_argument(
+        "--language",
+        default=languages.DEFAULT,
+        choices=languages.LANGUAGES,
+        help="idioma de los prompts de esta instancia",
+    )
     maker.set_defaults(func=guarded(instances.create_workspace))
 
     creator = subparsers.add_parser(
@@ -85,6 +94,14 @@ def build_parser():
         default=None,
         choices=("teacher", "student"),
         help="perfil de evaluador: decide qué se le pregunta al comparar propuestas",
+    )
+    # Aquí hay valor por defecto y en el formulario de registro no: no hay ningún navegador
+    # a quien preguntárselo, y una cuenta sin idioma no puede leer nada.
+    creator.add_argument(
+        "--language",
+        default=languages.DEFAULT,
+        choices=languages.LANGUAGES,
+        help="idioma de la interfaz para esta cuenta",
     )
     creator.set_defaults(func=guarded(accounts.create_user))
 

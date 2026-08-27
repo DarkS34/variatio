@@ -59,6 +59,12 @@ class Workspace(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(200))
+    # The language this instance's PROMPTS are written in — not the language its material is
+    # written in, which `content_context.json` already carries and which the corpus decides.
+    # A MIRROR of `instance/locale.json` and never the truth: the pipeline runs from the
+    # command line with no database, so a build reads the file. The column is here so the
+    # panel can list the instances without touching disk.
+    prompt_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
@@ -179,6 +185,13 @@ class User(Base):
     # `teacher` / `student` / NULL. A stratification variable for the study and nothing
     # else: it changes the wording of one question and how the panel groups the results.
     evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
+    # What this person READS: the interface, the guide, the errors and the labels of a run.
+    # Deliberately not the same axis as a workspace's `prompt_language` — somebody working in
+    # Spanish may perfectly well prepare an instance whose prompts are English. Asked when the
+    # account comes into existence, like `evaluator_profile`, and changeable afterwards; NOT
+    # NULL because there is no such thing as reading no language, and «es» is what every
+    # account written before today was.
+    ui_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )

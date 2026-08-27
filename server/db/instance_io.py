@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from variatio import stages
 from variatio.core import json_io
 from variatio.core.workspace import Workspace as FsWorkspace
+from variatio.instance import locale
 
 from . import repository as repo
 from .layout import KINDS, artifact_paths
@@ -80,6 +81,11 @@ def import_instance(
     """Load a filesystem workspace into the database as one workspace row."""
     workspace = repo.ensure_workspace(session, slug, name)
 
+    # The file is the truth and the column is the mirror, so importing a directory has to
+    # bring the language over: otherwise a workspace whose prompts are English arrives as a
+    # row that says Spanish, and the panel reports something the next build will contradict.
+    workspace.prompt_language = locale.prompt_language(ws)
+
     imported: list[str] = []
     for kind, stage_paths in artifact_paths(ws).items():
         for stage, path in stage_paths.items():
@@ -142,6 +148,7 @@ def import_instance(
         "artifacts": imported,
         "approvals": approvals,
         "raw_documents": documents,
+        "prompt_language": workspace.prompt_language,
     }
     logger.success(
         f"«{workspace.slug}» importado: {len(imported)} versión(es) de artefacto, "
@@ -157,6 +164,9 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
         raise LookupError(f"No workspace '{slug}' in the database")
 
     ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    # Written unconditionally, unlike the artifacts: a directory without it reads as Spanish,
+    # which for an English instance is not a missing file but a wrong one.
+    locale.set_prompt_language(ws, workspace.prompt_language)
 
     written: list[str] = []
     for kind, stage_paths in artifact_paths(ws).items():
@@ -182,4 +192,10 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
         json_io.write_json(ws.review_state_path, state)
 
     logger.success(f"«{slug}» exportado a {ws.root}: {len(written)} artefacto(s)")
-    return {"workspace": slug, "root": str(ws.root), "artifacts": written, "approvals": len(state)}
+    return {
+        "workspace": slug,
+        "root": str(ws.root),
+        "artifacts": written,
+        "approvals": len(state),
+        "prompt_language": workspace.prompt_language,
+    }

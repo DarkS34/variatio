@@ -55,6 +55,13 @@ class AcceptBody(BaseModel):
     name: str = ""
     password: str
     evaluator_profile: str | None = None
+    # Absent is allowed here and nowhere else: a browser that never asked can still register,
+    # and the form seeds this from `navigator.language`. `create_user` resolves it.
+    ui_language: str | None = None
+
+
+class LanguageBody(BaseModel):
+    language: str
 
 
 class PasswordBody(BaseModel):
@@ -164,6 +171,27 @@ def update_me(
 # request, and a route whose only reader is gone is a surface with no user. What survives is
 # what never needed the list — `logout-all`, and the password change, which revokes every
 # other session in the same transaction.
+
+
+# LANGUAGE --------------------------------------------------------------------------
+
+
+# The account's own, and only the account's: an administrator may correct an evaluator
+# profile because it is a variable of the study, but what somebody reads the interface in is
+# nobody else's decision. It deliberately does NOT touch any workspace: the language a person
+# reads and the language an instance's prompts are written in are separate axes, and the
+# screen says so before it saves.
+@router.post("/language")
+def change_language(
+    body: LanguageBody,
+    user: User = Depends(deps.current_user),
+    session: DbSession = Depends(deps.db),
+) -> dict:
+    error = identity.language_error(body.language)
+    if error:
+        raise HTTPException(422, error)
+    identity.set_ui_language(session, user, body.language)
+    return {"ui_language": user.ui_language}
 
 
 # PASSWORD --------------------------------------------------------------------------
@@ -310,12 +338,21 @@ def accept_invite(
     if body.evaluator_profile is None:
         raise HTTPException(422, "Di si das clase o si estudias: decide qué se te preguntará.")
 
+    # Unlike the profile, an unknown language is refused rather than ignored: the account
+    # reads everything through it, so silently seating somebody in Spanish because they typed
+    # `fr` is worse than saying the installation does not speak it.
+    if body.ui_language is not None:
+        error = identity.language_error(body.ui_language)
+        if error:
+            raise HTTPException(422, error)
+
     user = identity.create_user(
         session,
         username=username,
         name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
         evaluator_profile=body.evaluator_profile,
+        ui_language=body.ui_language,
     )
     _apply_membership(session, invite, user)
     identity.consume_invite(session, invite, user.id)
@@ -359,6 +396,10 @@ def _me(session: DbSession, user: User) -> dict:
             # The evaluation screen asks a teacher and a student different things, and it
             # has to know which before it draws the first card.
             "evaluator_profile": user.evaluator_profile,
+            # What the interface is drawn in. It travels on the session query rather than on
+            # a screen of its own because every screen needs it, and the tab has to know
+            # before the first render — the same reason `active_workspace` is here.
+            "ui_language": user.ui_language,
         },
         "workspaces": workspaces,
         "active_workspace": active,

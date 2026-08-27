@@ -12,6 +12,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from variatio.core import languages
+
 from .models import (
     EDITOR,
     EVALUATOR_PROFILES,
@@ -61,6 +63,13 @@ def profile_error(profile: str | None) -> str | None:
     return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
 
 
+# There is no `language_error` of its own here: the vocabulary is `variatio.core.languages`
+# and the pipeline reads it too, so a second copy on the server side would be exactly the
+# drift the two functions above exist to prevent. Unlike a profile, `None` is NOT valid —
+# nobody reads no language — so the caller resolves it rather than storing it.
+language_error = languages.error
+
+
 # USERS ---------------------------------------------------------------------------------
 
 
@@ -93,6 +102,7 @@ def create_user(
     is_admin: bool = False,
     email_verified: bool = False,
     evaluator_profile: str | None = None,
+    ui_language: str | None = None,
 ) -> User:
     username = normalise_username(username)
     user = User(
@@ -103,6 +113,7 @@ def create_user(
         is_admin=is_admin,
         email_verified_at=now() if email_verified and email else None,
         evaluator_profile=evaluator_profile,
+        ui_language=languages.resolve(ui_language),
     )
     session.add(user)
     session.flush()
@@ -111,6 +122,12 @@ def create_user(
 
 def set_evaluator_profile(session: Session, user: User, profile: str | None) -> User:
     user.evaluator_profile = profile
+    session.flush()
+    return user
+
+
+def set_ui_language(session: Session, user: User, language: str) -> User:
+    user.ui_language = languages.resolve(language)
     session.flush()
     return user
 

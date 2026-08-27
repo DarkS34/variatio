@@ -51,6 +51,8 @@ def create_workspace(args) -> int:
     from ..db.identity import get_user, grant
     from ..db.models import OWNER
     from ..db.repository import create_workspace as insert, get_workspace
+    from variatio.instance import locale
+
     from ..settings import provision, slug_error, workspace_for
 
     error = slug_error(args.slug)
@@ -63,7 +65,9 @@ def create_workspace(args) -> int:
             print(f"Ya existe el workspace '{args.slug}'.")
             return 1
 
-        workspace = insert(session, args.slug, args.name or args.slug)
+        workspace = insert(
+            session, args.slug, args.name or args.slug, prompt_language=args.language
+        )
         if args.owner:
             user = get_user(session, args.owner)
             if user is None:
@@ -73,7 +77,13 @@ def create_workspace(args) -> int:
 
         ws = workspace_for(args.slug)
         provision(ws)
-        print(f"Workspace '{workspace.slug}' creado en {ws.root}")
+        # The file and not the column is what a build reads: the pipeline runs with no
+        # database at all, so the row beside it is a mirror for the panel to list by.
+        locale.set_prompt_language(ws, args.language)
+        print(
+            f"Workspace '{workspace.slug}' creado en {ws.root}, "
+            f"con los prompts en «{args.language}»"
+        )
         if args.owner:
             print(f"{args.owner} es su propietario.")
         else:

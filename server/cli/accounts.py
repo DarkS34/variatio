@@ -67,6 +67,7 @@ def create_user(args) -> int:
             is_admin=args.admin,
             email_verified=bool(args.email),
             evaluator_profile=getattr(args, "profile", None),
+            ui_language=getattr(args, "language", None),
         )
         # An account with no workspace is a normal account since 2026-08-26: there is no
         # instance to attach it to by default, and the first thing the panel offers it is

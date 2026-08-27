@@ -4,6 +4,8 @@ import json
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from variatio.core import languages
+
 from .models import CURATED, DRAFT, Approval, Artifact, RawDocument, Workspace
 
 
@@ -34,8 +36,12 @@ def list_workspaces(session: Session) -> list[Workspace]:
     )
 
 
-def create_workspace(session: Session, slug: str, name: str | None = None) -> Workspace:
-    workspace = Workspace(slug=slug, name=name or slug)
+def create_workspace(
+    session: Session, slug: str, name: str | None = None, prompt_language: str | None = None
+) -> Workspace:
+    workspace = Workspace(
+        slug=slug, name=name or slug, prompt_language=languages.resolve(prompt_language)
+    )
     session.add(workspace)
     session.flush()
     return workspace

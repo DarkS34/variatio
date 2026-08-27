@@ -15,6 +15,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
+from variatio.core import languages
+from variatio.instance import locale
+
 from .. import auth, deps, runtime, settings
 from ..db import generations, identity, repository
 from ..db.models import OWNER, VIEWER, User, Workspace
@@ -25,6 +28,10 @@ router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
 class CreateBody(BaseModel):
     slug: str = Field(min_length=3, max_length=64)
     name: str = ""
+    # The language its PROMPTS will be written in, and the only moment it can be decided:
+    # the relation labels a build writes into `knowledge_graph.json` are what the loader
+    # indexes by, so once anything is built the choice is baked into the artifacts.
+    prompt_language: str = languages.DEFAULT
 
 
 class RenameBody(BaseModel):
@@ -37,6 +44,7 @@ def _view(workspace: Workspace, role: str | None, active: bool, as_admin: bool =
         "name": workspace.name,
         "role": role,
         "active": active,
+        "prompt_language": workspace.prompt_language,
         # An administrator sees every workspace in the switcher, including the ones they
         # are not a member of. Saying so is what keeps them from mistaking somebody else's
         # instance for their own.
@@ -86,13 +94,23 @@ def create(
     if repository.get_workspace(db, slug) is not None:
         raise HTTPException(409, f"Ya existe un workspace con el identificador '{slug}'.")
 
-    workspace = repository.create_workspace(db, slug, body.name.strip() or slug)
+    error = languages.error(body.prompt_language)
+    if error:
+        raise HTTPException(422, error)
+
+    workspace = repository.create_workspace(
+        db, slug, body.name.strip() or slug, prompt_language=body.prompt_language
+    )
     identity.grant(db, workspace.id, user.id, OWNER)
     user.active_workspace_id = workspace.id
 
     # The directory tree before the row is usable: every screen of a brand-new workspace
     # reads files, and an empty chain with no place to upload into is a dead end.
-    settings.provision(settings.workspace_for(slug))
+    ws = settings.workspace_for(slug)
+    settings.provision(ws)
+    # The file is what a build reads — the pipeline never touches the database — so the row
+    # written above is the mirror and this is the truth.
+    locale.set_prompt_language(ws, workspace.prompt_language)
     return {"workspace": _view(workspace, OWNER, active=True)}
 
 
