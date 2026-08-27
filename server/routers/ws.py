@@ -29,6 +29,24 @@ router = APIRouter()
 
 HEARTBEAT_SECONDS = 20.0
 
+# What a browser that has NEVER seen the stream is sent. A run emits one event per model
+# token, so the buffer holds tens of thousands of `token` events and megabytes of text;
+# replaying them into a fresh tab froze it for as long as the reducer took to chew — the
+# «second person's screen goes white» bug. A cold connect gets the durable events only,
+# bounded, and the `jobs` snapshot below is what guarantees the runs still carry their job
+# even when `job.queued`/`job.started` have been evicted from the ring.
+COLD_REPLAY_LIMIT = 4000
+COLD_SKIPPED_KINDS = frozenset({"token"})
+
+# How many jobs of the workspace travel in `stream.ready`. The client keeps 12 runs.
+JOBS_SNAPSHOT_LIMIT = 20
+
+
+def trim_cold_replay(events: list[dict]) -> list[dict]:
+    kept = [e for e in events if e.get("kind") not in COLD_SKIPPED_KINDS]
+    return kept[-COLD_REPLAY_LIMIT:]
+
+
 # 4401 is the WebSocket convention for "unauthorised": the browser cannot read an HTTP
 # status here, so the close code is the only way to tell the client to go and log in
 # instead of reconnecting forever.
@@ -52,19 +70,28 @@ async def stream(websocket: WebSocket) -> None:
 
     async with runtime.bus.subscribe() as queue:
         replayed, gap = runtime.bus.replay(since, workspace=slug)
-        await websocket.send_json(
-            {
-                "kind": "stream.ready",
-                "since": since,
-                "gap": gap,
-                "last_seq": runtime.bus.last_seq,
-                "workspace": slug,
-                "events": replayed,
-            }
-        )
+        # `delivered` is computed BEFORE the cold trim: a trimmed event must not be
+        # re-delivered from the live queue as if it were new.
         delivered = replayed[-1]["seq"] if replayed else since
+        if since <= 0:
+            replayed = trim_cold_replay(replayed)
+        jobs = [
+            job.to_dict()
+            for job in runtime.runner.all(limit=JOBS_SNAPSHOT_LIMIT, workspace=slug)
+        ]
 
         try:
+            await websocket.send_json(
+                {
+                    "kind": "stream.ready",
+                    "since": since,
+                    "gap": gap,
+                    "last_seq": runtime.bus.last_seq,
+                    "workspace": slug,
+                    "jobs": jobs,
+                    "events": replayed,
+                }
+            )
             while True:
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)

@@ -74,7 +74,9 @@ def pipeline_payload(access: auth.Access) -> dict:
     if waiting:
         first = set(waiting[0].backends)
         blocking = sum(1 for j in running if first & set(j.backends))
-        ahead = blocking + runtime.runner.queue_position(waiting[0].id) - 1
+        # Clamped: the dispatcher can start `waiting[0]` between the two reads above, and
+        # then `queue_position` answers 0 — «-1 por delante» is not a count.
+        ahead = max(0, blocking + runtime.runner.queue_position(waiting[0].id) - 1)
     return {
         "stages": chain,
         "generation_unlocked": all(s["status"] == "approved" for s in chain),
