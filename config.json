@@ -109,25 +109,27 @@
         "guardrail": "granite4.1-guardian:8b-q4_K_M",
         "embedding": "qwen3-embedding:4b",
         "phases": {
-          "exemplars_transcribe": null,
+          "transcribe": "qwen3.6:35b-a3b-q8_0",
+          "transcribe_seam": "qwen3.6:35b-a3b-q8_0",
           "ep_scan": null,
-          "ep_context": null,
-          "eb_extract": "gemma-4-31b",
-          "kg_extract": "gemma-4-31b",
-          "kg_domains": null,
-          "kg_domains_leftovers": null,
-          "kg_context": null,
-          "description_generation": null,
-          "concept_tagger": null,
-          "admissibility": null,
-          "repair": "gemma-4-31b",
           "ep_consolidate": "gemma-4-31b",
+          "ep_context": "gemma-4-31b",
+          "eb_extract": null,
+          "kg_extract": null,
           "kg_clean_merge": "gemma-4-31b",
           "kg_clean_drop": "gemma-4-31b",
+          "kg_units": "gemma-4-31b",
+          "kg_domains": "gemma-4-31b",
+          "kg_domains_leftovers": "gemma-4-31b",
           "kg_link_domain": "gemma-4-31b",
           "kg_link_cross_domain": "gemma-4-31b",
           "kg_taggable": "gemma-4-31b",
-          "variant_generation": "gemma-4-31b"
+          "kg_context": "gemma-4-31b",
+          "description_generation": null,
+          "concept_tagger": null,
+          "variant_generation": "gemma-4-31b",
+          "admissibility": "gemma-4-31b",
+          "repair": null
         }
       },
       "reasoning": {
@@ -139,9 +141,6 @@
           "kg_link_cross_domain": "high",
           "kg_taggable": "high",
           "concept_tagger": "low"
-        },
-        "phases": {
-          "kg_extract": true
         }
       }
     },
