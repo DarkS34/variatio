@@ -7,6 +7,8 @@ from variatio.builders._source_docs import pages
 from variatio.builders.knowledge_graph_builder import extraction
 from variatio.core.workspace import Workspace
 
+from ..conftest import ES
+
 PAGE_ONE = "# Tema 1\n\nUna variable guarda un valor. El bucle recorre la"
 PAGE_TWO = "lista entera.\n\n## Funciones\n\nUna función agrupa instrucciones."
 
@@ -53,6 +55,7 @@ def convert(ws, monkeypatch, texts, seam="space"):
         converter=_Refuses(),
         chunk_size=12000,
         cache_dir=ws.markdown_cache_dir,
+        prompts=ES,
     )
     return documents, seen
 
@@ -100,6 +103,7 @@ def test_a_second_build_reuses_the_pages_and_calls_no_model(corpus, monkeypatch)
         converter=_Refuses(),
         chunk_size=12000,
         cache_dir=corpus.markdown_cache_dir,
+        prompts=ES,
     )
     assert documents
 

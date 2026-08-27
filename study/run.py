@@ -151,6 +151,7 @@ def _screen(context, item_type, commission: Commission):
                 commission.concepts,
             ),
             commission.concepts,
+            context.prompts,
             context.content_context.prompt_block(),
         )
         if not ruling.ok:

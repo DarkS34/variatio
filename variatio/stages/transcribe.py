@@ -13,6 +13,8 @@ from .. import config
 from ..builders import _source_docs
 from ..core import progress
 from ..core.workspace import Workspace
+from ..instance import locale
+from .. import prompts as prompts_pkg
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"
@@ -175,6 +177,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                 try:
                     pages = _source_docs.document_pages(
                         source,
+                        prompts_pkg.of(locale.prompt_language(ws)),
                         converter=converter,
                         ocr=ocr,
                         tag=f"[{idx}/{len(sources)}] ",

@@ -6,6 +6,8 @@ from variatio.builders._source_docs import chunking, markdown, pages
 from variatio.core import inference
 from variatio.prompts import SEAM_SEPARATORS
 
+from ..conftest import ES
+
 CODE_OPEN = "Escribe la función:\n\n```python\ndef f(n):\n    total = 0"
 CODE_REST = "```python\n    for i in range(n):\n        total += i\n    return total\n```"
 
@@ -107,14 +109,14 @@ def test_the_separator_catalogue_matches_the_prompt_exactly():
 
 def test_the_review_asks_once_per_uncertain_seam(monkeypatch):
     prompts = answer(monkeypatch, '{"continues": false, "separator": "paragraph", "drop_head_lines": 0}')
-    records = pages.review_seams(["Uno.", "Dos.", "Tres."], model="m")
+    records = pages.review_seams(["Uno.", "Dos.", "Tres."], ES, model="m")
     assert len(prompts) == 2
     assert [record["page"] for record in records] == [2, 3]
 
 
 def test_the_review_never_asks_about_a_seam_the_rule_is_sure_of(monkeypatch):
     prompts = answer(monkeypatch, '{"continues": true, "separator": "newline", "drop_head_lines": 0}')
-    assert pages.review_seams([CODE_OPEN, CODE_REST], model="m") == []
+    assert pages.review_seams([CODE_OPEN, CODE_REST], ES, model="m") == []
     assert prompts == []
 
 
@@ -122,14 +124,14 @@ def test_the_model_can_override_the_rule(monkeypatch):
     answer(monkeypatch, '{"continues": true, "separator": "space", "drop_head_lines": 0}')
     left, right = "Escribe una función que", "Devuelve la suma."
     assert pages.seam(left, right)[0] == pages.PARAGRAPH
-    seams = pages.review_seams([left, right], model="m")
+    seams = pages.review_seams([left, right], ES, model="m")
     assert pages.join_pages([left, right], seams) == "Escribe una función que Devuelve la suma."
 
 
 def test_a_repeated_page_header_is_dropped_by_the_number_of_lines_the_model_says(monkeypatch):
     answer(monkeypatch, '{"continues": true, "separator": "space", "drop_head_lines": 1}')
     left, right = "El ejercicio pide que el alumno", "Prog1 · PEC1\nescriba una función."
-    seams = pages.review_seams([left, right], model="m")
+    seams = pages.review_seams([left, right], ES, model="m")
     joined = pages.join_pages([left, right], seams)
     assert "Prog1" not in joined
     assert joined == "El ejercicio pide que el alumno escriba una función."
@@ -137,13 +139,13 @@ def test_a_repeated_page_header_is_dropped_by_the_number_of_lines_the_model_says
 
 def test_the_model_may_not_drop_more_lines_than_the_cap(monkeypatch):
     answer(monkeypatch, '{"continues": true, "separator": "space", "drop_head_lines": 99}')
-    seams = pages.review_seams(["El ejercicio pide que el alumno", "a\nb\nc\nd\ne"], model="m")
+    seams = pages.review_seams(["El ejercicio pide que el alumno", "a\nb\nc\nd\ne"], ES, model="m")
     assert seams[0]["drop_head_lines"] == pages.MAX_SEAM_DROP_LINES
 
 
 def test_an_invented_separator_is_discarded(monkeypatch):
     answer(monkeypatch, '{"continues": true, "separator": "pegado", "drop_head_lines": 0}')
-    records = pages.review_seams(["Uno.", "Dos."], model="m")
+    records = pages.review_seams(["Uno.", "Dos."], ES, model="m")
     assert records == [{"page": 2, "failed": True}]
 
 
@@ -152,14 +154,14 @@ def test_an_engine_failure_falls_back_to_the_rule(monkeypatch):
         raise inference.InferenceError("el motor no responde")
 
     monkeypatch.setattr(pages.inference, "generate", boom)
-    records = pages.review_seams([SENTENCE_OPEN, SENTENCE_REST], model="m")
+    records = pages.review_seams([SENTENCE_OPEN, SENTENCE_REST], ES, model="m")
     assert records == [{"page": 2, "failed": True}]
     assert "con el siguiente," in pages.join_pages([SENTENCE_OPEN, SENTENCE_REST], records)
 
 
 def test_unreadable_json_falls_back_to_the_rule(monkeypatch):
     answer(monkeypatch, "no soy json en absoluto")
-    records = pages.review_seams(["Uno.", "Dos."], model="m")
+    records = pages.review_seams(["Uno.", "Dos."], ES, model="m")
     assert records == [{"page": 2, "failed": True}]
     assert pages.join_pages(["Uno.", "Dos."], records) == "Uno.\n\n<!-- pág. 2 -->\n\nDos."
 
@@ -168,7 +170,7 @@ def test_the_prompt_shows_only_the_tail_and_the_head(monkeypatch):
     prompts = answer(monkeypatch, '{"continues": false, "separator": "paragraph", "drop_head_lines": 0}')
     left = "PRINCIPIO " + "x" * 5000 + " FIN DE LA IZQUIERDA"
     right = "PRINCIPIO DE LA DERECHA " + "y" * 5000 + " FINAL"
-    pages.review_seams([left, right], model="m")
+    pages.review_seams([left, right], ES, model="m")
     assert "FIN DE LA IZQUIERDA" in prompts[0]
     assert "PRINCIPIO DE LA DERECHA" in prompts[0]
     assert "FINAL" not in prompts[0].split("<<<FIN DE LA CABEZA>>>")[0].split("<<<CABEZA>>>")[1]
@@ -186,7 +188,7 @@ def test_a_cancellation_between_seams_is_honoured(monkeypatch):
 
     with pages.progress.emitting(Stop()):
         with pytest.raises(pages.progress.Cancelled):
-            pages.review_seams(["Uno.", "Dos."], model="m")
+            pages.review_seams(["Uno.", "Dos."], ES, model="m")
 
 
 def test_the_meta_records_how_many_seams_were_merged_and_which_failed():

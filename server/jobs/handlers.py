@@ -7,10 +7,11 @@ read a process-wide workspace would write one person's build into another's dire
 
 from loguru import logger
 
-from variatio import config, stages
+from variatio import config, prompts, stages
 from variatio.concept_tagger import ConceptTagger
 from variatio.core import inference, progress
 from variatio.core.workspace import Workspace
+from variatio.instance import locale
 from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
 
@@ -185,7 +186,11 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     with progress.overall(taggability.BUILD_PHASES):
         progress.phase("taggable")
         non_taggable = taggability.review(
-            graph, profile, bank, stages.load_content_context(ws)
+            graph,
+            profile,
+            prompts.of(locale.prompt_language(ws)),
+            bank,
+            stages.load_content_context(ws),
         )
 
     result = kg_edit.set_non_taggable(ws, non_taggable)

@@ -11,16 +11,7 @@ EXEMPLARS_PROFILE_FIELD_NAMING = """\
   · la explicación didáctica o justificación de la respuesta → `explicacion`
   Inventa un nombre nuevo SOLO si el rol del campo no aparece en esta lista; entonces aplícale las mismas reglas. No añadas sufijos que describan el soporte concreto de esta muestra: `solucion`, no `codigo_solucion`.
 - NOMBRES RESERVADOS, prohibidos como campo: `item_type`, `id`, `source`, `concepts`, `primary_concept`. Los usa el propio sistema.
-- NADA DE CAMPOS DE MODALIDAD: no declares un campo `tipo`, `tipo_item`, `modalidad`, `formato` ni equivalente. La modalidad del ejercicio ES la clave de su entrada en `item_types`; un campo así la duplicaría.
-- VOCABULARIO CANÓNICO: los nombres deben ser estables entre asignaturas distintas, para que un ejercicio de programación y uno de física se describan con las mismas claves. Si un campo desempeña uno de estos roles, usa EXACTAMENTE ese nombre en vez de inventar un sinónimo:
-  · el texto principal que plantea al alumno la tarea, el problema o la pregunta → `statement`
-  · la respuesta, resolución o resultado esperado → `solution`
-  · el grado de dificultad o exigencia → `difficulty_level`
-  · el título o nombre corto del ejercicio → `title`
-  · las alternativas de una pregunta cerrada → `options`
-  · la explicación didáctica o justificación de la respuesta → `explanation`
-  · la modalidad o formato del ejercicio → `item_type`
-  Inventa un nombre nuevo SOLO si el rol del campo no aparece en esta lista; entonces aplícale las mismas reglas. No añadas sufijos que describan el soporte concreto de esta muestra: `statement`, no `instruction_text`; `solution`, no `solution_code`.\
+- NADA DE CAMPOS DE MODALIDAD: no declares un campo `tipo`, `tipo_item`, `modalidad`, `formato` ni equivalente. La modalidad del ejercicio ES la clave de su entrada en `item_types`; un campo así la duplicaría.\
 """
 
 

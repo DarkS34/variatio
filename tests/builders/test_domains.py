@@ -2,7 +2,9 @@ from types import SimpleNamespace
 
 from variatio import config
 from variatio.builders.knowledge_graph_builder import curation
-from variatio.prompts import curate_graph_domains_prompt
+from variatio.prompts.es import curate_graph_domains_prompt
+
+from ..conftest import ES
 
 CONCEPTS = ["Bucle while", "Función", "Lista", "Variable"]
 RELATIONS = [["Función", "tiene como prerrequisito", "Variable"]]
@@ -20,7 +22,7 @@ def answer(monkeypatch, response: str) -> list[str]:
 
 
 def place_all_in_the_first_domain(monkeypatch):
-    def fake_assign_round(pending, placed, relations, definitions=None, *, max_attempts):
+    def fake_assign_round(pending, placed, relations, definitions=None, *, max_attempts, prompts):
         first = next(iter(placed))
         placed[first].extend(pending)
         return []
@@ -31,7 +33,7 @@ def place_all_in_the_first_domain(monkeypatch):
 def curate(monkeypatch, response):
     prompts = answer(monkeypatch, response)
     place_all_in_the_first_domain(monkeypatch)
-    result = curation.curate_domains(CONCEPTS, RELATIONS, [], {}, max_attempts=1)
+    result = curation.curate_domains(CONCEPTS, RELATIONS, [], {}, max_attempts=1, prompts=ES)
     return result, prompts
 
 

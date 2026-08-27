@@ -2,11 +2,15 @@ import json
 
 import pytest
 
-from variatio import admissibility
+from variatio import admissibility, prompts
 from variatio.core import cerebras_budget
 from variatio.instance.content_context import ContentContext
 from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
+
+# The Spanish set, which is what every measurement in this suite was taken against.
+# A test that is ABOUT the two languages resolves its own with `prompts.of`.
+ES = prompts.of("es")
 
 CHAIN_GRAPH = {
     "concepts_by_domains": {

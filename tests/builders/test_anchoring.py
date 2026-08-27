@@ -2,6 +2,8 @@ import json
 
 from variatio.builders.knowledge_graph_builder import extraction
 
+from ..conftest import ES
+
 
 def test_mentions_matches_literally():
     assert extraction.mentions("Un bucle for recorre una secuencia.", "Bucle for")
@@ -282,6 +284,7 @@ def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path
         return ConceptDescriber(
             KnowledgeGraph(str(path)),
             context,
+            ES,
             path=descriptions_path,
             sources_path=tmp_path / "concept_sources.json",
         )

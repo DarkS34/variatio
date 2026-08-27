@@ -1,13 +1,13 @@
-# Appended by the page transcriber to the option a coloured/bold mark singles out on the
-# page, and stripped again by the extractor. Two prompts, one convention: the mark has to
-# be recognisable in the cached markdown a human may edit, and must never end up inside a
-# field value.
-CORRECT_ANSWER_MARK = "✔"
+from ..marks import CORRECT_ANSWER_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 
-# What a page made of nothing but logos, headers and page numbers comes back as. Recognised
-# by the reader and turned into an empty page, so it neither reaches a prompt nor looks
-# like a transcription that silently failed.
-EMPTY_PAGE_MARK = "[PÁGINA SIN CONTENIDO]"
+__all__ = [
+    "CORRECT_ANSWER_MARK",
+    "EMPTY_PAGE_MARK",
+    "SEAM_SEPARATORS",
+    "format_content_prompt",
+    "merge_pages_prompt",
+    "transcribe_page_prompt",
+]
 
 
 def transcribe_page_prompt(page_number: int, page_count: int) -> str:
@@ -41,9 +41,6 @@ Transcribe solo lo que ves en ESTA página. Si un ejercicio empieza aquí y sigu
 Solo el Markdown de la página. Sin preámbulo, sin comentarios tuyos, sin ```markdown envolviendo el conjunto, sin decir «Aquí está la transcripción». Si la página no contiene nada más que elementos omitibles, responde exactamente `{EMPTY_PAGE_MARK}`.
 
 Markdown:"""
-
-
-SEAM_SEPARATORS = ("none", "space", "newline", "paragraph")
 
 
 def merge_pages_prompt(tail: str, head: str, page_number: int, page_count: int) -> str:

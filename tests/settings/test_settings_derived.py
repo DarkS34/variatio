@@ -80,10 +80,5 @@ def test_a_host_that_already_has_a_scheme_is_left_alone():
     assert derived.derive(values)["OLLAMA_HOST"] == "https://gpu.interno:443"
 
 
-def test_the_relation_schema_derives_the_prerequisite_label():
-    out = derive_ok()
-    assert out["KG_PREREQUISITE_RELATION"] == out["RELATION_SCHEMA"].prerequisite_verbose
-
-
 def test_temperature_default_follows_the_deterministic_one():
     assert derive_ok()["TEMPERATURE_DEFAULT"] == 0.0

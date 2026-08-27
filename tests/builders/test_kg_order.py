@@ -11,6 +11,8 @@ from variatio.builders.knowledge_graph_builder import (
 )
 from variatio.instance.relations import RELATION_SCHEMA_ES as SCHEMA
 
+from ..conftest import ES
+
 PREREQ = SCHEMA.prerequisite_verbose
 EMPTY = '{"concepts": [], "relations": []}'
 
@@ -73,7 +75,7 @@ def test_positions_record_the_first_chunk_a_concept_is_seen_in(monkeypatch):
     answers(monkeypatch, first, second)
     documents = [("doc.md", [], [("Tema 1", [], "texto uno"), ("Tema 2", [], "texto dos")])]
 
-    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1, prompts=ES)
 
     assert found["positions"] == {"Variable": 1, "Bucle": 2}
     assert found["definitions"]["Variable"] == "Definición de Variable."
@@ -88,7 +90,7 @@ def test_positions_run_across_documents(monkeypatch):
         json.dumps({"concepts": [concept("B")], "relations": []}),
     )
     documents = [("uno.md", [], [("", [], "x")]), ("dos.md", [], [("", [], "y")])]
-    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1, prompts=ES)
     assert found["positions"] == {"A": 1, "B": 2}
 
 
@@ -104,10 +106,18 @@ def test_gleaning_adds_what_the_first_reading_missed(monkeypatch):
     prompts = answers(monkeypatch, first, gleaned, EMPTY)
 
     concepts, relations, definitions = extraction.extract_from_chunk(
-        "texto", "[t] ", "", schema=SCHEMA, max_attempts=1
+        "texto", "[t] ", "", schema=SCHEMA, max_attempts=1, prompts=ES
     )
     concepts, relations, definitions = extraction.glean_chunk(
-        "texto", "[t] ", "", concepts, relations, definitions, schema=SCHEMA, max_attempts=1
+        "texto",
+        "[t] ",
+        "",
+        concepts,
+        relations,
+        definitions,
+        schema=SCHEMA,
+        max_attempts=1,
+        prompts=ES,
     )
 
     assert concepts == ["Variable", "Bucle", "Condición"]
@@ -121,13 +131,13 @@ def test_gleaning_adds_what_the_first_reading_missed(monkeypatch):
 def test_gleaning_stops_as_soon_as_a_pass_adds_nothing(monkeypatch):
     monkeypatch.setattr(config, "KG_EXTRACT_GLEANING_PASSES", 3)
     prompts = answers(monkeypatch, EMPTY)
-    extraction.glean_chunk("texto", "[t] ", "", ["A"], [], {}, schema=SCHEMA, max_attempts=1)
+    extraction.glean_chunk("texto", "[t] ", "", ["A"], [], {}, schema=SCHEMA, max_attempts=1, prompts=ES)
     assert len(prompts) == 1
 
 
 def test_gleaning_is_skipped_when_the_first_reading_found_nothing(monkeypatch):
     prompts = answers(monkeypatch)
-    extraction.glean_chunk("texto", "[t] ", "", [], [], {}, schema=SCHEMA, max_attempts=1)
+    extraction.glean_chunk("texto", "[t] ", "", [], [], {}, schema=SCHEMA, max_attempts=1, prompts=ES)
     assert prompts == []
 
 
@@ -143,7 +153,7 @@ def test_occurrences_record_only_extractions_and_not_relation_endpoints(monkeypa
     answers(monkeypatch, first, second)
     documents = [("doc.md", [], [("", [], "uno"), ("", [], "dos")])]
 
-    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1, prompts=ES)
 
     assert found["positions"]["Recursividad"] == 1
     assert found["occurrences"]["Recursividad"] == [2]
@@ -156,7 +166,7 @@ def test_occurrences_accumulate_every_chunk_a_concept_is_extracted_from(monkeypa
     answers(monkeypatch, body, body, body)
     documents = [("doc.md", [], [("", [], "a"), ("", [], "b"), ("", [], "c")])]
 
-    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1, prompts=ES)
 
     assert found["occurrences"]["Lista"] == [1, 2, 3]
 
@@ -169,7 +179,7 @@ def test_the_outline_keeps_duplicates_and_the_order_of_the_corpus(monkeypatch):
         ("dos.md", [], [("", ["Ejemplo"], "c")]),
     ]
 
-    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1)
+    found = extraction.extract_documents(documents, schema=SCHEMA, max_attempts=1, prompts=ES)
 
     assert found["outline"] == [
         {"document": 0, "heading": "Tema I", "chunk": 1},
@@ -296,7 +306,12 @@ def test_the_linking_prompt_lists_the_domain_in_the_order_of_the_material(monkey
         {"Variable": 1, "Función": 5, "Recursividad": 9},
     )
     curation.link_relations(
-        by_domain, [], {"Variable": "Un nombre ligado a un valor."}, schema=SCHEMA, max_attempts=1
+        by_domain,
+        [],
+        {"Variable": "Un nombre ligado a un valor."},
+        schema=SCHEMA,
+        max_attempts=1,
+        prompts=ES,
     )
     body = prompts[0].split("EN EL ORDEN DEL MATERIAL")[-1]
     assert body.index("Variable") < body.index("Función") < body.index("Recursividad")

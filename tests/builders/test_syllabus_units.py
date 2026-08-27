@@ -3,7 +3,9 @@ from types import SimpleNamespace
 
 from variatio import config
 from variatio.builders.knowledge_graph_builder import blocks, curation
-from variatio.prompts import segment_syllabus_prompt
+from variatio.prompts.es import segment_syllabus_prompt
+
+from ..conftest import ES
 
 OUTLINE = [
     {"document": 0, "heading": "Índice", "chunk": 1},
@@ -157,19 +159,19 @@ def test_two_units_opening_in_the_same_chunk_keep_only_the_first():
 
 def test_segment_syllabus_reads_what_the_model_writes(monkeypatch):
     answer(monkeypatch, units(("Introducción", 2), ("Bucles", 4)))
-    result = curation.segment_syllabus(OUTLINE, [{"name": "apuntes.pdf"}], max_attempts=1)
+    result = curation.segment_syllabus(OUTLINE, [{"name": "apuntes.pdf"}], max_attempts=1, prompts=ES)
     assert [u["name"] for u in result] == ["Introducción", "Bucles"]
 
 
 def test_segment_syllabus_returns_nothing_without_an_outline(monkeypatch):
     prompts = answer(monkeypatch, units(("A", 1), ("B", 2)))
-    assert curation.segment_syllabus([], [], max_attempts=1) == []
+    assert curation.segment_syllabus([], [], max_attempts=1, prompts=ES) == []
     assert prompts == []
 
 
 def test_segment_syllabus_returns_nothing_when_the_answer_is_unreadable(monkeypatch):
     answer(monkeypatch, "lo siento, no puedo")
-    assert curation.segment_syllabus(OUTLINE, [], max_attempts=0) == []
+    assert curation.segment_syllabus(OUTLINE, [], max_attempts=0, prompts=ES) == []
 
 
 # THE PROMPT ----------------------------------------------------------------------------
@@ -253,7 +255,7 @@ def cleaned_corpus(**overrides) -> dict:
 def test_curate_units_places_by_the_corpus_and_never_reorders_by_median(monkeypatch):
     answer(monkeypatch, units(("Uno", 2), ("Dos", 4), ("Tres", 5)))
     cleaned = cleaned_corpus()
-    by_domain, found = curation.curate_units(cleaned, max_attempts=1)
+    by_domain, found = curation.curate_units(cleaned, max_attempts=1, prompts=ES)
 
     assert list(by_domain) == ["Uno", "Dos", "Tres"]
     assert by_domain["Uno"] == ["Variable"]
@@ -271,13 +273,13 @@ def test_curate_units_places_by_the_corpus_and_never_reorders_by_median(monkeypa
 
 def test_curate_units_gives_up_without_an_outline(monkeypatch):
     prompts = answer(monkeypatch, units(("Uno", 2), ("Dos", 4)))
-    assert curation.curate_units(cleaned_corpus(outline=[]), max_attempts=1) == ({}, [])
+    assert curation.curate_units(cleaned_corpus(outline=[]), max_attempts=1, prompts=ES) == ({}, [])
     assert prompts == []
 
 
 def test_curate_units_gives_up_when_the_segmentation_fails(monkeypatch):
     answer(monkeypatch, units(("Solo una", 2)))
-    assert curation.curate_units(cleaned_corpus(), max_attempts=1) == ({}, [])
+    assert curation.curate_units(cleaned_corpus(), max_attempts=1, prompts=ES) == ({}, [])
 
 
 def test_members_of_a_unit_follow_the_order_of_the_material(monkeypatch):
@@ -290,5 +292,6 @@ def test_members_of_a_unit_follow_the_order_of_the_material(monkeypatch):
             occurrences={"Alfa": [6], "Zeta": [6]},
         ),
         max_attempts=1,
+        prompts=ES,
     )
     assert by_domain["Dos"] == ["Zeta", "Alfa"]

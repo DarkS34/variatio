@@ -6,8 +6,9 @@ from .. import config
 from ..core import inference
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
+from ..instance import locale
 from ..instance.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
-from ..prompts import synthesize_content_context_prompt
+from .. import prompts as prompts_pkg
 
 CONTENT_CONTEXT_SCHEMA = {
     "type": "object",
@@ -32,7 +33,10 @@ def synthesize(
     think: bool = False,
 ) -> ContentContext | None:
     current = load_for(ws)
-    prompt = synthesize_content_context_prompt(
+    # Resolved from the workspace it was handed, which is the rule everywhere a `Workspace`
+    # is already in scope: what has no workspace receives the resolved set instead.
+    prompts = prompts_pkg.of(locale.prompt_language(ws))
+    prompt = prompts.synthesize_content_context_prompt(
         current_block=current.prompt_block(),
         evidence_block=evidence_block.strip(),
         source_label=source_label,
@@ -53,6 +57,7 @@ def synthesize(
         shape='{"narrative": "…", "subject": "…", '
         '"educational_level": "…", "language_of_instruction": "…"}',
         format=CONTENT_CONTEXT_SCHEMA,
+        prompts=prompts,
     )
     if parsed is None:
         logger.warning(

@@ -20,14 +20,13 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...embedder import embed_normalized
-from ...prompts import filter_graph_nodes_prompt, merge_candidate_groups_prompt
 from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA
 
 MIN_SINGULARIZE_LENGTH = 3
 
 
-def run(staging: dict, *, schema, max_attempts: int) -> dict:
+def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     progress.phase("clean")
     nodes = node_universe(staging)
     logger.info(f"Limpiando el grafo en bruto: {len(nodes)} nodo(s) en el universo")
@@ -43,6 +42,7 @@ def run(staging: dict, *, schema, max_attempts: int) -> dict:
         det_map,
         definitions,
         max_attempts=max_attempts,
+            prompts=prompts,
     )
     canonicals = sorted({llm_map.get(n, n) for n in representatives})
     logger.info(f"Fusión semántica: {len(representatives)} → {len(canonicals)} nodo(s)")
@@ -50,7 +50,8 @@ def run(staging: dict, *, schema, max_attempts: int) -> dict:
 
     surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
     drop = propose_drops(
-        canonicals, staging["relations"], surviving, definitions, max_attempts=max_attempts
+        canonicals, staging["relations"], surviving, definitions, max_attempts=max_attempts,
+            prompts=prompts,
     )
     progress.advance(0.95, f"{len(drop)} descarte(s)")
 
@@ -116,6 +117,7 @@ def propose_merges(
     definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
+    prompts,
 ) -> dict:
     groups = merge_candidates(nodes)
     if not groups:
@@ -140,7 +142,7 @@ def propose_merges(
             progress.advance(
                 0.1 + 0.4 * (idx - 1) / len(batches), f"grupos {idx}/{len(batches)}"
             )
-            prompt = merge_candidate_groups_prompt(
+            prompt = prompts.merge_candidate_groups_prompt(
                 blocks.groups_block(batch, relations, det_map, definitions)
             )
             response = inference.generate(
@@ -150,7 +152,7 @@ def propose_merges(
                 temperature=inference.judgement_temperature(config.THINK_KG_CLEAN_MERGE),
             ).response
             raw = parsing.parse_object(
-                response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA, max_attempts
+                response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA, max_attempts, prompts
             )
             if raw is None:
                 continue
@@ -256,6 +258,7 @@ def propose_drops(
     definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
+    prompts,
 ) -> set:
     size = config.KG_BUILDER_CLEAN_BATCH_SIZE
     batches = [nodes[i : i + size] for i in range(0, len(nodes), size)]
@@ -270,7 +273,7 @@ def propose_drops(
             progress.advance(
                 0.6 + 0.35 * (idx - 1) / len(batches), f"lote {idx}/{len(batches)}"
             )
-            prompt = filter_graph_nodes_prompt(
+            prompt = prompts.filter_graph_nodes_prompt(
                 blocks.nodes_block(batch, relations, node_map, definitions=definitions)
             )
             # Reasoning stays ON, and this is measured, not assumed: it looks like a
@@ -286,7 +289,7 @@ def propose_drops(
                 temperature=inference.judgement_temperature(config.THINK_KG_CLEAN_DROP),
             ).response
             raw = parsing.parse_object(
-                response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA, max_attempts
+                response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA, max_attempts, prompts
             )
             if raw is None:
                 continue

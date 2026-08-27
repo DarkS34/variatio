@@ -15,7 +15,6 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.lexicon import mentions
-from ...prompts import extract_typed_graph_prompt, glean_typed_graph_prompt
 from .. import _source_docs
 from . import parsing
 from .schemas import EXTRACT_SCHEMA
@@ -69,6 +68,7 @@ def convert_corpus(
     converter,
     chunk_size: int,
     cache_dir: Path,
+    prompts,
 ) -> list[tuple[str, list[str], list[tuple[str, list[str], str]]]]:
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
@@ -89,6 +89,7 @@ def convert_corpus(
             try:
                 text = _source_docs.document_markdown(
                     file_path,
+                    prompts,
                     converter=converter,
                     tag=f"[{idx}/{len(files)}] ",
                     cache_dir=cache_dir,
@@ -144,6 +145,7 @@ def extract_documents(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> dict:
     total = sum(len(chunks) for _, _, chunks in documents)
     logger.info(f"Extrayendo de {total} fragmento(s) de {len(documents)} documento(s)")
@@ -178,7 +180,8 @@ def extract_documents(
                 )
                 tag = f"[{name} · chunk {ci}/{len(chunks)}] "
                 chunk_concepts, chunk_relations, chunk_definitions = extract_from_chunk(
-                    chunk, tag, location, schema=schema, max_attempts=max_attempts
+                    chunk, tag, location, schema=schema, max_attempts=max_attempts,
+            prompts=prompts,
                 )
                 chunk_concepts, chunk_relations, chunk_definitions = glean_chunk(
                     chunk,
@@ -189,6 +192,7 @@ def extract_documents(
                     chunk_definitions,
                     schema=schema,
                     max_attempts=max_attempts,
+            prompts=prompts,
                 )
                 seen_here = set(chunk_concepts)
                 for source, _key, target in chunk_relations:
@@ -313,9 +317,10 @@ def extract_from_chunk(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
-    prompt = extract_typed_graph_prompt(chunk, schema, location)
-    return _ask(prompt, log_prefix, schema=schema, max_attempts=max_attempts)
+    prompt = prompts.extract_typed_graph_prompt(chunk, schema, location)
+    return _ask(prompt, log_prefix, schema=schema, max_attempts=max_attempts, prompts=prompts)
 
 
 # A second look at the same chunk, shown what the first one found. It is the cheapest
@@ -333,6 +338,7 @@ def glean_chunk(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
     if not concepts:
         return concepts, relations, definitions
@@ -340,11 +346,12 @@ def glean_chunk(
     relations = list(relations)
     definitions = dict(definitions)
     for attempt in range(1, config.KG_EXTRACT_GLEANING_PASSES + 1):
-        prompt = glean_typed_graph_prompt(
+        prompt = prompts.glean_typed_graph_prompt(
             chunk, schema, location, concepts, definitions, relations
         )
         more_concepts, more_relations, more_definitions = _ask(
-            prompt, f"{log_prefix}[glean {attempt}] ", schema=schema, max_attempts=max_attempts
+            prompt, f"{log_prefix}[glean {attempt}] ", schema=schema, max_attempts=max_attempts,
+            prompts=prompts,
         )
         known = set(concepts)
         new_concepts = [c for c in dict.fromkeys(more_concepts) if c not in known]
@@ -364,7 +371,7 @@ def glean_chunk(
 
 
 def _ask(
-    prompt: str, log_prefix: str, *, schema, max_attempts: int
+    prompt: str, log_prefix: str, *, schema, max_attempts: int, prompts
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
     response = inference.generate(
         model=config.KG_EXTRACT_MODEL,
@@ -373,7 +380,7 @@ def _ask(
         format=None if config.THINK_KG_EXTRACT else EXTRACT_SCHEMA,
         temperature=inference.judgement_temperature(config.THINK_KG_EXTRACT),
     ).response
-    raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts)
+    raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts, prompts)
     if raw is None:
         return [], [], {}
     concepts, definitions = parsing.concepts_with_definitions(raw.get("concepts", []))

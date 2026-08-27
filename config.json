@@ -43,7 +43,6 @@
     "kg_unclassified_domain": "Sin clasificar",
     "kg_max_titles_per_doc": 3,
     "kg_title_ubiquity": 0.6,
-    "kg_relation_schema": "es",
     "kg_merge_similarity": 0.8,
     "kg_max_merge_group": 8,
     "kg_merge_groups_per_call": 10,

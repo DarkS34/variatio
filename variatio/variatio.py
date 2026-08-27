@@ -14,7 +14,6 @@ from .embedder import Embedder
 from .instance.content_context import ContentContext
 from .instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from .instance.knowledge_graph import KnowledgeGraph
-from .prompts import generate_content_prompt
 
 
 def json_objects(text: str) -> list[str]:
@@ -261,6 +260,8 @@ class VariantGenerator:
         embedder: Embedder,
         exemplars_profile: ExemplarsProfile,
         generator_model: str,
+        prompts,
+        prerequisite_relation: str | None,
         content_context: ContentContext | None = None,
         repair_model: str = config.REPAIR_LLM,
         tagger: ConceptTagger | None = None,
@@ -269,6 +270,11 @@ class VariantGenerator:
         self.exemplars_bank = exemplars_bank
         self.embedder = embedder
         self.exemplars_profile = exemplars_profile
+        self.prompts = prompts
+        # The graph's own label for «is a prerequisite of», in the language the instance was
+        # built in. It used to be read from `config` at every call, which is a global: two
+        # workspaces in different languages would both have looked up the installation's.
+        self.prerequisite_relation = prerequisite_relation
         self.content_context = content_context or ContentContext()
         self.generator_model = generator_model
         self.repair_model = repair_model
@@ -340,7 +346,7 @@ class VariantGenerator:
                 reporter.tick(i + 1)
 
                 def attempt(correction: str | None) -> GeneratedVariant | None:
-                    prompt = generate_content_prompt(
+                    prompt = self.prompts.generate_content_prompt(
                         context_block=self.content_context.prompt_block(),
                         item_type_block=item_type_block,
                         target_concepts_block=target_block,
@@ -438,6 +444,7 @@ class VariantGenerator:
                 instructions,
                 self._screen_instructions_owners(item_type, concepts),
                 concepts,
+                self.prompts,
                 self.content_context.prompt_block(),
             )
             if not ruling.ok:
@@ -537,7 +544,7 @@ class VariantGenerator:
     def _neighbour_exemplars(
         self, item_type: ItemType, concepts: list[str], taken: set[str]
     ) -> list[tuple[str, dict]]:
-        relation = config.KG_PREREQUISITE_RELATION
+        relation = self.prerequisite_relation
         if not relation or not self.knowledge_graph.has_relation(relation):
             return []
         graph = self.knowledge_graph[relation]
@@ -602,7 +609,7 @@ class VariantGenerator:
         return "\n".join(lines)
 
     def _closure(self, concepts: list[str], forward: bool) -> list[str]:
-        relation = config.KG_PREREQUISITE_RELATION
+        relation = self.prerequisite_relation
         if forward:
             return self.knowledge_graph.prerequisite_closure(concepts, relation)
         return self.knowledge_graph.dependent_closure(concepts, relation)
@@ -769,6 +776,7 @@ class VariantGenerator:
             max_attempts=self.max_repair_attempts,
             shape="objeto",
             format=item_type.stripped_schema(),
+            prompts=self.prompts,
         )
 
         if item is None:

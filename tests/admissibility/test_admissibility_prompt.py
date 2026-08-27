@@ -1,5 +1,5 @@
 from variatio import admissibility
-from variatio.prompts import classify_instructions_prompt
+from variatio.prompts.es import classify_instructions_prompt
 
 
 def test_the_prompt_names_every_slot_and_every_owner(owners_for, context):

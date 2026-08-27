@@ -11,12 +11,7 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.json_io import write_json
-from ...prompts import (
-    EMPTY_PAGE_MARK,
-    SEAM_SEPARATORS,
-    merge_pages_prompt,
-    transcribe_page_prompt,
-)
+from ...prompts.marks import EMPTY_PAGE_MARK, SEAM_SEPARATORS
 from .files import SUPPORTED_EXTS, required_cache_dir, source_hash
 from .markdown import page_mark, tidy_markdown, to_markdown
 
@@ -234,8 +229,10 @@ def _unwrap_markdown_fence(text: str) -> str:
     return match.group(1) if match else text.strip()
 
 
-def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -> str:
-    prompt = transcribe_page_prompt(index, count)
+def _transcribe_page(
+    image: str, index: int, count: int, model: str, tag: str, prompts
+) -> str:
+    prompt = prompts.transcribe_page_prompt(index, count)
     last_error: Exception | None = None
     for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
         try:
@@ -264,7 +261,7 @@ def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -
     return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
 
 
-def transcribe_pdf(pdf_path: Path, model: str, dpi: int, tag: str = "") -> list[str]:
+def transcribe_pdf(pdf_path: Path, model: str, dpi: int, prompts, tag: str = "") -> list[str]:
     count, images = page_images(pdf_path, dpi)
     logger.info(f"{tag}{pdf_path.name}: transcribiendo {count} página(s) con '{model}'")
     pages: list[str] = []
@@ -274,7 +271,7 @@ def transcribe_pdf(pdf_path: Path, model: str, dpi: int, tag: str = "") -> list[
         for index, image in enumerate(images, 1):
             progress.checkpoint()
             reporter.tick(index, detail=f"página {index}/{count}")
-            pages.append(_transcribe_page(image, index, count, model, tag))
+            pages.append(_transcribe_page(image, index, count, model, tag, prompts))
     kept = sum(1 for page in pages if page.strip())
     logger.info(f"{tag}{pdf_path.name}: {kept}/{count} página(s) con contenido")
     return pages
@@ -288,18 +285,20 @@ def _transcribe(
     seam_model: str,
     dpi: int,
     tag: str,
+    prompts,
 ) -> tuple[list[str], list[dict]]:
     if not is_pdf:
         return [to_markdown(converter, source, use_cache=False)], []
     pages = [
         tidy_markdown(page) if page.strip() else ""
-        for page in transcribe_pdf(source, model, dpi, tag=tag)
+        for page in transcribe_pdf(source, model, dpi, prompts, tag=tag)
     ]
-    return pages, review_seams(pages, seam_model, tag=tag)
+    return pages, review_seams(pages, prompts, seam_model, tag=tag)
 
 
 def _document(
     source: str | Path,
+    prompts,
     converter=None,
     model: str = "",
     dpi: int = 0,
@@ -333,7 +332,7 @@ def _document(
             )
             return cached
 
-    pages, seams = _transcribe(source, is_pdf, converter, model, seam_model, dpi, tag)
+    pages, seams = _transcribe(source, is_pdf, converter, model, seam_model, dpi, tag, prompts)
 
     if not pages:
         # Caching "nothing" would make the emptiness stick until the source file changes,
@@ -347,6 +346,7 @@ def _document(
 
 def document_pages(
     source: str | Path,
+    prompts,
     converter=None,
     model: str = "",
     dpi: int = 0,
@@ -363,6 +363,7 @@ def document_pages(
     """
     return _document(
         source,
+        prompts,
         converter=converter,
         model=model,
         dpi=dpi,
@@ -376,6 +377,7 @@ def document_pages(
 
 def document_markdown(
     source: str | Path,
+    prompts,
     converter=None,
     model: str = "",
     dpi: int = 0,
@@ -392,6 +394,7 @@ def document_markdown(
     """
     pages, seams = _document(
         source,
+        prompts,
         converter=converter,
         model=model,
         dpi=dpi,
@@ -596,7 +599,7 @@ SEAM_SCHEMA = {
 }
 
 
-def review_seams(pages: list[str], model: str = "", tag: str = "") -> list[dict]:
+def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> list[dict]:
     model = model or config.TRANSCRIBE_SEAM_MODEL
     boundaries = _boundaries(pages)
     if not boundaries:
@@ -608,7 +611,7 @@ def review_seams(pages: list[str], model: str = "", tag: str = "") -> list[dict]
         for done, (left, right, index) in enumerate(boundaries, 1):
             progress.checkpoint()
             reporter.tick(done, detail=f"costura {index - 1}→{index}")
-            record = _review_seam(left, right, index, len(pages), model, tag)
+            record = _review_seam(left, right, index, len(pages), model, tag, prompts)
             if record is not None:
                 records.append(record)
     merged = sum(1 for record in records if record.get("separator", PARAGRAPH) != PARAGRAPH)
@@ -630,7 +633,7 @@ def _boundaries(pages: list[str]) -> list[tuple[str, str, int]]:
 
 
 def _review_seam(
-    left: str, right: str, index: int, count: int, model: str, tag: str
+    left: str, right: str, index: int, count: int, model: str, tag: str, prompts
 ) -> dict | None:
     if seam(left, right)[1]:
         return None
@@ -641,7 +644,7 @@ def _review_seam(
     try:
         response = inference.generate(
             model=model,
-            prompt=merge_pages_prompt(tail, head, index, count),
+            prompt=prompts.merge_pages_prompt(tail, head, index, count),
             think=config.THINK_TRANSCRIBE_SEAM,
             format=None if config.THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
             temperature=inference.judgement_temperature(config.THINK_TRANSCRIBE_SEAM),

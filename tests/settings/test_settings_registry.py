@@ -3,16 +3,13 @@ from variatio.settings import derived
 from variatio.settings.registry import BY_KEY, BY_NAME, GROUPS, REGISTRY
 
 DERIVED_ONLY = {
-    "RELATION_SCHEMA",
-    "KG_PREREQUISITE_RELATION",
     "EMBEDDING_MODELS",
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
 }
 
-# A schema without a prerequisite relation is legitimate, and an empty document prefix is
-# qwen3-embedding's prescribed usage rather than an omission.
-MAY_BE_EMPTY = {"KG_PREREQUISITE_RELATION", "EMBEDDING_DOCUMENT_PREFIX"}
+# An empty document prefix is qwen3-embedding's prescribed usage rather than an omission.
+MAY_BE_EMPTY = {"EMBEDDING_DOCUMENT_PREFIX"}
 
 
 def test_every_named_setting_is_an_attribute_of_config():
@@ -100,5 +97,8 @@ def test_every_phase_key_is_declared_in_the_registry():
 # each page the judge is shown. The fifth is the bank builder's batch overlap, which is
 # what makes the same seam survive the extractor's own cut.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 144
-    assert len(BY_NAME) == 115
+    # 143 since `builders.kg_relation_schema` was retired: the relation vocabulary follows
+    # a workspace's own `prompt_language` now, and an installation-wide setting could only
+    # ever have given two instances in different languages the same one.
+    assert len(REGISTRY) == 143
+    assert len(BY_NAME) == 114

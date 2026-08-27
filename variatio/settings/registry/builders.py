@@ -256,9 +256,10 @@ una sola.""",
         default=r"\s+en (python|java)\b",
         group="Constructores",
         impact=Impact.NONE,
-        doc="""Regex stripped from a concept name before merge comparison so a language-qualified
-mention folds into its bare form; fails silently if wrong — without it, «Listas en
-Python» stops merging into «Listas».""",
+        doc="""Expresión regular que se recorta del nombre de un concepto antes de comparar para
+fusionar, de modo que una mención cualificada por lenguaje se pliegue sobre su forma
+desnuda; falla en silencio si está mal — sin ella, «Listas en Python» deja de fusionarse
+con «Listas».""",
     ),
     Setting(
         key="builders.kg_unclassified_domain",
@@ -267,9 +268,9 @@ Python» stops merging into «Listas».""",
         default="Sin clasificar",
         group="Constructores",
         impact=Impact.NONE,
-        doc="""The sentinel domain name reserved for concepts `place_leftovers` could not place
-anywhere else; fails silently if wrong — leftovers would land in a domain literally
-called `Unclassified` instead of being retried.""",
+        doc="""El nombre de dominio centinela reservado para los conceptos que `place_leftovers` no
+pudo colocar en ningún otro sitio; falla en silencio si está mal — los sobrantes
+aterrizarían en un dominio llamado literalmente `Unclassified` en lugar de reintentarse.""",
     ),
     Setting(
         key="builders.kg_max_titles_per_doc",
@@ -296,21 +297,6 @@ de sección recurrente en vez de como uno suelto; alimenta la llamada que nombra
 dominios.""",
     ),
     Setting(
-        key="builders.kg_relation_schema",
-        name="KG_RELATION_SCHEMA",
-        kind="str",
-        default="es",
-        group="Constructores",
-        impact=Impact.LOCKED,
-        editable=False,
-        doc="""Elige qué vocabulario de relaciones de `relations.py` usa el grafo; fija las etiquetas
-verbose en español por las que el cargador indexa el grafo.
-
-Decisión cerrada: debe seguir siendo «es». Las etiquetas verbose son load-bearing y el
-grafo que se distribuye las contiene; cambiarlo invalidaría todos los grafos de todos
-los workspaces.""",
-    ),
-    Setting(
         key="builders.kg_merge_similarity",
         name="KG_BUILDER_MERGE_SIMILARITY",
         kind="float",
@@ -330,8 +316,9 @@ llamada de fusión como candidatos a ser el mismo concepto, durante la limpieza 
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Caps how many candidate concept names can be grouped together for a single merge
-decision during graph cleaning, keeping each call's comparison set small enough to judge.""",
+        doc="""Acota cuántos nombres de concepto candidatos pueden agruparse para una sola decisión de
+fusión durante la limpieza del grafo, manteniendo el conjunto que cada llamada compara lo
+bastante pequeño como para poder juzgarlo.""",
     ),
     Setting(
         key="builders.kg_merge_groups_per_call",

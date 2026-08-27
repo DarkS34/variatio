@@ -9,7 +9,6 @@ from .core import inference, progress
 from .core.repair import parse_with_repair
 from .embedder import Embedder
 from .instance.content_context import ContentContext
-from .prompts import tag_concepts_prompt
 
 TRACE_KEY = "_tagging"
 
@@ -36,12 +35,14 @@ class ConceptTagger:
         embedder: Embedder,
         concept_tagger_model: str,
         embed_text: Callable[[dict], str],
+        prompts,
         primary_text: Callable[[dict], str] | None = None,
         context: ContentContext | None = None,
         top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
         fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
     ):
         self.concept_tagger_model = concept_tagger_model
+        self.prompts = prompts
         self.embedder = embedder
         self.embed_text = embed_text
         # What the tagger READS is every indexed field; what a person reading the live feed
@@ -118,7 +119,7 @@ class ConceptTagger:
         self, statement: str, candidates: list[tuple[str, float]], method: str
     ) -> tuple[dict | None, str]:
         candidate_names = [c for c, _ in candidates]
-        prompt = tag_concepts_prompt(
+        prompt = self.prompts.tag_concepts_prompt(
             statement=statement,
             candidates=self._candidates_block(candidates),
             relations=self._relations_block(candidate_names),
@@ -164,6 +165,7 @@ class ConceptTagger:
             max_attempts=self.max_repair_attempts,
             shape="objeto",
             format=schema,
+            prompts=self.prompts,
         )
         return result
 

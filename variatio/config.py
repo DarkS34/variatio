@@ -5,7 +5,6 @@ beside each one, and `settings.apply` writes them here. What is read below is th
 of what the system exposes, not its definition.
 """
 
-from .instance.relations import RelationSchema
 from .settings import apply
 
 INFERENCE_ENGINE: str
@@ -109,9 +108,6 @@ KG_BUILDER_MERGE_GROUPS_PER_CALL: int
 KG_BUILDER_CLEAN_BATCH_SIZE: int
 KG_BUILDER_DOMAIN_BATCH_SIZE: int
 KG_BUILDER_DOMAIN_ROUNDS: int
-KG_RELATION_SCHEMA: str
-RELATION_SCHEMA: RelationSchema
-KG_PREREQUISITE_RELATION: str | None
 
 EMBEDDING_QUERY_PREFIX: str
 EMBEDDING_DOCUMENT_PREFIX: str

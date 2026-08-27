@@ -28,7 +28,9 @@ from ... import config
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace
+from ...instance import locale
 from ...instance.relations import RelationSchema
+from ... import prompts as prompts_pkg
 from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
@@ -101,7 +103,11 @@ class KnowledgeGraphBuilder:
         verbose: bool = True,
     ):
         self.workspace = workspace
-        self.schema = schema or config.RELATION_SCHEMA
+        # Both resolved from the same place, because they have to agree: the catalogue the
+        # prompts interpolate is prose written in the schema's language, and its slot names
+        # are the two words the prompts' own text uses.
+        self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self.schema = schema or locale.relation_schema(workspace)
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE
 
@@ -170,12 +176,16 @@ class KnowledgeGraphBuilder:
             chunk_size=self.chunk_size,
             cache_dir=self.workspace.markdown_cache_dir,
             max_attempts=self.max_repair_attempts,
+            prompts=self.prompts,
             recursive=recursive,
         )
 
     def clean(self, staging: dict) -> dict:
         return cleaning.run(
-            staging, schema=self.schema, max_attempts=self.max_repair_attempts
+            staging,
+            schema=self.schema,
+            max_attempts=self.max_repair_attempts,
+            prompts=self.prompts,
         )
 
     def curate(
@@ -190,4 +200,5 @@ class KnowledgeGraphBuilder:
             sources_path or self.workspace.concept_sources_path,
             schema=self.schema,
             max_attempts=self.max_repair_attempts,
+            prompts=self.prompts,
         )

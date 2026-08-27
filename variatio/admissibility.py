@@ -8,7 +8,6 @@ from . import config
 from .core import inference, progress
 from .core.inference import InferenceError
 from .core.lexicon import fold
-from .prompts import classify_instructions_prompt
 
 
 @dataclass(frozen=True)
@@ -167,12 +166,18 @@ def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | No
     return Request(text=text, slot=None, owner=owner, term=term)
 
 
-def screen(text: str, owners: list[Owner], targets: list[str], context_block: str = "") -> Ruling:
+def screen(
+    text: str,
+    owners: list[Owner],
+    targets: list[str],
+    prompts,
+    context_block: str = "",
+) -> Ruling:
     text = (text or "").strip()
     if not text:
         return Ruling(requests=(), checked=True)
 
-    prompt = classify_instructions_prompt(
+    prompt = prompts.classify_instructions_prompt(
         instructions=text,
         catalog=CATALOG,
         owners=owners,

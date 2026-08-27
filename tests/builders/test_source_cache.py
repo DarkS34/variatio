@@ -5,6 +5,8 @@ from types import SimpleNamespace
 
 from variatio.builders._source_docs import markdown, pages
 
+from ..conftest import ES
+
 LATER = 2_000_000_000
 
 
@@ -40,29 +42,29 @@ class _Converter:
 def test_pages_survive_a_copy_that_only_moves_the_timestamp(tmp_path):
     cache = tmp_path / "cache" / "markdown"
     source = _document(tmp_path, "examen.md", "una pregunta")
-    pages.document_pages(source, cache_dir=cache)
+    pages.document_pages(source, ES, cache_dir=cache)
     _hand_edit(source, cache, "corregido a mano")
 
     os.utime(source, (LATER, LATER))
 
-    assert pages.document_pages(source, cache_dir=cache) == ["corregido a mano"]
+    assert pages.document_pages(source, ES, cache_dir=cache) == ["corregido a mano"]
 
 
 def test_pages_are_rebuilt_when_the_document_itself_changes(tmp_path):
     cache = tmp_path / "cache" / "markdown"
     source = _document(tmp_path, "examen.md", "una pregunta")
-    pages.document_pages(source, cache_dir=cache)
+    pages.document_pages(source, ES, cache_dir=cache)
     _hand_edit(source, cache, "corregido a mano")
 
     source.write_text("otra pregunta", encoding="utf-8")
 
-    assert pages.document_pages(source, cache_dir=cache) == ["otra pregunta\n"]
+    assert pages.document_pages(source, ES, cache_dir=cache) == ["otra pregunta\n"]
 
 
 def test_pages_cached_before_the_hash_are_adopted_and_rewritten(tmp_path):
     cache = tmp_path / "cache" / "markdown"
     source = _document(tmp_path, "examen.md", "una pregunta")
-    pages.document_pages(source, cache_dir=cache)
+    pages.document_pages(source, ES, cache_dir=cache)
 
     legacy = {k: v for k, v in _meta(source, cache).items() if k != "source_sha256"}
     legacy["source_mtime"] = 1.0
@@ -71,7 +73,7 @@ def test_pages_cached_before_the_hash_are_adopted_and_rewritten(tmp_path):
     )
     _hand_edit(source, cache, "corregido a mano")
 
-    assert pages.document_pages(source, cache_dir=cache) == ["corregido a mano"]
+    assert pages.document_pages(source, ES, cache_dir=cache) == ["corregido a mano"]
     rewritten = _meta(source, cache)
     assert "source_mtime" not in rewritten
     assert rewritten["source_sha256"]
@@ -80,12 +82,12 @@ def test_pages_cached_before_the_hash_are_adopted_and_rewritten(tmp_path):
 def test_pages_of_a_different_document_of_the_same_size_are_not_adopted(tmp_path):
     cache = tmp_path / "cache" / "markdown"
     source = _document(tmp_path, "examen.md", "una pregunta")
-    pages.document_pages(source, cache_dir=cache)
+    pages.document_pages(source, ES, cache_dir=cache)
     _hand_edit(source, cache, "corregido a mano")
 
     source.write_text("una respuesta", encoding="utf-8")
 
-    assert pages.document_pages(source, cache_dir=cache) == ["una respuesta\n"]
+    assert pages.document_pages(source, ES, cache_dir=cache) == ["una respuesta\n"]
 
 
 def test_markdown_is_not_reconverted_when_only_the_timestamp_moves(tmp_path):

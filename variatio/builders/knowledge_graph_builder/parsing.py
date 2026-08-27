@@ -20,7 +20,7 @@ def parse_json_object(text: str) -> tuple[dict | None, str | None]:
 
 
 def parse_object(
-    response: str, log_prefix: str, format: dict, max_attempts: int
+    response: str, log_prefix: str, format: dict, max_attempts: int, prompts
 ) -> dict | None:
     result, error = parse_with_repair(
         response,
@@ -30,6 +30,7 @@ def parse_object(
         shape="object",
         format=format,
         log_prefix=log_prefix,
+        prompts=prompts,
     )
     if result is None:
         logger.warning(f"{log_prefix}JSON irrecuperable: {error}")

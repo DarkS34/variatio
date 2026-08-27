@@ -6,6 +6,8 @@ from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
 from variatio.stages import _artifacts
 
+from ..conftest import ES
+
 ITEM_TYPE = "escritura_codigo"
 TARGETS = ["Recursividad"]
 
@@ -55,7 +57,7 @@ def instance():
 @pytest.mark.parametrize("text", ADMISSIBLE)
 def test_a_legitimate_scenario_is_never_rejected(instance, text):
     owners, block = instance
-    ruling = admissibility.screen(text, owners, TARGETS, block)
+    ruling = admissibility.screen(text, owners, TARGETS, ES, block)
     assert ruling.checked, "el juez devolvió una respuesta ilegible"
     assert ruling.ok, f"rechazada por {ruling.blocked[0].owner.key} ({ruling.blocked[0].term})"
 
@@ -64,7 +66,7 @@ def test_a_legitimate_scenario_is_never_rejected(instance, text):
 @pytest.mark.parametrize("text", UNOWNED)
 def test_a_request_no_control_owns_is_never_blocked(instance, text):
     owners, block = instance
-    ruling = admissibility.screen(text, owners, TARGETS, block)
+    ruling = admissibility.screen(text, owners, TARGETS, ES, block)
     assert ruling.ok, f"rechazada por {ruling.blocked[0].owner.key} ({ruling.blocked[0].term})"
 
 
@@ -73,7 +75,7 @@ def test_every_inadmissible_request_is_caught(instance):
     owners, block = instance
     caught = []
     for text, expected in INADMISSIBLE:
-        ruling = admissibility.screen(text, owners, TARGETS, block)
+        ruling = admissibility.screen(text, owners, TARGETS, ES, block)
         if not ruling.ok and ruling.blocked[0].owner.key == expected:
             caught.append(text)
     assert len(caught) == len(INADMISSIBLE), (

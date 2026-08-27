@@ -1,6 +1,8 @@
 from loguru import logger
 
 from ..core.workspace import Workspace
+from ..instance import locale
+from .. import prompts as prompts_pkg
 from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
 from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
@@ -19,6 +21,7 @@ def _describer(ws: Workspace) -> ConceptDescriber:
     return ConceptDescriber(
         KnowledgeGraph(kg_path),
         _artifacts.load_content_context(ws),
+        prompts_pkg.of(locale.prompt_language(ws)),
         path=ws.concept_descriptions_path,
         sources_path=ws.concept_sources_path,
     )

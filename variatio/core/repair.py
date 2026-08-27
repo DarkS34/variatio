@@ -3,7 +3,6 @@ from collections.abc import Callable
 from loguru import logger
 
 from .. import config
-from ..prompts import json_repair_prompt
 from . import inference, progress
 
 
@@ -13,6 +12,11 @@ from . import inference, progress
 # reply that parsed but named a field `sol` instead of `solucion` came back byte-identical
 # three times in a row and burned the whole budget. Under the grammar that key cannot be
 # written. Pass the schema when the caller has one, `"json"` when the shape is open-ended.
+#
+# `prompts` is the resolved prompt set of the workspace whose call is being repaired, and it
+# is required for the same reason `shape` is: a repair is one more turn of the same
+# conversation, so asking for the fix in a different language than the call was made in is
+# how a reply comes back in one language and the artifact is written in another.
 def parse_with_repair(
     response: str,
     parse: Callable[[str], tuple[object | None, str | None]],
@@ -20,6 +24,7 @@ def parse_with_repair(
     max_attempts: int,
     shape: str,
     format: dict | str,
+    prompts,
     log_prefix: str = "",
 ) -> tuple[object | None, str | None]:
     result, error = parse(response)
@@ -39,7 +44,7 @@ def parse_with_repair(
             error=str(error)[:300],
             where=log_prefix.strip() or shape,
         )
-        prompt = json_repair_prompt(
+        prompt = prompts.json_repair_prompt(
             broken_output=response, error_msg=error or "invalid JSON", shape=shape
         )
         response = inference.generate(

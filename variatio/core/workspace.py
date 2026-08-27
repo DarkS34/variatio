@@ -44,6 +44,18 @@ class Workspace:
     def raw_exemplars_dir(self) -> Path:
         return self.raw_dir / "raw_exemplars_bank"
 
+    # WHAT THIS INSTANCE DECLARES ABOUT ITSELF --------------------------------------------
+
+    # The language its prompts are written in, and the one thing about a workspace that has
+    # to be readable BEFORE anything is built: it is what the builders' own instructions are
+    # written in, so it cannot live in `content_context.json`, which a build produces. It is
+    # undotted because it is not host state — it travels with `export-instance` and a
+    # workspace handed to somebody else is unreadable without it. Absent means `es`, which is
+    # what every workspace written before this factually was.
+    @property
+    def locale_path(self) -> Path:
+        return self.instance_dir / "locale.json"
+
     # INSTANCE ARTIFACTS ------------------------------------------------------------------
 
     @property

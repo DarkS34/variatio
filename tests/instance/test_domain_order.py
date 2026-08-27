@@ -3,6 +3,7 @@ import json
 import pytest
 
 from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.instance.relations import RELATION_SCHEMA_ES
 
 # The domains are deliberately NOT in size order, NOT alphabetical and NOT in the order
 # the concepts sort in: any test that passes by accident here proves nothing.
@@ -46,7 +47,7 @@ def test_the_view_emits_the_groups_in_the_syllabus_order(graph_path):
     from server import kg_view
 
     kg = KnowledgeGraph(str(graph_path))
-    payload = kg_view.build(GRAPH, kg)
+    payload = kg_view.build(GRAPH, kg, RELATION_SCHEMA_ES)
 
     assert [group["name"] for group in payload["groups"]] == [
         "Zeta primero",

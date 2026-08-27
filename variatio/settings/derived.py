@@ -1,4 +1,3 @@
-from ..instance.relations import BUILTIN_SCHEMAS
 from .registry.reasoning import PHASE_KEYS
 
 PHASES = {
@@ -28,7 +27,6 @@ PHASES = {
 
 def derive(values: dict[str, object]) -> dict[str, object]:
     main = values["models.main"]
-    schema = BUILTIN_SCHEMAS[values["builders.kg_relation_schema"]]
 
     # The registry declares the bare `host:port` because that is what a person writes and
     # what `OLLAMA_HOST` has always held. Every consumer wants a URL, so the scheme is added
@@ -36,8 +34,6 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     host = str(values["engine.ollama_host"])
     out: dict[str, object] = {
         "OLLAMA_HOST": host if host.startswith(("http://", "https://")) else f"http://{host}",
-        "RELATION_SCHEMA": schema,
-        "KG_PREREQUISITE_RELATION": schema.prerequisite_verbose,
         "EMBEDDING_MODELS": (values["models.embedding"],),
         "TEMPERATURE_DEFAULT": values["sampling.temperature_deterministic"],
     }

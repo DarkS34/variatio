@@ -14,9 +14,10 @@ from ..core.json_io import write_json
 from ..core.lexicon import fold
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
+from ..instance import locale
 from ..instance.content_context import ContentContext
+from .. import prompts as prompts_pkg
 from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from ..prompts import format_content_prompt
 from . import _source_docs
 
 
@@ -55,6 +56,10 @@ class ExemplarsBankBuilder:
         verbose: bool = True,
     ):
         self.workspace = workspace
+        # The workspace's own prompt set, resolved once here. Every model call this
+        # builder makes goes through it, so a Spanish instance and an English one build
+        # from the same code and never share a prompt.
+        self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self.exemplars_profile = exemplars_profile
         self.content_context = content_context or ContentContext()
 
@@ -213,6 +218,7 @@ class ExemplarsBankBuilder:
                 try:
                     text_by_file[file_path] = _source_docs.document_markdown(
                         file_path,
+                        self.prompts,
                         converter=self._docling,
                         ocr=config.EXEMPLARS_OCR,
                         tag=f"[{idx}/{len(files)}] ",
@@ -280,7 +286,7 @@ class ExemplarsBankBuilder:
         return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
-        prompt = format_content_prompt(
+        prompt = self.prompts.format_content_prompt(
             content=batch,
             types_block=self._types_block,
             context_block=self.content_context.prompt_block(),
@@ -302,6 +308,7 @@ class ExemplarsBankBuilder:
             shape="array",
             format=self._extraction_schema,
             log_prefix=f"{tag} ",
+            prompts=self.prompts,
         )
 
         if items is None:

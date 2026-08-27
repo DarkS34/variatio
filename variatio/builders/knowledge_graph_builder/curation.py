@@ -14,13 +14,6 @@ from ... import config
 from ...core import inference, progress
 from ...core.json_io import write_json
 from ...core.lexicon import fold
-from ...prompts import (
-    assign_leftover_concepts_prompt,
-    curate_graph_domains_prompt,
-    link_cross_domain_relations_prompt,
-    link_domain_relations_prompt,
-    segment_syllabus_prompt,
-)
 from . import blocks, parsing
 from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA, UNITS_SCHEMA
 
@@ -32,6 +25,7 @@ def run(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> dict:
     concepts = cleaned["entities"]
     relations = cleaned["relations"]
@@ -53,6 +47,7 @@ def run(
                     cleaned.get("origins") or {},
                     definitions,
                     max_attempts=max_attempts,
+            prompts=prompts,
                 ),
                 positions,
             )
@@ -65,6 +60,7 @@ def run(
         definitions,
         schema=schema,
         max_attempts=max_attempts,
+            prompts=prompts,
     )
 
     progress.phase("curate")
@@ -135,7 +131,7 @@ MIN_UNITS = 2
 
 
 def segment_syllabus(
-    outline: list[dict], documents: list[dict], *, max_attempts: int
+    outline: list[dict], documents: list[dict], *, max_attempts: int, prompts
 ) -> list[dict]:
     if not outline:
         logger.info(
@@ -143,7 +139,7 @@ def segment_syllabus(
             "la estructura del material"
         )
         return []
-    prompt = segment_syllabus_prompt(blocks.outline_block(outline, documents))
+    prompt = prompts.segment_syllabus_prompt(blocks.outline_block(outline, documents))
     response = inference.generate(
         model=config.KG_UNITS_MODEL,
         prompt=prompt,
@@ -151,7 +147,7 @@ def segment_syllabus(
         format=None if config.THINK_KG_UNITS else UNITS_SCHEMA,
         temperature=inference.judgement_temperature(config.THINK_KG_UNITS),
     ).response
-    raw = parsing.parse_object(response, "[units] ", UNITS_SCHEMA, max_attempts) or {}
+    raw = parsing.parse_object(response, "[units] ", UNITS_SCHEMA, max_attempts, prompts) or {}
     units = accept_units(raw.get("units") or [], outline)
     if not units:
         logger.warning(
@@ -234,10 +230,11 @@ def assign_to_units(
     return by_unit, leftovers
 
 
-def curate_units(cleaned: dict, *, max_attempts: int) -> tuple[dict, list[dict]]:
+def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, list[dict]]:
     outline = cleaned.get("outline") or []
     units = segment_syllabus(
-        outline, cleaned.get("documents") or [], max_attempts=max_attempts
+        outline, cleaned.get("documents") or [], max_attempts=max_attempts,
+            prompts=prompts,
     )
     if not units:
         return {}, []
@@ -256,6 +253,7 @@ def curate_units(cleaned: dict, *, max_attempts: int) -> tuple[dict, list[dict]]
         cleaned.get("relations") or [],
         cleaned.get("definitions") or {},
         max_attempts=max_attempts,
+            prompts=prompts,
     )
     positions = cleaned.get("positions") or {}
     return {d: blocks.ordered(m, positions) for d, m in placed.items()}, units
@@ -285,8 +283,9 @@ def curate_domains(
     definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
+    prompts,
 ) -> dict:
-    prompt = curate_graph_domains_prompt(
+    prompt = prompts.curate_graph_domains_prompt(
         blocks.nodes_block(concepts, [], {}, origins),
         blocks.documents_block(documents),
     )
@@ -297,7 +296,7 @@ def curate_domains(
         format=None if config.THINK_KG_DOMAINS else DOMAIN_NAMES_SCHEMA,
         temperature=inference.judgement_temperature(config.THINK_KG_DOMAINS),
     ).response
-    raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts) or {}
+    raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts, prompts) or {}
 
     named: list[str] = []
     for domain in raw.get("domains") or []:
@@ -311,14 +310,17 @@ def curate_domains(
     logger.info(f"{len(named)} dominio(s) nombrados; asignando {len(concepts)} concepto(s) por lotes")
     by_domain = {domain: [] for domain in named}
     remaining = assign_round(
-        sorted(concepts), by_domain, relations, definitions, max_attempts=max_attempts
+        sorted(concepts), by_domain, relations, definitions, max_attempts=max_attempts,
+            prompts=prompts,
     )
 
     for domain in by_domain:
         by_domain[domain] = sorted(set(by_domain[domain]))
     if remaining:
         by_domain[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(remaining)
-    return place_leftovers(by_domain, relations, definitions, max_attempts=max_attempts)
+    return place_leftovers(
+        by_domain, relations, definitions, max_attempts=max_attempts, prompts=prompts
+    )
 
 
 # A concept parked in the unclassified bucket is not a concept the model judged hard to
@@ -332,6 +334,7 @@ def place_leftovers(
     definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
+    prompts,
 ) -> dict:
     unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
     leftovers = by_domain.get(unclassified)
@@ -352,7 +355,8 @@ def place_leftovers(
     for _ in range(config.KG_BUILDER_DOMAIN_ROUNDS):
         before = len(remaining)
         remaining = assign_round(
-            remaining, placed, relations, definitions, max_attempts=max_attempts
+            remaining, placed, relations, definitions, max_attempts=max_attempts,
+            prompts=prompts,
         )
         if not remaining or len(remaining) == before:
             break
@@ -375,6 +379,7 @@ def assign_round(
     definitions: dict[str, str] | None = None,
     *,
     max_attempts: int,
+    prompts,
 ) -> list[str]:
     size = config.KG_BUILDER_DOMAIN_BATCH_SIZE
     batches = [pending[i : i + size] for i in range(0, len(pending), size)]
@@ -385,7 +390,7 @@ def assign_round(
         progress.advance(
             0.5 + 0.45 * (idx - 1) / len(batches), f"sin dominio: {len(unplaced)} concepto(s)"
         )
-        prompt = assign_leftover_concepts_prompt(
+        prompt = prompts.assign_leftover_concepts_prompt(
             blocks.domains_block(placed),
             blocks.nodes_block(batch, relations, {}, definitions=definitions),
         )
@@ -402,6 +407,7 @@ def assign_round(
                 f"[domains · leftovers {idx}/{len(batches)}] ",
                 DOMAINS_SCHEMA,
                 max_attempts,
+                prompts,
             )
             or {}
         )
@@ -452,6 +458,7 @@ def link_relations(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> list[list]:
     domains = list(concepts_by_domains)
     if not domains:
@@ -479,6 +486,7 @@ def link_relations(
                     definitions,
                     schema=schema,
                     max_attempts=max_attempts,
+            prompts=prompts,
                 )
             )
 
@@ -488,7 +496,8 @@ def link_relations(
         known.update(
             tuple(r)
             for r in link_cross_domain(
-                concepts_by_domains, definitions, schema=schema, max_attempts=max_attempts
+                concepts_by_domains, definitions, schema=schema, max_attempts=max_attempts,
+            prompts=prompts,
             )
         )
 
@@ -505,10 +514,11 @@ def link_domain(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> list[list]:
     if len(members) < 2:
         return []
-    prompt = link_domain_relations_prompt(
+    prompt = prompts.link_domain_relations_prompt(
         domain, blocks.nodes_block(members, relations, {}, definitions=definitions), schema
     )
     response = inference.generate(
@@ -517,7 +527,7 @@ def link_domain(
         think=config.THINK_KG_LINK_DOMAIN,
         temperature=inference.judgement_temperature(config.THINK_KG_LINK_DOMAIN),
     ).response
-    raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts)
+    raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts, prompts)
     if raw is None:
         return []
     return parsing.valid_relations(raw.get("relations", []), schema, allowed=set(members))
@@ -529,10 +539,11 @@ def link_cross_domain(
     *,
     schema,
     max_attempts: int,
+    prompts,
 ) -> list[list]:
     if len(concepts_by_domains) < 2:
         return []
-    prompt = link_cross_domain_relations_prompt(
+    prompt = prompts.link_cross_domain_relations_prompt(
         blocks.domains_block(concepts_by_domains, definitions), schema
     )
     response = inference.generate(
@@ -541,7 +552,7 @@ def link_cross_domain(
         think=config.THINK_KG_LINK_CROSS_DOMAIN,
         temperature=inference.judgement_temperature(config.THINK_KG_LINK_CROSS_DOMAIN),
     ).response
-    raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts)
+    raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts, prompts)
     if raw is None:
         return []
 

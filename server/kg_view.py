@@ -9,8 +9,8 @@ import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
-from variatio import config
 from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.instance.relations import RelationSchema
 
 
 def _slug(text: str) -> str:
@@ -23,8 +23,11 @@ def _slug(text: str) -> str:
 # `key` is the verbose label because that is the name the edit endpoints speak.
 # `type` is the schema key when the relation is one the builder knows about: it is
 # what gives a relation the same colour and the same meaning across instances.
-def _relation_entry(verbose: str, details: dict) -> dict:
-    known = config.RELATION_SCHEMA.by_verbose(verbose)
+# The schema and the prerequisite label are the WORKSPACE's, not the installation's: they
+# are written into `knowledge_graph.json` in the language the instance was built in, so
+# reading a global here drew one instance's graph with another instance's vocabulary.
+def _relation_entry(verbose: str, details: dict, schema: RelationSchema) -> dict:
+    known = schema.by_verbose(verbose)
     return {
         "key": verbose,
         "verbose": verbose,
@@ -32,12 +35,17 @@ def _relation_entry(verbose: str, details: dict) -> dict:
         "directed": bool(details.get("directed", True)),
         "acyclic": bool(details.get("acyclic", False)),
         "use_in_embedding": bool(details.get("use_in_embedding", True)),
-        "prerequisite": verbose == config.KG_PREREQUISITE_RELATION,
+        "prerequisite": verbose == schema.prerequisite_verbose,
         "count": 0,
     }
 
 
-def build(graph_raw: dict, kg: KnowledgeGraph, title: str = "Grafo de conocimiento") -> dict:
+def build(
+    graph_raw: dict,
+    kg: KnowledgeGraph,
+    schema: RelationSchema,
+    title: str = "Grafo de conocimiento",
+) -> dict:
     names = list(kg.all_concepts)
     node_index = {name: i for i, name in enumerate(names)}
 
@@ -50,7 +58,8 @@ def build(graph_raw: dict, kg: KnowledgeGraph, title: str = "Grafo de conocimien
     group_index = {group["name"]: i for i, group in enumerate(groups)}
 
     relations = [
-        _relation_entry(verbose, details) for verbose, details in kg.relation_details.items()
+        _relation_entry(verbose, details, schema)
+        for verbose, details in kg.relation_details.items()
     ]
     relation_index = {relation["key"]: i for i, relation in enumerate(relations)}
 

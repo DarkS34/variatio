@@ -22,7 +22,7 @@ from variatio.variatio import build_few_shot_block, parse_item
 
 from .. import FAILED, OK, ArmResult, Commission, rag_index_path
 from .. import config as study_config
-from ..prompts import rag_generation_prompt
+from .. import prompts as study_prompts
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatBankIndex
 
@@ -72,7 +72,7 @@ def run(commission: Commission, context) -> ArmResult:
     )
 
     exemplars = [context.exemplars_bank[item_id] for item_id in exemplar_ids]
-    prompt = rag_generation_prompt(
+    prompt = study_prompts.of(context.language).rag_generation_prompt(
         naive_prompt=build_naive_prompt(commission, context),
         exemplars_block=build_few_shot_block(item_type, exemplars),
         rules_block="\n".join(f"- {rule}" for rule in item_type.general_generation_rules),
@@ -97,6 +97,9 @@ def run(commission: Commission, context) -> ArmResult:
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="objeto",
         format=item_type.stripped_schema(),
+        # The workspace's set, not this arm's: what is repaired is JSON, not the baseline.
+        # The two prompts that MAKE this arm a baseline are `study/prompts/`'s.
+        prompts=context.prompts,
     )
 
     return ArmResult(

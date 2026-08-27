@@ -1,7 +1,6 @@
-import pytest
-
-from variatio import config
 from variatio.variatio import NEIGHBOUR, VariantGenerator, build_few_shot_block
+
+from ..conftest import ES
 
 
 class _FakeEmbedder:
@@ -32,12 +31,12 @@ def _generator(graph, profile, bank: dict, max_few_shot: int = 3) -> VariantGene
     generator.exemplars_bank = bank
     generator.embedder = _FakeEmbedder()
     generator.max_few_shot = max_few_shot
+    generator.prompts = ES
+    # It is a field of the generator now and no longer a global: two workspaces in
+    # different languages label the same relation differently, so reading the
+    # installation's would have given both of them whichever one was configured.
+    generator.prerequisite_relation = "tiene como prerrequisito"
     return generator
-
-
-@pytest.fixture(autouse=True)
-def _prerequisite_relation(monkeypatch):
-    monkeypatch.setattr(config, "KG_PREREQUISITE_RELATION", "tiene como prerrequisito")
 
 
 def _ids(chosen):

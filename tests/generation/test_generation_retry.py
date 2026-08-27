@@ -1,4 +1,4 @@
-from variatio.prompts import generate_content_prompt
+from variatio.prompts.es import generate_content_prompt
 from variatio.variatio import GeneratedVariant, generate_with_retries
 
 

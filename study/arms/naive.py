@@ -17,7 +17,7 @@ from variatio.core.repair import parse_with_repair
 from variatio.variatio import parse_item
 
 from .. import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission
-from ..prompts import naive_generation_prompt
+from .. import prompts as study_prompts
 from . import external
 
 
@@ -25,7 +25,7 @@ def build_prompt(commission: Commission, context) -> str:
     item_type = context.exemplars_profile.item_type(commission.item_type)
     # The three canonical facts, not the narrative. This arm composes a sentence a person
     # would type, and handing it synthesised prose would change what the baseline measures.
-    return naive_generation_prompt(
+    return study_prompts.of(context.language).naive_generation_prompt(
         subject=context.content_context.subject,
         educational_level=context.content_context.educational_level,
         language_of_instruction=context.content_context.language_of_instruction,
@@ -73,6 +73,9 @@ def run(commission: Commission, context) -> ArmResult:
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="objeto",
         format=item_type.stripped_schema(),
+        # The workspace's set, not this arm's: what is repaired is JSON, not the baseline.
+        # The two prompts that MAKE this arm a baseline are `study/prompts/`'s.
+        prompts=context.prompts,
     )
 
     # From the ANSWER, not from config: the provider chain may have fallen back, and a

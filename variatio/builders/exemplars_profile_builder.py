@@ -11,13 +11,9 @@ from ..core.inference import ensure_models
 from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
+from ..instance import locale
 from ..instance.exemplars_profile import ExemplarsProfile
-from ..prompts import (
-    consolidate_exemplars_profile_prompt,
-    json_repair_prompt,
-    repair_exemplars_profile_prompt,
-    scan_item_types_prompt,
-)
+from .. import prompts as prompts_pkg
 from . import _context, _source_docs
 
 
@@ -84,6 +80,10 @@ class ExemplarsProfileBuilder:
         verbose: bool = True,
     ):
         self.workspace = workspace
+        # The workspace's own prompt set, resolved once here. Every model call this
+        # builder makes goes through it, so a Spanish instance and an English one build
+        # from the same code and never share a prompt.
+        self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self.scan_model = scan_model or config.EP_SCAN_MODEL
         self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
         self.context_model = context_model or config.EP_CONTEXT_MODEL
@@ -206,6 +206,7 @@ class ExemplarsProfileBuilder:
                 try:
                     content = _source_docs.document_markdown(
                         file_path,
+                        self.prompts,
                         converter=self._docling,
                         ocr=config.EXEMPLARS_OCR,
                         tag=f"[{idx}/{len(files)}] ",
@@ -253,7 +254,7 @@ class ExemplarsProfileBuilder:
         return found
 
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
-        prompt = scan_item_types_prompt(body, location, self.excerpt_chars)
+        prompt = self.prompts.scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
             model=self.scan_model,
             think=config.THINK_EP_SCAN,
@@ -270,6 +271,7 @@ class ExemplarsProfileBuilder:
             shape="objeto",
             format=SCAN_SCHEMA,
             log_prefix=tag,
+            prompts=self.prompts,
         )
         if entries is None:
             logger.warning(f"{tag}{location}: rastreo inservible ({err}); omitido")
@@ -349,7 +351,7 @@ class ExemplarsProfileBuilder:
         return profile
 
     def _infer(self, findings: str) -> dict:
-        prompt = consolidate_exemplars_profile_prompt(findings, self.max_item_types)
+        prompt = self.prompts.consolidate_exemplars_profile_prompt(findings, self.max_item_types)
         think = (
             config.THINK_EP_CONSOLIDATE
             if inference.supports_thinking(self.consolidate_model)
@@ -374,12 +376,12 @@ class ExemplarsProfileBuilder:
             logger.warning(f"Reparación {attempt}/{self.max_repair_attempts}: {err}")
             if profile is None:
                 repair_model = config.REPAIR_LLM
-                repair_prompt = json_repair_prompt(
+                repair_prompt = self.prompts.json_repair_prompt(
                     broken_output=response, error_msg=err, shape="objeto"
                 )
             else:
                 repair_model = self.consolidate_model
-                repair_prompt = repair_exemplars_profile_prompt(
+                repair_prompt = self.prompts.repair_exemplars_profile_prompt(
                     profile=json.dumps(profile, ensure_ascii=False, indent=2), error_msg=err
                 )
             response = inference.generate(

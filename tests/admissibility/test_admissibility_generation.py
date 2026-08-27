@@ -1,7 +1,9 @@
 import pytest
 
 from variatio import admissibility
-from variatio.prompts import generate_content_prompt
+from variatio.prompts.es import generate_content_prompt
+
+from ..conftest import ES
 
 BLOCKS = dict(
     context_block="", item_type_block="t", target_concepts_block="c",
@@ -33,7 +35,7 @@ def test_the_prompt_has_no_petition_section_without_instructions():
 
 
 def test_the_prompt_labels_match_the_catalog():
-    from variatio.prompts.generation import _SLOT_LABELS
+    from variatio.prompts.es.generation import _SLOT_LABELS
 
     assert _SLOT_LABELS == {s.key: s.label for s in admissibility.CATALOG}
 
@@ -43,6 +45,7 @@ def _bare_generator(context):
 
     generator = vg.VariantGenerator.__new__(vg.VariantGenerator)
     generator.content_context = context
+    generator.prompts = ES
     generator._screen_instructions_owners = lambda item_type, concepts: []
     return generator
 

@@ -10,7 +10,9 @@ from ..concept_tagger import ConceptTagger
 from ..core import progress
 from ..core.workspace import Workspace
 from ..embedder import Embedder
+from ..instance import locale
 from ..instance.content_context import ContentContext
+from .. import prompts as prompts_pkg
 from ..instance.exemplars_profile import ExemplarsProfile
 from ..instance.knowledge_graph import KnowledgeGraph
 from ..variatio import VariantGenerator
@@ -36,6 +38,7 @@ def make_embedder(
     return Embedder(
         knowledge_graph,
         config.EMBEDDING_LLM,
+        prompts=prompts_pkg.of(locale.prompt_language(ws)),
         embed_text=_embed_text(exemplars_profile),
         embed_signature=exemplars_profile.embed_signature,
         context=content_context or _artifacts.load_content_context(ws),
@@ -47,6 +50,7 @@ def make_embedder(
 
 
 def make_tagger(
+    ws: Workspace,
     embedder: Embedder,
     exemplars_profile: ExemplarsProfile,
     content_context: ContentContext | None = None,
@@ -54,6 +58,7 @@ def make_tagger(
     return ConceptTagger(
         embedder,
         config.CONCEPT_TAGGER_LLM,
+        prompts=prompts_pkg.of(locale.prompt_language(ws)),
         embed_text=_embed_text(exemplars_profile),
         primary_text=exemplars_profile.primary_text,
         context=content_context if content_context is not None else ContentContext(),
@@ -72,6 +77,8 @@ class PipelineContext:
     exemplars_profile_path: Path
     knowledge_graph_path: Path
     workspace: Workspace
+    prompts: object
+    language: str
 
     # The bank is the one artifact that changes while the context is alive (tagging,
     # manual edits). Swapping it means re-embedding and re-merging the index; doing it
@@ -187,8 +194,9 @@ def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
             f"{sum(1 for item in bank.values() if item.get('concepts'))} ya etiquetados"
         )
 
+    language = locale.prompt_language(ws)
     embedder = make_embedder(ws, exemplars_profile, knowledge_graph, content_context)
-    tagger = make_tagger(embedder, exemplars_profile, content_context)
+    tagger = make_tagger(ws, embedder, exemplars_profile, content_context)
     generator = VariantGenerator(
         knowledge_graph=knowledge_graph,
         exemplars_bank=bank,
@@ -196,6 +204,8 @@ def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
         exemplars_profile=exemplars_profile,
         content_context=content_context,
         generator_model=config.VARIANT_GENERATION_LLM,
+        prompts=prompts_pkg.of(language),
+        prerequisite_relation=locale.prerequisite_relation(ws),
         tagger=tagger,
     )
 
@@ -210,6 +220,8 @@ def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
         exemplars_profile_path=profile_path,
         knowledge_graph_path=kg_path,
         workspace=ws,
+        prompts=prompts_pkg.of(language),
+        language=language,
     )
 
     if tag:

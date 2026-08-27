@@ -5,7 +5,6 @@ from .builders.knowledge_graph_builder import blocks, parsing
 from .builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
 from .core import inference, progress
 from .instance.content_context import ContentContext
-from .prompts import review_taggable_concepts_prompt
 
 MAX_SAMPLES_PER_DOMAIN = 3
 SAMPLE_CHARS = 300
@@ -45,6 +44,7 @@ def samples_block(exemplars_profile, exemplars_bank, domain_concepts: list[str])
 def review(
     knowledge_graph,
     exemplars_profile,
+    prompts,
     exemplars_bank: dict | None = None,
     content_context: ContentContext | None = None,
     max_attempts: int = config.MAX_JSON_REPAIR_TRIES,
@@ -111,7 +111,7 @@ def _judge_domain(
     modalities,
     max_attempts,
 ) -> list[str]:
-    prompt = review_taggable_concepts_prompt(
+    prompt = prompts.review_taggable_concepts_prompt(
         domain,
         blocks.concepts_block(domains),
         blocks.nodes_block(members, relations, {}),

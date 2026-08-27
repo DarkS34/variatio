@@ -1,6 +1,6 @@
 from variatio import taggability
 from variatio.instance.content_context import ContentContext
-from variatio.prompts import review_taggable_concepts_prompt
+from variatio.prompts.es import review_taggable_concepts_prompt
 
 # The context is no longer a field of the profile: it is its own artifact, so the fake
 # stops carrying it and the prompt is handed the rendered block, like every caller.

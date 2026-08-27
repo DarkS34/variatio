@@ -19,7 +19,6 @@ from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
 from ..instance.content_context import ContentContext
 from ..instance.knowledge_graph import KnowledgeGraph
-from ..prompts import concept_description_prompt, describe_domain_concepts_prompt
 from .vectors import embed_normalized
 
 # Grammar-constrained decoding, and not a bare `think=False`. `DESCRIPTION_GENERATION_LLM`
@@ -132,6 +131,7 @@ class ConceptDescriber:
         self,
         knowledge_graph: KnowledgeGraph,
         context: ContentContext,
+        prompts,
         path: str | Path,
         sources_path: str | Path,
         siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
@@ -139,6 +139,7 @@ class ConceptDescriber:
     ):
         self.knowledge_graph = knowledge_graph
         self.context = context
+        self.prompts = prompts
         self.path = Path(path)
         self.sources_path = Path(sources_path)
         self.siblings_top_k = siblings_top_k
@@ -340,7 +341,7 @@ class ConceptDescriber:
         peers = self.siblings(concept) if against is None else against
         siblings = {c: written.get(c, "") for c in peers}
 
-        prompt = concept_description_prompt(
+        prompt = self.prompts.concept_description_prompt(
             concept=concept,
             domain=domain,
             relations=relations,
@@ -364,6 +365,7 @@ class ConceptDescriber:
             shape='{"description": "…"}',
             format=DESCRIPTION_SCHEMA,
             log_prefix=f"[{concept}] ",
+            prompts=self.prompts,
         )
         if parsed is None:
             raise ValueError(f"descripción ilegible: {error}")
@@ -454,7 +456,7 @@ class ConceptDescriber:
     def describe_domain(
         self, domain: str, concepts: list[str], written: dict[str, str] | None = None
     ) -> dict[str, str]:
-        prompt = describe_domain_concepts_prompt(
+        prompt = self.prompts.describe_domain_concepts_prompt(
             domain=domain,
             concepts_block=self._batch_concepts_block(concepts),
             passages_block=self._batch_passages_block(concepts),
@@ -477,6 +479,7 @@ class ConceptDescriber:
             shape='{"descriptions": {"<concepto>": "…"}}',
             format=_batch_schema(concepts),
             log_prefix=f"[{domain}] ",
+            prompts=self.prompts,
         )
         if parsed is None:
             raise ValueError(f"descripciones ilegibles para «{domain}»: {error}")

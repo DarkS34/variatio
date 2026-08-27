@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio import config
+from variatio.instance import locale
 
 from .. import auth, curriculum, kg_view
 from ..editors import kg_edit
@@ -70,7 +70,11 @@ def read(access: auth.Access = auth.VIEW) -> dict:
 def graph(access: auth.Access = auth.VIEW) -> dict:
     try:
         graph_raw = kg_edit.raw(access.ws)
-        return kg_view.build(graph_raw, kg_edit.load_graph(access.ws, graph_raw))
+        return kg_view.build(
+            graph_raw,
+            kg_edit.load_graph(access.ws, graph_raw),
+            locale.relation_schema(access.ws),
+        )
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
 
@@ -208,5 +212,7 @@ def write_curriculum(body: CurriculumBody, access: auth.Access = auth.VIEW) -> d
     graph = kg_edit.load_graph(access.ws)
     concepts = body.concepts
     if body.close_prerequisites:
-        concepts = curriculum.closure(concepts, graph, config.KG_PREREQUISITE_RELATION)
+        concepts = curriculum.closure(
+            concepts, graph, locale.prerequisite_relation(access.ws)
+        )
     return curriculum.save(access.ws, concepts, graph)

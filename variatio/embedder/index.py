@@ -19,6 +19,7 @@ class Embedder:
         self,
         knowledge_graph: KnowledgeGraph,
         embedding_model: str,
+        prompts,
         embed_text: Callable[[dict], str],
         embed_signature: str,
         context: dict,
@@ -56,7 +57,7 @@ class Embedder:
         self._exemplar_rows_by_concept: dict[str, list[int]] = {}
 
         self.describer = ConceptDescriber(
-            knowledge_graph, context, self.descriptions_path, self.concept_sources_path
+            knowledge_graph, context, prompts, self.descriptions_path, self.concept_sources_path
         )
         self.concept_descriptions = self.describer.ensure()
         self._ensure_concepts_index()
