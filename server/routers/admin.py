@@ -27,9 +27,11 @@ from sqlalchemy.orm import Session as DbSession
 from study.api import store as evaluation_store
 
 from .. import auth, deps, maintenance, review, runtime, settings, storage
+from ..auth import deps as auth_deps
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import generations, identity, repository
 from ..db.models import EDITOR, ROLES, Invite, User
+from ..jobs import lanes as jobs_lanes
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
@@ -67,6 +69,15 @@ class MaintenanceBody(BaseModel):
 # WHO AND WHAT ----------------------------------------------------------------------------
 
 
+def _lane_jobs() -> dict:
+    return {
+        backend: (job.to_dict() if job is not None else None)
+        for backend, job in (
+            (b, runtime.runner.current_in(b)) for b in jobs_lanes.BACKENDS
+        )
+    }
+
+
 @router.get("/overview")
 def overview(db: DbSession = Depends(auth.db)) -> dict:
     workspaces = repository.list_workspaces(db)
@@ -75,7 +86,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
     headers = evaluation_store.headers(db)
     by_account = {group["key"]: group for group in evaluation_store.by_account(headers)}
 
-    running = runtime.runner.current()
+    running = runtime.runner.running()
     return {
         "totals": {
             "users": len(users),
@@ -125,8 +136,9 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             for workspace in workspaces
         ],
         "engine": {
-            "busy": running is not None,
-            "job": running.to_dict() if running else None,
+            "busy": bool(running),
+            "job": running[0].to_dict() if running else None,
+            "lanes": _lane_jobs(),
             "queued": len(runtime.runner.pending()),
             "warm_contexts": deps.warm_slugs(),
         },
@@ -256,10 +268,23 @@ def delete_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
+    # Whoever was sitting in it is moved to wherever they land now, before the row goes:
+    # leaving the pointer dangling left them holding a slug the API answers 404 for, on
+    # every request, with the switcher offering no way back.
+    rehomed = auth_deps.rehome_accounts(db, workspace)
+
     db.delete(workspace)
     db.flush()
     deps.invalidate(slug, "workspace eliminado")
-    return {"deleted": slug, "path": str(ws.root), "files_removed": removed}
+    # Heard only by whoever is looking at the instance that has just stopped existing,
+    # which is exactly who has to reload.
+    runtime.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    return {
+        "deleted": slug,
+        "path": str(ws.root),
+        "files_removed": removed,
+        "rehomed": rehomed,
+    }
 
 
 # Empty a stage. Leaves the workspace standing and its artifact «missing», which is what
@@ -291,8 +316,9 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
 def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     if repository.get_workspace(db, slug) is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
-    current = runtime.runner.current()
-    if (current is not None and current.workspace == slug) or runtime.runner.pending(slug):
+    # Every run of this workspace, on either lane: asking `current()` alone would miss the
+    # one on the second lane whenever somebody else's older job holds the first.
+    if runtime.runner.running(slug) or runtime.runner.pending(slug):
         raise HTTPException(409, "Ese workspace tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = settings.workspace_for(slug)
     result = settings.clear_cache(ws)
@@ -331,11 +357,14 @@ def export_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
 # THE QUEUE -------------------------------------------------------------------------------
 
 
+# `running` is the oldest of them, kept as it was; `lanes` is the honest picture now that
+# the queue serialises per backend and two jobs can be in flight at once.
 @router.get("/jobs")
 def job_queue() -> dict:
-    running = runtime.runner.current()
+    running = runtime.runner.running()
     return {
-        "running": running.to_dict() if running else None,
+        "running": running[0].to_dict() if running else None,
+        "lanes": _lane_jobs(),
         "queued": [
             {**job.to_dict(), "queue_position": runtime.runner.queue_position(job.id)}
             for job in runtime.runner.pending()

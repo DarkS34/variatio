@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, Request, WebSocket
+from sqlalchemy import select
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import Session as DbSession
 
@@ -168,6 +169,15 @@ def require_open(user: User = Depends(current_user)) -> User:
 # workspace of the installation — and it went with the rest: entering somebody else's
 # instance because it happened to be first is not landing anywhere on purpose, and the
 # switcher already lists every one of them for an administrator to open by hand.
+def first_membership(
+    session: DbSession, user: User, excluding: int | None = None
+) -> Workspace | None:
+    for _, workspace in identity.memberships_for(session, user.id):
+        if workspace.id != excluding:
+            return workspace
+    return None
+
+
 def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
     if user.active_workspace_id is not None:
         workspace = session.get(Workspace, user.active_workspace_id)
@@ -178,10 +188,28 @@ def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
         if workspace is not None and workspace.deleted_at is None:
             if user.is_admin or identity.membership(session, workspace.id, user.id):
                 return workspace
-    rows = identity.memberships_for(session, user.id)
-    if rows:
-        return rows[0][1]
-    return None
+    return first_membership(session, user)
+
+
+# Where an account goes when the instance it was sitting in stops existing. The criterion
+# is the same one `current_workspace_for` applies with the last choice gone — its first
+# membership, and nothing if it has none, which is a normal state the panel draws.
+#
+# Run BEFORE the row is deleted and told which workspace is leaving, because the two
+# backends disagree about when a `SET NULL` lands and `memberships_for` would otherwise
+# still offer the instance being removed.
+def rehome_accounts(session: DbSession, workspace: Workspace) -> dict[str, str | None]:
+    stranded = (
+        session.execute(select(User).where(User.active_workspace_id == workspace.id))
+        .scalars()
+        .all()
+    )
+    moved: dict[str, str | None] = {}
+    for user in stranded:
+        landing = first_membership(session, user, excluding=workspace.id)
+        user.active_workspace_id = landing.id if landing is not None else None
+        moved[user.username] = landing.slug if landing is not None else None
+    return moved
 
 
 def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Workspace:
