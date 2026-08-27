@@ -233,7 +233,20 @@ class RunStore {
         // `apply` advances lastSeq to the last replayed event. The bus's own last_seq can
         // already be ahead of that replay, and adopting it here would make the reducer
         // discard the live events in between — the tokens produced while we connected.
-        for (const event of payload.events ?? []) this.apply(event);
+        // One unreadable historical event must not cost the rest of the replay, so each
+        // is applied on its own; a live event failing later fails alone anyway.
+        for (const event of payload.events ?? []) {
+          try {
+            this.apply(event);
+          } catch {
+            /* keep replaying */
+          }
+        }
+        // After the events, because the snapshot is the fresher of the two: the replay is
+        // bounded and its `job.queued`/`job.started` may have been evicted from the ring,
+        // which used to leave this tab with runs whose `job` was null for ever — no
+        // screen could claim them, and the finish never invalidated anything.
+        this.adoptJobs((payload as any).jobs ?? []);
         return;
       }
       if (payload.kind === "stream.heartbeat") return;
@@ -319,6 +332,32 @@ class RunStore {
       this.commit({ runs: { ...this.state.runs, [jobId]: emptyRun(jobId) } });
     }
     if (this.state.currentJobId !== jobId) this.commit({ currentJobId: jobId });
+  }
+
+  /**
+   * The server's own account of this workspace's jobs, from `stream.ready`.
+   *
+   * The replay reconstructs runs from whatever events survive the ring buffer, and the
+   * `job.queued`/`job.started` that carry the job body are the OLDEST events of a run —
+   * the first to be evicted. The snapshot is taken at connect time, so it wins over
+   * whatever the replayed events said, and a run always knows its job.
+   */
+  private adoptJobs(jobs: Job[]) {
+    if (!Array.isArray(jobs) || jobs.length === 0) return;
+    const runs = { ...this.state.runs };
+    let currentJobId = this.state.currentJobId;
+    for (const job of jobs) {
+      if (!job?.id) continue;
+      const run = runs[job.id] ?? emptyRun(job.id);
+      runs[job.id] = {
+        ...run,
+        job,
+        startedAt: run.startedAt ?? job.started_at ?? job.created_at,
+        finishedAt: run.finishedAt ?? job.finished_at,
+      };
+      if (job.status === "running" || job.status === "queued") currentJobId = job.id;
+    }
+    this.commit({ runs: this.prune(runs), currentJobId });
   }
 
   /* REDUCER ---------------------------------------------------------------------- */

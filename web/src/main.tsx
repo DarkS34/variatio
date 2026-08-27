@@ -15,6 +15,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
 import { App } from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AuthGate } from "./features/auth/AuthGate";
 import { ApiError } from "./lib/api";
@@ -45,9 +46,14 @@ createRoot(document.getElementById("root")!).render(
           so the login and invitation screens can acknowledge an action too. */}
       <RouterProvider>
         <ToastProvider>
-          <AuthGate>
-            <App />
-          </AuthGate>
+          {/* The last floor: any render error below becomes a sentence and a reload
+              button instead of a white page. It fixes nothing — it makes the next crash
+              reportable. */}
+          <ErrorBoundary>
+            <AuthGate>
+              <App />
+            </AuthGate>
+          </ErrorBoundary>
         </ToastProvider>
       </RouterProvider>
     </QueryClientProvider>

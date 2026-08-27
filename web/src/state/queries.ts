@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { api, getScope } from "@/lib/api";
-import { isSplitEngine, queuedNotice, readLanes } from "@/lib/queue";
+import { isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
 import type {
   ArtifactName,
   BuildPhase,
@@ -19,7 +19,7 @@ import type {
   Role,
   WorkspaceRow,
 } from "@/lib/types";
-import { authKeys, useHasWorkspace } from "./auth";
+import { authKeys, useHasWorkspace, useSession } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
 
@@ -103,6 +103,33 @@ export function useJobRun(
     if (runs.length === 0) return null;
     return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
   }, [stream, kind, accept]);
+}
+
+/**
+ * The most recent run of this kind that THIS account launched.
+ *
+ * The stream carries the whole workspace, so `useJobRun` alone adopts a colleague's run:
+ * with two evaluators on `/evaluar`, the second one's screen collapsed onto the first
+ * one's comparison — and then onto its 404. The generate and evaluation screens are
+ * about a commission somebody made, so they filter by author; the build screens stay on
+ * `useJobRun`, because an artifact under construction is under construction for everyone.
+ * `ownedBy` fails open when either id is unknown, so an older API degrades to the shared
+ * behaviour instead of hiding the run.
+ */
+export function useOwnJobRun(
+  kind: JobKind,
+  accept?: (run: RunView) => boolean,
+): RunView | null {
+  const me = useSession().data?.user.id;
+  const stream = useStream();
+  return useMemo(() => {
+    const runs = Object.values(stream.runs).filter(
+      (run) =>
+        run.job?.kind === kind && ownedBy(run.job, me) && (!accept || accept(run)),
+    );
+    if (runs.length === 0) return null;
+    return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
+  }, [stream, kind, accept, me]);
 }
 
 /** True while a job of this kind is queued or running, whoever launched it. */

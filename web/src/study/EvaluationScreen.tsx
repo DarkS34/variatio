@@ -14,7 +14,7 @@ import type { RunView } from "@/state/runStore";
 import {
   useCancelJob,
   useElapsed,
-  useJobRun,
+  useOwnJobRun,
   useKg,
   useKgGraph,
   useLanes,
@@ -157,7 +157,7 @@ export function EvaluationScreen() {
   const decline = useDeclineSession();
   const rate = useRateSession();
   const cancel = useCancelJob();
-  const run = useJobRun("evaluate", notStock);
+  const run = useOwnJobRun("evaluate", notStock);
   const lanes = useLanes();
   const split = useSplitEngine();
   // A comparison is launched through the study's own mutation and not `useSubmitJob`, so

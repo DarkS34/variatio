@@ -14,7 +14,7 @@ import type { RunView } from "@/state/runStore";
 import {
   useCancelJob,
   useEngineOffline,
-  useJobRun,
+  useOwnJobRun,
   useKg,
   useKgGraph,
   useLanes,
@@ -53,7 +53,7 @@ export function GenerateScreen() {
   // ITS OWN run, by kind, and not «lo que la máquina esté haciendo»: two lanes mean a build
   // can be running beside this generation, and the screen used to take whichever job the
   // stream had heard from last and then find no items in it.
-  const run = useJobRun("generate");
+  const run = useOwnJobRun("generate");
   const lanes = useLanes();
   const split = useSplitEngine();
   const client = useQueryClient();

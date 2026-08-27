@@ -125,6 +125,22 @@ export function waitFor(
 
 /** Is this job waiting rather than working? `queue_position` is the direct answer; the
  *  status is the fallback for an API that does not send one. */
+/**
+ * Is this job the given account's own?
+ *
+ * The stream is filtered by WORKSPACE, never by user, so every browser of an instance
+ * hears every colleague's jobs — and a screen that adopts «the most recent run of my
+ * kind» adopts theirs. This is the one criterion for telling them apart, and it fails
+ * OPEN: with either id unknown (an older API, an account deleted under the job) nobody's
+ * run is hidden, because the failure this replaces is the second person's screen being
+ * taken over, not a run showing to one person too many.
+ */
+export function ownedBy(job: Job | null | undefined, userId: number | null | undefined): boolean {
+  if (!job) return false;
+  if (typeof job.user_id !== "number" || typeof userId !== "number") return true;
+  return job.user_id === userId;
+}
+
 export function isQueued(job: Job | null | undefined): boolean {
   if (!job) return false;
   if (typeof job.queue_position === "number") return job.queue_position > 0;

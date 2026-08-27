@@ -5,6 +5,7 @@ import {
   backendsOf,
   isQueued,
   isSplitEngine,
+  ownedBy,
   pickActiveRun,
   prospectNote,
   queuedLabel,
@@ -259,5 +260,28 @@ describe("pickActiveRun", () => {
   it("falls back to the most recent finished run rather than an empty panel", () => {
     const runs = { old: run("succeeded", 1), recent: run("failed", 5) };
     expect(pickActiveRun(runs, null)).toBe(runs.recent);
+  });
+});
+
+describe("ownedBy", () => {
+  const job = (user_id: number | null) => ({ user_id }) as Job;
+
+  it("matches the author and rejects everybody else", () => {
+    expect(ownedBy(job(3), 3)).toBe(true);
+    expect(ownedBy(job(3), 4)).toBe(false);
+  });
+
+  // Failing open is the point: hiding a run is the same failure this criterion exists
+  // to remove, so an unattributable job shows to everyone rather than to nobody.
+  it("fails open when either side is unknown", () => {
+    expect(ownedBy(job(null), 3)).toBe(true);
+    expect(ownedBy({} as Job, 3)).toBe(true);
+    expect(ownedBy(job(3), null)).toBe(true);
+    expect(ownedBy(job(3), undefined)).toBe(true);
+  });
+
+  it("is false with no job at all", () => {
+    expect(ownedBy(null, 3)).toBe(false);
+    expect(ownedBy(undefined, null)).toBe(false);
   });
 });
