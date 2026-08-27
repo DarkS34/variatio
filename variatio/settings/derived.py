@@ -2,7 +2,8 @@ from ..instance.relations import BUILTIN_SCHEMAS
 from .registry.reasoning import PHASE_KEYS
 
 PHASES = {
-    "models.phases.exemplars_transcribe": "EXEMPLARS_TRANSCRIBE_MODEL",
+    "models.phases.transcribe": "TRANSCRIBE_MODEL",
+    "models.phases.transcribe_seam": "TRANSCRIBE_SEAM_MODEL",
     "models.phases.ep_scan": "EP_SCAN_MODEL",
     "models.phases.ep_consolidate": "EP_CONSOLIDATE_MODEL",
     "models.phases.ep_context": "EP_CONTEXT_MODEL",

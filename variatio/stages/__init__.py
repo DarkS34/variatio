@@ -28,11 +28,27 @@ from .index import (
 )
 from .initialize import PipelineContext, initialize
 from .tag import save_bank, tag_bank
+from .transcribe import (
+    CORPUS,
+    EXEMPLARS,
+    SLOTS,
+    TRANSCRIBE_PHASES,
+    delete_document_page,
+    document_pages_listing,
+    insert_document_page,
+    transcribe_slot,
+    transcription_status,
+    write_document_page,
+)
 
 __all__ = [
+    "CORPUS",
+    "EXEMPLARS",
     "EXEMPLARS_BANK",
     "EXEMPLARS_PROFILE",
     "KNOWLEDGE_GRAPH",
+    "SLOTS",
+    "TRANSCRIBE_PHASES",
     "MissingArtifactError",
     "PipelineContext",
     "build_artifact",
@@ -43,10 +59,13 @@ __all__ = [
     "build_models",
     "build_phases",
     "content_context_path",
+    "delete_document_page",
     "describe_concepts",
+    "document_pages_listing",
     "exemplars_profile_path",
     "generate",
     "initialize",
+    "insert_document_page",
     "knowledge_graph_path",
     "load_concept_descriptions",
     "load_concept_sources",
@@ -56,4 +75,7 @@ __all__ = [
     "save_bank",
     "save_concept_descriptions",
     "tag_bank",
+    "transcribe_slot",
+    "transcription_status",
+    "write_document_page",
 ]

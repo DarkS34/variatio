@@ -1,10 +1,10 @@
 import re
 
-from .markdown import HEADING_RE, mask_fences, restore_fences
+from .markdown import HEADING_RE, mask_fences, restore_fences, strip_page_marks
 
 
 def chunk_text(text: str, max_chars: int) -> list[str]:
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", strip_page_marks(text)) if p.strip()]
     chunks: list[str] = []
     current = ""
     for paragraph in paragraphs:
@@ -65,7 +65,7 @@ def chunk_sections(text: str, max_chars: int) -> list[tuple[str, list[str], str]
 
 
 def split_sections(text: str) -> list[tuple[str, str, str]]:
-    masked, fences = mask_fences(text)
+    masked, fences = mask_fences(strip_page_marks(text))
     stack: list[str] = []
     sections: list[tuple[str, str, list[str]]] = []
     current: list[str] = []

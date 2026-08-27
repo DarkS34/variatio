@@ -134,3 +134,84 @@ def test_validate_patch_names_every_offender_not_just_the_first():
     message = str(caught.value)
     assert "IDLE" in message
     assert "no.existe" in message
+
+
+# THE RENAMED KEYS ---------------------------------------------------------------------------------
+#
+# `config.json` at the root is the installation's own settings as they actually stand, and it
+# predates the 2026-08-27 rename of the transcription phase. Refusing to read the old names
+# would turn a rename into a silent reset of whatever the installation had chosen.
+
+
+def test_a_legacy_key_still_resolves(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps({"models": {"phases": {"exemplars_transcribe": "un-modelo"}}}),
+        encoding="utf-8",
+    )
+    assert store.read_file(path) == {"models.phases.transcribe": "un-modelo"}
+
+
+def test_a_legacy_key_inside_an_engine_profile_resolves_too(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "profiles": {
+                    "ollama": {
+                        "models": {"phases": {"exemplars_transcribe": "un-modelo"}},
+                        "reasoning": {
+                            "phases": {"exemplars_transcribe": True},
+                            "effort": {"exemplars_transcribe": "high"},
+                        },
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    flat = store.read_file(path)
+    assert flat["profiles.ollama.models.phases.transcribe"] == "un-modelo"
+    assert flat["profiles.ollama.reasoning.phases.transcribe"] is True
+    assert flat["profiles.ollama.reasoning.effort.transcribe"] == "high"
+    assert not any("exemplars_transcribe" in key for key in flat)
+
+
+def test_the_new_name_wins_when_a_file_carries_both(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "models": {
+                    "phases": {
+                        "exemplars_transcribe": "el-viejo",
+                        "transcribe": "el-nuevo",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert store.read_file(path)["models.phases.transcribe"] == "el-nuevo"
+
+
+def test_a_legacy_key_resolves_even_when_resolve_is_called_directly(tmp_path):
+    settings = [make("models.phases.transcribe", "TRANSCRIBE_MODEL", "str", None, nullable=True)]
+    values, sources = store.resolve(
+        settings, {"models.phases.exemplars_transcribe": "un-modelo"}, {}
+    )
+    assert values["models.phases.transcribe"] == "un-modelo"
+    assert sources["models.phases.transcribe"] == "file"
+
+
+def test_reading_a_legacy_file_and_writing_it_back_migrates_the_name(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps({"models": {"phases": {"exemplars_transcribe": "un-modelo"}}}),
+        encoding="utf-8",
+    )
+    settings = [make("models.phases.transcribe", "TRANSCRIBE_MODEL", "str", None, nullable=True)]
+    values, _ = store.resolve(settings, store.read_file(path), {})
+    store.write_file(path, settings, values)
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["models"]["phases"] == {"transcribe": "un-modelo"}

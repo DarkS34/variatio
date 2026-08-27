@@ -9,10 +9,14 @@ SETTINGS: list[Setting] = [
         group="Constructores",
         impact=Impact.NONE,
         minimum=1,
-        doc="""Transcripción de los ejemplares en bruto a partir de la imagen de cada página. Docling lee
-estos PDF como texto y pierde tres cosas a la vez: separa los bloques de código de la
-pregunta que los cita, aplana sus saltos de línea y deja caer el color que marca la opción
-correcta. Renderizar la página y leerla como imagen recupera las tres.""",
+        doc="""Transcripción del material en bruto a partir de la imagen de cada página, en los dos slots
+de `raw/`. Docling lee estos PDF como texto y pierde tres cosas a la vez: separa los bloques
+de código de la pregunta que los cita, aplana sus saltos de línea y deja caer el color que
+marca la opción correcta. Renderizar la página y leerla como imagen recupera las tres.
+
+Desde el 2026-08-27, por petición explícita del usuario, el corpus del grafo va por esta
+misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
+Docling solo le queda el `.docx`, que no tiene página que renderizar.""",
     ),
     Setting(
         key="builders.transcribe_temperature",
@@ -41,9 +45,28 @@ pensando en otra cosa.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=0,
-        doc="""Cuántas veces se reintenta la transcripción de la imagen de una página tras un fallo de
-parseo antes de que el constructor renuncie a esa página y recurra a la extracción de
-texto de Docling.""",
+        doc="""Cuántas veces se reintenta la transcripción de la imagen de una página tras un fallo del
+motor antes de que el constructor renuncie a esa página. Cuando renuncia deja en la caché
+un marcador de fallo, no un hueco: una página perdida son ejercicios perdidos, y algo con
+lo que tropezar es mejor que una página que parece vacía.""",
+    ),
+    Setting(
+        key="builders.transcribe_seam_chars",
+        name="TRANSCRIBE_SEAM_CHARS",
+        kind="int",
+        default=1200,
+        group="Constructores",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuánto se le enseña al modelo de cada lado de una costura: los últimos N caracteres de una
+página y los primeros N de la siguiente. Es lo que decide si lo que abre la segunda página
+continúa lo que la primera dejó a medias.
+
+1.200 sin medir: es un párrafo largo con su vecino a cada lado, bastante para ver dónde
+acaba una frase o si una tabla sigue, y lo bastante corto para que la llamada no cueste
+como una lectura del fragmento entero. NO forma parte de la huella de la caché de páginas:
+cambiarlo no vuelve a transcribir nada, solo cambia lo que verá la próxima revisión de
+costuras.""",
     ),
     Setting(
         key="builders.transcribe_prompt_version",
@@ -113,6 +136,24 @@ para que un corpus ruidoso no fragmente el perfil en modalidades casi duplicadas
         minimum=1,
         doc="""Acota los caracteres por fragmento cuando el constructor del banco de ejemplares agrupa
 el markdown de un documento fuente para extraerlo.""",
+    ),
+    Setting(
+        key="builders.eb_batch_overlap_blocks",
+        name="EB_BATCH_OVERLAP_BLOCKS",
+        kind="int",
+        default=1,
+        group="Constructores",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántos bloques del final de un lote se arrastran al principio del siguiente cuando el
+constructor del banco parte un documento para extraerlo.
+
+El corte es por tamaño, así que un ejercicio a caballo entre dos lotes se veía a medias en
+cada llamada y salía extraído dos veces y mal las dos. Con solape el ejercicio entero cabe
+en al menos una de las dos llamadas, y los ítems repetidos se descartan comparando su campo
+primario normalizado, antes de que consuman un id. Un bloque basta porque los bloques son
+los que `split_blocks` reconoce: un ejercicio con sus apartados es uno solo. 0 lo desactiva
+y vuelve al corte seco.""",
     ),
     Setting(
         key="builders.kg_chunk_size",

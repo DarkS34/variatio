@@ -2,13 +2,36 @@ from variatio import config, settings
 from variatio.settings import derived
 from variatio.settings.registry import BY_KEY, PIPELINE
 from variatio.settings.registry import reasoning
+from variatio.settings.registry.reasoning import Phase
 
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
+# The two transcription nodes run in all three builders, so they are DRAWN three times and
+# are still one setting each. Everything else belongs to one lane.
+SHARED = {"transcribe", "transcribe_seam"}
 
-def test_every_phase_appears_once():
-    keys = [phase.key for phase in PHASES]
-    assert len(keys) == len(set(keys))
+
+def test_only_the_shared_transcription_is_drawn_in_more_than_one_lane():
+    lanes_by_key: dict[str, list[str]] = {}
+    for lane in PIPELINE:
+        for phase in lane.phases:
+            lanes_by_key.setdefault(phase.key, []).append(lane.key)
+    assert {key for key, lanes in lanes_by_key.items() if len(lanes) > 1} == SHARED
+    for key in SHARED:
+        assert lanes_by_key[key] == ["profile", "graph", "bank"]
+
+
+def test_a_phase_drawn_twice_points_at_the_same_settings():
+    seen: dict[str, Phase] = {}
+    for phase in PHASES:
+        first = seen.setdefault(phase.key, phase)
+        assert first == phase, phase.key
+
+
+def test_a_lane_never_repeats_a_phase():
+    for lane in PIPELINE:
+        keys = [phase.key for phase in lane.phases]
+        assert len(keys) == len(set(keys)), lane.key
 
 
 def test_every_phase_either_toggles_or_says_why_not():

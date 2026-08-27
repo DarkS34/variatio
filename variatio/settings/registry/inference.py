@@ -124,7 +124,7 @@ this existed such a model had no entry in `LLM_CONTEXT` and Ollama sized its KV 
 the Modelfile, which for `qwen3.6:35b-a3b-q8_0` (34.88 GiB of weights on its own) is the
 difference between fitting beside the embedder and not. One value and not one per phase: on
 2026-08-23 the only override is that MoE, placed on the build phases that read documents
-(`exemplars_transcribe`, `ep_scan`, `eb_extract`, `kg_extract`, the two `kg_clean_*` and
+(`transcribe`, `ep_scan`, `eb_extract`, `kg_extract`, the two `kg_clean_*` and
 the two `kg_link_*`) while `LLM_MAIN` stays `qwen3.8:27b-q4_K_M` for judging and generating.
 The two never need to be resident together — a build loads the MoE once and the 27b comes
 back on the next generation — so the co-residency arithmetic is still three models.
@@ -132,9 +132,11 @@ back on the next generation — so the co-residency arithmetic is still three mo
 65536 because the same rule as `context_window.main` applies (prompt plus deliberation
 where a phase reasons), and because lowering it truncates silently."""
 
-_EXEMPLARS_TRANSCRIBE_DOC = """Raw exemplars transcription — shared by BOTH builders that read raw_exemplars_bank/,
-so there is one constant and not two that could drift and produce two different
-markdowns for the same file.
+_TRANSCRIBE_DOC = """Page transcription from the rendered image — shared by ALL THREE builders and by BOTH raw
+slots, so there is one constant and not three that could drift and produce two different
+markdowns for the same file. Since 2026-08-27, by explicit user request, `raw/raw_corpus/`
+goes through this route too: quality weighs more than speed, and Docling is left with the
+`.docx` that has no page to render.
 
 What carries fidelity here is the PROMPT, not the model. Measured on Prog1_PEC1 p.1:
 without the character-by-character clause of `transcribe_page_prompt`, gemma4:31b
@@ -149,7 +151,23 @@ which no longer holds this job — it followed `LLM_MAIN` into `qwen3.8:27b-q4_K
 2026-08-18. The new model has the `vision` capability, checked, so the call works; whether
 it transcribes as faithfully is NOT measured yet. This is the cheapest thing in the
 pipeline to re-check (one page) and the most damaging to get wrong, since a corrupted
-transcription lands in the bank as an exercise whose answer has changed."""
+transcription lands in the bank as an exercise whose answer has changed and, since the
+corpus joined this route, in the graph as a concept the syllabus never taught."""
+
+_TRANSCRIBE_SEAM_DOC = """La costura entre dos páginas transcritas por separado: el modelo CLASIFICA cómo se pegan
+—`none`/`space`/`newline`/`paragraph`— y cuántas líneas iniciales de la segunda son
+repetición mecánica de la maquetación. NUNCA reescribe el contenido: todo el prompt de
+transcripción está construido sobre «copia carácter a carácter», y un segundo modelo con
+permiso para redactar lo tiraría por la borda. La respuesta se verifica contra el catálogo
+de separadores antes de creerla, y lo que no se pueda leer cae al detector determinista.
+
+SIN MEDIR. Esta fase existe desde el 2026-08-27 por petición explícita del usuario y no
+tiene todavía ni una medición de calidad ni una de coste: lo único comprobado es que el
+detector determinista solo, que es lo que había antes, mete un salto de párrafo en mitad de
+una frase o de un bloque de código cada vez que un ejercicio ocupa dos páginas. Una llamada
+por costura y solo cuando el detector no tiene certeza (una valla de código abierta sí lo
+es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
+
 
 _PHASE_SHARED_DOC = """One constant per model call is still the unit of retuning, and that is the whole reason
 they survive a consolidation: pointing them all at `LLM_MAIN` is a decision, not a
@@ -494,15 +512,26 @@ otro sitio, no aquí.""",
         doc=_CONTEXT_WINDOW_OVERRIDES_DOC,
     ),
     Setting(
-        key="models.phases.exemplars_transcribe",
-        name="EXEMPLARS_TRANSCRIBE_MODEL",
+        key="models.phases.transcribe",
+        name="TRANSCRIBE_MODEL",
         kind="str",
         default=None,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
         nullable=True,
-        doc=_EXEMPLARS_TRANSCRIBE_DOC + "\n\n" + _VACIO_SENTINEL,
+        doc=_TRANSCRIBE_DOC + "\n\n" + _VACIO_SENTINEL,
+    ),
+    Setting(
+        key="models.phases.transcribe_seam",
+        name="TRANSCRIBE_SEAM_MODEL",
+        kind="str",
+        default=None,
+        group="Modelos",
+        impact=Impact.CONTEXTS,
+        scope="engine",
+        nullable=True,
+        doc=_TRANSCRIBE_SEAM_DOC + "\n\n" + _VACIO_SENTINEL,
     ),
     Setting(
         key="models.phases.ep_scan",

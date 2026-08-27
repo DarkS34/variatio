@@ -43,6 +43,42 @@ Solo el Markdown de la página. Sin preámbulo, sin comentarios tuyos, sin ```ma
 Markdown:"""
 
 
+SEAM_SEPARATORS = ("none", "space", "newline", "paragraph")
+
+
+def merge_pages_prompt(tail: str, head: str, page_number: int, page_count: int) -> str:
+    return f"""\
+Dos páginas consecutivas de un documento docente se transcribieron por separado. Decide CÓMO SE UNEN, y nada más.
+
+No escribes texto: no completas, no corriges, no reescribes, no resumes, no traduces. Otro proceso ya copió carácter a carácter lo que había en cada página, y tu única salida es un separador y un número. Cualquier palabra tuya que acabara en el documento sería material docente falso.
+
+# FINAL DE LA PÁGINA {page_number - 1} DE {page_count}
+<<<COLA>>>
+{tail}
+<<<FIN DE LA COLA>>>
+
+# PRINCIPIO DE LA PÁGINA {page_number} DE {page_count}
+<<<CABEZA>>>
+{head}
+<<<FIN DE LA CABEZA>>>
+
+# QUÉ DECIDIR
+1. `continues`: true si lo que abre la segunda página continúa lo que la primera dejó a medias — una frase cortada, un bloque de código partido, una tabla que sigue, una lista que sigue, una palabra partida. false si la segunda página empieza algo nuevo.
+2. `separator`: qué se pone entre las dos transcripciones.
+   - `none`: nada. Solo cuando la primera corta una palabra o un identificador por la mitad.
+   - `space`: un espacio. Una frase que sigue en la página siguiente.
+   - `newline`: un salto de línea. Un bloque de código, una tabla o una lista que continúan: una línea en blanco rompería la estructura.
+   - `paragraph`: una línea en blanco. El caso normal, cuando la segunda página empieza algo nuevo.
+3. `drop_head_lines`: cuántas líneas del principio de la CABEZA hay que descartar por ser repetición mecánica de la maquetación y no contenido — una cabecera de página repetida, un pie, el número del mismo ejercicio que la cola ya llevaba escrito. 0 casi siempre. Ante la duda, 0: descartar una línea de contenido pierde material docente y dejar una cabecera repetida no.
+4. `reason`: una frase corta en español que diga por qué.
+
+# SALIDA
+Un único objeto JSON: {{"continues": true|false, "separator": "none"|"space"|"newline"|"paragraph", "drop_head_lines": 0, "reason": "..."}}
+Nada antes, nada después, sin ```json.
+
+JSON:"""
+
+
 def format_content_prompt(
     content: str,
     types_block: str,

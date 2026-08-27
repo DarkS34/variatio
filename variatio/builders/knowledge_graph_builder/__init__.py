@@ -44,19 +44,26 @@ __all__ = [
     "schemas",
 ]
 
-# Shares of a whole build, taken from a timed run rather than from how the code looks. The
-# previous numbers guessed extraction at 48 % because it is the only per-chunk phase; it
-# measured 8 %, while the handful of calls that reason over the whole inventory — linking,
-# merging — are where the build actually spends its hour. Typing the relations is
-# deterministic and takes milliseconds, so it only carries a weight to avoid a bar that
-# jumps. Conversion keeps a real share for the first build and simply flies past on later
-# ones, where the markdown cache answers instead of Docling. Taggability moved out of the
-# build entirely (see `variatio/taggability.py`) and carries no weight here.
-# Extraction's 8 is the measured share of ONE reading per chunk; the gleaning pass
+# Shares of a whole build. Everything below `convert` is still the timed run: the previous
+# numbers guessed extraction at 48 % because it is the only per-chunk phase; it measured
+# 8 %, while the handful of calls that reason over the whole inventory — linking, merging —
+# are where the build actually spends its hour. Typing the relations is deterministic and
+# takes milliseconds, so it only carries a weight to avoid a bar that jumps. Taggability
+# moved out of the build entirely (see `variatio/taggability.py`) and carries no weight
+# here. Extraction's 8 is the measured share of ONE reading per chunk; the gleaning pass
 # (`KG_EXTRACT_GLEANING_PASSES`) reads each chunk a second time with the same model and a
 # slightly longer prompt, so its weight is that measurement doubled, not a new timing.
+#
+# `convert`'s 40 IS AN ESTIMATE and the only number here that is not measured. Its 11 was
+# Docling reading text off the page in seconds; since 2026-08-27 the corpus goes through the
+# page-transcription route, so the phase is one model call per page of the whole corpus plus
+# one short one per seam. That puts it well above a single extraction pass — a page is a few
+# thousand characters against a 12 000-character chunk — and below the whole-inventory
+# reasoning that follows it. 40 of 118 (~34 %) sits between the two, and beside the bank
+# builder's own estimate of 30 % for the same work over a corpus with far less reasoning
+# after it. It flies past on later builds, where the page cache answers instead of the model.
 BUILD_PHASES = (
-    ("convert", "Convirtiendo los documentos del corpus", 11),
+    ("convert", "Transcribiendo los documentos del corpus", 40),
     ("extract", "Extrayendo conceptos y relaciones", 16),
     ("clean", "Fusionando duplicados y normalizando nombres", 25),
     ("domains", "Agrupando los conceptos en dominios", 9),
@@ -70,6 +77,8 @@ BUILD_PHASES = (
 
 def build_models() -> list[str]:
     return [
+        config.TRANSCRIBE_MODEL,
+        config.TRANSCRIBE_SEAM_MODEL,
         config.KG_EXTRACT_MODEL,
         config.EMBEDDING_LLM,
         config.KG_CLEAN_MERGE_MODEL,
@@ -98,9 +107,9 @@ class KnowledgeGraphBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        # Lecture PDFs do not need Docling's table model, and it is slow over a whole corpus;
-        # the bank and profile builders keep the default, since exercise documents do carry
-        # tables. `LazyConverter` is what keeps Docling out of the import.
+        # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
+        # plain text needs no conversion, so on the usual corpus Docling is never built.
+        # `LazyConverter` is what keeps it out of the import.
         self.converter = _source_docs.LazyConverter(table_structure=False)
 
     # PUBLIC API ----------------------------------------------------------------------------------
@@ -159,7 +168,7 @@ class KnowledgeGraphBuilder:
             converter=self.converter,
             schema=self.schema,
             chunk_size=self.chunk_size,
-            markdown_cache_dir=self.workspace.markdown_cache_dir,
+            cache_dir=self.workspace.markdown_cache_dir,
             max_attempts=self.max_repair_attempts,
             recursive=recursive,
         )

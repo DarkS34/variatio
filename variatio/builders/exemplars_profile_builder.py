@@ -65,7 +65,8 @@ SCAN_SCHEMA = {
 
 def build_models() -> list[str]:
     return [
-        config.EXEMPLARS_TRANSCRIBE_MODEL,
+        config.TRANSCRIBE_MODEL,
+        config.TRANSCRIBE_SEAM_MODEL,
         config.EP_SCAN_MODEL,
         config.EP_CONSOLIDATE_MODEL,
         config.EP_CONTEXT_MODEL,
@@ -102,7 +103,8 @@ class ExemplarsProfileBuilder:
     def bootstrap(self) -> None:
         ensure_models(
             [
-                config.EXEMPLARS_TRANSCRIBE_MODEL,
+                config.TRANSCRIBE_MODEL,
+                config.TRANSCRIBE_SEAM_MODEL,
                 self.scan_model,
                 self.consolidate_model,
                 self.context_model,
@@ -202,14 +204,12 @@ class ExemplarsProfileBuilder:
                 reporter.tick(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    content = _source_docs.join_pages(
-                        _source_docs.document_pages(
-                            file_path,
-                            converter=self._docling,
-                            ocr=config.EXEMPLARS_OCR,
-                            tag=f"[{idx}/{len(files)}] ",
-                            cache_dir=self.workspace.markdown_cache_dir,
-                        )
+                    content = _source_docs.document_markdown(
+                        file_path,
+                        converter=self._docling,
+                        ocr=config.EXEMPLARS_OCR,
+                        tag=f"[{idx}/{len(files)}] ",
+                        cache_dir=self.workspace.markdown_cache_dir,
                     )
                 except progress.Cancelled:
                     raise

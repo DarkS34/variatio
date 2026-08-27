@@ -31,6 +31,36 @@ def _flatten(node: object, prefix: str = "") -> dict[str, object]:
     return out
 
 
+# A setting that is renamed keeps answering to its old name here, and only here: the file
+# on disk is the installation's own and predates the rename, so refusing to read it would
+# turn a rename into a silent reset of whatever it was set to. The new name is written back
+# on the first save, because every writer keys off the registry — so the alias migrates the
+# file rather than living in it for ever. A file carrying BOTH names keeps the new one.
+LEGACY_KEYS = {
+    "models.phases.exemplars_transcribe": "models.phases.transcribe",
+    "reasoning.phases.exemplars_transcribe": "reasoning.phases.transcribe",
+    "reasoning.effort.exemplars_transcribe": "reasoning.effort.transcribe",
+}
+
+
+def _current_key(key: str) -> str:
+    for old, new in LEGACY_KEYS.items():
+        if key == old:
+            return new
+        if key.endswith(f".{old}"):
+            return f"{key[: -len(old)]}{new}"
+    return key
+
+
+def _rename_legacy(flat: dict[str, object]) -> dict[str, object]:
+    out = {key: value for key, value in flat.items() if _current_key(key) == key}
+    for key, value in flat.items():
+        current = _current_key(key)
+        if current != key and current not in out:
+            out[current] = value
+    return out
+
+
 def read_file(path: str | Path) -> dict[str, object]:
     path = Path(path)
     if not path.is_file():
@@ -43,7 +73,7 @@ def read_file(path: str | Path) -> dict[str, object]:
     if not isinstance(raw, dict):
         logger.error(f"[config] '{path}' no contiene un objeto")
         return {}
-    return _flatten(raw)
+    return _rename_legacy(_flatten(raw))
 
 
 ENGINE_KEY = "engine.name"
@@ -99,6 +129,7 @@ def resolve(
 ) -> tuple[dict[str, object], dict[str, str]]:
     values: dict[str, object] = {}
     sources: dict[str, str] = {}
+    file_values = _rename_legacy(file_values)
     engine = active_engine(settings, file_values, environ)
     engines = next(
         (s.choices or () for s in settings if s.key == ENGINE_KEY), ()

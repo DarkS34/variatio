@@ -5,13 +5,20 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
+from json_repair import repair_json
 from loguru import logger
 
 from ... import config
 from ...core import inference, progress
-from ...prompts import EMPTY_PAGE_MARK, transcribe_page_prompt
+from ...core.json_io import write_json
+from ...prompts import (
+    EMPTY_PAGE_MARK,
+    SEAM_SEPARATORS,
+    merge_pages_prompt,
+    transcribe_page_prompt,
+)
 from .files import SUPPORTED_EXTS, required_cache_dir, source_hash
-from .markdown import tidy_markdown, to_markdown
+from .markdown import page_mark, tidy_markdown, to_markdown
 
 # Docling reads these exercise PDFs as text and loses three things at once: it detaches a
 # code block from the question that cites it, it collapses the block's line breaks, and it
@@ -25,6 +32,12 @@ from .markdown import tidy_markdown, to_markdown
 PAGE_FILE_RE = re.compile(r"^(\d{3})\.md$")
 META_NAME = "_meta.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
+
+# What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
+# deciding whether the cached pages are still current.
+META_EXTRA = ("pages", "seams", "seams_merged", "seams_failed", "failed_pages")
+
+FAILED_PAGE_PREFIX = "> [TRANSCRIPCIÓN FALLIDA"
 
 
 def document_cache_dir(source: str | Path, cache_dir: str | Path) -> Path:
@@ -55,7 +68,7 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     }
 
 
-def _fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
+def fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
     is_pdf = source.suffix.lower() == ".pdf"
     return _page_fingerprint(
         source,
@@ -69,7 +82,7 @@ def _fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
 # Pages written before the fingerprint stopped believing timestamps are adopted instead of
 # re-transcribed: everything else about them still matches, and the mtime they recorded is
 # exactly the field that cannot be trusted.
-def _same_document(stored: dict, fingerprint: dict) -> bool:
+def same_document(stored: dict, fingerprint: dict) -> bool:
     if stored == fingerprint:
         return True
     if "source_sha256" in stored or "source_mtime" not in stored:
@@ -78,32 +91,60 @@ def _same_document(stored: dict, fingerprint: dict) -> bool:
     return {**adopted, "source_sha256": fingerprint["source_sha256"]} == fingerprint
 
 
-def _read_cached_pages(cache_dir: Path, fingerprint: dict) -> list[str] | None:
-    meta_path = cache_dir / META_NAME
+def read_meta(cache_dir: str | Path) -> dict:
+    meta_path = Path(cache_dir) / META_NAME
     if not meta_path.exists():
-        return None
+        return {}
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return None
-    stored = {k: v for k, v in meta.items() if k != "pages"}
-    if not _same_document(stored, fingerprint):
-        return None
+        return {}
+    return meta if isinstance(meta, dict) else {}
 
-    count = meta.get("pages")
+
+def fingerprint_of(meta: dict) -> dict:
+    return {k: v for k, v in meta.items() if k not in META_EXTRA}
+
+
+def read_pages(cache_dir: str | Path) -> list[str]:
+    cache_dir = Path(cache_dir)
+    count = read_meta(cache_dir).get("pages")
     if not isinstance(count, int) or count < 1:
-        return None
+        return []
     paths = [_page_path(cache_dir, i) for i in range(1, count + 1)]
     if not all(path.exists() for path in paths):
-        return None
-    if stored != fingerprint:
-        _write_meta(cache_dir, fingerprint, count)
-    # Read back rather than returning what was produced: a page a human corrected by hand
-    # is the whole point of writing them out, and it must win over what the model said.
+        return []
     return [path.read_text(encoding="utf-8") for path in paths]
 
 
-def _write_pages(cache_dir: Path, pages: list[str], fingerprint: dict) -> None:
+def _read_cached_pages(
+    cache_dir: Path, fingerprint: dict
+) -> tuple[list[str], list[dict]] | None:
+    meta = read_meta(cache_dir)
+    if not meta:
+        return None
+    stored = fingerprint_of(meta)
+    if not same_document(stored, fingerprint):
+        return None
+
+    # Read back rather than returning what was produced: a page a human corrected by hand
+    # is the whole point of writing them out, and it must win over what the model said.
+    pages = read_pages(cache_dir)
+    if not pages:
+        return None
+    seams = valid_seams(meta.get("seams"))
+    if stored != fingerprint:
+        write_pages(cache_dir, pages, fingerprint, seams)
+    return pages, seams
+
+
+def write_pages(
+    cache_dir: str | Path,
+    pages: list[str],
+    fingerprint: dict,
+    seams: list[dict] | None = None,
+) -> None:
+    cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     # Wipe first: a source that lost pages would otherwise leave the previous run's
     # trailing files behind, and they would be read back as content.
@@ -112,14 +153,55 @@ def _write_pages(cache_dir: Path, pages: list[str], fingerprint: dict) -> None:
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
-    _write_meta(cache_dir, fingerprint, len(pages))
+    _write_meta(cache_dir, fingerprint, pages, seams or [])
 
 
-def _write_meta(cache_dir: Path, fingerprint: dict, count: int) -> None:
-    (cache_dir / META_NAME).write_text(
-        json.dumps({**fingerprint, "pages": count}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+def _write_meta(
+    cache_dir: Path, fingerprint: dict, pages: list[str], seams: list[dict]
+) -> None:
+    write_json(
+        cache_dir / META_NAME,
+        {
+            **fingerprint,
+            "pages": len(pages),
+            "seams": [dict(record) for record in seams],
+            "seams_merged": seams_merged(seams),
+            "seams_failed": seams_failed(seams),
+            "failed_pages": failed_pages(pages),
+        },
     )
+
+
+def seams_merged(seams) -> int:
+    return sum(
+        1
+        for record in valid_seams(seams)
+        if record.get("separator", PARAGRAPH) != PARAGRAPH
+    )
+
+
+def seams_failed(seams) -> list[int]:
+    return [record["page"] for record in valid_seams(seams) if record.get("failed")]
+
+
+def failed_pages(pages: list[str]) -> list[int]:
+    return [
+        index
+        for index, page in enumerate(pages, 1)
+        if page.lstrip().startswith(FAILED_PAGE_PREFIX)
+    ]
+
+
+def page_count(pdf_path: str | Path) -> int:
+    """How many pages a PDF declares, without rendering or reading a single one."""
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return 0
+    try:
+        return len(pdfium.PdfDocument(str(pdf_path)))
+    except Exception:
+        return 0
 
 
 def page_images(pdf_path: Path, dpi: int) -> tuple[int, Iterator[str]]:
@@ -160,7 +242,7 @@ def _transcribe_page(image: str, index: int, count: int, model: str, tag: str) -
             response = inference.generate(
                 model=model,
                 prompt=prompt,
-                think=config.THINK_EXEMPLARS_TRANSCRIBE,
+                think=config.THINK_TRANSCRIBE,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
             ).response
@@ -198,7 +280,25 @@ def transcribe_pdf(pdf_path: Path, model: str, dpi: int, tag: str = "") -> list[
     return pages
 
 
-def document_pages(
+def _transcribe(
+    source: Path,
+    is_pdf: bool,
+    converter,
+    model: str,
+    seam_model: str,
+    dpi: int,
+    tag: str,
+) -> tuple[list[str], list[dict]]:
+    if not is_pdf:
+        return [to_markdown(converter, source, use_cache=False)], []
+    pages = [
+        tidy_markdown(page) if page.strip() else ""
+        for page in transcribe_pdf(source, model, dpi, tag=tag)
+    ]
+    return pages, review_seams(pages, seam_model, tag=tag)
+
+
+def _document(
     source: str | Path,
     converter=None,
     model: str = "",
@@ -207,21 +307,18 @@ def document_pages(
     use_cache: bool = True,
     tag: str = "",
     cache_dir: str | Path | None = None,
-) -> list[str]:
-    """The document as a list of markdown pages, transcribed from images when it is a PDF.
-
-    Non-PDF sources have no pages to render, so they keep the Docling/plain-text route and
-    come back as a single piece — same directory layout, one file inside.
-    """
+    seam_model: str = "",
+) -> tuple[list[str], list[dict]]:
     source = Path(source)
     suffix = source.suffix.lower()
     if suffix not in SUPPORTED_EXTS:
         raise ValueError(f"Unsupported file extension: {suffix}")
 
     is_pdf = suffix == ".pdf"
-    model = model or config.EXEMPLARS_TRANSCRIBE_MODEL
+    model = model or config.TRANSCRIBE_MODEL
+    seam_model = seam_model or config.TRANSCRIBE_SEAM_MODEL
     dpi = dpi or config.TRANSCRIBE_DPI
-    fingerprint = _fingerprint_for(source, model, dpi, ocr)
+    fingerprint = fingerprint_for(source, model, dpi, ocr)
 
     document_dir = (
         document_cache_dir(source, required_cache_dir(cache_dir, "document_pages"))
@@ -231,24 +328,345 @@ def document_pages(
     if use_cache:
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
-            logger.info(f"{tag}{source.name}: {len(cached)} página(s) reutilizadas de la caché")
+            logger.info(
+                f"{tag}{source.name}: {len(cached[0])} página(s) reutilizadas de la caché"
+            )
             return cached
 
-    if is_pdf:
-        pages = [tidy_markdown(page) if page.strip() else "" for page in
-                 transcribe_pdf(source, model, dpi, tag=tag)]
-    else:
-        pages = [to_markdown(converter, source, use_cache=False)]
+    pages, seams = _transcribe(source, is_pdf, converter, model, seam_model, dpi, tag)
 
     if not pages:
         # Caching "nothing" would make the emptiness stick until the source file changes,
         # and an empty document is far more likely to be a transient failure than a fact.
         logger.warning(f"{tag}{source.name}: no produjo páginas; no se guarda en caché")
-        return pages
+        return pages, seams
     if use_cache:
-        _write_pages(document_dir, pages, fingerprint)
-    return pages
+        write_pages(document_dir, pages, fingerprint, seams)
+    return pages, seams
 
 
-def join_pages(pages: list[str]) -> str:
-    return "\n\n".join(page.strip() for page in pages if page.strip())
+def document_pages(
+    source: str | Path,
+    converter=None,
+    model: str = "",
+    dpi: int = 0,
+    ocr: bool = False,
+    use_cache: bool = True,
+    tag: str = "",
+    cache_dir: str | Path | None = None,
+    seam_model: str = "",
+) -> list[str]:
+    """The document as a list of markdown pages, transcribed from images when it is a PDF.
+
+    Non-PDF sources have no pages to render, so they keep the Docling/plain-text route and
+    come back as a single piece — same directory layout, one file inside.
+    """
+    return _document(
+        source,
+        converter=converter,
+        model=model,
+        dpi=dpi,
+        ocr=ocr,
+        use_cache=use_cache,
+        tag=tag,
+        cache_dir=cache_dir,
+        seam_model=seam_model,
+    )[0]
+
+
+def document_markdown(
+    source: str | Path,
+    converter=None,
+    model: str = "",
+    dpi: int = 0,
+    ocr: bool = False,
+    use_cache: bool = True,
+    tag: str = "",
+    cache_dir: str | Path | None = None,
+    seam_model: str = "",
+) -> str:
+    """The whole document as one markdown string, stitched page by page.
+
+    The seam decisions travel with the pages in `_meta.json`, so a rebuild reading the cache
+    stitches exactly as the run that transcribed it did and pays no model call for it.
+    """
+    pages, seams = _document(
+        source,
+        converter=converter,
+        model=model,
+        dpi=dpi,
+        ocr=ocr,
+        use_cache=use_cache,
+        tag=tag,
+        cache_dir=cache_dir,
+        seam_model=seam_model,
+    )
+    return join_pages(pages, seams)
+
+
+# THE SEAM BETWEEN TWO PAGES ----------------------------------------------------------------------
+#
+# `"\n\n".join(...)` put a PARAGRAPH break between page N and page N+1 whatever fell there,
+# so an exercise spanning two pages arrived at the extractor cut in half, a code block came
+# back with its fence closed in the middle and a table lost its second half. The page break
+# is a fact about the paper, not about the text: what has to be decided per seam is how much
+# of a break it really is.
+
+SEPARATORS = {"none": "", "space": " ", "newline": "\n", "paragraph": "\n\n"}
+PARAGRAPH = "paragraph"
+NEWLINE = "newline"
+SPACE = "space"
+
+# A cap, not a knob: the model is asked how many head lines are layout rather than content,
+# and beyond a handful the answer stops being «a repeated header» and starts being «a page
+# I decided to drop». Losing content is the one failure this whole route exists to avoid.
+MAX_SEAM_DROP_LINES = 3
+
+_FENCE_LINE_RE = re.compile(r"^\s*```")
+_HEADING_LINE_RE = re.compile(r"^\s{0,3}#{1,6}\s")
+_BULLET_LINE_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
+_TABLE_DIVIDER_RE = re.compile(r"^\s*\|(?:\s*:?-{2,}:?\s*\|)+\s*$")
+_SENTENCE_END_RE = re.compile(r"[.!?:;…]['\"»”)\]]*$")
+_CONTINUATION_HEADS = ",;:)]}»…"
+
+
+def seam(left: str, right: str) -> tuple[str, bool]:
+    """`(separator key, certain)` for the boundary between two consecutive pages."""
+    if not left.strip() or not right.strip():
+        return PARAGRAPH, True
+    # An unbalanced fence is the one case that needs no judgement: the block is open, so the
+    # next page is inside it whatever it looks like.
+    if fence_is_open(left):
+        return NEWLINE, True
+    tail, head = _last_line(left), _first_line(right)
+    if (
+        _TABLE_ROW_RE.match(tail)
+        and _TABLE_ROW_RE.match(head)
+        and not _TABLE_DIVIDER_RE.match(head)
+    ):
+        return NEWLINE, False
+    if _continues_sentence(tail, head):
+        return SPACE, False
+    return PARAGRAPH, False
+
+
+def fence_is_open(text: str) -> bool:
+    return sum(1 for line in text.splitlines() if _FENCE_LINE_RE.match(line)) % 2 == 1
+
+
+def _continues_sentence(tail: str, head: str) -> bool:
+    if _HEADING_LINE_RE.match(tail) or _BULLET_LINE_RE.match(tail):
+        return False
+    if _TABLE_ROW_RE.match(tail) or _FENCE_LINE_RE.match(tail):
+        return False
+    if _SENTENCE_END_RE.search(tail.rstrip()):
+        return False
+    if _HEADING_LINE_RE.match(head) or _BULLET_LINE_RE.match(head):
+        return False
+    if _TABLE_ROW_RE.match(head) or _FENCE_LINE_RE.match(head):
+        return False
+    first = head.lstrip()[:1]
+    return bool(first) and (first.islower() or first in _CONTINUATION_HEADS)
+
+
+def _last_line(text: str) -> str:
+    return next((line for line in reversed(text.splitlines()) if line.strip()), "")
+
+
+def _first_line(text: str) -> str:
+    return next((line for line in text.splitlines() if line.strip()), "")
+
+
+# `strip()` would take the INDENTATION of the first surviving line with the blank lines, and
+# a page that continues a code block starts indented. Flattening it is the corruption the
+# whole page-image route exists to avoid, so only whole blank lines go.
+def _trim(text: str) -> str:
+    lines = text.splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return "\n".join(lines)
+
+
+def _drop_lines(text: str, count: int) -> str:
+    if count <= 0:
+        return text
+    lines = text.splitlines()
+    dropped, index = 0, 0
+    while index < len(lines) and dropped < count:
+        if lines[index].strip():
+            dropped += 1
+        index += 1
+    return _trim("\n".join(lines[index:]))
+
+
+def _drop_reopened_fence(text: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        if _FENCE_LINE_RE.match(line):
+            return _trim("\n".join(lines[:index] + lines[index + 1 :]))
+        return text
+    return text
+
+
+def _drop_repeated_header(text: str) -> str:
+    lines = text.splitlines()
+    body = [index for index, line in enumerate(lines) if line.strip()]
+    if len(body) < 2:
+        return text
+    first, second = body[0], body[1]
+    if _TABLE_ROW_RE.match(lines[first]) and _TABLE_DIVIDER_RE.match(lines[second]):
+        return _trim("\n".join(lines[:first] + lines[second + 1 :]))
+    return text
+
+
+def _clamp_drop(value) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(count, MAX_SEAM_DROP_LINES))
+
+
+def valid_seams(records) -> list[dict]:
+    if not isinstance(records, list):
+        return []
+    out = []
+    for record in records:
+        if not isinstance(record, dict) or not isinstance(record.get("page"), int):
+            continue
+        out.append(record)
+    return out
+
+
+def join_pages(pages: list[str], seams: list[dict] | None = None) -> str:
+    """The pages as one markdown document, each seam closed as tightly as it deserves."""
+    decided = {record["page"]: record for record in valid_seams(seams)}
+    out = ""
+    for index, page in enumerate(pages, 1):
+        body = _trim(page)
+        if not body:
+            continue
+        if not out:
+            out = body
+            continue
+        separator, certain = seam(out, body)
+        record = decided.get(index)
+        if record is not None and not certain:
+            if record.get("separator") in SEPARATORS:
+                separator = str(record["separator"])
+            body = _drop_lines(body, _clamp_drop(record.get("drop_head_lines")))
+        if separator == NEWLINE:
+            body = (
+                _drop_reopened_fence(body)
+                if fence_is_open(out)
+                else _drop_repeated_header(body)
+            )
+        if not body.strip():
+            continue
+        if separator == PARAGRAPH:
+            out = f"{out}\n\n{page_mark(index)}\n\n{body}"
+        else:
+            out = f"{out}{SEPARATORS[separator]}{body}"
+    return out
+
+
+# THE SEAM, REVIEWED BY THE MODEL ------------------------------------------------------------------
+#
+# It CLASSIFIES the seam and never rewrites a character: the transcription prompt is built
+# on «copy character by character», and a second model allowed to redraft would undo it. All
+# it may say is how the two pages are glued and how many of the second one's opening lines
+# are repeated layout. Everything it answers is checked against the catalogue before it is
+# believed, and anything unreadable falls back to the deterministic rule — one seam is never
+# a reason to throw away a forty-page transcription.
+
+SEAM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "continues": {"type": "boolean"},
+        "separator": {"type": "string", "enum": list(SEAM_SEPARATORS)},
+        "drop_head_lines": {"type": "integer"},
+        "reason": {"type": "string"},
+    },
+    "required": ["continues", "separator", "drop_head_lines"],
+}
+
+
+def review_seams(pages: list[str], model: str = "", tag: str = "") -> list[dict]:
+    model = model or config.TRANSCRIBE_SEAM_MODEL
+    boundaries = _boundaries(pages)
+    if not boundaries:
+        return []
+    records: list[dict] = []
+    with progress.step(
+        "transcribe_seam", "Revisando las costuras entre páginas", len(boundaries)
+    ) as reporter:
+        for done, (left, right, index) in enumerate(boundaries, 1):
+            progress.checkpoint()
+            reporter.tick(done, detail=f"costura {index - 1}→{index}")
+            record = _review_seam(left, right, index, len(pages), model, tag)
+            if record is not None:
+                records.append(record)
+    merged = sum(1 for record in records if record.get("separator", PARAGRAPH) != PARAGRAPH)
+    if records:
+        logger.info(f"{tag}{merged}/{len(boundaries)} costura(s) unidas como continuación")
+    return records
+
+
+def _boundaries(pages: list[str]) -> list[tuple[str, str, int]]:
+    out: list[tuple[str, str, int]] = []
+    previous: str | None = None
+    for index, page in enumerate(pages, 1):
+        if not page.strip():
+            continue
+        if previous is not None:
+            out.append((previous, page, index))
+        previous = page
+    return out
+
+
+def _review_seam(
+    left: str, right: str, index: int, count: int, model: str, tag: str
+) -> dict | None:
+    if seam(left, right)[1]:
+        return None
+    tail = left.strip()[-config.TRANSCRIBE_SEAM_CHARS :]
+    head = right.strip()[: config.TRANSCRIBE_SEAM_CHARS]
+    if not tail or not head:
+        return None
+    try:
+        response = inference.generate(
+            model=model,
+            prompt=merge_pages_prompt(tail, head, index, count),
+            think=config.THINK_TRANSCRIBE_SEAM,
+            format=None if config.THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
+            temperature=inference.judgement_temperature(config.THINK_TRANSCRIBE_SEAM),
+        ).response
+    except inference.InferenceError as e:
+        logger.warning(f"{tag}costura {index - 1}→{index}: sin revisar ({e}); se une por regla")
+        return {"page": index, "failed": True}
+    parsed = _parse_seam(response)
+    if parsed is None:
+        logger.warning(
+            f"{tag}costura {index - 1}→{index}: respuesta ilegible; se une por regla"
+        )
+        return {"page": index, "failed": True}
+    return {"page": index, **parsed}
+
+
+def _parse_seam(response: str) -> dict | None:
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
+    try:
+        raw = repair_json(cleaned, return_objects=True)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(raw, dict) or raw.get("separator") not in SEAM_SEPARATORS:
+        return None
+    return {
+        "separator": str(raw["separator"]),
+        "drop_head_lines": _clamp_drop(raw.get("drop_head_lines")),
+    }

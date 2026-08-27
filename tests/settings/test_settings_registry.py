@@ -93,6 +93,12 @@ def test_every_phase_key_is_declared_in_the_registry():
 # per minute and per day — plus how long a call may wait for one to roll. All five named,
 # and all five Impact.NONE, because the limiter reads them on every call: changing a ceiling
 # has to take effect without resetting the engine or invalidating a single warm context.
+# 144 since the corpus joined the page-transcription route (2026-08-27): the transcription
+# phase was renamed `exemplars_transcribe` → `transcribe` because all three builders share
+# it now, which moves no count, and the seam between two pages became a phase of its own —
+# a named model, a named reasoning switch, its unnamed per-phase effort and how much of
+# each page the judge is shown. The fifth is the bank builder's batch overlap, which is
+# what makes the same seam survive the extractor's own cut.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 139
-    assert len(BY_NAME) == 111
+    assert len(REGISTRY) == 144
+    assert len(BY_NAME) == 115

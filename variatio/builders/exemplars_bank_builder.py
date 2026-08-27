@@ -11,6 +11,7 @@ from .. import config
 from ..core import inference, progress
 from ..core.inference import ensure_models
 from ..core.json_io import write_json
+from ..core.lexicon import fold
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..instance.content_context import ContentContext
@@ -19,8 +20,8 @@ from ..prompts import format_content_prompt
 from . import _source_docs
 
 
-# Transcribing a PDF is one model call per page, so conversion is no longer the rounding
-# error it was when Docling did it in three seconds.
+# Transcribing a PDF is one model call per page plus one short one per seam, so conversion
+# is no longer the rounding error it was when Docling did it in three seconds.
 #
 # `extract` now costs more than before because it does not only extract: each document is
 # tagged as soon as it comes out, inside the same phase, so an item appears with its
@@ -34,7 +35,8 @@ BUILD_PHASES = (
 
 def build_models() -> list[str]:
     return [
-        config.EXEMPLARS_TRANSCRIBE_MODEL,
+        config.TRANSCRIBE_MODEL,
+        config.TRANSCRIBE_SEAM_MODEL,
         config.EB_EXTRACT_MODEL,
         config.EMBEDDING_LLM,
         config.CONCEPT_TAGGER_LLM,
@@ -136,7 +138,7 @@ class ExemplarsBankBuilder:
         self._id_counter = self._max_id(bank)
         logger.info(f"{len(files)} documento(s); se empieza en C{self._id_counter + 1:03d}")
 
-        pages_by_file = self._convert(files)
+        text_by_file = self._convert(files)
 
         progress.phase("extract", f"0/{len(files)} documento(s)")
         with progress.step(
@@ -152,7 +154,7 @@ class ExemplarsBankBuilder:
                 )
                 try:
                     new_items = self._process_file(
-                        file_path, pages_by_file.get(file_path, []), tag=tag
+                        file_path, text_by_file.get(file_path, ""), tag=tag
                     )
                 except progress.Cancelled:
                     raise
@@ -198,9 +200,9 @@ class ExemplarsBankBuilder:
     # Pages are the unit of transcription and of the on-disk cache; batching stays a
     # matter of size, over the whole document, so an exercise that straddles a page break
     # is not cut in half before the extractor ever sees it.
-    def _convert(self, files: list[Path]) -> dict[Path, list[str]]:
+    def _convert(self, files: list[Path]) -> dict[Path, str]:
         progress.phase("convert", f"0/{len(files)} documento(s)")
-        pages_by_file: dict[Path, list[str]] = {}
+        text_by_file: dict[Path, str] = {}
         with progress.step(
             "convert", "Transcribiendo los documentos", len(files)
         ) as reporter:
@@ -209,7 +211,7 @@ class ExemplarsBankBuilder:
                 reporter.tick(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    pages_by_file[file_path] = _source_docs.document_pages(
+                    text_by_file[file_path] = _source_docs.document_markdown(
                         file_path,
                         converter=self._docling,
                         ocr=config.EXEMPLARS_OCR,
@@ -220,11 +222,10 @@ class ExemplarsBankBuilder:
                     raise
                 except Exception as e:
                     logger.exception(f"[{file_path.name}] conversión omitida: {e}")
-        progress.advance(1.0, f"{sum(len(p) for p in pages_by_file.values())} página(s)")
-        return pages_by_file
+        progress.advance(1.0, f"{len(text_by_file)} documento(s) transcrito(s)")
+        return text_by_file
 
-    def _process_file(self, file_path: Path, pages: list[str], tag: str) -> dict[str, dict]:
-        content = _source_docs.join_pages(pages)
+    def _process_file(self, file_path: Path, content: str, tag: str) -> dict[str, dict]:
         if not content.strip():
             logger.warning(f"{tag} sin contenido aprovechable tras la transcripción")
             return {}
@@ -234,6 +235,8 @@ class ExemplarsBankBuilder:
             return {}
 
         items: dict[str, dict] = {}
+        seen: set[str] = set()
+        repeated = 0
         with progress.step(
             "extract_batches", f"{file_path.name}: extrayendo lotes", len(batches)
         ) as reporter:
@@ -249,9 +252,32 @@ class ExemplarsBankBuilder:
                     logger.error(f"{b_tag} falló: {e}")
                     continue
                 for raw in extracted:
+                    key = self._identity(raw)
+                    # The id is claimed AFTER the duplicate check: a repeat that consumed
+                    # one would leave a gap in the numbering for an item nobody kept.
+                    if key and key in seen:
+                        repeated += 1
+                        continue
+                    if key:
+                        seen.add(key)
                     items[self._next_id()] = {**raw, "source": file_path.stem}
                 logger.debug(f"{b_tag} extrajo {len(extracted)} ítem(s)")
+        if repeated:
+            logger.debug(f"{tag} {repeated} ítem(s) repetidos por el solape, descartados")
         return items
+
+    # What makes two extractions the same item: the primary field, which is the one the
+    # profile declares as carrying the statement. Compared folded, because the same
+    # exercise read from two overlapping batches comes back with the same words and not
+    # necessarily the same spacing.
+    def _identity(self, raw: dict) -> str:
+        key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
+        try:
+            item_type = self.exemplars_profile.item_type(str(key))
+            text = item_type.primary_text(raw)
+        except (KeyError, ValueError):
+            return ""
+        return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
         prompt = format_content_prompt(
@@ -316,6 +342,9 @@ class ExemplarsBankBuilder:
 
     # BATCHING ------------------------------------------------------------------------------------
 
+    # Batches OVERLAP: the last `EB_BATCH_OVERLAP_BLOCKS` blocks of one open the next, so an
+    # exercise that straddles the size cut is seen whole by at least one call instead of
+    # half by each. The price is items extracted twice, and `_identity` is what pays it.
     def _build_batches(self, content: str) -> list[str]:
         blocks = _source_docs.split_blocks(content)
         if not blocks:
@@ -332,13 +361,27 @@ class ExemplarsBankBuilder:
                 continue
             if size + b_size > self.chunk_size and current:
                 batches.append("\n\n---\n\n".join(current))
-                current, size = [block], b_size
+                current = self._carry_over(current)
+                size = sum(len(b) + 10 for b in current)
+                current.append(block)
+                size += b_size + 10
             else:
                 current.append(block)
                 size += b_size + 10
         if current:
             batches.append("\n\n---\n\n".join(current))
         return batches
+
+    # Only what leaves room: carrying a block that fills half the budget would push the very
+    # next cut back into the same block and could stop the batches advancing at all.
+    def _carry_over(self, blocks: list[str]) -> list[str]:
+        count = min(config.EB_BATCH_OVERLAP_BLOCKS, len(blocks))
+        carried: list[str] = []
+        for block in reversed(blocks[len(blocks) - count :]):
+            if sum(len(b) for b in carried) + len(block) > self.chunk_size // 2:
+                break
+            carried.insert(0, block)
+        return carried
 
     # HELPERS -------------------------------------------------------------------------------------
 

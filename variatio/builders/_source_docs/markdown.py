@@ -20,6 +20,12 @@ SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
 FENCE_TOKEN_RE = re.compile(r"§§FENCE(\d+)§§")
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+# Where a page ENDED, kept in the joined markdown so the transcription of a document can
+# still be read page by page, and removed before anything is chunked: an HTML comment that
+# survived into a chunk would be quoted back as an item's statement or as a concept's
+# corpus passage. Written only on a seam that is a paragraph break anyway, so it never
+# lands inside a fence, a table or a sentence.
+PAGE_MARK_RE = re.compile(r"^[ \t]*<!--\s*pág\.\s*\d+\s*-->[ \t]*(?:\n|$)", re.MULTILINE)
 PAGE_NUMBER_RE = re.compile(r"^[ \t]*\d{1,4}[ \t]*$", re.MULTILINE)
 HYPHEN_BREAK_RE = re.compile(r"(\w)-\n(\w)")
 BLANK_RUN_RE = re.compile(r"\n{3,}")
@@ -190,8 +196,18 @@ def headings_by_level(text: str) -> dict[int, list[str]]:
     return levels
 
 
-def split_blocks(text: str) -> list[str]:
+def page_mark(index: int) -> str:
+    return f"<!-- pág. {index} -->"
+
+
+def strip_page_marks(text: str) -> str:
     masked, fences = mask_fences(text)
+    masked = BLANK_RUN_RE.sub("\n\n", PAGE_MARK_RE.sub("", masked))
+    return restore_fences(masked, fences).strip()
+
+
+def split_blocks(text: str) -> list[str]:
+    masked, fences = mask_fences(strip_page_marks(text))
     pieces = (
         SEPARATOR_RE.split(masked)
         if SEPARATOR_RE.search(masked)

@@ -27,7 +27,7 @@ def run(
     converter,
     schema,
     chunk_size: int,
-    markdown_cache_dir: Path,
+    cache_dir: Path,
     max_attempts: int,
     recursive: bool = False,
 ) -> dict:
@@ -36,7 +36,7 @@ def run(
         recursive=recursive,
         converter=converter,
         chunk_size=chunk_size,
-        markdown_cache_dir=markdown_cache_dir,
+        cache_dir=cache_dir,
     )
     if not documents:
         return {}
@@ -57,33 +57,41 @@ def run(
 # Every document is converted and chunked up front so the extraction bar knows its
 # own total: a per-file bar cannot say how much of the corpus is left, because a
 # 40-chunk lecture and a 3-chunk one weigh the same in it.
+#
+# It goes through the SAME page-transcription route as the two exemplars builders since
+# 2026-08-27, by explicit user request: one engine and one algorithm for both raw slots,
+# because quality weighs more than speed. Docling is left with the `.docx`, which has no
+# page to render, and the converter is still lazy for exactly that reason.
 def convert_corpus(
     input_dir: str | Path,
     *,
     recursive: bool,
     converter,
     chunk_size: int,
-    markdown_cache_dir: Path,
+    cache_dir: Path,
 ) -> list[tuple[str, list[str], list[tuple[str, list[str], str]]]]:
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
         logger.error(f"Ningún documento admitido en {input_dir}")
         return []
 
-    logger.info(f"{len(files)} documento(s) en el corpus; convirtiendo a markdown")
+    logger.info(f"{len(files)} documento(s) en el corpus; transcribiendo a markdown")
     progress.phase("convert", f"0/{len(files)} documento(s)")
 
     converted: list[tuple[str, dict[int, list[str]], list[tuple[str, list[str], str]]]] = []
     with progress.step(
-        "kg_convert", "Convirtiendo los documentos del corpus", len(files)
+        "kg_convert", "Transcribiendo los documentos del corpus", len(files)
     ) as reporter:
         for idx, file_path in enumerate(files, 1):
             progress.checkpoint()
             reporter.tick(idx, detail=file_path.name)
             progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
             try:
-                text = _source_docs.to_markdown(
-                    converter, file_path, cache_dir=markdown_cache_dir
+                text = _source_docs.document_markdown(
+                    file_path,
+                    converter=converter,
+                    tag=f"[{idx}/{len(files)}] ",
+                    cache_dir=cache_dir,
                 )
             except progress.Cancelled:
                 raise

@@ -16,8 +16,14 @@ determinista: se lee igual, lo que cambia es el juicio."""
 
 _TRANSCRIBE_DOC = """Copiar una página que se tiene delante como imagen no es un juicio, y lo que sostiene la
 fidelidad es la cláusula carácter a carácter del prompt, no la deliberación. Apagado por
-defecto: cada página es una llamada, y razonar multiplica el coste de la fase más larga
-del banco sin nada que medir a cambio."""
+defecto: cada página es una llamada, y razonar multiplica el coste de la fase más larga de
+los tres constructores sin nada que medir a cambio."""
+
+_TRANSCRIBE_SEAM_DOC = """La revisión de la costura entre dos páginas contesta con gramática a una pregunta cerrada
+—con qué separador se pegan y cuántas líneas iniciales sobran— sobre unos 1.200 caracteres
+de cada lado. Apagado por defecto, como el resto de las llamadas acotadas del proyecto, y
+además porque corre una vez por costura: encenderlo quita la gramática y paga una
+deliberación por cada salto de página de todo el corpus. La fase entera está sin medir."""
 
 _EP_SCAN_DOC = """El rastreo lee fragmentos y señala modalidades candidatas con una gramática. Es una lectura,
 no un juicio, y corre sobre cada fragmento del corpus; apagado por defecto."""
@@ -97,7 +103,8 @@ entre el guardián y la generación; razonar aquí alarga cada generación por u
 falla abierto de todos modos. Apagado por defecto."""
 
 _DEFAULTS = {
-    "exemplars_transcribe": (False, _TRANSCRIBE_DOC),
+    "transcribe": (False, _TRANSCRIBE_DOC),
+    "transcribe_seam": (False, _TRANSCRIBE_SEAM_DOC),
     "ep_scan": (False, _EP_SCAN_DOC),
     "ep_consolidate": (True, _EP_CONSOLIDATE_DOC),
     "ep_context": (False, _CONTEXT_DOC),
@@ -215,16 +222,27 @@ def _switch(key: str, label: str, note: str = "") -> Phase:
     )
 
 
+_SHARED_TRANSCRIBE_NOTE = (
+    "Lee cada página como imagen; un solo ajuste compartido por los tres constructores."
+)
+_SHARED_SEAM_NOTE = (
+    "Clasifica cómo se pega una página con la siguiente; compartida con los otros dos."
+)
+
+
+def _transcription() -> tuple[Phase, ...]:
+    return (
+        _switch("transcribe", "Transcripción", _SHARED_TRANSCRIBE_NOTE),
+        _switch("transcribe_seam", "Costura", _SHARED_SEAM_NOTE),
+    )
+
+
 PIPELINE: tuple[Lane, ...] = (
     Lane(
         "profile",
         "Perfil de ejemplares",
         (
-            _switch(
-                "exemplars_transcribe",
-                "Transcripción",
-                "Lee páginas como imagen; compartida con el banco.",
-            ),
+            *_transcription(),
             _switch("ep_scan", "Escaneo"),
             _switch("ep_consolidate", "Consolidación"),
             _switch("ep_context", "Contexto"),
@@ -234,6 +252,7 @@ PIPELINE: tuple[Lane, ...] = (
         "graph",
         "Grafo de conocimiento",
         (
+            *_transcription(),
             _switch("kg_extract", "Extracción"),
             _switch("kg_clean_merge", "Fusión"),
             _switch("kg_clean_drop", "Descarte"),
@@ -258,6 +277,7 @@ PIPELINE: tuple[Lane, ...] = (
         "bank",
         "Banco de ejemplares",
         (
+            *_transcription(),
             _switch("eb_extract", "Extracción"),
             _switch(
                 "concept_tagger",
