@@ -29,9 +29,10 @@ import { takeDraft } from "./draft";
 import { GenerateForm, summarize } from "./GenerateForm";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
+import { useT, type Key } from "@/lib/i18n";
 
 /** The job error the guardrail raises, recognised so it can be shown on its own step. */
-const GUARDRAIL_ERROR = "no han pasado la revisión";
+const GUARDRAIL_ERROR: Key = "generate.notPassed";
 
 interface Result {
   item: Record<string, unknown>;
@@ -43,6 +44,8 @@ interface Result {
 }
 
 export function GenerateScreen() {
+  const tr = useT();
+  const { t } = tr;
   const pipeline = usePipeline();
   const profileQuery = useProfile();
   const kg = useKg();
@@ -152,12 +155,11 @@ export function GenerateScreen() {
       {hasRun && editing ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
           <p className="min-w-0 flex-1 text-body text-muted-foreground">
-            Parte del encargo anterior. Las variantes de abajo ya están guardadas: la nueva
-            tanda las sustituye en pantalla, no en «Mis variantes».
+            {t("generate.reopened")}
           </p>
           <Button variant="ghost" size="sm" onClick={() => setForm(EMPTY_FORM)}>
             <Eraser />
-            Empezar de cero
+            {t("generate.startOver")}
           </Button>
         </div>
       ) : null}
@@ -183,7 +185,7 @@ export function GenerateScreen() {
       <RunPanel
         run={run}
         running={running}
-        waiting={queued ? (wait ? waitReason(wait, split) : "Está en cola.") : null}
+        waiting={queued ? (wait ? waitReason(wait, split, tr) : t("generate.queued")) : null}
         profile={profile}
       />
       {results.length > 0 && profile ? (
@@ -196,26 +198,24 @@ export function GenerateScreen() {
     <div className="space-y-5">
       <header className="flex items-center gap-2">
         <h1 className="font-display font-expanded text-display">Generar variantes</h1>
-        <InfoHint label="Cómo se genera">
-          Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil
-          deja en tus manos; el resto lo redacta el modelo, guiado por el grafo y por los
-          ejemplos del banco. Cada variante validada se guarda sola en «Mis variantes».
+        <InfoHint label={t("generate.howItWorks")}>
+          {t("generate.howItWorks.body")}
         </InfoHint>
       </header>
 
       {/* Without an engine nothing is generated: the server refuses with a 503 and the whole form
           is disabled, instead of letting one press and getting a job error back. */}
       {unlocked && offline ? (
-        <Alert tone="attention" title="Sin motor de inferencia">
-          <p>{offline} Arráncalo y vuelve a intentarlo.</p>
+        <Alert tone="attention" title={t("generate.noEngine")}>
+          <p>{t("generate.noEngineBody", { reason: offline })}</p>
         </Alert>
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="attention" title="Generación bloqueada">
+        <Alert tone="attention" title={t("generate.blocked")}>
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
-            Sin aprobar:{" "}
+            {t("generate.notApproved")}{" "}
             {(pipeline.data?.stages ?? [])
               .filter((s) => s.status !== "approved")
               .map((s) => s.label)
@@ -225,7 +225,7 @@ export function GenerateScreen() {
       ) : null}
 
       {status === "failed" && !blocked ? (
-        <Alert tone="danger" title="La generación falló">
+        <Alert tone="danger" title={t("generate.failed")}>
           <p>{run?.job?.error}</p>
         </Alert>
       ) : null}
@@ -234,7 +234,7 @@ export function GenerateScreen() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
             <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
-              {summarize(again, profile)}
+              {summarize(again, profile, tr)}
             </p>
             {/* The wait replaces the progress, never sits beside it: nothing is being
                 generated yet, and the count of jobs in front is the only honest measure of
@@ -242,10 +242,10 @@ export function GenerateScreen() {
             {queued ? (
               <span
                 className="flex shrink-0 items-center gap-1.5 text-body font-medium"
-                title={wait ? waitReason(wait, split) : undefined}
+                title={wait ? waitReason(wait, split, tr) : undefined}
               >
                 <Clock className="size-3.5" />
-                {queuedLabel(wait)}
+                {queuedLabel(wait, tr)}
               </span>
             ) : null}
             {active ? (
@@ -256,7 +256,7 @@ export function GenerateScreen() {
                 disabled={cancel.isPending}
               >
                 <Ban />
-                Cancelar
+                {t("common.cancel")}
               </Button>
             ) : (
               <>
@@ -269,7 +269,7 @@ export function GenerateScreen() {
                   }}
                 >
                   <Pencil />
-                  Cambiar el encargo
+                  {t("generate.changeCommission")}
                 </Button>
                 <Button
                   size="sm"
@@ -278,7 +278,7 @@ export function GenerateScreen() {
                   title={offline ?? undefined}
                 >
                   {submit.isPending ? <Spinner /> : <Sparkles />}
-                  {again.n === 1 ? "Generar otra" : `Generar otras ${again.n}`}
+                  {again.n === 1 ? t("generate.another") : t("generate.anotherN", { n: again.n })}
                 </Button>
               </>
             )}
@@ -313,6 +313,7 @@ function Results({
   run: RunView | null;
   savedCount: number;
 }) {
+  const { t, plural } = useT();
   const requested = run?.job?.result?.requested;
   const produced = run?.job?.result?.produced;
   const asJson = JSON.stringify(
@@ -325,15 +326,15 @@ function Results({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-body font-semibold">
-          Resultados
+          {t("generate.results")}
           <span className="ml-2 font-normal text-muted-foreground nums">
             {results.length}
-            {requested ? ` de ${requested}` : ""}
+            {requested ? t("generate.ofRequested", { n: requested }) : ""}
           </span>
         </h2>
         {produced !== undefined && requested !== undefined && produced < requested ? (
           <Badge variant="attention">
-            generación parcial: {produced}/{requested}
+            {t("generate.partial", { produced, requested })}
           </Badge>
         ) : null}
         <div className="ml-auto flex gap-1">
@@ -352,7 +353,7 @@ function Results({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => download("items.md", toMarkdown(results, profile), "text/markdown")}
+            onClick={() => download("items.md", toMarkdown(results, profile, t), "text/markdown")}
           >
             <Download />
             Markdown
@@ -376,10 +377,9 @@ function Results({
 
       {savedCount > 0 ? (
         <p className="text-small text-muted-foreground">
-          {savedCount === 1 ? "Esta variante ya está" : `Estas ${savedCount} variantes ya están`}{" "}
-          en{" "}
+          {plural("generate.savedNotice", savedCount)}{" "}
           <Link to="/perfil/variantes" className="text-primary underline-offset-4 hover:underline">
-            Mis variantes
+            {t("menu.savedVariants")}
           </Link>
           .
         </p>

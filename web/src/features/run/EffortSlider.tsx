@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { EFFORT_LABELS, type EffortLevel } from "./effort";
+import { useT } from "@/lib/i18n";
 
 /**
  * How much the model deliberates, as one rule you drag along.
@@ -31,6 +32,7 @@ export function EffortSlider({
   value: EffortLevel;
   onChange: (next: EffortLevel) => void;
 }) {
+  const { t } = useT();
   const track = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -55,12 +57,12 @@ export function EffortSlider({
     <div
       role="slider"
       tabIndex={0}
-      aria-label="Esfuerzo de razonamiento"
+      aria-label={t("effort.label")}
       aria-orientation="horizontal"
       aria-valuemin={0}
       aria-valuemax={levels.length - 1}
       aria-valuenow={index}
-      aria-valuetext={EFFORT_LABELS[value]}
+      aria-valuetext={t(EFFORT_LABELS[value])}
       onPointerDown={(event) => {
         setDragging(true);
         pick(event.clientX);
@@ -151,7 +153,7 @@ export function EffortSlider({
                     : "translateX(-50%)",
             }}
           >
-            {EFFORT_LABELS[level]}
+            {t(EFFORT_LABELS[level])}
           </span>
         ))}
       </div>

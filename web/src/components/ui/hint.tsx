@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const WIDTH = 288;
 
@@ -19,12 +20,15 @@ const WIDTH = 288;
 export function InfoHint({
   children,
   className,
-  label = "Más información",
+  label,
 }: {
   children: ReactNode;
   className?: string;
+  /** What the trigger announces. Defaults to the generic «more information». */
   label?: string;
 }) {
+  const { t } = useT();
+  const trigger = label ?? t("ui.moreInfo");
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -65,7 +69,7 @@ export function InfoHint({
       <button
         ref={ref}
         type="button"
-        aria-label={label}
+        aria-label={trigger}
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
 import type { EvaluationPosition, Instruments, TriageValue } from "./types";
+import { useT } from "@/lib/i18n";
 
 /**
  * Three proposals, told apart by nothing but a letter.
@@ -46,6 +47,7 @@ function ProposalCard({
   onTriage: (value: TriageValue) => void;
   pending: boolean;
 }) {
+  const { t } = useT();
   const letter = letterFor(position.position);
   const meta = revealed && position.arm ? ARM_META[position.arm] : null;
   const hasItem = Boolean(position.item);
@@ -71,7 +73,7 @@ function ProposalCard({
         </span>
         <div className="min-w-0">
           <p className="truncate text-body font-medium">
-            {meta ? meta.label : `Propuesta ${letter}`}
+            {meta ? t(meta.labelKey) : `Propuesta ${letter}`}
           </p>
           {meta ? (
             <p className="truncate font-mono text-[11px] text-muted-foreground">
@@ -83,13 +85,13 @@ function ProposalCard({
             elsewhere on the screen. */}
         {!revealed && hasItem && !answered ? (
           <span className="ml-auto shrink-0 text-micro font-condensed text-attention uppercase">
-            te falta
+            {t("grid.missing")}
           </span>
         ) : null}
         {chosen ? (
           <span className="ml-auto flex shrink-0 items-center gap-1 text-small font-medium text-primary">
             <Check className="size-3.5" />
-            tu elección
+            {t("grid.yourChoice")}
           </span>
         ) : null}
       </header>
@@ -100,9 +102,7 @@ function ProposalCard({
         ) : (
           <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
             <CircleSlash className="size-5 text-muted-foreground/60" />
-            <p className="max-w-56 text-body text-muted-foreground">
-              Esta propuesta no llegó a producir un ejercicio válido.
-            </p>
+            <p className="max-w-56 text-body text-muted-foreground">{t("grid.noValidItem")}</p>
             {revealed && position.error ? (
               <p className="max-w-64 text-small text-muted-foreground/80">{position.error}</p>
             ) : null}
@@ -122,7 +122,10 @@ function ProposalCard({
               disabled={pending}
               onClick={() => onTriage(option.value)}
               aria-pressed={triage === option.value}
-              aria-label={`${instruments.triage.question} ${option.label}`}
+              aria-label={t("grid.triageOption", {
+                question: instruments.triage.question,
+                option: option.label,
+              })}
               className={cn(
                 "h-8 flex-1 border text-small font-medium transition-colors disabled:opacity-60",
                 triage === option.value
@@ -142,7 +145,7 @@ function ProposalCard({
           rather than a bare name. */}
       {hasItem && revealed && triage ? (
         <footer className="flex items-center justify-between gap-2 border-t border-border bg-muted px-3 py-2">
-          <span className="text-small text-muted-foreground">dijiste</span>
+          <span className="text-small text-muted-foreground">{t("grid.youSaid")}</span>
           <span className="text-small font-semibold">
             {instruments.triage.options.find((option) => option.value === triage)?.label}
           </span>
@@ -177,6 +180,7 @@ export function ComparisonGrid({
   onDecline: () => void;
   pending: boolean;
 }) {
+  const { t } = useT();
   const [note, setNote] = useState("");
 
   // A card with no item cannot be triaged, so it cannot be what is being waited for.
@@ -192,11 +196,13 @@ export function ComparisonGrid({
       {!revealed ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border border-border border-l-[3px] border-l-primary bg-card px-4 py-3">
           <p className="text-body">
-            <strong>Para cada una: {instruments.triage.question.toLowerCase()}</strong>{" "}
+            <strong>
+              {t("grid.forEach", { question: instruments.triage.question.toLowerCase() })}
+            </strong>{" "}
             <span className="text-muted-foreground">{instruments.triage.hint}</span>
           </p>
           <p className="ml-auto text-small nums text-muted-foreground">
-            {answered.length} de {answerable.length} respondidas
+            {t("grid.answered", { answered: answered.length, total: answerable.length })}
           </p>
         </div>
       ) : null}
@@ -225,12 +231,12 @@ export function ComparisonGrid({
         <div className="animate-slide-up space-y-3 border border-border bg-muted p-3">
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-body">
-              <strong>¿Cuál usarías en clase?</strong>{" "}
+              <strong>{t("grid.whichWouldYouUse")}</strong>{" "}
               {!complete ? (
                 <span className="text-muted-foreground">
                   {missing === 1
-                    ? "Responde a la que falta y podrás elegir."
-                    : `Responde a las ${missing} que faltan y podrás elegir.`}
+                    ? t("grid.answerMissingOne")
+                    : t("grid.answerMissing", { n: missing })}
                 </span>
               ) : null}
             </p>
@@ -241,10 +247,12 @@ export function ComparisonGrid({
                   variant={complete ? "default" : "outline"}
                   disabled={!complete || !position.item || pending}
                   onClick={() => onChoose(position.position, note)}
-                  aria-label={`Elegir la propuesta ${letterFor(position.position)}`}
+                  aria-label={t("grid.chooseAria", { letter: letterFor(position.position) })}
                 >
                   {pending ? <Spinner /> : null}
-                  {position.item ? `Elegir ${letterFor(position.position)}` : "Sin ejercicio"}
+                  {position.item
+                    ? t("grid.choose", { letter: letterFor(position.position) })
+                    : t("grid.noExercise")}
                 </Button>
               ))}
             </div>
@@ -253,14 +261,14 @@ export function ComparisonGrid({
           {complete ? (
             <div className="flex flex-wrap items-center gap-3">
               <Input
-                aria-label="Por qué, en una línea"
+                aria-label={t("grid.whyAria")}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Por qué, en una línea (opcional)"
+                placeholder={t("grid.whyPlaceholder")}
                 className="h-9 min-w-48 flex-1"
               />
               <Button variant="ghost" disabled={pending} onClick={() => onChoose(null, note)}>
-                Ninguna me convence
+                {t("grid.noneConvinces")}
               </Button>
             </div>
           ) : null}

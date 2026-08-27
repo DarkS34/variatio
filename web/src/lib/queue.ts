@@ -1,4 +1,5 @@
 import type { Job, JobStatus, LaneName, LaneState, Lanes, Pipeline } from "./types";
+import type { Key, Translate } from "@/lib/i18n";
 
 /**
  * Who is waiting for what, derived once from the payload and nowhere else.
@@ -17,9 +18,9 @@ import type { Job, JobStatus, LaneName, LaneState, Lanes, Pipeline } from "./typ
 
 const LANE_ORDER: LaneName[] = ["local", "remote"];
 
-const LANE_LABELS: Record<LaneName, string> = {
-  local: "el motor local",
-  remote: "el motor remoto",
+const LANE_KEYS: Record<LaneName, Key> = {
+  local: "lane.local",
+  remote: "lane.remote",
 };
 
 /**
@@ -33,8 +34,8 @@ export function isSplitEngine(engine: string | null | undefined): boolean {
   return typeof engine === "string" && engine.includes("+");
 }
 
-function laneName(lane: LaneName | null, split: boolean): string {
-  return lane && split ? LANE_LABELS[lane] : "el motor";
+function laneName(lane: LaneName | null, split: boolean, tr: Translate): string {
+  return tr.t(lane && split ? LANE_KEYS[lane] : "lane.any");
 }
 
 function readLane(value: unknown): LaneState | null {
@@ -163,19 +164,25 @@ export function waitOf(job: Job | null | undefined, lanes: Lanes | null): Wait |
   return ahead > 0 ? { lane: null, ahead, label: null } : null;
 }
 
-export function aheadLabel(ahead: number): string {
-  return ahead === 1 ? "1 trabajo por delante" : `${ahead} trabajos por delante`;
+export function aheadLabel(ahead: number, tr: Translate): string {
+  return tr.plural("queue.ahead", ahead);
 }
 
 /** What the button says about itself while it waits. */
-export function queuedLabel(wait: Wait | null): string {
-  return wait && wait.ahead > 0 ? `En cola (${wait.ahead} por delante)` : "En cola";
+export function queuedLabel(wait: Wait | null, tr: Translate): string {
+  return wait && wait.ahead > 0
+    ? tr.t("queue.queuedAhead", { n: wait.ahead })
+    : tr.t("queue.queued");
 }
 
 /** Why it is waiting: which half of the engine, holding what, with how many in front. */
-export function waitReason(wait: Wait, split: boolean): string {
-  const holder = wait.label ? ` con «${wait.label}»` : "";
-  return `Está ocupado ${laneName(wait.lane, split)}${holder}: ${aheadLabel(wait.ahead)}.`;
+export function waitReason(wait: Wait, split: boolean, tr: Translate): string {
+  const holder = wait.label ? tr.t("queue.withHolder", { label: wait.label }) : "";
+  return tr.t("queue.busyReason", {
+    where: laneName(wait.lane, split, tr),
+    holder,
+    ahead: aheadLabel(wait.ahead, tr),
+  });
 }
 
 /** The ephemeral notice, and only when there really is a wait — it is about the WAIT and
@@ -184,22 +191,27 @@ export function queuedNotice(
   job: Job | null | undefined,
   lanes: Lanes | null,
   split: boolean,
+  tr: Translate,
 ): { title: string; description: string } | null {
   const wait = waitOf(job, lanes);
   if (!wait) return null;
   return {
-    title: `En cola: ${job!.label}`,
-    description: waitReason(wait, split),
+    title: tr.t("queue.noticeTitle", { label: job!.label }),
+    description: waitReason(wait, split, tr),
   };
 }
 
 // `queued` is this workspace's own share of the lane, which is why it is said as «tienes».
-function busyPhrase(lane: LaneState, name: LaneName, split: boolean): string {
-  const where = laneName(name, split);
-  const holder = lane.label ? ` con «${lane.label}»` : "";
-  if (!lane.busy) return `en ${where} tienes ${aheadLabel(lane.queued)}`;
-  if (lane.queued > 0) return `${where} está ocupado${holder} y tienes ${lane.queued} en cola`;
-  return `${where} está ocupado${holder}`;
+function busyPhrase(lane: LaneState, name: LaneName, split: boolean, tr: Translate): string {
+  const where = laneName(name, split, tr);
+  const holder = lane.label ? tr.t("queue.withHolder", { label: lane.label }) : "";
+  if (!lane.busy) {
+    return tr.t("queue.laneFree", { where, ahead: aheadLabel(lane.queued, tr) });
+  }
+  if (lane.queued > 0) {
+    return tr.t("queue.laneBusyWithYours", { where, holder, n: lane.queued });
+  }
+  return tr.t("queue.laneBusy", { where, holder });
 }
 
 /**
@@ -216,14 +228,17 @@ export function prospectNote(
   lanes: Lanes | null,
   split: boolean,
   queueLength: number,
+  tr: Translate,
 ): string | null {
   if (!lanes || !split) {
-    return queueLength > 0 ? ` Se pondrá en cola: ${aheadLabel(queueLength)}.` : null;
+    return queueLength > 0
+      ? tr.t("queue.willQueue", { ahead: aheadLabel(queueLength, tr) })
+      : null;
   }
   const busy = LANE_ORDER.filter((name) => lanes[name].busy || lanes[name].queued > 0);
   if (busy.length === 0) return null;
-  const phrases = busy.map((name) => busyPhrase(lanes[name], name, split));
-  return ` Ahora mismo ${phrases.join(" y ")}; este trabajo solo espera por el motor que necesite.`;
+  const phrases = busy.map((name) => busyPhrase(lanes[name], name, split, tr));
+  return tr.t("queue.rightNow", { phrases: phrases.join(tr.t("queue.and")) });
 }
 
 /**

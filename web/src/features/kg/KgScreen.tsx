@@ -46,6 +46,7 @@ import { CurriculumTab } from "./CurriculumTab";
 import { DescriptionReview } from "./DescriptionReview";
 import { GraphCanvas } from "./GraphCanvas";
 import { buildModel, frontierOf } from "./graph/model";
+import { useT } from "@/lib/i18n";
 
 function ConceptDetail({
   concept,
@@ -60,6 +61,7 @@ function ConceptDetail({
   concepts: KgConcept[];
   onChanged: () => void;
 }) {
+  const { t } = useT();
   const locked = useStageLocked();
   const [name, setName] = useState(concept.name);
   const [domain, setDomain] = useState(concept.domain);
@@ -86,7 +88,7 @@ function ConceptDetail({
       })
       .catch((e: Error) => {
         setError(e.message);
-        toast({ title: "No se ha podido guardar", description: e.message, tone: "danger" });
+        toast({ title: t("kg.saveFailed"), description: e.message, tone: "danger" });
       });
   };
 
@@ -99,18 +101,18 @@ function ConceptDetail({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Field label="Nombre">
+        <Field label={t("kg.conceptName")}>
           <Input
             value={name}
             readOnly={locked}
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        <Field label="Unidad">
+        <Field label={t("kg.unit")}>
           <Select
             value={domain}
             disabled={locked}
-            title={locked ? LOCKED_HINT : undefined}
+            title={locked ? t(LOCKED_HINT) : undefined}
             onChange={(event) => setDomain(event.target.value)}
           >
             {domains.map((option) => (
@@ -122,11 +124,8 @@ function ConceptDetail({
         </Field>
         <div className="flex items-center justify-between rounded-md border border-border p-2">
           <div className="flex items-center gap-1.5">
-            <p className="text-body">Etiquetable</p>
-            <InfoHint label="Qué significa etiquetable">
-              Un concepto no etiquetable queda fuera del retrieval y de la generación: sigue en el
-              grafo por sus relaciones, pero ningún ítem se le asigna.
-            </InfoHint>
+            <p className="text-body">{t("kg.taggable")}</p>
+            <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
           </div>
           <Switch
             checked={concept.taggable}
@@ -159,25 +158,29 @@ function ConceptDetail({
 
       {concept.description ? (
         <div className="space-y-1">
-          <h4 className="text-micro font-condensed uppercase text-muted-foreground">Descripción</h4>
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">
+            {t("kg.description")}
+          </h4>
           <p className="rounded-md border border-border bg-muted/40 p-2 text-body leading-relaxed">
             {concept.description}
           </p>
         </div>
       ) : (
         <Alert tone="attention">
-          <p className="text-small">Sin descripción: no compite en el retrieval.</p>
+          <p className="text-small">{t("kg.noDescription")}</p>
         </Alert>
       )}
 
       <div className="flex gap-4 text-small text-muted-foreground">
-        <span>grado {concept.degree}</span>
+        <span>{t("kg.degree", { n: concept.degree })}</span>
       </div>
 
       <Separator />
 
       <div className="space-y-2">
-        <h4 className="text-micro font-condensed uppercase text-muted-foreground">Relaciones</h4>
+        <h4 className="text-micro font-condensed uppercase text-muted-foreground">
+          {t("kg.relations")}
+        </h4>
         {neighbours.isLoading ? (
           <Spinner />
         ) : (
@@ -193,7 +196,7 @@ function ConceptDetail({
                       {locked ? null : (
                         <button
                           type="button"
-                          aria-label={`Quitar ${n}`}
+                          aria-label={t("kg.removeEdge", { name: n })}
                           onClick={() =>
                             run(() =>
                               api.removeEdge(
@@ -221,7 +224,7 @@ function ConceptDetail({
 
         <div className="flex gap-1 pt-1">
           <Select
-            aria-label="Tipo de relación"
+            aria-label={t("kg.relationType")}
             disabled={locked}
             value={relation}
             onChange={(event) => setRelation(event.target.value)}
@@ -234,13 +237,13 @@ function ConceptDetail({
             ))}
           </Select>
           <Select
-            aria-label="Concepto destino"
+            aria-label={t("kg.targetConcept")}
             disabled={locked}
             value={target}
             onChange={(event) => setTarget(event.target.value)}
             className="text-small"
           >
-            <option value="">concepto…</option>
+            <option value="">{t("kg.conceptPlaceholder")}</option>
             {concepts
               .filter((c) => c.name !== concept.name)
               .map((c) => (
@@ -253,9 +256,9 @@ function ConceptDetail({
             size="icon"
             variant="outline"
             disabled={locked || !target || !relation}
-            title={locked ? LOCKED_HINT : undefined}
+            title={locked ? t(LOCKED_HINT) : undefined}
             onClick={() => run(() => api.addEdge(relation, concept.name, target)).then(() => setTarget(""))}
-            aria-label="Añadir relación"
+            aria-label={t("kg.addRelation")}
           >
             <Link2 />
           </Button>
@@ -269,15 +272,15 @@ function ConceptDetail({
       <Button
         variant="outline"
         disabled={locked}
-        title={locked ? LOCKED_HINT : undefined}
+        title={locked ? t(LOCKED_HINT) : undefined}
         className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => {
-          if (!window.confirm(`¿Eliminar el concepto "${concept.name}" y sus relaciones?`)) return;
-          run(() => api.deleteConcept(concept.name), "Concepto eliminado");
+          if (!window.confirm(t("kg.deleteConceptConfirm", { name: concept.name }))) return;
+          run(() => api.deleteConcept(concept.name), t("kg.conceptDeleted"));
         }}
       >
         <Trash2 />
-        Eliminar concepto
+        {t("kg.deleteConcept")}
       </Button>
     </div>
   );
@@ -298,6 +301,7 @@ function AddConceptDialog({
   initialDomain?: string;
   onDone: () => void;
 }) {
+  const { t } = useT();
   const [name, setName] = useState("");
   const [domain, setDomain] = useState(initialDomain ?? domains[0] ?? "");
   const [taggable, setTaggable] = useState(true);
@@ -308,7 +312,7 @@ function AddConceptDialog({
     mutationFn: () => api.addConcept(name.trim(), domain, taggable),
     onSuccess: () => {
       onDone();
-      toast({ title: "Concepto creado", description: name.trim() });
+      toast({ title: t("kg.conceptCreated"), description: name.trim() });
       setName("");
       onClose();
     },
@@ -319,25 +323,25 @@ function AddConceptDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Nuevo concepto"
-      description="Se añadirá al grafo y quedará disponible para etiquetar y generar."
+      title={t("kg.newConcept")}
+      description={t("kg.newConcept.description")}
       className="max-w-md"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button onClick={() => create.mutate()} disabled={!name.trim() || create.isPending}>
-            Crear
+            {t("common.create")}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
-        <Field label="Nombre">
+        <Field label={t("kg.conceptName")}>
           <Input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
         </Field>
-        <Field label="Unidad">
+        <Field label={t("kg.unit")}>
           <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
             {domains.map((option) => (
               <option key={option} value={option}>
@@ -347,8 +351,8 @@ function AddConceptDialog({
           </Select>
         </Field>
         <div className="flex items-center gap-2">
-          <Switch checked={taggable} onCheckedChange={setTaggable} label="etiquetable" />
-          <span className="text-body">Etiquetable</span>
+          <Switch checked={taggable} onCheckedChange={setTaggable} label={t("kg.taggableSwitch")} />
+          <span className="text-body">{t("kg.taggable")}</span>
         </div>
         {error ? <p className="text-small text-destructive">{error}</p> : null}
       </div>
@@ -365,6 +369,7 @@ function AddConceptDialog({
  * is the screen and the drawing is the reference, one click from filling the window.
  */
 function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
+  const { plural, t } = useT();
   const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
@@ -493,7 +498,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   return (
     <div className="space-y-3">
       {error ? (
-        <Alert tone="danger" title="Error al editar el grafo">
+        <Alert tone="danger" title={t("kg.editError")}>
           <p>{error}</p>
         </Alert>
       ) : null}
@@ -513,16 +518,19 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
         <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 p-3">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
-              Temario · {totals.concepts} conceptos · {totals.taggable} etiquetables
+              {t("kg.outlineHeader", {
+                concepts: plural("outline.conceptCount", totals.concepts),
+                taggable: totals.taggable,
+              })}
             </span>
             <span className="flex-1" />
             <div className="relative min-w-56 flex-1 sm:flex-none">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
-                aria-label="Buscar concepto o descripción"
+                aria-label={t("kg.search")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar concepto o descripción…"
+                placeholder={t("kg.searchPlaceholder")}
                 className="h-8 pl-8"
               />
             </div>
@@ -530,25 +538,25 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               size="sm"
               variant="outline"
               disabled={locked}
-              title={locked ? LOCKED_HINT : undefined}
+              title={locked ? t(LOCKED_HINT) : undefined}
               onClick={() => {
-                const name = window.prompt("Nombre de la nueva unidad");
+                const name = window.prompt(t("kg.newUnitPrompt"));
                 if (name?.trim())
                   api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
               }}
             >
               <FolderPlus />
-              Unidad
+              {t("kg.unitButton")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               disabled={locked}
-              title={locked ? LOCKED_HINT : undefined}
+              title={locked ? t(LOCKED_HINT) : undefined}
               onClick={() => setAddingIn(domains[0] ?? "")}
             >
               <Plus />
-              Concepto
+              {t("kg.conceptButton")}
             </Button>
           </div>
 
@@ -569,7 +577,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                   .catch((e) => setError(e.message))
               }
               onRenameUnit={(name) => {
-                const next = window.prompt("Nuevo nombre de la unidad", name);
+                const next = window.prompt(t("kg.renameUnitPrompt"), name);
                 if (next?.trim() && next !== name)
                   api
                     .renameDomain(name, next.trim())
@@ -580,7 +588,10 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               onDeleteUnit={(name, count) => {
                 if (
                   !window.confirm(
-                    `¿Eliminar "${name}"? Sus ${count} concepto(s) se eliminarán también.`,
+                    t("kg.deleteUnitConfirm", {
+                      name,
+                      concepts: plural("outline.conceptCount", count),
+                    }),
                   )
                 )
                   return;
@@ -598,7 +609,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => setSelected(null)}
-                aria-label="Volver al mapa"
+                aria-label={t("kg.backToMap")}
               >
                 <ArrowLeft />
               </Button>
@@ -613,11 +624,11 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
             <Card className="overflow-hidden">
               <div className="flex items-center justify-between gap-2 p-3 pb-2">
                 <span className="text-micro font-condensed uppercase text-muted-foreground">
-                  Mapa
+                  {t("kg.map")}
                 </span>
                 <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
                   <Maximize2 />
-                  Ampliar
+                  {t("kg.enlarge")}
                 </Button>
               </div>
               <div className="h-72 border-y border-border">{canvas(true)}</div>
@@ -629,7 +640,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                   return (
                     <button
                       key={relation.key}
-                      title={hidden ? "Mostrar esta relación" : "Ocultar esta relación del mapa"}
+                      title={hidden ? t("kg.showRelation") : t("kg.hideRelation")}
                       onClick={() =>
                         setHiddenRelations((current) => {
                           const next = new Set(current);
@@ -658,7 +669,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                       {relation.prerequisite ? (
                         <Waypoints
                           className="size-3 shrink-0 text-muted-foreground"
-                          aria-label="Ordena la vista de currículo"
+                          aria-label={t("kg.ordersCurriculum")}
                         />
                       ) : null}
                       <span className="nums shrink-0 text-small text-muted-foreground">
@@ -675,7 +686,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                 <div className="space-y-2 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-micro font-condensed uppercase text-muted-foreground">
-                      Currículo del curso
+                      {t("kg.courseCurriculum")}
                     </span>
                     <span className="nums text-small text-muted-foreground">
                       {covered}/{totals.concepts}
@@ -691,14 +702,15 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                   </span>
                   <p className="text-small text-muted-foreground">
                     {covered === 0
-                      ? "Sin currículo: la generación puede usar cualquier concepto."
-                      : `Guardado ${when(curriculum.data?.updated_at ?? null)} · ${
-                          frontierNames?.size ?? 0
-                        } concepto(s) en la frontera.`}
+                      ? t("kg.noCurriculum")
+                      : t("kg.curriculumSaved", {
+                          when: when(curriculum.data?.updated_at ?? null),
+                          frontier: plural("kg.frontierCount", frontierNames?.size ?? 0),
+                        })}
                   </p>
                   <Button size="sm" variant="outline" onClick={onGoToCurriculum}>
                     <Waypoints />
-                    Editar el currículo
+                    {t("kg.editCurriculum")}
                   </Button>
                 </div>
               </Card>
@@ -708,7 +720,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               <Card>
                 <div className="space-y-2 p-3">
                   <span className="text-micro font-condensed uppercase text-muted-foreground">
-                    Frontera del currículo
+                    {t("kg.frontier")}
                   </span>
                   <FrontierKey />
                 </div>
@@ -725,13 +737,8 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
           its progress bar below. What stays here is what the header cannot say — what it means
           that the review has not been done. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
-        <Alert tone="attention" title="Etiquetabilidad sin revisar">
-          <p>
-            Los {totals.concepts} conceptos se tratan como etiquetables, incluidos los que no
-            identifican nada. La revisión decide cuáles descartar, y necesita el perfil de
-            ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios de
-            esta asignatura.
-          </p>
+        <Alert tone="attention" title={t("kg.unreviewed")}>
+          <p>{t("kg.unreviewed.body", { n: totals.concepts })}</p>
         </Alert>
       ) : null}
 
@@ -741,8 +748,8 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
       <Dialog
         open={mapOpen}
         onClose={() => setMapOpen(false)}
-        title="Mapa del grafo"
-        description="Arrastra para mover, rueda para acercar. Al elegir un concepto se edita aquí mismo."
+        title={t("kg.mapTitle")}
+        description={t("kg.mapDescription")}
         className="sm:max-w-[100rem]"
       >
         {/* Side by side once there is room for both, stacked below it — and the map keeps
@@ -758,7 +765,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => setSelected(null)}
-                    aria-label="Quitar la selección"
+                    aria-label={t("kg.clearSelection")}
                   >
                     <ArrowLeft />
                   </Button>
@@ -770,7 +777,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               </>
             ) : (
               <p className="m-auto max-w-56 p-4 text-center text-small text-muted-foreground">
-                Elige un concepto en el mapa y aparecerá aquí para editarlo.
+                {t("kg.pickOnMap")}
               </p>
             )}
           </div>
@@ -790,6 +797,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
 }
 
 export function KgScreen({ stage }: { stage: StageState | undefined }) {
+  const { t } = useT();
   const [tab, setTab] = useState("graph");
   const kg = useKg();
   const pipeline = usePipeline();
@@ -811,30 +819,24 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
     pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
   const reviewReason =
     !stage || stage.status === "missing"
-      ? "Construye antes el grafo."
+      ? t("kg.review.buildFirst")
       : stage.status === "building"
-        ? "El grafo se está reconstruyendo."
+        ? t("kg.review.rebuilding")
         : stage.status === "approved"
-          ? LOCKED_HINT
+          ? t(LOCKED_HINT)
           : offline
             ? offline
             : !profileReady
-              ? "Aprueba antes el perfil de ejemplares: qué sirve como etiqueta depende de qué forma tienen los ejercicios."
+              ? t("kg.review.needsProfile")
               : reviewing
-                ? "La revisión está en marcha."
+                ? t("kg.review.running")
                 : null;
 
   return (
     <StageGate
       stage={stage}
-      title="Grafo de conocimiento"
-      description={
-        <>
-          El vocabulario del sistema. Todo lo que se etiquete y se genere después saldrá de aquí:
-          ni el modelo ni tú podéis usar un concepto que no esté en el grafo. Al terminar, revisa
-          las descripciones — son el texto contra el que se hace el emparejamiento.
-        </>
-      }
+      title={t("kg.stage.title")}
+      description={t("kg.stage.description")}
       actions={
         <>
           <Button
@@ -843,21 +845,19 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
             disabled={Boolean(reviewReason) || submitReview.isPending}
             title={
               reviewReason ??
-              (reviewed
-                ? "Vuelve a decidir qué conceptos sirven como etiqueta"
-                : "Decide qué conceptos sirven como etiqueta contra las modalidades del perfil")
+              (reviewed ? t("kg.review.again") : t("kg.review.first"))
             }
             onClick={() => submitReview.mutate({ kind: "review_taggability" })}
           >
             {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
-            {reviewing ? "Revisando…" : "Revisar etiquetabilidad"}
+            {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
           </Button>
           <Tabs
             items={[
-              { value: "graph", label: "Temario" },
+              { value: "graph", label: t("kg.tab.graph") },
               {
                 value: "descriptions",
-                label: "Descripciones",
+                label: t("kg.tab.descriptions"),
                 badge:
                   missing > 0 ? (
                     <Badge variant="attention" className="ml-1">
@@ -865,7 +865,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                     </Badge>
                   ) : undefined,
               },
-              { value: "curriculum", label: "Currículo" },
+              { value: "curriculum", label: t("kg.tab.curriculum") },
             ]}
             value={tab}
             onChange={setTab}
@@ -878,7 +878,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
           run={reviewRun}
           phases={reviewPhases}
           className="mb-4"
-          waiting="Revisando la etiquetabilidad. El detalle aparecerá con el primer dominio."
+          waiting={t("kg.review.waiting")}
         />
       ) : null}
 
@@ -896,10 +896,10 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
         <Alert
           tone="settled"
           className="mt-4"
-          title="Grafo listo para etiquetar"
+          title={t("kg.readyToTag")}
           action={
             <Button size="sm" onClick={() => navigate("/preparar/banco")}>
-              Ir al banco
+              {t("kg.goToBank")}
               <ArrowRight />
             </Button>
           }

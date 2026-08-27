@@ -41,8 +41,9 @@ import {
   useRateSession,
   useTriageProposal,
 } from "./queries";
+import { useT, type Key } from "@/lib/i18n";
 
-const GUARDRAIL_ERROR = "no han pasado la revisión";
+const GUARDRAIL_ERROR: Key = "generate.notPassed";
 
 /**
  * Only the comparison THIS person has to judge.
@@ -78,6 +79,7 @@ function Running({
   onCancel: () => void;
   cancelling: boolean;
 }) {
+  const { t } = useT();
   const step = useMemo(() => run?.steps.find((s) => s.id === "eval.arms"), [run]);
   const elapsed = useElapsed(run?.job?.started_at ?? null, !queued);
   const done = step?.current ?? 0;
@@ -88,9 +90,11 @@ function Running({
         {queued ? <Clock className="size-4 shrink-0 text-muted-foreground" /> : <Spinner />}
         <div className="min-w-0 flex-1">
           <p className="text-body font-medium">
-            {queued ? ahead : "Preparando las tres propuestas"}
+            {queued ? ahead : t("eval.preparing")}
             {queued ? null : (
-              <span className="ml-2 nums text-muted-foreground">{done} de 3</span>
+              <span className="ml-2 nums text-muted-foreground">
+                {t("eval.doneOf3", { n: done })}
+              </span>
             )}
           </p>
           <p className={cn("text-small text-muted-foreground", queued || "nums")}>
@@ -100,14 +104,13 @@ function Running({
         {queued ? null : <Progress value={done} max={3} className="hidden w-40 sm:block" />}
         <Button variant="outline" size="sm" onClick={onCancel} disabled={cancelling}>
           <Ban />
-          Cancelar
+          {t("common.cancel")}
         </Button>
       </div>
 
       <p className="flex items-start gap-1.5 text-small text-muted-foreground">
         <EyeOff className="mt-0.5 size-3.5 shrink-0" />
-        Durante una comparación se ocultan el registro y el detalle técnico: dirían de qué
-        arquitectura sale cada propuesta antes de que la leas.
+        {t("eval.blindNotice")}
       </p>
 
       <div className="grid items-stretch gap-4 xl:grid-cols-3">
@@ -146,6 +149,8 @@ function Running({
 type Tab = "queue" | "compose" | "history";
 
 export function EvaluationScreen() {
+  const { plural, t } = useT();
+  const tr = useT();
   const pipeline = usePipeline();
   const profileQuery = useProfile();
   const kg = useKg();
@@ -237,24 +242,20 @@ export function EvaluationScreen() {
   const typeLabel = (key: string) => profile?.item_types?.[key]?.label || key;
 
   const TABS: { id: Tab; label: string; count?: number; attention?: boolean }[] = [
-    { id: "queue", label: "Asignadas", count: queue?.pending ?? 0, attention: true },
-    ...(canCompose ? [{ id: "compose" as Tab, label: "Encargo propio" }] : []),
-    { id: "history", label: "Mis sesiones", count: listing.data?.total ?? 0 },
+    { id: "queue", label: t("eval.tab.queue"), count: queue?.pending ?? 0, attention: true },
+    ...(canCompose ? [{ id: "compose" as Tab, label: t("eval.tab.compose") }] : []),
+    { id: "history", label: t("eval.tab.history"), count: listing.data?.total ?? 0 },
   ];
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display font-expanded text-display">Evaluación</h1>
-        <InfoHint label="Para qué sirve">
-          El mismo encargo se resuelve de tres formas: un modelo comercial con un prompt
-          corriente, una búsqueda por similitud sobre el banco, y este sistema con el grafo.
-          Eliges a ciegas y solo después se revela cuál era cuál.
-        </InfoHint>
+        <h1 className="font-display font-expanded text-display">{t("eval.title")}</h1>
+        <InfoHint label={t("eval.whatFor")}>{t("eval.whatFor.body")}</InfoHint>
         {showComparison ? (
           <Button variant="outline" size="sm" className="ml-auto" onClick={closeSession}>
             <Plus />
-            Volver a la lista
+            {t("eval.backToList")}
           </Button>
         ) : null}
       </header>
@@ -297,31 +298,29 @@ export function EvaluationScreen() {
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="attention" title="Comparación bloqueada">
+        <Alert tone="attention" title={t("eval.blocked")}>
           <p className="flex items-center gap-1.5">
             <Lock className="size-3.5" />
-            Sin aprobar:{" "}
-            {(pipeline.data?.stages ?? [])
-              .filter((s) => s.status !== "approved")
-              .map((s) => s.label)
-              .join(", ")}
+            {t("eval.notApproved", {
+              stages: (pipeline.data?.stages ?? [])
+                .filter((s) => s.status !== "approved")
+                .map((s) => s.label)
+                .join(", "),
+            })}
           </p>
         </Alert>
       ) : null}
 
       {status === "failed" && !blocked ? (
-        <Alert tone="danger" title="La comparación falló">
+        <Alert tone="danger" title={t("eval.failed")}>
           <p>{run?.job?.error}</p>
         </Alert>
       ) : null}
 
       {external && !external.configured ? (
-        <Alert tone="attention" title="La propuesta comercial no está configurada">
+        <Alert tone="attention" title={t("eval.externalUnset")}>
           <p>{external.reason}</p>
-          <p className="mt-1 text-muted-foreground">
-            La sesión seguirá adelante y esa propuesta quedará registrada como no
-            disponible, que es un dato en sí mismo.
-          </p>
+          <p className="mt-1 text-muted-foreground">{t("eval.externalUnset.body")}</p>
         </Alert>
       ) : null}
 
@@ -329,8 +328,8 @@ export function EvaluationScreen() {
         <Running
           run={run}
           queued={queued}
-          waiting={wait ? waitReason(wait, split) : "Empezará en cuanto le toque el turno."}
-          ahead={queuedLabel(wait)}
+          waiting={wait ? waitReason(wait, split, tr) : t("eval.waitingTurn")}
+          ahead={queuedLabel(wait, tr)}
           onCancel={() => run?.job && cancel.mutate(run.job.id)}
           cancelling={cancel.isPending}
         />
@@ -423,8 +422,10 @@ export function EvaluationScreen() {
                 <Button variant="outline" className="w-full" onClick={openNext}>
                   <Scale />
                   {queue && queue.pending > 0
-                    ? `Siguiente de la cola (${queue.pending} pendiente${queue.pending === 1 ? "" : "s"})`
-                    : "Volver a la lista"}
+                    ? t("eval.nextInQueue", {
+                        pending: plural("eval.pendingCount", queue.pending),
+                      })
+                    : t("eval.backToList")}
                 </Button>
               </div>
             </div>

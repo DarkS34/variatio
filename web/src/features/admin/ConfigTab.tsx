@@ -27,6 +27,7 @@ import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReasoningLegend, ReasoningPipeline } from "@/features/admin/ReasoningPipeline";
+import { useT, type Key, type Translate } from "@/lib/i18n";
 import type {
   ConfigImpact,
   ConfigPayload,
@@ -36,10 +37,10 @@ import type {
   ReasoningLane,
 } from "@/lib/types";
 
-const SOURCE_LABELS: Record<ConfigSource, string> = {
-  default: "por defecto",
-  file: "en el fichero",
-  env: "fijado por el entorno",
+const SOURCE_LABELS: Record<ConfigSource, Key> = {
+  default: "cfg.source.default",
+  file: "cfg.source.file",
+  env: "cfg.source.env",
 };
 
 // Not tuning knobs of the same kind: `reindex` says so in its own message ("invalidará los
@@ -54,10 +55,10 @@ const IMPACT_SEVERITY: Record<ConfigImpact, number> = {
   locked: 4,
 };
 
-const IMPACT_MESSAGES: Partial<Record<ConfigImpact, string>> = {
-  contexts: "Invalidará los contextos calientes; el próximo trabajo los reconstruye.",
-  reindex: "Invalidará los contextos y volverá a embeber el índice de conceptos.",
-  engine: "Reiniciará la conexión con el motor de inferencia.",
+const IMPACT_MESSAGES: Partial<Record<ConfigImpact, Key>> = {
+  contexts: "cfg.impact.contexts",
+  reindex: "cfg.impact.reindex",
+  engine: "cfg.impact.engine",
 };
 
 function sameValue(a: unknown, b: unknown): boolean {
@@ -72,10 +73,10 @@ function sameValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
-function formatValue(value: unknown): string {
+function formatValue(value: unknown, t: Translate["t"]): string {
   if (value === null || value === undefined) return "—";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
-  if (typeof value === "boolean") return value ? "activado" : "desactivado";
+  if (typeof value === "boolean") return t(value ? "cfg.on" : "cfg.off");
   return String(value);
 }
 
@@ -91,9 +92,12 @@ const CEREBRAS_KEYS = [
 
 type Section = {
   key: string;
-  label: string;
+  // A section built from a group the table below does not claim carries the server's own
+  // name, which has no key: `labelKey` is null there and the raw string is drawn instead.
+  label: string | null;
+  labelKey: Key | null;
   icon: LucideIcon;
-  description: string;
+  descriptionKey: Key | null;
   groups: string[];
 };
 
@@ -102,72 +106,78 @@ type Section = {
 // group names are the server's; a group nobody claims below still gets a page of its own,
 // so a registry addition never disappears from the screen.
 const SECTIONS: Section[] = [
+  // Every `groups` entry is a REGISTRY group name, matched against what the server sends.
+  // Translating one would stop it matching, which is why they are literals and the labels
+  // beside them are keys.
   {
     key: "motor",
-    label: "Motor",
+    label: null,
+    labelKey: "cfg.section.engine",
     icon: Cpu,
-    description:
-      "El motor de inferencia, su anfitrión y el túnel SSH hasta la máquina de la GPU.",
-    groups: ["Motor", "Túnel SSH"],
+    descriptionKey: "cfg.section.engineDesc",
+    groups: ["Motor", "Túnel SSH"], // i18n-exempt
   },
   {
     key: "modelos",
-    label: "Modelos y razonamiento",
+    label: null,
+    labelKey: "cfg.section.models",
     icon: Brain,
-    description:
-      "El recorrido completo, llamada a llamada: qué modelo atiende cada fase, si razona antes de contestar y con qué esfuerzo.",
+    descriptionKey: "cfg.section.modelsDesc",
     groups: [MODELS_GROUP, REASONING_GROUP],
   },
   {
     key: "muestreo",
-    label: "Muestreo y contexto",
+    label: null,
+    labelKey: "cfg.section.sampling",
     icon: SlidersHorizontal,
-    description:
-      "Las temperaturas de cada tipo de llamada y la ventana de contexto (el KV cache) que se reserva a cada modelo.",
-    groups: ["Muestreo", "Ventana de contexto"],
+    descriptionKey: "cfg.section.samplingDesc",
+    groups: ["Muestreo", "Ventana de contexto"], // i18n-exempt
   },
   {
     key: "constructores",
-    label: "Constructores",
+    label: null,
+    labelKey: "cfg.section.builders",
     icon: Hammer,
-    description:
-      "Cómo se construyen el grafo, el perfil y el banco a partir del corpus en bruto: troceado, fusión, dominios y anclaje.",
+    descriptionKey: "cfg.section.buildersDesc",
     groups: ["Constructores"],
   },
   {
     key: "recuperacion",
-    label: "Recuperación",
+    label: null,
+    labelKey: "cfg.section.retrieval",
     icon: ScanSearch,
-    description:
-      "El índice de conceptos: prefijos de embedding, pesos, umbrales y cuántos candidatos se recuperan.",
+    descriptionKey: "cfg.section.retrievalDesc",
     groups: ["Recuperación"],
   },
   {
     key: "generacion",
-    label: "Etiquetado y generación",
+    label: null,
+    labelKey: "cfg.section.generation",
     icon: Tags,
-    description:
-      "El etiquetador del banco y la generación de variantes: ejemplos few-shot, reintentos y el guardián.",
-    groups: ["Etiquetado y generación"],
+    descriptionKey: "cfg.section.generationDesc",
+    groups: ["Etiquetado y generación"], // i18n-exempt
   },
   {
     key: "evaluacion",
-    label: "Evaluación",
+    label: null,
+    labelKey: "cfg.section.evaluation",
     icon: FlaskConical,
-    description:
-      "El estudio comparativo: los proveedores externos de los brazos de referencia y el estado de sus claves.",
+    descriptionKey: "cfg.section.evaluationDesc",
     groups: ["Evaluación"],
   },
   {
     key: "registro",
-    label: "Registro",
+    label: null,
+    labelKey: "cfg.section.logging",
     icon: ScrollText,
-    description: "Qué escribe el proceso en su registro y desde qué nivel.",
+    descriptionKey: "cfg.section.loggingDesc",
     groups: ["Registro"],
   },
 ];
 
 export function ConfigTab() {
+  const tr = useT();
+  const { t, plural } = tr;
   const client = useQueryClient();
   const toast = useToast();
   const query = useQuery({ queryKey: ["admin", "config"], queryFn: api.adminConfig });
@@ -184,7 +194,7 @@ export function ConfigTab() {
       setDraft({});
       setApplied(payload.applied ?? null);
       invalidate();
-      toast({ title: "Configuración guardada" });
+      toast({ title: t("cfg.saved") });
     },
   });
 
@@ -193,7 +203,7 @@ export function ConfigTab() {
     onSuccess: (payload) => {
       setApplied(payload.applied ?? null);
       invalidate();
-      toast({ title: "Recargado desde el fichero" });
+      toast({ title: t("cfg.reloaded") });
     },
   });
 
@@ -208,10 +218,10 @@ export function ConfigTab() {
       });
       setApplied(payload.applied ?? null);
       invalidate();
-      toast({ title: "Valor por defecto restablecido" });
+      toast({ title: t("cfg.resetDone") });
     },
     onError: (error: Error) =>
-      toast({ title: "No se ha podido restablecer", description: error.message, tone: "danger" }),
+      toast({ title: t("cfg.resetFailed"), description: error.message, tone: "danger" }),
   });
 
   if (query.isLoading) return <Skeleton className="h-96" />;
@@ -237,17 +247,19 @@ export function ConfigTab() {
       .map((group) => ({
         key: `grupo:${group}`,
         label: group,
+        labelKey: null,
         icon: Wrench,
-        description: "",
+        descriptionKey: null,
         groups: [group],
       })),
     ...(orphans.length > 0
       ? [
           {
             key: OTHERS_KEY,
-            label: "Otros",
+            label: null,
+            labelKey: "cfg.section.others" as Key,
             icon: Wrench,
-            description: "Ajustes cuyo grupo no tiene sitio propio en el panel.",
+            descriptionKey: "cfg.section.othersDesc" as Key,
             groups: [],
           },
         ]
@@ -297,19 +309,17 @@ export function ConfigTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-small text-muted-foreground">
-          Lo que la instalación tiene configurado ahora mismo: por defecto, desde el fichero o
-          fijado por el entorno. Lo fijado por el entorno gana siempre, así que no se puede
-          editar desde aquí.
+          {t("cfg.intro")}
         </p>
         <Button variant="outline" onClick={() => reload.mutate()} disabled={reload.isPending}>
           {reload.isPending ? <Spinner /> : <RefreshCw />}
-          Recargar desde el fichero
+          {t("cfg.reload")}
         </Button>
       </div>
 
       <FormError error={reload.error} />
       {applied && applied.length > 0 ? (
-        <Alert tone="settled" title="Aplicado">
+        <Alert tone="settled" title={t("cfg.applied")}>
           <ul className="list-disc space-y-0.5 pl-5">
             {applied.map((line) => (
               <li key={line}>{line}</li>
@@ -319,10 +329,10 @@ export function ConfigTab() {
       ) : null}
 
       <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <nav aria-label="Secciones de la configuración" className="space-y-2 lg:sticky lg:top-4">
+        <nav aria-label={t("cfg.nav")} className="space-y-2 lg:sticky lg:top-4">
           <Input
-            aria-label="Buscar un ajuste"
-            placeholder="Buscar un ajuste…"
+            aria-label={t("cfg.search")}
+            placeholder={t("cfg.searchPlaceholder")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -347,7 +357,9 @@ export function ConfigTab() {
                     )}
                   >
                     <section.icon className="size-4 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {section.labelKey ? t(section.labelKey) : section.label}
+                    </span>
                     {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
                   </button>
                 </li>
@@ -360,7 +372,7 @@ export function ConfigTab() {
           {matches ? (
             <div className="space-y-3">
               <p className="text-small text-muted-foreground">
-                {matches.length} ajuste(s) para «{search.trim()}»
+                {plural("cfg.matches", matches.length, { term: search.trim() })}
               </p>
               {matches.map(row)}
             </div>
@@ -371,9 +383,13 @@ export function ConfigTab() {
                   <activeSection.icon className="size-4" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="font-expanded text-heading">{activeSection.label}</h2>
-                  {activeSection.description ? (
-                    <p className="text-small text-muted-foreground">{activeSection.description}</p>
+                  <h2 className="font-expanded text-heading">
+                    {activeSection.labelKey ? t(activeSection.labelKey) : activeSection.label}
+                  </h2>
+                  {activeSection.descriptionKey ? (
+                    <p className="text-small text-muted-foreground">
+                      {t(activeSection.descriptionKey)}
+                    </p>
                   ) : null}
                 </div>
               </div>
@@ -415,10 +431,11 @@ export function ConfigTab() {
           )}
 
           {"engine.name" in draft ? (
-            <Alert tone="attention" title="Cambio de motor">
-              Al guardar, los ajustes de ámbito motor (modelos, fases, ventanas de contexto y
-              razonamiento) pasarán al perfil de «{String(draft["engine.name"])}». El perfil de
-              «{String(stored.get("engine.name"))}» se conserva tal cual para cuando se vuelva.
+            <Alert tone="attention" title={t("cfg.engineChange")}>
+              {t("cfg.engineChangeBody", {
+                next: String(draft["engine.name"]),
+                current: String(stored.get("engine.name")),
+              })}
             </Alert>
           ) : null}
 
@@ -431,14 +448,14 @@ export function ConfigTab() {
       <div className="sticky bottom-0 flex items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-raised">
         <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Spinner /> : <Save />}
-          Guardar
+          {t("common.save")}
         </Button>
         <Button variant="outline" disabled={!dirty} onClick={() => setDraft({})}>
-          Descartar
+          {t("common.discard")}
         </Button>
         {dirty ? (
           <span className="text-small text-muted-foreground">
-            {Object.keys(draft).length} cambio(s) sin guardar
+            {plural("cfg.unsaved", Object.keys(draft).length)}
           </span>
         ) : null}
       </div>
@@ -506,6 +523,7 @@ function PipelineCard({
   onChange: (key: string, value: unknown) => void;
   onReset: (key: string) => void;
 }) {
+  const { t } = useT();
   const phases = lanes.flatMap((lane) => lane.phases);
   const drawn = new Set([
     ...phases.map((phase) => phase.setting),
@@ -540,14 +558,9 @@ function PipelineCard({
       <CardContent className="space-y-4 pt-4">
         {residents.map(row)}
         <p className="max-w-2xl text-small text-muted-foreground">
-          Cada columna es una construcción y se lee de arriba abajo; cada parada, una llamada
-          al modelo. Bajo el nombre, qué modelo la atiende («principal» sigue a {residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN"});
-          el círculo dice si razona antes de contestar y, mientras razona, el selector de al
-          lado fija su esfuerzo. Razonar y una gramática no conviven en esta
-          pila, así que encender una fase que hoy responde con gramática se la quita y deja la
-          forma en manos del analizador y de la reparación. Tres nodos no dependen de un
-          ajuste: el guardián no razona, la variante la decide cada encargo y la reparación es
-          su propia gramática.
+          {t("cfg.pipelineNote", {
+            main: residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN",
+          })}
         </p>
         <ReasoningPipeline
           lanes={lanes}
@@ -559,7 +572,7 @@ function PipelineCard({
         <ReasoningLegend />
         {inNodes.length > 0 ? (
           <details className="text-small text-muted-foreground">
-            <summary className="cursor-pointer select-none">Por qué cada nodo</summary>
+            <summary className="cursor-pointer select-none">{t("cfg.whyEachNode")}</summary>
             <dl className="mt-2 space-y-3">
               {inNodes
                 .filter((setting) => setting.doc && setting.name)
@@ -606,16 +619,19 @@ function ModelSelect({
   models: ConfigPayload["models"];
   onChange: (next: unknown) => void;
 }) {
+  const { t } = useT();
   const installed = models.installed;
   const known = installed.some((m) => m.model === value);
   const [other, setOther] = useState(() => Boolean(value) && !known);
   const residentVram = new Map(models.running.map((m) => [m.model, m.size_vram]));
 
   const describe = (model: InstalledModel) => {
-    if (model.remote) return `${model.model} — remoto (Cerebras)`;
+    if (model.remote) return t("cfg.modelRemote", { model: model.model });
     const vram = residentVram.get(model.model);
-    if (vram) return `${model.model} — cargado, ${bytes(vram)} en VRAM`;
-    return model.size ? `${model.model} — en disco, ${bytes(model.size)}` : model.model;
+    if (vram) return t("cfg.modelLoaded", { model: model.model, size: bytes(vram) });
+    return model.size
+      ? t("cfg.modelOnDisk", { model: model.model, size: bytes(model.size) })
+      : model.model;
   };
 
   const selectValue = other ? OTHER : value ?? "";
@@ -637,19 +653,21 @@ function ModelSelect({
           onChange(next === "" ? null : next);
         }}
       >
-        {setting.nullable ? <option value="">Seguir al principal</option> : null}
-        {value && !known && !other ? <option value={value}>{value} — sin instalar</option> : null}
+        {setting.nullable ? <option value="">{t("cfg.followMain")}</option> : null}
+        {value && !known && !other ? (
+          <option value={value}>{t("cfg.notInstalled", { model: value })}</option>
+        ) : null}
         {installed.map((model) => (
           <option key={model.model} value={model.model}>
             {describe(model)}
           </option>
         ))}
-        <option value={OTHER}>Otro…</option>
+        <option value={OTHER}>{t("cfg.other")}</option>
       </Select>
       {other ? (
         <Input
-          aria-label={`${label}: nombre del modelo`}
-          placeholder="nombre:etiqueta, tal como lo conoce Ollama"
+          aria-label={t("cfg.modelName", { label })}
+          placeholder={t("eng.models.pullPlaceholder")}
           disabled={disabled}
           value={value ?? ""}
           onChange={(event) => onChange(event.target.value || null)}
@@ -657,7 +675,7 @@ function ModelSelect({
       ) : null}
       {installed.length === 0 ? (
         <p className="text-small text-muted-foreground">
-          El motor no responde: no se puede listar lo instalado, pero el nombre se puede escribir.
+          {t("cfg.noEngineList")}
         </p>
       ) : null}
     </div>
@@ -677,6 +695,7 @@ function CerebrasModelsField({
   disabled: boolean;
   onChange: (next: unknown) => void;
 }) {
+  const { t } = useT();
   const catalog = useQuery({
     queryKey: ["admin", "config", "cerebras-catalog"],
     queryFn: api.adminCerebrasModels,
@@ -693,7 +712,7 @@ function CerebrasModelsField({
         <span className="text-body">{label}</span>
         <p className="flex items-center gap-2 text-small text-muted-foreground">
           <Spinner />
-          Leyendo el catálogo de Cerebras…
+          {t("cfg.cerebrasLoading")}
         </p>
       </div>
     );
@@ -717,7 +736,7 @@ function CerebrasModelsField({
           }
         />
         <p className="text-small text-muted-foreground">
-          {catalog.data?.error ?? "El catálogo de Cerebras no responde."} Sepáralos con comas.
+          {catalog.data?.error ?? t("cfg.cerebrasDown")} {t("cfg.commaSeparated")}
         </p>
       </div>
     );
@@ -734,7 +753,7 @@ function CerebrasModelsField({
               checked={selected.includes(model)}
               disabled={disabled}
               onCheckedChange={(next) => toggle(model, next)}
-              label={`Enrutar ${model} a Cerebras`}
+              label={t("cfg.routeTo", { model })}
             />
             <span className="font-mono text-body">{model}</span>
           </li>
@@ -745,16 +764,15 @@ function CerebrasModelsField({
               checked
               disabled={disabled}
               onCheckedChange={(next) => toggle(model, next)}
-              label={`Enrutar ${model} a Cerebras`}
+              label={t("cfg.routeTo", { model })}
             />
             <span className="font-mono text-body">{model}</span>
-            <Badge variant="outline">fuera del catálogo</Badge>
+            <Badge variant="outline">{t("cfg.offCatalog")}</Badge>
           </li>
         ))}
       </ul>
       <p className="text-small text-muted-foreground">
-        La lista viene de la propia API de Cerebras. Lo marcado se sirve en remoto; todo lo demás
-        sigue en Ollama.
+        {t("cfg.cerebrasNote")}
       </p>
     </div>
   );
@@ -773,6 +791,7 @@ function SettingRow({
   onReset: () => void;
   models: ConfigPayload["models"] | null;
 }) {
+  const { t } = useT();
   const label = setting.name || setting.key;
   const id = `config-${setting.key}`;
   const lockedByEnv = setting.source === "env";
@@ -790,7 +809,7 @@ function SettingRow({
             <div className="flex items-center justify-between gap-2">
               <span className="text-body">{label}</span>
               <Badge variant="outline">
-                {setting.state === "configurada" ? "Configurada" : "Ausente"}
+                {setting.state === "configurada" ? t("cfg.configured") : t("cfg.absent")}
               </Badge>
             </div>
           ) : setting.kind === "bool" ? (
@@ -832,7 +851,7 @@ function SettingRow({
                   onChange(event.target.value === "" && setting.nullable ? null : event.target.value)
                 }
               >
-                {setting.nullable ? <option value="">— sin fijar —</option> : null}
+                {setting.nullable ? <option value="">{t("cfg.unset")}</option> : null}
                 {setting.choices.map((choice) => (
                   <option key={choice} value={choice}>
                     {choice}
@@ -879,7 +898,7 @@ function SettingRow({
                   )
                 }
               />
-              <p className="text-small text-muted-foreground">Sepáralos con comas.</p>
+              <p className="text-small text-muted-foreground">{t("cfg.commaSeparated")}</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -895,29 +914,31 @@ function SettingRow({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <Badge variant={setting.source === "file" ? "secondary" : "outline"}>
-            {SOURCE_LABELS[setting.source]}
+            {t(SOURCE_LABELS[setting.source])}
           </Badge>
           {resettable ? (
             <Button
               variant="ghost"
               size="sm"
-              title={`Volver a ${formatValue(setting.default)}`}
+              title={t("cfg.backTo", { value: formatValue(setting.default, t) })}
               onClick={onReset}
             >
               <Undo2 />
-              Por defecto
+              {t("cfg.default")}
             </Button>
           ) : null}
         </div>
       </div>
 
       {lockedByEnv ? (
-        <p className="text-small text-muted-foreground">Lo fija {setting.env}.</p>
+        <p className="text-small text-muted-foreground">
+          {t("cfg.fixedBy", { env: setting.env ?? "" })}
+        </p>
       ) : null}
 
       {setting.doc ? (
         <details className="text-small text-muted-foreground">
-          <summary className="cursor-pointer select-none">Por qué este valor</summary>
+          <summary className="cursor-pointer select-none">{t("cfg.whyThisValue")}</summary>
           <p className="mt-1 whitespace-pre-wrap">{setting.doc}</p>
         </details>
       ) : null}
@@ -932,6 +953,7 @@ function DiffSummary({
   settings: ConfigSetting[];
   draft: Record<string, unknown>;
 }) {
+  const { t } = useT();
   const touched = settings.filter((setting) => setting.key in draft);
   if (touched.length === 0) return null;
 
@@ -944,21 +966,22 @@ function DiffSummary({
   return (
     <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
       <p className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-        Cambios pendientes ({touched.length})
+        {t("cfg.pending", { n: touched.length })}
       </p>
       <ul className="space-y-1 text-body">
         {touched.map((setting) => (
           <li key={setting.key} className="flex flex-wrap items-baseline gap-1.5">
             <span className="font-medium">{setting.name || setting.key}</span>
             <span className="text-muted-foreground">
-              {formatValue(setting.value ?? setting.default)} → {formatValue(draft[setting.key])}
+              {formatValue(setting.value ?? setting.default, t)} →{" "}
+              {formatValue(draft[setting.key], t)}
             </span>
           </li>
         ))}
       </ul>
       {warning ? (
-        <Alert tone="attention" title="Antes de guardar">
-          <p>{warning}</p>
+        <Alert tone="attention" title={t("cfg.beforeSaving")}>
+          <p>{t(warning)}</p>
         </Alert>
       ) : null}
     </div>

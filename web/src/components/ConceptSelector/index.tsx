@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { BoardMode } from "./BoardMode";
 import { GraphMode } from "./GraphMode";
 import { SelectionTray } from "./SelectionTray";
+import { useT } from "@/lib/i18n";
 
 export interface ConceptSelectorProps {
   concepts: KgConcept[];
@@ -73,6 +74,7 @@ export function ConceptSelector({
   onConfirm,
   confirmLabel = "Hecho",
 }: ConceptSelectorProps) {
+  const { t } = useT();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("board");
   const [cursor, setCursor] = useState(0);
@@ -221,11 +223,11 @@ export function ConceptSelector({
             <div className="relative min-w-56 flex-1 sm:max-w-md">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
-                aria-label="Buscar concepto o dominio"
+                aria-label={t("concept.search")}
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar concepto o dominio…"
+                placeholder={t("concept.search.placeholder")}
                 className="pl-8"
               />
             </div>
@@ -236,15 +238,15 @@ export function ConceptSelector({
               [
                 {
                   value: "board",
-                  label: "Lista",
+                  label: t("concept.tab.list"),
                   icon: LayoutGrid,
-                  hint: "Los conceptos agrupados por dominio",
+                  hint: t("concept.tab.listHint"),
                 },
                 {
                   value: "graph",
-                  label: "Grafo",
+                  label: t("concept.tab.graph"),
                   icon: Waypoints,
-                  hint: "El grafo ordenado por niveles de prerrequisito",
+                  hint: t("concept.tab.graphHint"),
                 },
               ] as const
             ).map((option) => (
@@ -253,7 +255,7 @@ export function ConceptSelector({
                 type="button"
                 title={
                   option.value === "graph" && !graph
-                    ? "Este espacio de trabajo no tiene grafo que mostrar"
+                    ? t("concept.noGraph")
                     : option.hint
                 }
                 disabled={option.value === "graph" && !graph}
@@ -271,7 +273,7 @@ export function ConceptSelector({
             ))}
           </div>
 
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Cerrar">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t("common.close")}>
             <X />
           </Button>
         </div>

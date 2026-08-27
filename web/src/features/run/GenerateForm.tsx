@@ -31,7 +31,9 @@ import type {
   KgConcept,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { baseType } from "@/features/profile/FieldEditor";
 import { useHealth, useScope } from "@/state/queries";
+import { useT, type Translate } from "@/lib/i18n";
 
 import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
@@ -67,34 +69,45 @@ export function activeTypeSpec(
 // apart exactly where it mattered — «currículo de 0» over a request that carries `[]`, which
 // is no restriction at all. `presetSize` is null when the workspace's own has not been read,
 // which is the collapsed line's case: it has the state, not the query.
-function curriculumLabel(state: FormState, presetSize: number | null): string {
-  if (!state.useCurriculum) return "Sin restricción de currículo";
+function curriculumLabel(
+  state: FormState,
+  presetSize: number | null,
+  { t }: Translate,
+): string {
+  if (!state.useCurriculum) return t("form.curriculum.none");
   if (state.usePresetCurriculum) {
-    if (presetSize === null) return "Currículo del workspace";
+    if (presetSize === null) return t("form.curriculum.workspace");
     return presetSize > 0
-      ? `Currículo del workspace (${presetSize} conceptos)`
-      : "Sin restricción de currículo";
+      ? t("form.curriculum.workspaceN", { n: presetSize })
+      : t("form.curriculum.none");
   }
   return state.curriculum.length > 0
-    ? `Currículo de ${state.curriculum.length} conceptos`
-    : "Sin conceptos elegidos todavía";
+    ? t("form.curriculum.ofN", { n: state.curriculum.length })
+    : t("form.curriculum.noneChosen");
 }
 
-export function summarize(state: FormState, profile: ExemplarsProfile | null): string {
+export function summarize(
+  state: FormState,
+  profile: ExemplarsProfile | null,
+  tr: Translate,
+): string {
+  const { t, plural } = tr;
   const spec = activeTypeSpec(state, profile);
-  const parts = [`${state.n} ítem${state.n === 1 ? "" : "s"}`];
+  const parts = [plural("form.items", state.n)];
   if (spec && typeKeys(profile).length > 1) parts.push(spec.label || activeTypeKey(state, profile)!);
-  parts.push(state.concepts.join(" · ") || "sin conceptos");
+  parts.push(state.concepts.join(" · ") || t("form.summary.noConcepts"));
   for (const field of userDecidedFields(spec)) {
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
   }
-  const label = curriculumLabel(state, null);
+  const label = curriculumLabel(state, null, tr);
   parts.push(label.charAt(0).toLowerCase() + label.slice(1));
-  if (state.instructions.trim()) parts.push("con instrucciones");
-  if (!state.think) parts.push("sin razonamiento previo");
+  if (state.instructions.trim()) parts.push(t("form.summary.withInstructions"));
+  if (!state.think) parts.push(t("form.summary.noReasoning"));
   else if (state.effort !== "low")
-    parts.push(`razonamiento ${EFFORT_LABELS[state.effort].toLowerCase()}`);
+    parts.push(
+      t("form.summary.reasoning", { level: t(EFFORT_LABELS[state.effort]).toLowerCase() }),
+    );
   return parts.join(" · ");
 }
 
@@ -156,6 +169,7 @@ function ChosenConcepts({
   onRemove: (name: string) => void;
   empty: string;
 }) {
+  const { t } = useT();
   if (names.length === 0) return <p className="text-body text-muted-foreground">{empty}</p>;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -169,7 +183,7 @@ function ChosenConcepts({
           <button
             type="button"
             onClick={() => onRemove(name)}
-            aria-label={`Quitar ${name}`}
+            aria-label={t("form.removeConcept", { name })}
             className="rounded-full p-0.5 hover:bg-background/60"
           >
             <X className="size-3" />
@@ -248,6 +262,8 @@ export function GenerateForm({
    *  which «Comparar tres propuestas» would misreport as one. */
   launchLabel?: string;
 }) {
+  const tr = useT();
+  const { t, plural } = tr;
   const [open, setOpen] = useState<string | null | undefined>(undefined);
   const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
   // What the full-screen selector is choosing: the targets, the ad-hoc curriculum, or
@@ -412,28 +428,28 @@ export function GenerateForm({
   // Same rules the generator enforces server-side; failing here is just faster.
   const problems = useMemo(() => {
     const found: string[] = [];
-    if (types.length > 1 && !typeKey) found.push("Elige el tipo de ítem.");
-    if (state.concepts.length === 0) found.push("Elige al menos un concepto objetivo.");
+    if (types.length > 1 && !typeKey) found.push(t("form.problem.itemType"));
+    if (state.concepts.length === 0) found.push(t("form.problem.concepts"));
     if (activeCurriculum) {
       const inside = new Set(activeCurriculum);
       const outside = state.concepts.filter((c) => !inside.has(c));
       if (outside.length > 0)
-        found.push(`Estos conceptos objetivo no están en el currículo: ${outside.join(", ")}.`);
+        found.push(t("form.problem.outside", { names: outside.join(", ") }));
     }
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
-      found.push(`Las instrucciones no pueden pasar de ${MAX_INSTRUCTIONS} caracteres.`);
+      found.push(t("form.problem.tooLong", { max: MAX_INSTRUCTIONS }));
     return found;
-  }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions]);
+  }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions, t]);
 
   const decisionSummary = decided
-    .map((field) => describeDecision(field, state.decisions[field]))
+    .map((field) => describeDecision(field, state.decisions[field], t))
     .join(" · ");
 
-  const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null);
+  const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null, tr);
 
   const filterLabel = exemplarType
-    ? `Solo conceptos con ejemplares de «${typeLabel}»`
-    : "Solo conceptos con ejemplares en el banco";
+    ? t("form.filter.ofType", { type: typeLabel })
+    : t("form.filter.any");
 
   let index = 0;
 
@@ -442,10 +458,10 @@ export function GenerateForm({
       {types.length > 1 ? (
         <FormStep
           index={++index}
-          title="¿Qué tipo de ítem?"
-          hint="La modalidad decide el esquema del ítem, sus reglas de redacción y de qué ejemplares del banco se sirve el few-shot: solo entran los de esta misma modalidad."
+          title={t("form.type.title")}
+          hint={t("form.type.hint")}
           answered={Boolean(typeKey)}
-          summary={typeSpec?.label || typeKey || "Ningún tipo elegido todavía"}
+          summary={typeSpec?.label || typeKey || t("form.type.none")}
           {...step("itemType")}
         >
           <div className="grid gap-2 sm:grid-cols-2">
@@ -485,8 +501,8 @@ export function GenerateForm({
 
       <FormStep
         index={++index}
-        title="¿Qué se ha visto ya?"
-        hint="Restringe lo que el modelo puede dar por sabido: el ítem no podrá exigir nada fuera de esta lista, y solo se ofrecerán como objetivo los conceptos que estén dentro."
+        title={t("form.taught.title")}
+        hint={t("form.taught.hint")}
         optional
         answered={state.useCurriculum && Boolean(activeCurriculum)}
         summary={curriculumSummary}
@@ -500,9 +516,9 @@ export function GenerateForm({
               // Only switching it OFF closes the question. On, it opens the two below.
               if (!useCurriculum) advance("curriculum");
             }}
-            label="Restringir a un currículo"
+            label={t("form.taught.restrict")}
           />
-          <span className="text-body font-medium">Restringir a un currículo</span>
+          <span className="text-body font-medium">{t("form.taught.restrict")}</span>
         </div>
 
         {state.useCurriculum ? (
@@ -517,22 +533,19 @@ export function GenerateForm({
                     // the button that picks one by hand, so only the first way is an answer.
                     if (usePresetCurriculum) advance("curriculum");
                   }}
-                  label={`Usar el currículo preestablecido (${preset.concepts.length} conceptos)`}
+                  label={t("form.taught.usePreset", { n: preset.concepts.length })}
                 />
                 <span className="text-body">
-                  Usar el currículo preestablecido ({preset.concepts.length} conceptos)
+                  {t("form.taught.usePreset", { n: preset.concepts.length })}
                 </span>
               </div>
             ) : (
-              <p className="text-small text-muted-foreground">
-                Este workspace no tiene currículo preestablecido. Puedes definir uno en la
-                pestaña Currículo del grafo, o elegir aquí los conceptos para este lote.
-              </p>
+              <p className="text-small text-muted-foreground">{t("form.taught.noPreset")}</p>
             )}
             {!state.usePresetCurriculum || !preset?.concepts.length ? (
               <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
                 <ListChecks />
-                Elegir los conceptos cubiertos ({state.curriculum.length})
+                {t("form.taught.pick", { n: state.curriculum.length })}
               </Button>
             ) : null}
           </div>
@@ -541,10 +554,10 @@ export function GenerateForm({
 
       <FormStep
         index={++index}
-        title="¿Qué hay que practicar?"
-        hint="Lo que el ítem debe hacer practicar, no lo que menciona. Sale del grafo, y los ejemplos few-shot se eligen entre los ítems del banco etiquetados con estos conceptos."
+        title={t("form.practise.title")}
+        hint={t("form.practise.hint")}
         answered={chosen}
-        summary={state.concepts.join(" · ") || "Ningún concepto elegido todavía"}
+        summary={state.concepts.join(" · ") || t("form.practise.none")}
         {...step("concepts")}
       >
         {withoutExemplars > 0 ? (
@@ -557,8 +570,8 @@ export function GenerateForm({
             <span className="text-small font-medium">{filterLabel}</span>
             <span className="ml-auto text-[11px] nums text-muted-foreground">
               {onlyWithExemplars
-                ? `${hidden} oculto${hidden === 1 ? "" : "s"} sin ejemplares`
-                : `${withoutExemplars} sin ningún ejemplar a la vista`}
+                ? plural("form.hiddenNoExemplars", hidden)
+                : plural("form.withoutExemplars", withoutExemplars)}
             </span>
           </div>
         ) : null}
@@ -566,11 +579,11 @@ export function GenerateForm({
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setPicking("concepts")}>
             <ListChecks />
-            Elegir conceptos ({state.concepts.length})
+            {t("form.practise.pick", { n: state.concepts.length })}
           </Button>
           {state.concepts.length > 1 ? (
             <Button size="sm" variant="ghost" onClick={() => patch({ concepts: [] })}>
-              Limpiar
+              {t("form.practise.clear")}
             </Button>
           ) : null}
         </div>
@@ -581,15 +594,15 @@ export function GenerateForm({
           onRemove={(name) =>
             patch({ concepts: state.concepts.filter((c) => c !== name) })
           }
-          empty="Elige los conceptos que deben practicarse"
+          empty={t("form.practise.empty")}
         />
 
         {!onlyWithExemplars && withoutExemplars > 0 ? (
           <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
             {exemplarType
-              ? `Con el filtro apagado puedes elegir conceptos sin ningún ítem de «${typeLabel}» en el banco. Si ninguno de los elegidos tiene ejemplares de esa modalidad, la generación será zero-shot y la calidad del resultado puede empeorar.`
-              : "Con el filtro apagado puedes elegir conceptos sin ningún ítem en el banco. Si ninguno de los elegidos tiene ejemplares, la generación será zero-shot y la calidad del resultado puede empeorar."}
+              ? t("form.zeroShot.filterOffType", { type: typeLabel })
+              : t("form.zeroShot.filterOff")}
           </p>
         ) : null}
 
@@ -597,29 +610,33 @@ export function GenerateForm({
           <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
             {exemplarType
-              ? `Ningún concepto elegido tiene ejemplares de «${typeLabel}». El few-shot solo toma ejemplares de la modalidad elegida, así que el lote irá en zero-shot salvo que aporte alguno un prerrequisito.`
-              : "Ningún concepto elegido tiene ejemplares en el banco: se generará en zero-shot."}
+              ? t("form.zeroShot.wholeBatchType", { type: typeLabel })
+              : t("form.zeroShot.wholeBatch")}
           </p>
         ) : zeroShot.length > 0 ? (
           <p className="text-small text-muted-foreground">
-            {exemplarType ? "Sin ejemplares de esta modalidad" : "Sin ejemplares propios"}, pero
-            el lote sí tendrá ejemplos de los demás conceptos: {zeroShot.join(", ")}.
+            {t("form.zeroShot.butOthers", {
+              lead: exemplarType
+                ? t("form.zeroShot.noneOfType")
+                : t("form.zeroShot.noneOwn"),
+              names: zeroShot.join(", "),
+            })}
           </p>
         ) : null}
 
         {given.length > 0 || forbidden.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-dashed border-border p-2.5">
-            <p className="text-small text-muted-foreground">Lo que el grafo le dirá al modelo:</p>
+            <p className="text-small text-muted-foreground">{t("form.graphSays")}</p>
             <ConceptTrack
               tone="given"
               icon={<Check className="size-3" />}
-              label="se da por sabido"
+              label={t("form.given")}
               concepts={given}
             />
             <ConceptTrack
               tone="forbidden"
               icon={<Ban className="size-3" />}
-              label="todavía no impartido"
+              label={t("form.forbidden")}
               concepts={forbidden}
             />
           </div>
@@ -629,21 +646,40 @@ export function GenerateForm({
       {chosen && decided.length > 0 ? (
         <FormStep
           index={++index}
-          title={decided.length === 1 ? "¿Cómo debe ser?" : "¿Cómo deben ser?"}
-          hint="Lo que decides tú en vez del modelo. El perfil de ejemplares marca qué campos se preguntan aquí; «Cualquiera» se lo deja a él."
+          title={
+            decided.length === 1
+              ? t("form.decisions.titleOne")
+              : t("form.decisions.titleMany")
+          }
+          hint={t("form.decisions.hint")}
           answered={decided.some((field) => state.decisions[field] !== undefined)}
           summary={decisionSummary}
           {...step("decisions")}
         >
-          {decided.map((field) => (
-            <DecisionField
-              key={field}
-              name={field}
-              spec={typeSpec!.fields[field]}
-              value={state.decisions[field]}
-              onChange={(next) => patch({ decisions: { ...state.decisions, [field]: next } })}
-            />
-          ))}
+          {decided.map((field) => {
+            const spec = typeSpec!.fields[field];
+            const kind = baseType(spec.schema);
+            const discrete = kind === "enum" || kind === "boolean";
+            return (
+              <DecisionField
+                key={field}
+                name={field}
+                spec={spec}
+                value={state.decisions[field]}
+                onChange={(next) => {
+                  const decisions = { ...state.decisions, [field]: next };
+                  patch({ decisions });
+                  if (
+                    discrete &&
+                    next !== undefined &&
+                    decided.every((name) => decisions[name] !== undefined)
+                  ) {
+                    advance("decisions");
+                  }
+                }}
+              />
+            );
+          })}
         </FormStep>
       ) : null}
 
@@ -651,18 +687,18 @@ export function GenerateForm({
       {chosen ? (
         <FormStep
           index={++index}
-          title="Instrucciones adicionales"
-          hint="Una petición libre para este lote. Se atiende siempre que no contradiga el objetivo, el conocimiento previo ni el currículo. Antes de entrar en el prompt la revisa un modelo juez."
+          title={t("form.instructions.title")}
+          hint={t("form.instructions.hint")}
           optional
           answered={state.instructions.trim().length > 0}
-          summary={state.instructions.trim() || "Ninguna"}
+          summary={state.instructions.trim() || t("form.instructions.none")}
           {...step("instructions")}
         >
           <Textarea
-            aria-label="Instrucciones adicionales"
+            aria-label={t("form.instructions.title")}
             value={state.instructions}
             maxLength={MAX_INSTRUCTIONS}
-            placeholder="Por ejemplo: que el contexto sea deportivo"
+            placeholder={t("form.instructions.placeholder")}
             onChange={(event) => patch({ instructions: event.target.value })}
             className={cn("min-h-20", blockedInstructions && "border-destructive")}
           />
@@ -675,7 +711,7 @@ export function GenerateForm({
           {scope.data ? (
             <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-small">
               <div>
-                <span className="font-medium">Aquí puedes pedir</span>
+                <span className="font-medium">{t("form.scope.canAsk")}</span>
                 <ul className="mt-1 space-y-0.5 text-muted-foreground">
                   {scope.data.slots.map((slot) => (
                     <li key={slot.key}>
@@ -686,7 +722,7 @@ export function GenerateForm({
               </div>
               {scope.data.owners.length > 0 ? (
                 <div>
-                  <span className="font-medium">Esto se decide más arriba</span>
+                  <span className="font-medium">{t("form.scope.decidedAbove")}</span>
                   <ul className="mt-1 space-y-0.5 text-muted-foreground">
                     {scope.data.owners.map((owner) => (
                       <li key={owner.key}>
@@ -698,7 +734,7 @@ export function GenerateForm({
               ) : null}
               {scope.data.facts.length > 0 ? (
                 <div>
-                  <span className="font-medium">Esto lo fija la asignatura</span>
+                  <span className="font-medium">{t("form.scope.subjectFixes")}</span>
                   <p className="mt-1 text-muted-foreground">
                     {scope.data.facts.map((fact) => fact.value).join(" · ")}
                   </p>
@@ -708,7 +744,7 @@ export function GenerateForm({
           ) : null}
 
           {blockedInstructions ? (
-            <Alert tone="danger" title="Instrucciones bloqueadas">
+            <Alert tone="danger" title={t("form.instructions.blocked")}>
               <p>{blockedInstructions}</p>
             </Alert>
           ) : null}
@@ -719,10 +755,10 @@ export function GenerateForm({
         <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
           {variant === "generate" ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-body font-medium">¿Cuántos ítems?</span>
+              <span className="text-body font-medium">{t("form.howMany")}</span>
               <Count value={state.n} onChange={(n) => patch({ n })} />
               {state.n > 1 ? (
-                <Badge variant="outline">no repetirán temática entre sí</Badge>
+                <Badge variant="outline">{t("form.noRepeat")}</Badge>
               ) : null}
             </div>
           ) : null}
@@ -736,14 +772,16 @@ export function GenerateForm({
                 <Switch
                   checked={state.think}
                   onCheckedChange={(think) => patch({ think })}
-                  label="Razonamiento previo del modelo"
+                  label={t("form.think.label")}
                 />
                 <span className="flex items-center gap-1.5 text-body font-medium">
                   <Brain className="size-3.5" />
-                  Razonamiento previo
+                  {t("form.think.short")}
                 </span>
                 <span className="ml-auto text-[11px] nums text-muted-foreground">
-                  {state.think ? `activado · ${EFFORT_LABELS[effort].toLowerCase()}` : "desactivado"}
+                  {state.think
+                    ? t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
+                    : t("form.think.off")}
                 </span>
               </div>
               {state.think ? (
@@ -761,26 +799,21 @@ export function GenerateForm({
                 </div>
               ) : null}
               <p className="text-small text-muted-foreground">
-                {state.think
-                  ? "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Más esfuerzo es más deliberación, y ese razonamiento queda visible junto al resultado."
-                  : "El modelo responde directamente, sin deliberar. Va mucho más rápido, pero suele ajustarse peor al concepto objetivo y respetar peor lo que el grafo marca como todavía no impartido."}
+                {state.think ? t("form.think.onBody") : t("form.think.offBody")}
               </p>
-              {state.think && policy.note ? (
-                <p className="text-small text-muted-foreground">{policy.note}</p>
+              {state.think && policy.noteKey ? (
+                <p className="text-small text-muted-foreground">{t(policy.noteKey)}</p>
               ) : null}
               {state.think && warning ? (
-                <Alert tone="attention" title="Esfuerzo elevado">
-                  <p>{warning}</p>
+                <Alert tone="attention" title={t("form.think.highEffort")}>
+                  <p>{t(warning)}</p>
                 </Alert>
               ) : null}
             </div>
           ) : (
             <p className="flex items-start gap-1.5 text-small text-muted-foreground">
               <Brain className="mt-0.5 size-3.5 shrink-0" />
-              El razonamiento previo no se elige aquí: cada comparación lo enciende o lo apaga
-              al azar, igual para las dos propuestas locales —la comercial delibera según
-              decida su proveedor—. Así, sesión a sesión, los datos dicen si deliberar antes de
-              escribir sirve de algo.
+              {t("form.think.comparison")}
             </p>
           )}
 
@@ -799,7 +832,9 @@ export function GenerateForm({
           {running ? (
             <Button variant="outline" className="w-full" onClick={onCancel}>
               <Ban />
-              {variant === "evaluation" ? "Cancelar la comparación" : "Cancelar generación"}
+              {variant === "evaluation"
+                ? t("form.cancelComparison")
+                : t("form.cancelGeneration")}
             </Button>
           ) : (
             <Button
@@ -810,15 +845,15 @@ export function GenerateForm({
               {pending ? <Spinner /> : variant === "evaluation" ? <Scale /> : <Play />}
               {launchLabel ??
                 (variant === "evaluation"
-                  ? "Comparar tres propuestas"
-                  : `Generar ${state.n} ítem${state.n === 1 ? "" : "s"}`)}
+                  ? t("form.compareThree")
+                  : plural("form.generateItems", state.n))}
             </Button>
           )}
         </div>
       ) : null}
 
       <ConceptSelector
-        title="¿Qué hay que practicar?"
+        title={t("form.practise.title")}
         concepts={concepts}
         graph={graph}
         selected={state.concepts}
@@ -835,7 +870,7 @@ export function GenerateForm({
           // where it already was.
           if (state.concepts.length > 0) advance("concepts");
         }}
-        confirmLabel="Confirmar y continuar"
+        confirmLabel={t("form.confirmContinue")}
       />
 
       {/* Neither `implied` nor `restrictTo`: a curriculum is declared whole and nothing
@@ -843,7 +878,7 @@ export function GenerateForm({
           have been taught, which is what a curriculum states — a target, being what an item
           is ABOUT, is the one that must stay taggable. */}
       <ConceptSelector
-        title="¿Qué se ha visto ya?"
+        title={t("form.taught.title")}
         concepts={concepts}
         graph={graph}
         selected={state.curriculum}
@@ -856,7 +891,7 @@ export function GenerateForm({
           setPicking(null);
           advance("curriculum");
         }}
-        confirmLabel="Confirmar y continuar"
+        confirmLabel={t("form.confirmContinue")}
       />
     </div>
   );

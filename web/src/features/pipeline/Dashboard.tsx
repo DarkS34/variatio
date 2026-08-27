@@ -51,6 +51,7 @@ import {
   useRaw,
   useStream,
 } from "@/state/queries";
+import { useT, type Key } from "@/lib/i18n";
 
 const SCREEN: Record<string, string> = {
   exemplars_profile: "/preparar/perfil",
@@ -58,16 +59,14 @@ const SCREEN: Record<string, string> = {
   exemplars_bank: "/preparar/banco",
 };
 
-const EXPLAIN: Record<string, string> = {
-  exemplars_profile:
-    "Define el esquema de un ítem y las guías de extracción y generación. Se infiere de una muestra de los ejemplares en bruto.",
-  knowledge_graph:
-    "El vocabulario de conceptos y dominios. Es la única fuente de conceptos que podrá usarse después: nada fuera de aquí puede etiquetarse ni generarse.",
-  exemplars_bank:
-    "Los ítems extraídos de los documentos, etiquetados con conceptos del grafo. Alimentan los ejemplos few-shot de la generación.",
+const EXPLAIN: Record<string, Key> = {
+  exemplars_profile: "dash.explain.profile",
+  knowledge_graph: "dash.explain.graph",
+  exemplars_bank: "dash.explain.bank",
 };
 
 function StageCard({ stage }: { stage: StageState }) {
+  const { t } = useT();
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
   const building = stage.status === "building";
@@ -95,7 +94,9 @@ function StageCard({ stage }: { stage: StageState }) {
         <div className="flex items-center gap-2">
           <div className="flex flex-1 items-center gap-1.5">
             <CardTitle>{stage.label}</CardTitle>
-            <InfoHint label={`Qué es ${stage.label}`}>{EXPLAIN[stage.artifact]}</InfoHint>
+            <InfoHint label={t("stage.whatIs", { title: stage.label })}>
+              {t(EXPLAIN[stage.artifact])}
+            </InfoHint>
           </div>
           <StageBadge stage={stage} />
         </div>
@@ -120,7 +121,9 @@ function StageCard({ stage }: { stage: StageState }) {
         ) : null}
 
         {stage.approved_at && stage.status === "approved" ? (
-          <p className="text-small text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
+          <p className="text-small text-muted-foreground">
+            {t("dash.approvedOn", { when: when(stage.approved_at) })}
+          </p>
         ) : null}
 
         {building && !queued ? <BuildProgress artifact={stage.artifact} /> : null}
@@ -132,7 +135,7 @@ function StageCard({ stage }: { stage: StageState }) {
             <Link to={SCREEN[stage.artifact]}>
               <Button size="sm" variant={stage.status === "approved" ? "outline" : "default"} disabled={blocked}>
                 <Pencil />
-                {stage.status === "approved" ? "Revisar de nuevo" : "Revisar"}
+                {stage.status === "approved" ? t("dash.reviewAgain") : t("dash.review")}
               </Button>
             </Link>
           )}
@@ -146,6 +149,7 @@ function StageCard({ stage }: { stage: StageState }) {
 }
 
 function RawSection() {
+  const { t, plural } = useT();
   const raw = useRaw();
   const slots = raw.data?.slots ?? [];
   const emptySlots = slots.filter((slot) => slot.files.length === 0);
@@ -169,27 +173,31 @@ function RawSection() {
           ) : (
             <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} />
           )}
-          Datos en bruto
+          {t("dash.rawData")}
         </button>
         {total > 0 ? (
           <span className="text-small text-muted-foreground">
-            {total} archivo(s) · {bytes(size)}
+            {plural("dash.fileCount", total)} · {bytes(size)}
           </span>
         ) : null}
         {emptySlots.length > 0 ? (
           <Badge variant="attention">
-            {emptySlots.map((slot) => slot.label.toLowerCase()).join(" y ")} sin archivos
+            {t("dash.slotsEmpty", {
+              slots: emptySlots
+                .map((slot) => slot.label.toLowerCase())
+                .join(t("common.listJoin")),
+            })}
           </Badge>
         ) : null}
         {transcription.running ? (
-          <Badge mark={<Spinner className="size-3" />}>transcribiendo</Badge>
+          <Badge mark={<Spinner className="size-3" />}>{t("dash.transcribing")}</Badge>
         ) : transcription.stale > 0 ? (
-          <Badge variant="attention">transcripción caducada</Badge>
+          <Badge variant="attention">{t("dash.transcriptionStale")}</Badge>
         ) : null}
         {!expanded ? (
           <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
             <UploadCloud />
-            Importar
+            {t("common.import")}
           </Button>
         ) : null}
       </div>
@@ -225,6 +233,7 @@ function settingLabel(name: string): string {
  * one sees whether one is not installed and which phase would go without it.
  */
 function ModelsRow({ models }: { models: Health["models"] }) {
+  const { t, plural } = useT();
   const [open, setOpen] = useState(false);
 
   const resident = useMemo(
@@ -253,20 +262,20 @@ function ModelsRow({ models }: { models: Health["models"] }) {
   return (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-muted-foreground">Modelos cargados</span>
+        <span className="text-muted-foreground">{t("dash.modelsLoaded")}</span>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          title="Ver qué hay cargado y qué modelos pide la instancia"
+          title={t("dash.modelsHint")}
           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {models.missing.length > 0 ? (
             <Badge variant="danger" className="cursor-pointer hover:opacity-85">
-              {models.missing.length} sin instalar
+              {plural("dash.modelsMissing", models.missing.length)}
             </Badge>
           ) : resident.length === 0 ? (
             <Badge variant="outline" className="cursor-pointer hover:opacity-85">
-              ninguno en memoria
+              {t("dash.noneResident")}
             </Badge>
           ) : (
             <Badge variant="settled" className="cursor-pointer hover:opacity-85">
@@ -279,19 +288,18 @@ function ModelsRow({ models }: { models: Health["models"] }) {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Modelos"
-        description="Arriba, lo que el motor tiene residente en este momento; abajo, lo que la instancia pide en su configuración."
+        title={t("dash.modelsTitle")}
+        description={t("dash.modelsDescription")}
         className="max-w-2xl"
       >
         <div className="space-y-4">
           <section className="space-y-2">
             <h3 className="text-micro font-condensed uppercase text-muted-foreground">
-              En memoria ahora ({resident.length})
+              {t("dash.inMemoryNow", { n: resident.length })}
             </h3>
             {resident.length === 0 ? (
               <p className="text-body text-muted-foreground">
-                El motor no tiene ningún modelo cargado. El primer trabajo que necesite uno
-                paga su carga.
+                {t("dash.noModelLoaded")}
               </p>
             ) : (
               <ul className="space-y-2">
@@ -300,16 +308,20 @@ function ModelsRow({ models }: { models: Health["models"] }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <code className="font-mono text-body">{entry.model}</code>
                       <span className="ml-auto text-micro nums text-muted-foreground">
-                        {entry.size_vram ? `${bytes(entry.size_vram)} en VRAM` : "sin VRAM"}
+                        {entry.size_vram
+                          ? t("dash.inVram", { size: bytes(entry.size_vram) })
+                          : t("dash.noVram")}
                       </span>
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 text-small text-muted-foreground">
                       {entry.context_length ? (
                         <span className="nums">
-                          contexto {entry.context_length.toLocaleString("es-ES")}
+                          {t("dash.context", { n: entry.context_length.toLocaleString() })}
                         </span>
                       ) : null}
-                      {entry.expires_at ? <span>reside hasta {when(entry.expires_at)}</span> : null}
+                      {entry.expires_at ? (
+                        <span>{t("dash.residentUntil", { when: when(entry.expires_at) })}</span>
+                      ) : null}
                     </p>
                   </li>
                 ))}
@@ -317,14 +329,14 @@ function ModelsRow({ models }: { models: Health["models"] }) {
             )}
             {vram > 0 ? (
               <p className="text-small nums text-muted-foreground">
-                {bytes(vram)} de VRAM ocupados en total.
+                {t("dash.vramTotal", { size: bytes(vram) })}
               </p>
             ) : null}
           </section>
 
           <section className="space-y-2 border-t border-border pt-3">
             <h3 className="text-micro font-condensed uppercase text-muted-foreground">
-              Los que pide la instancia ({required.length})
+              {t("dash.requiredBy", { n: required.length })}
             </h3>
             <ul className="space-y-2">
               {required.map(({ model, settings, missing, remote, loaded }) => (
@@ -332,16 +344,16 @@ function ModelsRow({ models }: { models: Health["models"] }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-mono text-body">{model}</code>
                     {remote ? (
-                      <Badge variant="outline">remoto</Badge>
+                      <Badge variant="outline">{t("model.remote")}</Badge>
                     ) : missing ? (
-                      <Badge variant="danger">sin instalar</Badge>
+                      <Badge variant="danger">{t("model.notInstalled")}</Badge>
                     ) : loaded ? (
-                      <Badge variant="settled">cargado</Badge>
+                      <Badge variant="settled">{t("model.loaded")}</Badge>
                     ) : (
-                      <Badge variant="outline">en disco</Badge>
+                      <Badge variant="outline">{t("model.onDisk")}</Badge>
                     )}
                     <span className="ml-auto text-micro nums text-muted-foreground">
-                      {settings.length} fase(s)
+                      {plural("dash.phases", settings.length)}
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -371,6 +383,7 @@ function ModelsRow({ models }: { models: Health["models"] }) {
  * answers «what is running, how long has it been, and can I stop it».
  */
 function ActivityCard() {
+  const { t, plural } = useT();
   const run = useActiveRun();
   const stream = useStream();
   const pipeline = usePipeline();
@@ -392,11 +405,9 @@ function ActivityCard() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <Activity className="size-4 text-muted-foreground" />
-          Actividad
-          <InfoHint label="Qué se ve aquí">
-            El trabajo que el servidor tiene en marcha, sea cual sea: construir un
-            artefacto, indexar, etiquetar el banco, generar o evaluar. El detalle paso a
-            paso y el registro están en «Ver ejecución», abajo a la derecha.
+          {t("dash.activity")}
+          <InfoHint label={t("dash.whatIsHere")}>
+            {t("dash.activityBody")}
           </InfoHint>
         </CardTitle>
       </CardHeader>
@@ -404,7 +415,7 @@ function ActivityCard() {
         {stream.connected ? null : (
           <p className="flex items-center gap-1.5 text-small text-attention">
             <WifiOff className="size-3.5 shrink-0" />
-            Sin conexión con el servidor; reintentando.
+            {t("dash.disconnected")}
           </p>
         )}
 
@@ -415,12 +426,10 @@ function ActivityCard() {
           pipeline.data?.engine_busy_elsewhere ? (
             <p className="flex items-start gap-1.5 text-small text-muted-foreground">
               <Hourglass className="mt-0.5 size-3.5 shrink-0" />
-              Nada tuyo en ejecución. La GPU está ocupada con un trabajo de otro
-              workspace: solo se ejecuta uno cada vez, así que lo que lances ahora
-              esperará su turno.
+              {t("dash.busyElsewhere")}
             </p>
           ) : (
-            <p className="text-muted-foreground">Nada en ejecución.</p>
+            <p className="text-muted-foreground">{t("dash.nothingRunning")}</p>
           )
         ) : (
           <>
@@ -442,12 +451,12 @@ function ActivityCard() {
             {/* The explanation goes as text and not behind an (i): it was in both places at once, and
                 of the two the one that gets read is the one already on screen. */}
             <p className="text-small text-muted-foreground">
-              {explain?.what ?? "Trabajo en curso."}
+              {explain ? t(explain.what) : t("run.working")}
             </p>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
               <span className={cn("font-medium", JOB_STATUS[status!]?.tone)}>
-                {JOB_STATUS[status!]?.label}
+                {JOB_STATUS[status!] ? t(JOB_STATUS[status!].labelKey) : status}
               </span>
               <span className="flex items-center gap-1 nums text-muted-foreground">
                 <Hourglass className="size-3" />
@@ -455,12 +464,10 @@ function ActivityCard() {
               </span>
               {status === "queued" && ahead !== null ? (
                 <span className="text-muted-foreground">
-                  {ahead === 0
-                    ? "siguiente en arrancar"
-                    : `${ahead} trabajo${ahead === 1 ? "" : "s"} delante`}
+                  {ahead === 0 ? t("dash.nextToStart") : plural("dash.jobsAhead", ahead)}
                 </span>
               ) : queued > 0 ? (
-                <span className="text-muted-foreground">{queued} en cola</span>
+                <span className="text-muted-foreground">{t("dash.inQueue", { n: queued })}</span>
               ) : null}
             </div>
 
@@ -470,7 +477,7 @@ function ActivityCard() {
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="min-w-0 truncate text-small">
-                    {overall?.label ?? step?.label ?? "Preparando el proceso…"}
+                    {overall?.label ?? step?.label ?? t("progress.preparing")}
                   </span>
                   <span className="shrink-0 text-small font-medium nums">
                     {overall
@@ -513,7 +520,7 @@ function ActivityCard() {
                 disabled={cancel.isPending}
               >
                 <Ban />
-                Cancelar
+                {t("common.cancel")}
               </Button>
             ) : null}
           </>
@@ -524,6 +531,7 @@ function ActivityCard() {
 }
 
 function SystemCard() {
+  const { t } = useT();
   const health = useHealth();
   const invalidate = useInvalidateChain();
   const client = useQueryClient();
@@ -539,8 +547,8 @@ function SystemCard() {
   if (health.isLoading) return <Skeleton className="h-40" />;
   if (!health.data) {
     return (
-      <Alert tone="danger" title="Sin servidor">
-        <p>La API no responde en el puerto 8000.</p>
+      <Alert tone="danger" title={t("dash.noServer")}>
+        <p>{t("dash.noServerBody")}</p>
       </Alert>
     );
   }
@@ -554,12 +562,12 @@ function SystemCard() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <Server className="size-4 text-muted-foreground" />
-          Sistema
+          {t("dash.system")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-body">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Motor de inferencia</span>
+          <span className="text-muted-foreground">{t("dash.engine")}</span>
           <span className="flex items-center gap-1.5">
             {/* Reachable or not used to be one dot in two hues, which is the worst case
                 of colour-only encoding: it is the single line this panel is read for. */}
@@ -570,7 +578,7 @@ function SystemCard() {
             )}
             <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
             {available ? null : (
-              <span className="text-small text-destructive">sin conexión</span>
+              <span className="text-small text-destructive">{t("dash.offline")}</span>
             )}
           </span>
         </div>
@@ -579,18 +587,17 @@ function SystemCard() {
 
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            Modelos en memoria
-            <InfoHint label="Qué es calentar los modelos">
-              Cargar en la GPU los modelos que pide la instancia antes de que haga falta. En
-              frío, el primer trabajo que los necesite paga la carga; calentarlos la adelanta.
+            {t("dash.modelsInMemory")}
+            <InfoHint label={t("dash.warmHint")}>
+              {t("dash.warmBody")}
             </InfoHint>
           </span>
           {cold.length === 0 ? (
-            <Badge variant="settled">Calientes</Badge>
+            <Badge variant="settled">{t("dash.warm")}</Badge>
           ) : (
             <div className="flex items-center gap-2">
               <Badge variant="outline">
-                {cold.length === wanted.length ? "Fríos" : `${cold.length} en frío`}
+                {cold.length === wanted.length ? t("dash.cold") : t("dash.someCold", { n: cold.length })}
               </Badge>
               <Button
                 size="sm"
@@ -599,7 +606,7 @@ function SystemCard() {
                 disabled={warm.isPending || warming || !available}
               >
                 {warm.isPending || warming ? <Spinner /> : <Cpu />}
-                Calentar
+                {t("dash.warmUp")}
               </Button>
             </div>
           )}
@@ -610,6 +617,7 @@ function SystemCard() {
 }
 
 export function Dashboard() {
+  const { t } = useT();
   const pipeline = usePipeline();
   const { navigate } = useRouter();
 
@@ -629,11 +637,9 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-2">
-        <h1 className="font-display font-expanded text-display">Panel</h1>
-        <InfoHint label="Cómo funciona la cadena">
-          Cada artefacto se construye, se revisa y se aprueba antes de desbloquear el siguiente.
-          Se revisa una vez al principio; después se generan variantes contra una instancia
-          congelada.
+        <h1 className="font-display font-expanded text-display">{t("nav.dashboard")}</h1>
+        <InfoHint label={t("dash.howTheChainWorks")}>
+          {t("dash.chainBody")}
         </InfoHint>
       </header>
 
@@ -642,10 +648,10 @@ export function Dashboard() {
       {next ? (
         <Alert
           tone="info"
-          title={`Siguiente paso: ${next.label}`}
+          title={t("dash.nextStep", { label: next.label })}
           action={
             <Button size="sm" onClick={() => navigate(SCREEN[next.artifact])}>
-              Ir
+              {t("dash.go")}
               <ArrowRight />
             </Button>
           }
@@ -653,17 +659,17 @@ export function Dashboard() {
           <p>
             {next.blocked_reason ??
               (next.status === "missing"
-                ? "Todavía no existe: hay que construirlo."
-                : "Existe pero no está aprobado.")}
+                ? t("dash.notBuiltYet")
+                : t("dash.notApproved"))}
           </p>
         </Alert>
       ) : (
         <Alert
           tone="settled"
-          title="Cadena aprobada de principio a fin"
+          title={t("dash.chainApproved")}
           action={
             <Button size="sm" onClick={() => navigate("/generar")}>
-              Generar
+              {t("nav.generate")}
               <ArrowRight />
             </Button>
           }

@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { STATUS, statusKey, type Tone } from "@/lib/status";
 import type { ArtifactStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const TONE_CLASS: Record<Tone, string> = {
   settled: "text-settled",
@@ -22,13 +23,14 @@ export function StatusMark({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const { t } = useT();
   const key = statusKey(status, blocked);
   const meta = STATUS[key];
   const box = size === "sm" ? "size-2.5" : "size-3.5";
   const tone = TONE_CLASS[meta.tone];
 
   if (meta.shape === "lock") {
-    return <Lock role="img" aria-label={meta.label} className={cn(box, tone, "shrink-0", className)} />;
+    return <Lock role="img" aria-label={t(meta.labelKey)} className={cn(box, tone, "shrink-0", className)} />;
   }
 
   // An SVG rather than a div with a border: "broken ring" and "ring with a sweep" are not
@@ -38,7 +40,7 @@ export function StatusMark({
     <svg
       viewBox="0 0 12 12"
       role="img"
-      aria-label={meta.label}
+      aria-label={t(meta.labelKey)}
       className={cn(box, tone, "shrink-0", className)}
     >
       {meta.shape === "disc" ? <circle cx="6" cy="6" r="4.5" fill="currentColor" /> : null}

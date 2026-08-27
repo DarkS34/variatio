@@ -2,6 +2,7 @@ import { Check, Lock, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 export function SelectionTray({
   selected,
@@ -22,6 +23,7 @@ export function SelectionTray({
   onConfirm: () => void;
   confirmLabel: string;
 }) {
+  const { t, plural } = useT();
   // `total` counts what is on offer, which for every current caller includes everything
   // selected; a caller that broke that invariant would otherwise be announced as having
   // chosen more concepts than exist.
@@ -34,9 +36,9 @@ export function SelectionTray({
             <span className="text-body font-semibold nums text-foreground">
               {selected.length}
             </span>{" "}
-            de {offered} concepto(s) elegidos
+            {plural("tray.chosenOf", offered)}
             {implied.length > 0 ? (
-              <span className="text-primary"> · {implied.length} por prerrequisito</span>
+              <span className="text-primary">{t("tray.byPrerequisite", { n: implied.length })}</span>
             ) : null}
           </p>
           <div className="ml-auto flex items-center gap-2">
@@ -45,9 +47,9 @@ export function SelectionTray({
               size="sm"
               onClick={onClear}
               disabled={selected.length === 0}
-              title="Quitar todos los conceptos elegidos"
+              title={t("concept.clearAll")}
             >
-              Limpiar
+              {t("common.clear")}
             </Button>
             <Button size="sm" onClick={onConfirm}>
               <Check />
@@ -59,7 +61,7 @@ export function SelectionTray({
         <div className="thin-scroll max-h-24 overflow-y-auto">
           <div className="flex flex-wrap items-center gap-1.5">
             {selected.length === 0 ? (
-              <span className="text-body text-muted-foreground">Ningún concepto elegido</span>
+              <span className="text-body text-muted-foreground">{t("concept.noneChosen")}</span>
             ) : (
               selected.map((name) => (
                 <Badge key={name} variant="secondary" className="pr-1">
@@ -71,7 +73,7 @@ export function SelectionTray({
                   <button
                     type="button"
                     onClick={() => onRemove(name)}
-                    aria-label={`Quitar ${name}`}
+                    aria-label={t("concept.remove", { name })}
                     className="rounded-full p-0.5 hover:bg-background/60"
                   >
                     <X className="size-3" />
@@ -86,13 +88,13 @@ export function SelectionTray({
           <div className="thin-scroll max-h-20 overflow-y-auto border-t border-dashed border-border pt-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-micro font-medium uppercase tracking-wide text-muted-foreground">
-                Por prerrequisito
+                {t("tray.byPrerequisiteLabel")}
               </span>
               {implied.map((name) => (
                 <Badge
                   key={name}
                   className="border-dashed border-primary/40 bg-primary/10 text-primary/80"
-                  title="Viene incluido por prerrequisito de lo que ya has elegido"
+                  title={t("concept.byPrerequisite")}
                 >
                   <Lock className="size-3 shrink-0" />
                   <span className="max-w-64 truncate">{name}</span>

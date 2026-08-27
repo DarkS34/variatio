@@ -4,6 +4,7 @@ import { GraphCanvas } from "@/features/kg/GraphCanvas";
 import { buildModel } from "@/features/kg/graph/model";
 import type { GraphView } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export function GraphMode({
   graph,
@@ -22,6 +23,7 @@ export function GraphMode({
   onToggle: (concept: string) => void;
   onAdd: (concepts: string[]) => void;
 }) {
+  const { t } = useT();
   const model = useMemo(() => buildModel(graph), [graph]);
 
   const bands = useMemo(() => {
@@ -54,7 +56,7 @@ export function GraphMode({
       <div className="shrink-0 border-b border-border px-4 py-2 sm:px-6">
         <div className="mx-auto flex max-w-[110rem] flex-wrap items-center gap-2">
           <span className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-            Niveles de prerrequisito
+            {t("concept.prerequisiteLevels")}
           </span>
           {bands.map((band) => (
             <div
@@ -74,10 +76,10 @@ export function GraphMode({
                 type="button"
                 disabled={band.upTo.length === 0}
                 onClick={() => onAdd(band.upTo)}
-                title={`Elegir todos los conceptos que se enseñan hasta el nivel ${band.level}`}
+                title={t("concept.chooseUpToLevel", { level: band.level })}
                 className="rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
-                hasta aquí
+                {t("concept.upToHere")}
               </button>
             </div>
           ))}

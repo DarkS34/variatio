@@ -21,6 +21,7 @@ import {
   useJobRun,
   useSubmitJob,
 } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * What the chain writes on its own, put where it can be read and corrected.
@@ -37,6 +38,7 @@ import {
 
 /** What is happening while they are being written, on the screen where it was asked for. */
 function WritingProgress() {
+  const { t } = useT();
   const run = useJobRun("describe_concepts");
   const cancel = useCancelJob();
   const status = run?.job?.status;
@@ -65,7 +67,7 @@ function WritingProgress() {
             disabled={cancel.isPending}
           >
             <Ban />
-            Cancelar
+            {t("common.cancel")}
           </Button>
         </div>
         {/* No bar: the header's is already this job's while it runs. Two stacked bars counting the
@@ -73,8 +75,8 @@ function WritingProgress() {
         {/* Saved after each concept, so cancelling keeps what was written. Saying so here is what
             makes the button above not scary. */}
         <p className="truncate text-small text-muted-foreground">
-          {step?.detail ?? "Preparando…"} · se guarda tras cada concepto, cancelar no pierde
-          lo ya escrito
+          {step?.detail ?? t("desc.preparing")}
+          {t("desc.savedPerConcept")}
         </p>
       </CardContent>
     </Card>
@@ -82,13 +84,14 @@ function WritingProgress() {
 }
 
 function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: boolean }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   if (sources.length === 0) {
     return (
       <p className="mt-2 flex items-center gap-1.5 text-small text-attention">
         <TriangleAlert className="size-3.5" />
-        Sin respaldo en el corpus: se redactó solo con las relaciones del grafo.
+        {t("desc.noBacking")}
       </p>
     );
   }
@@ -101,7 +104,9 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
         className="flex items-center gap-1.5 text-small text-muted-foreground transition-colors hover:text-foreground"
       >
         <FileText className="size-3.5" />
-        {open ? "Ocultar" : "Ver"} el material del que sale ({sources.length})
+        {open
+          ? t("desc.hideMaterial", { n: sources.length })
+          : t("desc.showMaterial", { n: sources.length })}
       </button>
       {open ? (
         <div className="mt-2 space-y-2">
@@ -127,6 +132,7 @@ function SourcePassages({ sources, named }: { sources: ConceptSource[]; named: b
 }
 
 export function DescriptionReview({ kg }: { kg: KgSummary }) {
+  const { plural, t } = useT();
   const query = useDescriptions();
   const submit = useSubmitJob();
   const offline = useEngineOffline();
@@ -184,7 +190,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
         <div className="min-w-56 flex-1">
           <div className="mb-1 flex items-baseline justify-between text-small">
             <span className="text-muted-foreground">
-              {writing ? "Escribiendo descripciones" : "Conceptos con descripción"}
+              {writing ? t("desc.writing") : t("desc.withDescription")}
             </span>
             <span className="nums">
               {writing
@@ -213,29 +219,29 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
           onClick={() => submit.mutate({ kind: "describe_concepts", params: {}, force: true })}
         >
           {submit.isPending || writing ? <Spinner /> : <Sparkles />}
-          {writing ? "Escribiendo…" : "Generar las que faltan"}
+          {writing ? t("desc.writingShort") : t("desc.generateMissing")}
         </Button>
         <Button
           variant="ghost"
           disabled={submit.isPending || writing || Boolean(offline)}
-          title={offline ?? "Vuelve a escribir todas las descripciones desde cero"}
+          title={offline ?? t("desc.regenerateAllHint")}
           onClick={() =>
             submit.mutate({ kind: "describe_concepts", params: { overwrite: true }, force: true })
           }
         >
           <RefreshCw />
-          Regenerar todas
+          {t("desc.regenerateAll")}
         </Button>
         <Button
           variant="secondary"
           disabled={submit.isPending || writing || Boolean(offline)}
           title={
             offline ??
-            "Escribe las descripciones que falten y calcula los embeddings de los conceptos"
+            t("desc.indexHint")
           }
           onClick={() => submit.mutate({ kind: "index", params: {}, force: true })}
         >
-          Indexar conceptos
+          {t("desc.index")}
         </Button>
       </div>
 
@@ -244,38 +250,29 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
       {/* Said once, visibly, and not behind an (i): it is the only sentence that explains why
           this tab exists and why nothing has to be pressed to have them. */}
       <p className="text-small leading-relaxed text-muted-foreground">
-        Las descripciones son el texto contra el que se emparejan los ítems al etiquetar:
-        un concepto sin ella no tiene vector y nunca sale como candidato. Se escriben solas
-        al indexar, a partir de los párrafos del corpus de teoría en los que aparece cada
-        concepto — los mismos que se pueden abrir debajo de cada texto. Los botones de
-        arriba solo sirven para adelantarlo o para rehacerlo.
+        {t("desc.why")}
       </p>
 
       {missing.length > 0 && !writing ? (
-        <Alert tone="attention" title={`${missing.length} concepto(s) sin descripción`} />
+        <Alert tone="attention" title={plural("desc.missing", missing.length)} />
       ) : null}
 
       {unanchored.length > 0 ? (
         <Alert
           tone="attention"
-          title={`${unanchored.length} concepto(s) sin respaldo en el corpus`}
+          title={plural("desc.unanchored", unanchored.length)}
           action={
-            <InfoHint label="Qué significa sin respaldo">
-              El anclaje lo escribe la construcción del grafo. Un concepto sin él, o bien se
-              añadió a mano, o bien viene de un grafo construido antes de que esto existiera:
-              su descripción se redacta solo con las relaciones. Reconstruir el grafo lo
-              devuelve.
-            </InfoHint>
+            <InfoHint label={t("desc.unanchoredHintLabel")}>{t("desc.unanchoredHint")}</InfoHint>
           }
         />
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          aria-label="Filtrar por concepto o dominio"
+          aria-label={t("desc.filter")}
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
-          placeholder="Filtrar por concepto o dominio…"
+          placeholder={t("desc.filterPlaceholder")}
           className="max-w-72"
         />
         <Button
@@ -284,9 +281,11 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
           onClick={() => setOnlyMissing((value) => !value)}
         >
           <TriangleAlert />
-          Solo sin descripción
+          {t("desc.onlyMissing")}
         </Button>
-        <span className="text-small text-muted-foreground">{rows.length} concepto(s)</span>
+        <span className="text-small text-muted-foreground">
+          {plural("desc.conceptCount", rows.length)}
+        </span>
       </div>
 
       <div className="space-y-2">
@@ -306,13 +305,13 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                 <span className="text-body font-medium">{concept.name}</span>
                 <Badge variant="outline">{concept.domain}</Badge>
                 {hasExemplars(concept) ? null : (
-                  <Badge variant="attention">sin ejemplos</Badge>
+                  <Badge variant="attention">{t("desc.noExamples")}</Badge>
                 )}
                 <div className="ml-auto flex items-center gap-2">
                   {saved[concept.name] ? (
                     <span className="flex items-center gap-1 text-small text-settled">
                       <Check className="size-3.5" />
-                      guardada
+                      {t("desc.saved")}
                     </span>
                   ) : null}
                   {dirty ? (
@@ -328,7 +327,7 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                           })
                         }
                       >
-                        Descartar
+                        {t("common.discard")}
                       </Button>
                       <Button
                         size="sm"
@@ -337,19 +336,19 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
                           save.mutate({ concept: concept.name, description: value })
                         }
                       >
-                        Guardar
+                        {t("common.save")}
                       </Button>
                     </>
                   ) : null}
                 </div>
               </div>
               <Textarea
-                aria-label={`Descripción de ${concept.name}`}
+                aria-label={t("desc.of", { name: concept.name })}
                 value={value}
                 onChange={(event) =>
                   setEdits((current) => ({ ...current, [concept.name]: event.target.value }))
                 }
-                placeholder="Sin descripción: se generará con el modelo o puedes escribirla aquí."
+                placeholder={t("desc.placeholder")}
                 className="min-h-20"
               />
               <SourcePassages

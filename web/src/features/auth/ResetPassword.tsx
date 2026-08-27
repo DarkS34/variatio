@@ -6,8 +6,10 @@ import { Spinner } from "@/components/ui/misc";
 import { useResetPassword } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
+import { useT } from "@/lib/i18n";
 
 export function ResetPassword({ token }: { token: string }) {
+  const { t } = useT();
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const reset = useResetPassword();
@@ -25,21 +27,21 @@ export function ResetPassword({ token }: { token: string }) {
   if (reset.isSuccess) {
     return (
       <AuthLayout
-        title="Contraseña cambiada"
-        description="Has entrado con la nueva. Se ha cerrado la sesión en los demás dispositivos."
+        title={t("reset.done")}
+        description={t("reset.doneBody")}
       >
         <Button className="w-full" onClick={() => window.location.assign("/")}>
-          Continuar
+          {t("common.continue")}
         </Button>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout title="Nueva contraseña" description="El enlace solo sirve una vez.">
+    <AuthLayout title={t("reset.newPassword")} description={t("reset.singleUse")}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="reset-password">Contraseña</Label>
+          <Label htmlFor="reset-password">{t("auth.password")}</Label>
           <Input
             id="reset-password"
             type="password"
@@ -49,11 +51,11 @@ export function ResetPassword({ token }: { token: string }) {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="text-small text-muted-foreground">Al menos 12 caracteres.</p>
+          <p className="text-small text-muted-foreground">{t("password.next.help")}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="reset-repeat">Repítela</Label>
+          <Label htmlFor="reset-repeat">{t("password.repeat")}</Label>
           <Input
             id="reset-repeat"
             type="password"
@@ -62,14 +64,16 @@ export function ResetPassword({ token }: { token: string }) {
             value={repeat}
             onChange={(event) => setRepeat(event.target.value)}
           />
-          {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
+          {mismatch ? (
+            <p className="text-small text-destructive">{t("password.mismatch")}</p>
+          ) : null}
         </div>
 
         <FormError error={reset.error} />
 
         <Button type="submit" disabled={reset.isPending || mismatch}>
           {reset.isPending ? <Spinner /> : null}
-          Guardar
+          {t("common.save")}
         </Button>
       </form>
     </AuthLayout>

@@ -32,6 +32,7 @@ import {
   useProfile,
   usePromoteGeneration,
 } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * Everything this workspace has generated, kept.
@@ -49,6 +50,7 @@ import {
  * title, so this one heads its own section and does not claim to be the page.
  */
 export function GenerationsPanel() {
+  const { t } = useT();
   const session = useSession();
   const profileQuery = useProfile();
   const [scope, setScope] = useState<"mine" | "workspace">("mine");
@@ -73,9 +75,10 @@ export function GenerationsPanel() {
         ? toMarkdown(
             rows.map((row) => ({ item: row.item, item_type: row.item_type })),
             profile,
+            t,
           )
         : "",
-    [rows, profile],
+    [rows, profile, t],
   );
 
   if (profileQuery.isLoading) return <Skeleton className="h-96" />;
@@ -84,10 +87,8 @@ export function GenerationsPanel() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
         <h2 className="text-heading">Variantes guardadas</h2>
-        <InfoHint label="Qué hay aquí">
-          Cada ítem que el generador validó, con el encargo que lo produjo. Se guardan
-          solas, una a una en cuanto se validan: no hay nada que pulsar al generar, y una
-          tanda cancelada conserva lo que ya había salido.
+        <InfoHint label={t("generations.whatIsHere")}>
+          {t("generations.whatIsHere.body")}
         </InfoHint>
         <span className="text-body nums text-muted-foreground">{total}</span>
 
@@ -125,13 +126,13 @@ export function GenerationsPanel() {
             active={scope === "mine"}
             onClick={() => setScope("mine")}
             icon={<User className="size-3.5" />}
-            label="Mías"
+            label={t("generations.mine")}
           />
           <ScopeTab
             active={scope === "workspace"}
             onClick={() => setScope("workspace")}
             icon={<Users className="size-3.5" />}
-            label="De todo el workspace"
+            label={t("generations.wholeWorkspace")}
           />
         </div>
 
@@ -143,14 +144,14 @@ export function GenerationsPanel() {
           }}
         >
           <Input
-            aria-label="Buscar en el enunciado, el concepto o las instrucciones"
-            placeholder="Buscar en el enunciado, el concepto o las instrucciones…"
+            aria-label={t("generations.search")}
+            placeholder={t("generations.search.placeholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <Button type="submit" variant="outline" size="sm">
             <Search />
-            Buscar
+            {t("common.search")}
           </Button>
         </form>
       </div>
@@ -160,11 +161,9 @@ export function GenerationsPanel() {
       ) : rows.length === 0 ? (
         <EmptyState
           icon={<Sparkles className="size-6" />}
-          title={search ? "Nada coincide con esa búsqueda" : "Todavía no hay variantes guardadas"}
+          title={search ? t("generations.noMatch") : t("generations.empty")}
         >
-          {search
-            ? "Prueba con otro término, o cambia el ámbito a todo el workspace."
-            : "Genera un ítem y quedará aquí, con los conceptos y las instrucciones con que lo pediste."}
+          {search ? t("generations.noMatchHint") : t("generations.emptyHint")}
         </EmptyState>
       ) : (
         <div className="space-y-3">
@@ -237,6 +236,7 @@ function GenerationCard({
   onPromote: () => void;
   showAuthor: boolean;
 }) {
+  const { t } = useT();
   const { navigate } = useRouter();
   const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
   const manyTypes = profile ? Object.keys(profile.item_types).length > 1 : false;
@@ -247,15 +247,15 @@ function GenerationCard({
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-body">
-            {row.concepts.length > 0 ? row.concepts.join(" · ") : "Sin conceptos declarados"}
+            {row.concepts.length > 0 ? row.concepts.join(" · ") : t("generations.noConcepts")}
           </CardTitle>
           {manyTypes && profile ? (
-            <Badge variant="outline">{typeLabel(profile, row.item_type)}</Badge>
+            <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>
           ) : null}
           {row.think ? (
             <Badge variant="secondary" className="gap-1">
               <Brain className="size-3" />
-              razonó
+              {t("generations.reasoned")}
             </Badge>
           ) : null}
           <span className="text-small text-muted-foreground">
@@ -269,42 +269,42 @@ function GenerationCard({
             {row.promoted_item_id ? (
               <Badge variant="secondary" className="gap-1 self-center">
                 <Library className="size-3" />
-                en el banco · {row.promoted_item_id}
+                {t("generations.inBank", { id: row.promoted_item_id })}
               </Badge>
             ) : canPromote ? (
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={promoting}
-                title="Añade esta variante al banco de ejemplares, etiquetada con sus conceptos; el banco quedará pendiente de aprobarse de nuevo"
+                title={t("generations.promoteHint")}
                 onClick={onPromote}
               >
                 <BookPlus />
-                {promoting ? "Promoviendo…" : "Promover al banco"}
+                {promoting ? t("generations.promoting") : t("generations.promote")}
               </Button>
             ) : null}
             <Button
               variant="ghost"
               size="sm"
-              title="Abre «Generar» con el mismo encargo: conceptos, currículo, campos fijados e instrucciones"
+              title={t("generations.againHint")}
               onClick={() => {
                 stashDraft(fromGeneration(row));
                 navigate("/generar");
               }}
             >
               <Sparkles />
-              Generar más como esta
+              {t("generations.moreLikeThis")}
             </Button>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Copiar JSON"
+              aria-label={t("generations.copyJson")}
               onClick={() => navigator.clipboard.writeText(JSON.stringify(row.item, null, 2))}
             >
               <Copy />
             </Button>
             {canDelete ? (
-              <Button variant="ghost" size="icon-sm" aria-label="Borrar" onClick={onDelete}>
+              <Button variant="ghost" size="icon-sm" aria-label={t("generations.delete")} onClick={onDelete}>
                 <Trash2 />
               </Button>
             ) : null}
@@ -330,7 +330,7 @@ function GenerationCard({
           onClick={onToggle}
           className="text-small font-medium text-primary underline-offset-4 hover:underline"
         >
-          {expanded ? "Ver menos" : "Ver el ítem completo y su encargo"}
+          {expanded ? "Ver menos" : t("generations.viewFull")}
         </button>
       </CardContent>
     </Card>

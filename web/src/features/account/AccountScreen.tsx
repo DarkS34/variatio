@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Check, KeyRound, UserRound } from "lucide-react";
+import { ArrowRight, Check, KeyRound, Languages, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,14 @@ import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
 import { GenerationsPanel } from "@/features/generations/GenerationsPanel";
+import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import {
-  ROLE_HINTS,
-  ROLE_LABELS,
+  ROLE_HINT_KEYS,
+  ROLE_LABEL_KEYS,
   useChangePassword,
   useSession,
+  useSetLanguage,
   useUpdateProfile,
 } from "@/state/auth";
 import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";
@@ -39,14 +41,15 @@ import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/q
  * can be sent, bookmarked and reloaded.
  */
 export const ACCOUNT_TABS = [
-  { value: "cuenta", label: "Cuenta", path: "/perfil" },
-  { value: "variantes", label: "Variantes", path: "/perfil/variantes" },
-  { value: "accesos", label: "Accesos", path: "/perfil/accesos" },
-] as const;
+  { value: "cuenta", label: "tabs.account", path: "/perfil" },
+  { value: "variantes", label: "tabs.variants", path: "/perfil/variantes" },
+  { value: "accesos", label: "tabs.access", path: "/perfil/accesos" },
+] as const satisfies readonly { value: string; label: Key; path: string }[];
 
 export type AccountTab = (typeof ACCOUNT_TABS)[number]["value"];
 
 export function AccountScreen({ tab }: { tab: AccountTab }) {
+  const { t } = useT();
   const session = useSession();
   const { navigate } = useRouter();
   const user = session.data?.user;
@@ -56,18 +59,14 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display font-expanded text-display">Mi perfil</h1>
-        <InfoHint label="Qué hay aquí">
-          Tu cuenta y lo que es tuyo: los datos con los que entras, las variantes que has
-          generado y los workspaces a los que tienes acceso. Nada de esto es parte de la
-          cadena de artefactos, por eso no está en la barra de arriba.
-        </InfoHint>
+        <h1 className="font-display font-expanded text-display">{t("account.title")}</h1>
+        <InfoHint label={t("account.whatIsHere")}>{t("account.whatIsHere.body")}</InfoHint>
         <span className="font-mono text-body text-muted-foreground">{user.username}</span>
-        {user.is_admin ? <Badge variant="secondary">Administrador</Badge> : null}
+        {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
       </header>
 
       <Tabs
-        items={ACCOUNT_TABS.map(({ value, label }) => ({ value, label }))}
+        items={ACCOUNT_TABS.map(({ value, label }) => ({ value, label: t(label) }))}
         value={tab}
         onChange={(next) => {
           const target = ACCOUNT_TABS.find((item) => item.value === next);
@@ -84,11 +83,81 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
 /* Cuenta ------------------------------------------------------------------------------ */
 
+/**
+ * What this account READS the app in.
+ *
+ * Deliberately a card here and not a row in the avatar menu, unlike the theme: the theme
+ * is a property of the screen somebody is sitting at and changes twice a day, while this
+ * is a property of the person and is set once. The warning under it is the point of the
+ * card — the obvious reading of «idioma» is that it changes everything, and it changes
+ * exactly one half: what the workspace's prompts are written in is the workspace's own
+ * declaration, fixed when it was created.
+ */
+function LanguageCard() {
+  const { t, language } = useT();
+  const setLanguage = useSetLanguage();
+  const toast = useToast();
+
+  const choose = (next: Language) => {
+    if (next === language) return;
+    setLanguage.mutate(next, {
+      onSuccess: () =>
+        toast({ title: t("language.changed", { name: LANGUAGE_NAMES[next] }) }),
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <Languages className="size-4 text-muted-foreground" />
+          {t("language.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-small text-muted-foreground">{t("language.help")}</p>
+
+        <div
+          role="radiogroup"
+          aria-label={t("language.title")}
+          className="flex flex-wrap gap-2"
+        >
+          {LANGUAGES.map((code) => (
+            <Button
+              key={code}
+              role="radio"
+              aria-checked={code === language}
+              variant={code === language ? "default" : "outline"}
+              disabled={setLanguage.isPending}
+              onClick={() => choose(code)}
+            >
+              {setLanguage.isPending && setLanguage.variables === code ? (
+                <Spinner />
+              ) : code === language ? (
+                <Check />
+              ) : null}
+              {LANGUAGE_NAMES[code]}
+            </Button>
+          ))}
+        </div>
+
+        <Alert tone="attention" title={t("language.warning.title")}>
+          {t("language.warning.body")}
+        </Alert>
+        <p className="text-small text-muted-foreground">{t("language.notPrompts")}</p>
+
+        <FormError error={setLanguage.error} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function AccountTabView() {
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
       <IdentityCard />
       <PasswordCard />
+      <LanguageCard />
     </div>
   );
 }
@@ -102,6 +171,7 @@ function AccountTabView() {
  * what it is *for* rather than pretending to be a second identity.
  */
 function IdentityCard() {
+  const { t } = useT();
   const session = useSession();
   const update = useUpdateProfile();
   const toast = useToast();
@@ -116,7 +186,7 @@ function IdentityCard() {
     event.preventDefault();
     update.mutate(
       { name: name.trim(), email: email.trim() || null },
-      { onSuccess: () => toast({ title: "Guardado" }) },
+      { onSuccess: () => toast({ title: t("common.saved") }) },
     );
   };
 
@@ -125,23 +195,23 @@ function IdentityCard() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <UserRound className="size-4 text-muted-foreground" />
-          Datos de la cuenta
+          {t("account.identity.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Usuario</Label>
+            <Label>{t("account.identity.username")}</Label>
             <p className="rounded-md border border-dashed border-border px-3 py-2 font-mono text-body text-muted-foreground">
               {user.username}
             </p>
             <p className="text-small text-muted-foreground">
-              No se puede cambiar: es lo que identifica todo lo que has hecho.
+              {t("account.identity.usernameLocked")}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="account-name">Nombre</Label>
+            <Label htmlFor="account-name">{t("account.identity.name")}</Label>
             <Input
               id="account-name"
               value={name}
@@ -149,23 +219,22 @@ function IdentityCard() {
               onChange={(event) => setName(event.target.value)}
             />
             <p className="text-small text-muted-foreground">
-              Como apareces para el resto en este workspace.
+              {t("account.identity.nameHelp")}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="account-email">Correo (opcional)</Label>
+            <Label htmlFor="account-email">{t("account.identity.email")}</Label>
             <Input
               id="account-email"
               type="email"
               autoComplete="email"
-              placeholder="sin correo"
+              placeholder={t("account.identity.email.placeholder")}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
             <p className="text-small text-muted-foreground">
-              Solo sirve para recibir el enlace de restablecer la contraseña. No se entra
-              con él y no lo ve nadie más.
+              {t("account.identity.email.help")}
             </p>
           </div>
 
@@ -174,12 +243,12 @@ function IdentityCard() {
           <div className="flex items-center gap-2">
             <Button type="submit" disabled={!dirty || update.isPending}>
               {update.isPending ? <Spinner /> : null}
-              Guardar
+              {t("common.save")}
             </Button>
             {update.isSuccess && !dirty ? (
               <span className="flex items-center gap-1 text-small text-settled">
                 <Check className="size-3.5" />
-                Guardado
+                {t("common.saved")}
               </span>
             ) : null}
           </div>
@@ -192,6 +261,7 @@ function IdentityCard() {
 /** The old dialog, on the page. Same contract, said out loud: changing the password signs
  *  out every other device, because the usual reason to change it is a suspicion. */
 function PasswordCard() {
+  const { t } = useT();
   const toast = useToast();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -211,8 +281,8 @@ function PasswordCard() {
           setNext("");
           setRepeat("");
           toast({
-            title: "Contraseña cambiada",
-            description: "Se ha cerrado la sesión en el resto de dispositivos.",
+            title: t("password.changed.title"),
+            description: t("password.changed.body"),
           });
         },
       },
@@ -224,18 +294,15 @@ function PasswordCard() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="size-4 text-muted-foreground" />
-          Contraseña
+          {t("password.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <p className="text-small text-muted-foreground">
-            Al cambiarla se cierra la sesión en el resto de dispositivos; esta pestaña
-            sigue abierta con una sesión nueva.
-          </p>
+          <p className="text-small text-muted-foreground">{t("password.help")}</p>
 
           <div className="space-y-1.5">
-            <Label htmlFor="current-password">Contraseña actual</Label>
+            <Label htmlFor="current-password">{t("password.current")}</Label>
             <Input
               id="current-password"
               type="password"
@@ -247,7 +314,7 @@ function PasswordCard() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="next-password">Nueva</Label>
+            <Label htmlFor="next-password">{t("password.next")}</Label>
             <Input
               id="next-password"
               type="password"
@@ -256,11 +323,11 @@ function PasswordCard() {
               value={next}
               onChange={(event) => setNext(event.target.value)}
             />
-            <p className="text-small text-muted-foreground">Al menos 12 caracteres.</p>
+            <p className="text-small text-muted-foreground">{t("password.next.help")}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="repeat-password">Repítela</Label>
+            <Label htmlFor="repeat-password">{t("password.repeat")}</Label>
             <Input
               id="repeat-password"
               type="password"
@@ -269,7 +336,9 @@ function PasswordCard() {
               value={repeat}
               onChange={(event) => setRepeat(event.target.value)}
             />
-            {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
+            {mismatch ? (
+              <p className="text-small text-destructive">{t("password.mismatch")}</p>
+            ) : null}
           </div>
 
           <FormError error={change.error} />
@@ -277,12 +346,12 @@ function PasswordCard() {
           <div className="flex items-center gap-2">
             <Button type="submit" disabled={change.isPending || mismatch}>
               {change.isPending ? <Spinner /> : null}
-              Cambiar la contraseña
+              {t("password.submit")}
             </Button>
             {change.isSuccess ? (
               <span className="flex items-center gap-1 text-small text-settled">
                 <Check className="size-3.5" />
-                Cambiada
+                {t("password.changed")}
               </span>
             ) : null}
           </div>
@@ -307,6 +376,7 @@ function PasswordCard() {
  * writes, and a screen that offered to change it here would be offering a 403.
  */
 function AccessTab() {
+  const { t } = useT();
   const listing = useWorkspaces();
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
@@ -316,21 +386,15 @@ function AccessTab() {
 
   return (
     <div className="space-y-4">
-      <Alert tone="info" title="Los accesos los concede quien administra la instalación">
-        <p>
-          No hay registro abierto: se entra por invitación, y quien te da acceso a una
-          instancia es la misma persona. Aquí solo se lee lo que ya tienes concedido.
-        </p>
+      <Alert tone="info" title={t("access.granted.title")}>
+        <p>{t("access.granted.body")}</p>
       </Alert>
 
       {listing.isLoading ? <Spinner /> : null}
 
       {!listing.isLoading && mine.length === 0 ? (
-        <Alert tone="attention" title="Tu cuenta no es miembro de ningún workspace">
-          <p>
-            Es un estado normal, no una cuenta a medio hacer: el panel te ofrece crear tu
-            propia instancia, y quien administra puede darte acceso a una que ya exista.
-          </p>
+        <Alert tone="attention" title={t("access.none.title")}>
+          <p>{t("access.none.body")}</p>
         </Alert>
       ) : null}
 
@@ -345,21 +409,21 @@ function AccessTab() {
                     {workspace.slug}
                   </span>
                   {workspace.slug === current ? (
-                    <Badge variant="secondary">en uso</Badge>
+                    <Badge variant="secondary">{t("access.inUse")}</Badge>
                   ) : null}
                 </p>
                 <p className="text-small text-muted-foreground">
                   {workspace.as_admin
-                    ? "No eres miembro: entras porque administras la instalación."
+                    ? t("access.notAMember")
                     : workspace.role
-                      ? ROLE_HINTS[workspace.role]
-                      : "Sin permiso declarado."}
+                      ? t(ROLE_HINT_KEYS[workspace.role])
+                      : t("role.undeclared")}
                 </p>
               </div>
               {workspace.as_admin ? (
-                <Badge variant="secondary">por administración</Badge>
+                <Badge variant="secondary">{t("access.byAdmin")}</Badge>
               ) : workspace.role ? (
-                <Badge variant="outline">{ROLE_LABELS[workspace.role]}</Badge>
+                <Badge variant="outline">{t(ROLE_LABEL_KEYS[workspace.role])}</Badge>
               ) : null}
               {workspace.slug === current ? null : (
                 <Button
@@ -368,7 +432,7 @@ function AccessTab() {
                   disabled={switching.isPending}
                   onClick={() => switching.mutate(workspace.slug)}
                 >
-                  Entrar
+                  {t("ws.enter")}
                   <ArrowRight />
                 </Button>
               )}

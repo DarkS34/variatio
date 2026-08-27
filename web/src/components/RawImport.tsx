@@ -10,6 +10,7 @@ import { bytes } from "@/lib/format";
 import type { RawSlot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { keys, useRaw } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * The way in for a first-time instance.
@@ -34,6 +35,7 @@ function accepts(name: string, extensions: string[]) {
 }
 
 function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] }) {
+  const { t, plural } = useT();
   const client = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -57,7 +59,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
     setError(null);
     setNotice(null);
     if (valid.length === 0) {
-      setError(`Ningún archivo admitido. Se aceptan: ${extensions.join(", ")}.`);
+      setError(t("raw.noneAccepted", { extensions: extensions.join(", ") }));
       return;
     }
 
@@ -66,8 +68,8 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
       const result = await api.uploadRaw(slot.kind, valid, setProgress);
       const renamed = result.added.filter((file) => file.renamed);
       const parts = [`${result.added.length} archivo(s) importado(s)`];
-      if (renamed.length > 0) parts.push(`${renamed.length} renombrado(s) por nombre repetido`);
-      if (invalid.length > 0) parts.push(`${invalid.length} descartado(s) por extensión`);
+      if (renamed.length > 0) parts.push(plural("raw.renamed", renamed.length));
+      if (invalid.length > 0) parts.push(plural("raw.invalid", invalid.length));
       for (const item of result.rejected) parts.push(`${item.name}: ${item.reason}`);
       setNotice(parts.join(" · "));
       refresh();
@@ -79,7 +81,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
   };
 
   const remove = async (name: string) => {
-    if (!window.confirm(`¿Eliminar "${name}" de ${slot.label.toLowerCase()}?`)) return;
+    if (!window.confirm(t("raw.confirmDelete", { name, slot: slot.label.toLowerCase() }))) return;
     setError(null);
     try {
       await api.deleteRaw(slot.kind, name);
@@ -106,7 +108,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
           <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
           <CardTitle className="flex-1">{slot.label}</CardTitle>
           {empty ? (
-            <Badge variant="attention">vacío</Badge>
+            <Badge variant="attention">{t("common.empty")}</Badge>
           ) : (
             <Badge variant="outline">
               {slot.files.length} archivo(s) · {bytes(slot.bytes)}
@@ -149,7 +151,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
             className={cn("size-6", dragging ? "text-primary" : "text-muted-foreground")}
           />
           <p className="text-body font-medium">
-            {dragging ? "Suelta aquí los documentos" : "Arrastra documentos o haz clic"}
+            {dragging ? t("raw.drop") : "Arrastra documentos o haz clic"}
           </p>
           <p className="text-small text-muted-foreground">{extensions.join(" · ")}</p>
           <input
@@ -190,8 +192,8 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
                 </span>
                 <button
                   type="button"
-                  aria-label={`Eliminar ${file.name}`}
-                  title="Eliminar del origen"
+                  aria-label={t("raw.deleteFile", { name: file.name })}
+                  title={t("raw.deleteFromSlot")}
                   onClick={() => remove(file.name)}
                   className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
                 >
@@ -208,7 +210,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
                 >
                   {expanded
                     ? "Ver menos"
-                    : `Ver los ${slot.files.length - VISIBLE_FILES} restantes`}
+                    : plural("raw.showRest", slot.files.length - VISIBLE_FILES)}
                 </button>
               </li>
             ) : null}
@@ -220,6 +222,7 @@ function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] })
 }
 
 export function RawImport() {
+  const { t } = useT();
   const raw = useRaw();
 
   if (raw.isLoading) {
@@ -233,8 +236,8 @@ export function RawImport() {
 
   if (!raw.data) {
     return (
-      <Alert tone="danger" title="No se pudieron leer los datos en bruto">
-        <p>La API no respondió a /api/raw.</p>
+      <Alert tone="danger" title={t("raw.unreadable")}>
+        <p>{t("raw.noApi")}</p>
       </Alert>
     );
   }

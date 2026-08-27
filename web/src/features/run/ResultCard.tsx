@@ -11,6 +11,7 @@ import { isCodeField } from "@/features/bank/BankScreen";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT, type Key } from "@/lib/i18n";
 
 /** A value that already fences its own code carries markdown, not raw source. */
 function isFenced(value: string): boolean {
@@ -63,6 +64,7 @@ export function ItemFields({
  * copy, the tagger not recognising the objective — are signals for the person reading.
  */
 export function ItemChecks({ checks, retried }: { checks?: ItemChecks | null; retried?: number }) {
+  const { t } = useT();
   if (!checks) return null;
   const flagged = checks.flags.length > 0;
   const tagger = checks.tagger;
@@ -77,18 +79,23 @@ export function ItemChecks({ checks, retried }: { checks?: ItemChecks | null; re
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {retried ? (
           <span>
-            <Badge variant="outline">Reintentada ×{retried}</Badge>
+            <Badge variant="outline">{t("result.retried", { n: retried })}</Badge>
           </span>
         ) : null}
         {flagged ? (
           checks.flags.map((flag) => <span key={flag}>{flag}</span>)
         ) : (
-          <span>Sin señales: el etiquetador la reconoce, nada prohibido, escenario propio.</span>
+          <span>{t("result.noFlags")}</span>
         )}
         <span className="text-micro text-muted-foreground">
-          {tagger ? `etiquetada como ${tagger.primary ?? "nada"}` : "sin etiquetador"}
+          {tagger
+            ? t("result.taggedAs", { concept: tagger.primary ?? t("common.none").toLowerCase() })
+            : t("result.noTagger")}
           {checks.similarity
-            ? ` · más cercana a ${checks.similarity.to} (${checks.similarity.score.toFixed(2)})`
+            ? ` ${t("result.closestTo", {
+                to: checks.similarity.to,
+                score: checks.similarity.score.toFixed(2),
+              })}`
             : ""}
         </span>
       </div>
@@ -116,6 +123,7 @@ export function ResultCard({
   /** Whether the server has already kept this item as a row of «Mis variantes». */
   saved?: boolean;
 }) {
+  const { t, language } = useT();
   const [showThinking, setShowThinking] = useState(false);
   const spec = itemTypeOf(profile, { item_type: itemType });
   const manyTypes = Object.keys(profile.item_types).length > 1;
@@ -124,23 +132,23 @@ export function ResultCard({
     <Card className="animate-fade-in">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle>Ítem {index}</CardTitle>
+          <CardTitle>{t("result.itemHeading", { n: index })}</CardTitle>
           {manyTypes ? (
             <span className="text-small text-muted-foreground">
-              {typeLabel(profile, itemType ?? null)}
+              {typeLabel(profile, itemType ?? null, t)}
             </span>
           ) : null}
           {saved ? (
             <Badge variant="secondary" className="gap-1">
               <Check className="size-3" />
-              guardada
+              {t("result.saved")}
             </Badge>
           ) : null}
           <div className="ml-auto flex gap-1">
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Copiar JSON"
+              aria-label={t("generations.copyJson")}
               onClick={() => navigator.clipboard.writeText(JSON.stringify(item, null, 2))}
             >
               <Copy />
@@ -164,9 +172,9 @@ export function ResultCard({
                 className={cn("size-3.5 transition-transform", showThinking && "rotate-90")}
               />
               <Brain className="size-3.5" />
-              Razonamiento
+              {t("result.reasoning")}
               <span className="ml-auto nums">
-                {thinking.length.toLocaleString("es-ES")}
+                {thinking.length.toLocaleString(language)}
               </span>
             </button>
             {showThinking ? (
@@ -184,14 +192,15 @@ export function ResultCard({
 export function toMarkdown(
   items: { item: Record<string, unknown>; item_type?: string }[],
   profile: ExemplarsProfile,
+  t: (key: Key, params?: Record<string, string | number>) => string,
 ): string {
-  const lines: string[] = ["# Ítems generados", ""];
+  const lines: string[] = [t("result.generatedItems"), ""];
   items.forEach(({ item, item_type }, index) => {
     const spec = itemTypeOf(profile, { item_type });
-    const heading = `## Ítem ${index + 1}`;
+    const heading = t("result.itemN", { n: index + 1 });
     lines.push(
       Object.keys(profile.item_types).length > 1
-        ? `${heading} · ${typeLabel(profile, item_type ?? null)}`
+        ? `${heading} · ${typeLabel(profile, item_type ?? null, t)}`
         : heading,
       "",
       spec ? String(item[spec.primary_field] ?? "") : "",

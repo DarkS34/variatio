@@ -41,6 +41,9 @@ export interface Scene {
    *  its name is set in pixels and so grows relative to the frame as the frame gets smaller —
    *  at preview size the names cover the very regions they label. */
   hullLabels: boolean;
+  /** «N sin relaciones», already in the reader's language. The painter takes the sentence
+   *  rather than the catalogue: it runs once per frame and must not know about i18n. */
+  isolatedCaption: string;
   selected: number;
   picked?: Set<number>;
   focused: number;
@@ -582,9 +585,7 @@ function drawParkedLane(context: CanvasRenderingContext2D, scene: Scene) {
     context.font = `600 ${Math.min(16, 10 / view.scale)}px ${FONT_SANS}`;
     context.textAlign = "left";
     context.textBaseline = "alphabetic";
-    const caption =
-      model.isolated.length === 1 ? "1 sin relaciones" : `${model.isolated.length} sin relaciones`;
-    context.fillText(caption, rule, minY - 30);
+    context.fillText(scene.isolatedCaption, rule, minY - 30);
   }
   context.globalAlpha = 1;
 }

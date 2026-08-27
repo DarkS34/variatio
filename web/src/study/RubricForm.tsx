@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { ARM_META } from "./arms";
 import type { EvaluationRating, Instruments } from "./types";
+import { useT } from "@/lib/i18n";
 
 /**
  * Four questions about OUR variant, after the reveal, and deliberately OPTIONAL.
@@ -38,6 +39,7 @@ function Scale({
   ends: [string, string];
   target?: number | null;
 }) {
+  const { t } = useT();
   return (
     <div className="space-y-1">
       <div className="flex gap-1">
@@ -46,7 +48,7 @@ function Scale({
             key={score}
             type="button"
             onClick={() => onChange(score)}
-            aria-label={`${score} de 5`}
+            aria-label={t("rubric.scoreOf", { n: score })}
             aria-pressed={value === score}
             className={cn(
               "h-8 flex-1 border text-body nums transition-colors",
@@ -85,6 +87,7 @@ export function RubricForm({
   onSkip: () => void;
   pending: boolean;
 }) {
+  const { t } = useT();
   const [draft, setDraft] = useState<Partial<EvaluationRating>>(rating ?? {});
   const saved = Boolean(rating);
   const patch = (fields: Partial<EvaluationRating>) => setDraft({ ...draft, ...fields });
@@ -95,22 +98,22 @@ export function RubricForm({
     <section className="space-y-3 border border-border bg-card p-3 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-2">
         <h2 className="text-body font-semibold">
-          Si te apetece afinar la del{" "}
-          <span style={{ color: ARM_META.system.colour }}>sistema</span>
+          {t("rubric.title")}{" "}
+          <span style={{ color: ARM_META.system.colour }}>{t("rubric.system")}</span>
         </h2>
         <span className="bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-          opcional
+          {t("common.optional")}
         </span>
         {saved ? (
           <span className="ml-auto flex items-center gap-1 text-small text-settled">
             <Check className="size-3.5" />
-            guardada
+            {t("rubric.saved")}
           </span>
         ) : null}
       </header>
 
       <p className="text-small text-muted-foreground">
-        Da igual cuál elegiste: esto describe lo que produjo el sistema.
+        {t("rubric.whicheverYouChose")}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -131,23 +134,23 @@ export function RubricForm({
       </div>
 
       <Textarea
-        aria-label="Qué le sobra o le falta"
+        aria-label={t("rubric.commentAria")}
         value={draft.comment ?? ""}
         onChange={(event) => patch({ comment: event.target.value })}
-        placeholder="Qué le sobra o le falta (opcional)"
+        placeholder={t("rubric.commentPlaceholder")}
         className="min-h-16"
       />
 
       <div className="flex flex-wrap items-center gap-2">
         <p className="flex-1 text-small text-muted-foreground">
-          Puedes saltarte esto: la comparación ya está registrada.
+          {t("rubric.skippable")}
         </p>
         <Button variant="outline" onClick={onSkip}>
-          Saltar
+          {t("rubric.skip")}
         </Button>
         <Button disabled={!complete || pending} onClick={() => onSave(draft)}>
           {pending ? <Spinner /> : null}
-          {saved ? "Actualizar la valoración" : "Guardar la valoración"}
+          {saved ? t("rubric.update") : t("rubric.save")}
         </Button>
       </div>
     </section>

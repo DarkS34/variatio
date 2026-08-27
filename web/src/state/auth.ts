@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError, api } from "@/lib/api";
+import { localeStore, type Key, type Language } from "@/lib/i18n";
 import type { Role, Session } from "@/lib/types";
 import { runStore } from "./runStore";
 import { workspaceStore } from "./workspace";
@@ -25,6 +26,9 @@ export function useSession() {
     queryFn: async () => {
       const session = await api.me();
       workspaceStore.adopt(session.active_workspace);
+      // Same reason and the same moment as the line above: the language has to be in place
+      // before the first child renders, or every screen paints once in the wrong one.
+      localeStore.adopt(session.user.ui_language);
       return session;
     },
     retry: false,
@@ -129,6 +133,26 @@ export function useChangePassword() {
 
 /** The account's own data. The response IS the new session payload, so it is written
  *  straight into the query the whole app reads instead of being refetched. */
+/**
+ * The account's own interface language.
+ *
+ * It writes through the store as well as the row, because the store is what every screen
+ * reads and the query only refreshes what the server sent back. Nothing else is
+ * invalidated: this changes what you READ and not one thing the app has stored.
+ */
+export function useSetLanguage() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (language: Language) => api.setLanguage(language),
+    onSuccess: ({ ui_language }) => {
+      localeStore.adopt(ui_language);
+      client.setQueryData(authKeys.me, (previous: Session | undefined) =>
+        previous ? { ...previous, user: { ...previous.user, ui_language } } : previous,
+      );
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const client = useQueryClient();
   return useMutation({
@@ -153,16 +177,16 @@ export function useIsOwner() {
   return useSession().data?.role === "owner";
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
-  viewer: "Lectura",
-  editor: "Edición",
-  owner: "Propietario",
+export const ROLE_LABEL_KEYS: Record<Role, Key> = {
+  viewer: "role.viewer",
+  editor: "role.editor",
+  owner: "role.owner",
 };
 
 // «Invitar» left this list when invitations became the administrator's alone: a role that
 // still advertised it would be describing a button nobody with that role can press.
-export const ROLE_HINTS: Record<Role, string> = {
-  viewer: "Ve la instancia y el historial; no construye, no edita, no genera.",
-  editor: "Todo lo anterior, más construir, editar, aprobar y generar.",
-  owner: "Todo lo anterior, más renombrar o borrar el workspace.",
+export const ROLE_HINT_KEYS: Record<Role, Key> = {
+  viewer: "role.viewer.hint",
+  editor: "role.editor.hint",
+  owner: "role.owner.hint",
 };

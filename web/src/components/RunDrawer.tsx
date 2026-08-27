@@ -15,6 +15,7 @@ import { isQueued, pickActiveRun, waitOf, waitReason } from "@/lib/queue";
 import { cn } from "@/lib/utils";
 import { useCancelJob, useLanes, useSplitEngine, useStream } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
+import { useT } from "@/lib/i18n";
 
 export type DrawerTab = "progress" | "logs";
 
@@ -45,6 +46,8 @@ export function RunDrawer({
   tab: DrawerTab;
   onTab: (next: DrawerTab) => void;
 }) {
+  const tr = useT();
+  const { t } = useT();
   const run = useActiveRun();
   const stream = useStream();
   const cancel = useCancelJob();
@@ -71,20 +74,22 @@ export function RunDrawer({
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-body font-medium">{run?.job?.label ?? "Ejecución"}</p>
           {explain ? (
-            <InfoHint label="Qué hace este trabajo">
-              <p>{explain.what}</p>
+            <InfoHint label={t("run.whatThisJobDoes")}>
+              <p>{t(explain.what)}</p>
               <p className="mt-1">
-                <span className="font-medium">Produce:</span> {explain.produces}
+                <span className="font-medium">{t("run.produces")}</span> {t(explain.produces)}
               </p>
               <p className="mt-1">
-                <span className="font-medium">Coste:</span> {explain.cost}
+                <span className="font-medium">{t("run.cost")}</span> {t(explain.cost)}
               </p>
             </InfoHint>
           ) : null}
         </div>
 
         <span className={cn("text-small font-medium", run?.job ? JOB_STATUS[status]?.tone : "text-muted-foreground")}>
-          {run?.job ? JOB_STATUS[status]?.label : "Sin ejecuciones en esta sesión"}
+          {run?.job && JOB_STATUS[status]
+            ? t(JOB_STATUS[status].labelKey)
+            : t("run.noRuns")}
         </span>
         {run?.job?.elapsed_ms !== null && run?.job?.elapsed_ms !== undefined ? (
           <span className="text-small nums text-muted-foreground">
@@ -92,16 +97,16 @@ export function RunDrawer({
           </span>
         ) : null}
         {wait ? (
-          <span className="text-small text-muted-foreground">{waitReason(wait, split)}</span>
+          <span className="text-small text-muted-foreground">{waitReason(wait, split, tr)}</span>
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
           <Tabs
             items={[
-              { value: "progress", label: "Progreso" },
+              { value: "progress", label: t("run.tab.progress") },
               {
                 value: "logs",
-                label: "Registro",
+                label: t("run.tab.log"),
                 badge: stream.logs.length ? (
                   <Badge variant="outline" className="ml-1">
                     {stream.logs.length}
@@ -120,19 +125,19 @@ export function RunDrawer({
               disabled={cancel.isPending}
             >
               <Ban />
-              Cancelar
+              {t("common.cancel")}
             </Button>
           ) : null}
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={() => setTall((value) => !value)}
-            aria-label={tall ? "Reducir el panel" : "Ampliar el panel"}
-            title={tall ? "Reducir el panel" : "Ampliar el panel"}
+            aria-label={tall ? t("run.shrink") : t("run.expand")}
+            title={tall ? t("run.shrink") : t("run.expand")}
           >
             {tall ? <ChevronsDownUp /> : <ChevronsUpDown />}
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Contraer">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t("run.collapse")}>
             <ChevronDown />
           </Button>
         </div>
@@ -151,21 +156,21 @@ export function RunDrawer({
                 checked={onlyThisJob}
                 onCheckedChange={setOnlyThisJob}
                 disabled={!run}
-                label="solo este trabajo"
+                label={t("run.onlyThisJob")}
               />
-              Solo este trabajo
+              {t("run.onlyThisJobLabel")}
             </label>
             <LogViewer logs={logs} height={tall ? "62vh" : "38vh"} />
           </div>
         ) : !run ? (
           <p className="p-6 text-center text-body text-muted-foreground">
-            Nada ejecutado en esta sesión.
+            {t("run.nothingRun")}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-3">
               <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-                Pasos
+                {t("run.steps")}
               </h4>
               <RunTimeline steps={run.steps} />
               {run.job?.error ? (
@@ -177,7 +182,7 @@ export function RunDrawer({
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-                  Qué ha ido pasando
+                  {t("run.whatHappened")}
                 </h4>
                 {run.items.length > 0 ? (
                   <Badge variant="settled">{run.items.length} ítem(s)</Badge>

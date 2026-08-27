@@ -12,6 +12,7 @@ import { AcceptInvite } from "./AcceptInvite";
 import { AuthLayout } from "./AuthLayout";
 import { LoginScreen } from "./LoginScreen";
 import { ResetPassword } from "./ResetPassword";
+import { useT, type Key } from "@/lib/i18n";
 
 /**
  * Nothing else in the app renders until this has an answer.
@@ -29,16 +30,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
 
   if (path === "/invitacion") {
-    return token ? <AcceptInvite token={token} /> : <MissingToken kind="invitación" />;
+    return token ? <AcceptInvite token={token} /> : <MissingToken kind="auth.kindInvite" />;
   }
   if (path === "/restablecer") {
-    return token ? <ResetPassword token={token} /> : <MissingToken kind="enlace" />;
+    return token ? <ResetPassword token={token} /> : <MissingToken kind="auth.kindLink" />;
   }
 
   return <Guarded>{children}</Guarded>;
 }
 
 function Guarded({ children }: { children: ReactNode }) {
+  const { t } = useT();
   const session = useSession();
   const unauthenticated = useIsUnauthenticated(session);
   const maintenance = useMaintenance();
@@ -83,12 +85,12 @@ function Guarded({ children }: { children: ReactNode }) {
 
   if (session.isError) {
     return (
-      <AuthLayout title="El servidor no responde">
+      <AuthLayout title={t("auth.serverDown")}>
         <p className="text-body text-muted-foreground">
           {session.error instanceof Error ? session.error.message : "Error desconocido"}
         </p>
         <Button className="mt-4 w-full" onClick={() => session.refetch()}>
-          Reintentar
+          {t("common.retry")}
         </Button>
       </AuthLayout>
     );
@@ -102,19 +104,20 @@ function Guarded({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function MissingToken({ kind }: { kind: string }) {
+function MissingToken({ kind }: { kind: Key }) {
+  const { t } = useT();
   return (
     <AuthLayout
-      title={`Falta el código de la ${kind}`}
-      description="Abre el enlace completo tal y como lo recibiste."
+      title={t("auth.missingCode", { kind: t(kind) })}
+      description={t("auth.missingCodeBody")}
       footer={
         <a href="/" className="text-muted-foreground hover:underline">
-          Ir a la pantalla de entrada
+          {t("auth.backToLogin")}
         </a>
       }
     >
       <Button className="w-full" onClick={() => window.location.assign("/")}>
-        Entrar
+        {t("common.enter")}
       </Button>
     </AuthLayout>
   );

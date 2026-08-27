@@ -1,3 +1,4 @@
+import type { Key } from "@/lib/i18n";
 import type { ArtifactStatus, JobStatus } from "./types";
 
 export function duration(ms: number | null | undefined): string {
@@ -40,31 +41,31 @@ export function when(iso: string | null): string {
 
 export const ARTIFACT_STATUS: Record<
   ArtifactStatus,
-  { label: string; tone: "default" | "secondary" | "outline" | "settled" | "attention" | "danger" }
+  { labelKey: Key; tone: "default" | "secondary" | "outline" | "settled" | "attention" | "danger" }
 > = {
-  missing: { label: "Sin construir", tone: "outline" },
-  building: { label: "Construyendo", tone: "default" },
-  draft: { label: "Borrador", tone: "attention" },
-  approved: { label: "Aprobado", tone: "settled" },
-  stale: { label: "Obsoleto", tone: "danger" },
+  missing: { labelKey: "status.missing", tone: "outline" },
+  building: { labelKey: "status.building", tone: "default" },
+  draft: { labelKey: "status.draft", tone: "attention" },
+  approved: { labelKey: "status.approved", tone: "settled" },
+  stale: { labelKey: "status.stale", tone: "danger" },
 };
 
-export const JOB_STATUS: Record<JobStatus, { label: string; tone: string }> = {
-  queued: { label: "En cola", tone: "text-muted-foreground" },
-  running: { label: "En curso", tone: "text-primary" },
-  succeeded: { label: "Completado", tone: "text-settled" },
-  failed: { label: "Fallido", tone: "text-destructive" },
-  cancelled: { label: "Cancelado", tone: "text-muted-foreground" },
+export const JOB_STATUS: Record<JobStatus, { labelKey: Key; tone: string }> = {
+  queued: { labelKey: "job.queued", tone: "text-muted-foreground" },
+  running: { labelKey: "job.running", tone: "text-primary" },
+  succeeded: { labelKey: "job.succeeded", tone: "text-settled" },
+  failed: { labelKey: "job.failed", tone: "text-destructive" },
+  cancelled: { labelKey: "job.cancelled", tone: "text-muted-foreground" },
 };
 
-export const TAGGING_METHOD: Record<string, string> = {
-  single_dominant: "candidato dominante",
-  llm: "verificado por LLM",
-  llm_thinking: "LLM con razonamiento",
-  rejected: "LLM descartó todos",
-  failed: "fallo al parsear",
-  no_candidates: "sin candidatos sobre el umbral",
-  manual: "asignado a mano",
+export const TAGGING_METHOD_KEYS: Record<string, Key> = {
+  single_dominant: "tagging.single_dominant",
+  llm: "tagging.llm",
+  llm_thinking: "tagging.llm_thinking",
+  rejected: "tagging.rejected",
+  failed: "tagging.failed",
+  no_candidates: "tagging.no_candidates",
+  manual: "tagging.manual",
 };
 
 export function truncate(text: string, limit: number): string {

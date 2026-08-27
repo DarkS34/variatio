@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import type { BankItem, BankItemType } from "@/lib/types";
 import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
+import { useT } from "@/lib/i18n";
 
 /**
  * What the builder has written so far, while it writes it.
@@ -22,6 +23,7 @@ import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
  * window slide as the extractor works.
  */
 export function BankLive() {
+  const { t } = useT();
   const query = useQuery({
     queryKey: ["bank", "live"],
     queryFn: () => api.bank({ order: "recent", page: 1, page_size: VISIBLE }),
@@ -44,19 +46,18 @@ export function BankLive() {
       <CardContent className="space-y-3 py-4">
         <div className="flex items-baseline justify-between gap-3">
           <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-            Ítems que van saliendo
+            {t("bank.live.title")}
           </h4>
           {listing ? (
             <span className="text-small nums text-muted-foreground">
-              {listing.totals.tagged}/{listing.totals.items} etiquetados
+              {listing.totals.tagged}/{listing.totals.items} {t("bank.live.tagged")}
             </span>
           ) : null}
         </div>
 
         {rows.length === 0 ? (
           <p className="text-body text-muted-foreground">
-            Todavía no ha salido ningún ítem. Aparecerán aquí en cuanto el primer documento
-            termine de extraerse.
+            {t("bank.live.empty")}
           </p>
         ) : (
           <SlidingList rows={rows}>

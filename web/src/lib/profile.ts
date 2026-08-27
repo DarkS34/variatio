@@ -1,4 +1,5 @@
 import type { ExemplarsProfile, ItemTypeSpec } from "@/lib/types";
+import type { Key } from "@/lib/i18n";
 
 /** Mirrors ExemplarsProfile.type_key_of: with a single modality declared, an item that
  *  never named one still belongs to it — there was nothing to choose. */
@@ -29,8 +30,12 @@ export function itemTypeOf(
   return key && profile ? profile.item_types[key] : null;
 }
 
-export function typeLabel(profile: ExemplarsProfile | null, key: string | null): string {
-  if (!key) return "sin modalidad";
+export function typeLabel(
+  profile: ExemplarsProfile | null,
+  key: string | null,
+  t: (key: Key) => string,
+): string {
+  if (!key) return t("profile.noModality");
   return profile?.item_types[key]?.label || key;
 }
 

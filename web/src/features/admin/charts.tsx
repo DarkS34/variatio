@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * The chart pieces this panel is built from.
@@ -77,10 +78,11 @@ export function BarRows({
   referenceLabel?: string;
   labelWidth?: string;
 }) {
+  const { t } = useT();
   const [hover, setHover] = useState<string | null>(null);
 
   if (total <= 0) {
-    return <p className="text-small text-muted-foreground">Todavía no hay datos que resumir.</p>;
+    return <p className="text-small text-muted-foreground">{t("charts.nothingToSummarise")}</p>;
   }
 
   return (
@@ -159,13 +161,12 @@ export interface DayPoint {
  * 2 px of surface, which is what separates them — no stroke.
  */
 export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height?: number }) {
+  const { t } = useT();
   const [hover, setHover] = useState<number | null>(null);
 
   if (points.length === 0) {
     return (
-      <p className="text-small text-muted-foreground">
-        Ninguna comparación registrada todavía.
-      </p>
+      <p className="text-small text-muted-foreground">{t("charts.noComparisons")}</p>
     );
   }
 
@@ -177,13 +178,13 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
       <div className="flex items-center gap-3 text-micro text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-[2px] bg-primary" />
-          Decididas
+          {t("charts.decided")}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-[2px] bg-primary/25" />
-          Sin decidir
+          {t("charts.undecided")}
         </span>
-        <span className="ml-auto nums">máx. {peak}/día</span>
+        <span className="ml-auto nums">{t("charts.peakPerDay", { n: peak })}</span>
       </div>
 
       <div className="relative">
@@ -220,7 +221,10 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
                   <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-micro shadow-md">
                     <span className="font-medium">{point.day}</span>
                     <span className="ml-2 nums text-muted-foreground">
-                      {point.decided}/{point.sessions} decididas
+                      {t("charts.decidedOf", {
+                        decided: point.decided,
+                        sessions: point.sessions,
+                      })}
                     </span>
                   </div>
                 ) : null}

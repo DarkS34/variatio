@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { clock } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { LogLine } from "@/state/runStore";
+import { useT } from "@/lib/i18n";
 
 /**
  * The raw console, with the two controls that make thousands of lines usable: a level
@@ -46,6 +47,7 @@ export function LogViewer({
   height?: string;
   onClear?: () => void;
 }) {
+  const { t, plural } = useT();
   const [floor, setFloor] = useState("DEBUG");
   const [needle, setNeedle] = useState("");
   const [follow, setFollow] = useState(true);
@@ -85,10 +87,10 @@ export function LogViewer({
         <div className="relative min-w-44 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
-            aria-label="Filtrar por texto o módulo"
+            aria-label={t("log.filter")}
             value={needle}
             onChange={(event) => setNeedle(event.target.value)}
-            placeholder="Filtrar por texto o módulo…"
+            placeholder={t("log.filter.placeholder")}
             className="h-8 pl-8 text-small"
           />
         </div>
@@ -99,7 +101,7 @@ export function LogViewer({
               key={level}
               type="button"
               onClick={() => setFloor(level)}
-              title={`Mostrar desde ${level}`}
+              title={t("log.showFrom", { level })}
               className={cn(
                 "rounded-full border px-2 py-0.5 text-micro transition-colors",
                 floor === level
@@ -118,12 +120,12 @@ export function LogViewer({
           size="icon-sm"
           variant={follow ? "secondary" : "ghost"}
           onClick={() => setFollow((value) => !value)}
-          title={follow ? "Siguiendo el final" : "Seguir el final"}
-          aria-label="Seguir el final"
+          title={follow ? t("log.following") : t("log.follow")}
+          aria-label={t("log.follow")}
         >
           <ArrowDownToLine />
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={copy} title="Copiar" aria-label="Copiar">
+        <Button size="icon-sm" variant="ghost" onClick={copy} title={t("action.copy")} aria-label={t("action.copy")}>
           <Copy />
         </Button>
         {onClear ? (
@@ -131,8 +133,8 @@ export function LogViewer({
             size="icon-sm"
             variant="ghost"
             onClick={onClear}
-            title="Vaciar la vista"
-            aria-label="Vaciar"
+            title={t("log.clearView")}
+            aria-label={t("log.clear")}
           >
             <Trash2 />
           </Button>
@@ -142,8 +144,8 @@ export function LogViewer({
       {filtered.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-4 text-center text-small text-muted-foreground">
           {logs.length === 0
-            ? "Todavía no hay registros en esta sesión."
-            : "Ningún registro coincide con el filtro."}
+            ? t("log.empty")
+            : t("log.noMatch")}
         </p>
       ) : (
         <div
@@ -157,7 +159,7 @@ export function LogViewer({
         >
           {filtered.length > visible.length ? (
             <p className="pb-1 text-muted-foreground">
-              … {filtered.length - visible.length} línea(s) anteriores omitidas
+              {plural("log.omitted", filtered.length - visible.length)}
             </p>
           ) : null}
           {visible.map((line) => (

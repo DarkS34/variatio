@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
 import type { MaintenanceState } from "@/lib/types";
 import { LoginScreen } from "@/features/auth/LoginScreen";
+import { useT, type Translate } from "@/lib/i18n";
 
 /**
  * What the installation looks like from outside while somebody is working on it.
@@ -32,8 +33,10 @@ export function MaintenanceScreen({
   /** Only when there is no session at all: with one, the way in is not a login form. */
   canLogIn: boolean;
 }) {
+  const tr = useT();
+  const { t } = useT();
   const [login, setLogin] = useState(false);
-  const elapsed = useElapsed(state.since);
+  const elapsed = useElapsed(state.since, tr);
 
   if (login) return <LoginScreen />;
 
@@ -54,7 +57,7 @@ export function MaintenanceScreen({
               <Wrench className="size-4 animate-pulse-soft" />
             </span>
             <h1 className="font-display font-expanded text-title sm:text-display">
-              En mantenimiento
+              {t("maintenance.title")}
             </h1>
           </div>
 
@@ -62,18 +65,18 @@ export function MaintenanceScreen({
 
           <p className="mt-2 text-small text-muted-foreground">
             {elapsed
-              ? `Cerrada desde hace ${elapsed}. No hay una hora prevista de vuelta: nada se ha perdido, lo construido sigue donde estaba.`
-              : "Nada se ha perdido: lo construido sigue donde estaba y volverá tal cual."}
+              ? t("maintenance.closedFor", { elapsed })
+              : t("maintenance.nothingLost")}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={onRetry}>
               <RefreshCw />
-              Comprobar de nuevo
+              {t("maintenance.checkAgain")}
             </Button>
             {canLogIn ? (
               <Button variant="ghost" onClick={() => setLogin(true)}>
-                Entrar como administración
+                {t("maintenance.loginAsAdmin")}
               </Button>
             ) : null}
           </div>
@@ -85,7 +88,7 @@ export function MaintenanceScreen({
 
 /** How long it has been closed, recomputed every half minute so a screen left open does
  *  not keep reporting the number it had when it loaded. */
-function useElapsed(since: string | null): string | null {
+function useElapsed(since: string | null, tr: Translate): string | null {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -98,10 +101,10 @@ function useElapsed(since: string | null): string | null {
   if (Number.isNaN(started)) return null;
 
   const minutes = Math.max(0, Math.round((now - started) / 60_000));
-  if (minutes < 1) return "menos de un minuto";
+  if (minutes < 1) return tr.t("maintenance.lessThanAMinute");
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} h ${(minutes % 60).toString().padStart(2, "0")} min`;
   const days = Math.floor(hours / 24);
-  return `${days} día${days === 1 ? "" : "s"}`;
+  return tr.plural("maintenance.days", days);
 }

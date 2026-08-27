@@ -6,6 +6,7 @@ import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { QueueItem } from "./types";
+import { useT } from "@/lib/i18n";
 
 /**
  * What somebody handed this evaluator, and the screen the tab opens on.
@@ -23,9 +24,13 @@ import type { QueueItem } from "./types";
 /** A meter, and deliberately NOT the rail: a queue is a pile of independent judgements,
  *  and the rail means "a sequence whose steps depend on each other". */
 function Meter({ items }: { items: QueueItem[] }) {
+  const { t } = useT();
   return (
     <div className="flex h-1.5 gap-[3px]" role="img"
-         aria-label={`${items.filter((item) => item.decided || item.declined).length} de ${items.length} juzgadas`}>
+         aria-label={t("queue.progressLabel", {
+        decided: items.filter((item) => item.decided || item.declined).length,
+        total: items.length,
+      })}>
       {items.map((item, index) => {
         const done = item.decided || item.declined;
         const next = !done && items.slice(0, index).every((earlier) => earlier.decided || earlier.declined);
@@ -41,7 +46,8 @@ function Meter({ items }: { items: QueueItem[] }) {
 }
 
 function Concepts({ names }: { names: string[] }) {
-  return <>{names.join(", ") || "sin conceptos"}</>;
+  const { t } = useT();
+  return <>{names.join(", ") || t("queue.noConcepts")}</>;
 }
 
 export function QueueTab({
@@ -55,15 +61,13 @@ export function QueueTab({
   typeLabel: (key: string) => string;
   onOpen: (id: string) => void;
 }) {
+  const { t } = useT();
   if (items.length === 0) {
     return (
       // Not an error and not something to fix: it is the ordinary state until somebody
       // hands this account a set, so there is no action to offer here.
-      <EmptyState icon={<Inbox />} title="No tienes comparaciones asignadas">
-        <p>
-          Cuando se te asigne alguna, aparecerá aquí. Mientras tanto puedes pedir un
-          ejercicio tú desde «Encargo propio».
-        </p>
+      <EmptyState icon={<Inbox />} title={t("queue.none")}>
+        <p>{t("queue.noneBody")}</p>
       </EmptyState>
     );
   }
@@ -81,7 +85,7 @@ export function QueueTab({
       {next ? (
         <div className="flex flex-wrap items-center gap-6 border border-primary bg-card p-5 shadow-sm">
           <div className="min-w-56 flex-1">
-            <p className="text-micro font-condensed text-muted-foreground uppercase">La siguiente</p>
+            <p className="text-micro font-condensed text-muted-foreground uppercase">{t("queue.next")}</p>
             <h2 className="mt-1.5 text-title">
               <Concepts names={next.concepts} />
             </h2>
@@ -95,7 +99,7 @@ export function QueueTab({
             </div>
           </div>
           <Button variant="attention" onClick={() => onOpen(next.id)}>
-            Leer las tres propuestas
+            {t("queue.open")}
             <ArrowRight />
           </Button>
         </div>
@@ -105,7 +109,7 @@ export function QueueTab({
         <div className="border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted px-4 py-2.5">
             <p className="text-micro font-condensed text-muted-foreground uppercase">
-              Pendientes · {rest.length} más
+              {t("queue.pendingMore", { n: rest.length })}
             </p>
           </div>
           {rest.map((item) => (
@@ -131,7 +135,7 @@ export function QueueTab({
         <div className="border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted px-4 py-2.5">
             <p className="text-micro font-condensed text-muted-foreground uppercase">
-              Ya juzgadas · {done.length}
+              {t("queue.alreadyJudged", { n: done.length })}
             </p>
           </div>
           {done.map((item) => (
@@ -154,7 +158,7 @@ export function QueueTab({
                 <Concepts names={item.concepts} />
               </span>
               <span className="shrink-0 text-micro font-condensed text-settled uppercase">
-                {item.declined ? "sin criterio" : "juzgada"}
+                {item.declined ? t("queue.declined") : t("queue.judged")}
               </span>
             </button>
           ))}
@@ -163,7 +167,7 @@ export function QueueTab({
 
       {pending === 0 ? (
         <p className="text-center text-small text-muted-foreground">
-          Has terminado todo lo que tenías asignado. Gracias.
+          {t("queue.allDone")}
         </p>
       ) : null}
     </div>

@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { truncate } from "@/lib/format";
 import { useCanEdit } from "@/state/auth";
 import { keys, useContentContext } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 // The paragraph is paid for in every call the system makes and may reach 900 characters
 // (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to recognise it, not to review it:
@@ -37,6 +38,7 @@ const FACT_LABEL: Record<string, string> = {
  * evaluation's naive arm composes a sentence from them and cannot read the paragraph.
  */
 export function ContextCard() {
+  const { t } = useT();
   const query = useContentContext();
   const canEdit = useCanEdit();
   const client = useQueryClient();
@@ -79,27 +81,24 @@ export function ContextCard() {
         <div className="flex items-center gap-2">
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="size-4 text-muted-foreground" />
-            La asignatura
+            {t("context.title")}
           </CardTitle>
           {data.source ? (
             <Badge variant="outline" className="ml-auto">
-              {data.source === "curated" ? "curado" : "borrador"}
+              {data.source === "curated" ? t("context.curated") : t("context.draft")}
             </Badge>
           ) : null}
         </div>
         <p className="text-small text-muted-foreground">
-          Se interpola en todos los prompts del sistema: fija la materia, el nivel y el idioma
-          de lo que se genera. Lo escriben las construcciones del grafo y del perfil; lo que
-          guardes aquí manda sobre lo que escriban.
+          {t("context.interpolated")}
         </p>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {!data.exists && !editing ? (
-          <Alert tone="attention" title="Todavía no hay contexto">
+          <Alert tone="attention" title={t("context.none")}>
             <p>
-              Ningún prompt sabe de qué materia se trata. Lo sintetiza la próxima construcción
-              del grafo o del perfil, o puedes escribirlo tú ahora.
+              {t("context.noneBody")}
             </p>
           </Alert>
         ) : null}
@@ -107,14 +106,14 @@ export function ContextCard() {
         {editing ? (
           <>
             <Field
-              label="En prosa"
-              description="Una o dos frases: qué materia es, a quién se dirige, en qué idioma y con qué convenciones. Nada de listas."
+              label={t("context.prose")}
+              description={t("context.proseHelp")}
             >
               <Textarea
                 value={narrative}
                 onChange={(event) => setNarrative(event.target.value)}
                 className="min-h-28 text-small"
-                placeholder="Introducción a la Programación, asignatura de primer curso…"
+                placeholder={t("context.prosePlaceholder")}
               />
             </Field>
 
@@ -132,18 +131,17 @@ export function ContextCard() {
               ))}
             </div>
             <p className="text-small text-muted-foreground">
-              Estos tres se leen por separado para la rama de referencia de la evaluación, que
-              no puede usar el párrafo. Deben decir lo mismo que él.
+              {t("context.threeFacts")}
             </p>
 
             <div className="flex gap-2">
               <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
                 {save.isPending ? <Spinner /> : <Save />}
-                Guardar
+                {t("common.save")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
                 <X />
-                Cancelar
+                {t("common.cancel")}
               </Button>
             </div>
           </>
@@ -174,10 +172,10 @@ export function ContextCard() {
                     variant="ghost"
                     onClick={() => adopt.mutate()}
                     disabled={adopt.isPending}
-                    title="Sustituye este texto por la síntesis de la última construcción"
+                    title={t("context.adoptHint")}
                   >
                     {adopt.isPending ? <Spinner /> : <Check />}
-                    Adoptar el borrador
+                    {t("context.adopt")}
                   </Button>
                 ) : null}
               </div>

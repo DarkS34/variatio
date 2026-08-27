@@ -13,8 +13,9 @@ import { cn } from "@/lib/utils";
 
 import { useDocumentPages, usePageActions } from "./queries";
 import type { DocumentPage } from "./types";
+import { useT } from "@/lib/i18n";
 
-const FAILED_MARK = "> [TRANSCRIPCIÓN FALLIDA";
+const FAILED_MARK = "> [TRANSCRIPCIÓN FALLIDA"; // i18n-exempt: lo escribe `pages.py`
 
 type PageMark = "failed" | "empty" | "ok";
 
@@ -61,6 +62,7 @@ export function DocumentDialog({
   name: string;
   onClose: () => void;
 }) {
+  const { t } = useT();
   const listing = useDocumentPages(kind, name);
   const { save, insert, remove } = usePageActions(kind, name);
 
@@ -82,7 +84,7 @@ export function DocumentDialog({
     if (
       dirty &&
       !window.confirm(
-        `Hay cambios sin guardar en la página ${shown}. ¿Descartarlos y cambiar de página?`,
+        t("doc.unsavedSwitch", { page: shown }),
       )
     ) {
       return;
@@ -95,7 +97,7 @@ export function DocumentDialog({
     if (
       dirty &&
       !window.confirm(
-        `Hay cambios sin guardar en la página ${shown}. ¿Cerrar y descartarlos?`,
+        t("doc.unsavedClose", { page: shown }),
       )
     ) {
       return;
@@ -121,7 +123,7 @@ export function DocumentDialog({
   const onDelete = () => {
     if (
       !window.confirm(
-        `¿Borrar la página ${shown} de «${name}»? Las siguientes se renumeran.`,
+        t("doc.confirmDelete", { page: shown, name }),
       )
     ) {
       return;
@@ -139,15 +141,15 @@ export function DocumentDialog({
       open
       onClose={attemptClose}
       title={name}
-      description="Lo que corrijas aquí gana sobre lo que dijo el modelo: las construcciones siguientes leen estas páginas del disco, no vuelven a preguntarle."
+      description={t("doc.description")}
       className="sm:max-w-[80rem]"
       footer={
         pages.length > 0 ? (
           <>
             <p className="mr-auto text-small text-muted-foreground">
               {dirty
-                ? `Página ${shown} con cambios sin guardar.`
-                : `Página ${shown} de ${pages.length}.`}
+                ? t("doc.pageDirty", { page: shown })
+                : t("doc.pageOf", { page: shown, total: pages.length })}
             </p>
             <Button
               size="sm"
@@ -156,26 +158,26 @@ export function DocumentDialog({
               disabled={working || pages.length === 1}
               title={
                 pages.length === 1
-                  ? "Es la única página del documento."
-                  : "Borra esta página y renumera las siguientes."
+                  ? t("doc.onlyPage")
+                  : t("doc.deleteHint")
               }
             >
               {remove.isPending ? <Spinner /> : <Trash2 />}
-              Borrar página
+              {t("doc.deletePage")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={onInsert}
               disabled={working}
-              title="Añade una página en blanco justo después de esta y renumera las siguientes."
+              title={t("doc.insertHint")}
             >
               {insert.isPending ? <Spinner /> : <Plus />}
-              Insertar después
+              {t("doc.insertAfter")}
             </Button>
             <Button size="sm" onClick={onSave} disabled={!dirty || working}>
               {save.isPending ? <Spinner /> : <Save />}
-              Guardar página
+              {t("doc.savePage")}
             </Button>
           </>
         ) : null
@@ -184,17 +186,13 @@ export function DocumentDialog({
       {listing.isLoading ? (
         <Skeleton className="h-[60vh]" />
       ) : !listing.data ? (
-        <Alert tone="danger" title="No se pudieron leer las páginas">
-          <p>
-            El servidor no respondió a la transcripción de «{name}». Vuelve a abrirlo dentro
-            de un momento.
-          </p>
+        <Alert tone="danger" title={t("doc.unreadable")}>
+          <p>{t("doc.unreadableBody", { name })}</p>
         </Alert>
       ) : pages.length === 0 ? (
-        <EmptyState title="Todavía no hay páginas">
+        <EmptyState title={t("doc.noPages")}>
           <p>
-            Este documento no se ha transcrito aún. Lánzala desde «Transcripción», en datos
-            en bruto, y vuelve aquí a revisar el resultado.
+            {t("doc.notTranscribed")}
           </p>
         </EmptyState>
       ) : (
@@ -203,16 +201,16 @@ export function DocumentDialog({
             <div className="space-y-1 border-b border-border p-2.5">
               <div className="flex items-center gap-2">
                 <span className="text-micro font-condensed uppercase text-muted-foreground">
-                  Páginas ({pages.length})
+                  {t("doc.pagesCount", { n: pages.length })}
                 </span>
                 {attention > 0 ? (
                   <Badge variant="attention" className="ml-auto">
-                    {attention} por revisar
+                    {t("doc.toReview", { n: attention })}
                   </Badge>
                 ) : null}
               </div>
               <p className="text-small leading-relaxed text-muted-foreground">
-                Van numeradas: borrar o insertar una renumera las siguientes.
+                {t("doc.numbered")}
               </p>
             </div>
             <ul className="thin-scroll min-h-0 flex-1 divide-y divide-border overflow-y-auto">
@@ -241,7 +239,7 @@ export function DocumentDialog({
                       </span>
                       <span className="truncate text-small text-muted-foreground">
                         {mark === "empty"
-                          ? "Sin contenido"
+                          ? t("doc.noContent")
                           : truncate(page.text.replace(/\s+/g, " ").trim(), 64)}
                       </span>
                     </button>
@@ -253,26 +251,23 @@ export function DocumentDialog({
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
             {draftMark(text) === "failed" ? (
-              <Alert tone="danger" title="La transcripción de esta página falló">
+              <Alert tone="danger" title={t("doc.failed")}>
                 <p>
-                  El modelo no devolvió nada utilizable y se dejó este aviso en su lugar.
-                  Escribe aquí lo que hubiera en la página del documento original.
+                  {t("doc.failedPage")}
                 </p>
               </Alert>
             ) : draftMark(text) === "empty" ? (
-              <Alert tone="attention" title="Página en blanco">
+              <Alert tone="attention" title={t("doc.blank")}>
                 <p>
-                  Puede ser una página realmente vacía del original —una portada, un
-                  separador— o algo que el modelo no supo leer. Compruébalo antes de
-                  construir.
+                  {t("doc.emptyPage")}
                 </p>
               </Alert>
             ) : null}
 
             <Field
-              label={`Markdown de la página ${shown}`}
+              label={t("doc.markdownOf", { page: shown })}
               className="min-h-0 flex-1"
-              description="Se guarda tal cual, sin reformatear."
+              description={t("doc.savedAsIs")}
             >
               {(props) => (
                 <Textarea

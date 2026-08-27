@@ -21,6 +21,7 @@ import {
   useStream,
 } from "@/state/queries";
 import { runStore } from "@/state/runStore";
+import { useT, type Key } from "@/lib/i18n";
 
 /**
  * THREE BLOCKS, AND ONLY THE MIDDLE ONE IS A CHAIN.
@@ -57,17 +58,17 @@ import { runStore } from "@/state/runStore";
  * account menu.
  */
 const STAGES = [
-  { path: "/preparar/perfil", label: "Perfil", artifact: "exemplars_profile" },
-  { path: "/preparar/grafo", label: "Grafo", artifact: "knowledge_graph" },
-  { path: "/preparar/banco", label: "Banco", artifact: "exemplars_bank" },
+  { path: "/preparar/perfil", label: "nav.profile", artifact: "exemplars_profile" },
+  { path: "/preparar/grafo", label: "nav.graph", artifact: "knowledge_graph" },
+  { path: "/preparar/banco", label: "nav.bank", artifact: "exemplars_bank" },
 ] as const;
 
-function stageStops(stages: StageState[], path: string): RailStop[] {
+function stageStops(stages: StageState[], path: string, t: (key: Key) => string): RailStop[] {
   return STAGES.map((item) => {
     const stage = stages.find((s) => s.artifact === item.artifact);
     return {
       key: item.path,
-      label: item.label,
+      label: t(item.label),
       status: stage?.status ?? "missing",
       blocked: Boolean(stage?.blocked_reason),
       href: item.path,
@@ -150,6 +151,7 @@ function MainNav({
   locked: string | null;
   className?: string;
 }) {
+  const { t } = useT();
   return (
     <nav
       className={cn(
@@ -157,7 +159,7 @@ function MainNav({
         className,
       )}
     >
-      <NavPill to="/" label="Panel" icon={Activity} active={path === "/"} />
+      <NavPill to="/" label={t("nav.dashboard")} icon={Activity} active={path === "/"} />
 
       <NavRule />
 
@@ -166,21 +168,21 @@ function MainNav({
           That is the whole point of separating it: the line between the marks means
           a dependency, and it only means that if it is visibly bounded. */}
       <div className="shrink-0 rounded-lg border border-border/70 bg-secondary/50 px-2 py-1 sm:px-3">
-        <Rail stops={stageStops(stages, path)} size="sm" className="min-w-[12.5rem] sm:min-w-[15rem]" />
+        <Rail stops={stageStops(stages, path, t)} size="sm" className="min-w-[12.5rem] sm:min-w-[15rem]" />
       </div>
 
       <NavRule />
 
       <NavPill
         to="/generar"
-        label="Generar"
+        label={t("nav.generate")}
         icon={Play}
         active={path === "/generar"}
         disabledReason={locked}
       />
       <NavPill
         to="/evaluar"
-        label="Evaluar"
+        label={t("nav.evaluate")}
         icon={Scale}
         active={path === "/evaluar"}
         tone="study"
@@ -191,6 +193,7 @@ function MainNav({
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useT();
   const { path } = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>("progress");
@@ -233,7 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // screens behind them explain what is missing, which a dimmed link cannot.
   const locked = (pipeline.data?.generation_unlocked ?? false)
     ? null
-    : "Requiere las tres etapas aprobadas";
+    : t("nav.needsApproved");
 
   return (
     <div className="flex min-h-full flex-col">
@@ -274,10 +277,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               // the one piece of it nobody can guess.
               className="px-2 sm:px-3"
               onClick={() => openDrawer("logs")}
-              title="Ver el registro completo de la sesión"
+              title={t("shell.viewFullLog")}
             >
               <ScrollText />
-              <span className="hidden lg:inline">Registro</span>
+              <span className="hidden lg:inline">{t("shell.log")}</span>
               {stream.logs.length > 0 ? (
                 <span className="nums text-muted-foreground">{stream.logs.length}</span>
               ) : null}
@@ -300,11 +303,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {maintenance.data?.active ? (
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-small sm:px-4">
             <Wrench className="size-3.5 shrink-0" />
-            <span>
-              La instalación está en mantenimiento: nadie más puede entrar.
-            </span>
+            <span>{t("shell.maintenance")}</span>
             <Link to="/administracion" className="font-medium underline underline-offset-4">
-              Reabrirla
+              {t("shell.reopen")}
             </Link>
           </div>
         ) : null}
@@ -314,16 +315,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {offline || missingModels.length > 0 ? (
           <div className="flex items-start gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-3 py-1.5 text-small sm:items-center sm:px-4">
             {offline ? (
-              <span>
-                Ollama no responde en <code className="font-mono">{health.data?.host}</code>:
-                cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.
-              </span>
+              <span>{t("shell.engineOffline", { host: health.data?.host ?? "" })}</span>
             ) : (
-              <span>
-                Modelos sin instalar{" "}
-                <code className="font-mono">{missingModels.join(", ")}</code>: los trabajos que
-                los usen fallarán, el resto de la cadena funciona.
-              </span>
+              <span>{t("shell.missingModels", { models: missingModels.join(", ") })}</span>
             )}
           </div>
         ) : null}
@@ -358,13 +352,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"
           >
             <Activity className="size-4" />
-            Ver ejecución
+            {t("shell.viewRun")}
           </button>
           <span className="h-5 w-px bg-border" />
           <button
             onClick={() => openDrawer("logs")}
-            title="Ver el registro"
-            aria-label="Ver el registro"
+            title={t("shell.viewLog")}
+            aria-label={t("shell.viewLog")}
             className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <ScrollText className="size-4" />

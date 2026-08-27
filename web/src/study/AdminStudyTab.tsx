@@ -16,6 +16,7 @@ import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
 import { studyApi } from "./api";
 import type { AdminEvaluations, AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
 import { useSelection } from "./useSelection";
+import { useT, type Key } from "@/lib/i18n";
 
 /** A three-way blind choice: what pure chance would produce. Every share is read
  *  against it, and the panel never shows one without drawing the other. */
@@ -25,11 +26,11 @@ const CHANCE = 1 / 3;
  *  side draws them in it — the CVD check is over ADJACENT pairs. */
 const ARMS: EvaluationArm[] = ["naive", "rag", "system"];
 
-const RUBRIC_LABELS: Record<string, string> = {
-  originality: "Originalidad",
-  complexity: "Exigencia",
-  concept_fit: "Ajuste al concepto",
-  soundness: "Planteamiento",
+const RUBRIC_LABELS: Record<string, Key> = {
+  originality: "rubricScale.originality",
+  complexity: "rubricScale.complexity",
+  concept_fit: "rubricScale.concept_fit",
+  soundness: "rubricScale.soundness",
 };
 
 export function StudyTab({
@@ -47,6 +48,7 @@ export function StudyTab({
   onWorkspace: (slug: string | null) => void;
   onAccount: (id: number | null) => void;
 }) {
+  const { t, plural } = useT();
   if (loading && !data) return <Skeleton className="h-96" />;
   if (!data) return null;
 
@@ -62,9 +64,9 @@ export function StudyTab({
           in one column, with the reading filter on top, where it read as if it governed
           the reparto as well. */}
       <Section
-        eyebrow="Reparto"
-        title="Repartir comparaciones"
-        description="La cuenta, la instancia y el conjunto se eligen aquí dentro. El filtro de abajo no afecta a este bloque."
+        eyebrow={t("adminStudy.handOut.eyebrow")}
+        title={t("adminStudy.handOut.title")}
+        description={t("adminStudy.handOut.description")}
       >
         <Card>
           <AdminSetsPanel />
@@ -72,20 +74,20 @@ export function StudyTab({
       </Section>
 
       <Section
-        eyebrow="Resultados"
-        title="Lo que ya se ha evaluado"
-        description="Solo lectura. El filtro acota lo que muestran las tarjetas y lo que descarga el CSV; no cambia nada de lo repartido."
+        eyebrow={t("adminStudy.results.eyebrow")}
+        title={t("adminStudy.results.title")}
+        description={t("adminStudy.results.description")}
       >
         {/* The filter stays above the numbers inside its own section, so what is being
             looked at is stated before the numbers rather than inferred from them. */}
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            aria-label="Filtrar el estudio por workspace"
+            aria-label={t("adminStudy.filterByWorkspace")}
             value={workspace ?? ""}
             onChange={(event) => onWorkspace(event.target.value || null)}
             className="w-56"
           >
-            <option value="">Todos los workspaces</option>
+            <option value="">{t("adminStudy.allWorkspaces")}</option>
             {data.filters.workspaces.map((slug) => (
               <option key={slug} value={slug}>
                 {slug}
@@ -95,13 +97,13 @@ export function StudyTab({
 
           {account !== null ? (
             <Button variant="outline" size="sm" onClick={() => onAccount(null)}>
-              Quitar el filtro de cuenta
+              {t("adminStudy.clearAccountFilter")}
             </Button>
           ) : null}
 
           {filtered ? (
             <span className="text-small text-muted-foreground">
-              {data.aggregates.sessions} sesión(es) en el filtro
+              {plural("adminStudy.sessionsInFilter", data.aggregates.sessions)}
             </span>
           ) : null}
 
@@ -122,61 +124,59 @@ export function StudyTab({
         {data.aggregates.sessions === 0 ? (
           <Card>
             <p className="text-small text-muted-foreground">
-              {filtered
-                ? "Hay comparaciones registradas, pero ninguna encaja con este filtro. Quítalo para verlas todas."
-                : "Todavía no hay ninguna comparación evaluada. En cuanto alguien evalúe, aquí aparecerá el marcador y podrás descargarlo."}
+              {filtered ? t("adminStudy.filteredEmpty") : t("adminStudy.empty")}
             </p>
           </Card>
         ) : (
           <>
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-              <Card title="Cuántas veces ganó cada propuesta">
+              <Card title={t("adminStudy.card.wins")}>
                 <Preferences aggregates={data.aggregates} />
               </Card>
-              <Card title="Ritmo del estudio">
+              <Card title={t("adminStudy.card.pace")}>
                 <DayColumns points={data.per_day} />
               </Card>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <Card title="¿Usarían cada propuesta? (a ciegas, por tarjeta)">
+              <Card title={t("adminStudy.card.triage")}>
                 <Triage aggregates={data.aggregates} />
               </Card>
-              <Card title="Calidad de la medición">
+              <Card title={t("adminStudy.card.measurement")}>
                 <Measurement data={data} />
               </Card>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <Card title="Rúbrica sobre la variante del sistema">
+              <Card title={t("adminStudy.card.rubric")}>
                 <Rubric aggregates={data.aggregates} />
               </Card>
-              <Card title="¿Aporta algo el razonamiento previo?">
+              <Card title={t("adminStudy.card.think")}>
                 <ThinkEffect aggregates={data.aggregates} />
               </Card>
             </div>
 
-            <Card title="Por perfil">
-              <GroupTable groups={data.by_profile} firstHeader="Perfil" />
+            <Card title={t("adminStudy.card.byProfile")}>
+              <GroupTable groups={data.by_profile} firstHeader={t("adminStudy.col.profile")} />
             </Card>
 
-            <Card title="Por cuenta">
+            <Card title={t("adminStudy.card.byAccount")}>
               <GroupTable
                 groups={data.by_account}
-                firstHeader="Evaluador"
+                firstHeader={t("adminStudy.col.evaluator")}
                 onSelect={(group) => onAccount(Number(group.key) || null)}
               />
             </Card>
 
-            <Card title="Por workspace">
+            <Card title={t("adminStudy.card.byWorkspace")}>
               <GroupTable
                 groups={data.by_workspace}
-                firstHeader="Workspace"
+                firstHeader={t("adminStudy.col.workspace")}
                 onSelect={(group) => onWorkspace(String(group.key) || null)}
               />
             </Card>
 
-            <Card title={`Sesiones (${data.sessions.length})`}>
+            <Card title={t("adminStudy.card.sessions", { n: data.sessions.length })}>
               <SessionsTable rows={data.sessions} />
             </Card>
           </>
@@ -245,12 +245,12 @@ function pValue(p: number | null | undefined): string {
  * it rather than instead of it.
  */
 function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { t } = useT();
   const rows = ARMS.filter((arm) => aggregates.triage?.[arm]);
   if (rows.length === 0) {
     return (
       <p className="text-small text-muted-foreground">
-        Todavía sin respuestas de triaje. Se recogen a ciegas, una por tarjeta, antes de
-        elegir.
+        {t("adminStudy.noTriage")}
       </p>
     );
   }
@@ -262,10 +262,15 @@ function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
           const slice = aggregates.triage[arm]!;
           return {
             key: arm,
-            label: ARM_META[arm].label,
+            label: t(ARM_META[arm].labelKey),
             value: slice.counts.yes + slice.counts.partly,
             colour: ARM_META[arm].colour,
-            detail: `${ARM_META[arm].short} · ${slice.counts.yes} tal cual, ${slice.counts.partly} con retoques, ${slice.counts.no} no`,
+            detail: t("adminStudy.triageDetail", {
+              arm: t(ARM_META[arm].shortKey),
+              yes: slice.counts.yes,
+              partly: slice.counts.partly,
+              no: slice.counts.no,
+            }),
           };
         })}
         total={Math.max(...rows.map((arm) => aggregates.triage[arm]!.n))}
@@ -277,9 +282,13 @@ function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
           const slice = aggregates.triage[arm]!;
           return (
             <div key={arm} className="flex flex-wrap items-baseline gap-x-3 border-t border-border pt-1">
-              <dt className="min-w-20 text-muted-foreground">{ARM_META[arm].short}</dt>
-              <dd className="nums font-medium">{percent(slice.usable)} la usarían</dd>
-              <dd className="nums text-muted-foreground">{percent(slice.outright)} tal cual</dd>
+              <dt className="min-w-20 text-muted-foreground">{t(ARM_META[arm].shortKey)}</dt>
+              <dd className="nums font-medium">
+                {t("adminStudy.wouldUse", { pct: percent(slice.usable) })}
+              </dd>
+              <dd className="nums text-muted-foreground">
+                {t("adminStudy.asIs", { pct: percent(slice.outright) })}
+              </dd>
               <dd className="ml-auto nums text-muted-foreground">
                 {slice.ci95_usable
                   ? `IC95 ${percent(slice.ci95_usable[0])}–${percent(slice.ci95_usable[1])}`
@@ -303,6 +312,7 @@ function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
  * Cohen's κ proper, and the memoria has to say so instead of calling the number κ.
  */
 function Measurement({ data }: { data: AdminEvaluations }) {
+  const { plural, t } = useT();
   const { agreement, aggregates } = data;
   const position = aggregates.position;
   const duration = aggregates.duration;
@@ -310,13 +320,15 @@ function Measurement({ data }: { data: AdminEvaluations }) {
   return (
     <div className="space-y-3 text-small">
       <div className="space-y-1">
-        <p className="font-medium">Acuerdo entre evaluadores</p>
+        <p className="font-medium">{t("adminStudy.agreement")}</p>
         {agreement.choice.pairs > 0 ? (
           <p className="text-muted-foreground">
-            {agreement.choice.pairs} par(es) sobre {agreement.sets_shared} comparación(es)
-            repartida(s) a más de una persona. Coinciden en la elección el{" "}
+            {t("adminStudy.agreement.head", {
+              pairs: plural("adminStudy.pairs", agreement.choice.pairs),
+              sets: plural("adminStudy.comparisons", agreement.sets_shared),
+            })}
             <span className="nums text-foreground">{percent(agreement.choice.observed)}</span>{" "}
-            de las veces
+            {t("adminStudy.agreement.times")}
             {agreement.choice.kappa != null ? (
               <>
                 {" "}
@@ -329,8 +341,10 @@ function Measurement({ data }: { data: AdminEvaluations }) {
             ) : null}
             {agreement.triage.pairs > 0 ? (
               <>
-                ; en el triaje, {percent(agreement.triage.observed)} sobre{" "}
-                {agreement.triage.pairs} pares.
+                {t("adminStudy.agreement.triage", {
+                  percent: percent(agreement.triage.observed),
+                  pairs: agreement.triage.pairs,
+                })}
               </>
             ) : (
               "."
@@ -338,53 +352,57 @@ function Measurement({ data }: { data: AdminEvaluations }) {
           </p>
         ) : (
           <p className="text-muted-foreground">
-            Ninguna comparación la han juzgado dos personas todavía. Reparte alguna arriba a
-            más de un evaluador y aquí aparecerá el acuerdo.
+            {t("adminStudy.agreement.none")}
           </p>
         )}
       </div>
 
       <div className="space-y-1">
-        <p className="font-medium">¿Decidió algo la posición de la tarjeta?</p>
+        <p className="font-medium">{t("adminStudy.position")}</p>
         {position.n > 0 ? (
           <p className="text-muted-foreground">
             A: <span className="nums text-foreground">{position.counts["1"] ?? 0}</span> · B:{" "}
             <span className="nums text-foreground">{position.counts["2"] ?? 0}</span> · C:{" "}
             <span className="nums text-foreground">{position.counts["3"] ?? 0}</span> ·{" "}
-            <span className="nums">{pValue(position.p)}</span> frente al reparto uniforme.
+            <span className="nums">{pValue(position.p)}</span>
+            {t("adminStudy.position.vsUniform")}
           </p>
         ) : (
-          <p className="text-muted-foreground">Sin elecciones todavía.</p>
+          <p className="text-muted-foreground">{t("adminStudy.position.none")}</p>
         )}
       </div>
 
       <div className="space-y-1">
-        <p className="font-medium">Cuánto se tarda en juzgar</p>
+        <p className="font-medium">{t("adminStudy.duration")}</p>
         {duration.n > 0 ? (
           <p className="text-muted-foreground">
-            Mediana <span className="nums text-foreground">{duration.median} s</span> sobre{" "}
-            {duration.n} sesión(es)
+            {t("adminStudy.duration.median")}
+            <span className="nums text-foreground">{duration.median} s</span>
+            {t("adminStudy.duration.over", {
+              n: plural("adminStudy.sessionCount", duration.n),
+            })}
             {duration.under_20s ? (
               <>
                 {" "}
-                · <span className="nums">{duration.under_20s}</span> por debajo de 20 s, que
-                no da para leer tres enunciados
+                · <span className="nums">{duration.under_20s}</span>
+                {t("adminStudy.duration.under20")}
               </>
             ) : null}
             .
           </p>
         ) : (
-          <p className="text-muted-foreground">Sin medidas todavía.</p>
+          <p className="text-muted-foreground">{t("adminStudy.duration.none")}</p>
         )}
       </div>
 
       {aggregates.declined > 0 ? (
         <div className="space-y-1">
-          <p className="font-medium">Sin criterio</p>
+          <p className="font-medium">{t("adminStudy.declined")}</p>
           <p className="text-muted-foreground">
-            <span className="nums text-foreground">{aggregates.declined}</span> sesión(es) las
-            saltó quien no daba esa asignatura. No cuentan como preferencia, y son un dato
-            sobre la composición del panel.
+            <span className="nums text-foreground">
+              {plural("adminStudy.sessionCount", aggregates.declined)}
+            </span>
+            {t("adminStudy.declined.body")}
           </p>
         </div>
       ) : null}
@@ -400,20 +418,24 @@ function Measurement({ data }: { data: AdminEvaluations }) {
  * reference line IS the null hypothesis, drawn where it can be seen.
  */
 function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { plural, t } = useT();
   const decided = aggregates.decided || 0;
   const rows: BarRow[] = [
     ...ARMS.map((arm) => ({
       key: arm,
-      label: ARM_META[arm].label,
+      label: t(ARM_META[arm].labelKey),
       value: aggregates.preferences[arm] ?? 0,
       colour: ARM_META[arm].colour,
       detail: aggregates.elapsed_ms?.[arm]
-        ? `${ARM_META[arm].short} · ${duration(aggregates.elapsed_ms[arm])} de media`
-        : ARM_META[arm].short,
+        ? t("adminStudy.onAverage", {
+            arm: t(ARM_META[arm].shortKey),
+            time: duration(aggregates.elapsed_ms[arm]),
+          })
+        : t(ARM_META[arm].shortKey),
     })),
     {
       key: "none",
-      label: "Ninguna convenció",
+      label: t("adminStudy.noneConvinced"),
       value: aggregates.preferences.none ?? 0,
       colour: "var(--muted-foreground)",
     },
@@ -422,13 +444,16 @@ function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
   return (
     <div className="space-y-2">
       <p className="text-micro text-muted-foreground">
-        {decided} sesión{decided === 1 ? "" : "es"} con elección, de {aggregates.sessions}
+        {t("adminStudy.decidedOf", {
+          decided: plural("adminStudy.sessionCount", decided),
+          total: aggregates.sessions,
+        })}
       </p>
       <BarRows
         rows={rows}
         total={decided}
         reference={CHANCE}
-        referenceLabel="La línea vertical marca el 33 %: lo que saldría por azar."
+        referenceLabel={t("adminStudy.chanceLine")}
       />
       <Reliability aggregates={aggregates} />
     </div>
@@ -437,13 +462,14 @@ function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
 
 /** A failed arm is a result, not an accident — reliability is part of the comparison. */
 function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { t } = useT();
   const total = aggregates.decided || 0;
   if (total === 0) return null;
 
   return (
     <div className="space-y-1.5 border-t border-border pt-2">
       <h3 className="text-micro font-medium text-muted-foreground">
-        Propuestas sin ítem válido
+        {t("adminStudy.noValidItem")}
       </h3>
       <div className="grid grid-cols-3 gap-2">
         {ARMS.map((arm) => {
@@ -456,7 +482,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
                   className="size-2 shrink-0 rounded-[2px]"
                   style={{ backgroundColor: ARM_META[arm].colour }}
                 />
-                {ARM_META[arm].short}
+                {t(ARM_META[arm].shortKey)}
               </p>
               <p
                 className={cn(
@@ -465,7 +491,9 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
                 )}
               >
                 {bad}
-                <span className="ml-1 text-small text-muted-foreground">de {total}</span>
+                <span className="ml-1 text-small text-muted-foreground">
+                  {t("adminStudy.ofTotal", { n: total })}
+                </span>
               </p>
             </div>
           );
@@ -476,15 +504,16 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
 }
 
 function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { plural, t } = useT();
   const rubric = aggregates.rubric ?? { n: 0 };
   if (!rubric.n) {
-    return <p className="text-small text-muted-foreground">Ninguna sesión valorada todavía.</p>;
+    return <p className="text-small text-muted-foreground">{t("adminStudy.noRated")}</p>;
   }
 
   return (
     <div className="space-y-2">
       <p className="text-micro text-muted-foreground">
-        {rubric.n} valorada{rubric.n === 1 ? "" : "s"} · escala de 1 a 5
+        {t("adminStudy.ratedScale", { rated: plural("adminStudy.ratedCount", rubric.n) })}
       </p>
       <div className="space-y-1.5">
         {Object.keys(RUBRIC_LABELS).map((key) => {
@@ -493,7 +522,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
           return (
             <div key={key} className="flex items-center gap-2">
               <span className="w-40 shrink-0 truncate text-small text-muted-foreground">
-                {RUBRIC_LABELS[key]}
+                {t(RUBRIC_LABELS[key])}
               </span>
               <div className="relative h-2.5 flex-1 overflow-hidden rounded-[2px] bg-muted">
                 <div
@@ -517,8 +546,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
       </div>
       {rubric.complexity?.mean_distance_to_3 !== undefined ? (
         <p className="text-micro text-muted-foreground">
-          En exigencia el objetivo es el 3, no el 5 — de ahí la marca central. La distancia
-          media al 3 es{" "}
+          {t("adminStudy.complexityNote")}
           <span className="nums">{rubric.complexity.mean_distance_to_3}</span>.
         </p>
       ) : null}
@@ -532,13 +560,14 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
  * the case where a chart would have to invent a shared axis it does not have.
  */
 function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { t } = useT();
   const think = aggregates.think;
   if (!think) return null;
   const total = think.on.decided + think.off.decided;
   if (total === 0) {
     return (
       <p className="text-small text-muted-foreground">
-        Todavía no hay sesiones juzgadas de las que sacar la comparación.
+        {t("adminStudy.think.none")}
       </p>
     );
   }
@@ -553,30 +582,38 @@ function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
   };
 
   const rows: { label: string; on: string; off: string }[] = [
-    { label: "Sesiones decididas", on: String(think.on.decided), off: String(think.off.decided) },
-    { label: "Ganó el sistema", on: share(think.on), off: share(think.off) },
     {
-      label: "Tiempo medio del sistema",
+      label: t("adminStudy.think.decided"),
+      on: String(think.on.decided),
+      off: String(think.off.decided),
+    },
+    { label: t("adminStudy.think.systemWon"), on: share(think.on), off: share(think.off) },
+    {
+      label: t("adminStudy.think.systemTime"),
       on: think.on.elapsed_ms?.system ? duration(think.on.elapsed_ms.system) : "—",
       off: think.off.elapsed_ms?.system ? duration(think.off.elapsed_ms.system) : "—",
     },
     ...Object.entries(RUBRIC_LABELS)
-      .map(([key, label]) => ({ label, on: mean(think.on, key), off: mean(think.off, key) }))
+      .map(([key, label]) => ({
+        label: t(label),
+        on: mean(think.on, key),
+        off: mean(think.off, key),
+      }))
       .filter((row) => row.on !== "—" || row.off !== "—"),
   ];
 
   return (
     <div className="space-y-2">
       <p className="text-micro text-muted-foreground">
-        El modo se sortea al empezar cada sesión, igual para las dos propuestas locales.
+        {t("adminStudy.think.drawn")}
       </p>
       <div>
         <Table minWidth="22rem">
           <THead>
             <TR>
               <TH />
-              <TH align="num">Con razonamiento</TH>
-              <TH align="num">Sin razonamiento</TH>
+              <TH align="num">{t("adminStudy.think.on")}</TH>
+              <TH align="num">{t("adminStudy.think.off")}</TH>
             </TR>
           </THead>
           <TBody>
@@ -592,8 +629,7 @@ function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
       </div>
       {think.on.decided === 0 || think.off.decided === 0 ? (
         <p className="text-micro text-muted-foreground">
-          Falta uno de los dos lados: hasta que el sorteo llene ambas columnas no hay
-          comparación posible.
+          {t("adminStudy.think.oneSided")}
         </p>
       ) : null}
     </div>
@@ -619,8 +655,9 @@ function GroupTable({
   firstHeader: string;
   onSelect?: (group: AdminGroup) => void;
 }) {
+  const { t } = useT();
   if (groups.length === 0) {
-    return <p className="text-small text-muted-foreground">Nada que agrupar todavía.</p>;
+    return <p className="text-small text-muted-foreground">{t("adminStudy.nothingToGroup")}</p>;
   }
 
   return (
@@ -629,11 +666,11 @@ function GroupTable({
         <THead>
           <TR>
             <TH>{firstHeader}</TH>
-            <TH align="num">Sesiones</TH>
-            <TH align="num">Decididas</TH>
-            <TH>Ganó el sistema</TH>
-            <TH align="num">Valoradas</TH>
-            <TH align="num">Última</TH>
+            <TH align="num">{t("adminStudy.col.sessions")}</TH>
+            <TH align="num">{t("adminStudy.col.decided")}</TH>
+            <TH>{t("adminStudy.col.systemWon")}</TH>
+            <TH align="num">{t("adminStudy.col.rated")}</TH>
+            <TH align="num">{t("adminStudy.col.last")}</TH>
           </TR>
         </THead>
         <TBody>
@@ -652,7 +689,10 @@ function GroupTable({
                   value={group.preferences?.system ?? 0}
                   total={group.decided}
                   reference={CHANCE}
-                  title={`${group.preferences?.system ?? 0} de ${group.decided}; la marca es el 33 % del azar`}
+                  title={t("adminStudy.shareTitle", {
+                    system: group.preferences?.system ?? 0,
+                    decided: group.decided,
+                  })}
                 />
               </TD>
               <TD align="num" className="px-3 py-1.5  nums">{group.rated}</TD>
@@ -672,6 +712,7 @@ function GroupTable({
 type SessionRow = NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["sessions"][number];
 
 function SessionsTable({ rows }: { rows: SessionRow[] }) {
+  const { plural, t } = useT();
   const toast = useToast();
   const remove = useDeleteEvaluations();
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
@@ -682,23 +723,23 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
     const ids = [...selected];
     const decided = rows.filter((row) => selected.has(row.id) && row.chosen_at !== null).length;
     const message =
-      `¿Borrar ${ids.length} sesión(es) de evaluación?\n\n` +
-      (decided
-        ? `${decided} de ellas ya tienen elección y dejan de contar en el estudio.\n`
-        : "") +
-      "\nNo se puede deshacer.";
+      (ids.length === 1
+        ? t("adminStudy.confirmHeadOne")
+        : t("adminStudy.confirmHeadMany", { n: ids.length })) +
+      (decided ? t("sessions.confirmDecided", { n: decided }) : "") +
+      t("sessions.confirmTail");
     if (!window.confirm(message)) return;
     remove.mutate(ids, {
       onSuccess: ({ deleted }) => {
         clear();
         toast({
-          title: "Sesiones borradas",
-          description: `${deleted.length} sesión(es)`,
+          title: t("adminStudy.sessionsDeleted"),
+          description: plural("sessions.deletedCount", deleted.length),
           tone: "attention",
         });
       },
       onError: (error: Error) =>
-        toast({ title: "No se ha podido borrar", description: error.message, tone: "danger" }),
+        toast({ title: t("sessions.deleteFailed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -706,7 +747,9 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <span className="text-small text-muted-foreground">
-          {selected.size > 0 ? `${selected.size} seleccionada(s)` : "Selecciona sesiones para borrarlas"}
+          {selected.size > 0
+            ? plural("sessions.selected", selected.size)
+            : t("adminStudy.selectToDelete")}
         </span>
         <Button
           variant="destructive"
@@ -716,7 +759,7 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
           onClick={confirmDelete}
         >
           <Trash2 />
-          Borrar selección
+          {t("sessions.deleteSelection")}
         </Button>
       </div>
     <div className="thin-scroll max-h-[28rem] overflow-y-auto">
@@ -728,16 +771,20 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
                 checked={allSelected}
                 indeterminate={someSelected}
                 onCheckedChange={toggleAll}
-                label={allSelected ? "Deseleccionar todas las sesiones" : "Seleccionar todas las sesiones"}
+                label={
+                  allSelected
+                    ? t("adminStudy.deselectAllSessions")
+                    : t("adminStudy.selectAllSessions")
+                }
               />
             </TH>
-            <TH>Cuándo</TH>
-            <TH>Evaluador</TH>
-            <TH>Workspace</TH>
-            <TH>Conceptos</TH>
-            <TH>Eligió</TH>
-            <TH className="text-center">Razonó</TH>
-            <TH>Nota</TH>
+            <TH>{t("sessions.col.when")}</TH>
+            <TH>{t("adminStudy.col.evaluator")}</TH>
+            <TH>{t("adminStudy.col.workspace")}</TH>
+            <TH>{t("sessions.col.concepts")}</TH>
+            <TH>{t("adminStudy.col.chose")}</TH>
+            <TH className="text-center">{t("sessions.col.reasoned")}</TH>
+            <TH>{t("adminStudy.col.note")}</TH>
           </TR>
         </THead>
         <TBody>
@@ -749,7 +796,7 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
                   <Checkbox
                     checked={selected.has(row.id)}
                     onCheckedChange={(next) => toggle(row.id, next)}
-                    label={`Seleccionar la sesión ${row.id}`}
+                    label={t("adminStudy.selectSession", { id: row.id })}
                   />
                 </TD>
                 <TD className="whitespace-nowrap py-1.5 pr-3 text-muted-foreground">
@@ -762,21 +809,21 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
                 <TD className="max-w-52 truncate px-3 py-1.5">{row.concepts.join(" · ")}</TD>
                 <TD className="whitespace-nowrap px-3 py-1.5">
                   {row.chosen_at === null ? (
-                    <span className="text-muted-foreground">sin decidir</span>
+                    <span className="text-muted-foreground">{t("sessions.undecided")}</span>
                   ) : meta ? (
                     <span className="flex items-center gap-1.5">
                       <span
                         className="size-2 shrink-0 rounded-[2px]"
                         style={{ backgroundColor: meta.colour }}
                       />
-                      {meta.short}
+                      {t(meta.shortKey)}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">ninguna</span>
+                    <span className="text-muted-foreground">{t("sessions.none")}</span>
                   )}
                 </TD>
                 <TD className="px-3 py-1.5 text-center text-muted-foreground">
-                  {row.think ? "sí" : "no"}
+                  {row.think ? t("fair.yes") : t("fair.no")}
                 </TD>
                 <TD className="max-w-64 truncate py-1.5 pl-3 text-muted-foreground">
                   {row.evaluator_note ?? ""}

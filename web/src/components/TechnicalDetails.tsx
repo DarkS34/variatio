@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
+import { useT } from "@/lib/i18n";
 
 function Section({
   title,
@@ -42,14 +43,15 @@ function Section({
 }
 
 export function TechnicalDetails({ run }: { run: RunView }) {
+  const { t } = useT();
   return (
     <div className="space-y-2">
       {run.retrieval ? (
-        <Section title="Recuperación de conceptos" count={run.retrieval.candidates.length}>
+        <Section title={t("technical.retrieval")} count={run.retrieval.candidates.length}>
           <p className="mb-2 truncate text-small text-muted-foreground">{run.retrieval.query}</p>
           {run.retrieval.candidates.length === 0 ? (
             <p className="text-small text-attention">
-              Ningún candidato superó el umbral de similitud.
+              {t("technical.noCandidates")}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -70,12 +72,12 @@ export function TechnicalDetails({ run }: { run: RunView }) {
       ) : null}
 
       {run.repairs.length > 0 ? (
-        <Section title="Reparaciones de JSON" count={run.repairs.length}>
+        <Section title={t("technical.repairs")} count={run.repairs.length}>
           <ul className="space-y-1.5">
             {run.repairs.map((repair, index) => (
               <li key={index} className="text-small">
                 <span className="text-attention">
-                  intento {repair.attempt}/{repair.max_attempts}
+                  {t("technical.attempt", { n: repair.attempt, max: repair.max_attempts })}
                 </span>{" "}
                 <span className="text-muted-foreground">({repair.where})</span>
                 <p className="font-mono text-micro text-muted-foreground">{repair.error}</p>
@@ -86,7 +88,7 @@ export function TechnicalDetails({ run }: { run: RunView }) {
       ) : null}
 
       {run.prompt ? (
-        <Section title="Prompt enviado al modelo">
+        <Section title={t("technical.prompt")}>
           <CodeBlock code={run.prompt} language="text" maxHeight="18rem" />
         </Section>
       ) : null}

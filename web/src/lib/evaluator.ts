@@ -1,4 +1,5 @@
 import type { EvaluatorProfile } from "@/lib/types";
+import type { Key } from "@/lib/i18n";
 
 /**
  * The two evaluator profiles, named once for the whole browser.
@@ -10,9 +11,9 @@ import type { EvaluatorProfile } from "@/lib/types";
  */
 export const PROFILES: EvaluatorProfile[] = ["teacher", "student"];
 
-export const PROFILE_LABELS: Record<EvaluatorProfile, string> = {
-  teacher: "Docente",
-  student: "Alumno",
+export const PROFILE_LABEL_KEYS: Record<EvaluatorProfile, Key> = {
+  teacher: "profile.teacher",
+  student: "profile.student",
 };
 
 /**
@@ -20,12 +21,15 @@ export const PROFILE_LABELS: Record<EvaluatorProfile, string> = {
  * THEMSELVES. Verbs and not nouns because a noun has to pick a gender — «alumno» — and the
  * installation does not know one; «¿das clase o estudias?» asks the same thing of anybody.
  */
-export const PROFILE_SELF_LABELS: Record<EvaluatorProfile, string> = {
-  teacher: "Docente",
-  student: "Estudiante",
+export const PROFILE_SELF_LABEL_KEYS: Record<EvaluatorProfile, Key> = {
+  teacher: "profile.self.teacher",
+  student: "profile.self.student",
 };
 
 /** `null` is a state and not a gap, so it is named rather than left blank. */
-export function profileLabel(value: EvaluatorProfile | null | undefined): string {
-  return value ? PROFILE_LABELS[value] : "Sin perfil";
+export function profileLabel(
+  value: EvaluatorProfile | null | undefined,
+  t: (key: Key) => string,
+): string {
+  return value ? t(PROFILE_LABEL_KEYS[value]) : t("evaluator.noProfile");
 }

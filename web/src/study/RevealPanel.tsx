@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
 import type { EvaluationDetail, EvaluationPosition } from "./types";
+import { useT } from "@/lib/i18n";
 
 /**
  * The moment the screen goes from grey to colour.
@@ -23,6 +24,7 @@ function Origin({
   position: EvaluationPosition;
   chosen: boolean;
 }) {
+  const { t, plural } = useT();
   const [open, setOpen] = useState(false);
   const meta = position.arm ? ARM_META[position.arm] : null;
   if (!meta) return null;
@@ -39,16 +41,16 @@ function Origin({
         >
           {letterFor(position.position)}
         </span>
-        <span className="text-body font-medium">{meta.label}</span>
+        <span className="text-body font-medium">{t(meta.labelKey)}</span>
         {chosen ? (
           <Badge variant="default">
             <Trophy />
-            elegida
+            {t("reveal.chosen")}
           </Badge>
         ) : null}
         {position.status !== "ok" ? (
           <Badge variant={position.status === "unavailable" ? "outline" : "attention"}>
-            {position.status === "unavailable" ? "no disponible" : "sin ítem válido"}
+            {position.status === "unavailable" ? t("reveal.unavailable") : t("reveal.noValidItem")}
           </Badge>
         ) : null}
         <span className="ml-auto flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
@@ -58,7 +60,7 @@ function Origin({
       </div>
 
       <p className="px-3 pb-2 text-small leading-relaxed text-muted-foreground">
-        {meta.description}
+        {t(meta.descriptionKey)}
       </p>
 
       {position.error ? (
@@ -78,19 +80,18 @@ function Origin({
         className="flex w-full items-center gap-2 border-t border-border px-3 py-1.5 text-left text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3 transition-transform", open && "rotate-90")} />
-        Ver el prompt exacto que recibió
+        {t("reveal.seePrompt")}
         {position.exemplar_ids && position.exemplar_ids.length > 0 ? (
           <span className="ml-auto nums">
-            {position.exemplar_ids.length} ejemplo
-            {position.exemplar_ids.length === 1 ? "" : "s"} del banco
+            {plural("reveal.examplesFromBank", position.exemplar_ids.length)}
           </span>
         ) : (
-          <span className="ml-auto">sin ejemplos</span>
+          <span className="ml-auto">{t("reveal.noExamples")}</span>
         )}
       </button>
       {open ? (
         <div className="space-y-2 border-t border-border bg-muted/30 p-3">
-          <CodeBlock code={position.prompt || "(sin prompt registrado)"} maxHeight="20rem" />
+          <CodeBlock code={position.prompt || t("reveal.noPrompt")} maxHeight="20rem" />
           {position.exemplar_ids && position.exemplar_ids.length > 0 ? (
             <p className="font-mono text-[11px] text-muted-foreground">
               {position.exemplar_ids.join(" · ")}
@@ -103,24 +104,28 @@ function Origin({
 }
 
 export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
+  const { t } = useT();
   const { session, positions } = detail;
   const chosenMeta = session.choice_arm ? ARM_META[session.choice_arm] : null;
 
   return (
     <section className="animate-fade-in space-y-3">
       <header className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 className="text-body font-semibold">De dónde salió cada propuesta</h2>
+        <h2 className="text-body font-semibold">{t("reveal.title")}</h2>
         <p className="text-body text-muted-foreground">
           {session.choice === null
-            ? "No elegiste ninguna."
-            : `Elegiste ${letterFor(session.choice)} — ${chosenMeta?.label ?? ""}.`}
+            ? t("reveal.choseNone")
+            : t("reveal.chose", {
+                letter: letterFor(session.choice),
+                arm: chosenMeta ? t(chosenMeta.labelKey) : "",
+              })}
         </p>
         <span className="ml-auto flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <Brain className="size-3" />
-            {session.think ? "con razonamiento" : "sin razonamiento"}
+            {session.think ? t("reveal.withReasoning") : t("reveal.withoutReasoning")}
           </span>
-          <span>semilla {session.seed}</span>
+          <span>{t("reveal.seed", { seed: session.seed ?? "—" })}</span>
         </span>
       </header>
 
@@ -129,8 +134,8 @@ export function RevealPanel({ detail }: { detail: EvaluationDetail }) {
           existed precisely to measure without that bias. */}
       <p className="text-small text-muted-foreground">
         {session.think
-          ? "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir."
-          : "Esta sesión salió sorteada sin razonamiento previo: las dos propuestas locales respondieron directamente."}
+          ? t("reveal.reasoningBody")
+          : t("reveal.noReasoningBody")}
       </p>
 
       <div className="space-y-2">

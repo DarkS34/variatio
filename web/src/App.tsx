@@ -7,6 +7,7 @@ import { Dashboard } from "@/features/pipeline/Dashboard";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { useHasWorkspace } from "@/state/auth";
 import { usePipeline } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
 // happens here rather than in a route table. The panel stays static because «/» is
@@ -44,6 +45,7 @@ const GenerateScreen = lazy(() =>
 const NEEDS_WORKSPACE = ["/", "/preparar/perfil", "/preparar/grafo", "/preparar/banco", "/generar", "/evaluar"];
 
 export function App() {
+  const { t } = useT();
   const { path } = useRouter();
   const pipeline = usePipeline();
   const hasWorkspace = useHasWorkspace();
@@ -90,9 +92,9 @@ export function App() {
         return <AdminScreen />;
       default:
         return (
-          <EmptyState title="Esa página no existe">
+          <EmptyState title={t("route.notFound")}>
             <Link to="/" className="text-primary underline-offset-4 hover:underline">
-              Volver al panel
+              {t("route.backToPanel")}
             </Link>
           </EmptyState>
         );

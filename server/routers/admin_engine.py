@@ -73,13 +73,13 @@ def engine() -> dict:
             {
                 "model": model,
                 "asked_by": names,
-                "state": "remoto"
+                "state": "remote"
                 if model in remote
-                else "cargado"
+                else "loaded"
                 if model in resident
-                else "en disco"
+                else "on_disk"
                 if model in on_disk
-                else "sin instalar",
+                else "not_installed",
             }
             for model, names in sorted(asked_by.items())
         ],

@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useLogin } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
+import { useT } from "@/lib/i18n";
 
 export function LoginScreen() {
   const [forgotting, setForgotting] = useState(false);
@@ -18,6 +19,7 @@ export function LoginScreen() {
 }
 
 function LoginForm({ onForgot }: { onForgot: () => void }) {
+  const { t } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const login = useLogin();
@@ -29,17 +31,17 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
 
   return (
     <AuthLayout
-      title="Entra"
-      description="El acceso es por invitación: no hay registro abierto."
+      title={t("auth.login")}
+      description={t("auth.byInvitation")}
       footer={
         <button type="button" onClick={onForgot} className="text-muted-foreground hover:underline">
-          He olvidado la contraseña
+          {t("auth.forgot")}
         </button>
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="username">Usuario</Label>
+          <Label htmlFor="username">{t("auth.username")}</Label>
           <Input
             id="username"
             autoComplete="username"
@@ -53,7 +55,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Contraseña</Label>
+          <Label htmlFor="password">{t("auth.password")}</Label>
           <Input
             id="password"
             type="password"
@@ -68,7 +70,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
 
         <Button type="submit" disabled={login.isPending}>
           {login.isPending ? <Spinner /> : null}
-          Entrar
+          {t("common.enter")}
         </Button>
       </form>
     </AuthLayout>
@@ -76,6 +78,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
 }
 
 function ForgotForm({ onBack }: { onBack: () => void }) {
+  const { t } = useT();
   const [username, setUsername] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,8 +97,8 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
 
   return (
     <AuthLayout
-      title="Recuperar el acceso"
-      description="Se genera un enlace de un solo uso para poner una contraseña nueva."
+      title={t("auth.recover")}
+      description={t("auth.recoverBody")}
       footer={
         <button type="button" onClick={onBack} className="text-muted-foreground hover:underline">
           Volver a entrar
@@ -108,14 +111,12 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
         // not a hedge either — most accounts here have no address at all, and the link
         // reaches its owner through whoever administra la instalación.
         <p className="text-body text-muted-foreground">
-          Si esa cuenta existe, el enlace ya está emitido y caduca en 45 minutos. Llega por
-          correo solo si la cuenta tiene una dirección asociada; si no, pídeselo a quien
-          administra la instalación.
+          {t("auth.forgotSent")}
         </p>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="forgot-username">Usuario</Label>
+            <Label htmlFor="forgot-username">{t("auth.username")}</Label>
             <Input
               id="forgot-username"
               autoComplete="username"
@@ -129,7 +130,7 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
           </div>
           <Button type="submit" disabled={busy}>
             {busy ? <Spinner /> : null}
-            Pedir el enlace
+            {t("login.requestLink")}
           </Button>
         </form>
       )}

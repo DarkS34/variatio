@@ -10,6 +10,7 @@ import type { ArtifactName, BuildPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import { useArtifactRun, useBuildPhases, useCancelJob, useElapsed } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * What a build is doing right now, on the screen of the thing being built.
@@ -31,6 +32,7 @@ export function BuildProgress({
   artifact: ArtifactName;
   className?: string;
 }) {
+  const { t } = useT();
   const run = useArtifactRun(artifact);
   // The plan belongs to the BUILDER, not to the artifact: a `tag` job is filed under
   // the bank too, declares no phases and emits no `build.progress`, so handing it the
@@ -41,7 +43,7 @@ export function BuildProgress({
       run={run}
       phases={phases}
       className={className}
-      waiting="Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso."
+      waiting={t("progress.building")}
     />
   );
 }
@@ -58,13 +60,16 @@ export function JobProgress({
   run,
   phases,
   className,
-  waiting = "En marcha. El detalle aparecerá en cuanto el proceso emita su primer paso.",
+  waiting,
 }: {
   run: RunView | null;
   phases: BuildPhase[];
   className?: string;
+  /** What the card says before the first step arrives. Defaults to the generic sentence. */
   waiting?: string;
 }) {
+  const { t } = useT();
+  const waitingText = waiting ?? t("progress.running");
   const cancel = useCancelJob();
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
@@ -75,7 +80,7 @@ export function JobProgress({
       <Card className={className}>
         <CardContent className="flex items-center gap-2 py-4 text-body text-muted-foreground">
           <Spinner />
-          {waiting}
+          {waitingText}
         </CardContent>
       </Card>
     );
@@ -124,7 +129,7 @@ export function JobProgress({
               disabled={cancel.isPending}
             >
               <Ban />
-              Cancelar
+              {t("common.cancel")}
             </Button>
           ) : null}
         </div>
@@ -139,7 +144,7 @@ export function JobProgress({
                   {position + 1}/{phases.length}
                 </span>
               ) : null}
-              {overall?.label ?? step?.label ?? "Preparando el proceso…"}
+              {overall?.label ?? step?.label ?? t("progress.preparing")}
             </p>
             <span className="shrink-0 text-body font-medium nums">
               {percent === null ? "—" : `${percent} %`}
@@ -166,7 +171,7 @@ export function JobProgress({
 
         <div className="space-y-2">
           <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-            Pasos
+            {t("run.steps")}
           </h4>
           <RunTimeline steps={run.steps} />
           {run.job.error ? (

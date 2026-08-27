@@ -22,7 +22,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Checkbox, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { TAGGING_METHOD, truncate } from "@/lib/format";
+import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
 import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +34,7 @@ import {
   useKg,
   useSubmitJob,
 } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 function ItemEditor({
   item,
@@ -50,6 +51,7 @@ function ItemEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const locked = useStageLocked();
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -96,22 +98,22 @@ function ItemEditor({
     <Dialog
       open
       onClose={onClose}
-      title={`Ítem ${item.id}`}
-      description={item.source ? `Origen: ${item.source}` : undefined}
+      title={t("bank.item", { id: item.id })}
+      description={item.source ? t("bank.source", { source: item.source }) : undefined}
       className="max-w-4xl"
       footer={
         locked ? (
           <Button variant="ghost" onClick={onClose}>
-            Cerrar
+            {t("common.close")}
           </Button>
         ) : (
           <>
             <Button variant="ghost" onClick={onClose}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button onClick={submit} disabled={pending}>
               {pending ? <Spinner /> : null}
-              Guardar
+              {t("common.save")}
             </Button>
           </>
         )
@@ -140,11 +142,8 @@ function ItemEditor({
         <div className="space-y-3">
           <div>
             <div className="mb-2 flex items-center gap-1.5">
-              <Label>Conceptos</Label>
-              <InfoHint label="Cómo se etiqueta un ítem">
-                Solo conceptos del grafo. El marcado como principal es el que decide de qué
-                concepto es ejemplo este ítem.
-              </InfoHint>
+              <Label>{t("bank.concepts")}</Label>
+              <InfoHint label={t("bank.howTagged")}>{t("bank.howTaggedBody")}</InfoHint>
             </div>
             <ConceptPicker
               concepts={concepts}
@@ -160,11 +159,15 @@ function ItemEditor({
           {item._tagging ? (
             <div className="rounded-lg border border-border p-3">
               <p className="mb-2 text-small font-medium text-muted-foreground">
-                Cómo se decidió: {TAGGING_METHOD[item._tagging.method] ?? item._tagging.method}
+                {t("bank.taggingMethod", {
+                  method: TAGGING_METHOD_KEYS[item._tagging.method]
+                    ? t(TAGGING_METHOD_KEYS[item._tagging.method])
+                    : item._tagging.method,
+                })}
               </p>
               {item._tagging.candidates.length === 0 ? (
                 <p className="text-small text-[var(--attention)]">
-                  Ningún candidato superó el umbral de similitud.
+                  {t("bank.noCandidates")}
                 </p>
               ) : (
                 <ul className="space-y-1">
@@ -222,6 +225,7 @@ function ItemRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useT();
   const locked = useStageLocked();
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
@@ -240,7 +244,7 @@ function ItemRow({
           <Checkbox
             checked={selected}
             onCheckedChange={onToggle}
-            label={`Seleccionar el ítem ${item.id}`}
+            label={t("bank.selectItem", { id: item.id })}
             className="mt-1"
           />
         </TD>
@@ -271,7 +275,9 @@ function ItemRow({
               {item._tagging ? (
                 <div className="rounded-md border border-border p-2">
                   <p className="mb-1 text-small text-muted-foreground">
-                    {TAGGING_METHOD[item._tagging.method] ?? item._tagging.method}
+                    {TAGGING_METHOD_KEYS[item._tagging.method]
+                      ? t(TAGGING_METHOD_KEYS[item._tagging.method])
+                      : item._tagging.method}
                     {item._tagging.model ? ` · ${item._tagging.model}` : ""}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -285,7 +291,7 @@ function ItemRow({
                     ))}
                     {item._tagging.candidates.length === 0 ? (
                       <span className="text-small text-[var(--attention)]">
-                        sin candidatos sobre el umbral
+                        {t("tagging.no_candidates")}
                       </span>
                     ) : null}
                   </div>
@@ -299,7 +305,7 @@ function ItemRow({
             {untagged ? (
               <Badge variant="attention">
                 <TriangleAlert />
-                sin concepto
+                {t("bank.noConcept")}
               </Badge>
             ) : (
               item.concepts!.map((concept) => (
@@ -311,7 +317,7 @@ function ItemRow({
           </div>
         </TD>
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
-          <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label="Detalle">
+          <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label={t("bank.detail")}>
             <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
           </Button>
           <Button
@@ -319,8 +325,8 @@ function ItemRow({
             size="icon-sm"
             onClick={onDelete}
             disabled={locked}
-            title={locked ? LOCKED_HINT : "Eliminar"}
-            aria-label="Eliminar"
+            title={locked ? t(LOCKED_HINT) : "Eliminar"}
+            aria-label={t("bank.delete")}
           >
             <Trash2 />
           </Button>
@@ -331,6 +337,7 @@ function ItemRow({
 }
 
 export function BankScreen({ stage }: { stage: StageState | undefined }) {
+  const { t, plural } = useT();
   const kg = useKg();
   const coverage = useCoverage();
   const submit = useSubmitJob();
@@ -433,20 +440,16 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   return (
     <StageGate
       stage={stage}
-      title="Banco de ejemplares"
+      title={t("bank.title")}
       description={
-        <>
-          Los ítems extraídos de los documentos y etiquetados con conceptos del grafo. Salen en el
-          orden en que se extrajeron; «Ordenar por sospecha» pone delante los que se quedaron sin
-          concepto y las decisiones que se ganaron por poco margen.
-        </>
+t("bank.stage.description")
       }
       livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
       buildLabels={{
-        create: "Extraer",
-        redo: "Volver a extraer",
+        create: t("bank.extract"),
+        redo: t("bank.reextract"),
         confirmRedo: hasItems
-          ? `Volver a extraer descarta los ${listing?.totals.items} ítem(s) que hay ahora —con sus etiquetas y las correcciones hechas a mano— y los vuelve a sacar de los documentos en bruto. ¿Continuar?`
+          ? t("bank.confirmReextract", { n: listing?.totals.items ?? 0 })
           : undefined,
       }}
     >
@@ -454,13 +457,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Etiquetado</CardTitle>
+              <CardTitle>{t("bank.tagging")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {listing ? (
                 <>
                   <div className="flex items-baseline justify-between text-body">
-                    <span className="text-muted-foreground">Ítems con concepto</span>
+                    <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
                     <span className="nums">
                       {listing.totals.tagged}/{listing.totals.items}
                     </span>
@@ -479,7 +482,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                         }}
                         className="text-small text-[var(--attention)] hover:underline"
                       >
-                        Ver los {listing.totals.untagged} sin concepto →
+                        {plural("bank.seeUntagged", listing.totals.untagged)}
                       </button>
                     ) : (
                       <span />
@@ -492,14 +495,14 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                           disabled={locked || submit.isPending || Boolean(offline)}
                           title={
                             locked
-                              ? LOCKED_HINT
+                              ? t(LOCKED_HINT)
                               : (offline ??
-                                `Vuelve a pasar el etiquetador por los ${listing.totals.untagged} ítem(s) sin concepto`)
+                                plural("bank.retagUntaggedHint", listing.totals.untagged))
                           }
                           onClick={() => submit.mutate({ kind: "tag", params: {} })}
                         >
                           {submit.isPending ? <Spinner /> : <RefreshCw />}
-                          Re-etiquetar los {listing.totals.untagged}
+                          {t("bank.retagUntagged", { n: listing.totals.untagged })}
                         </Button>
                       ) : null}
                       {hasItems ? (
@@ -509,21 +512,21 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                           disabled={locked || submit.isPending || Boolean(offline)}
                           title={
                             locked
-                              ? LOCKED_HINT
+                              ? t(LOCKED_HINT)
                               : (offline ??
-                                `Vuelve a etiquetar los ${listing.totals.items} ítem(s) del banco desde cero`)
+                                t("bank.retagAllHint", { n: listing.totals.items }))
                           }
                           onClick={() => {
                             if (
                               window.confirm(
-                                `Re-etiquetar todo vuelve a pasar el etiquetador por los ${listing.totals.items} ítem(s) del banco y sobrescribe las etiquetas actuales, incluidas las corregidas a mano. ¿Continuar?`,
+                                t("bank.confirmRetagAll", { n: listing.totals.items }),
                               )
                             )
                               submit.mutate({ kind: "tag", params: { all: true } });
                           }}
                         >
                           {submit.isPending ? <Spinner /> : <RefreshCw />}
-                          Re-etiquetar todo
+                          {t("bank.retagAll")}
                         </Button>
                       ) : null}
                     </div>
@@ -538,18 +541,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-1.5">
-                <CardTitle>Cobertura del currículo</CardTitle>
-                <InfoHint label="Qué mide la cobertura">
-                  Cuántos conceptos etiquetables tienen al menos un ítem del banco. Los que no lo
-                  tienen se generan en zero-shot, sin ejemplo que imitar.
-                </InfoHint>
+                <CardTitle>{t("bank.coverage")}</CardTitle>
+                <InfoHint label={t("bank.coverageHint")}>{t("bank.coverageBody")}</InfoHint>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {coverage.data ? (
                 <>
                   <div className="flex items-baseline justify-between text-body">
-                    <span className="text-muted-foreground">Conceptos con ejemplo</span>
+                    <span className="text-muted-foreground">{t("bank.conceptsWithExample")}</span>
                     <span className="nums">
                       {coverage.data.covered}/{coverage.data.total}
                     </span>
@@ -565,21 +565,17 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-1.5">
-                <CardTitle>Umbrales de recuperación</CardTitle>
-                <InfoHint label="Qué controlan los umbrales">
-                  Por debajo de la similitud mínima un ítem se queda sin candidatos y, por tanto,
-                  sin concepto. El número de candidatos es cuántos conceptos del grafo llegan al
-                  LLM para que decida entre ellos.
-                </InfoHint>
+                <CardTitle>{t("bank.thresholds")}</CardTitle>
+                <InfoHint label={t("bank.thresholdsHint")}>{t("bank.thresholdsBody")}</InfoHint>
               </div>
             </CardHeader>
             <CardContent className="space-y-1 text-body">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Similitud mínima</span>
+                <span className="text-muted-foreground">{t("bank.minSimilarity")}</span>
                 <span className="nums">{listing?.thresholds.similarity ?? "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Candidatos por ítem</span>
+                <span className="text-muted-foreground">{t("bank.candidatesPerItem")}</span>
                 <span className="nums">{listing?.thresholds.top_k ?? "—"}</span>
               </div>
             </CardContent>
@@ -596,13 +592,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 setQuery(event.target.value);
                 setPage(1);
               }}
-              placeholder="Buscar en el enunciado o por id…"
+              placeholder={t("bank.search")}
               className="pl-8"
             />
           </div>
           {manyTypes ? (
             <Select
-              aria-label="Filtrar por modalidad"
+              aria-label={t("bank.filterByModality")}
               value={itemType}
               onChange={(event) => {
                 setItemType(event.target.value);
@@ -610,7 +606,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               }}
               className="max-w-56"
             >
-              <option value="">Todas las modalidades</option>
+              <option value="">{t("bank.allModalities")}</option>
               {itemTypes.map((type) => (
                 <option key={type.key} value={type.key}>
                   {type.label || type.key} ({type.count})
@@ -626,7 +622,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             }}
             className="max-w-48"
           >
-            <option value="">Todos los orígenes</option>
+            <option value="">{t("bank.allSources")}</option>
             {(listing?.sources ?? []).map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -642,20 +638,20 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             }}
           >
             <TriangleAlert />
-            Sin concepto
+            {t("bank.untagged")}
           </Button>
           <Select
             value={order}
             onChange={(event) => setOrder(event.target.value as "suspicion" | "id")}
             className="max-w-56"
           >
-            <option value="id">Ordenar por id</option>
-            <option value="suspicion">Ordenar por sospecha</option>
+            <option value="id">{t("bank.orderById")}</option>
+            <option value="suspicion">{t("bank.orderBySuspicion")}</option>
           </Select>
         </div>
 
         {bank.isError ? (
-          <Alert tone="danger" title="No se pudo leer el banco">
+          <Alert tone="danger" title={t("bank.unreadable")}>
             <p>{(bank.error as Error).message}</p>
           </Alert>
         ) : null}
@@ -672,15 +668,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                       onCheckedChange={togglePage}
                       label={
                         pageSelected
-                          ? "Deseleccionar los ítems de esta página"
-                          : "Seleccionar todos los ítems de esta página"
+                          ? t("bank.deselectPage")
+                          : t("bank.selectPage")
                       }
                     />
                   </TH>
                   <TH className="w-16">id</TH>
-                  {manyTypes ? <TH className="w-40">modalidad</TH> : null}
+                  {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
                   <TH>{primaryHeader}</TH>
-                  <TH className="w-72">conceptos</TH>
+                  <TH className="w-72">{t("bank.column.concepts")}</TH>
                   <TH className="w-24" />
                 </TR>
               </THead>
@@ -696,7 +692,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     onToggle={() => toggle(item.id)}
                     onEdit={() => setEditing(item)}
                     onDelete={() => {
-                      if (window.confirm(`¿Eliminar el ítem ${item.id}?`)) remove.mutate(item.id);
+                      if (window.confirm(t("bank.confirmDelete", { id: item.id }))) remove.mutate(item.id);
                     }}
                   />
                 ))}
@@ -704,7 +700,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             </Table>
             {listing.items.length === 0 ? (
               <p className="p-8 text-center text-body text-muted-foreground">
-                Ningún ítem con estos filtros.
+                {t("bank.noneWithFilters")}
               </p>
             ) : null}
           </div>
@@ -715,7 +711,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         {listing && pages > 1 ? (
           <div className="flex items-center justify-between text-body">
             <span className="text-muted-foreground">
-              {listing.total} ítem(s) · página {listing.page} de {pages}
+              {plural("bank.pageOf", listing.total, { page: listing.page, pages })}
             </span>
             <div className="flex gap-2">
               <Button
@@ -724,7 +720,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 disabled={page <= 1}
                 onClick={() => setPage((value) => value - 1)}
               >
-                Anterior
+                {t("common.previous")}
               </Button>
               <Button
                 variant="outline"
@@ -732,7 +728,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 disabled={page >= pages}
                 onClick={() => setPage((value) => value + 1)}
               >
-                Siguiente
+                {t("common.next")}
               </Button>
             </div>
           </div>
@@ -746,9 +742,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             chosen by hand, whatever their state. */}
         {selected.size > 0 ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
-            <span>{selected.size} ítem(s) seleccionados</span>
+            <span>{plural("bank.selectedCount", selected.size)}</span>
             <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-              Deseleccionar
+              {t("bank.deselect")}
             </Button>
             <Button
               size="sm"
@@ -756,13 +752,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               disabled={locked || submit.isPending || Boolean(offline)}
               title={
                 locked
-                  ? LOCKED_HINT
-                  : (offline ?? `Vuelve a etiquetar los ${selected.size} ítem(s) seleccionados`)
+                  ? t(LOCKED_HINT)
+                  : (offline ?? plural("bank.retagSelectedHint", selected.size))
               }
               onClick={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
             >
               {submit.isPending ? <Spinner /> : <RefreshCw />}
-              Re-etiquetar selección
+              {t("bank.retagSelected")}
             </Button>
           </div>
         ) : null}

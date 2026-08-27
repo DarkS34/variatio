@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
-import { PROFILES, PROFILE_SELF_LABELS } from "@/lib/evaluator";
+import { PROFILES, PROFILE_SELF_LABEL_KEYS } from "@/lib/evaluator";
+import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import type { EvaluatorProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ROLE_HINTS, ROLE_LABELS, useAcceptInvite } from "@/state/auth";
+import { useT } from "@/lib/i18n";
+import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useAcceptInvite } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
 
@@ -28,6 +30,7 @@ import { AuthLayout, FormError } from "./AuthLayout";
  * should have happened anyway; the effect strips the token from the URL on the way.
  */
 export function AcceptInvite({ token }: { token: string }) {
+  const { t } = useT();
   const preview = useQuery({
     queryKey: ["auth", "invite", token],
     queryFn: () => api.invitePreview(token),
@@ -42,6 +45,10 @@ export function AcceptInvite({ token }: { token: string }) {
   // No default: the two are not a scale with a middle, and a preselected answer is one
   // nobody gave. Nothing is submitted until it is chosen.
   const [profile, setProfile] = useState<EvaluatorProfile | null>(null);
+  // Seeded from what the browser already says, so a person whose machine is in English
+  // is not greeted in Spanish and then asked to fix it. It is a default and not an
+  // answer: the control below is what they actually decide with.
+  const [language, setLanguage] = useState<Language>(useLanguage());
   const accept = useAcceptInvite();
   const { navigate } = useRouter();
 
@@ -51,7 +58,7 @@ export function AcceptInvite({ token }: { token: string }) {
 
   if (accept.isSuccess) {
     return (
-      <AuthLayout title="Cuenta creada" description="Ya estás dentro; entrando…">
+      <AuthLayout title="Cuenta creada" description={t("invite.alreadyIn")}>
         <Spinner />
       </AuthLayout>
     );
@@ -59,7 +66,7 @@ export function AcceptInvite({ token }: { token: string }) {
 
   if (preview.isLoading) {
     return (
-      <AuthLayout title="Invitación">
+      <AuthLayout title={t("invite.title")}>
         <Spinner />
       </AuthLayout>
     );
@@ -68,11 +75,11 @@ export function AcceptInvite({ token }: { token: string }) {
   if (preview.isError) {
     return (
       <AuthLayout
-        title="Esa invitación ya no vale"
-        description="Puede que se haya usado o que haya caducado. Pide otra a quien te invitó."
+        title={t("invite.dead")}
+        description={t("invite.deadBody")}
         footer={
           <a href="/" className="text-muted-foreground hover:underline">
-            Ir a la pantalla de entrada
+            {t("auth.backToLogin")}
           </a>
         }
       >
@@ -93,21 +100,25 @@ export function AcceptInvite({ token }: { token: string }) {
       name: name.trim(),
       password,
       evaluator_profile: profile,
+      ui_language: language,
     });
   };
 
   return (
     <AuthLayout
-      title="Crea tu cuenta"
+      title={t("invite.create")}
       description={
         invite.workspace
-          ? `Te han invitado a «${invite.workspace}» con permiso de ${ROLE_LABELS[invite.role].toLowerCase()}.`
-          : "Te han invitado a Variatio."
+          ? t("invite.toWorkspace", {
+            workspace: invite.workspace,
+            role: t(ROLE_LABEL_KEYS[invite.role]).toLowerCase(),
+          })
+          : t("invite.toApp")
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-username">Usuario</Label>
+          <Label htmlFor="invite-username">{t("auth.username")}</Label>
           <Input
             id="invite-username"
             name="username"
@@ -120,12 +131,12 @@ export function AcceptInvite({ token }: { token: string }) {
             onChange={(event) => setUsername(event.target.value)}
           />
           <p className="text-small text-muted-foreground">
-            Con esto entrarás. Minúsculas, cifras, punto, guion o guion bajo.
+            {t("invite.usernameHelp")}
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-name">Nombre visible</Label>
+          <Label htmlFor="invite-name">{t("invite.visibleName")}</Label>
           <Input
             id="invite-name"
             name="name"
@@ -141,7 +152,7 @@ export function AcceptInvite({ token }: { token: string }) {
             form — asking mid-comparison gets an answer of convenience. It is not a
             permission, and an administrator corrects it from the panel afterwards. */}
         <div className="flex flex-col gap-1.5">
-          <Label id="invite-profile-label">¿Eres estudiante o docente?</Label>
+          <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
           <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
             {PROFILES.map((option) => (
               <button
@@ -156,18 +167,49 @@ export function AcceptInvite({ token }: { token: string }) {
                     : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
                 )}
               >
-                {PROFILE_SELF_LABELS[option]}
+                {t(PROFILE_SELF_LABEL_KEYS[option])}
               </button>
             ))}
           </div>
           <p className="text-small text-muted-foreground">
-            Decide qué se te preguntará cuando compares ejercicios. No cambia lo que puedes
-            hacer aquí.
+            {t("invite.profileHint")}
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-password">Contraseña</Label>
+          <Label id="invite-language-label">{t("invite.language")}</Label>
+          <div role="group" aria-labelledby="invite-language-label" className="flex gap-1">
+            {LANGUAGES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setLanguage(option);
+                  // Written through at once: the rest of this form, and the screen behind
+                  // it, are already drawn — a choice that only landed on submit would leave
+                  // somebody finishing a form in a language they have just said they do not
+                  // read.
+                  localeStore.set(option);
+                }}
+                aria-pressed={language === option}
+                className={cn(
+                  "h-9 flex-1 border text-small font-medium transition-colors",
+                  language === option
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-accent/60",
+                )}
+              >
+                {LANGUAGE_NAMES[option]}
+              </button>
+            ))}
+          </div>
+          <p className="text-small text-muted-foreground">
+            {t("invite.languageHint")}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="invite-password">{t("auth.password")}</Label>
           {/* `new-password` on both fields is what makes this a sign-up form to a password
               manager: it is the signal Google Contraseñas reads to offer «Sugerir
               contraseña segura» on focus, and to store the pair afterwards. Generating one
@@ -194,13 +236,12 @@ export function AcceptInvite({ token }: { token: string }) {
             </button>
           </div>
           <p className="text-small text-muted-foreground">
-            Al menos 12 caracteres. Si usas el gestor de contraseñas de Google o del
-            navegador, pulsa en el campo y elige «Sugerir contraseña segura».
+            {t("invite.passwordHelp")}
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-repeat">Repítela</Label>
+          <Label htmlFor="invite-repeat">{t("password.repeat")}</Label>
           <Input
             id="invite-repeat"
             name="confirm-password"
@@ -210,16 +251,18 @@ export function AcceptInvite({ token }: { token: string }) {
             value={repeat}
             onChange={(event) => setRepeat(event.target.value)}
           />
-          {mismatch ? <p className="text-small text-destructive">Las dos no coinciden.</p> : null}
+          {mismatch ? (
+            <p className="text-small text-destructive">{t("password.mismatch")}</p>
+          ) : null}
         </div>
 
-        <p className="text-small text-muted-foreground">{ROLE_HINTS[invite.role]}</p>
+        <p className="text-small text-muted-foreground">{t(ROLE_HINT_KEYS[invite.role])}</p>
 
         <FormError error={accept.error} />
 
         <Button type="submit" disabled={accept.isPending || mismatch || !profile}>
           {accept.isPending ? <Spinner /> : null}
-          Crear la cuenta
+          {t("invite.createAccount")}
         </Button>
       </form>
     </AuthLayout>

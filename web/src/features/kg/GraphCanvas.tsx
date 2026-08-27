@@ -23,6 +23,7 @@ import {
   type LayoutMode,
 } from "./graph/layout";
 import { buildModel, frontierOf } from "./graph/model";
+import { useT } from "@/lib/i18n";
 
 /**
  * The knowledge graph, drawn by hand on a canvas, in two layouts.
@@ -81,6 +82,7 @@ export function GraphCanvas({
   compact = false,
   className,
 }: Props) {
+  const { t, plural } = useT();
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -161,6 +163,7 @@ export function GraphCanvas({
     compact,
     curriculum: curriculumIndices,
     frontier,
+    isolatedCaption: "",
   });
   viewProps.current = {
     selected,
@@ -173,6 +176,10 @@ export function GraphCanvas({
     compact,
     curriculum: curriculumIndices,
     frontier,
+    // The one string `draw.ts` paints. It is passed in rather than translated there: the
+    // painter runs every frame and knows nothing about the catalogue, which is the property
+    // that keeps it testable and cheap.
+    isolatedCaption: plural("canvas.isolated", model.isolated.length),
   };
 
   const wake = useCallback(() => {
@@ -329,6 +336,7 @@ export function GraphCanvas({
         hiddenRelations: props.hiddenRelations,
         curriculum: props.curriculum,
         frontier: props.frontier,
+        isolatedCaption: props.isolatedCaption,
       };
     };
 
@@ -576,14 +584,21 @@ export function GraphCanvas({
       <div className="pointer-events-auto absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border bg-card/90 p-0.5 shadow-sm backdrop-blur">
         {(
           [
-            { value: "force", label: "Vecindario", icon: Network, hint: "Conceptos cerca de aquellos con los que se relacionan" },
+            {
+              value: "force",
+              label: t("canvas.layout.force"),
+              icon: Network,
+              hint: t("canvas.layout.force.hint"),
+            },
             {
               value: "curriculum",
-              label: "Currículo",
+              label: t("canvas.layout.curriculum"),
               icon: Waypoints,
               hint: model.curriculumEdges
-                ? `Un nivel por profundidad de prerrequisitos: lo de arriba se enseña antes (${model.curriculumEdges} relación(es) lo ordenan)`
-                : "El grafo no tiene relaciones de prerrequisito que ordenar",
+                ? t("canvas.layout.curriculum.hint", {
+                    n: plural("canvas.relations", model.curriculumEdges),
+                  })
+                : t("canvas.layout.curriculum.none"),
             },
           ] as const
         ).map((option) => (
@@ -607,18 +622,18 @@ export function GraphCanvas({
       </div>
 
       <div className="absolute right-2 top-2 flex flex-col gap-1">
-        <Button variant="secondary" size="icon-sm" onClick={() => zoom(1.2)} aria-label="Acercar">
+        <Button variant="secondary" size="icon-sm" onClick={() => zoom(1.2)} aria-label={t("canvas.zoomIn")}>
           <ZoomIn />
         </Button>
-        <Button variant="secondary" size="icon-sm" onClick={() => zoom(1 / 1.2)} aria-label="Alejar">
+        <Button variant="secondary" size="icon-sm" onClick={() => zoom(1 / 1.2)} aria-label={t("canvas.zoomOut")}>
           <ZoomOut />
         </Button>
         <Button
           variant="secondary"
           size="icon-sm"
           onClick={fit}
-          aria-label="Encuadrar"
-          title="Encuadrar todo (F)"
+          aria-label={t("canvas.fit")}
+          title={t("canvas.fitHint")}
         >
           <Maximize2 />
         </Button>
@@ -626,8 +641,8 @@ export function GraphCanvas({
           variant="secondary"
           size="icon-sm"
           onClick={relayout}
-          aria-label="Recolocar"
-          title="Recolocar el grafo"
+          aria-label={t("canvas.relayout")}
+          title={t("canvas.relayoutHint")}
         >
           <RotateCw />
         </Button>
@@ -635,13 +650,13 @@ export function GraphCanvas({
           variant={labels === "none" ? "outline" : "secondary"}
           size="icon-sm"
           onClick={() => setLabels(labels === "auto" ? "all" : labels === "all" ? "none" : "auto")}
-          aria-label="Etiquetas"
+          aria-label={t("canvas.labels")}
           title={
             labels === "auto"
-              ? "Etiquetas: automáticas (clic para verlas todas)"
+              ? t("canvas.labels.auto")
               : labels === "all"
-                ? "Etiquetas: todas (clic para ocultarlas)"
-                : "Etiquetas: ocultas (clic para volver a automáticas)"
+                ? t("canvas.labels.all")
+                : t("canvas.labels.none")
           }
         >
           <Tag />
@@ -654,11 +669,12 @@ export function GraphCanvas({
           onClick={() => setArrows(!arrows)}
           className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
         >
-          {arrows ? "Ocultar sentido" : "Mostrar sentido"}
+          {arrows ? t("canvas.hideArrows") : t("canvas.showArrows")}
         </button>
         <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
-          {graph.nodes.length} conceptos · {graph.links.length} relaciones
-          {graph.meta.isolated > 0 ? ` · ${graph.meta.isolated} aislados` : ""}
+          {plural("canvas.conceptCount", graph.nodes.length)} ·{" "}
+          {plural("canvas.relations", graph.links.length)}
+          {graph.meta.isolated > 0 ? plural("canvas.isolatedCount", graph.meta.isolated) : ""}
         </span>
 
         {/* Without a key, three colours on a canvas are three colours. */}
@@ -666,9 +682,13 @@ export function GraphCanvas({
           <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
             {(
               [
-                ["Cubierto", "var(--settled)", curriculumIndices.size],
-                ["Frontera", "var(--attention)", frontier?.size ?? 0],
-                ["Sin impartir", "var(--muted-foreground)", graph.nodes.length - curriculumIndices.size - (frontier?.size ?? 0)],
+                [t("canvas.legend.covered"), "var(--settled)", curriculumIndices.size],
+                [t("canvas.legend.frontier"), "var(--attention)", frontier?.size ?? 0],
+                [
+                  t("canvas.legend.notTaught"),
+                  "var(--muted-foreground)",
+                  graph.nodes.length - curriculumIndices.size - (frontier?.size ?? 0),
+                ],
               ] as const
             ).map(([label, colour, count]) => (
               <span key={label} className="flex items-center gap-1.5">
@@ -684,9 +704,10 @@ export function GraphCanvas({
           the graph, not a failure of the view: saying so keeps it from looking like the latter. */}
       {mode === "curriculum" && model.levelCount < 3 ? (
         <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
-          Solo {model.curriculumEdges} relación(es) de prerrequisito ordenan {graph.nodes.length}{" "}
-          conceptos, así que casi todo cae en el nivel 0. Añade prerrequisitos en el detalle de cada
-          concepto para que esta vista diga algo.
+          {t("canvas.flatWarning", {
+            edges: plural("canvas.relations", model.curriculumEdges),
+            concepts: plural("canvas.conceptCount", graph.nodes.length),
+          })}
         </p>
       ) : null}
 
@@ -702,12 +723,17 @@ export function GraphCanvas({
         >
           <p className="font-medium">{hoveredNode[0]}</p>
           <p className="text-muted-foreground">
-            {graph.groups[hoveredNode[1]]?.name} · grado {model.degrees[hovered!] ?? 0}
+            {t("canvas.degree", {
+              domain: graph.groups[hoveredNode[1]]?.name ?? "",
+              degree: model.degrees[hovered!] ?? 0,
+            })}
             {mode === "curriculum" && model.curriculumEdges > 0
-              ? ` · nivel ${model.levels[hovered!]}`
+              ? t("canvas.level", { n: model.levels[hovered!] })
               : ""}
           </p>
-          {hoveredNode[2] ? <p className="text-muted-foreground">no etiquetable</p> : null}
+          {hoveredNode[2] ? (
+            <p className="text-muted-foreground">{t("canvas.notTaggable")}</p>
+          ) : null}
         </div>
       ) : null}
     </div>

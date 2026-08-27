@@ -8,6 +8,7 @@ import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * The embedded picker: it puts concepts on ONE item, and marks which of them is the
@@ -33,7 +34,7 @@ export function ConceptPicker({
   onChange,
   primary,
   onPrimaryChange,
-  emptyHint = "Ningún concepto seleccionado",
+  emptyHint,
   showExemplarCount = true,
   onlyWithExemplars = false,
   maxHeight = "18rem",
@@ -50,6 +51,8 @@ export function ConceptPicker({
   maxHeight?: string;
   disabled?: boolean;
 }) {
+  const { t, plural } = useT();
+  const emptyText = emptyHint ?? t("concept.noneSelected");
   const [query, setQuery] = useState("");
   const [override, setOverride] = useState<Record<string, boolean>>({});
   const [showAllSelected, setShowAllSelected] = useState(false);
@@ -120,7 +123,7 @@ export function ConceptPicker({
     <div className="space-y-2">
       <div className="flex min-h-8 flex-wrap items-center gap-1.5">
         {selected.length === 0 ? (
-          <span className="text-body text-muted-foreground">{emptyHint}</span>
+          <span className="text-body text-muted-foreground">{emptyText}</span>
         ) : (
           visible.map((name) => (
             <Badge
@@ -138,7 +141,7 @@ export function ConceptPicker({
                   type="button"
                   onClick={() => onPrimaryChange(name)}
                   className="max-w-56 truncate"
-                  title="Marcar como principal"
+                  title={t("concept.markPrimary")}
                 >
                   {name}
                 </button>
@@ -149,7 +152,7 @@ export function ConceptPicker({
                 <button
                   type="button"
                   onClick={() => toggle(name)}
-                  aria-label={`Quitar ${name}`}
+                  aria-label={t("concept.remove", { name })}
                   className="rounded-full p-0.5 hover:bg-background/60"
                 >
                   <X className="size-3" />
@@ -160,12 +163,12 @@ export function ConceptPicker({
         )}
         {selected.length > MAX_VISIBLE_CHIPS ? (
           <Button variant="ghost" size="sm" onClick={() => setShowAllSelected((v) => !v)}>
-            {showAllSelected ? "Ver menos" : `+${selected.length - MAX_VISIBLE_CHIPS} más`}
+            {showAllSelected ? "Ver menos" : t("concept.more", { n: selected.length - MAX_VISIBLE_CHIPS })}
           </Button>
         ) : null}
         {selected.length > 1 && !disabled ? (
           <Button variant="ghost" size="sm" onClick={() => onChange([])}>
-            Limpiar
+            {t("common.clear")}
           </Button>
         ) : null}
       </div>
@@ -174,16 +177,16 @@ export function ConceptPicker({
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
-            aria-label="Buscar concepto o dominio"
+            aria-label={t("concept.search")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar concepto o dominio…"
+            placeholder={t("concept.search.placeholder")}
             className="pl-8"
           />
         </div>
         {grouped.length > 1 ? (
           <Button variant="ghost" size="sm" onClick={() => setAll(!anyOpen)}>
-            {anyOpen ? "Plegar todo" : "Desplegar todo"}
+            {anyOpen ? t("concept.collapseAll") : t("concept.expandAll")}
           </Button>
         ) : null}
       </div>
@@ -193,7 +196,7 @@ export function ConceptPicker({
         style={{ maxHeight }}
       >
         {grouped.length === 0 ? (
-          <p className="p-4 text-center text-body text-muted-foreground">Sin resultados</p>
+          <p className="p-4 text-center text-body text-muted-foreground">{t("concept.noResults")}</p>
         ) : (
           grouped.map(([domain, items]) => {
             const picked = items.filter((concept) => chosen.has(concept.name)).length;
@@ -258,8 +261,8 @@ export function ConceptPicker({
                           title={
                             showExemplarCount
                               ? zeroShot
-                                ? "Sin ejemplos en el banco: se generará en zero-shot"
-                                : `${concept.exemplars} ejemplo(s) en el banco`
+                                ? t("concept.noExemplars")
+                                : plural("concept.exemplars", concept.exemplars)
                               : undefined
                           }
                           className={cn(

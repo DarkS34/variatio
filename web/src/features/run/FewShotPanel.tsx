@@ -9,6 +9,7 @@ import type { ExemplarsProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/type
 import { cn } from "@/lib/utils";
 
 import { isCodeField } from "@/features/bank/BankScreen";
+import { useT } from "@/lib/i18n";
 
 function primaryText(exemplar: FewShotExemplar, spec: ItemTypeSpec | null): string {
   const value = spec ? exemplar.item[spec.primary_field] : undefined;
@@ -22,6 +23,7 @@ function Exemplar({
   exemplar: FewShotExemplar;
   profile: ExemplarsProfile | null;
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const item = exemplar.item as { item_type?: string };
   const spec = itemTypeOf(profile, item);
@@ -51,7 +53,7 @@ function Exemplar({
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[11px] text-muted-foreground">{exemplar.id}</span>
             {showType ? (
-              <Badge variant="outline">{typeLabel(profile, typeKeyOf(profile, item))}</Badge>
+              <Badge variant="outline">{typeLabel(profile, typeKeyOf(profile, item), t)}</Badge>
             ) : null}
             {primaryConcept ? (
               <Badge variant="default" className="gap-1">
@@ -69,7 +71,7 @@ function Exemplar({
               open ? "whitespace-pre-wrap" : "line-clamp-2",
             )}
           >
-            {statement || <span className="text-muted-foreground">(sin enunciado)</span>}
+            {statement || <span className="text-muted-foreground">{t("fewshot.noStatement")}</span>}
           </span>
         </span>
       </button>
@@ -93,7 +95,7 @@ function Exemplar({
 
           {concepts.length > 0 ? (
             <div className="space-y-1">
-              <Label>conceptos</Label>
+              <Label>{t("bank.column.concepts")}</Label>
               <div className="flex flex-wrap gap-1">
                 {concepts.map((concept) => (
                   <Badge
@@ -119,6 +121,7 @@ export function FewShotPanel({
   exemplars: FewShotExemplar[];
   profile: ExemplarsProfile | null;
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -131,7 +134,7 @@ export function FewShotPanel({
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         <BookOpenText className="size-3.5" />
-        Ejemplares usados para el few-shot prompting
+        {t("fewshot.title")}
         <Badge variant={exemplars.length === 0 ? "attention" : "outline"} className="ml-auto">
           {exemplars.length === 0 ? "zero-shot" : exemplars.length}
         </Badge>
@@ -141,7 +144,7 @@ export function FewShotPanel({
         <div className="space-y-1.5 border-t border-border p-2.5">
           {exemplars.length === 0 ? (
             <p className="text-small text-attention">
-              Ningún ítem del banco lleva estos conceptos: el modelo genera sin ejemplos.
+              {t("fewshot.none")}
             </p>
           ) : (
             exemplars.map((exemplar) => (

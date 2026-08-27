@@ -22,11 +22,12 @@ import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
-import { PROFILE_LABELS, PROFILES, profileLabel } from "@/lib/evaluator";
+import { PROFILE_LABEL_KEYS, PROFILES, profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
 import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ROLE_HINTS, ROLE_LABELS, useSession } from "@/state/auth";
+import { useT } from "@/lib/i18n";
+import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
 import {
   useAccountActions,
   useAdminInvites,
@@ -58,6 +59,7 @@ export function AccountsTab({
   overview: AdminOverview;
   onInspect: (id: number) => void;
 }) {
+  const { plural, t } = useT();
   const toggle = useSetAccountEnabled();
   const remove = useDeleteAccount();
   const session = useSession();
@@ -68,26 +70,22 @@ export function AccountsTab({
   // half people get wrong: the account goes, the material it produced does not.
   const confirmDelete = (account: AdminAccount) => {
     const kept = [
-      account.generations ? `${account.generations} variante(s) guardada(s)` : "",
-      account.evaluations ? `${account.evaluations} comparación(es)` : "",
+      account.generations ? plural("acc.savedVariants", account.generations) : "",
+      account.evaluations ? plural("acc.comparisons", account.evaluations) : "",
     ].filter(Boolean);
     const message =
-      `¿Eliminar la cuenta «${account.username}» por completo?\n\n` +
-      "Pierde sus accesos y sus sesiones abiertas, y el usuario queda libre para otra " +
-      "cuenta.\n" +
-      (kept.length
-        ? `Lo que generó se queda pero sin autor: ${kept.join(" y ")}.\n`
-        : "") +
-      "\nNo se puede deshacer. Para cerrarle la puerta sin borrar nada, desactívala.";
+      t("acc.deleteConfirm", { username: account.username }) +
+      (kept.length ? t("acc.deleteKept", { kept: kept.join(t("acc.and")) }) : "") +
+      t("acc.deleteTail");
     if (!window.confirm(message)) return;
     // The dialog is the confirmation BEFORE; this is the one after. Everything on this
     // screen that destroys something says so once it is done, because the row simply
     // disappearing is indistinguishable from a list that reloaded.
     remove.mutate(account.id, {
       onSuccess: () =>
-        toast({ title: "Cuenta eliminada", description: account.username, tone: "attention" }),
+        toast({ title: t("acc.deleted"), description: account.username, tone: "attention" }),
       onError: (error: Error) =>
-        toast({ title: "No se ha podido eliminar", description: error.message, tone: "danger" }),
+        toast({ title: t("acc.deleteFailed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -97,18 +95,18 @@ export function AccountsTab({
 
       <section className="space-y-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          Cuentas ({overview.accounts.length})
+          {t("acc.heading", { n: overview.accounts.length })}
         </h2>
         <div className="overflow-hidden rounded-lg border border-border">
           <Table minWidth="56rem">
             <THead>
               <TR>
-                <TH>Cuenta</TH>
-                <TH>Accesos</TH>
-                <TH align="num">Variantes</TH>
-                <TH align="num">Comparaciones</TH>
-                <TH align="num">Sesiones</TH>
-                <TH>Alta</TH>
+                <TH>{t("acc.col.account")}</TH>
+                <TH>{t("acc.col.access")}</TH>
+                <TH align="num">{t("acc.col.variants")}</TH>
+                <TH align="num">{t("acc.col.comparisons")}</TH>
+                <TH align="num">{t("acc.col.sessions")}</TH>
+                <TH>{t("acc.col.created")}</TH>
                 <TH />
               </TR>
             </THead>
@@ -157,6 +155,7 @@ function AccountRows({
   onDelete: () => void;
   busy: boolean;
 }) {
+  const { t } = useT();
   const locked = account.locked_seconds > 0;
   return (
     <>
@@ -168,17 +167,19 @@ function AccountRows({
             >
               {account.username}
             </span>
-            {account.is_admin ? <Badge variant="secondary">admin</Badge> : null}
-            {self ? <Badge variant="outline">tú</Badge> : null}
-            {account.disabled ? <Badge variant="outline">desactivada</Badge> : null}
+            {account.is_admin ? <Badge variant="secondary">{t("acc.badge.admin")}</Badge> : null}
+            {self ? <Badge variant="outline">{t("acc.badge.you")}</Badge> : null}
+            {account.disabled ? (
+              <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
+            ) : null}
             {locked ? (
-              <Badge variant="attention" title={`${Math.ceil(account.locked_seconds)} s`}>
-                login bloqueado
+              <Badge variant="attention" title={t("acc.lockedSeconds", { n: Math.ceil(account.locked_seconds) })}>
+                {t("acc.badge.locked")}
               </Badge>
             ) : null}
           </span>
           <span className="block text-small text-muted-foreground">
-            {account.name} · {profileLabel(account.evaluator_profile).toLowerCase()}
+            {account.name} · {profileLabel(account.evaluator_profile, t).toLowerCase()}
           </span>
         </TD>
         <TD className="px-3 py-2">
@@ -193,14 +194,14 @@ function AccountRows({
             {/* For an administrator account the membership list does not describe what it can enter:
                 it enters everything. Saying «sin acceso a ninguno» there would be false. */}
             {account.is_admin ? (
-              <span className="text-muted-foreground">acceso total (administración)</span>
+              <span className="text-muted-foreground">{t("acc.fullAccess")}</span>
             ) : account.workspaces.length === 0 ? (
-              <span className="text-muted-foreground">sin acceso a ninguno</span>
+              <span className="text-muted-foreground">{t("acc.noAccess")}</span>
             ) : (
               <span className="flex flex-wrap gap-1">
                 {account.workspaces.map((w) => (
                   <Badge key={w.slug} variant="outline">
-                    {w.slug} · {ROLE_LABELS[w.role].toLowerCase()}
+                    {w.slug} · {t(ROLE_LABEL_KEYS[w.role]).toLowerCase()}
                   </Badge>
                 ))}
               </span>
@@ -210,7 +211,9 @@ function AccountRows({
         <TD align="num" className="px-3 py-2 nums">{account.generations}</TD>
         <TD align="num" className="px-3 py-2 nums">
           {account.evaluations}
-          <span className="ml-1 text-small text-muted-foreground">({account.decided} dec.)</span>
+          <span className="ml-1 text-small text-muted-foreground">
+            {t("acc.decidedShort", { n: account.decided })}
+          </span>
         </TD>
         <TD align="num" className="px-3 py-2 nums">{account.sessions}</TD>
         <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
@@ -219,7 +222,7 @@ function AccountRows({
         <TD align="num" className="whitespace-nowrap px-3 py-2">
           {account.evaluations > 0 ? (
             <Button variant="ghost" size="sm" onClick={onInspect}>
-              Ver sus sesiones
+              {t("acc.seeSessions")}
             </Button>
           ) : null}
           {/* Deactivating or deleting one's own account leaves the installation with nobody to
@@ -235,12 +238,12 @@ function AccountRows({
                 onClick={() => onEnabled(account.disabled)}
               >
                 {account.disabled ? <UserCheck /> : <UserX />}
-                {account.disabled ? "Reactivar" : "Desactivar"}
+                {account.disabled ? t("acc.reactivate") : t("acc.deactivate")}
               </Button>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                title="Eliminar la cuenta por completo"
+                title={t("acc.deleteTitle")}
                 disabled={busy}
                 onClick={onDelete}
               >
@@ -270,6 +273,7 @@ function AccountRows({
  * that are confirmed are the ones that somebody else feels at once.
  */
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
+  const { plural, t } = useT();
   const { setAdmin, setProfile, resetLink, revokeSessions, unlock } = useAccountActions();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
@@ -284,23 +288,30 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
       {
         onSuccess: ({ is_admin }) =>
           toast({
-            title: is_admin ? "Ahora administra la instalación" : "Ya no administra",
+            title: is_admin ? t("acc.nowAdmin") : t("acc.noLongerAdmin"),
             description: account.username,
             tone: "attention",
           }),
         onError: (error: Error) =>
-          toast({ title: "No se ha podido cambiar", description: error.message, tone: "danger" }),
+          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
       },
     );
   };
 
   const confirmRevoke = () => {
-    if (!window.confirm(`¿Cerrar las ${account.sessions} sesión(es) de «${account.username}»?\n\nTendrá que volver a entrar con su contraseña en cada navegador.`)) return;
+    const message = t("acc.revokeConfirm", {
+      n: plural("acc.openSessions", account.sessions),
+      username: account.username,
+    });
+    if (!window.confirm(message)) return;
     revokeSessions.mutate(account.id, {
       onSuccess: ({ revoked }) =>
-        toast({ title: "Sesiones cerradas", description: `${revoked} de ${account.username}` }),
+        toast({
+          title: t("acc.sessionsClosed"),
+          description: t("acc.sessionsClosedOf", { n: revoked, username: account.username }),
+        }),
       onError: (error: Error) =>
-        toast({ title: "No se ha podido", description: error.message, tone: "danger" }),
+        toast({ title: t("acc.failed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -313,11 +324,14 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
       {
         onSuccess: () =>
           toast({
-            title: "Perfil de evaluador",
-            description: `${account.username} · ${profileLabel(profile).toLowerCase()}`,
+            title: t("acc.profileToast"),
+            description: t("acc.profileToastBody", {
+              username: account.username,
+              profile: profileLabel(profile, t).toLowerCase(),
+            }),
           }),
         onError: (error: Error) =>
-          toast({ title: "No se ha podido cambiar", description: error.message, tone: "danger" }),
+          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
       },
     );
   };
@@ -326,12 +340,12 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          La cuenta
+          {t("acc.theAccount")}
         </span>
         {self ? null : (
           <Button variant="outline" size="sm" disabled={setAdmin.isPending} onClick={confirmAdmin}>
             {account.is_admin ? <ShieldOff /> : <ShieldCheck />}
-            {account.is_admin ? "Quitar administración" : "Hacer administrador"}
+            {account.is_admin ? t("acc.removeAdmin") : t("acc.makeAdmin")}
           </Button>
         )}
         <Button
@@ -340,23 +354,23 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           disabled={resetLink.isPending || account.disabled}
           title={
             account.disabled
-              ? "Reactívala antes: una cuenta desactivada no puede restablecer nada"
-              : "Genera un enlace de un solo uso para que fije una contraseña nueva"
+              ? t("acc.resetDisabled")
+              : t("acc.resetHint")
           }
           onClick={() => resetLink.mutate(account.id)}
         >
           {resetLink.isPending ? <Spinner /> : <KeyRound />}
-          Enlace de restablecimiento
+          {t("acc.resetLink")}
         </Button>
         <Button
           variant="outline"
           size="sm"
           disabled={revokeSessions.isPending || account.sessions === 0}
-          title={account.sessions === 0 ? "No tiene ninguna sesión abierta" : undefined}
+          title={account.sessions === 0 ? t("acc.noOpenSessions") : undefined}
           onClick={confirmRevoke}
         >
           <LogOut />
-          Cerrar sus sesiones
+          {t("acc.closeSessions")}
         </Button>
         {locked ? (
           <Button
@@ -365,12 +379,13 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
             disabled={unlock.isPending}
             onClick={() =>
               unlock.mutate(account.id, {
-                onSuccess: () => toast({ title: "Login desbloqueado", description: account.username }),
+                onSuccess: () =>
+                  toast({ title: t("acc.loginUnlocked"), description: account.username }),
               })
             }
           >
             <LockOpen />
-            Desbloquear el login ({Math.ceil(account.locked_seconds / 60)} min)
+            {t("acc.unlockLogin", { n: Math.ceil(account.locked_seconds / 60) })}
           </Button>
         ) : null}
       </div>
@@ -378,7 +393,7 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           what somebody is asked when they compare, and `require_member` never reads it. It
           lives here rather than beside the memberships for exactly that reason. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Label htmlFor={`profile-${account.id}`}>Perfil de evaluador</Label>
+        <Label htmlFor={`profile-${account.id}`}>{t("acc.profileLabel")}</Label>
         <Select
           id={`profile-${account.id}`}
           value={account.evaluator_profile ?? ""}
@@ -386,19 +401,14 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           disabled={setProfile.isPending}
           onChange={(event) => changeProfile(event.target.value)}
         >
-          <option value="">Sin especificar</option>
+          <option value="">{t("acc.profileUnset")}</option>
           {PROFILES.map((option) => (
             <option key={option} value={option}>
-              {PROFILE_LABELS[option]}
+              {t(PROFILE_LABEL_KEYS[option])}
             </option>
           ))}
         </Select>
-        <InfoHint label="Qué cambia">
-          Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el
-          estudio sus respuestas. No da ni quita ningún permiso. Sin especificar se le hacen
-          las preguntas de docente, y el reparto de comparaciones lo marca para que no se
-          quede así.
-        </InfoHint>
+        <InfoHint label={t("acc.profileHint")}>{t("acc.profileHint.body")}</InfoHint>
       </div>
 
       <FormError
@@ -412,9 +422,10 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
       />
       {resetLink.isSuccess ? (
         <CopyLink link={resetLink.data.link}>
-          Pásaselo tú. Vale {resetLink.data.expires_in_minutes} minutos y una sola vez; quien lo
-          abra fija la contraseña nueva de «{account.username}», así que no lo dejes en un sitio
-          compartido.
+          {t("acc.resetCopy", {
+            minutes: resetLink.data.expires_in_minutes,
+            username: account.username,
+          })}
         </CopyLink>
       ) : null}
     </div>
@@ -429,6 +440,7 @@ function MembershipEditor({
   account: AdminAccount;
   overview: AdminOverview;
 }) {
+  const { t } = useT();
   const { grant, revoke } = useMembershipActions();
   const missing = overview.workspaces.filter(
     (workspace) => !account.workspaces.some((w) => w.slug === workspace.slug),
@@ -445,15 +457,14 @@ function MembershipEditor({
     return (
       <div className="space-y-2">
         <p className="text-small text-muted-foreground">
-          Esta cuenta administra la instalación: entra en todos los workspaces sin ser
-          miembro de ninguno, así que no hay accesos que darle.
+          {t("acc.adminNoMemberships")}
         </p>
         {account.workspaces.length > 0 ? (
           <p className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
-            Consta además como miembro de
+            {t("acc.alsoMemberOf")}
             {account.workspaces.map((membership) => (
               <Badge key={membership.slug} variant="outline">
-                {membership.slug} · {ROLE_LABELS[membership.role].toLowerCase()}
+                {membership.slug} · {t(ROLE_LABEL_KEYS[membership.role]).toLowerCase()}
               </Badge>
             ))}
           </p>
@@ -466,8 +477,7 @@ function MembershipEditor({
     <div className="space-y-3">
       {account.workspaces.length === 0 ? (
         <p className="text-small text-muted-foreground">
-          Esta cuenta no es miembro de ningún workspace. Entra igual: el panel le ofrece
-          crear la suya, y aquí puedes darle acceso a una que ya exista.
+          {t("acc.noMemberships")}
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border bg-background">
@@ -490,14 +500,14 @@ function MembershipEditor({
               >
                 {ROLES.map((option) => (
                   <option key={option} value={option}>
-                    {ROLE_LABELS[option]}
+                    {t(ROLE_LABEL_KEYS[option])}
                   </option>
                 ))}
               </Select>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                title="Quitar el acceso a este workspace"
+                title={t("acc.revokeWorkspace")}
                 disabled={revoke.isPending}
                 onClick={() => revoke.mutate({ id: account.id, workspace: membership.slug })}
               >
@@ -511,7 +521,7 @@ function MembershipEditor({
       {missing.length > 0 ? (
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
-            <Label htmlFor={`add-${account.id}`}>Dar acceso a</Label>
+            <Label htmlFor={`add-${account.id}`}>{t("acc.grantAccessTo")}</Label>
             <Select
               id={`add-${account.id}`}
               value={slug}
@@ -528,12 +538,12 @@ function MembershipEditor({
           <Select
             value={role}
             className="w-36"
-            aria-label="Permiso"
+            aria-label={t("acc.permission")}
             onChange={(event) => setRole(event.target.value as Role)}
           >
             {ROLES.map((option) => (
               <option key={option} value={option}>
-                {ROLE_LABELS[option]}
+                {t(ROLE_LABEL_KEYS[option])}
               </option>
             ))}
           </Select>
@@ -543,9 +553,9 @@ function MembershipEditor({
             onClick={() => grant.mutate({ id: account.id, workspace: slug, role })}
           >
             {grant.isPending ? <Spinner /> : null}
-            Conceder
+            {t("acc.grant")}
           </Button>
-          <span className="text-small text-muted-foreground">{ROLE_HINTS[role]}</span>
+          <span className="text-small text-muted-foreground">{t(ROLE_HINT_KEYS[role])}</span>
         </div>
       ) : null}
 
@@ -562,6 +572,7 @@ function MembershipEditor({
  * in a shared place — until it is redeemed it is a credential.
  */
 function InviteSection({ overview }: { overview: AdminOverview }) {
+  const { t, language } = useT();
   const invites = useAdminInvites();
   const create = useCreateInvite();
   const revoke = useRevokeInvite();
@@ -574,25 +585,21 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
     <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          Invitar a alguien
+          {t("acc.invite")}
         </h2>
-        <InfoHint label="Cómo se entra aquí">
-          No hay registro abierto: una cuenta existe porque alguien abrió una invitación de
-          un solo uso, o porque se creó desde la línea de órdenes. Quitar el registro
-          público es lo que quita de en medio el mayor blanco de un login web.
-        </InfoHint>
+        <InfoHint label={t("acc.invite.hintLabel")}>{t("acc.invite.hint")}</InfoHint>
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
-          <Label htmlFor="invite-workspace">Workspace</Label>
+          <Label htmlFor="invite-workspace">{t("acc.invite.workspace")}</Label>
           <Select
             id="invite-workspace"
             value={workspace}
             className="w-64"
             onChange={(event) => setWorkspace(event.target.value)}
           >
-            <option value="">Ninguno (solo crear la cuenta)</option>
+            <option value="">{t("acc.invite.noWorkspace")}</option>
             {overview.workspaces.map((row) => (
               <option key={row.slug} value={row.slug}>
                 {row.name} ({row.slug})
@@ -601,7 +608,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="invite-role">Permiso</Label>
+          <Label htmlFor="invite-role">{t("acc.permission")}</Label>
           <Select
             id="invite-role"
             value={role}
@@ -611,7 +618,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           >
             {ROLES.map((option) => (
               <option key={option} value={option}>
-                {ROLE_LABELS[option]}
+                {t(ROLE_LABEL_KEYS[option])}
               </option>
             ))}
           </Select>
@@ -623,21 +630,18 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
           disabled={create.isPending}
         >
           {create.isPending ? <Spinner /> : <LinkIcon />}
-          Crear enlace
+          {t("acc.invite.create")}
         </Button>
         <span className="text-small text-muted-foreground">
           {workspace
-            ? ROLE_HINTS[role]
-            : "Entrará sin acceso a ninguna instancia; se lo das después desde la tabla."}
+            ? t(ROLE_HINT_KEYS[role])
+            : t("acc.invite.noAccessHint")}
         </span>
       </div>
 
       <FormError error={create.error} />
       {create.isSuccess ? (
-        <CopyLink link={create.data.link}>
-          Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio
-          usuario, así que no lo dejes en un sitio compartido.
-        </CopyLink>
+        <CopyLink link={create.data.link}>{t("acc.invite.copy")}</CopyLink>
       ) : null}
 
       {pending.length > 0 ? (
@@ -648,24 +652,28 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
                 {/* There is no addressee to name: what tells two pending links apart is when they were
                     issued and for which instance. */}
                 <p className="truncate">
-                  Enlace del {new Date(invite.created_at).toLocaleDateString("es-ES")}
+                  {t("acc.invite.linkOf", {
+                    date: new Date(invite.created_at).toLocaleDateString(language),
+                  })}
                   {invite.created_by ? (
                     <span className="ml-1 text-small text-muted-foreground">
-                      · lo creó {invite.created_by}
+                      {t("acc.invite.createdBy", { name: invite.created_by })}
                     </span>
                   ) : null}
                 </p>
                 <p className="text-small text-muted-foreground">
                   {invite.workspace_slug
-                    ? `${invite.workspace_slug} · ${ROLE_LABELS[invite.role]}`
-                    : "sin workspace"}{" "}
-                  · caduca el {new Date(invite.expires_at).toLocaleDateString("es-ES")}
+                    ? `${invite.workspace_slug} · ${t(ROLE_LABEL_KEYS[invite.role])}`
+                    : t("acc.invite.noWorkspaceShort")}
+                  {t("acc.invite.expires", {
+                    date: new Date(invite.expires_at).toLocaleDateString(language),
+                  })}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                title="Anular"
+                title={t("acc.invite.revoke")}
                 disabled={revoke.isPending}
                 onClick={() => revoke.mutate(invite.id)}
               >
@@ -681,6 +689,7 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
 
 /** A credential handed over by hand: the link, the warning, and a copy button. */
 export function CopyLink({ link, children }: { link: string; children: React.ReactNode }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
@@ -699,7 +708,7 @@ export function CopyLink({ link, children }: { link: string; children: React.Rea
           }}
         >
           {copied ? <Check /> : <Copy />}
-          {copied ? "Copiado" : "Copiar"}
+          {copied ? t("acc.copied") : t("acc.copy")}
         </Button>
       </div>
     </div>

@@ -19,24 +19,26 @@ import {
   useTranscription,
 } from "./queries";
 import type { DocumentState } from "./types";
+import { useT, type Key, type Translate } from "@/lib/i18n";
 
 const STATE: Record<
   DocumentState,
-  { label: string; variant: "settled" | "outline" | "attention" }
+  { labelKey: Key; variant: "settled" | "outline" | "attention" }
 > = {
-  done: { label: "transcrito", variant: "settled" },
-  pending: { label: "pendiente", variant: "outline" },
-  stale: { label: "caducado", variant: "attention" },
+  done: { labelKey: "transcribe.state.done", variant: "settled" },
+  pending: { labelKey: "transcribe.state.pending", variant: "outline" },
+  stale: { labelKey: "transcribe.state.stale", variant: "attention" },
 };
 
-function launchLabel(pending: number, stale: number, done: number): string {
-  if (stale > 0 && pending > 0) return "Transcribir lo pendiente y lo caducado";
-  if (stale > 0) return "Volver a transcribir lo caducado";
-  if (done > 0) return "Transcribir lo pendiente";
-  return "Comenzar transcripción";
+function launchLabel(pending: number, stale: number, done: number, t: Translate["t"]): string {
+  if (stale > 0 && pending > 0) return t("transcribe.pendingAndStale");
+  if (stale > 0) return t("transcribe.staleOnly");
+  if (done > 0) return t("transcribe.pendingOnly");
+  return t("transcribe.start");
 }
 
 function SlotTranscription({ slot }: { slot: RawSlot }) {
+  const { t, plural } = useT();
   const hasFiles = slot.files.length > 0;
   const state = useTranscription(slot.kind, hasFiles);
   const run = useTranscribeRun(slot.kind);
@@ -61,15 +63,15 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
   const busy = busyDocument(run);
 
   const reason = !canEdit
-    ? "Tu permiso sobre esta instancia es de solo lectura."
+    ? t("build.readOnly")
     : offline
       ? offline
       : running
-        ? "Ya se está transcribiendo este origen."
+        ? t("transcribe.alreadyRunning")
         : start.isPending
-          ? "Enviando…"
+          ? t("common.sending")
           : todo === 0
-            ? "Todos los documentos están transcritos y al día."
+            ? t("transcribe.allDone")
             : null;
 
   return (
@@ -80,11 +82,11 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
           <CardTitle className="flex-1">{slot.label}</CardTitle>
           {data ? (
             data.stale > 0 ? (
-              <Badge variant="attention">{data.stale} caducado(s)</Badge>
+              <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>
             ) : data.pending > 0 ? (
-              <Badge variant="outline">{data.pending} pendiente(s)</Badge>
+              <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>
             ) : (
-              <Badge variant="settled">al día</Badge>
+              <Badge variant="settled">{t("transcribe.upToDate")}</Badge>
             )
           ) : null}
         </div>
@@ -92,21 +94,19 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
 
       <CardContent className="space-y-3">
         {!hasFiles ? (
-          <p className="text-small text-muted-foreground">
-            Sin documentos que transcribir. Importa algo arriba y aparecerá aquí.
-          </p>
+          <p className="text-small text-muted-foreground">{t("transcribe.noDocuments")}</p>
         ) : state.isLoading ? (
           <Skeleton className="h-24" />
         ) : !data ? (
-          <Alert tone="danger" title="No se pudo leer el estado de la transcripción">
-            <p>El servidor no respondió a /api/raw/{slot.kind}/transcription.</p>
+          <Alert tone="danger" title={t("transcribe.unreadable")}>
+            <p>{t("transcribe.noResponse", { path: `/api/raw/${slot.kind}/transcription` })}</p>
           </Alert>
         ) : (
           <>
             <p className="text-small nums text-muted-foreground">
-              {data.documents.length} documento(s)
-              {data.total_pages > 0 ? ` · ${data.total_pages} página(s)` : ""} · una llamada
-              al modelo por página
+              {plural("transcribe.documents", data.documents.length)}
+              {data.total_pages > 0 ? plural("transcribe.pages", data.total_pages) : ""}
+              {t("transcribe.oneCallPerPage")}
             </p>
 
             <Button
@@ -116,8 +116,8 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
               title={
                 reason ??
                 (data.done > 0
-                  ? "Transcribe a markdown lo que falta; lo que ya está al día se reutiliza."
-                  : "Transcribe los documentos a markdown, página a página, y guarda cada página para que puedas corregirla.")
+                  ? t("transcribe.startHintSome")
+                  : t("transcribe.startHintNone"))
               }
               onClick={() => start.mutate(slot.kind)}
             >
@@ -128,7 +128,7 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
               ) : (
                 <Hammer />
               )}
-              {launchLabel(data.pending, data.stale, data.done)}
+              {launchLabel(data.pending, data.stale, data.done, t)}
             </Button>
 
             {running ? (
@@ -141,23 +141,23 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
                   )}
                   <span className="min-w-0 flex-1 truncate text-small">
                     {queued
-                      ? "En cola: esperando a que se libere el motor"
-                      : (overall?.label ?? docs?.label ?? "Preparando la transcripción…")}
+                      ? t("transcribe.queued")
+                      : (overall?.label ?? docs?.label ?? t("transcribe.preparing"))}
                   </span>
                   {docs ? (
                     <span className="shrink-0 text-small font-medium nums">
-                      {loopLabel(docs)} doc.
+                      {t("transcribe.docCounter", { n: loopLabel(docs) })}
                     </span>
                   ) : null}
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={cancel.isPending || !run?.job}
-                    title="Detiene la transcripción donde va. Las páginas ya guardadas se conservan y al volver a lanzarla se reanuda por donde quedó."
+                    title={t("transcribe.stopHint")}
                     onClick={() => run?.job && cancel.mutate(run.job.id)}
                   >
                     <Ban />
-                    Detener
+                    {t("common.stop")}
                   </Button>
                 </div>
 
@@ -210,26 +210,30 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
                       </span>
                       {entry.pages > 0 ? (
                         <span className="shrink-0 nums text-muted-foreground">
-                          {entry.pages} pág.
+                          {t("transcribe.pageAbbrev", { n: entry.pages })}
                         </span>
                       ) : null}
                       <Badge
                         variant={
-                          busy === entry.name ? "outline" : STATE[entry.state].variant
+                          busy === entry.name ? "outline" : STATE[entry.state]?.variant ?? "outline"
                         }
                       >
-                        {busy === entry.name ? "transcribiendo" : STATE[entry.state].label}
+                        {busy === entry.name
+                          ? t("transcribe.transcribing")
+                          : STATE[entry.state]
+                            ? t(STATE[entry.state].labelKey)
+                            : entry.state}
                       </Badge>
                       <Button
                         size="icon-sm"
                         variant="ghost"
-                        aria-label={`Ver y corregir las páginas de ${entry.name}`}
+                        aria-label={t("transcribe.reviewPagesOf", { name: entry.name })}
                         title={
                           busy === entry.name
-                            ? "Se está reescribiendo ahora mismo; lo que corrigieras aquí se perdería al terminar"
+                            ? t("transcribe.beingRewritten")
                             : entry.state === "pending"
-                              ? "Todavía no hay páginas que ver"
-                              : "Ver y corregir las páginas"
+                              ? t("transcribe.noPagesYet")
+                              : t("transcribe.reviewPages")
                         }
                         disabled={entry.state === "pending" || busy === entry.name}
                         onClick={() => setOpened(entry.name)}
@@ -242,7 +246,7 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
                     ) : null}
                     {entry.failed_pages > 0 ? (
                       <p className="text-small text-destructive">
-                        {entry.failed_pages} página(s) que el modelo no pudo transcribir.
+                        {plural("transcribe.failedPages", entry.failed_pages)}
                       </p>
                     ) : null}
                   </li>
@@ -266,29 +270,21 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
 }
 
 export function TranscriptionSection({ slots }: { slots: RawSlot[] }) {
+  const { t } = useT();
   if (!slots.some((slot) => slot.files.length > 0)) return null;
 
   return (
     <section className="space-y-3">
       <div className="space-y-1">
-        <h3 className="font-display font-expanded text-heading">Transcripción</h3>
+        <h3 className="font-display font-expanded text-heading">{t("transcribe.title")}</h3>
         <p className="max-w-3xl text-small leading-relaxed text-muted-foreground">
-          Pasar los documentos a markdown es lo primero que hace cada construcción, y es
-          trabajo mecánico: hacerlo aquí una vez lo saca del principio del grafo, del perfil
-          y del banco. Cada página se guarda por separado, así que lo que corrijas a mano
-          gana sobre lo que dijo el modelo y sobrevive a las construcciones siguientes.
+          {t("transcribe.intro1")}
         </p>
         <p className="max-w-3xl text-small leading-relaxed text-muted-foreground">
-          No es un requisito: si construyes sin haber transcrito, la construcción lo hará
-          por su cuenta, como hasta ahora. Y si cambia el modelo de transcripción, el DPI,
-          el OCR o el prompt, las páginas quedan marcadas como caducadas con el motivo, en
-          vez de rehacerse en silencio.
+          {t("transcribe.intro2")}
         </p>
         <p className="max-w-3xl text-small leading-relaxed text-muted-foreground">
-          Se puede detener en cualquier momento: lo que ya se guardó se queda, y al volver a
-          lanzarla sigue por donde iba. Los documentos que ya han salido pueden revisarse y
-          corregirse mientras el resto se transcribe; el único que no se deja abrir es el
-          que se está reescribiendo en ese instante.
+          {t("transcribe.intro3")}
         </p>
       </div>
 

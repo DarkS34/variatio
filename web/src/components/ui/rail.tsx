@@ -3,6 +3,7 @@ import { Link } from "@/lib/router";
 import { STATUS, statusKey } from "@/lib/status";
 import type { ArtifactStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export interface RailStop {
   key: string;
@@ -35,6 +36,7 @@ export function Rail({
   showLabels?: boolean;
   className?: string;
 }) {
+  const { t } = useT();
   const solid = "bg-[color-mix(in_oklch,var(--settled)_55%,transparent)]";
   const dotted = "bg-[repeating-linear-gradient(to_right,var(--border)_0_3px,transparent_3px_6px)]";
 
@@ -82,11 +84,11 @@ export function Rail({
             ) : null}
 
             {stop.href ? (
-              <Link to={stop.href} title={`${stop.label} — ${meta.label}`}>
+              <Link to={stop.href} title={`${stop.label} — ${t(meta.labelKey)}`}>
                 {body}
               </Link>
             ) : (
-              <span title={`${stop.label} — ${meta.label}`}>{body}</span>
+              <span title={`${stop.label} — ${t(meta.labelKey)}`}>{body}</span>
             )}
 
             {index < stops.length - 1 ? (

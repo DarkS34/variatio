@@ -20,6 +20,7 @@ import {
   useClearCache,
   useDeleteArtifact,
 } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * The installation's instances, and what this panel writes about them: removing them, or
@@ -31,6 +32,7 @@ import {
  * where what is being touched can be seen.
  */
 export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
+  const { t } = useT();
   const remove = useAdminDeleteWorkspace();
   const toast = useToast();
   const [target, setTarget] = useState<AdminWorkspace | null>(null);
@@ -47,26 +49,21 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          Workspaces ({overview.workspaces.length}) · {bytes(total)} en disco
+          {t("ws.heading", { n: overview.workspaces.length, size: bytes(total) })}
         </h2>
-        <InfoHint label="Qué pesa cada parte">
-          «Bruto» son los documentos subidos, lo único que no se reconstruye con una GPU y un
-          rato. «Instancia» son los artefactos y su contexto. «Caché» son las derivaciones
-          —vectores, markdown convertido, descripciones— y «historial» las copias que guarda
-          cada edición junto con los registros de ejecución.
-        </InfoHint>
+        <InfoHint label={t("ws.diskHint")}>{t("ws.diskHint.body")}</InfoHint>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
         <Table minWidth="64rem">
           <THead>
             <TR>
-              <TH>Workspace</TH>
-              <TH>Cadena</TH>
-              <TH align="num">Miembros</TH>
-              <TH align="num">Variantes</TH>
-              <TH>Disco</TH>
-              <TH>Creado</TH>
+              <TH>{t("ws.col.workspace")}</TH>
+              <TH>{t("ws.col.chain")}</TH>
+              <TH align="num">{t("ws.col.members")}</TH>
+              <TH align="num">{t("ws.col.variants")}</TH>
+              <TH>{t("ws.col.disk")}</TH>
+              <TH>{t("ws.col.created")}</TH>
               <TH />
             </TR>
           </THead>
@@ -79,7 +76,9 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                     {workspace.slug}
                   </span>
                   {workspace.warm ? (
-                    <span className="ml-2 text-micro text-muted-foreground">· en memoria</span>
+                    <span className="ml-2 text-micro text-muted-foreground">
+                      {t("ws.inMemory")}
+                    </span>
                   ) : null}
                 </TD>
                 <TD className="px-3 py-2">
@@ -102,8 +101,8 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                     disabled={only || remove.isPending}
                     title={
                       only
-                        ? "Es el único workspace de la instalación"
-                        : "Eliminar el workspace y sus ficheros"
+                        ? t("ws.onlyOne")
+                        : t("ws.deleteTitle")
                     }
                     onClick={() => setTarget(workspace)}
                   >
@@ -129,17 +128,17 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
               onSuccess: () => {
                 setTarget(null);
                 toast({
-                  title: "Workspace eliminado",
+                  title: t("ws.deleted"),
                   description:
                     target.slug === here
-                      ? `${target.slug}, con su árbol de ficheros. Era el que tenías abierto: la interfaz se mueve a donde tenga acceso tu cuenta.`
-                      : `${target.slug}, con su árbol de ficheros.`,
+                      ? t("ws.deletedHere", { slug: target.slug })
+                      : t("ws.deletedOther", { slug: target.slug }),
                   tone: "attention",
                 });
               },
               onError: (error: Error) =>
                 toast({
-                  title: "No se ha podido eliminar",
+                  title: t("ws.deleteFailed"),
                   description: error.message,
                   tone: "danger",
                 }),
@@ -178,22 +177,24 @@ function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
  * job rewrites all of it from what is on disk — nothing a person typed is in it.
  */
 function ClearCacheButton({ workspace }: { workspace: AdminWorkspace }) {
+  const { plural, t } = useT();
   const clear = useClearCache();
   const toast = useToast();
   const confirm = () => {
     const message =
-      `¿Vaciar la caché regenerable de ${workspace.slug}?\n\n` +
-      "Se borran los vectores y el markdown convertido; el próximo trabajo los vuelve a " +
-      "calcular (minutos). Las descripciones de conceptos y el anclaje al corpus se quedan.";
+      t("ws.clearConfirm", { slug: workspace.slug });
     if (!window.confirm(message)) return;
     clear.mutate(workspace.slug, {
       onSuccess: ({ files_removed, bytes_freed }) =>
         toast({
-          title: "Caché vaciada",
-          description: `${files_removed} fichero(s), ${bytes(bytes_freed)} liberados.`,
+          title: t("ws.cacheCleared"),
+          description: t("ws.cacheClearedBody", {
+            files: plural("ws.files", files_removed),
+            size: bytes(bytes_freed),
+          }),
         }),
       onError: (error: Error) =>
-        toast({ title: "No se ha podido vaciar", description: error.message, tone: "danger" }),
+        toast({ title: t("ws.clearFailed"), description: error.message, tone: "danger" }),
     });
   };
   return (
@@ -203,8 +204,8 @@ function ClearCacheButton({ workspace }: { workspace: AdminWorkspace }) {
       disabled={clear.isPending || workspace.disk.cache === 0}
       title={
         workspace.disk.cache === 0
-          ? "La caché está vacía"
-          : "Vaciar los vectores y el markdown convertido (se regeneran)"
+          ? t("ws.cacheEmpty")
+          : t("ws.clearHint")
       }
       onClick={confirm}
     >
@@ -219,6 +220,7 @@ function ClearCacheButton({ workspace }: { workspace: AdminWorkspace }) {
  * pressing anything irreversible on this row.
  */
 function ExportButton({ workspace }: { workspace: AdminWorkspace }) {
+  const { plural, t } = useT();
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const download = async () => {
@@ -233,11 +235,18 @@ function ExportButton({ workspace }: { workspace: AdminWorkspace }) {
       anchor.click();
       URL.revokeObjectURL(url);
       toast({
-        title: "Instancia exportada",
-        description: `${Object.keys(bundle.files).length} fichero(s) de ${workspace.slug}.`,
+        title: t("ws.exported"),
+        description: t("ws.exportedBody", {
+          files: plural("ws.files", Object.keys(bundle.files).length),
+          slug: workspace.slug,
+        }),
       });
     } catch (error) {
-      toast({ title: "No se ha podido exportar", description: (error as Error).message, tone: "danger" });
+      toast({
+        title: t("ws.exportFailed"),
+        description: (error as Error).message,
+        tone: "danger",
+      });
     } finally {
       setBusy(false);
     }
@@ -247,7 +256,7 @@ function ExportButton({ workspace }: { workspace: AdminWorkspace }) {
       variant="ghost"
       size="icon-sm"
       disabled={busy}
-      title="Descargar la instancia (artefactos, contexto, aprobaciones y currículo) como JSON"
+      title={t("ws.exportHint")}
       onClick={download}
     >
       {busy ? <Spinner /> : <Download />}
@@ -264,28 +273,28 @@ function ExportButton({ workspace }: { workspace: AdminWorkspace }) {
  * artifact's screen — and that is exactly what makes offering it here not reckless.
  */
 function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
+  const { t } = useT();
   const discard = useDeleteArtifact();
   const toast = useToast();
 
   const confirm = (artifact: AdminWorkspace["stages"][number]) => {
     const message =
-      `¿Vaciar «${artifact.label}» de ${workspace.slug}?\n\n` +
-      "Se borran el fichero del artefacto y las derivaciones de la caché que dependían " +
-      "de él; la etapa vuelve a «sin construir» y habrá que reconstruirla.\n\n" +
-      "Las copias del historial no se tocan: si te equivocas, se restaura desde la " +
-      "pantalla del artefacto.";
+      t("ws.discardConfirm", { label: artifact.label, slug: workspace.slug });
     if (!window.confirm(message)) return;
     discard.mutate(
       { slug: workspace.slug, artifact: artifact.artifact },
       {
         onSuccess: () =>
           toast({
-            title: "Etapa vaciada",
-            description: `«${artifact.label}» de ${workspace.slug}. El historial sigue ahí.`,
+            title: t("ws.stageCleared"),
+            description: t("ws.stageClearedBody", {
+              label: artifact.label,
+              slug: workspace.slug,
+            }),
             tone: "attention",
           }),
         onError: (error: Error) =>
-          toast({ title: "No se ha podido vaciar", description: error.message, tone: "danger" }),
+          toast({ title: t("ws.clearFailed"), description: error.message, tone: "danger" }),
       },
     );
   };
@@ -302,8 +311,8 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
             disabled={empty || discard.isPending}
             title={
               empty
-                ? `${stage.label}: sin construir`
-                : `Vaciar «${stage.label}» de ${workspace.slug}`
+                ? t("ws.stageMissing", { label: stage.label })
+                : t("ws.clearStage", { label: stage.label, slug: workspace.slug })
             }
             onClick={() => confirm(stage)}
             className={cn(
@@ -312,7 +321,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
             )}
           >
             <Badge variant={meta.tone as never}>
-              {stage.label.split(" ")[0]} · {meta.label.toLowerCase()}
+              {stage.label.split(" ")[0]} · {t(meta.labelKey).toLowerCase()}
             </Badge>
           </button>
         );
@@ -342,6 +351,7 @@ function DeleteWorkspaceDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { plural, t } = useT();
   const [typed, setTyped] = useState("");
   const built = workspace.stages.filter((stage) => stage.status !== "missing");
 
@@ -349,13 +359,13 @@ function DeleteWorkspaceDialog({
     <Dialog
       open
       onClose={onClose}
-      title={`Eliminar «${workspace.name}»`}
-      description="No se puede deshacer."
+      title={t("ws.deleteDialog", { name: workspace.name })}
+      description={t("ws.cannotUndo")}
       className="max-w-lg"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -363,40 +373,44 @@ function DeleteWorkspaceDialog({
             onClick={onConfirm}
           >
             {busy ? <Spinner /> : <Trash2 />}
-            Eliminar
+            {t("common.delete")}
           </Button>
         </>
       }
     >
       <div className="space-y-3 text-body">
-        <p>Desaparecen de la instalación y del disco ({bytes(workspace.disk.total)}):</p>
+        <p>{t("ws.disappear", { size: bytes(workspace.disk.total) })}</p>
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
           <li>
             {built.length > 0
-              ? `sus artefactos construidos (${built.map((s) => s.label.toLowerCase()).join(", ")})`
-              : "sus artefactos, que están todos sin construir"}
+              ? t("ws.builtArtifacts", {
+                  names: built.map((s) => s.label.toLowerCase()).join(", "),
+                })
+              : t("ws.unbuiltArtifacts")}
           </li>
           <li>
-            los documentos en bruto que se subieron a esta instancia
+            {t("ws.rawDocuments")}
             {workspace.disk.raw > 0 ? ` (${bytes(workspace.disk.raw)})` : ""}
           </li>
-          <li>sus cachés, sus accesos y sus aprobaciones</li>
+          <li>{t("ws.cachesAccess")}</li>
           <li>
             {workspace.generations > 0
-              ? `sus ${workspace.generations} variante(s) guardada(s) y sus comparaciones`
-              : "sus comparaciones de evaluación, si las hubiera"}
+              ? t("ws.itsVariants", {
+                  n: plural("acc.savedVariants", workspace.generations),
+                })
+              : t("ws.itsComparisons")}
           </li>
         </ul>
         {here ? (
           <p className="text-muted-foreground">
-            Es el que tienes abierto ahora mismo. Al borrarlo, esta pestaña se mueve sola a
-            otro de tus accesos; si no te queda ninguno, la aplicación te ofrece crear uno.
+            {t("ws.hereNow")}
           </p>
         ) : null}
         <div className="space-y-1">
           <Label htmlFor="confirm-slug">
-            Escribe <span className="font-mono normal-case">{workspace.slug}</span> para
-            confirmar
+            {t("ws.typeToConfirm")}
+            <span className="font-mono normal-case">{workspace.slug}</span>
+            {t("ws.typeToConfirm.tail")}
           </Label>
           <Input
             id="confirm-slug"

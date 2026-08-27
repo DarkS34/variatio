@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { RunView } from "@/state/runStore";
 import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
+import { useT } from "@/lib/i18n";
 
 /**
  * The same window, fed by the tagger instead of by the extractor.
@@ -16,6 +17,7 @@ import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
  * build's feed. The buffer is the run's own, so a browser reloaded mid-run replays it.
  */
 export function TagLive({ run }: { run: RunView | null }) {
+  const { t } = useT();
   const tagged = run?.tagged;
   const latest = useMemo(() => tagged?.slice(0, VISIBLE), [tagged]);
   const rows = useSlidingWindow(latest);
@@ -25,7 +27,7 @@ export function TagLive({ run }: { run: RunView | null }) {
       <CardContent className="space-y-3 py-4">
         <div className="flex items-baseline justify-between gap-3">
           <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-            Ítems que se van etiquetando
+            {t("bank.tagLive.title")}
           </h4>
           {run && run.taggedCount > 0 ? (
             <span className="text-small nums text-muted-foreground">
@@ -36,8 +38,7 @@ export function TagLive({ run }: { run: RunView | null }) {
 
         {rows.length === 0 ? (
           <p className="text-body text-muted-foreground">
-            Todavía no ha salido ninguna decisión. Aparecerán aquí en cuanto el etiquetador
-            termine con el primer ítem.
+            {t("bank.tagLive.empty")}
           </p>
         ) : (
           <SlidingList rows={rows}>
@@ -46,7 +47,7 @@ export function TagLive({ run }: { run: RunView | null }) {
                 {item.concepts.length === 0 ? (
                   <span className="flex items-center gap-1 text-small text-[var(--attention)]">
                     <Tags className="size-3" />
-                    sin concepto
+                    {t("bank.noConcept")}
                   </span>
                 ) : (
                   item.concepts.map((concept) => (

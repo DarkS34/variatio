@@ -1,6 +1,7 @@
 import { describeEvent, type ActivityLine } from "@/lib/explain";
 import type { FewShotExemplar, ItemChecks, Job, VgEvent } from "@/lib/types";
 import { activeWorkspace } from "./workspace";
+import type { Translate } from "@/lib/i18n";
 
 /**
  * One live view of what the system is doing, fed by a single WebSocket.
@@ -104,6 +105,10 @@ export interface RunView {
 const MAX_TOKENS = 120_000;
 const MAX_LOGS = 3_000;
 const MAX_SESSION_LOGS = 8_000;
+// Whether an event deserves a line does not depend on the language, so the reducer asks
+// with a translator that answers nothing: what it needs is the null, never the words.
+const SILENT: Translate = { t: () => "", plural: () => "" };
+
 const MAX_ACTIVITY = 600;
 const MAX_RUNS = 12;
 const MAX_TAGGED = 24;
@@ -406,9 +411,9 @@ class RunStore {
   // The event stream is written for the code; this is the running commentary a human
   // reads instead. Kept next to the reducer so a new event kind is described once.
   private withActivity(run: RunView, event: VgEvent): RunView {
-    const described = describeEvent(event);
-    if (!described) return run;
-    const activity = [...run.activity, { seq: event.seq, ts: event.ts, ...described }];
+    // Only whether it is worth a line is decided here; the words are the reader's.
+    if (!describeEvent(event, SILENT)) return run;
+    const activity = [...run.activity, { seq: event.seq, ts: event.ts, event }];
     return {
       ...run,
       activity: activity.length > MAX_ACTIVITY ? activity.slice(-MAX_ACTIVITY) : activity,

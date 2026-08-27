@@ -27,6 +27,7 @@ import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
 import { FieldEditor, baseType, fieldNameError, nameError } from "./FieldEditor";
+import { useT } from "@/lib/i18n";
 
 function AddInline({
   placeholder,
@@ -43,6 +44,7 @@ function AddInline({
   mono?: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useT();
   const [text, setText] = useState("");
   const error = text.trim() ? (validate?.(text.trim()) ?? null) : null;
 
@@ -59,7 +61,7 @@ function AddInline({
         <Input
           aria-label={placeholder}
           disabled={disabled}
-          title={disabled ? LOCKED_HINT : undefined}
+          title={disabled ? t(LOCKED_HINT) : undefined}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
@@ -77,7 +79,7 @@ function AddInline({
         variant="outline"
         onClick={submit}
         disabled={disabled || !text.trim() || Boolean(error)}
-        title={disabled ? LOCKED_HINT : undefined}
+        title={disabled ? t(LOCKED_HINT) : undefined}
       >
         <Plus />
         {cta}
@@ -105,17 +107,14 @@ function TypeStrip({
   onRemove: (key: string) => void;
   disabled?: boolean;
 }) {
+  const tr = useT();
+  const { t } = tr;
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-body font-semibold tracking-tight">Modalidades de ítem</h2>
+        <h2 className="text-body font-semibold tracking-tight">{t("modality.title")}</h2>
         <Badge variant="outline">{keys.length}</Badge>
-        <InfoHint label="Qué son las modalidades">
-          Cada modalidad es una forma distinta de plantear la tarea — una pregunta con
-          alternativas, un encargo de escribir código, un fallo que corregir — y tiene su propio
-          esquema de campos, su campo primario y sus reglas. Al generar se elige una, y el
-          few-shot solo usa ejemplares de esa misma modalidad. La primera es la de por defecto.
-        </InfoHint>
+        <InfoHint label={t("modality.whatAre")}>{t("modality.whatAre.body")}</InfoHint>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -135,11 +134,11 @@ function TypeStrip({
               <span
                 role="button"
                 tabIndex={-1}
-                title={`Quitar la modalidad ${key}`}
+                title={t("modality.remove", { key })}
                 className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (window.confirm(`¿Quitar la modalidad «${key}» y todos sus campos?`))
+                  if (window.confirm(t("modality.removeConfirm", { key })))
                     onRemove(key);
                 }}
               >
@@ -151,10 +150,10 @@ function TypeStrip({
       </div>
 
       <AddInline
-        placeholder="nueva_modalidad"
-        cta="Añadir modalidad"
+        placeholder={t("modality.newPlaceholder")}
+        cta={t("modality.add")}
         onAdd={onAdd}
-        validate={(key) => nameError(key, keys)}
+        validate={(key) => nameError(key, keys, tr)}
         disabled={disabled}
       />
     </div>
@@ -162,6 +161,8 @@ function TypeStrip({
 }
 
 export function ProfileEditor() {
+  const tr = useT();
+  const { t } = tr;
   const query = useProfile();
   const invalidate = useInvalidateChain();
   const stageLocked = useStageLocked();
@@ -318,8 +319,8 @@ export function ProfileEditor() {
       <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
         <Tabs
           items={[
-            { value: "form", label: "Formulario" },
-            { value: "raw", label: "JSON crudo" },
+            { value: "form", label: t("profileEditor.tab.form") },
+            { value: "raw", label: t("profileEditor.tab.raw") },
           ]}
           value={tab}
           onChange={(next) => {
@@ -332,7 +333,7 @@ export function ProfileEditor() {
           validation.valid ? (
             <span className="flex items-center gap-1.5 text-small text-settled">
               <CircleCheck className="size-3.5" />
-              El perfil carga correctamente
+              {t("profileEditor.loadsFine")}
             </span>
           ) : (
             <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
@@ -345,20 +346,20 @@ export function ProfileEditor() {
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
-          {dirty ? <Badge variant="attention">sin guardar</Badge> : null}
+          {dirty ? <Badge variant="attention">{t("profileEditor.unsaved")}</Badge> : null}
           <Button
             onClick={() => save.mutate(draft)}
             disabled={stageLocked || !dirty || save.isPending || validation?.valid === false}
-            title={stageLocked ? LOCKED_HINT : undefined}
+            title={stageLocked ? t(LOCKED_HINT) : undefined}
           >
             {save.isPending ? <Spinner /> : <Save />}
-            Guardar
+            {t("common.save")}
           </Button>
         </div>
       </div>
 
       {save.isError ? (
-        <Alert tone="danger" title="No se pudo guardar">
+        <Alert tone="danger" title={t("profileEditor.saveFailed")}>
           <p>{(save.error as Error).message}</p>
         </Alert>
       ) : null}
@@ -377,9 +378,9 @@ export function ProfileEditor() {
             size="sm"
             onClick={applyRaw}
             disabled={stageLocked}
-            title={stageLocked ? LOCKED_HINT : undefined}
+            title={stageLocked ? t(LOCKED_HINT) : undefined}
           >
-            Aplicar al formulario
+            {t("profileEditor.applyToForm")}
           </Button>
         </div>
       ) : (
@@ -406,11 +407,9 @@ export function ProfileEditor() {
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <CardTitle>Identidad de la modalidad</CardTitle>
-                  <InfoHint label="Para qué sirve">
-                    La descripción la leen dos prompts: el extractor, para decidir a qué modalidad
-                    pertenece cada ejercicio del documento, y el generador, para saber qué forma
-                    debe tener el ítem. Escríbela discriminante: qué la distingue de las demás.
+                  <CardTitle>{t("modality.identity")}</CardTitle>
+                  <InfoHint label={t("modality.identity.hintLabel")}>
+                    {t("modality.identity.hint")}
                   </InfoHint>
                   <code className="ml-auto font-mono text-small text-muted-foreground">
                     {activeKey}
@@ -418,18 +417,18 @@ export function ProfileEditor() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Field label="Nombre legible">
+                <Field label={t("modality.readableName")}>
                   <Input
                     value={spec.label ?? ""}
-                    placeholder="Pregunta tipo test"
+                    placeholder={t("modality.readableName.placeholder")}
                     readOnly={stageLocked}
                     onChange={(event) => updateType({ label: event.target.value })}
                   />
                 </Field>
-                <Field label="Descripción">
+                <Field label={t("modality.description")}>
                   <Textarea
                     value={spec.description ?? ""}
-                    placeholder="Qué es esta modalidad y cómo se reconoce en el material"
+                    placeholder={t("modality.description.placeholder")}
                     className="min-h-20"
                     readOnly={stageLocked}
                     onChange={(event) => updateType({ description: event.target.value })}
@@ -441,7 +440,7 @@ export function ProfileEditor() {
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <CardTitle>Reglas de redacción</CardTitle>
+                  <CardTitle>{t("modality.rules")}</CardTitle>
                   <Badge variant="outline" className="ml-auto">
                     {rules.length}
                   </Badge>
@@ -450,12 +449,7 @@ export function ProfileEditor() {
                     decides how a generated item reads, and it is the only instrument the
                     profile carries for it — the per-field generation guidance is a manual
                     exception now, not the other half of a pair. */}
-                <p className="text-small text-muted-foreground">
-                  Cómo escribe esta asignatura esta modalidad, y lo único que el perfil le dice al
-                  generador sobre la forma del ejercicio. Cada regla debe poder comprobarse leyendo
-                  un ejercicio ya escrito, y nombrar el campo al que se aplica. Lo que valdría para
-                  cualquier asignatura no es una regla: de la didáctica ya se ocupa el generador.
-                </p>
+                <p className="text-small text-muted-foreground">{t("modality.rules.body")}</p>
               </CardHeader>
               <CardContent className="space-y-2">
                 {rules.map((rule, index) => (
@@ -464,11 +458,11 @@ export function ProfileEditor() {
                       {index + 1}
                     </span>
                     <Textarea
-                      aria-label={`Regla ${index + 1}`}
+                      aria-label={t("modality.rule.n", { n: index + 1 })}
                       value={rule}
                       className="min-h-16"
                       readOnly={stageLocked}
-                      placeholder="Una regla por bloque"
+                      placeholder={t("modality.rule.placeholder")}
                       onChange={(event) => {
                         const next = [...rules];
                         next[index] = event.target.value;
@@ -479,7 +473,7 @@ export function ProfileEditor() {
                       variant="ghost"
                       size="icon-sm"
                       disabled={stageLocked}
-                      title={stageLocked ? LOCKED_HINT : "Quitar regla"}
+                      title={stageLocked ? t(LOCKED_HINT) : t("modality.rule.remove")}
                       className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       onClick={() =>
                         updateType({
@@ -493,21 +487,18 @@ export function ProfileEditor() {
                 ))}
 
                 {rules.length === 0 ? (
-                  <p className="text-small text-attention">
-                    Sin reglas: el generador escribirá esta modalidad sin ninguna convención de la
-                    asignatura, solo con las descripciones del schema. Lo habitual son entre 3 y 8.
-                  </p>
+                  <p className="text-small text-attention">{t("modality.rules.none")}</p>
                 ) : null}
 
                 <Button
                   size="sm"
                   variant="ghost"
                   disabled={stageLocked}
-                  title={stageLocked ? LOCKED_HINT : undefined}
+                  title={stageLocked ? t(LOCKED_HINT) : undefined}
                   onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
                 >
                   <Plus />
-                  Añadir regla
+                  {t("modality.rule.add")}
                 </Button>
               </CardContent>
             </Card>
@@ -515,14 +506,12 @@ export function ProfileEditor() {
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <h2 className="text-body font-semibold tracking-tight">
-              Campos de «{spec.label || activeKey}»
+              {t("modality.fieldsOf", { name: spec.label || activeKey })}
             </h2>
             <Badge variant="outline">{names.length}</Badge>
-            <InfoHint label="Qué son los campos">
-              Definen qué es un ítem de esta modalidad: el esquema contra el que se validan tanto
-              los extraídos del banco como los generados. El campo marcado con{" "}
-              <Star className="inline size-3" /> es el primario: el texto que se etiqueta y se
-              embebe.
+            <InfoHint label={t("modality.fields.hintLabel")}>
+              {t("modality.fields.hintA")}{" "}
+              <Star className="inline size-3" /> {t("modality.fields.hintB")}
             </InfoHint>
             <Button
               size="sm"
@@ -531,20 +520,16 @@ export function ProfileEditor() {
               onClick={() => setOpen(allOpen ? [] : names)}
             >
               {allOpen ? <ChevronsDownUp /> : <ChevronsUpDown />}
-              {allOpen ? "Contraer todo" : "Expandir todo"}
+              {allOpen ? t("modality.collapseAll") : t("modality.expandAll")}
             </Button>
           </div>
 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex flex-wrap items-center gap-2 text-body">
-                Campos que se indexan
-                <InfoHint label="Qué se indexa">
-                  Los campos que se leen JUNTOS para decidir qué concepto del currículo practica
-                  el ítem. Añade aquí lo que RECIBE con el enunciado quien lo resuelve —el código a
-                  analizar, el material de partida—: cuando el enunciado es una fórmula fija
-                  («¿qué imprime este código?»), el concepto está ahí y no en el enunciado. No
-                  marques la solución: medido sobre este banco, incluirla empeora el acierto.
+                {t("modality.indexed")}
+                <InfoHint label={t("modality.indexed.hintLabel")}>
+                  {t("modality.indexed.hint")}
                 </InfoHint>
               </CardTitle>
             </CardHeader>
@@ -560,9 +545,9 @@ export function ProfileEditor() {
                     onClick={() => toggleIndexed(name)}
                     title={
                       locked
-                        ? "El campo primario siempre se indexa"
+                        ? t("modality.indexed.primaryAlways")
                         : stageLocked
-                          ? LOCKED_HINT
+                          ? t(LOCKED_HINT)
                           : undefined
                     }
                     className={cn(
@@ -582,11 +567,10 @@ export function ProfileEditor() {
           </Card>
 
           {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
-            <Alert tone="attention" title="El campo primario no es de texto">
+            <Alert tone="attention" title={t("modality.primaryNotText")}>
               <p>
-                <code className="font-mono">{spec.primary_field}</code> es el texto que se embebe y
-                se etiqueta contra el grafo; con otro tipo el emparejamiento con conceptos pierde
-                sentido.
+                <code className="font-mono">{spec.primary_field}</code>{" "}
+                {t("modality.primaryNotTextBody")}
               </p>
             </Alert>
           ) : null}
@@ -626,10 +610,10 @@ export function ProfileEditor() {
           </div>
 
           <AddInline
-            placeholder="nombre_del_campo"
-            cta="Añadir campo"
+            placeholder={t("modality.newFieldPlaceholder")}
+            cta={t("modality.addField")}
             onAdd={addField}
-            validate={(name) => fieldNameError(name, names)}
+            validate={(name) => fieldNameError(name, names, tr)}
             disabled={stageLocked}
           />
         </div>
@@ -639,17 +623,12 @@ export function ProfileEditor() {
 }
 
 export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
+  const { t } = useT();
   return (
     <StageGate
       stage={stage}
-      title="Perfil de ejemplares"
-      description={
-        <>
-          Define qué es un ítem: sus campos, sus tipos y las guías que el modelo sigue al
-          extraerlos y al generarlos. Cambiarlo después de extraer el banco lo invalida, porque
-          los ítems se extrajeron contra el esquema anterior.
-        </>
-      }
+      title={t("profileStage.title")}
+      description={t("profileStage.description")}
     >
       <ProfileEditor />
     </StageGate>

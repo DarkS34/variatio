@@ -2,8 +2,7 @@ import { Input } from "@/components/ui/input";
 import { baseType, enumValues } from "@/features/profile/FieldEditor";
 import type { FieldSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-export const ANY = "Cualquiera";
+import { useT, type Translate } from "@/lib/i18n";
 
 function Choice({
   label,
@@ -50,6 +49,7 @@ export function DecisionField({
   value: unknown;
   onChange: (next: unknown) => void;
 }) {
+  const { t } = useT();
   const type = baseType(spec.schema);
   const label = spec.description?.split(/[.:]/)[0]?.trim();
 
@@ -72,20 +72,28 @@ export function DecisionField({
               onClick={() => onChange(value === option ? undefined : option)}
             />
           ))}
-          <Choice label={ANY} active={value === undefined} onClick={() => onChange(undefined)} />
+          <Choice
+            label={t("decision.any")}
+            active={value === undefined}
+            onClick={() => onChange(undefined)}
+          />
         </div>
       ) : type === "boolean" ? (
         <div className="flex flex-wrap gap-1.5">
-          <Choice label="Sí" active={value === true} onClick={() => onChange(true)} />
-          <Choice label="No" active={value === false} onClick={() => onChange(false)} />
-          <Choice label={ANY} active={value === undefined} onClick={() => onChange(undefined)} />
+          <Choice label={t("common.yes")} active={value === true} onClick={() => onChange(true)} />
+          <Choice label={t("common.no")} active={value === false} onClick={() => onChange(false)} />
+          <Choice
+            label={t("decision.any")}
+            active={value === undefined}
+            onClick={() => onChange(undefined)}
+          />
         </div>
       ) : (
         <Input
           aria-label={label}
           type={type === "integer" || type === "number" ? "number" : "text"}
           value={value === undefined || value === null ? "" : String(value)}
-          placeholder={`${ANY} — lo decide el modelo`}
+          placeholder={t("decision.anyModel", { any: t("decision.any") })}
           onChange={(event) => {
             const raw = event.target.value;
             if (!raw.trim()) return onChange(undefined);
@@ -97,9 +105,10 @@ export function DecisionField({
   );
 }
 
-export function describeDecision(name: string, value: unknown): string {
-  if (value === undefined || value === null || value === "") return `${name}: cualquiera`;
-  if (value === true) return `${name}: sí`;
-  if (value === false) return `${name}: no`;
+export function describeDecision(name: string, value: unknown, t: Translate["t"]): string {
+  if (value === undefined || value === null || value === "")
+    return t("decision.anyOf", { name: name });
+  if (value === true) return t("decision.yesOf", { name: name });
+  if (value === false) return t("decision.noOf", { name: name });
   return `${name}: ${value}`;
 }

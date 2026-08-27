@@ -120,7 +120,9 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
       if (xhr.status >= 200 && xhr.status < 300) resolve(body as RawUpload);
       else reject(new ApiError(body?.detail ?? `${xhr.status} ${xhr.statusText}`, xhr.status));
     };
-    xhr.onerror = () => reject(new ApiError("No se pudo contactar con el servidor", 0));
+    // A key, not a sentence: this rejects into a screen, and the screen knows the
+    // language. `ApiError.message` is rendered through `t()` wherever it is shown.
+    xhr.onerror = () => reject(new ApiError("api.unreachable", 0));
     xhr.send(form);
   });
 }
@@ -148,6 +150,8 @@ export const api = {
     post<Session>("/api/auth/login", { username, password }),
   logout: () => post<{ ok: boolean }>("/api/auth/logout"),
   logoutAll: () => post<{ ok: boolean; revoked: number }>("/api/auth/logout-all"),
+  setLanguage: (language: string) =>
+    post<{ ui_language: string }>("/api/auth/language", { language }),
   changePassword: (current: string, next: string) =>
     post<{ ok: boolean }>("/api/auth/password", { current, new: next }),
   forgotPassword: (username: string) => post<{ sent: boolean }>("/api/auth/forgot", { username }),
@@ -164,11 +168,15 @@ export const api = {
     name: string;
     password: string;
     evaluator_profile: EvaluatorProfile;
+    ui_language: string;
   }) => post<Session>("/api/auth/accept", body),
 
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
-  createWorkspace: (slug: string, name: string) =>
-    post<{ workspace: WorkspaceRow }>("/api/workspaces", { slug, name }),
+  // The prompt language travels with the creation and only with it: the relation labels a
+  // build writes into the graph are what the loader indexes by, so once anything is built
+  // the choice is baked into the artifacts and there is nothing to change it to.
+  createWorkspace: (slug: string, name: string, prompt_language: string) =>
+    post<{ workspace: WorkspaceRow }>("/api/workspaces", { slug, name, prompt_language }),
   activateWorkspace: (slug: string) =>
     post<{ workspace: WorkspaceRow }>(`/api/workspaces/${encodeURIComponent(slug)}/activate`),
   renameWorkspace: (slug: string, name: string) =>

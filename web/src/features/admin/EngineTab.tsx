@@ -44,6 +44,7 @@ import {
   useAdminSystem,
   useEngineActions,
 } from "@/state/queries";
+import { useT, type Key } from "@/lib/i18n";
 
 /**
  * The machine and the process, as one screen.
@@ -84,7 +85,7 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
 
   return (
     <div className="space-y-5">
-      {remote ? <Half title="Local" note="la máquina, sus pesos y la VRAM en la que caben" /> : null}
+      {remote ? <Half titleKey="eng.half.local" noteKey="eng.half.localNote" /> : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <TunnelCard tunnel={data.tunnel} available={data.available} host={data.host} />
         <ResidencyCard engine={data} overview={overview} />
@@ -93,13 +94,13 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
 
       {remote ? (
         <>
-          <Half title="Remoto" note="nada que cargar; lo que limita es la cuota" />
+          <Half titleKey="eng.half.remote" noteKey="eng.half.remoteNote" />
           <CerebrasCard cerebras={data.cerebras!} />
         </>
       ) : null}
 
       {remote ? (
-        <Half title="Este proceso" note="la cola, los contextos en memoria y la base de datos" />
+        <Half titleKey="eng.half.process" noteKey="eng.half.processNote" />
       ) : null}
       <QueueSection />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -112,11 +113,12 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
 }
 
 /** A rule under a display-width word, drawn only while the tab has more than one subject. */
-function Half({ title, note }: { title: string; note: string }) {
+function Half({ titleKey, noteKey }: { titleKey: Key; noteKey: Key }) {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap items-baseline gap-3 border-b border-primary pb-2">
-      <h2 className="font-expanded text-title">{title}</h2>
-      <p className="text-small text-muted-foreground">{note}</p>
+      <h2 className="font-expanded text-title">{t(titleKey)}</h2>
+      <p className="text-small text-muted-foreground">{t(noteKey)}</p>
     </div>
   );
 }
@@ -132,6 +134,7 @@ function TunnelCard({
   available: boolean;
   host: string;
 }) {
+  const { t, plural } = useT();
   const { tunnelStart, tunnelStop } = useEngineActions();
   const toast = useToast();
 
@@ -140,37 +143,32 @@ function TunnelCard({
   // not «apagado», and offering «Conectar» would launch an ssh onto a port already taken.
   const external = available && !tunnel.running && !tunnel.wanted;
   const state = external
-    ? { label: "conectado fuera de la API", tone: "settled" as const }
+    ? { labelKey: "tunnel.external" as const, tone: "settled" as const }
     : !tunnel.configured
-      ? { label: "sin configurar", tone: "outline" as const }
+      ? { labelKey: "tunnel.unconfigured" as const, tone: "outline" as const }
       : tunnel.running
-        ? { label: "conectado", tone: "settled" as const }
+        ? { labelKey: "tunnel.connected" as const, tone: "settled" as const }
         : tunnel.wanted
-          ? { label: "reconectando", tone: "attention" as const }
-          : { label: "apagado", tone: "outline" as const };
+          ? { labelKey: "tunnel.reconnecting" as const, tone: "attention" as const }
+          : { labelKey: "tunnel.off" as const, tone: "outline" as const };
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <Cable className="size-4 text-muted-foreground" />
-          <CardTitle>Túnel SSH</CardTitle>
-          <Badge variant={state.tone}>{state.label}</Badge>
-          <InfoHint label="Qué hace el túnel">
-            El motor corre en otra máquina; este túnel reenvía el puerto local de
-            «OLLAMA_HOST» al puerto de Ollama en la máquina de la GPU, con el cliente ssh del
-            servidor y tus claves. Se enciende y apaga desde aquí; si el proceso de ssh muere
-            se relanza solo mientras esté pedido. El destino y el puerto remoto se fijan en
-            «Configuración», bajo «Túnel SSH».
-          </InfoHint>
+          <CardTitle>{t("eng.tunnel.title")}</CardTitle>
+          <Badge variant={state.tone}>{t(state.labelKey)}</Badge>
+          <InfoHint label={t("eng.tunnel.hintLabel")}>{t("eng.tunnel.hint")}</InfoHint>
         </div>
         <CardDescription>
           {external
-            ? `El motor ya responde en ${host} sin que la API haya abierto ssh: un túnel levantado a mano, o un Ollama local.${tunnel.configured ? "" : " Rellena OLLAMA_SSH_HOST en «Configuración» si quieres que lo gestione la API."}`
+            ? t("eng.tunnel.external", { host }) +
+              (tunnel.configured ? "" : t("eng.tunnel.externalFill"))
             : tunnel.configured
               ? `${host} → ${tunnel.host}:${tunnel.remote_port}`
-              : "Rellena OLLAMA_SSH_HOST en «Configuración» para poder levantarlo desde aquí."}
-          {tunnel.autostart ? " · arranca con la API" : ""}
+              : t("eng.tunnel.unconfigured")}
+          {tunnel.autostart ? t("eng.tunnel.autostart") : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -181,12 +179,12 @@ function TunnelCard({
               disabled={tunnelStop.isPending}
               onClick={() =>
                 tunnelStop.mutate(undefined, {
-                  onSuccess: () => toast({ title: "Túnel apagado" }),
+                  onSuccess: () => toast({ title: t("eng.tunnel.stopped") }),
                 })
               }
             >
               {tunnelStop.isPending ? <Spinner /> : <Unplug />}
-              Desconectar
+              {t("eng.tunnel.disconnect")}
             </Button>
           ) : external ? null : (
             <Button
@@ -195,39 +193,45 @@ function TunnelCard({
                 tunnelStart.mutate(undefined, {
                   onSuccess: (status) =>
                     toast({
-                      title: status.running ? "Túnel abierto" : "Túnel pedido",
+                      title: status.running ? t("eng.tunnel.opened") : t("eng.tunnel.requested"),
                       description: status.running
-                        ? `ssh en marcha (pid ${status.pid})`
-                        : "ssh arrancará en cuanto pueda",
+                        ? t("eng.tunnel.sshRunning", { pid: status.pid ?? "—" })
+                        : t("eng.tunnel.sshSoon"),
                     }),
                   onError: (error: Error) =>
-                    toast({ title: "No se ha podido abrir", description: error.message, tone: "danger" }),
+                    toast({ title: t("eng.tunnel.openFailed"), description: error.message, tone: "danger" }),
                 })
               }
             >
               {tunnelStart.isPending ? <Spinner /> : <PlugZap />}
-              Conectar
+              {t("eng.tunnel.connect")}
             </Button>
           )}
           <span className="text-small text-muted-foreground">
             {tunnel.running && tunnel.since
-              ? `desde hace ${duration((Date.now() / 1000 - tunnel.since) * 1000)}`
+              ? t("eng.tunnel.since", {
+                  elapsed: duration((Date.now() / 1000 - tunnel.since) * 1000),
+                })
               : tunnel.attempts > 0
-                ? `${tunnel.attempts} intento(s)`
+                ? plural("eng.tunnel.attempts", tunnel.attempts)
                 : null}
-            {tunnel.running ? (available ? " · el motor responde" : " · el motor no responde aún") : null}
-            {external ? "el motor responde" : null}
+            {tunnel.running
+              ? available
+                ? t("eng.tunnel.engineResponds")
+                : t("eng.tunnel.engineSilent")
+              : null}
+            {external ? t("eng.tunnel.engineRespondsBare") : null}
           </span>
         </div>
         <FormError error={tunnelStart.error ?? tunnelStop.error} />
         {tunnel.last_error && !tunnel.running ? (
-          <Alert tone="attention" title="Último error">
+          <Alert tone="attention" title={t("eng.tunnel.lastError")}>
             <p className="font-mono text-small">{tunnel.last_error}</p>
           </Alert>
         ) : null}
         {tunnel.stderr.length > 0 ? (
           <details className="text-small text-muted-foreground">
-            <summary className="cursor-pointer select-none">Lo que dijo ssh</summary>
+            <summary className="cursor-pointer select-none">{t("eng.tunnel.sshSaid")}</summary>
             <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 font-mono text-micro">
               {tunnel.stderr.join("\n")}
             </pre>
@@ -241,6 +245,7 @@ function TunnelCard({
 /* Residency ------------------------------------------------------------------------------ */
 
 function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: AdminOverview }) {
+  const { t, plural } = useT();
   const { release } = useEngineActions();
   const client = useQueryClient();
   const toast = useToast();
@@ -249,7 +254,7 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
     mutationFn: (target: string) => api.adminWarmModels(target),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: keys.adminJobs });
-      toast({ title: "Calentado en cola", description: slug });
+      toast({ title: t("eng.gpu.warmQueued"), description: slug });
     },
   });
   const vram = engine.running.reduce((sum, m) => sum + (m.size_vram ?? 0), 0);
@@ -260,20 +265,23 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <Flame className="size-4 text-muted-foreground" />
-          <CardTitle>La GPU</CardTitle>
+          <CardTitle>{t("eng.gpu.title")}</CardTitle>
           <Badge variant={engine.available ? "settled" : "outline"}>
-            {engine.available ? "motor en línea" : "motor sin conexión"}
+            {engine.available ? t("eng.gpu.online") : t("eng.gpu.offline")}
           </Badge>
         </div>
         <CardDescription>
           {engine.running.length > 0
-            ? `${engine.running.length} modelo(s) residentes · ${bytes(vram)} de VRAM`
-            : "Nada residente ahora mismo"}
+            ? plural("eng.gpu.resident", engine.running.length, { size: bytes(vram) })
+            : t("eng.gpu.nothingResident")}
           {engine.busy
-            ? " · trabajando"
+            ? t("eng.gpu.working")
             : engine.idle.threshold > 0
-              ? ` · ${idleMinutes} min sin trabajos (se libera a los ${Math.floor(engine.idle.threshold / 60)})`
-              : " · la liberación automática está desactivada"}
+              ? t("eng.gpu.idle", {
+                  n: idleMinutes,
+                  threshold: Math.floor(engine.idle.threshold / 60),
+                })
+              : t("eng.gpu.autoReleaseOff")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -284,25 +292,32 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
             disabled={release.isPending || engine.running.length === 0 || engine.busy}
             title={
               engine.busy
-                ? "Hay un trabajo en curso"
+                ? t("eng.gpu.jobRunning")
                 : engine.running.length === 0
-                  ? "No hay nada cargado"
-                  : "Descargar todos los modelos de la GPU ahora; el próximo trabajo los vuelve a cargar (~30 s)"
+                  ? t("eng.gpu.nothingLoaded")
+                  : t("eng.gpu.releaseHint")
             }
             onClick={() =>
               release.mutate(undefined, {
                 onSuccess: ({ released }) =>
-                  toast({ title: "GPU liberada", description: `${released.length} modelo(s) descargados.` }),
+                  toast({
+                    title: t("eng.gpu.released"),
+                    description: plural("eng.gpu.releasedCount", released.length),
+                  }),
                 onError: (error: Error) =>
-                  toast({ title: "No se ha podido liberar", description: error.message, tone: "danger" }),
+                  toast({
+                    title: t("eng.gpu.releaseFailed"),
+                    description: error.message,
+                    tone: "danger",
+                  }),
               })
             }
           >
             {release.isPending ? <Spinner /> : <Power />}
-            Liberar la GPU
+            {t("eng.gpu.release")}
           </Button>
           <div className="space-y-1">
-            <Label htmlFor="warm-workspace">Calentar para</Label>
+            <Label htmlFor="warm-workspace">{t("eng.gpu.warmFor")}</Label>
             <Select
               id="warm-workspace"
               value={slug}
@@ -319,11 +334,11 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
           <Button
             variant="outline"
             disabled={!slug || !engine.available || warm.isPending}
-            title="Carga en memoria los modelos del siguiente paso de ese workspace"
+            title={t("eng.gpu.warmHint")}
             onClick={() => warm.mutate(slug)}
           >
             {warm.isPending ? <Spinner /> : <Flame />}
-            Calentar
+            {t("eng.gpu.warm")}
           </Button>
         </div>
         <FormError error={release.error ?? warm.error} />
@@ -347,13 +362,14 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
  * once. That is legible in a bar and invisible in a list of three numbers.
  */
 function Vram({ running, total }: { running: RunningModel[]; total: number }) {
+  const { t, language } = useT();
   const shares = [...running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0));
   const tint = ["bg-primary", "bg-primary/55", "bg-primary/30", "bg-primary/18"];
 
   return (
     <div className="space-y-2">
       {total > 0 ? (
-        <div className="flex h-2.5 gap-0.5" role="img" aria-label={`${bytes(total)} de VRAM en uso`}>
+        <div className="flex h-2.5 gap-0.5" role="img" aria-label={t("eng.vram.inUse", { size: bytes(total) })}>
           {shares.map((model, index) => (
             <span
               key={model.model}
@@ -374,15 +390,16 @@ function Vram({ running, total }: { running: RunningModel[]; total: number }) {
             <span className="grow" />
             <span className="nums text-muted-foreground">
               {model.size_vram ? bytes(model.size_vram) : "—"}
-              {model.context_length ? ` · ctx ${model.context_length.toLocaleString("es-ES")}` : ""}
-              {model.expires_at ? ` · hasta ${when(model.expires_at)}` : ""}
+              {model.context_length
+                ? t("eng.vram.ctx", { n: model.context_length.toLocaleString(language) })
+                : ""}
+              {model.expires_at ? t("eng.vram.until", { when: when(model.expires_at) }) : ""}
             </span>
           </li>
         ))}
       </ul>
       <p className="text-micro text-muted-foreground">
-        Proporción entre los residentes, no fracción del total: «/api/ps» dice cuánto ocupa
-        cada modelo y no cuánta VRAM tiene la tarjeta.
+        {t("eng.vram.note")}
       </p>
     </div>
   );
@@ -391,18 +408,20 @@ function Vram({ running, total }: { running: RunningModel[]; total: number }) {
 /* Models on disk ------------------------------------------------------------------------- */
 
 function ModelsCard({ engine }: { engine: AdminEngine }) {
+  const { t, plural } = useT();
   const { pull, remove } = useEngineActions();
   const toast = useToast();
   const [name, setName] = useState("");
   const resident = new Set(engine.running.map((m) => m.model));
-  const missing = engine.required.filter((r) => r.state === "sin instalar");
+  const missing = engine.required.filter((r) => r.state === "not_installed");
 
   const confirmDelete = (model: string) => {
-    if (!window.confirm(`¿Borrar '${model}' del disco del motor?\n\nHabrá que volver a descargarlo para usarlo.`)) return;
+    if (!window.confirm(t("eng.models.confirmDelete", { model }))) return;
     remove.mutate(model, {
-      onSuccess: () => toast({ title: "Modelo borrado", description: model, tone: "attention" }),
+      onSuccess: () =>
+        toast({ title: t("eng.models.deleted"), description: model, tone: "attention" }),
       onError: (error: Error) =>
-        toast({ title: "No se ha podido borrar", description: error.message, tone: "danger" }),
+        toast({ title: t("eng.models.deleteFailed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -410,10 +429,10 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
     pull.mutate(model, {
       onSuccess: () => {
         setName("");
-        toast({ title: "Descarga iniciada", description: model });
+        toast({ title: t("eng.models.pullStarted"), description: model });
       },
       onError: (error: Error) =>
-        toast({ title: "No se ha podido iniciar", description: error.message, tone: "danger" }),
+        toast({ title: t("eng.models.pullFailed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -422,25 +441,21 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <HardDrive className="size-4 text-muted-foreground" />
-          <CardTitle>Modelos en el disco del motor</CardTitle>
-          <InfoHint label="Qué se puede hacer aquí">
-            Lo que Ollama tiene descargado, y qué ajustes piden cada uno. Descargar uno nuevo
-            es lo que hace falta antes de elegirlo en «Configuración»; borrar uno libera disco
-            en la máquina de la GPU. No se borra un modelo que algún ajuste nombre.
-          </InfoHint>
+          <CardTitle>{t("eng.models.title")}</CardTitle>
+          <InfoHint label={t("eng.models.hintLabel")}>{t("eng.models.hint")}</InfoHint>
         </div>
         <CardDescription>
-          {engine.installed.filter((m) => !m.remote).length} en disco ·{" "}
+          {plural("eng.models.onDisk", engine.installed.filter((m) => !m.remote).length)} ·{" "}
           {bytes(engine.installed.reduce((sum, m) => sum + (m.size ?? 0), 0))}
           {engine.installed.some((m) => m.remote)
-            ? ` · ${engine.installed.filter((m) => m.remote).length} remoto(s) en Cerebras`
+            ? plural("eng.models.remoteCount", engine.installed.filter((m) => m.remote).length)
             : ""}
-          {missing.length > 0 ? ` · ${missing.length} que la configuración pide y faltan` : ""}
+          {missing.length > 0 ? plural("eng.models.missingCount", missing.length) : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {missing.length > 0 ? (
-          <Alert tone="attention" title="Faltan modelos que la configuración pide">
+          <Alert tone="attention" title={t("eng.models.missingTitle")}>
             <ul className="space-y-1">
               {missing.map((row) => (
                 <li key={row.model} className="flex flex-wrap items-center gap-2">
@@ -448,7 +463,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                   <span className="text-muted-foreground">({row.asked_by.join(", ")})</span>
                   <Button size="sm" variant="outline" disabled={pull.isPending} onClick={() => startPull(row.model)}>
                     <Download />
-                    Descargar
+                    {t("eng.models.pull")}
                   </Button>
                 </li>
               ))}
@@ -466,10 +481,10 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
 
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-64 flex-1 space-y-1">
-            <Label htmlFor="pull-model">Descargar un modelo</Label>
+            <Label htmlFor="pull-model">{t("eng.models.pullLabel")}</Label>
             <Input
               id="pull-model"
-              placeholder="nombre:etiqueta, tal como lo conoce Ollama"
+              placeholder={t("eng.models.pullPlaceholder")}
               value={name}
               disabled={!engine.available}
               onChange={(event) => setName(event.target.value)}
@@ -480,7 +495,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
           </div>
           <Button disabled={!name.trim() || !engine.available || pull.isPending} onClick={() => startPull(name.trim())}>
             {pull.isPending ? <Spinner /> : <Download />}
-            Descargar
+            {t("eng.models.pull")}
           </Button>
         </div>
         <FormError error={pull.error ?? remove.error} />
@@ -490,10 +505,10 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
             <Table minWidth="40rem">
               <THead>
                 <TR>
-                  <TH>Modelo</TH>
-                  <TH align="num">En disco</TH>
-                  <TH>Estado</TH>
-                  <TH>Lo piden</TH>
+                  <TH>{t("eng.models.col.model")}</TH>
+                  <TH align="num">{t("eng.models.col.size")}</TH>
+                  <TH>{t("eng.models.col.state")}</TH>
+                  <TH>{t("eng.models.col.askedBy")}</TH>
                   <TH />
                 </TR>
               </THead>
@@ -508,15 +523,15 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                       </TD>
                       <TD className="px-3 py-2">
                         {model.remote ? (
-                          <Badge variant="outline">remoto</Badge>
+                          <Badge variant="outline">{t("eng.models.remote")}</Badge>
                         ) : resident.has(model.model) ? (
-                          <Badge variant="settled">cargado</Badge>
+                          <Badge variant="settled">{t("eng.models.loaded")}</Badge>
                         ) : (
-                          <Badge variant="outline">en disco</Badge>
+                          <Badge variant="outline">{t("eng.models.stored")}</Badge>
                         )}
                       </TD>
                       <TD className="px-3 py-2 text-small text-muted-foreground">
-                        {asked ? model.asked_by.join(", ") : "nadie"}
+                        {asked ? model.asked_by.join(", ") : t("eng.models.nobody")}
                       </TD>
                       <TD align="num" className="px-3 py-2">
                         <Button
@@ -525,12 +540,12 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                           disabled={Boolean(model.remote) || asked || remove.isPending || engine.busy}
                           title={
                             model.remote
-                              ? "Se sirve en Cerebras: aquí no hay nada que borrar"
+                              ? t("eng.models.remoteDeleteHint")
                               : asked
-                                ? "Lo pide la configuración: cambia esos ajustes antes"
+                                ? t("eng.models.askedDeleteHint")
                                 : engine.busy
-                                  ? "Hay un trabajo en curso"
-                                  : "Borrar del disco del motor"
+                                  ? t("eng.gpu.jobRunning")
+                                  : t("eng.models.deleteHint")
                           }
                           onClick={() => confirmDelete(model.model)}
                         >
@@ -545,7 +560,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
           </div>
         ) : (
           <p className="text-small text-muted-foreground">
-            {engine.available ? "El motor no tiene ningún modelo en disco." : "Sin conexión con el motor: no se puede listar lo instalado."}
+            {engine.available ? t("eng.models.empty") : t("eng.models.noEngine")}
           </p>
         )}
       </CardContent>
@@ -554,6 +569,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
 }
 
 function PullRow({ pull }: { pull: PullStatus }) {
+  const { t } = useT();
   const running = pull.status === "running";
   const tone = pull.status === "failed" ? "danger" : pull.status === "succeeded" ? "settled" : "primary";
   return (
@@ -563,11 +579,14 @@ function PullRow({ pull }: { pull: PullStatus }) {
         <span className="nums text-muted-foreground">
           {running
             ? pull.total > 0
-              ? `${bytes(pull.completed)} de ${bytes(pull.total)}`
-              : "preparando…"
+              ? t("eng.pull.progress", {
+                  done: bytes(pull.completed),
+                  total: bytes(pull.total),
+                })
+              : t("eng.pull.preparing")
             : pull.status === "succeeded"
-              ? "descargado"
-              : "falló"}
+              ? t("eng.pull.done")
+              : t("eng.pull.failed")}
           {pull.user ? ` · ${pull.user}` : ""}
         </span>
       </div>
@@ -580,6 +599,7 @@ function PullRow({ pull }: { pull: PullStatus }) {
 /* Warm contexts -------------------------------------------------------------------------- */
 
 function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: AdminOverview }) {
+  const { t } = useT();
   const { invalidate, invalidateAll } = useEngineActions();
   const toast = useToast();
   const names = new Map(overview.workspaces.map((w) => [w.slug, w.name]));
@@ -588,18 +608,13 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle>Contextos en memoria</CardTitle>
-          <InfoHint label="Qué es un contexto">
-            El índice de conceptos y el banco de un workspace, embebidos y listos para
-            etiquetar o generar. Construirlo cuesta minutos, así que el proceso guarda hasta
-            ocho. Invalidar uno obliga al próximo trabajo a reconstruirlo desde los ficheros:
-            es lo que se hace cuando algo parece rancio.
-          </InfoHint>
+          <CardTitle>{t("eng.ctx.title")}</CardTitle>
+          <InfoHint label={t("eng.ctx.hintLabel")}>{t("eng.ctx.hint")}</InfoHint>
         </div>
         <CardDescription>
           {engine.contexts.length === 0
-            ? "Ninguno: el próximo trabajo de cada workspace construirá el suyo."
-            : `${engine.contexts.length} de 8 como máximo`}
+            ? t("eng.ctx.none")
+            : t("eng.ctx.count", { n: engine.contexts.length })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -614,13 +629,14 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  title="Invalidar este contexto"
+                  title={t("eng.ctx.invalidateOne")}
                   disabled={invalidate.isPending}
                   onClick={() =>
                     invalidate.mutate(slug, {
-                      onSuccess: () => toast({ title: "Contexto invalidado", description: slug }),
+                      onSuccess: () =>
+                        toast({ title: t("eng.ctx.invalidated"), description: slug }),
                       onError: (error: Error) =>
-                        toast({ title: "No se ha podido", description: error.message, tone: "danger" }),
+                        toast({ title: t("eng.ctx.failed"), description: error.message, tone: "danger" }),
                     })
                   }
                 >
@@ -638,13 +654,13 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
             onClick={() =>
               invalidateAll.mutate(undefined, {
                 onSuccess: ({ invalidated }) =>
-                  toast({ title: "Contextos invalidados", description: `${invalidated}` }),
+                  toast({ title: t("eng.ctx.invalidatedAll"), description: `${invalidated}` }),
                 onError: (error: Error) =>
-                  toast({ title: "No se ha podido", description: error.message, tone: "danger" }),
+                  toast({ title: t("eng.ctx.failed"), description: error.message, tone: "danger" }),
               })
             }
           >
-            Invalidar todos
+            {t("eng.ctx.invalidateAll")}
           </Button>
         ) : null}
         <FormError error={invalidate.error ?? invalidateAll.error} />
@@ -656,6 +672,7 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
 /* The database and the process ----------------------------------------------------------- */
 
 function SystemCard() {
+  const { t, language } = useT();
   const system = useAdminSystem();
   if (system.isLoading) return <Skeleton className="h-40" />;
   const data = system.data;
@@ -664,21 +681,21 @@ function SystemCard() {
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <Database className="size-4 text-muted-foreground" />
-          <CardTitle>Base de datos y proceso</CardTitle>
+          <CardTitle>{t("eng.sys.title")}</CardTitle>
         </div>
         <CardDescription>
           {data ? (
             <>
-              {data.database.location} · esquema{" "}
+              {data.database.location} · {t("eng.sys.schema")}{" "}
               <span className="font-mono">{data.database.revision ?? "—"}</span>
               {data.database.head && data.database.head !== data.database.revision ? (
                 <Badge variant="attention" className="ml-2">
-                  migración pendiente ({data.database.head})
+                  {t("eng.sys.pendingMigration", { head: data.database.head })}
                 </Badge>
               ) : null}
             </>
           ) : (
-            "Sin conexión con la base de datos"
+            t("eng.sys.noDatabase")
           )}
         </CardDescription>
       </CardHeader>
@@ -687,14 +704,14 @@ function SystemCard() {
         {data ? (
           <>
             <p className="text-small text-muted-foreground">
-              API en marcha desde hace {duration(data.process.uptime_seconds * 1000)} · registro en{" "}
+              {t("eng.sys.uptime", { elapsed: duration(data.process.uptime_seconds * 1000) })}{" "}
               <span className="font-mono">{data.process.log_level}</span>
             </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-small sm:grid-cols-3">
               {Object.entries(data.database.tables).map(([table, count]) => (
                 <div key={table} className="flex justify-between gap-2">
                   <dt className="font-mono text-muted-foreground">{table}</dt>
-                  <dd className="nums">{count.toLocaleString("es-ES")}</dd>
+                  <dd className="nums">{count.toLocaleString(language)}</dd>
                 </div>
               ))}
             </dl>
@@ -716,6 +733,7 @@ function SystemCard() {
  * entry of someone else's can be taken out of it.
  */
 function QueueSection() {
+  const { t } = useT();
   const jobs = useAdminJobs();
   const cancel = useAdminCancelJob();
   const toast = useToast();
@@ -725,23 +743,25 @@ function QueueSection() {
   const rows = [...(running ? [running] : []), ...queued];
 
   const confirmCancel = (job: Job) => {
-    const verb = job.status === "running" ? "Detener" : "Quitar de la cola";
+    const verb = job.status === "running" ? t("eng.queue.stop") : t("eng.queue.remove");
     const message =
-      `¿${verb} «${job.label}» de ${job.workspace}` +
-      `${job.user_name ? `, pedido por ${job.user_name}` : ""}?` +
-      (job.status === "running"
-        ? "\n\nSe cancela en el siguiente punto de control y el siguiente de la cola arranca."
-        : "");
+      t("eng.queue.confirm", {
+        verb,
+        label: job.label,
+        workspace: job.workspace,
+        by: job.user_name ? t("eng.queue.confirmBy", { name: job.user_name }) : "",
+      }) + (job.status === "running" ? t("eng.queue.confirmRunning") : "");
     if (!window.confirm(message)) return;
     cancel.mutate(job.id, {
       onSuccess: () =>
         toast({
-          title: job.status === "running" ? "Cancelación pedida" : "Quitado de la cola",
-          description: `«${job.label}» de ${job.workspace}`,
+          title:
+            job.status === "running" ? t("eng.queue.cancelRequested") : t("eng.queue.removed"),
+          description: t("eng.queue.jobOf", { label: job.label, workspace: job.workspace }),
           tone: "attention",
         }),
       onError: (error: Error) =>
-        toast({ title: "No se ha podido cancelar", description: error.message, tone: "danger" }),
+        toast({ title: t("eng.queue.cancelFailed"), description: error.message, tone: "danger" }),
     });
   };
 
@@ -749,31 +769,26 @@ function QueueSection() {
     <section className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          Cola de la GPU ({rows.length})
+          {t("eng.queue.title", { n: rows.length })}
         </h2>
-        <InfoHint label="Cómo funciona la cola">
-          Hay una GPU y se ejecuta un trabajo cada vez. Lo que se pide mientras está ocupada
-          —construir, generar, evaluar, de cualquier workspace— se apila por orden de llegada
-          y arranca solo cuando termina lo anterior. Cada persona ve desde su instancia solo
-          lo suyo; aquí se ve la fila entera y se puede sacar a cualquiera de ella.
-        </InfoHint>
+        <InfoHint label={t("eng.queue.hintLabel")}>{t("eng.queue.hint")}</InfoHint>
       </div>
 
       {jobs.isLoading ? (
         <Skeleton className="h-16" />
       ) : rows.length === 0 ? (
-        <p className="text-small text-muted-foreground">Nada en ejecución ni en espera.</p>
+        <p className="text-small text-muted-foreground">{t("eng.queue.empty")}</p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
           <Table minWidth="48rem">
             <THead>
               <TR>
                 <TH align="num">#</TH>
-                <TH>Trabajo</TH>
-                <TH>Workspace</TH>
-                <TH>Pedido por</TH>
-                <TH>Pedido</TH>
-                <TH>Estado</TH>
+                <TH>{t("eng.queue.col.job")}</TH>
+                <TH>{t("eng.queue.col.workspace")}</TH>
+                <TH>{t("eng.queue.col.askedBy")}</TH>
+                <TH>{t("eng.queue.col.asked")}</TH>
+                <TH>{t("eng.queue.col.state")}</TH>
                 <TH />
               </TR>
             </THead>
@@ -793,7 +808,7 @@ function QueueSection() {
                     </TD>
                     <TD className="px-3 py-2">
                       <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                        {JOB_STATUS[job.status].label}
+                        {t(JOB_STATUS[job.status].labelKey)}
                       </span>
                     </TD>
                     <TD align="num" className="whitespace-nowrap px-3 py-2">
@@ -801,11 +816,11 @@ function QueueSection() {
                         variant="ghost"
                         size="sm"
                         disabled={cancel.isPending}
-                        title={active ? "Detener el trabajo en curso" : "Quitar de la cola"}
+                        title={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
                         onClick={() => confirmCancel(job)}
                       >
                         {active ? <Ban /> : <Trash2 />}
-                        {active ? "Detener" : "Quitar"}
+                        {active ? t("eng.queue.stop") : t("eng.queue.removeShort")}
                       </Button>
                     </TD>
                   </TR>
@@ -823,35 +838,32 @@ function QueueSection() {
 /* The queue's past ----------------------------------------------------------------------- */
 
 function HistorySection() {
+  const { t } = useT();
   const history = useAdminJobHistory();
   const jobs = history.data?.jobs ?? [];
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          Trabajos terminados ({jobs.length})
+          {t("eng.hist.title", { n: jobs.length })}
         </h2>
-        <InfoHint label="De dónde sale">
-          Lo que la cola ha ejecutado desde que arrancó la API, de todos los workspaces. Vive
-          en memoria: reiniciar la API lo vacía. El detalle de cada uno está en el registro de
-          ejecución de su workspace.
-        </InfoHint>
+        <InfoHint label={t("eng.hist.hintLabel")}>{t("eng.hist.hint")}</InfoHint>
       </div>
       {history.isLoading ? (
         <Skeleton className="h-16" />
       ) : jobs.length === 0 ? (
-        <p className="text-small text-muted-foreground">Ninguno desde que arrancó la API.</p>
+        <p className="text-small text-muted-foreground">{t("eng.hist.empty")}</p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
           <Table minWidth="48rem">
             <THead>
               <TR>
-                <TH>Trabajo</TH>
-                <TH>Workspace</TH>
-                <TH>Pedido por</TH>
-                <TH>Terminó</TH>
-                <TH align="num">Duró</TH>
-                <TH>Estado</TH>
+                <TH>{t("eng.queue.col.job")}</TH>
+                <TH>{t("eng.queue.col.workspace")}</TH>
+                <TH>{t("eng.queue.col.askedBy")}</TH>
+                <TH>{t("eng.hist.col.finished")}</TH>
+                <TH align="num">{t("eng.hist.col.elapsed")}</TH>
+                <TH>{t("eng.queue.col.state")}</TH>
               </TR>
             </THead>
             <TBody>
@@ -875,7 +887,7 @@ function HistorySection() {
                   </TD>
                   <TD className="px-3 py-2">
                     <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                      {JOB_STATUS[job.status].label}
+                      {t(JOB_STATUS[job.status].labelKey)}
                     </span>
                   </TD>
                 </TR>

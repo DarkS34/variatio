@@ -21,6 +21,7 @@ import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "./blocks";
+import { useT } from "@/lib/i18n";
 
 export interface GuideSection {
   slug: string;
@@ -721,6 +722,7 @@ function Generar() {
 }
 
 function Evaluar() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
       <SectionHead eyebrow="Usarla" title="Evaluar">
@@ -834,8 +836,8 @@ function Evaluar() {
               style={{ background: ARM_META[arm].colour }}
             />
             <p className="flex-1">
-              <span className="font-medium text-foreground">{ARM_META[arm].label}</span> —{" "}
-              {ARM_META[arm].description}
+              <span className="font-medium text-foreground">{t(ARM_META[arm].labelKey)}</span> —{" "}
+              {t(ARM_META[arm].descriptionKey)}
             </p>
           </div>
         ))}
@@ -879,6 +881,7 @@ function Evaluar() {
 }
 
 function Ejecucion() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
       <SectionHead eyebrow="Día a día" title="Seguir una ejecución">
@@ -902,7 +905,7 @@ function Ejecucion() {
                 blocked={key === "blocked"}
                 size="md"
               />
-              <span className="w-32 shrink-0 text-body font-medium">{STATUS[key].label}</span>
+              <span className="w-32 shrink-0 text-body font-medium">{t(STATUS[key].labelKey)}</span>
               <span className="text-small text-muted-foreground">{STATE_HINTS[key]}</span>
             </div>
           ))}
@@ -1365,7 +1368,13 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     icon: Library,
     body: Banco,
   },
-  { slug: "generar", label: "Generar variantes", group: "Usarla", icon: Play, body: Generar },
+  {
+    slug: "generar",
+    label: "Generar variantes",
+    group: "Usarla",
+    icon: Play,
+    body: Generar,
+  },
   {
     slug: "evaluar",
     label: "Evaluar propuestas",

@@ -12,11 +12,12 @@ import type {
   ReasoningPhase,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT, type Key } from "@/lib/i18n";
 
-const FIXED_LABELS: Record<ReasoningFixed, string> = {
-  grammar: "con gramática: no puede razonar",
-  commission: "lo decide cada encargo",
-  model: "el modelo no razona",
+const FIXED_LABELS: Record<ReasoningFixed, Key> = {
+  grammar: "pipe.fixed.grammar",
+  commission: "pipe.fixed.commission",
+  model: "pipe.fixed.model",
 };
 
 const FIXED_ICONS: Record<ReasoningFixed, typeof Braces> = {
@@ -110,6 +111,7 @@ function PhaseNode({
   last: boolean;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { t } = useT();
   const thinks = setting
     ? Boolean(setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default))
     : false;
@@ -147,7 +149,7 @@ function PhaseNode({
           {modelSetting && !ownModel ? (
             <span
               className="min-w-0 flex-1 truncate font-mono text-micro text-muted-foreground"
-              title={`Modelo: ${residentName}`}
+              title={t("pipe.modelTitle", { model: residentName })}
             >
               {residentName}
             </span>
@@ -178,21 +180,22 @@ function NodeEffort({
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { t } = useT();
   const pending = setting.key in draft;
   const raw = pending ? draft[setting.key] : (setting.value ?? setting.default);
   const value = typeof raw === "string" && raw ? raw : "low";
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const title = [
-    `${phase.label}: esfuerzo de razonamiento ${value}`,
-    lockedByEnv ? `lo fija ${setting.env}` : null,
+    t("pipe.effortTitle", { phase: phase.label, level: value }),
+    lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
   ]
     .filter(Boolean)
     .join(" — ");
 
   return (
     <Select
-      aria-label={`${phase.label}: esfuerzo de razonamiento`}
+      aria-label={t("pipe.effortAria", { phase: phase.label })}
       title={title}
       value={value}
       disabled={disabled}
@@ -231,6 +234,7 @@ function NodeModel({
   models: Models | null;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { t } = useT();
   const pending = setting.key in draft;
   const raw = pending ? draft[setting.key] : (setting.value ?? setting.default);
   const value = typeof raw === "string" && raw ? raw : null;
@@ -241,17 +245,23 @@ function NodeModel({
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const effective = value ?? mainName;
-  const label = `${phase.label}: modelo`;
+  const label = t("pipe.modelLabel", { phase: phase.label });
 
   const describe = (model: InstalledModel) => {
-    if (model.remote) return `${model.model} — remoto (Cerebras)`;
+    if (model.remote) return t("pipe.model.remote", { model: model.model });
     const vram = residentVram.get(model.model);
-    if (vram) return `${model.model} — cargado, ${bytes(vram)} en VRAM`;
-    return model.size ? `${model.model} — en disco, ${bytes(model.size)}` : model.model;
+    if (vram) return t("pipe.model.loaded", { model: model.model, size: bytes(vram) });
+    return model.size
+      ? t("pipe.model.onDisk", { model: model.model, size: bytes(model.size) })
+      : model.model;
   };
   const title = [
-    effective ? `Modelo: ${effective}${value ? "" : " (sigue al principal)"}` : "Sin modelo",
-    lockedByEnv ? `lo fija ${setting.env}` : null,
+    effective
+      ? t("pipe.modelTitle", {
+          model: `${effective}${value ? "" : t("pipe.model.followsMain")}`,
+        })
+      : t("pipe.model.none"),
+    lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
   ]
     .filter(Boolean)
     .join(" — ");
@@ -279,20 +289,22 @@ function NodeModel({
         )}
       >
         {setting.nullable ? (
-          <option value="">{mainName ? `principal (${mainName})` : "principal"}</option>
+          <option value="">
+            {mainName ? t("pipe.mainNamed", { model: mainName }) : t("pipe.main")}
+          </option>
         ) : null}
-        {value && !known && !other ? <option value={value}>{value} — sin instalar</option> : null}
+        {value && !known && !other ? <option value={value}>{t("pipe.notInstalled", { model: value })}</option> : null}
         {installed.map((model) => (
           <option key={model.model} value={model.model}>
             {describe(model)}
           </option>
         ))}
-        <option value={OTHER}>Otro…</option>
+        <option value={OTHER}>{t("pipe.other")}</option>
       </Select>
       {other ? (
         <Input
-          aria-label={`${label}: nombre`}
-          placeholder="nombre:etiqueta"
+          aria-label={t("pipe.modelNameAria", { label })}
+          placeholder={t("pipe.modelNamePlaceholder")}
           disabled={disabled}
           value={value ?? ""}
           onChange={(event) => onChange(setting.key, event.target.value || null)}
@@ -314,13 +326,17 @@ function Toggle({
   draft: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { t } = useT();
   const pending = setting.key in draft;
   const on = Boolean(pending ? draft[setting.key] : (setting.value ?? setting.default));
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const title = [
-    `${phase.label}: razonamiento ${on ? "activado" : "desactivado"}`,
-    lockedByEnv ? `lo fija ${setting.env}` : null,
+    t("pipe.thinkTitle", {
+      phase: phase.label,
+      state: on ? t("pipe.think.on") : t("pipe.think.off"),
+    }),
+    lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
     phase.note || null,
   ]
     .filter(Boolean)
@@ -331,7 +347,7 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={`${phase.label}: razonar antes de contestar`}
+      aria-label={t("pipe.thinkAria", { phase: phase.label })}
       title={title}
       disabled={disabled}
       onClick={() => onChange(setting.key, !on)}
@@ -351,9 +367,10 @@ function Toggle({
 }
 
 function Fixed({ phase }: { phase: ReasoningPhase }) {
+  const { t } = useT();
   const fixed = phase.fixed ?? "grammar";
   const Icon = FIXED_ICONS[fixed];
-  const title = [`${phase.label}: ${FIXED_LABELS[fixed]}`, phase.note || null]
+  const title = [`${phase.label}: ${t(FIXED_LABELS[fixed])}`, phase.note || null]
     .filter(Boolean)
     .join(" — ");
   return (
@@ -368,27 +385,28 @@ function Fixed({ phase }: { phase: ReasoningPhase }) {
 }
 
 export function ReasoningLegend() {
+  const { t } = useT();
   return (
     <ul className="flex flex-wrap gap-x-5 gap-y-1 text-small text-muted-foreground">
       <li className="flex items-center gap-1.5">
         <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <Brain className="size-3" />
         </span>
-        razona
+        {t("pipe.legend.reasons")}
       </li>
       <li className="flex items-center gap-1.5">
         <span className="flex size-5 items-center justify-center rounded-full border border-border text-muted-foreground">
           <Brain className="size-3" />
         </span>
-        responde sin razonar
+        {t("pipe.legend.noReasoning")}
       </li>
       <li className="flex items-center gap-1.5">
         <span className="flex size-5 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
           <Braces className="size-3" />
         </span>
-        fija: no depende de un ajuste
+        {t("pipe.legend.fixed")}
       </li>
-      <li>en cada parada, el modelo que atiende la llamada; y si razona, su esfuerzo al lado</li>
+      <li>{t("pipe.legend.stop")}</li>
     </ul>
   );
 }

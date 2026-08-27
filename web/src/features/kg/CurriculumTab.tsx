@@ -13,10 +13,13 @@ import { adjacency, priors } from "@/features/run/prerequisites";
 import { getCurriculum, putCurriculum } from "@/lib/api";
 import { when } from "@/lib/format";
 import { useKg, useKgGraph } from "@/state/queries";
+import { useT, type Key } from "@/lib/i18n";
 
 const sorted = (names: string[]) => [...names].sort((a, b) => a.localeCompare(b, "es"));
 
-const UNCLASSIFIED_DOMAIN = "Sin clasificar";
+// The server's own sentinel (`KG_BUILDER_UNCLASSIFIED_DOMAIN`), matched against rather
+// than read. Translating it breaks the match.
+const UNCLASSIFIED_DOMAIN = "Sin clasificar"; // i18n-exempt
 
 // `adjacency()` returns null for two unrelated reasons — the graph declares no prerequisite
 // relation, or there is no graph payload to read — and only the first one means that what
@@ -26,20 +29,20 @@ const UNCLASSIFIED_DOMAIN = "Sin clasificar";
 const NOTICE = {
   none: {
     tone: "attention",
-    title: "El grafo no declara prerrequisitos",
-    body: "Sin una relación de prerrequisito no hay nada que cerrar: se guardará exactamente lo que hayas elegido.",
+    titleKey: "curric.notice.none.title",
+    bodyKey: "curric.notice.none.body",
   },
   loading: {
     tone: "info",
-    title: "Todavía no se sabe qué prerrequisitos entrarán",
-    body: "El grafo se está cargando. En cuanto llegue se listarán aquí, antes de guardar.",
+    titleKey: "curric.notice.loading.title",
+    bodyKey: "curric.notice.loading.body",
   },
   error: {
     tone: "attention",
-    title: "No se ha podido leer el grafo",
-    body: "No se puede decir cuáles entrarán, pero al guardar el servidor los añadirá igualmente: el currículo guardado puede acabar siendo mayor que el que ves aquí. Vuelve a cargar la página, o apaga el cierre por prerrequisitos para guardar solo lo elegido.",
+    titleKey: "curric.notice.error.title",
+    bodyKey: "curric.notice.error.body",
   },
-} as const;
+} as const satisfies Record<string, { tone: string; titleKey: Key; bodyKey: Key }>;
 
 // Membership rather than a joined string: a concept name is free Spanish text, so any
 // separator would be a guess about what cannot appear inside one.
@@ -50,6 +53,7 @@ const same = (a: string[], b: string[]) => {
 };
 
 export function CurriculumTab() {
+  const { plural, t } = useT();
   const client = useQueryClient();
   const kg = useKg();
   const graph = useKgGraph();
@@ -104,27 +108,18 @@ export function CurriculumTab() {
 
   return (
     <div className="space-y-4">
-      <Alert tone="info" title="Qué declara el currículo">
-        <p>
-          El temario ya impartido. Mientras esté definido, la generación se limita a estos
-          conceptos y no introduce ninguno de fuera; vacío significa sin restricción, es decir
-          todo el grafo. Un concepto no etiquetable también puede formar parte: aquí se declara
-          cobertura, no objetivos.
-        </p>
+      <Alert tone="info" title={t("curric.whatItDeclares")}>
+        <p>{t("curric.whatItDeclares.body")}</p>
       </Alert>
 
       {units.length > 1 ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle>Hasta dónde ha llegado el curso</CardTitle>
-            <p className="mt-1 text-small text-muted-foreground">
-              Las unidades salen en el orden del temario. Elegir una mete en el currículo
-              los conceptos de ésa y de todas las anteriores; después puedes seguir
-              ajustándolo a mano, y no se guarda nada hasta que pulses «Guardar currículo».
-            </p>
+            <CardTitle>{t("curric.howFar")}</CardTitle>
+            <p className="mt-1 text-small text-muted-foreground">{t("curric.howFar.body")}</p>
           </CardHeader>
           <CardContent>
-            <Field label="Hemos llegado hasta…" className="max-w-md">
+            <Field label={t("curric.upTo")} className="max-w-md">
               {(injected) => (
                 <Select
                   {...injected}
@@ -135,10 +130,14 @@ export function CurriculumTab() {
                     setDraft([...new Set(units.slice(0, upTo).flatMap((u) => u.concepts))]);
                   }}
                 >
-                  <option value="">Elige una unidad</option>
+                  <option value="">{t("curric.chooseUnit")}</option>
                   {units.map((unit, index) => (
                     <option key={unit.name} value={index + 1}>
-                      {index + 1} · {unit.name} ({unit.concepts.length} concepto(s))
+                      {t("curric.unitOption", {
+                        index: index + 1,
+                        name: unit.name,
+                        concepts: plural("outline.conceptCount", unit.concepts.length),
+                      })}
                     </option>
                   ))}
                 </Select>
@@ -151,22 +150,24 @@ export function CurriculumTab() {
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
           <div className="min-w-0">
-            <CardTitle>Currículo ({selected.length} concepto(s))</CardTitle>
+            <CardTitle>
+              {t("curric.title", {
+                concepts: plural("outline.conceptCount", selected.length),
+              })}
+            </CardTitle>
             <p className="mt-1 text-small text-muted-foreground">
-              Guardado por última vez: {when(curriculum.data?.updated_at ?? null)}
-              {dirty ? " · con cambios sin guardar" : null}
+              {t("curric.lastSaved", { when: when(curriculum.data?.updated_at ?? null) })}
+              {dirty ? t("curric.unsaved") : null}
             </p>
           </div>
           <Button variant="outline" onClick={() => setPicking(true)}>
             <Pencil />
-            Editar el currículo
+            {t("curric.edit")}
           </Button>
         </CardHeader>
         <CardContent>
           {selected.length === 0 ? (
-            <p className="text-body text-muted-foreground">
-              Sin currículo: la generación puede usar cualquier concepto del grafo.
-            </p>
+            <p className="text-body text-muted-foreground">{t("curric.emptyMeansAll")}</p>
           ) : (
             <div className="thin-scroll flex max-h-64 flex-wrap gap-1 overflow-y-auto">
               {sorted(selected).map((name) => (
@@ -174,7 +175,7 @@ export function CurriculumTab() {
                   {name}
                   <button
                     type="button"
-                    aria-label={`Quitar ${name}`}
+                    aria-label={t("curric.remove", { name })}
                     onClick={() => setDraft(selected.filter((c) => c !== name))}
                     className="rounded-full p-0.5 hover:bg-background/60"
                   >
@@ -188,28 +189,25 @@ export function CurriculumTab() {
       </Card>
 
       {dropped.length > 0 ? (
-        <Alert tone="attention" title="Conceptos que ya no están en el grafo">
-          <p>
-            Estos estaban en el currículo y el grafo ya no los tiene, así que dejan de contar:{" "}
-            {dropped.join(", ")}. Vuelve a guardar para quitarlos del fichero.
-          </p>
+        <Alert tone="attention" title={t("curric.dropped.title")}>
+          <p>{t("curric.dropped.body", { names: dropped.join(", ") })}</p>
         </Alert>
       ) : null}
 
       {closePrerequisites && implied.length > 0 ? (
-        <Alert tone="info" title={`Al guardar entrarán ${implied.length} prerrequisito(s)`}>
+        <Alert tone="info" title={plural("curric.impliedTitle", implied.length)}>
           <p>{implied.join(", ")}.</p>
         </Alert>
       ) : null}
 
       {closePrerequisites && notice ? (
-        <Alert tone={notice.tone} title={notice.title}>
-          <p>{notice.body}</p>
+        <Alert tone={notice.tone} title={t(notice.titleKey)}>
+          <p>{t(notice.bodyKey)}</p>
         </Alert>
       ) : null}
 
       {error ? (
-        <Alert tone="danger" title="No se pudo guardar el currículo">
+        <Alert tone="danger" title={t("curric.saveFailed")}>
           <p>{error}</p>
         </Alert>
       ) : null}
@@ -219,26 +217,23 @@ export function CurriculumTab() {
           <Switch
             checked={closePrerequisites}
             onCheckedChange={setClosePrerequisites}
-            label="cerrar bajo prerrequisitos"
+            label={t("curric.closeSwitch")}
           />
           <div>
-            <p className="text-body">Cerrar bajo prerrequisitos al guardar</p>
-            <p className="text-small text-muted-foreground">
-              Añade también todo aquello de lo que dependen los conceptos elegidos. Se propone
-              antes de guardar; nada se añade sin que lo veas.
-            </p>
+            <p className="text-body">{t("curric.closeTitle")}</p>
+            <p className="text-small text-muted-foreground">{t("curric.closeBody")}</p>
           </div>
         </div>
         <Button disabled={!canSave || save.isPending} onClick={() => save.mutate()}>
           <Save />
-          Guardar currículo
+          {t("curric.save")}
         </Button>
       </div>
 
       <ConceptSelector
         open={picking}
         onClose={() => setPicking(false)}
-        title="Conceptos del currículo"
+        title={t("curric.selectorTitle")}
         concepts={concepts}
         graph={graph.data}
         selected={selected}

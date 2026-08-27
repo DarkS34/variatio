@@ -8,6 +8,7 @@ import { stepExplain } from "@/lib/explain";
 import { duration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StepView } from "@/state/runStore";
+import { useT } from "@/lib/i18n";
 
 // The running step borrows the shape a building stage uses, so "this is the part still
 // moving" is drawn the same way here and in the navbar. The other four keep their own
@@ -90,6 +91,7 @@ export function RunTimeline({
   className?: string;
   slots?: Record<string, ReactNode>;
 }) {
+  const { t } = useT();
   const steps = groupSteps(rawSteps);
   const pending = Object.entries(slots ?? {}).filter(
     ([id, node]) => node && !steps.some((step) => step.id === id),
@@ -97,7 +99,7 @@ export function RunTimeline({
 
   if (steps.length === 0 && pending.length === 0) {
     return (
-      <p className={cn("text-body text-muted-foreground", className)}>Sin pasos todavía.</p>
+      <p className={cn("text-body text-muted-foreground", className)}>{t("run.noSteps")}</p>
     );
   }
 
@@ -145,7 +147,7 @@ export function RunTimeline({
                         full under the title, so there the icon was a second copy of the same sentence a
                         centimetre from the first: when both say the same thing, the visible one stays. */}
                     {explain && !running ? (
-                      <InfoHint label={`Qué hace: ${step.label}`}>{explain}</InfoHint>
+                      <InfoHint label={t("run.whatItDoes", { step: step.label })}>{t(explain)}</InfoHint>
                     ) : null}
                   </span>
                   <span className="shrink-0 text-small nums text-muted-foreground">
@@ -162,7 +164,7 @@ export function RunTimeline({
                 </div>
 
                 {running && explain ? (
-                  <p className="text-small leading-relaxed text-muted-foreground">{explain}</p>
+                  <p className="text-small leading-relaxed text-muted-foreground">{t(explain)}</p>
                 ) : null}
                 {step.detail ? (
                   <p className="truncate text-small text-muted-foreground">{step.detail}</p>

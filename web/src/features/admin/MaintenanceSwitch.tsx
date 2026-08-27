@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/misc";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAdminMaintenance, useSetMaintenance } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /**
  * The door of the installation, on the panel that runs it.
@@ -22,6 +23,7 @@ import { useAdminMaintenance, useSetMaintenance } from "@/state/queries";
  * somebody rephrased the sentence.
  */
 export function MaintenanceSwitch() {
+  const { t } = useT();
   const maintenance = useAdminMaintenance();
   const save = useSetMaintenance();
   const state = maintenance.data;
@@ -58,22 +60,27 @@ export function MaintenanceSwitch() {
           />
           <div className="min-w-0">
             <p className="font-medium">
-              {active ? "La instalación está cerrada" : "Modo mantenimiento"}
+              {active ? t("maint.closed") : t("maint.title")}
             </p>
             <p className="text-small text-muted-foreground">
               {active
-                ? `Solo entra quien administra. Cerrada ${state?.by ? `por «${state.by}» ` : ""}el ${when(state?.since ?? null)}.`
-                : "Cierra la aplicación para todo el mundo menos para quien administra, mientras se aplican cambios."}
+                ? t("maint.closedBy", {
+                    by: state?.by ? t("maint.closedByWho", { name: state.by }) : "",
+                    when: when(state?.since ?? null),
+                  })
+                : t("maint.body")}
             </p>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-small text-muted-foreground">{active ? "Cerrada" : "Abierta"}</span>
+          <span className="text-small text-muted-foreground">
+            {active ? t("maint.stateClosed") : t("maint.stateOpen")}
+          </span>
           <Switch
             checked={active}
             disabled={save.isPending || maintenance.isLoading}
-            label="Modo mantenimiento"
+            label={t("maint.title")}
             onCheckedChange={(next) =>
               save.mutate({ active: next, message: next ? message.trim() || null : null })
             }
@@ -84,8 +91,8 @@ export function MaintenanceSwitch() {
       {active ? (
         <div className="mt-4 space-y-2 border-t border-border/60 pt-4">
           <Field
-            label="Lo que se lee mientras tanto"
-            description="Es todo lo que verá quien intente entrar. Sin hora de vuelta: nadie la sabe."
+            label={t("maint.messageLabel")}
+            description={t("maint.messageHelp")}
           >
             <Textarea
               value={message}
@@ -106,7 +113,7 @@ export function MaintenanceSwitch() {
                 save.mutate({ active: true, message: message.trim() });
               }}
             >
-              Guardar el aviso
+              {t("maint.saveNotice")}
             </Button>
             {save.isError ? (
               <span className="text-small text-destructive">{(save.error as Error).message}</span>

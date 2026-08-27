@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
+import { useT } from "@/lib/i18n";
 
 export function Dialog({
   open,
@@ -22,6 +23,7 @@ export function Dialog({
   footer?: ReactNode;
   className?: string;
 }) {
+  const { t } = useT();
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -112,7 +114,7 @@ export function Dialog({
               <p className="mt-1 text-small text-muted-foreground">{description}</p>
             ) : null}
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Cerrar">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t("common.close")}>
             <X />
           </Button>
         </header>

@@ -26,6 +26,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
 import type { FieldSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT, type Key, type Translate } from "@/lib/i18n";
 
 export type FieldType =
   | "string"
@@ -38,19 +39,19 @@ export type FieldType =
 
 type TypeMeta = {
   value: FieldType;
-  label: string;
+  labelKey: Key;
   icon: ComponentType<{ className?: string }>;
-  caption: string;
+  captionKey: Key;
 };
 
 const TYPES: TypeMeta[] = [
-  { value: "string", label: "Texto", icon: Type, caption: "Texto libre: una línea o varios párrafos." },
-  { value: "enum", label: "Opciones", icon: ListChecks, caption: "Uno de una lista cerrada de valores." },
-  { value: "integer", label: "Entero", icon: Hash, caption: "Número sin decimales." },
-  { value: "number", label: "Decimal", icon: Calculator, caption: "Número con decimales." },
-  { value: "boolean", label: "Sí / No", icon: ToggleLeft, caption: "Verdadero o falso." },
-  { value: "array", label: "Lista", icon: List, caption: "Varios valores del mismo tipo." },
-  { value: "object", label: "Objeto", icon: Braces, caption: "Objeto libre: su interior no se valida." },
+  { value: "string", labelKey: "fieldType.string", icon: Type, captionKey: "fieldType.string.caption" },
+  { value: "enum", labelKey: "fieldType.enum", icon: ListChecks, captionKey: "fieldType.enum.caption" },
+  { value: "integer", labelKey: "fieldType.integer", icon: Hash, captionKey: "fieldType.integer.caption" },
+  { value: "number", labelKey: "fieldType.number", icon: Calculator, captionKey: "fieldType.number.caption" },
+  { value: "boolean", labelKey: "fieldType.boolean", icon: ToggleLeft, captionKey: "fieldType.boolean.caption" },
+  { value: "array", labelKey: "fieldType.array", icon: List, captionKey: "fieldType.array.caption" },
+  { value: "object", labelKey: "fieldType.object", icon: Braces, captionKey: "fieldType.object.caption" },
 ];
 
 const ITEM_TYPES = TYPES.filter((meta) => meta.value !== "array" && meta.value !== "object");
@@ -65,20 +66,29 @@ const NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
 const RESERVED = ["item_type", "id", "source", "concepts", "primary_concept"];
 
-export function nameError(candidate: string, taken: string[], current?: string): string | null {
+export function nameError(
+  candidate: string,
+  taken: string[],
+  { t }: Translate,
+  current?: string,
+): string | null {
   const value = candidate.trim();
-  if (!value) return "El nombre no puede estar vacío";
-  if (!NAME_PATTERN.test(value))
-    return "En minúsculas, sin tildes ni ñ: solo a-z, números y guiones bajos, empezando por letra";
-  if (value !== current && taken.includes(value)) return "Ya existe uno con ese nombre";
+  if (!value) return t("field.name.empty");
+  if (!NAME_PATTERN.test(value)) return t("field.name.pattern");
+  if (value !== current && taken.includes(value)) return t("field.name.taken");
   return null;
 }
 
-export function fieldNameError(candidate: string, taken: string[], current?: string): string | null {
-  const error = nameError(candidate, taken, current);
+export function fieldNameError(
+  candidate: string,
+  taken: string[],
+  tr: Translate,
+  current?: string,
+): string | null {
+  const error = nameError(candidate, taken, tr, current);
   if (error) return error;
   if (RESERVED.includes(candidate.trim()))
-    return `«${candidate.trim()}» está reservado por el sistema`;
+    return tr.t("field.name.reserved", { name: candidate.trim() });
   return null;
 }
 
@@ -109,14 +119,14 @@ export function enumValues(schema: Record<string, any>): string[] {
     .map(String);
 }
 
-export function describeType(schema: Record<string, any>): string {
+export function describeType(schema: Record<string, any>, { t, plural }: Translate): string {
   const type = baseType(schema);
-  if (type === "enum") {
-    const total = enumValues(schema).length;
-    return total === 1 ? "1 opción" : `${total} opciones`;
-  }
-  if (type === "array") return `lista de ${META[baseType(schema.items ?? {})].label.toLowerCase()}`;
-  return META[type].label;
+  if (type === "enum") return plural("field.options", enumValues(schema).length);
+  if (type === "array")
+    return t("fieldType.arrayOf", {
+      type: t(META[baseType(schema.items ?? {})].labelKey).toLowerCase(),
+    });
+  return t(META[type].labelKey);
 }
 
 function rebuild(schema: Record<string, any>, type: FieldType, nullable: boolean) {
@@ -156,14 +166,15 @@ function TypePicker({
   options?: TypeMeta[];
   disabled?: boolean;
 }) {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap gap-1.5">
-      {options.map(({ value: option, label, icon: Icon, caption }) => (
+      {options.map(({ value: option, labelKey, icon: Icon, captionKey }) => (
         <button
           key={option}
           type="button"
           disabled={disabled}
-          title={disabled ? LOCKED_HINT : caption}
+          title={disabled ? t(LOCKED_HINT) : t(captionKey)}
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
@@ -175,7 +186,7 @@ function TypePicker({
           )}
         >
           <Icon className="size-3.5" />
-          {label}
+          {t(labelKey)}
         </button>
       ))}
     </div>
@@ -324,6 +335,8 @@ export function FieldEditor({
   onMakePrimary: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
+  const tr = useT();
+  const { t } = tr;
   const locked = useStageLocked();
   const [nameDraft, setNameDraft] = useState(name);
   const [showRaw, setShowRaw] = useState(false);
@@ -337,7 +350,7 @@ export function FieldEditor({
   const type = baseType(schema);
   const nullable = isNullable(schema);
   const Icon = META[type].icon;
-  const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, name);
+  const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, tr, name);
   const canBePrimary = type === "string";
   // Mirrors ExemplarsProfile._validate_decided_by: the primary field IS the item, and a
   // list or a free object has no choice to put in front of whoever asks for the item.
@@ -352,7 +365,7 @@ export function FieldEditor({
 
   const commitName = () => {
     const next = nameDraft.trim();
-    if (next === name || fieldNameError(next, taken, name)) return;
+    if (next === name || fieldNameError(next, taken, tr, name)) return;
     onRename(next);
   };
 
@@ -360,7 +373,7 @@ export function FieldEditor({
     try {
       const parsed = JSON.parse(rawText);
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        setRawError("El campo debe ser un objeto");
+        setRawError(t("field.raw.notObject"));
         return;
       }
       if (
@@ -368,7 +381,7 @@ export function FieldEditor({
         parsed.schema === null ||
         Array.isArray(parsed.schema)
       ) {
-        setRawError("El campo debe declarar un objeto 'schema'");
+        setRawError(t("field.raw.noSchema"));
         return;
       }
       setRawError(null);
@@ -411,16 +424,16 @@ export function FieldEditor({
           <Icon className="size-4 shrink-0 text-primary" />
           <span className="shrink-0 font-mono text-body font-medium">{name}</span>
           {isPrimary ? (
-            <Badge className="shrink-0" title="Es el texto que se etiqueta y se embebe">
+            <Badge className="shrink-0" title={t("field.primary.title")}>
               <Star className="fill-current" />
-              primario
+              {t("field.primary.badge")}
             </Badge>
           ) : null}
           <Badge variant="outline" className="shrink-0">
-            {describeType(schema)}
+            {describeType(schema, tr)}
           </Badge>
           <Badge variant={nullable ? "outline" : "secondary"} className="shrink-0">
-            {nullable ? "opcional" : "obligatorio"}
+            {nullable ? t("field.optional") : t("field.obligatory")}
           </Badge>
           {!open && spec.description ? (
             <span className="min-w-0 truncate text-small text-muted-foreground">
@@ -437,12 +450,12 @@ export function FieldEditor({
             disabled={isPrimary || !canBePrimary || locked}
             title={
               isPrimary
-                ? "Ya es el campo primario"
+                ? t("field.primary.already")
                 : locked
-                  ? LOCKED_HINT
+                  ? t(LOCKED_HINT)
                   : canBePrimary
-                    ? "Marcar como campo primario"
-                    : "Solo un campo de texto puede ser el primario"
+                    ? t("field.primary.make")
+                    : t("field.primary.onlyText")
             }
           >
             <Star className={cn(isPrimary && "fill-current text-primary")} />
@@ -452,7 +465,7 @@ export function FieldEditor({
             size="icon-sm"
             onClick={() => onMove(-1)}
             disabled={first || locked}
-            title={locked ? LOCKED_HINT : "Subir"}
+            title={locked ? t(LOCKED_HINT) : t("field.moveUp")}
           >
             <ArrowUp />
           </Button>
@@ -461,7 +474,7 @@ export function FieldEditor({
             size="icon-sm"
             onClick={() => onMove(1)}
             disabled={last || locked}
-            title={locked ? LOCKED_HINT : "Bajar"}
+            title={locked ? t(LOCKED_HINT) : t("field.moveDown")}
           >
             <ArrowDown />
           </Button>
@@ -472,10 +485,10 @@ export function FieldEditor({
             disabled={isPrimary || locked}
             title={
               isPrimary
-                ? "El campo primario no se puede borrar"
+                ? t("field.primary.noDelete")
                 : locked
-                  ? LOCKED_HINT
-                  : "Eliminar campo"
+                  ? t(LOCKED_HINT)
+                  : t("field.delete")
             }
             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
@@ -488,8 +501,8 @@ export function FieldEditor({
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
           <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
             <Row
-              label="Nombre"
-              hint="Es la clave del campo en cada ítem generado."
+              label={t("field.name.label")}
+              hint={t("field.name.hint")}
               error={nameError}
             >
               <Input
@@ -505,68 +518,68 @@ export function FieldEditor({
               />
             </Row>
 
-            <Row label="Tipo" description={META[type].caption}>
+            <Row label={t("field.type.label")} description={t(META[type].captionKey)}>
               <TypePicker value={type} onChange={setType} disabled={locked} />
             </Row>
           </div>
 
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
             <Row
-              label="Obligatoriedad"
-              hint="Un campo opcional puede quedar sin valor en un ítem; uno obligatorio siempre debe traerlo."
+              label={t("field.required.label")}
+              hint={t("field.required.hint")}
             >
               <Segmented
                 value={nullable ? "optional" : "required"}
                 disabled={locked}
-                title={locked ? LOCKED_HINT : undefined}
+                title={locked ? t(LOCKED_HINT) : undefined}
                 onChange={(next) => setNullable(next === "optional")}
                 options={[
-                  { value: "required", label: "Obligatorio" },
-                  { value: "optional", label: "Opcional" },
+                  { value: "required", label: t("field.required.required") },
+                  { value: "optional", label: t("field.required.optional") },
                 ]}
               />
             </Row>
 
             <Row
-              label="Quién lo decide"
-              hint="«Quien genera» hace que la pantalla de generación pregunte por este campo antes de lanzar. «El modelo» lo deja fuera del formulario y lo redacta él."
+              label={t("field.decidedBy.label")}
+              hint={t("field.decidedBy.hint")}
             >
               <Segmented
                 value={decidedBy}
                 disabled={undecidable || locked}
                 title={
                   isPrimary
-                    ? "El campo primario es el ítem en sí: no es una preferencia que se elija antes de generar"
+                    ? t("field.decidedBy.primary")
                     : undecidable
-                      ? "Una lista o un objeto libre no admiten un control con el que elegir antes de generar"
+                      ? t("field.decidedBy.undecidable")
                       : locked
-                        ? LOCKED_HINT
+                        ? t(LOCKED_HINT)
                         : undefined
                 }
                 onChange={(next) =>
                   onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
                 }
                 options={[
-                  { value: "model", label: "El modelo" },
-                  { value: "user", label: "Quien genera" },
+                  { value: "model", label: t("field.decidedBy.model") },
+                  { value: "user", label: t("field.decidedBy.user") },
                 ]}
               />
             </Row>
 
             {type === "string" ? (
-              <Row label="Longitud" hint="En caracteres. Déjalo vacío para no limitar.">
+              <Row label={t("field.length.label")} hint={t("field.length.hint")}>
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minLength}
                     disabled={locked}
-                    placeholder="mín"
+                    placeholder={t("field.min")}
                     onChange={(next) => setSchema({ minLength: next })}
                   />
                   <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maxLength}
                     disabled={locked}
-                    placeholder="máx"
+                    placeholder={t("field.max")}
                     onChange={(next) => setSchema({ maxLength: next })}
                   />
                 </div>
@@ -574,19 +587,19 @@ export function FieldEditor({
             ) : null}
 
             {type === "integer" || type === "number" ? (
-              <Row label="Rango" hint="Valores mínimo y máximo aceptados. Vacío = sin límite.">
+              <Row label={t("field.range.label")} hint={t("field.range.hint")}>
                 <div className="flex items-center gap-2">
                   <NumberBox
                     value={schema.minimum}
                     disabled={locked}
-                    placeholder="mín"
+                    placeholder={t("field.min")}
                     onChange={(next) => setSchema({ minimum: next })}
                   />
                   <span className="text-small text-muted-foreground">—</span>
                   <NumberBox
                     value={schema.maximum}
                     disabled={locked}
-                    placeholder="máx"
+                    placeholder={t("field.max")}
                     onChange={(next) => setSchema({ maximum: next })}
                   />
                 </div>
@@ -595,33 +608,28 @@ export function FieldEditor({
           </div>
 
           {lengthInvalid ? (
-            <p className="text-small text-destructive">La longitud mínima supera a la máxima.</p>
+            <p className="text-small text-destructive">{t("field.length.invalid")}</p>
           ) : null}
           {rangeInvalid ? (
-            <p className="text-small text-destructive">El valor mínimo supera al máximo.</p>
+            <p className="text-small text-destructive">{t("field.range.invalid")}</p>
           ) : null}
 
           {type === "enum" ? (
             <Row
-              label="Valores permitidos"
-              hint="El modelo solo podrá responder con uno de estos valores. Haz clic en un valor para editarlo."
-              error={
-                enumValues(schema).length === 0
-                  ? "Un campo de opciones necesita al menos un valor."
-                  : null
-              }
+              label={t("field.enum.label")}
+              hint={t("field.enum.hint")}
+              error={enumValues(schema).length === 0 ? t("field.enum.empty") : null}
               description={
                 enumMismatch ? (
                   <span className="flex items-center gap-2 text-attention">
-                    El tipo admite vacío pero la lista de opciones no lo incluye, así que el
-                    pipeline lo tratará como obligatorio.
+                    {t("field.enum.mismatch")}
                     {locked ? null : (
                       <button
                         type="button"
                         onClick={() => setNullable(true)}
                         className="underline underline-offset-2"
                       >
-                        Corregir
+                        {t("field.enum.fix")}
                       </button>
                     )}
                   </span>
@@ -634,11 +642,9 @@ export function FieldEditor({
                 onChange={(values) =>
                   setSchema({ enum: nullable ? [...values, null] : values })
                 }
-                placeholder="básico, intermedio, avanzado…"
+                placeholder={t("field.enum.placeholder")}
                 hint={
-                  nullable
-                    ? "Al ser opcional, el valor vacío también se acepta."
-                    : "Enter o coma para añadir. Retroceso borra el último."
+                  nullable ? t("field.enum.nullableHint") : t("field.enum.chipHint")
                 }
               />
             </Row>
@@ -649,7 +655,7 @@ export function FieldEditor({
               underneath would be a label that lies about what it names. */}
           {type === "array" ? (
             <div className="space-y-2">
-              <Row label="Tipo de cada elemento">
+              <Row label={t("field.items.label")}>
                 <TypePicker
                   disabled={locked}
                   value={baseType(schema.items ?? {})}
@@ -666,11 +672,11 @@ export function FieldEditor({
               </Row>
               {baseType(schema.items ?? {}) === "enum" ? (
                 <ChipInput
-                  aria-label="Valores que puede tomar cada elemento"
+                  aria-label={t("field.items.values")}
                   disabled={locked}
                   values={enumValues(schema.items ?? {})}
                   onChange={(values) => setSchema({ items: { type: "string", enum: values } })}
-                  placeholder="Valores que puede tomar cada elemento…"
+                  placeholder={t("field.items.placeholder")}
                 />
               ) : null}
             </div>
@@ -678,17 +684,16 @@ export function FieldEditor({
 
           {type === "object" ? (
             <p className="rounded-lg border border-dashed border-border p-3 text-small text-muted-foreground">
-              Se valida como objeto libre: su contenido no se comprueba. Descríbelo bien abajo, es
-              lo único que guía al modelo.
+              {t("field.object.note")}
             </p>
           ) : null}
 
-          <Row label="Descripción" hint="Viaja al modelo dentro del esquema: di qué contiene el campo, no cómo escribirlo.">
+          <Row label={t("field.description.label")} hint={t("field.description.hint")}>
             <Textarea
               value={spec.description ?? ""}
               readOnly={locked}
               onChange={(event) => onChange({ ...spec, description: event.target.value })}
-              placeholder="Qué contiene este campo"
+              placeholder={t("field.description.placeholder")}
               className="min-h-16"
             />
           </Row>
@@ -698,10 +703,9 @@ export function FieldEditor({
               label={
                 <span className="inline-flex items-center gap-1.5">
                   <FileSearch className="size-3.5" />
-                  Cómo extraerlo
-                  <InfoHint label="Guía de extracción">
-                    Se usa al construir el banco desde los documentos: dónde está el campo y qué
-                  recortar.
+                  {t("field.extraction.label")}
+                  <InfoHint label={t("field.extraction.hintLabel")}>
+                    {t("field.extraction.hint")}
                   </InfoHint>
                 </span>
               }
@@ -715,7 +719,7 @@ export function FieldEditor({
                     guidance: { ...spec.guidance, extraction: event.target.value || undefined },
                   })
                 }
-                placeholder="Cómo localizar este campo en los documentos"
+                placeholder={t("field.extraction.placeholder")}
                 className="min-h-24 text-small"
               />
             </Field>
@@ -723,13 +727,13 @@ export function FieldEditor({
               label={
                 <span className="inline-flex items-center gap-1.5">
                   <Wand2 className="size-3.5" />
-                  Cómo generarlo
+                  {t("field.generation.label")}
                   <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-condensed text-muted-foreground">
-                    solo a mano
+                    {t("field.generation.byHand")}
                   </span>
                 </span>
               }
-              description="El constructor no lo rellena: lo general va en las reglas de la modalidad. Escríbelo solo cuando este campo concreto necesite un matiz que las reglas no cubren."
+              description={t("field.generation.description")}
             >
               <Textarea
                 value={spec.guidance?.generation ?? ""}
@@ -740,7 +744,7 @@ export function FieldEditor({
                     guidance: { ...spec.guidance, generation: event.target.value || undefined },
                   })
                 }
-                placeholder="Vacío salvo que este campo necesite un matiz propio"
+                placeholder={t("field.generation.placeholder")}
                 className="min-h-24 text-small"
               />
             </Field>
@@ -757,7 +761,7 @@ export function FieldEditor({
               className="flex items-center gap-1.5 text-small text-muted-foreground transition-colors hover:text-foreground"
             >
               <Braces className="size-3.5" />
-              {showRaw ? "Ocultar el JSON del campo" : "Ver el JSON del campo"}
+              {showRaw ? t("field.raw.hide") : t("field.raw.show")}
             </button>
 
             {showRaw ? (
@@ -765,7 +769,7 @@ export function FieldEditor({
                 {editingRaw ? (
                   <>
                     <Textarea
-                      aria-label="JSON del campo"
+                      aria-label={t("field.raw.label")}
                       value={rawText}
                       onChange={(event) => setRawText(event.target.value)}
                       className="min-h-48 font-mono text-small"
@@ -774,10 +778,10 @@ export function FieldEditor({
                     {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
                     <div className="flex gap-2">
                       <Button size="sm" onClick={applyRaw}>
-                        Aplicar campo
+                        {t("field.raw.apply")}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setEditingRaw(false)}>
-                        Cancelar
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </>
@@ -792,14 +796,14 @@ export function FieldEditor({
                       size="sm"
                       variant="outline"
                       disabled={locked}
-                      title={locked ? LOCKED_HINT : undefined}
+                      title={locked ? t(LOCKED_HINT) : undefined}
                       onClick={() => {
                         setRawText(JSON.stringify(spec, null, 2));
                         setRawError(null);
                         setEditingRaw(true);
                       }}
                     >
-                      Editar a mano
+                      {t("field.raw.edit")}
                     </Button>
                   </>
                 )}

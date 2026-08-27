@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/misc";
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT, type Key } from "@/lib/i18n";
 
 /**
  * The graph as the syllabus it is: one section per unit, one row per concept.
@@ -52,21 +53,21 @@ const COLUMNS =
 // deliberately two fields and not one split in half: the row explains the state, the key
 // explains the consequence, and deriving one from the other is how a legend ends up
 // wording itself by accident.
-const PLACE: Record<CurriculumPlace, { label: string; hint: string; means: string }> = {
+const PLACE: Record<CurriculumPlace, { labelKey: Key; hintKey: Key; meansKey: Key }> = {
   covered: {
-    label: "Cubierto",
-    hint: "El currículo lo da por impartido",
-    means: "puede darse por sabido",
+    labelKey: "place.covered",
+    hintKey: "place.covered.hint",
+    meansKey: "place.covered.means",
   },
   frontier: {
-    label: "Frontera",
-    hint: "Sin impartir, pero con todos sus prerrequisitos ya cubiertos",
-    means: "objetivo disponible para generar",
+    labelKey: "place.frontier",
+    hintKey: "place.frontier.hint",
+    meansKey: "place.frontier.means",
   },
   ahead: {
-    label: "Por delante",
-    hint: "Depende de algo que el curso todavía no ha cubierto",
-    means: "prohibido en la generación",
+    labelKey: "place.ahead",
+    hintKey: "place.ahead.hint",
+    meansKey: "place.ahead.means",
   },
 };
 
@@ -85,6 +86,7 @@ function PlaceMark({ place }: { place: CurriculumPlace }) {
 /** What the three marks mean, beside the list that uses them. Colour is never the only
  *  channel — each state also has its own shape — but neither says what it is FOR. */
 export function FrontierKey() {
+  const { t } = useT();
   return (
     <div className="space-y-1.5">
       {(["covered", "frontier", "ahead"] as const).map((place) => (
@@ -100,9 +102,9 @@ export function FrontierKey() {
                 place === "frontier" && "text-attention",
               )}
             >
-              {PLACE[place].label}
+              {t(PLACE[place].labelKey)}
             </span>
-            <span className="text-muted-foreground"> — {PLACE[place].means}</span>
+            <span className="text-muted-foreground"> — {t(PLACE[place].meansKey)}</span>
           </span>
         </p>
       ))}
@@ -129,6 +131,7 @@ function UnitMenu({
   onDelete: () => void;
   onAddConcept: () => void;
 }) {
+  const { plural, t } = useT();
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
 
@@ -163,7 +166,7 @@ function UnitMenu({
         onClick={() => setOpen((was) => !was)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Acciones de ${unit}`}
+        aria-label={t("outline.unitActions", { unit })}
         className={cn(
           "flex size-6 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
           open && "bg-accent text-foreground",
@@ -179,11 +182,11 @@ function UnitMenu({
         >
           <button type="button" role="menuitem" className={item} onClick={run(onAddConcept)}>
             <Plus />
-            Añadir concepto aquí
+            {t("outline.addConcept")}
           </button>
           <button type="button" role="menuitem" className={item} onClick={run(onRename)}>
             <Pencil />
-            Renombrar la unidad
+            {t("outline.renameUnit")}
           </button>
           <button
             type="button"
@@ -193,7 +196,7 @@ function UnitMenu({
             onClick={run(() => onMove(-1))}
           >
             <ArrowUp />
-            Antes en el temario
+            {t("outline.moveEarlier")}
           </button>
           <button
             type="button"
@@ -203,7 +206,7 @@ function UnitMenu({
             onClick={run(() => onMove(1))}
           >
             <ArrowDown />
-            Después en el temario
+            {t("outline.moveLater")}
           </button>
           <button
             type="button"
@@ -212,7 +215,7 @@ function UnitMenu({
             onClick={run(onDelete)}
           >
             <Trash2 />
-            Eliminar la unidad y sus {count} concepto(s)
+            {plural("outline.deleteUnit", count)}
           </button>
         </div>
       ) : null}
@@ -235,6 +238,7 @@ function ConceptRow({
   onSelect: () => void;
   onTaggable: (next: boolean) => void;
 }) {
+  const { t } = useT();
   const locked = useStageLocked();
 
   return (
@@ -273,7 +277,7 @@ function ConceptRow({
       </span>
 
       {place ? (
-        <span className="hidden items-center gap-1.5 md:flex" title={PLACE[place].hint}>
+        <span className="hidden items-center gap-1.5 md:flex" title={t(PLACE[place].hintKey)}>
           <PlaceMark place={place} />
           <span
             className={cn(
@@ -283,7 +287,7 @@ function ConceptRow({
               place === "ahead" && "text-muted-foreground",
             )}
           >
-            {PLACE[place].label}
+            {t(PLACE[place].labelKey)}
           </span>
         </span>
       ) : (
@@ -292,9 +296,9 @@ function ConceptRow({
 
       <span className="hidden md:block">
         {concept.description ? (
-          <Check className="size-3.5 text-settled" aria-label="Con descripción" />
+          <Check className="size-3.5 text-settled" aria-label={t("outline.withDescription")} />
         ) : (
-          <TriangleAlert className="size-3.5 text-attention" aria-label="Sin descripción" />
+          <TriangleAlert className="size-3.5 text-attention" aria-label={t("outline.withoutDescription")} />
         )}
       </span>
 
@@ -307,7 +311,7 @@ function ConceptRow({
           checked={concept.taggable}
           disabled={locked}
           onCheckedChange={onTaggable}
-          label={`${concept.name}: etiquetable`}
+          label={t("outline.taggableOf", { name: concept.name })}
         />
       </span>
 
@@ -354,6 +358,7 @@ export function ConceptOutline({
   onDeleteUnit: (name: string, count: number) => void;
   onAddConcept: (unit: string) => void;
 }) {
+  const { plural, t } = useT();
   const locked = useStageLocked();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -374,7 +379,7 @@ export function ConceptOutline({
   if (shown.length === 0) {
     return (
       <p className="px-3 py-10 text-center text-small text-muted-foreground">
-        Ningún concepto coincide con la búsqueda.
+        {t("outline.noMatch")}
       </p>
     );
   }
@@ -383,11 +388,11 @@ export function ConceptOutline({
     <div>
       <div className={cn(COLUMNS, "h-8 text-micro font-condensed uppercase text-muted-foreground")}>
         <span />
-        <span>Concepto</span>
-        <span className="hidden md:block">{hasCurriculum ? "Currículo" : ""}</span>
-        <span className="hidden md:block">Descr.</span>
-        <span>Etiquet.</span>
-        <span className="hidden text-right md:block">Grado</span>
+        <span>{t("outline.column.concept")}</span>
+        <span className="hidden md:block">{hasCurriculum ? t("outline.column.curriculum") : ""}</span>
+        <span className="hidden md:block">{t("outline.column.description")}</span>
+        <span>{t("outline.column.taggable")}</span>
+        <span className="hidden text-right md:block">{t("outline.column.degree")}</span>
         <span />
       </div>
 
@@ -423,8 +428,10 @@ export function ConceptOutline({
                 )}
                 <span className="truncate text-body font-semibold">{unit}</span>
                 <span className="shrink-0 text-micro font-condensed uppercase text-muted-foreground">
-                  {partial ? `${items.length} de ${total}` : total} concepto(s)
-                  {undescribed > 0 ? ` · ${undescribed} sin descripción` : ""}
+                  {partial
+                    ? t("outline.partialCount", { shown: items.length, total })
+                    : plural("outline.conceptCount", total)}
+                  {undescribed > 0 ? t("outline.undescribed", { n: undescribed }) : ""}
                 </span>
               </button>
 
@@ -433,7 +440,10 @@ export function ConceptOutline({
               {hasCurriculum ? (
                 <span
                   className="flex shrink-0 items-center gap-2"
-                  title={`${covered} de ${total} concepto(s) de esta unidad están en el currículo`}
+                  title={t("outline.coverageTitle", {
+                    covered: plural("outline.conceptCount", covered),
+                    total,
+                  })}
                 >
                   <span className="h-1 w-20 bg-muted">
                     <span
@@ -442,7 +452,7 @@ export function ConceptOutline({
                     />
                   </span>
                   <span className="nums text-micro font-condensed uppercase text-settled">
-                    {covered}/{total} cubiertos
+                    {t("outline.covered", { covered, total })}
                   </span>
                 </span>
               ) : null}

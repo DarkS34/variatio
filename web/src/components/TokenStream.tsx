@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { StreamPhase } from "@/state/runStore";
+import { useT } from "@/lib/i18n";
 
 /** Follows the tail of a growing pane until the reader scrolls away from it. */
 function useAutoScroll<T extends HTMLElement>(content: string, enabled = true) {
@@ -51,6 +52,7 @@ export function TokenStream({
   className?: string;
   height?: string;
 }) {
+  const { t } = useT();
   const [override, setOverride] = useState<boolean | null>(null);
   const thinkingLive = active && phase === "thinking";
   const showThinking = override ?? thinkingLive;
@@ -69,7 +71,7 @@ export function TokenStream({
     return (
       <p className={cn("flex items-center gap-2 text-body text-muted-foreground", className)}>
         <span className="size-1.5 animate-pulse-soft rounded-full bg-primary" />
-        Esperando al modelo
+        {t("token.waiting")}
       </p>
     );
   }
@@ -89,9 +91,9 @@ export function TokenStream({
           >
             <ChevronRight className={cn("size-3.5 transition-transform", showThinking && "rotate-90")} />
             <Brain className={cn("size-3.5", thinkingLive && "animate-pulse-soft")} />
-            Razonamiento
+            {t("stream.reasoning")}
             {thinkingLive ? (
-              <span className="text-muted-foreground">en curso…</span>
+              <span className="text-muted-foreground">{t("stream.inProgress")}</span>
             ) : null}
             <span className="ml-auto nums text-muted-foreground">
               {thinking.length.toLocaleString("es-ES")}
@@ -120,7 +122,7 @@ export function TokenStream({
           >
             {answer || (
               <span className="text-muted-foreground italic">
-                {thinkingLive ? "El modelo aún está razonando" : "Sin respuesta todavía"}
+                {thinkingLive ? t("stream.stillReasoning") : t("stream.noAnswer")}
               </span>
             )}
             {phase === "answering" ? <Caret /> : null}
@@ -133,7 +135,7 @@ export function TokenStream({
               onClick={() => answerPane.setPinned(true)}
             >
               <CornerDownLeft />
-              Al final
+              {t("token.toEnd")}
             </Button>
           ) : null}
         </div>

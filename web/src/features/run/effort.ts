@@ -1,23 +1,25 @@
+import type { Key } from "@/lib/i18n";
+
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
 export const EFFORT_ORDER: EffortLevel[] = ["low", "medium", "high", "max"];
 
-export const EFFORT_LABELS: Record<EffortLevel, string> = {
-  low: "Bajo",
-  medium: "Medio",
-  high: "Alto",
-  max: "Máximo",
+export const EFFORT_LABELS: Record<EffortLevel, Key> = {
+  low: "effort.low",
+  medium: "effort.medium",
+  high: "effort.high",
+  max: "effort.max",
 };
 
 export interface EffortPolicy {
   /** Matched against the start of the resolved generation model's name. */
   match: string;
   levels: EffortLevel[];
-  /** Choosing a level ABOVE this one shows `warning`. */
+  /** Choosing a level ABOVE this one shows `warningKey`. */
   warnAbove?: EffortLevel;
-  warning?: string;
+  warningKey?: Key;
   /** Always-visible nuance for this model, warning or not. */
-  note?: string;
+  noteKey?: Key;
 }
 
 // To support another generation model, add its entry here: which levels it accepts,
@@ -27,13 +29,12 @@ export const EFFORT_POLICIES: EffortPolicy[] = [
     match: "qwen3.8",
     levels: ["low", "medium", "high", "max"],
     warnAbove: "medium",
-    warning:
-      "Por encima de «Medio», qwen3.8 delibera durante miles de palabras en la GPU local: cada ítem puede tardar muchos minutos, y en el nivel alto se ha medido que llega a devolver una respuesta vacía.",
+    warningKey: "effort.warn.qwen38",
   },
   {
     match: "gemma-4",
     levels: ["low", "medium", "high"],
-    note: "Servido por Cerebras: responde en segundos con cualquier nivel, y en la práctica los tres se comportan casi igual.",
+    noteKey: "effort.note.gemma4",
   },
 ];
 
@@ -48,9 +49,9 @@ export function clampEffort(level: EffortLevel, policy: EffortPolicy): EffortLev
   return policy.levels.includes(level) ? level : policy.levels[policy.levels.length - 1];
 }
 
-export function effortWarning(level: EffortLevel, policy: EffortPolicy): string | null {
-  if (!policy.warnAbove || !policy.warning) return null;
+export function effortWarning(level: EffortLevel, policy: EffortPolicy): Key | null {
+  if (!policy.warnAbove || !policy.warningKey) return null;
   return EFFORT_ORDER.indexOf(level) > EFFORT_ORDER.indexOf(policy.warnAbove)
-    ? policy.warning
+    ? policy.warningKey
     : null;
 }

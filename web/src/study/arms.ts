@@ -1,3 +1,5 @@
+import type { Key } from "@/lib/i18n";
+
 import type { EvaluationArm } from "./types";
 
 /**
@@ -17,28 +19,25 @@ import type { EvaluationArm } from "./types";
  */
 export const ARM_META: Record<
   EvaluationArm,
-  { label: string; short: string; colour: string; description: string }
+  { labelKey: Key; shortKey: Key; colour: string; descriptionKey: Key }
 > = {
   naive: {
-    label: "Modelo comercial",
-    short: "Comercial",
+    labelKey: "arm.naive",
+    shortKey: "arm.naive.short",
     colour: "var(--arm-naive)",
-    description:
-      "Un modelo comercial generalista de gama gratuita, con el prompt que escribiría cualquiera con prisa: el tema, el contexto docente y las claves de salida. Ni banco ni grafo.",
+    descriptionKey: "arm.naive.description",
   },
   rag: {
-    label: "Solo RAG sobre el banco",
-    short: "Solo RAG",
+    labelKey: "arm.rag",
+    shortKey: "arm.rag.short",
     colour: "var(--arm-rag)",
-    description:
-      "Búsqueda por similitud sobre los enunciados del banco, con los más parecidos como ejemplos. Mismo modelo local que el sistema, pero sin grafo: sin descripciones de concepto, sin prerrequisitos y sin currículo.",
+    descriptionKey: "arm.rag.description",
   },
   system: {
-    label: "Este sistema",
-    short: "Sistema",
+    labelKey: "arm.system",
+    shortKey: "arm.system.short",
     colour: "var(--arm-system)",
-    description:
-      "El pipeline completo: ejemplos elegidos por concepto principal, prerrequisitos como andamiaje, conceptos posteriores prohibidos y el currículo como restricción dura.",
+    descriptionKey: "arm.system.description",
   },
 };
 

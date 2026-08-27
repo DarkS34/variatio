@@ -6,6 +6,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import type { CerebrasModel, CerebrasState, CerebrasWindow } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 /**
  * The remote half of the engine, which the rest of this tab cannot describe.
@@ -25,6 +26,7 @@ import type { CerebrasModel, CerebrasState, CerebrasWindow } from "@/lib/types";
  * Tinting every near-full meter would spend colour on something nobody can act on.
  */
 export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
+  const { t } = useT();
   const waiting = cerebras.inflight?.waiting_until != null;
   const blocked = cerebras.usage.some(
     (entry) => entry.windows.day.requests_remaining <= 0 || entry.windows.day.tokens_remaining <= 0,
@@ -33,14 +35,14 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
   // Only ever rendered while the engine routes here, so there is no «motor inactivo» state
   // to name: with the plain `ollama` engine the whole half is gone from the tab.
   const state = blocked
-    ? { label: "presupuesto diario agotado", tone: "danger" as const }
+    ? { label: t("cere.state.exhausted"), tone: "danger" as const }
     : waiting
-      ? { label: "esperando presupuesto", tone: "attention" as const }
+      ? { label: t("cere.state.waiting"), tone: "attention" as const }
       : cerebras.inflight
-        ? { label: "en marcha", tone: "settled" as const }
+        ? { label: t("cere.state.running"), tone: "settled" as const }
         : !cerebras.configured
-          ? { label: "sin clave", tone: "outline" as const }
-          : { label: "en reposo", tone: "settled" as const };
+          ? { label: t("cere.state.noKey"), tone: "outline" as const }
+          : { label: t("cere.state.idle"), tone: "settled" as const };
 
   return (
     <Card>
@@ -49,27 +51,20 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
           <Cloud className="size-4 text-muted-foreground" />
           <CardTitle>Cerebras</CardTitle>
           <Badge variant={state.tone}>{state.label}</Badge>
-          <InfoHint label="Cómo se cuenta el presupuesto">
-            La cuota es por modelo, y la de esta cuenta no es la que anuncia el catálogo: los
-            headers «limit» reportan la del modelo, y solo los «remaining» dejan ver la real.
-            Medido el 2026-08-26 sobre «gemma-4-31b»: el catálogo anuncia 500 peticiones por
-            minuto y la cuenta admite 5. Lo que ves aquí son los techos de «Configuración»,
-            que el limitador sube solo si alguna vez ve que queda más de lo que dicen.
+          <InfoHint label={t("cere.budgetHint")}>
+            {t("cere.budgetHint.body1")}
             <br />
             <br />
-            Los tokens se cuentan con el «usage» exacto de cada respuesta y no con los
-            headers, que van con retraso. Y como la API no manda ningún «reset», la ventana
-            es deslizante: se reconstruye con las marcas de tiempo de nuestras propias
-            llamadas.
+            {t("cere.budgetHint.body2")}
           </InfoHint>
         </div>
         <CardDescription>
           {cerebras.routed.length > 0 ? (
             <span className="font-mono">{cerebras.routed.join(", ")}</span>
           ) : (
-            "Ningún modelo enrutado"
+            t("cere.noRouted")
           )}
-          {cerebras.configured ? "" : " · falta CEREBRAS_API_KEY en el entorno"}
+          {cerebras.configured ? "" : t("cere.noKeyEnv")}
         </CardDescription>
       </CardHeader>
 
@@ -77,7 +72,7 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
         <Flight cerebras={cerebras} />
         {cerebras.usage.length === 0 ? (
           <p className="text-small text-muted-foreground">
-            Todavía no se ha gastado nada. Los medidores aparecen con la primera llamada.
+            {t("cere.nothingSpent")}
           </p>
         ) : (
           cerebras.usage.map((entry) => (
@@ -95,12 +90,13 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
 // looks frozen is usually a build being held twelve seconds at a time, and there was no
 // screen in the application that could say so.
 function Flight({ cerebras }: { cerebras: CerebrasState }) {
+  const { t } = useT();
   const flying = cerebras.inflight;
   if (!flying) {
     return (
       <div className="flex items-center gap-3 border border-border bg-muted px-3 py-2.5 text-small text-muted-foreground">
         <span className="size-2 rounded-full bg-muted-foreground/40" />
-        Sin llamadas en curso
+        {t("cere.noCalls")}
       </div>
     );
   }
@@ -134,7 +130,7 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
       {waiting ? (
         <span className="nums flex items-center gap-1.5 text-small font-semibold text-attention">
           <Timer className="size-3.5" />
-          sale en {Math.ceil(held)} s
+          {t("cere.leavesIn", { n: Math.ceil(held) })}
         </span>
       ) : (
         <span className="nums text-small text-muted-foreground">
@@ -148,6 +144,7 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
 /* The four meters, and the breakdown under them ------------------------------------------- */
 
 function ModelBudget({ entry, single }: { entry: CerebrasModel; single: boolean }) {
+  const { t } = useT();
   const day = entry.windows.day;
   const exhausted = day.requests_remaining <= 0 || day.tokens_remaining <= 0;
 
@@ -156,46 +153,44 @@ function ModelBudget({ entry, single }: { entry: CerebrasModel; single: boolean 
       {single ? null : <p className="font-mono text-small font-semibold">{entry.model}</p>}
 
       {exhausted ? (
-        <Alert tone="danger" title="Las llamadas a Cerebras se están rechazando">
-          El presupuesto del día no se libera hasta dentro de {hours(day.resets_in)}, y esperar
-          tanto sería un build colgado sin explicación. Cambia el motor a «ollama», sube el
-          techo en «Configuración» o espera.
+        <Alert tone="danger" title={t("cere.refusing")}>
+          {t("cere.refusing.body", { hours: hours(day.resets_in) })}
         </Alert>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Meter
-          label="Peticiones · minuto"
+          label={t("cere.meter.requestsMinute")}
           used={entry.windows.minute.requests_used}
           limit={entry.windows.minute.requests_limit}
           remaining={entry.windows.minute.requests_remaining}
           resets={entry.windows.minute.resets_in}
-          rolling="La ventana rueda en"
+          rolling={t("cere.rolling.window")}
         />
         <Meter
-          label="Tokens · minuto"
+          label={t("cere.meter.tokensMinute")}
           used={entry.windows.minute.tokens_used}
           limit={entry.windows.minute.tokens_limit}
           remaining={entry.windows.minute.tokens_remaining}
           resets={entry.windows.minute.resets_in}
-          rolling="La ventana rueda en"
+          rolling={t("cere.rolling.window")}
         />
         <Meter
-          label="Peticiones · día"
+          label={t("cere.meter.requestsDay")}
           used={day.requests_used}
           limit={day.requests_limit}
           remaining={day.requests_remaining}
           resets={day.resets_in}
-          rolling="Se libera en"
+          rolling={t("cere.rolling.day")}
           daily
         />
         <Meter
-          label="Tokens · día"
+          label={t("cere.meter.tokensDay")}
           used={day.tokens_used}
           limit={day.tokens_limit}
           remaining={day.tokens_remaining}
           resets={day.resets_in}
-          rolling="Se libera en"
+          rolling={t("cere.rolling.day")}
           daily
         />
       </div>
@@ -222,6 +217,7 @@ function Meter({
   rolling: string;
   daily?: boolean;
 }) {
+  const { t, language } = useT();
   // Three tones and no gradient between them, because the middle of a meter is not a state
   // anybody can act on: ink while there is room, attention when this window is the one with
   // nothing left, red when it is a daily one and therefore a refusal rather than a wait.
@@ -235,20 +231,23 @@ function Meter({
         {label}
       </p>
       <p className={`nums text-title ${emphasis}`}>
-        {used.toLocaleString("es-ES")}{" "}
+        {used.toLocaleString(language)}{" "}
         <span className="text-small font-normal text-muted-foreground">
-          de {limit.toLocaleString("es-ES")}
+          {t("cere.ofLimit", { limit: limit.toLocaleString(language) })}
         </span>
       </p>
       <Progress value={used} max={limit} tone={tone} />
       <p className={`nums text-micro text-muted-foreground ${emphasis}`}>
         {remaining <= 0
-          ? `Agotado · ${rolling.toLowerCase()} ${daily ? hours(resets) : `${Math.ceil(resets)} s`}`
+          ? t("cere.exhaustedIn", {
+              rolling: rolling.toLowerCase(),
+              time: daily ? hours(resets) : `${Math.ceil(resets)} s`,
+            })
           : daily
-            ? "Ventana deslizante de 24 h"
+            ? t("cere.slidingDay")
             : resets > 0
-              ? `${rolling} ${Math.ceil(resets)} s`
-              : "Sin llamadas en el último minuto"}
+              ? t("cere.resetsIn", { rolling, n: Math.ceil(resets) })
+              : t("cere.noCallsLastMinute")}
       </p>
     </div>
   );
@@ -258,6 +257,7 @@ function Meter({
 // somebody opens this card to see. The bar compares each phase against the largest one and
 // not against the day — at the day's scale every row but the first would be invisible.
 function Breakdown({ entry }: { entry: CerebrasModel }) {
+  const { t, language } = useT();
   if (entry.phases.length === 0) return null;
   const top = entry.phases[0].tokens || 1;
   const ceiling = entry.windows.day.tokens_limit || 1;
@@ -267,11 +267,9 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-micro font-condensed uppercase text-muted-foreground">
-            Consumo por fase
+            {t("cere.byPhase")}
           </p>
-          <p className="text-small text-muted-foreground">
-            Últimas 24 h, sobre el presupuesto diario
-          </p>
+          <p className="text-small text-muted-foreground">{t("cere.byPhase.sub")}</p>
         </div>
         <a
           className="inline-flex items-center gap-1.5 border border-input px-3 py-1.5 text-small font-medium hover:bg-muted"
@@ -279,24 +277,24 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
           download
         >
           <Download className="size-3.5" />
-          Descargar CSV
+          {t("cere.downloadCsv")}
         </a>
       </div>
       <Table>
         <THead>
           <TR>
-            <TH>Fase</TH>
-            <TH className="text-right">Peticiones</TH>
-            <TH className="text-right">Tokens</TH>
-            <TH className="text-right">Del día</TH>
+            <TH>{t("cere.col.phase")}</TH>
+            <TH className="text-right">{t("cere.col.requests")}</TH>
+            <TH className="text-right">{t("cere.col.tokens")}</TH>
+            <TH className="text-right">{t("cere.col.ofDay")}</TH>
           </TR>
         </THead>
         <TBody>
           {entry.phases.map((row) => (
             <TR key={row.phase}>
               <TD className="font-mono">{row.phase}</TD>
-              <TD className="nums text-right">{row.requests.toLocaleString("es-ES")}</TD>
-              <TD className="nums text-right">{row.tokens.toLocaleString("es-ES")}</TD>
+              <TD className="nums text-right">{row.requests.toLocaleString(language)}</TD>
+              <TD className="nums text-right">{row.tokens.toLocaleString(language)}</TD>
               <TD>
                 <div className="flex items-center justify-end gap-2">
                   <span className="h-1 w-11 bg-primary/10">

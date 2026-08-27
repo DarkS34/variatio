@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { api, getScope } from "@/lib/api";
+import { localeStore, translator, type Key, type Language } from "@/lib/i18n";
 import { isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
 import type {
   ArtifactName,
@@ -216,10 +217,10 @@ export function useSetMaintenance() {
  * button from even asking. While `/health` has not answered yet nothing is blocked — a
  * button disabled out of ignorance is worse than one that fails once.
  */
-export function useEngineOffline(): string | null {
+export function useEngineOffline(): Key | null {
   const health = useHealth();
   if (!health.data) return null;
-  return health.data.available ? null : "El motor de inferencia no responde.";
+  return health.data.available ? null : ("engine.offline" as Key);
 }
 
 export function usePipeline() {
@@ -443,8 +444,9 @@ export function useSwitchWorkspace() {
 }
 
 export function useCreateWorkspace() {
-  return useLandIn(({ slug, name }: { slug: string; name: string }) =>
-    api.createWorkspace(slug, name),
+  return useLandIn(
+    ({ slug, name, language }: { slug: string; name: string; language: Language }) =>
+      api.createWorkspace(slug, name, language),
   );
 }
 
@@ -764,7 +766,7 @@ export function useQueuedNotice() {
   const lanes = useLanes();
   const split = useSplitEngine();
   return (job: Parameters<typeof queuedNotice>[0]) => {
-    const notice = queuedNotice(job, lanes, split);
+    const notice = queuedNotice(job, lanes, split, translator(localeStore.getSnapshot()));
     if (notice) toast(notice);
   };
 }

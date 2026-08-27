@@ -410,6 +410,8 @@ export interface CurrentUser {
   email: string | null;
   name: string;
   is_admin: boolean;
+  /** What the interface is drawn in. Not a workspace's `prompt_language`: see `lib/i18n`. */
+  ui_language: string;
 }
 
 export interface WorkspaceMembership {
@@ -615,7 +617,8 @@ export interface PullStatus {
   user: string | null;
 }
 
-export type ModelResidency = "cargado" | "en disco" | "sin instalar" | "remoto";
+/** A key, never a label: what a person reads is decided in `lib/i18n`. */
+export type ModelResidency = "loaded" | "on_disk" | "not_installed" | "remote";
 
 /** One rolling window of one model's Cerebras quota. `resets_in` is when the oldest call
  *  inside it ages out — the API sends no `reset` header, so the window is reconstructed

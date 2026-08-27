@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 // VOCABULARY RULE: the verb is kept. The button says «Aprobar», the notice says
 // «Aprobado». Never «Operación completada con éxito», which names neither the operation
@@ -29,7 +30,7 @@ const ToastContext = createContext<Push | null>(null);
 
 export function useToast(): Push {
   const push = useContext(ToastContext);
-  if (!push) throw new Error("useToast fuera de ToastProvider");
+  if (!push) throw new Error("useToast outside ToastProvider");
   return push;
 }
 
@@ -88,6 +89,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
+  const { t } = useT();
   return (
     <div
       className={cn(
@@ -103,7 +105,7 @@ function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
       </div>
       <button
         onClick={onClose}
-        aria-label="Cerrar aviso"
+        aria-label={t("ui.closeNotice")}
         className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X className="size-3.5" />

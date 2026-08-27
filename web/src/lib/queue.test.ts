@@ -1,3 +1,4 @@
+import { translator } from "@/lib/i18n";
 import { describe, expect, it } from "vitest";
 
 import type { Job, LaneName, LaneState, Lanes, Pipeline } from "./types";
@@ -15,6 +16,8 @@ import {
   waitOf,
   waitReason,
 } from "./queue";
+
+const ES = translator("es");
 
 function lane(partial: Partial<LaneState> = {}): LaneState {
   return { busy: false, mine: false, label: null, queued: 0, ahead: null, ...partial };
@@ -165,23 +168,23 @@ describe("waitOf", () => {
 
 describe("what the button and the notice say", () => {
   it("labels the wait without ever naming a duration", () => {
-    expect(queuedLabel({ lane: "local", ahead: 2, label: null })).toBe("En cola (2 por delante)");
-    expect(queuedLabel({ lane: "local", ahead: 0, label: null })).toBe("En cola");
-    expect(queuedLabel(null)).toBe("En cola");
+    expect(queuedLabel({ lane: "local", ahead: 2, label: null }, ES)).toBe("En cola (2 por delante)");
+    expect(queuedLabel({ lane: "local", ahead: 0, label: null }, ES)).toBe("En cola");
+    expect(queuedLabel(null, ES)).toBe("En cola");
   });
 
   it("names the half of the engine only when there are two", () => {
     const wait = { lane: "remote" as const, ahead: 1, label: "Generar ítems" };
-    expect(waitReason(wait, true)).toBe(
+    expect(waitReason(wait, true, ES)).toBe(
       "Está ocupado el motor remoto con «Generar ítems»: 1 trabajo por delante.",
     );
-    expect(waitReason(wait, false)).toBe(
+    expect(waitReason(wait, false, ES)).toBe(
       "Está ocupado el motor con «Generar ítems»: 1 trabajo por delante.",
     );
   });
 
   it("says nothing at all when the job starts instead of waiting", () => {
-    expect(queuedNotice(job({ queue_position: 0 }), lanes({ busy: true }), false)).toBeNull();
+    expect(queuedNotice(job({ queue_position: 0 }), lanes({ busy: true }), false, ES)).toBeNull();
   });
 
   it("names the job it is about, so the notice is not «operación completada»", () => {
@@ -189,6 +192,7 @@ describe("what the button and the notice say", () => {
       job({ backends: ["local"], queue_position: 1 }),
       lanes({ busy: true, label: "Generar ítems" }),
       true,
+      ES,
     );
     expect(notice).toEqual({
       title: "En cola: Construir el grafo de conocimiento",
@@ -199,21 +203,21 @@ describe("what the button and the notice say", () => {
 
 describe("prospectNote", () => {
   it("keeps the flat prediction against an API that does not split the queue", () => {
-    expect(prospectNote(null, false, 2)).toBe(" Se pondrá en cola: 2 trabajos por delante.");
-    expect(prospectNote(null, false, 0)).toBeNull();
+    expect(prospectNote(null, false, 2, ES)).toBe(" Se pondrá en cola: 2 trabajos por delante.");
+    expect(prospectNote(null, false, 0, ES)).toBeNull();
   });
 
   it("predicts the wait when there is only one engine to wait for", () => {
-    expect(prospectNote(lanes({ busy: true, queued: 1 }), false, 2)).toBe(
+    expect(prospectNote(lanes({ busy: true, queued: 1 }), false, 2, ES)).toBe(
       " Se pondrá en cola: 2 trabajos por delante.",
     );
-    expect(prospectNote(lanes(), false, 0)).toBeNull();
+    expect(prospectNote(lanes(), false, 0, ES)).toBeNull();
   });
 
   // With two lanes the job's own is not known until the server assigns it, so the note
   // reports the machine and states the condition instead of promising a wait.
   it("reports rather than promises when there are two engines", () => {
-    expect(prospectNote(lanes({}, { busy: true, label: "Generar ítems" }), true, 1)).toBe(
+    expect(prospectNote(lanes({}, { busy: true, label: "Generar ítems" }), true, 1, ES)).toBe(
       " Ahora mismo el motor remoto está ocupado con «Generar ítems»; este trabajo solo" +
         " espera por el motor que necesite.",
     );
@@ -222,9 +226,9 @@ describe("prospectNote", () => {
   // The complaint, in the one place a person reads before pressing: a busy remote engine
   // must not turn into «se pondrá en cola» over a build that may well be local.
   it("never promises a wait it cannot know about", () => {
-    const note = prospectNote(lanes({}, { busy: true }), true, 1);
+    const note = prospectNote(lanes({}, { busy: true }), true, 1, ES);
     expect(note).not.toContain("Se pondrá en cola");
-    expect(prospectNote(lanes(), true, 0)).toBeNull();
+    expect(prospectNote(lanes(), true, 0, ES)).toBeNull();
   });
 });
 

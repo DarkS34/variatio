@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const SEPARATORS = /[\n,;]+/;
 
@@ -15,6 +16,7 @@ function Chip({
   onCommit: (next: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useT();
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
 
@@ -47,7 +49,7 @@ function Chip({
       <button
         type="button"
         onClick={() => setDraft(value)}
-        title="Editar valor"
+        title={t("chips.editValue")}
         className="max-w-56 truncate"
       >
         {value}
@@ -55,7 +57,7 @@ function Chip({
       <button
         type="button"
         onClick={onRemove}
-        aria-label={`Quitar ${value}`}
+        aria-label={t("chips.remove", { value })}
         className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
       >
         <X className="size-3" />
@@ -67,7 +69,7 @@ function Chip({
 export function ChipInput({
   values,
   onChange,
-  placeholder = "Escribe un valor y pulsa Enter…",
+  placeholder,
   hint,
   className,
   disabled = false,
@@ -88,6 +90,7 @@ export function ChipInput({
   "aria-describedby"?: string;
   "aria-label"?: string;
 }) {
+  const { t } = useT();
   const [text, setText] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -107,7 +110,7 @@ export function ChipInput({
       if (next.some((value) => value.toLowerCase() === part.toLowerCase())) repeated.push(part);
       else next.push(part);
     }
-    setNotice(repeated.length > 0 ? `Ya estaba en la lista: ${repeated.join(", ")}` : null);
+    setNotice(repeated.length > 0 ? t("chips.alreadyThere", { values: repeated.join(", ") }) : null);
     setText("");
     if (next.length !== values.length) onChange(next);
   };
@@ -118,7 +121,7 @@ export function ChipInput({
       return;
     }
     if (values.some((other, i) => i !== index && other.toLowerCase() === value.toLowerCase())) {
-      setNotice(`Ya estaba en la lista: ${value}`);
+      setNotice(t("chips.alreadyThere", { values: value }));
       return;
     }
     setNotice(null);
@@ -177,7 +180,9 @@ export function ChipInput({
               onChange(values.slice(0, -1));
             }
           }}
-          placeholder={values.length === 0 ? placeholder : "añadir…"}
+          placeholder={
+            values.length === 0 ? (placeholder ?? t("chips.placeholder")) : t("chips.add")
+          }
           className="h-6 min-w-32 flex-1 bg-transparent px-1 text-body outline-none placeholder:text-muted-foreground"
         />
       </div>

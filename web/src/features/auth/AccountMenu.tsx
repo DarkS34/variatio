@@ -13,7 +13,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
 import { useRouter } from "@/lib/router";
-import { ROLE_LABELS, useLogout, useSession } from "@/state/auth";
+import { useT, type Key } from "@/lib/i18n";
+import { ROLE_LABEL_KEYS, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
 import { themeStore, type ThemePreference } from "@/state/theme";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
  * list of destinations plus the one action that belongs nowhere else — leaving.
  */
 export function AccountMenu() {
+  const { t } = useT();
   const session = useSession();
   const logout = useLogout();
   const { navigate } = useRouter();
@@ -75,8 +77,8 @@ export function AccountMenu() {
             <p className="truncate text-body font-medium">{user.name}</p>
             <p className="truncate font-mono text-small text-muted-foreground">{user.username}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {role ? <Badge variant="outline">{ROLE_LABELS[role]}</Badge> : null}
-              {user.is_admin ? <Badge variant="secondary">Administrador</Badge> : null}
+              {role ? <Badge variant="outline">{t(ROLE_LABEL_KEYS[role])}</Badge> : null}
+              {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
             </div>
           </div>
 
@@ -85,12 +87,12 @@ export function AccountMenu() {
           <div className="p-1">
             <MenuItem
               icon={<UserRound className="size-4" />}
-              label="Perfil"
+              label={t("menu.profile")}
               onClick={() => go("/perfil")}
             />
             <MenuItem
               icon={<Sparkles className="size-4" />}
-              label="Variantes guardadas"
+              label={t("menu.savedVariants")}
               onClick={() => go("/perfil/variantes")}
             />
             {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
@@ -99,13 +101,13 @@ export function AccountMenu() {
             {user.is_admin ? (
               <MenuItem
                 icon={<ShieldCheck className="size-4" />}
-                label="Administración"
+                label={t("menu.admin")}
                 onClick={() => go("/administracion")}
               />
             ) : null}
             <MenuItem
               icon={<BookOpen className="size-4" />}
-              label="Guía"
+              label={t("menu.guide")}
               onClick={() => go("/guia")}
             />
           </div>
@@ -122,7 +124,7 @@ export function AccountMenu() {
           <div className="p-1">
             <MenuItem
               icon={<LogOut className="size-4" />}
-              label="Salir"
+              label={t("menu.logout")}
               onClick={() => {
                 setOpen(false);
                 // The socket carries the same session; leaving it retrying would keep
@@ -138,18 +140,19 @@ export function AccountMenu() {
   );
 }
 
-const THEMES: { value: ThemePreference; label: string; icon: React.ReactNode }[] = [
-  { value: "system", label: "Como el sistema", icon: <Monitor className="size-4" /> },
-  { value: "light", label: "Claro", icon: <Sun className="size-4" /> },
-  { value: "dark", label: "Oscuro", icon: <Moon className="size-4" /> },
+const THEMES: { value: ThemePreference; label: Key; icon: React.ReactNode }[] = [
+  { value: "system", label: "theme.system", icon: <Monitor className="size-4" /> },
+  { value: "light", label: "theme.light", icon: <Sun className="size-4" /> },
+  { value: "dark", label: "theme.dark", icon: <Moon className="size-4" /> },
 ];
 
 function ThemeRow() {
+  const { t } = useT();
   const preference = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot);
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-2">
-      <span className="text-small text-muted-foreground">Tema</span>
-      <div role="radiogroup" aria-label="Tema" className="flex rounded-md border border-border p-0.5">
+      <span className="text-small text-muted-foreground">{t("theme.label")}</span>
+      <div role="radiogroup" aria-label={t("theme.label")} className="flex rounded-md border border-border p-0.5">
         {THEMES.map((theme) => {
           const on = theme.value === preference;
           return (
@@ -158,8 +161,8 @@ function ThemeRow() {
               type="button"
               role="radio"
               aria-checked={on}
-              aria-label={theme.label}
-              title={theme.label}
+              aria-label={t(theme.label)}
+              title={t(theme.label)}
               onClick={() => themeStore.set(theme.value)}
               className={cn(
                 "flex size-7 items-center justify-center rounded transition-colors",

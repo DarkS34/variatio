@@ -1,3 +1,4 @@
+import type { Key } from "@/lib/i18n";
 import type { ArtifactStatus } from "@/lib/types";
 
 export type StatusKey = ArtifactStatus | "blocked";
@@ -5,7 +6,7 @@ export type Shape = "disc" | "ring" | "broken" | "sweep" | "dash" | "lock";
 export type Tone = "settled" | "attention" | "primary" | "muted";
 
 export interface StatusMeta {
-  label: string;
+  labelKey: Key;
   shape: Shape;
   tone: Tone;
 }
@@ -15,12 +16,12 @@ export interface StatusMeta {
 // badge and the dashboard card — each with its own colour map and none with a shape: for
 // anyone who cannot tell red from green, "stale" and "approved" were the same 6 px circle.
 export const STATUS: Record<StatusKey, StatusMeta> = {
-  approved: { label: "Aprobado", shape: "disc", tone: "settled" },
-  draft: { label: "Borrador", shape: "ring", tone: "attention" },
-  stale: { label: "Obsoleto", shape: "broken", tone: "attention" },
-  building: { label: "Construyendo", shape: "sweep", tone: "primary" },
-  missing: { label: "Sin construir", shape: "dash", tone: "muted" },
-  blocked: { label: "Bloqueado", shape: "lock", tone: "muted" },
+  approved: { labelKey: "status.approved", shape: "disc", tone: "settled" },
+  draft: { labelKey: "status.draft", shape: "ring", tone: "attention" },
+  stale: { labelKey: "status.stale", shape: "broken", tone: "attention" },
+  building: { labelKey: "status.building", shape: "sweep", tone: "primary" },
+  missing: { labelKey: "status.missing", shape: "dash", tone: "muted" },
+  blocked: { labelKey: "status.blocked", shape: "lock", tone: "muted" },
 };
 
 // Blocked wins over the status: a blocked stage is not "not built yet", it is "not your

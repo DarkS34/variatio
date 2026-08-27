@@ -9,6 +9,7 @@ import type { ExemplarsProfile } from "@/lib/types";
 import type { RunView } from "@/state/runStore";
 
 import { FewShotPanel } from "./FewShotPanel";
+import { useT } from "@/lib/i18n";
 
 export function RunPanel({
   run,
@@ -23,13 +24,14 @@ export function RunPanel({
   waiting?: string | null;
   profile: ExemplarsProfile | null;
 }) {
+  const { t } = useT();
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="flex-1">Ejecución</CardTitle>
+          <CardTitle className="flex-1">{t("run.title")}</CardTitle>
           {run.guardrail && !run.guardrail.checked ? (
-            <Badge variant="attention">instrucciones sin revisar</Badge>
+            <Badge variant="attention">{t("run.uncheckedInstructions")}</Badge>
           ) : null}
           {run.job ? <Badge variant={running ? "default" : "outline"}>{run.job.label}</Badge> : null}
         </div>
@@ -60,7 +62,7 @@ export function RunPanel({
         {run.activity.length > 0 ? (
           <details className="rounded-lg border border-border">
             <summary className="cursor-pointer px-3 py-2 text-small font-medium text-muted-foreground">
-              Qué ha ido pasando ({run.activity.length})
+              {t("run.whatHappened")} ({run.activity.length})
             </summary>
             <div className="thin-scroll max-h-56 overflow-y-auto border-t border-border p-3">
               <ActivityFeed lines={run.activity} />

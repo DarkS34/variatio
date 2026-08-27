@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const KEYWORDS =
   /\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield|self|print|range|len|int|str|float|bool|list|dict|set|tuple|input)\b/;
@@ -79,6 +80,7 @@ export function CodeBlock({
   className?: string;
   maxHeight?: string;
 }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const tokens = useMemo(
     () => (language === "python" ? tokenize(code) : [{ text: code, kind: "plain" }]),
@@ -97,7 +99,7 @@ export function CodeBlock({
         variant="ghost"
         size="icon-sm"
         onClick={copy}
-        aria-label="Copiar"
+        aria-label={t("action.copy")}
         className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
         {copied ? <Check className="text-settled" /> : <Copy />}

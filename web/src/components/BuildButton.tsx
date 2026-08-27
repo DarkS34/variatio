@@ -14,6 +14,7 @@ import {
   useSplitEngine,
   useSubmitJob,
 } from "@/state/queries";
+import { useT } from "@/lib/i18n";
 
 /** What the two halves of the action are called on a given screen, when the generic
  *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
@@ -56,6 +57,8 @@ export function BuildButton({
   className?: string;
   labels?: BuildLabels;
 }) {
+  const { t } = useT();
+  const tr = useT();
   const submit = useSubmitJob();
   const pipeline = usePipeline();
   const lanes = useLanes();
@@ -74,24 +77,27 @@ export function BuildButton({
   // Before the job exists nobody knows which lane it will take, so with two engines the
   // tooltip reports the machine instead of promising a wait. With one — or against an API
   // that does not split the queue — the flat count is exact and it still predicts.
-  const queueNote = prospectNote(lanes, split, pipeline.data?.queue_length ?? 0) ?? "";
+  const queueNote = prospectNote(lanes, split, pipeline.data?.queue_length ?? 0, tr) ?? "";
 
   // The permission goes first: a viewer being told that a raw slot is empty would be
   // reading advice about a button they could not press even after fixing it.
   const reason = !canEdit
-    ? "Tu permiso sobre esta instancia es de solo lectura."
+    ? t("build.readOnly")
     : stage.blocked_reason
       ? stage.blocked_reason
       : rawMissing
-        ? `Faltan documentos en «${rawMissing}»: impórtalos en el panel antes de construir.`
+        ? t("build.rawMissing", { slot: rawMissing })
         : offline
           ? offline
           : submit.isPending
-            ? "Enviando…"
+            ? t("build.sending")
             : waiting
               ? // Already launched and waiting its turn: pressing again would only queue a
                 // second copy of the same build behind the first.
-                `${waiting.label} ya está en cola.${wait ? ` ${waitReason(wait, split)}` : ""}`
+                t("build.alreadyQueued", {
+                  label: waiting.label,
+                  reason: wait ? ` ${waitReason(wait, split, tr)}` : "",
+                })
               : null;
 
   const launch = () => {
@@ -108,14 +114,14 @@ export function BuildButton({
       title={
         reason ??
         (missing
-          ? `Construir ${stage.label.toLowerCase()} desde los datos en bruto.${queueNote}`
-          : `Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe ${stage.label.toLowerCase()}.${queueNote}`)
+          ? t("build.create", { stage: stage.label.toLowerCase(), note: queueNote })
+          : t("build.redo", { stage: stage.label.toLowerCase(), note: queueNote }))
       }
       onClick={launch}
     >
       {submit.isPending ? <Spinner /> : waiting ? <Clock /> : missing ? <Hammer /> : <RefreshCw />}
       {waiting
-        ? queuedLabel(wait)
+        ? queuedLabel(wait, tr)
         : missing
           ? (labels?.create ?? "Construir")
           : (labels?.redo ?? "Reconstruir")}

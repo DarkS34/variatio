@@ -5,7 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/misc";
-import { ROLE_LABELS } from "@/state/auth";
+import {
+  LANGUAGES,
+  LANGUAGE_NAMES,
+  useLanguage,
+  useT,
+  type Language,
+} from "@/lib/i18n";
+import { ROLE_LABEL_KEYS } from "@/state/auth";
 import {
   useCreateWorkspace,
   useRenameWorkspace,
@@ -24,6 +31,7 @@ import { cn } from "@/lib/utils";
  * rebuilds the wrong graph.
  */
 export function WorkspaceSwitcher() {
+  const { t } = useT();
   const listing = useWorkspaces();
   const switching = useSwitchWorkspace();
   const [open, setOpen] = useState(false);
@@ -67,7 +75,7 @@ export function WorkspaceSwitcher() {
         {switching.isPending ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         ) : null}
-        <span className="truncate font-medium">{active?.name ?? "Sin workspace"}</span>
+        <span className="truncate font-medium">{active?.name ?? t("workspace.none")}</span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
 
@@ -77,7 +85,7 @@ export function WorkspaceSwitcher() {
           className="absolute left-0 top-10 z-40 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
           <p className="px-3 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Workspaces
+            {t("workspace.switcher.title")}
           </p>
           <div className="max-h-72 overflow-y-auto p-1">
             {workspaces.map((workspace) => (
@@ -106,11 +114,11 @@ export function WorkspaceSwitcher() {
                 {workspace.as_admin ? (
                   <Badge variant="secondary" className="shrink-0 gap-1">
                     <Shield className="size-3" />
-                    admin
+                    {t("workspace.adminBadge")}
                   </Badge>
                 ) : workspace.role ? (
                   <Badge variant="outline" className="shrink-0">
-                    {ROLE_LABELS[workspace.role]}
+                    {t(ROLE_LABEL_KEYS[workspace.role])}
                   </Badge>
                 ) : null}
               </button>
@@ -131,7 +139,7 @@ export function WorkspaceSwitcher() {
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
                 >
                   <Pencil className="size-4 text-muted-foreground" />
-                  Renombrar «{active!.name}»
+                  {t("ws.renameNamed", { name: active!.name })}
                 </button>
               ) : null}
               <button
@@ -140,7 +148,7 @@ export function WorkspaceSwitcher() {
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
               >
                 <FolderPlus className="size-4 text-muted-foreground" />
-                Crear un workspace
+                {t("ws.createOne")}
               </button>
             </div>
           )}
@@ -158,10 +166,15 @@ export function WorkspaceSwitcher() {
  * see again in the health panel, so letting them choose it beats inventing one.
  */
 function CreateForm({ onDone }: { onDone: () => void }) {
+  const { t } = useT();
   const create = useCreateWorkspace();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [touched, setTouched] = useState(false);
+  // What the model will be instructed in throughout this instance's whole construction.
+  // It defaults to what the person reads because that is the common case, and it is asked
+  // HERE because it cannot be asked later: see `api.createWorkspace`.
+  const [language, setLanguage] = useState<Language>(useLanguage());
 
   const effective = touched ? slug : slugify(name);
   const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(effective);
@@ -171,18 +184,22 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       className="space-y-2 p-3"
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) create.mutate({ slug: effective, name: name.trim() || effective }, { onSuccess: onDone });
+        if (valid)
+          create.mutate(
+            { slug: effective, name: name.trim() || effective, language },
+            { onSuccess: onDone },
+          );
       }}
     >
       <Input
         autoFocus
-        aria-label="Nombre del workspace"
-        placeholder="Nombre, p. ej. «Álgebra 2026»"
+        aria-label={t("workspace.name")}
+        placeholder={t("workspace.name.placeholder")}
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
       <Input
-        aria-label="Identificador del workspace"
+        aria-label={t("workspace.slug")}
         placeholder="identificador"
         value={effective}
         onChange={(event) => {
@@ -191,20 +208,45 @@ function CreateForm({ onDone }: { onDone: () => void }) {
         }}
         className="font-mono text-small"
       />
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] text-muted-foreground">{t("workspace.language.title")}</span>
+        <div role="group" aria-label={t("workspace.language.title")} className="flex gap-1">
+          {LANGUAGES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setLanguage(option)}
+              aria-pressed={language === option}
+              className={cn(
+                "h-8 flex-1 border text-small font-medium transition-colors",
+                language === option
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-accent/60",
+              )}
+            >
+              {LANGUAGE_NAMES[option]}
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] text-muted-foreground">
+          {t("workspace.language.onlyAtCreation")}
+        </span>
+      </div>
+
       {create.isError ? (
         <p className="text-small text-destructive">{(create.error as Error).message}</p>
       ) : (
         <p className="text-[11px] text-muted-foreground">
-          Empieza vacío: subes su corpus y sus ejemplares y construyes su propia cadena.
+          {t("workspace.startsEmpty")}
         </p>
       )}
       <div className="flex gap-2">
         <Button type="submit" size="sm" className="flex-1" disabled={!valid || create.isPending}>
           {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <FolderPlus />}
-          Crear
+          {t("common.create")}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onDone}>
-          Cancelar
+          {t("common.cancel")}
         </Button>
       </div>
     </form>
@@ -217,6 +259,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
  * migration nobody has asked for.
  */
 function RenameForm({ workspace, onDone }: { workspace: WorkspaceRow; onDone: () => void }) {
+  const { t } = useT();
   const rename = useRenameWorkspace();
   const [name, setName] = useState(workspace.name);
   const trimmed = name.trim();
@@ -232,8 +275,8 @@ function RenameForm({ workspace, onDone }: { workspace: WorkspaceRow; onDone: ()
     >
       <Input
         autoFocus
-        aria-label="Nuevo nombre del workspace"
-        placeholder="Nombre"
+        aria-label={t("workspace.newName")}
+        placeholder={t("workspace.namePlaceholder")}
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
@@ -241,16 +284,16 @@ function RenameForm({ workspace, onDone }: { workspace: WorkspaceRow; onDone: ()
         <p className="text-small text-destructive">{(rename.error as Error).message}</p>
       ) : (
         <p className="font-mono text-[11px] text-muted-foreground">
-          El identificador «{workspace.slug}» no cambia.
+          {t("ws.slugUnchanged", { slug: workspace.slug })}
         </p>
       )}
       <div className="flex gap-2">
         <Button type="submit" size="sm" className="flex-1" disabled={!valid || rename.isPending}>
           {rename.isPending ? <Loader2 className="size-4 animate-spin" /> : <Pencil />}
-          Renombrar
+          {t("common.rename")}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onDone}>
-          Cancelar
+          {t("common.cancel")}
         </Button>
       </div>
     </form>

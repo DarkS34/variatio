@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useT, type Key } from "@/lib/i18n";
 
 /**
  * The contract of fairness, on screen rather than only in the plan.
@@ -11,34 +12,46 @@ import { cn } from "@/lib/utils";
  * needs its safeguards visible to whoever is judging — and to whoever reads the memoria.
  * This is the same table the code implements, kept where the evaluator can open it.
  */
-const ROWS: { field: string; naive: boolean | string; rag: boolean | string; system: boolean | string }[] = [
-  { field: "Conceptos objetivo (los nombres)", naive: true, rag: true, system: true },
-  { field: "Descripciones de esos conceptos", naive: false, rag: false, system: true },
-  { field: "Instrucciones adicionales", naive: true, rag: true, system: true },
-  { field: "Decisiones de campo", naive: "como texto", rag: true, system: true },
-  { field: "Contexto docente del perfil", naive: true, rag: true, system: true },
-  { field: "Claves de salida", naive: "una línea", rag: "schema", system: "schema + guía" },
-  { field: "Prohibición de saludos y meta-texto", naive: true, rag: true, system: true },
-  { field: "Reglas de redacción de la asignatura", naive: false, rag: true, system: true },
-  { field: "Ejemplos del banco", naive: false, rag: "coseno plano", system: "por etiqueta" },
-  { field: "Prerrequisitos y posteriores", naive: false, rag: false, system: true },
-  { field: "Currículo cubierto", naive: false, rag: false, system: true },
-  { field: "Revisión de las instrucciones", naive: true, rag: true, system: true },
+const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: boolean | Key }[] = [
+  { fieldKey: "fair.row.concepts", naive: true, rag: true, system: true },
+  { fieldKey: "fair.row.descriptions", naive: false, rag: false, system: true },
+  { fieldKey: "fair.row.instructions", naive: true, rag: true, system: true },
+  { fieldKey: "fair.row.decisions", naive: "fair.v.asText", rag: true, system: true },
+  { fieldKey: "fair.row.context", naive: true, rag: true, system: true },
   {
-    field: "Razonamiento previo",
-    naive: "el del proveedor",
-    rag: "sorteado por sesión",
-    system: "sorteado por sesión",
+    fieldKey: "fair.row.outputKeys",
+    naive: "fair.v.oneLine",
+    rag: "fair.v.schema",
+    system: "fair.v.schemaGuide",
+  },
+  { fieldKey: "fair.row.noGreetings", naive: true, rag: true, system: true },
+  { fieldKey: "fair.row.rules", naive: false, rag: true, system: true },
+  {
+    fieldKey: "fair.row.examples",
+    naive: false,
+    rag: "fair.v.flatCosine",
+    system: "fair.v.byLabel",
+  },
+  { fieldKey: "fair.row.prerequisites", naive: false, rag: false, system: true },
+  { fieldKey: "fair.row.curriculum", naive: false, rag: false, system: true },
+  { fieldKey: "fair.row.admissibility", naive: true, rag: true, system: true },
+  {
+    fieldKey: "fair.row.reasoning",
+    naive: "fair.v.providers",
+    rag: "fair.v.drawn",
+    system: "fair.v.drawn",
   },
 ];
 
-function Cell({ value }: { value: boolean | string }) {
-  if (value === true) return <span className="text-settled">sí</span>;
-  if (value === false) return <span className="text-muted-foreground/50">no</span>;
-  return <span className="text-muted-foreground">{value}</span>;
+function Cell({ value }: { value: boolean | Key }) {
+  const { t } = useT();
+  if (value === true) return <span className="text-settled">{t("fair.yes")}</span>;
+  if (value === false) return <span className="text-muted-foreground/50">{t("fair.no")}</span>;
+  return <span className="text-muted-foreground">{t(value)}</span>;
 }
 
 export function FairnessTable({ className }: { className?: string }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -50,7 +63,7 @@ export function FairnessTable({ className }: { className?: string }) {
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
-        Qué recibe cada propuesta
+        {t("fair.title")}
       </button>
       {open ? (
         <div className="border-t border-border">
@@ -59,16 +72,16 @@ export function FairnessTable({ className }: { className?: string }) {
           <Table minWidth="34rem">
             <THead>
               <TR>
-                <TH>Del encargo</TH>
-                <TH>Comercial</TH>
-                <TH>Solo RAG</TH>
-                <TH>Sistema</TH>
+                <TH>{t("fair.col.commission")}</TH>
+                <TH>{t("fair.col.naive")}</TH>
+                <TH>{t("fair.col.rag")}</TH>
+                <TH>{t("fair.col.system")}</TH>
               </TR>
             </THead>
             <TBody>
               {ROWS.map((row) => (
-                <TR key={row.field}>
-                  <TD>{row.field}</TD>
+                <TR key={row.fieldKey}>
+                  <TD>{t(row.fieldKey)}</TD>
                   <TD>
                     <Cell value={row.naive} />
                   </TD>
@@ -83,12 +96,7 @@ export function FairnessTable({ className }: { className?: string }) {
             </TBody>
           </Table>
           <p className="px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-            Las tres reciben el mismo encargo y devuelven un ítem. Las dos locales usan el
-            mismo modelo, así que lo que se compara son arquitecturas y no modelos. Las
-            propuestas que fallan se registran como tales: no se reintenta solo la que falla.
-            El razonamiento previo se sortea al empezar cada sesión y se aplica igual a las
-            dos locales, de modo que nunca separa a una de la otra: queda registrado con la
-            sesión para poder medir aparte si aporta algo.
+            {t("fair.footnote")}
           </p>
         </div>
       ) : null}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * One question of the form: open while it is being answered, one line once it is.
@@ -32,6 +33,7 @@ export function FormStep({
   onOpen: () => void;
   children: ReactNode;
 }) {
+  const { t } = useT();
   return (
     <section
       className={cn(
@@ -68,7 +70,7 @@ export function FormStep({
             </span>
             {optional ? (
               <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-                opcional
+                {t("common.optional")}
               </span>
             ) : null}
             {hint ? <InfoHint label={title}>{hint}</InfoHint> : null}

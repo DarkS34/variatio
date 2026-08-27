@@ -19,6 +19,7 @@ import {
   useGenerateEvaluations,
 } from "./queries";
 import type { AssignableAccount, EvaluationSet, EvaluatorProfile } from "./types";
+import { useT } from "@/lib/i18n";
 
 /**
  * Handing comparisons out, in the order the decision is actually made.
@@ -39,9 +40,10 @@ import type { AssignableAccount, EvaluationSet, EvaluatorProfile } from "./types
 // this screen is the MARK on an account nobody classified — here it decides which wording
 // that person will be asked, so it is something to act on before handing anything over.
 function Profile({ value }: { value: EvaluatorProfile | null }) {
+  const { t } = useT();
   return (
     <span className={cn("text-small", value ? "text-muted-foreground" : "text-attention")}>
-      {profileLabel(value).toLowerCase()}
+      {profileLabel(value, t).toLowerCase()}
     </span>
   );
 }
@@ -57,13 +59,14 @@ function PersonStep({
   chosen: AssignableAccount | null;
   onChoose: (account: AssignableAccount | null) => void;
 }) {
+  const { t } = useT();
   if (chosen) {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-body font-medium">{chosen.username}</span>
         <Profile value={chosen.evaluator_profile} />
         <Button variant="ghost" size="sm" onClick={() => onChoose(null)}>
-          Cambiar
+          {t("sets.change")}
         </Button>
       </div>
     );
@@ -104,11 +107,11 @@ function WorkspaceStep({
   chosen: string | null;
   onChoose: (slug: string | null) => void;
 }) {
+  const { t } = useT();
   if (account.workspaces.length === 0) {
     return (
       <p className="text-small text-attention">
-        «{account.username}» no es miembro de ningún workspace todavía. Dale acceso en
-        «Cuentas y accesos» antes de asignarle nada.
+        {t("sets.noWorkspaces", { username: account.username })}
       </p>
     );
   }
@@ -120,7 +123,7 @@ function WorkspaceStep({
         <span className="text-body font-medium">{found?.name ?? chosen}</span>
         <span className="font-mono text-small text-muted-foreground">{chosen}</span>
         <Button variant="ghost" size="sm" onClick={() => onChoose(null)}>
-          Cambiar
+          {t("sets.change")}
         </Button>
       </div>
     );
@@ -157,6 +160,7 @@ function SetRow({
   picked: boolean;
   onPick: (next: boolean) => void;
 }) {
+  const { t } = useT();
   const holder = set.holders.find((entry) => entry.account_id === accountId);
   const others = set.holders.filter((entry) => entry.account_id !== accountId);
 
@@ -172,15 +176,15 @@ function SetRow({
         checked={picked}
         onCheckedChange={onPick}
         disabled={Boolean(holder)}
-        label={`Asignar la comparación de ${set.concepts.join(", ")}`}
+        label={t("sets.assignAria", { concepts: set.concepts.join(", ") })}
       />
       <span className="min-w-48 flex-1">
         <span className="block text-body font-medium">
-          {set.concepts.join(", ") || "sin conceptos"}
+          {set.concepts.join(", ") || t("sets.noConcepts")}
         </span>
         <span className="block text-small text-muted-foreground">
           {when(new Date(set.created_at * 1000).toISOString())}
-          {set.think ? " · con razonamiento" : " · sin razonamiento"}
+          {set.think ? t("sets.withReasoning") : t("sets.withoutReasoning")}
         </span>
       </span>
 
@@ -199,22 +203,25 @@ function SetRow({
           >
             {entry.decided ? <Check className="size-3" /> : null}
             {entry.declined ? <CircleSlash className="size-3" /> : null}
-            {entry.account ?? "cuenta borrada"}
+            {entry.account ?? t("sets.deletedAccount")}
           </span>
         ))}
         {others.length === 0 ? (
-          <span className="text-small text-muted-foreground">sin repartir</span>
+          <span className="text-small text-muted-foreground">{t("sets.unassigned")}</span>
         ) : null}
       </span>
 
       {holder ? (
-        <span className="text-micro font-condensed text-settled uppercase">ya la tiene</span>
+        <span className="text-micro font-condensed text-settled uppercase">
+          {t("sets.alreadyHas")}
+        </span>
       ) : null}
     </label>
   );
 }
 
 export function AdminSetsPanel() {
+  const { plural, t } = useT();
   const accounts = useAssignableAccounts();
   const [account, setAccount] = useState<AssignableAccount | null>(null);
   const [workspace, setWorkspace] = useState<string | null>(null);
@@ -266,11 +273,12 @@ export function AdminSetsPanel() {
     const failed = results.length - done;
 
     toast({
-      title: done > 0 ? `Asignadas a ${account.username}` : "No se pudo asignar",
+      title:
+        done > 0 ? t("sets.assignedTo", { username: account.username }) : t("sets.assignFailed"),
       description:
         done > 0
-          ? `${done} comparación(es)${failed ? `; ${failed} falló(aron)` : ""}.`
-          : "Ninguna llegó a asignarse. Vuelve a intentarlo.",
+          ? `${plural("sets.assignedCount", done)}${failed ? plural("sets.failedCount", failed) : ""}.`
+          : t("sets.assignedNone"),
       tone: failed && done ? "attention" : done ? "settled" : "danger",
     });
     setPicked([]);
@@ -283,16 +291,15 @@ export function AdminSetsPanel() {
       {
         onSuccess: ({ jobs }) => {
           toast({
-            title: `Encargadas ${jobs.length}`,
-            description:
-              "Se preparan una detrás de otra en la cola; aparecerán aquí en cuanto terminen.",
+            title: t("sets.commissioned", { n: jobs.length }),
+            description: t("sets.commissioned.body"),
             tone: "settled",
           });
           setComposing(false);
         },
         onError: (error) =>
           toast({
-            title: "No se pudo encargar",
+            title: t("sets.commissionFailed"),
             description: (error as Error).message,
             tone: "danger",
           }),
@@ -307,24 +314,22 @@ export function AdminSetsPanel() {
   if (accounts.isError) {
     return (
       <p className="text-small text-destructive">
-        No se pudieron leer las cuentas: {(accounts.error as Error).message}
+        {t("sets.accountsFailed", { error: (accounts.error as Error).message })}
       </p>
     );
   }
   if (!accounts.data) {
-    return <p className="text-small text-muted-foreground">Sin datos de cuentas.</p>;
+    return <p className="text-small text-muted-foreground">{t("sets.noAccountData")}</p>;
   }
   if (accounts.data.accounts.length === 0) {
     return (
-      <p className="text-small text-muted-foreground">
-        No hay cuentas activas a las que asignar. Crea alguna en «Cuentas y accesos».
-      </p>
+      <p className="text-small text-muted-foreground">{t("sets.noAccounts")}</p>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Step index={1} title="¿A quién se la asignas?" done={Boolean(account)}>
+      <Step index={1} title={t("sets.step1")} done={Boolean(account)}>
         <PersonStep
           accounts={accounts.data.accounts}
           chosen={account}
@@ -337,7 +342,7 @@ export function AdminSetsPanel() {
       </Step>
 
       {account ? (
-        <Step index={2} title="¿En cuál de sus workspaces?" done={Boolean(workspace)}>
+        <Step index={2} title={t("sets.step2")} done={Boolean(workspace)}>
           <WorkspaceStep
             account={account}
             chosen={workspace}
@@ -350,16 +355,13 @@ export function AdminSetsPanel() {
       ) : null}
 
       {account && workspace ? (
-        <Step index={3} title="¿Cuáles?" done={picked.length > 0}>
+        <Step index={3} title={t("sets.step3")} done={picked.length > 0}>
           {sets.isLoading ? (
             <Skeleton className="h-24" />
           ) : (
             <div className="space-y-3">
               {free.length === 0 && (sets.data?.sets.length ?? 0) === 0 ? (
-                <p className="text-small text-muted-foreground">
-                  Este workspace todavía no tiene comparaciones. Encarga unas cuantas abajo y
-                  reparte las que quieras: las que no asignes se quedan guardadas.
-                </p>
+                <p className="text-small text-muted-foreground">{t("sets.noneYet")}</p>
               ) : (
                 <div className="border border-border">
                   {(sets.data?.sets ?? []).map((set) => (
@@ -386,7 +388,10 @@ export function AdminSetsPanel() {
                   onClick={send}
                 >
                   {assign.isPending ? <Spinner /> : <Send />}
-                  Asignar {picked.length || ""} a {account.username}
+                  {t("sets.assignTo", {
+                    n: picked.length || "",
+                    username: account.username,
+                  })}
                 </Button>
                 <Button
                   variant="outline"
@@ -395,16 +400,14 @@ export function AdminSetsPanel() {
                   title={
                     sameInstance
                       ? undefined
-                      : `Cambia arriba a «${workspace}» para encargar comparaciones suyas`
+                      : t("sets.switchToCommission", { slug: workspace })
                   }
                 >
                   <Plus />
-                  Encargar más comparaciones
+                  {t("sets.commissionMore")}
                 </Button>
                 {picked.length > 0 ? (
-                  <p className="text-small text-muted-foreground">
-                    Recibirá los mismos ejercicios con un orden propio.
-                  </p>
+                  <p className="text-small text-muted-foreground">{t("sets.sameExercises")}</p>
                 ) : null}
               </div>
 
@@ -413,10 +416,9 @@ export function AdminSetsPanel() {
               {!sameInstance ? (
                 <p className="flex items-start gap-2 text-small text-attention">
                   <Sparkles className="mt-0.5 size-3.5 shrink-0" />
-                  Para encargar comparaciones de «{workspace}» tienes que tenerlo abierto:
-                  cámbialo en el selector de arriba del todo
-                  {active ? <> (ahora estás en «{active}»)</> : null}. Repartir las que ya
-                  existen sí funciona desde aquí.
+                  {t("sets.crossInstance", { slug: workspace })}
+                  {active ? t("sets.crossInstance.now", { slug: active }) : null}
+                  {t("sets.crossInstance.tail")}
                 </p>
               ) : null}
 
@@ -424,17 +426,15 @@ export function AdminSetsPanel() {
                 <div className="animate-fade-in space-y-3 border border-border bg-muted/30 p-3">
                   <p className="flex items-start gap-2 text-small text-muted-foreground">
                     <Sparkles className="mt-0.5 size-3.5 shrink-0" />
-                    Cada comparación son tres propuestas del mismo encargo. Se preparan una
-                    detrás de otra en la cola, y las que no repartas se quedan guardadas para
-                    otra persona.
+                    {t("sets.composeHint")}
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-body font-medium">¿Cuántas comparaciones?</span>
+                    <span className="text-body font-medium">{t("sets.howMany")}</span>
                     <Count value={comparisons} onChange={setComparisons} max={10} />
                     <span className="text-small text-muted-foreground">
                       {comparisons === 1
-                        ? "una sesión, tres propuestas"
-                        : `${comparisons} sesiones del mismo encargo; cada una sortea su orden y su razonamiento por separado`}
+                        ? t("sets.oneSession")
+                        : t("sets.manySessions", { n: comparisons })}
                     </span>
                   </div>
                   <GenerateForm
@@ -449,7 +449,7 @@ export function AdminSetsPanel() {
                     error={generate.isError ? (generate.error as Error).message : null}
                     blockedInstructions={null}
                     variant="evaluation"
-                    launchLabel={`Encargar ${comparisons} comparación${comparisons === 1 ? "" : "es"}`}
+                    launchLabel={plural("sets.launchLabel", comparisons)}
                     onLaunch={launch}
                     onCancel={() => setComposing(false)}
                   />
