@@ -98,7 +98,7 @@ export const STEP_EXPLAIN: Record<string, string> = {
   sample: "Lee una muestra del corpus hasta llenar el presupuesto de contexto.",
   infer_profile: "Pide al modelo el esquema de campos y sus guías de extracción y generación.",
   kg_convert:
-    "Docling convierte y trocea todo el corpus antes de extraer nada. El markdown se guarda en cache/markdown y se reutiliza mientras el original no cambie —recomponiendo de paso los acentos que los PDF de LaTeX parten en dos («M´etodo» → «Método»)—; el troceado corta por encabezados, no por longitud.",
+    "Transcribe y trocea todo el corpus antes de extraer nada. Cada página se copia mirándola como imagen, una llamada al modelo por página, y se guarda por separado en cache/markdown: se reutiliza mientras el original no cambie y lo que corrijas a mano gana sobre lo que dijo el modelo. El troceado corta por encabezados, no por longitud.",
   kg_extract:
     "Una llamada al modelo por fragmento, pidiendo conceptos y relaciones, con la ruta de encabezados del fragmento como contexto. Es la parte larga: la barra avanza fragmento a fragmento.",
   kg_clean:
@@ -115,7 +115,12 @@ export const STEP_EXPLAIN: Record<string, string> = {
     "Agrupa las relaciones por tipo y rompe los ciclos que el grafo no admite. Es determinista, sin modelo.",
   kg_taggability:
     "Una pasada por dominio decidiendo qué conceptos sirven de etiqueta: los que valen para cualquier ítem («codificación», «diseño») se marcan como no etiquetables. Al terminar se escribe el borrador.",
-  convert: "Docling convierte el documento a markdown antes de extraer nada.",
+  convert: "Transcribe el documento a markdown, página a página, antes de extraer nada. Si ya se transcribió desde «Datos en bruto», esto acierta en caché y pasa de largo.",
+  transcribe_documents: "Un documento tras otro. Cada uno se guarda entero al terminarlo, así que detener la transcripción conserva lo que ya salió.",
+  transcribe:
+    "Una llamada al modelo por página, con la página delante como imagen. El prompt manda copiar carácter a carácter y no completar ni corregir nada: lo que el documento tenga mal es parte del ejercicio. Una página que no se pueda transcribir deja una marca visible en su sitio, nunca un hueco en silencio.",
+  transcribe_seam:
+    "Un ejercicio puede empezar en una página y seguir en la siguiente. Esta pasada mira cada frontera —el final de una página y el principio de la otra— y decide si continúa y cómo unirlas. Solo clasifica la costura: no reescribe el texto. Si falla, se une como diga el criterio mecánico y se sigue.",
   extract: "Un documento tras otro, guardando el banco después de cada uno.",
   extract_batches: "El documento se trocea y cada trozo se extrae por separado para que quepa en contexto.",
 };

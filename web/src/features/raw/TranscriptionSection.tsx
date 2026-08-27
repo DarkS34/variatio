@@ -1,4 +1,4 @@
-import { FileText, Hammer, PenLine, RefreshCw } from "lucide-react";
+import { Ban, FileText, Hammer, Hourglass, PenLine, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, PhaseBar, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import type { RawSlot } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
-import { useEngineOffline } from "@/state/queries";
+import { useCancelJob, useEngineOffline } from "@/state/queries";
 
 import { DocumentDialog } from "./DocumentDialog";
+import { busyDocument, documentLoop, innerLoop, loopLabel } from "./progress";
 import {
   useStartTranscription,
   useTranscribePhases,
@@ -42,6 +43,7 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
   const running = useTranscribing(slot.kind);
   const phases = useTranscribePhases();
   const start = useStartTranscription();
+  const cancel = useCancelJob();
   const offline = useEngineOffline();
   const canEdit = useCanEdit();
   const [opened, setOpened] = useState<string | null>(null);
@@ -49,7 +51,14 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
   const data = state.data;
   const todo = (data?.pending ?? 0) + (data?.stale ?? 0);
   const overall = run?.overall ?? null;
-  const step = run?.steps.filter((entry) => entry.status === "running").at(-1);
+  const queued = run?.job?.status === "queued";
+  // Two nested loops, drawn as two bars: which document of how many, and how far into that
+  // document's pages (or, once they are done, into its seams).
+  const docs = documentLoop(run);
+  const inner = innerLoop(run);
+  // The one document nobody may correct while this runs: the transcriber rewrites its whole
+  // directory at the end, so an edit saved into it now would be discarded without a word.
+  const busy = busyDocument(run);
 
   const reason = !canEdit
     ? "Tu permiso sobre esta instancia es de solo lectura."
@@ -123,29 +132,69 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
             </Button>
 
             {running ? (
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate text-small">
-                    {overall?.label ?? step?.label ?? "Preparando la transcripción…"}
+              <div className="space-y-2 rounded-md border border-border p-2.5">
+                <div className="flex items-center gap-2">
+                  {queued ? (
+                    <Hourglass className="size-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <Spinner className="shrink-0" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-small">
+                    {queued
+                      ? "En cola: esperando a que se libere el motor"
+                      : (overall?.label ?? docs?.label ?? "Preparando la transcripción…")}
                   </span>
-                  <span className="shrink-0 text-small font-medium nums">
-                    {overall
-                      ? `${overall.percent} %`
-                      : step?.total
-                        ? `${step.current ?? 0}/${step.total}`
-                        : "—"}
-                  </span>
+                  {docs ? (
+                    <span className="shrink-0 text-small font-medium nums">
+                      {loopLabel(docs)} doc.
+                    </span>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={cancel.isPending || !run?.job}
+                    title="Detiene la transcripción donde va. Las páginas ya guardadas se conservan y al volver a lanzarla se reanuda por donde quedó."
+                    onClick={() => run?.job && cancel.mutate(run.job.id)}
+                  >
+                    <Ban />
+                    Detener
+                  </Button>
                 </div>
-                {overall && phases.length > 0 ? (
-                  <PhaseBar phases={phases} percent={overall.percent} activeKey={overall.key} />
-                ) : (
-                  <Progress
-                    value={overall ? overall.percent : (step?.current ?? 0)}
-                    max={overall ? 100 : (step?.total ?? null)}
-                  />
-                )}
-                {overall?.detail ? (
-                  <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
+
+                {!queued ? (
+                  <>
+                    {overall && phases.length > 0 ? (
+                      <PhaseBar
+                        phases={phases}
+                        percent={overall.percent}
+                        activeKey={overall.key}
+                      />
+                    ) : (
+                      <Progress value={overall?.percent ?? 0} max={100} />
+                    )}
+                    {overall?.detail ? (
+                      <p className="truncate text-small text-muted-foreground">
+                        {overall.detail}
+                      </p>
+                    ) : null}
+
+                    {/* The inner loop, drawn as its own bar: the outer one moves once per
+                        document, so on a corpus of long PDFs it would sit still for as long
+                        as it takes to read one — which reads as a stall and is not. */}
+                    {inner ? (
+                      <div className="space-y-1 border-l-2 border-border pl-2.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="min-w-0 truncate text-small text-muted-foreground">
+                            {inner.detail ?? inner.label}
+                          </span>
+                          <span className="shrink-0 nums text-small text-muted-foreground">
+                            {loopLabel(inner)}
+                          </span>
+                        </div>
+                        <Progress value={inner.current} max={inner.total} />
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
             ) : null}
@@ -155,6 +204,7 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
                 {data.documents.map((entry) => (
                   <li key={entry.name} className="space-y-0.5 px-2 py-1.5">
                     <div className="flex items-center gap-2 text-small">
+                      {busy === entry.name ? <Spinner className="size-3.5 shrink-0" /> : null}
                       <span className="min-w-0 flex-1 truncate" title={entry.name}>
                         {entry.name}
                       </span>
@@ -163,19 +213,25 @@ function SlotTranscription({ slot }: { slot: RawSlot }) {
                           {entry.pages} pág.
                         </span>
                       ) : null}
-                      <Badge variant={STATE[entry.state].variant}>
-                        {STATE[entry.state].label}
+                      <Badge
+                        variant={
+                          busy === entry.name ? "outline" : STATE[entry.state].variant
+                        }
+                      >
+                        {busy === entry.name ? "transcribiendo" : STATE[entry.state].label}
                       </Badge>
                       <Button
                         size="icon-sm"
                         variant="ghost"
                         aria-label={`Ver y corregir las páginas de ${entry.name}`}
                         title={
-                          entry.state === "pending"
-                            ? "Todavía no hay páginas que ver"
-                            : "Ver y corregir las páginas"
+                          busy === entry.name
+                            ? "Se está reescribiendo ahora mismo; lo que corrigieras aquí se perdería al terminar"
+                            : entry.state === "pending"
+                              ? "Todavía no hay páginas que ver"
+                              : "Ver y corregir las páginas"
                         }
-                        disabled={entry.state === "pending"}
+                        disabled={entry.state === "pending" || busy === entry.name}
                         onClick={() => setOpened(entry.name)}
                       >
                         <PenLine />
@@ -227,6 +283,12 @@ export function TranscriptionSection({ slots }: { slots: RawSlot[] }) {
           por su cuenta, como hasta ahora. Y si cambia el modelo de transcripción, el DPI,
           el OCR o el prompt, las páginas quedan marcadas como caducadas con el motivo, en
           vez de rehacerse en silencio.
+        </p>
+        <p className="max-w-3xl text-small leading-relaxed text-muted-foreground">
+          Se puede detener en cualquier momento: lo que ya se guardó se queda, y al volver a
+          lanzarla sigue por donde iba. Los documentos que ya han salido pueden revisarse y
+          corregirse mientras el resto se transcribe; el único que no se deja abrir es el
+          que se está reescribiendo en ese instante.
         </p>
       </div>
 

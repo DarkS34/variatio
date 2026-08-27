@@ -160,8 +160,11 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 
     with progress.overall(TRANSCRIBE_PHASES):
         progress.phase("transcribe", f"0/{len(sources)} documento(s)")
+        # NOT «transcribe»: `pages.py` already spends that id on the per-page loop nested
+        # inside this one, and the client patches the LAST step carrying an id — so the two
+        # loops overwrote each other's counter and neither could be drawn.
         with progress.step(
-            "transcribe", "Transcribiendo los documentos", len(sources)
+            "transcribe_documents", "Transcribiendo los documentos", len(sources)
         ) as reporter:
             for idx, source in enumerate(sources, 1):
                 progress.checkpoint()
