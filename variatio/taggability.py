@@ -77,6 +77,7 @@ def review(
                     domains,
                     relations,
                     exemplars_profile,
+                    prompts,
                     exemplars_bank,
                     content_context,
                     modalities,
@@ -106,6 +107,7 @@ def _judge_domain(
     domains,
     relations,
     exemplars_profile,
+    prompts,
     exemplars_bank,
     content_context,
     modalities,
@@ -127,7 +129,7 @@ def _judge_domain(
     ).response
     raw = (
         parsing.parse_object(
-            response, f"[taggable · {domain}] ", TAGGABLE_SCHEMA, max_attempts
+            response, f"[taggable · {domain}] ", TAGGABLE_SCHEMA, max_attempts, prompts
         )
         or {}
     )

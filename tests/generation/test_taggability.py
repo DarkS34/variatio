@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from variatio import taggability
 from variatio.instance.content_context import ContentContext
 from variatio.prompts.es import review_taggable_concepts_prompt
@@ -146,3 +148,31 @@ def test_the_prompt_omits_the_samples_section_when_empty():
         "",
     )
     assert "EJERCICIOS REALES DEL MATERIAL DE ESTA ASIGNATURA" not in prompt
+
+
+class FakeGraph:
+    concepts_by_domains = {"Funciones": ["Recursividad", "Parámetro"]}
+    graphs = {}
+
+
+def test_review_hands_the_prompt_set_it_was_given_to_every_domain(monkeypatch):
+    seen = []
+
+    class FakePrompts:
+        @staticmethod
+        def review_taggable_concepts_prompt(domain, *_args):
+            seen.append(domain)
+            return "prompt"
+
+    monkeypatch.setattr(
+        taggability.inference,
+        "generate",
+        lambda **_: SimpleNamespace(response='{"non_taggable": {"Parámetro": "vago"}}'),
+    )
+
+    non_taggable = taggability.review(
+        FakeGraph(), FakeProfile(), FakePrompts(), {}, CONTEXT
+    )
+
+    assert seen == ["Funciones"]
+    assert non_taggable == ["Parámetro"]
