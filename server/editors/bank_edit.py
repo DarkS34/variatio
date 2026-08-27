@@ -100,7 +100,7 @@ def listing(
     if source:
         rows = [r for r in rows if r.get("source") == source]
     if item_type:
-        rows = [r for r in rows if r.get(ITEM_TYPE_KEY) == item_type]
+        rows = [r for r in rows if profile.type_key_of_safe(r) == item_type]
     if query:
         needle = query.lower()
         rows = [

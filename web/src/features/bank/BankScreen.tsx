@@ -6,7 +6,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
@@ -26,6 +26,7 @@ import { TAGGING_METHOD, truncate } from "@/lib/format";
 import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  useActiveWorkspace,
   useCoverage,
   useEngineOffline,
   useInvalidateChain,
@@ -338,12 +339,18 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
-  const [concept, setConcept] = useState("");
+  const [itemType, setItemType] = useState("");
   const [source, setSource] = useState("");
   const [untagged, setUntagged] = useState<boolean | undefined>(undefined);
   const [order, setOrder] = useState<"suspicion" | "id">("id");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
+
+  const workspace = useActiveWorkspace();
+  useEffect(() => {
+    setItemType("");
+    setPage(1);
+  }, [workspace]);
 
   // Re-tagging puts the bank into «building» like a rebuild does, so StageGate hides the
   // whole screen and only the live preview survives. What belongs there is NOT the file
@@ -354,10 +361,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const tagStatus = tagRun?.job?.status;
   const tagging = tagStatus === "running" || tagStatus === "queued";
 
-  const params = { q: query, concept, source, untagged, order, page, page_size: 40 };
+  const params = { q: query, item_type: itemType, source, untagged, order, page, page_size: 40 };
   const bank = useQuery({
-    queryKey: ["bank", params],
+    queryKey: ["bank", workspace, params],
     queryFn: () => api.bank(params as never),
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === workspace ? previous : undefined,
   });
 
   const remove = useMutation({
@@ -591,23 +600,24 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               className="pl-8"
             />
           </div>
-          <Select
-            value={concept}
-            onChange={(event) => {
-              setConcept(event.target.value);
-              setPage(1);
-            }}
-            className="max-w-56"
-          >
-            <option value="">Todos los conceptos</option>
-            {concepts
-              .filter((c) => c.taggable)
-              .map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name} ({c.exemplars})
+          {manyTypes ? (
+            <Select
+              aria-label="Filtrar por modalidad"
+              value={itemType}
+              onChange={(event) => {
+                setItemType(event.target.value);
+                setPage(1);
+              }}
+              className="max-w-56"
+            >
+              <option value="">Todas las modalidades</option>
+              {itemTypes.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label || type.key} ({type.count})
                 </option>
               ))}
-          </Select>
+            </Select>
+          ) : null}
           <Select
             value={source}
             onChange={(event) => {

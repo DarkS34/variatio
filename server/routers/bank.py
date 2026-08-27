@@ -31,7 +31,7 @@ def listing(
     access: auth.Access = auth.VIEW,
 ) -> dict:
     try:
-        return bank_edit.listing(
+        result = bank_edit.listing(
             access.ws,
             concept=concept,
             untagged=untagged,
@@ -44,6 +44,15 @@ def listing(
         )
     except BankError as exc:
         raise HTTPException(404, str(exc)) from exc
+
+    declared = [t["key"] for t in result["item_types"]]
+    if item_type and item_type not in declared:
+        raise HTTPException(
+            422,
+            f"El perfil de ejemplares no declara la modalidad «{item_type}»; "
+            f"las que hay: {', '.join(declared) or 'ninguna'}",
+        )
+    return result
 
 
 @router.get("/coverage")
