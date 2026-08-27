@@ -13,10 +13,14 @@ import { FewShotPanel } from "./FewShotPanel";
 export function RunPanel({
   run,
   running,
+  waiting,
   profile,
 }: {
   run: RunView;
   running: boolean;
+  /** Why it has not started, when it has not. A job in the queue has no steps yet, and a
+   *  timeline with nothing in it reads as a run that has stalled. */
+  waiting?: string | null;
   profile: ExemplarsProfile | null;
 }) {
   return (
@@ -31,6 +35,7 @@ export function RunPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {waiting ? <p className="text-small text-muted-foreground">{waiting}</p> : null}
         <RunTimeline
           steps={run.steps}
           slots={{

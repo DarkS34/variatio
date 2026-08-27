@@ -6,6 +6,7 @@ export type JobKind =
   | "build_profile"
   | "build_kg"
   | "build_bank"
+  | "transcribe"
   | "describe_concepts"
   | "index"
   | "warm_models"
@@ -15,6 +16,29 @@ export type JobKind =
   | "evaluate";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+/**
+ * The two queues, one per inference backend: the GPU and the hosted API.
+ *
+ * A job reserves the lanes of the generative models it calls — the embedder and the
+ * guardrail reserve nothing — so two jobs on disjoint lanes run at the same time and two
+ * on the same lane serialise. This is why «el motor está ocupado» stopped being one
+ * sentence: with a composite engine it is true of one half and false of the other.
+ */
+export type LaneName = "local" | "remote";
+
+export interface LaneState {
+  busy: boolean;
+  /** Whether what occupies the lane belongs to this workspace. */
+  mine: boolean;
+  /** What holds it, whoever launched it: the machine is the installation's. */
+  label: string | null;
+  queued: number;
+  /** Jobs before this workspace's first queued one, or null when it has none waiting. */
+  ahead: number | null;
+}
+
+export type Lanes = Record<LaneName, LaneState>;
 
 export interface StaleCause {
   artifact: ArtifactName;
@@ -47,6 +71,9 @@ export interface Pipeline {
   /** Somebody, anybody, is holding the one GPU. The honest reason a job has not started. */
   engine_busy: boolean;
   engine_busy_elsewhere: boolean;
+  /** Absent when the API is older than this bundle: version skew must not blank a screen,
+   *  so every reader goes through `readLanes` and falls back to the flat queue counters. */
+  lanes?: Lanes;
 }
 
 /**
@@ -98,8 +125,11 @@ export interface Job {
   label: string;
   artifact: ArtifactName | null;
   elapsed_ms: number | null;
-  /** 1-based place in the shared queue; 0 or absent means "not waiting". */
+  /** 1-based place in the queue of its own lanes; 0 or absent means "not waiting". */
   queue_position?: number;
+  /** The lanes this job reserves. `[]` is a real answer — a job that calls no generative
+   *  model waits for nothing — and absent means the API did not say. */
+  backends?: LaneName[];
 }
 
 /**

@@ -1,13 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import { useToast } from "@/components/ui/toast";
 import { api, getScope } from "@/lib/api";
+import { isSplitEngine, queuedNotice, readLanes } from "@/lib/queue";
 import type {
   ArtifactName,
   BuildPhase,
   CommissionScope,
   EvaluatorProfile,
   JobKind,
+  Lanes,
   Role,
   WorkspaceRow,
 } from "@/lib/types";
@@ -76,14 +84,25 @@ export function useArtifactRun(artifact: ArtifactName | undefined): RunView | nu
  * `useArtifactRun` cannot answer this: it keys on the artifact a build writes, and the
  * jobs that have no artifact — describing concepts, indexing, tagging — are exactly the
  * ones whose screen has nowhere else to show that something is happening.
+ *
+ * It is also how a screen finds ITS run now that two lanes let two jobs run at once:
+ * «el trabajo en curso» is no longer a single thing, so the generate screen asks for a
+ * generation and the evaluation screen for a comparison instead of both taking whatever
+ * the stream last heard from. `accept` narrows further — pass a module-level function, or
+ * the memo re-runs every render.
  */
-export function useJobRun(kind: JobKind): RunView | null {
+export function useJobRun(
+  kind: JobKind,
+  accept?: (run: RunView) => boolean,
+): RunView | null {
   const stream = useStream();
   return useMemo(() => {
-    const runs = Object.values(stream.runs).filter((run) => run.job?.kind === kind);
+    const runs = Object.values(stream.runs).filter(
+      (run) => run.job?.kind === kind && (!accept || accept(run)),
+    );
     if (runs.length === 0) return null;
     return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
-  }, [stream, kind]);
+  }, [stream, kind, accept]);
 }
 
 /** True while a job of this kind is queued or running, whoever launched it. */
@@ -183,6 +202,24 @@ export function usePipeline() {
     refetchInterval: (query) => (query.state.data?.queue_length ? 5_000 : false),
     enabled: useHasWorkspace(),
   });
+}
+
+/**
+ * The state of the two queues, one per inference backend, or null.
+ *
+ * Null is «this server does not split the queue», not a failure: an API older than this
+ * bundle sends no `lanes` and every reader has a flat fallback. Reading `data.lanes.local`
+ * straight would blank the screen on exactly that skew, which is a failure this project
+ * has already made once.
+ */
+export function useLanes(): Lanes | null {
+  const pipeline = usePipeline();
+  return useMemo(() => readLanes(pipeline.data), [pipeline.data]);
+}
+
+/** Whether «el motor» is two halves worth telling apart, as the engine's own name says. */
+export function useSplitEngine(): boolean {
+  return isSplitEngine(useHealth().data?.engine);
 }
 
 export function useProfile() {
@@ -323,6 +360,35 @@ export function useWorkspaces() {
  */
 const NOT_ABOUT_AN_INSTANCE = ["auth", "maintenance"];
 
+/**
+ * Drop everything the instance we have just left put on screen.
+ *
+ * `removeQueries`, and never `client.clear()`: clearing does not empty a query, it
+ * DESTROYS it, so the observers of `["auth","me"]` — the gate and `useHasWorkspace` —
+ * stay bound to a dead object and never hear the fresh answer.
+ */
+function dropInstanceQueries(client: QueryClient) {
+  client.removeQueries({
+    predicate: (query) => !NOT_ABOUT_AN_INSTANCE.includes(query.queryKey[0] as string),
+  });
+}
+
+/**
+ * Put the stream back wherever the account has ended up.
+ *
+ * The tab is pointing at nothing, and where it lands next is `me`'s answer rather than
+ * this tab's — the server reassigns the account when the workspace it was in disappears.
+ * So the socket waits for that answer instead of reconnecting into the void: a handshake
+ * for an account in no workspace is refused with 4401, and «la sesión ha caducado» is the
+ * one thing that is not happening. `useSession` adopts the new slug as it arrives.
+ */
+function relandStream(client: QueryClient) {
+  runStore.forget();
+  void client.refetchQueries({ queryKey: authKeys.me }).then(() => {
+    if (activeWorkspace()) runStore.connect();
+  });
+}
+
 function useLandIn<TInput, TResult extends object>(
   mutationFn: (input: TInput) => Promise<TResult>,
 ) {
@@ -334,11 +400,13 @@ function useLandIn<TInput, TResult extends object>(
       // and where it lands next is `me`'s to say.
       const landed = (data as { workspace?: WorkspaceRow }).workspace;
       workspaceStore.set(landed?.slug ?? null);
-      client.removeQueries({
-        predicate: (query) => !NOT_ABOUT_AN_INSTANCE.includes(query.queryKey[0] as string),
-      });
-      client.invalidateQueries({ queryKey: authKeys.me });
-      runStore.reset();
+      dropInstanceQueries(client);
+      if (landed) {
+        client.invalidateQueries({ queryKey: authKeys.me });
+        runStore.reset();
+      } else {
+        relandStream(client);
+      }
     },
   });
 }
@@ -630,6 +698,12 @@ export function useDeleteArtifact() {
  * releases the switcher. Here that only applies when the one gone turns out to be this tab's;
  * in the normal case the deletion is of another instance and dropping the cache would reload
  * the screen for no reason.
+ *
+ * Deleting the one you are IN used to `client.clear()`, which is the one thing the login
+ * gate's rule forbids: it destroys `["auth","me"]` instead of emptying it, so the very
+ * query that says where this account lands next notifies nobody and the header keeps the
+ * name of a workspace that no longer exists. It takes the same door as switching now — the
+ * tab forgets its slug, the instance's queries go, and `me` says where it wakes up.
  */
 export function useAdminDeleteWorkspace() {
   const client = useQueryClient();
@@ -637,20 +711,40 @@ export function useAdminDeleteWorkspace() {
     mutationFn: (slug: string) => api.adminDeleteWorkspace(slug),
     onSuccess: ({ deleted }) => {
       if (deleted === activeWorkspace()) {
+        // Every request would otherwise carry the dead slug in `X-Workspace`.
         workspaceStore.set(null);
-        client.clear();
-        runStore.reset();
-        return;
+        dropInstanceQueries(client);
+        relandStream(client);
+      } else {
+        client.invalidateQueries({ queryKey: authKeys.me });
       }
       client.invalidateQueries({ queryKey: ["admin"] });
       client.invalidateQueries({ queryKey: keys.workspaces });
-      client.invalidateQueries({ queryKey: ["auth", "me"] });
     },
   });
 }
 
+/**
+ * Say, once and briefly, that what was just launched is going to wait.
+ *
+ * The notice is about the WAIT and not about the launch: a job that starts straight away
+ * has nothing to announce, and the criterion for «is it waiting» is the payload's, shared
+ * with the pending state every button holds afterwards. Every launcher goes through here,
+ * so no screen carries a second copy of the rule.
+ */
+export function useQueuedNotice() {
+  const toast = useToast();
+  const lanes = useLanes();
+  const split = useSplitEngine();
+  return (job: Parameters<typeof queuedNotice>[0]) => {
+    const notice = queuedNotice(job, lanes, split);
+    if (notice) toast(notice);
+  };
+}
+
 export function useSubmitJob() {
   const invalidate = useInvalidateChain();
+  const announce = useQueuedNotice();
   return useMutation({
     mutationFn: ({
       kind,
@@ -663,6 +757,7 @@ export function useSubmitJob() {
     }) => api.submitJob(kind, params ?? {}, force ?? false),
     onSuccess: ({ job }) => {
       runStore.setCurrentJob(job.id);
+      announce(job);
       invalidate();
     },
   });

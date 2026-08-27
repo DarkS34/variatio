@@ -14,7 +14,12 @@ import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, bytes, when } from "@/lib/format";
 import type { AdminOverview, AdminWorkspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useAdminDeleteWorkspace, useClearCache, useDeleteArtifact } from "@/state/queries";
+import {
+  useActiveWorkspace,
+  useAdminDeleteWorkspace,
+  useClearCache,
+  useDeleteArtifact,
+} from "@/state/queries";
 
 /**
  * The installation's instances, and what this panel writes about them: removing them, or
@@ -29,6 +34,12 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const remove = useAdminDeleteWorkspace();
   const toast = useToast();
   const [target, setTarget] = useState<AdminWorkspace | null>(null);
+  // Which one this tab has open, which is the one deletion has consequences for on screen:
+  // the header, the cache and the stream all belong to it.
+  const here = useActiveWorkspace();
+  // Mirrors the server, which refuses with a 409: an INSTALLATION with no workspace has
+  // nothing to offer anybody. An ACCOUNT with none is a different question and a normal
+  // state — that is what `NoWorkspace` is for.
   const only = overview.workspaces.length === 1;
   const total = overview.workspaces.reduce((sum, w) => sum + w.disk.total, 0);
 
@@ -110,6 +121,7 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
       {target ? (
         <DeleteWorkspaceDialog
           workspace={target}
+          here={target.slug === here}
           busy={remove.isPending}
           onClose={() => setTarget(null)}
           onConfirm={() =>
@@ -118,7 +130,10 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                 setTarget(null);
                 toast({
                   title: "Workspace eliminado",
-                  description: `${target.slug}, con su árbol de ficheros.`,
+                  description:
+                    target.slug === here
+                      ? `${target.slug}, con su árbol de ficheros. Era el que tenías abierto: la interfaz se mueve a donde tenga acceso tu cuenta.`
+                      : `${target.slug}, con su árbol de ficheros.`,
                   tone: "attention",
                 });
               },
@@ -315,11 +330,14 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
  */
 function DeleteWorkspaceDialog({
   workspace,
+  here,
   busy,
   onClose,
   onConfirm,
 }: {
   workspace: AdminWorkspace;
+  /** It is the one this tab has open: everything on screen belongs to it. */
+  here: boolean;
   busy: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -369,6 +387,12 @@ function DeleteWorkspaceDialog({
               : "sus comparaciones de evaluación, si las hubiera"}
           </li>
         </ul>
+        {here ? (
+          <p className="text-muted-foreground">
+            Es el que tienes abierto ahora mismo. Al borrarlo, esta pestaña se mueve sola a
+            otro de tus accesos; si no te queda ninguno, la aplicación te ofrece crear uno.
+          </p>
+        ) : null}
         <div className="space-y-1">
           <Label htmlFor="confirm-slug">
             Escribe <span className="font-mono normal-case">{workspace.slug}</span> para

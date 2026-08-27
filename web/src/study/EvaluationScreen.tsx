@@ -1,7 +1,6 @@
-import { Ban, EyeOff, Lock, Plus, Scale } from "lucide-react";
+import { Ban, Clock, EyeOff, Lock, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { useActiveRun } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
@@ -9,8 +8,21 @@ import { EMPTY_FORM, type FormState } from "@/features/run/commission";
 import { GenerateForm } from "@/features/run/GenerateForm";
 import { ApiError } from "@/lib/api";
 import { duration } from "@/lib/format";
+import { isQueued, queuedLabel, waitOf, waitReason } from "@/lib/queue";
 import { cn } from "@/lib/utils";
-import { useCancelJob, useElapsed, useKg, useKgGraph, usePipeline, useProfile } from "@/state/queries";
+import type { RunView } from "@/state/runStore";
+import {
+  useCancelJob,
+  useElapsed,
+  useJobRun,
+  useKg,
+  useKgGraph,
+  useLanes,
+  usePipeline,
+  useProfile,
+  useQueuedNotice,
+  useSplitEngine,
+} from "@/state/queries";
 
 import { toEvaluationParams } from "./commission";
 import { ComparisonGrid } from "./ComparisonGrid";
@@ -33,30 +45,59 @@ import {
 const GUARDRAIL_ERROR = "no han pasado la revisión";
 
 /**
+ * Only the comparison THIS person has to judge.
+ *
+ * The run drawer is global, so a batch an administrator ordered from the panel arrives as
+ * the active job like any other — and this screen used to take it. Stock is nobody's to
+ * judge until it is assigned, so the flag the panel stamps on the job is what is filtered
+ * on. Module-level so `useJobRun`'s memo does not re-run every render.
+ */
+const notStock = (run: RunView) => run.job?.params?.stock !== true;
+
+/**
  * While it runs, the screen deliberately says less than the Generate screen does.
  *
  * The run drawer would give the blinding away — the token stream, the few-shot, the
  * logs — so the server does not publish any of it during an evaluation. Saying so out
- * loud matters: silence that is not explained reads as an app that has frozen.
+ * loud matters: silence that is not explained reads as an app that has frozen. And a
+ * comparison waiting its turn is exactly that silence: nothing is being written yet, so
+ * it says «en cola» instead of counting proposals that are not being produced.
  */
-function Running({ onCancel, cancelling }: { onCancel: () => void; cancelling: boolean }) {
-  const run = useActiveRun();
+function Running({
+  run,
+  queued,
+  waiting,
+  ahead,
+  onCancel,
+  cancelling,
+}: {
+  run: RunView | null;
+  queued: boolean;
+  waiting: string | null;
+  ahead: string;
+  onCancel: () => void;
+  cancelling: boolean;
+}) {
   const step = useMemo(() => run?.steps.find((s) => s.id === "eval.arms"), [run]);
-  const elapsed = useElapsed(run?.job?.started_at ?? null, true);
+  const elapsed = useElapsed(run?.job?.started_at ?? null, !queued);
   const done = step?.current ?? 0;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-        <Spinner />
+        {queued ? <Clock className="size-4 shrink-0 text-muted-foreground" /> : <Spinner />}
         <div className="min-w-0 flex-1">
           <p className="text-body font-medium">
-            Preparando las tres propuestas
-            <span className="ml-2 nums text-muted-foreground">{done} de 3</span>
+            {queued ? ahead : "Preparando las tres propuestas"}
+            {queued ? null : (
+              <span className="ml-2 nums text-muted-foreground">{done} de 3</span>
+            )}
           </p>
-          <p className="text-small nums text-muted-foreground">{duration(elapsed)}</p>
+          <p className={cn("text-small text-muted-foreground", queued || "nums")}>
+            {queued ? waiting : duration(elapsed)}
+          </p>
         </div>
-        <Progress value={done} max={3} className="hidden w-40 sm:block" />
+        {queued ? null : <Progress value={done} max={3} className="hidden w-40 sm:block" />}
         <Button variant="outline" size="sm" onClick={onCancel} disabled={cancelling}>
           <Ban />
           Cancelar
@@ -116,7 +157,12 @@ export function EvaluationScreen() {
   const decline = useDeclineSession();
   const rate = useRateSession();
   const cancel = useCancelJob();
-  const run = useActiveRun();
+  const run = useJobRun("evaluate", notStock);
+  const lanes = useLanes();
+  const split = useSplitEngine();
+  // A comparison is launched through the study's own mutation and not `useSubmitJob`, so
+  // the one notice about waiting is asked for here rather than written a second time.
+  const announce = useQueuedNotice();
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -127,17 +173,14 @@ export function EvaluationScreen() {
   const unlocked = pipeline.data?.generation_unlocked ?? false;
   const external = listing.data?.external;
 
-  // ONLY A COMPARISON THIS PERSON HAS TO JUDGE. The run drawer is global, so a batch an
-  // administrator ordered from the panel arrives here as the active job like any other —
-  // and this screen used to take it: it showed «Preparando las tres propuestas», then
-  // opened the finished session for answering. Stock is nobody's to judge until it is
-  // assigned, so the flag the panel stamps on the job is what this screen filters on.
-  const isEvaluation = run?.job?.kind === "evaluate" && run?.job?.params?.stock !== true;
-  const running = isEvaluation && (run?.job?.status === "running" || run?.job?.status === "queued");
+  const status = run?.job?.status;
+  const queued = isQueued(run?.job);
+  const running = status === "running" || queued;
+  const wait = waitOf(run?.job, lanes);
 
   // The job result carries the session id and nothing else — the proposals are fetched
   // separately, from the endpoint that knows what it is allowed to show.
-  const producedId = isEvaluation ? (run?.job?.result?.session_id as string | undefined) : undefined;
+  const producedId = run?.job?.result?.session_id as string | undefined;
 
   useEffect(() => {
     if (producedId) {
@@ -146,10 +189,10 @@ export function EvaluationScreen() {
   }, [producedId]);
 
   const blocked = useMemo(() => {
-    if (!isEvaluation || run?.job?.status !== "failed") return null;
+    if (status !== "failed") return null;
     const error = run?.job?.error ?? "";
     return error.includes(GUARDRAIL_ERROR) ? error.replace(/^\w+Error:\s*/, "") : null;
-  }, [isEvaluation, run]);
+  }, [status, run]);
 
   // Instructions the judge refused come back to the form that wrote them, not to the queue:
   // the message is about text that is still on screen there and nowhere else.
@@ -266,9 +309,9 @@ export function EvaluationScreen() {
         </Alert>
       ) : null}
 
-      {isEvaluation && run?.job?.status === "failed" && !blocked ? (
+      {status === "failed" && !blocked ? (
         <Alert tone="danger" title="La comparación falló">
-          <p>{run.job.error}</p>
+          <p>{run?.job?.error}</p>
         </Alert>
       ) : null}
 
@@ -284,6 +327,10 @@ export function EvaluationScreen() {
 
       {running ? (
         <Running
+          run={run}
+          queued={queued}
+          waiting={wait ? waitReason(wait, split) : "Empezará en cuanto le toque el turno."}
+          ahead={queuedLabel(wait)}
           onCancel={() => run?.job && cancel.mutate(run.job.id)}
           cancelling={cancel.isPending}
         />
@@ -315,7 +362,11 @@ export function EvaluationScreen() {
             blockedInstructions={blocked}
             variant="evaluation"
             footnote={<FairnessTable />}
-            onLaunch={() => launch.mutate(toEvaluationParams(form))}
+            onLaunch={() =>
+              launch.mutate(toEvaluationParams(form), {
+                onSuccess: ({ job }) => announce(job),
+              })
+            }
             onCancel={() => run?.job && cancel.mutate(run.job.id)}
           />
         </div>

@@ -11,21 +11,27 @@ import { Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { JOB_STATUS, duration } from "@/lib/format";
+import { isQueued, pickActiveRun, waitOf, waitReason } from "@/lib/queue";
 import { cn } from "@/lib/utils";
-import { useCancelJob, useStream } from "@/state/queries";
+import { useCancelJob, useLanes, useSplitEngine, useStream } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 
 export type DrawerTab = "progress" | "logs";
 
+/**
+ * The run the drawer is about, for a screen that has no job of its own.
+ *
+ * `stream.currentJobId` alone answered this while the queue was one deep. With one lane
+ * per backend two jobs run at once and `currentJobId` is only the last one to emit an
+ * event, so it flickered between them. A screen that DOES have a job of its own should ask
+ * for it by kind (`useJobRun`) instead of taking whatever the machine is doing.
+ */
 export function useActiveRun(): RunView | null {
   const stream = useStream();
-  return useMemo(() => {
-    if (stream.currentJobId) return stream.runs[stream.currentJobId] ?? null;
-    const runs = Object.values(stream.runs);
-    if (runs.length === 0) return null;
-    // Nothing is running: show the most recent finished run rather than an empty panel.
-    return runs.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
-  }, [stream]);
+  return useMemo(
+    () => pickActiveRun(stream.runs, stream.currentJobId),
+    [stream.runs, stream.currentJobId],
+  );
 }
 
 export function RunDrawer({
@@ -42,13 +48,19 @@ export function RunDrawer({
   const run = useActiveRun();
   const stream = useStream();
   const cancel = useCancelJob();
+  const lanes = useLanes();
+  const split = useSplitEngine();
   const [tall, setTall] = useState(false);
   const [onlyThisJob, setOnlyThisJob] = useState(false);
 
   if (!open) return null;
 
   const status = run?.job?.status ?? "queued";
-  const active = status === "running";
+  const waiting = isQueued(run?.job);
+  const wait = waitOf(run?.job, lanes);
+  // A job that has not started yet is just as cancellable as one that has — the runner
+  // drops a queued job outright — and it is the state one most wants to get out of.
+  const active = status === "running" || waiting;
   const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
   const logs = onlyThisJob && run ? run.logs : stream.logs;
 
@@ -78,6 +90,9 @@ export function RunDrawer({
           <span className="text-small nums text-muted-foreground">
             {duration(run.job.elapsed_ms)}
           </span>
+        ) : null}
+        {wait ? (
+          <span className="text-small text-muted-foreground">{waitReason(wait, split)}</span>
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">

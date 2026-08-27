@@ -11,10 +11,17 @@ import { StatusMark } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, when } from "@/lib/format";
+import { isQueued, waitOf, waitReason } from "@/lib/queue";
 import { Link } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { isRebuild } from "@/lib/progress";
-import { useArtifactRun, useInvalidateChain, useRawMissingFor } from "@/state/queries";
+import {
+  useArtifactRun,
+  useInvalidateChain,
+  useLanes,
+  useRawMissingFor,
+  useSplitEngine,
+} from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
 
 // Approving closes the stage. What is approved is the file's hash, so editing it underneath
@@ -75,6 +82,8 @@ export function StageGate({
   const invalidate = useInvalidateChain();
   const rawMissing = useRawMissingFor(stage?.artifact);
   const busyRun = useArtifactRun(stage?.artifact);
+  const lanes = useLanes();
+  const split = useSplitEngine();
   const toast = useToast();
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
   // changed the state of the whole chain and said nothing, and invalidating a query does
@@ -107,6 +116,14 @@ export function StageGate({
   const missing = stage.status === "missing";
   const ready = !building && !missing;
   const locked = stage.status === "approved";
+  // «Building» covers a job that has not started: a queued build already marks the
+  // artifact, which is right — it is about to be rewritten — but a bar and «se está
+  // construyendo» over a job waiting its turn says work is happening that is not.
+  const waitingJob = building && isQueued(busyRun?.job) ? busyRun!.job! : null;
+  const wait = waitOf(waitingJob, lanes);
+  // What the build is about to replace, which «building» hides: the hash is of the file on
+  // disk and stays null through a first build, when there is nothing to replace at all.
+  const hasPrevious = Boolean(stage.hash);
 
   return (
     <StageLock.Provider value={locked}>
@@ -224,12 +241,30 @@ export function StageGate({
             it is said here instead of left to be assumed. */}
         {building ? (
           <>
-            {/* Two jobs land in the same «building» state and they are not the same thing.
+            {/* Three jobs land in the same «building» state and they are not the same thing.
                 A rebuild throws the previous artifact away and cancelling brings it back
                 untouched; a job that patches in place — tagging — rewrites the items one by
                 one and saves after each, so «si cancelas, vuelve tal cual» was flatly false
-                for it: what it had already decided stays decided. */}
-            {isRebuild(busyRun?.job?.kind) ? (
+                for it: what it had already decided stays decided. And a FIRST build has
+                nothing behind it at all, so promising that «el que hay ahora sigue guardado»
+                was false on the one screen where it is read most: an empty stage. */}
+            {waitingJob ? (
+              <Alert tone="info" title="En cola">
+                <p>
+                  {waitingJob.label} está esperando su turno; todavía no ha empezado.
+                  {wait ? ` ${waitReason(wait, split)}` : ""} Puedes cancelarlo desde el
+                  registro de ejecución sin que nada se haya tocado.
+                </p>
+              </Alert>
+            ) : !hasPrevious ? (
+              <Alert tone="info" title="Construyendo por primera vez">
+                <p>
+                  {stage.label} no existe todavía: no hay nada que reemplazar ni nada que
+                  perder. Si cancelas, la etapa se queda sin construir y puedes volver a
+                  lanzarla.
+                </p>
+              </Alert>
+            ) : isRebuild(busyRun?.job?.kind) ? (
               <Alert tone="info" title="Construyendo una versión nueva">
                 <p>
                   {stage.label} deja de mostrarse mientras dura la construcción. El que hay
@@ -246,7 +281,9 @@ export function StageGate({
                 </p>
               </Alert>
             )}
-            <BuildProgress artifact={stage.artifact} />
+            {/* A bar drawn over a job that has not started is a claim that work is under
+                way. It appears when the job does. */}
+            {waitingJob ? null : <BuildProgress artifact={stage.artifact} />}
             {livePreview}
           </>
         ) : missing ? null : (

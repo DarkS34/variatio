@@ -1,12 +1,12 @@
-import { Ban, Copy, Download, Eraser, Lock, Pencil, Sparkles } from "lucide-react";
+import { Ban, Clock, Copy, Download, Eraser, Lock, Pencil, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useActiveRun } from "@/components/RunDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { isQueued, queuedLabel, waitOf, waitReason } from "@/lib/queue";
 import { Link } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -14,10 +14,13 @@ import type { RunView } from "@/state/runStore";
 import {
   useCancelJob,
   useEngineOffline,
+  useJobRun,
   useKg,
   useKgGraph,
+  useLanes,
   usePipeline,
   useProfile,
+  useSplitEngine,
   useSubmitJob,
 } from "@/state/queries";
 
@@ -47,7 +50,12 @@ export function GenerateScreen() {
   const submit = useSubmitJob();
   const cancel = useCancelJob();
   const offline = useEngineOffline();
-  const run = useActiveRun();
+  // ITS OWN run, by kind, and not «lo que la máquina esté haciendo»: two lanes mean a build
+  // can be running beside this generation, and the screen used to take whichever job the
+  // stream had heard from last and then find no items in it.
+  const run = useJobRun("generate");
+  const lanes = useLanes();
+  const split = useSplitEngine();
   const client = useQueryClient();
 
   // A draft left by «Generar más como esta» in «Mis variantes» is the form's starting point;
@@ -62,11 +70,17 @@ export function GenerateScreen() {
   const conceptList = kg.data?.concepts ?? [];
   const unlocked = pipeline.data?.generation_unlocked ?? false;
 
-  const isGenerate = run?.job?.kind === "generate";
-  const running = isGenerate && run?.job?.status === "running";
+  const status = run?.job?.status;
+  const running = status === "running";
+  // A commission that is waiting its turn has already been made. Treating it as «nothing
+  // is happening» left the form open over it, so pressing again queued a second copy of
+  // the same batch behind the first — which is the bug, not the wait.
+  const queued = isQueued(run?.job);
+  const active = running || queued;
+  const wait = waitOf(run?.job, lanes);
 
   const results = useMemo<Result[]>(() => {
-    if (!isGenerate) return [];
+    if (!run) return [];
     const fromResult = (run?.job?.result?.items ?? []) as Result[];
     if (fromResult.length > 0) return fromResult;
     return (run?.items ?? []).map((i) => ({
@@ -77,7 +91,7 @@ export function GenerateScreen() {
       retried: i.retried,
       saved_id: i.saved_id,
     }));
-  }, [isGenerate, run]);
+  }, [run]);
 
   const savedCount = results.filter((r) => r.saved_id).length;
 
@@ -85,8 +99,8 @@ export function GenerateScreen() {
   // is only what is on screen right now, and a reload or a trip to another screen restarts
   // it at its defaults while the run survives in the store.
   const commission = useMemo(
-    () => (isGenerate && run?.job ? fromParams(run.job.params) : null),
-    [isGenerate, run],
+    () => (run?.job ? fromParams(run.job.params) : null),
+    [run],
   );
 
   // Each item becomes a row of «Mis variantes» the moment it validates; the archive is
@@ -98,10 +112,10 @@ export function GenerateScreen() {
   // A run that the guardrail stopped is not a generic failure: it is an answer about the
   // text in step 4, so the form comes back with that step's own message attached.
   const blocked = useMemo(() => {
-    if (!isGenerate || run?.job?.status !== "failed") return null;
+    if (status !== "failed") return null;
     const error = run?.job?.error ?? "";
     return error.includes(GUARDRAIL_ERROR) ? error.replace(/^\w+Error:\s*/, "") : null;
-  }, [isGenerate, run]);
+  }, [status, run]);
 
   // The form has to come back holding the text that was blocked, which it no longer does on
   // its own once the state and the run have drifted apart: the commission is the run's.
@@ -112,8 +126,8 @@ export function GenerateScreen() {
   }, [blocked]);
 
   useEffect(() => {
-    if (running) setEditing(false);
-  }, [running]);
+    if (active) setEditing(false);
+  }, [active]);
 
   if (profileQuery.isLoading || kg.isLoading || pipeline.isLoading) {
     return <Skeleton className="h-96" />;
@@ -130,7 +144,7 @@ export function GenerateScreen() {
   // repeat the one precondition the form checks before it enables its own button.
   const canLaunch = unlocked && !offline && again.concepts.length > 0;
 
-  const hasRun = isGenerate && (running || results.length > 0 || run?.job?.status === "failed");
+  const hasRun = Boolean(run) && (active || results.length > 0 || status === "failed");
   const collapsed = hasRun && !editing;
 
   const formPanel = (
@@ -154,7 +168,7 @@ export function GenerateScreen() {
         concepts={conceptList}
         graph={kgGraph.data}
         disabled={!unlocked || Boolean(offline)}
-        running={Boolean(running)}
+        running={active}
         pending={submit.isPending}
         error={submit.isError ? (submit.error as Error).message : null}
         blockedInstructions={blocked}
@@ -166,7 +180,12 @@ export function GenerateScreen() {
 
   const runPane = run ? (
     <div className="space-y-4">
-      <RunPanel run={run} running={Boolean(running)} profile={profile} />
+      <RunPanel
+        run={run}
+        running={running}
+        waiting={queued ? (wait ? waitReason(wait, split) : "Está en cola.") : null}
+        profile={profile}
+      />
       {results.length > 0 && profile ? (
         <Results results={results} profile={profile} run={run} savedCount={savedCount} />
       ) : null}
@@ -205,9 +224,9 @@ export function GenerateScreen() {
         </Alert>
       ) : null}
 
-      {isGenerate && run?.job?.status === "failed" && !blocked ? (
+      {status === "failed" && !blocked ? (
         <Alert tone="danger" title="La generación falló">
-          <p>{run.job.error}</p>
+          <p>{run?.job?.error}</p>
         </Alert>
       ) : null}
 
@@ -217,7 +236,19 @@ export function GenerateScreen() {
             <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
               {summarize(again, profile)}
             </p>
-            {running ? (
+            {/* The wait replaces the progress, never sits beside it: nothing is being
+                generated yet, and the count of jobs in front is the only honest measure of
+                how far off it is — there is no estimate of when, here or anywhere. */}
+            {queued ? (
+              <span
+                className="flex shrink-0 items-center gap-1.5 text-body font-medium"
+                title={wait ? waitReason(wait, split) : undefined}
+              >
+                <Clock className="size-3.5" />
+                {queuedLabel(wait)}
+              </span>
+            ) : null}
+            {active ? (
               <Button
                 variant="outline"
                 size="sm"
