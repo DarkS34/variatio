@@ -3,7 +3,8 @@
 A workspace's `raw/` is the user's own data and lives outside the package, so nothing
 in the pipeline creates its contents. A first-time user therefore has an empty chain and no
 way to start from the UI; this module is that way in — the two slots, what each one
-feeds, and a guarded write into them.
+feeds, a guarded write into them, and the transcription of what they hold into markdown
+pages that a person can then correct by hand.
 """
 
 import re
@@ -45,6 +46,8 @@ SLOTS: dict[str, dict] = {
 }
 
 _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+TRANSCRIBE_JOB = "transcribe"
 
 
 class RawError(Exception):
@@ -152,6 +155,42 @@ def delete(ws: Workspace, kind: str, name: str) -> dict:
         raise RawError(f"No existe '{name}' en {path.name}")
     target.unlink()
     return {"deleted": safe}
+
+
+def _stage():
+    from variatio.stages import transcribe
+
+    return transcribe
+
+
+def document(ws: Workspace, kind: str, name: str) -> str:
+    path = directory(ws, kind)
+    safe = _safe_name(name)
+    if not safe or safe not in {entry["name"] for entry in _files(path)}:
+        raise RawError(f"No existe '{name}' en {path.name}")
+    return safe
+
+
+def transcription(ws: Workspace, kind: str) -> dict:
+    directory(ws, kind)
+    return _stage().transcription_status(ws, kind)
+
+
+def transcription_document(ws: Workspace, kind: str, name: str) -> dict:
+    safe = document(ws, kind, name)
+    return {"name": safe, "pages": _stage().document_pages_listing(ws, kind, safe)}
+
+
+def write_page(ws: Workspace, kind: str, name: str, index: int, text: str) -> None:
+    _stage().write_document_page(ws, kind, document(ws, kind, name), index, text)
+
+
+def insert_page(ws: Workspace, kind: str, name: str, after: int, text: str) -> int:
+    return _stage().insert_document_page(ws, kind, document(ws, kind, name), after, text)
+
+
+def delete_page(ws: Workspace, kind: str, name: str, index: int) -> None:
+    _stage().delete_document_page(ws, kind, document(ws, kind, name), index)
 
 
 def _safe_name(name: str) -> str:

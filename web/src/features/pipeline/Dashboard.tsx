@@ -27,15 +27,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, PhaseBar, Progress, Skeleton, Spinner } from "@/components/ui/misc";
+import { TranscriptionSection } from "@/features/raw/TranscriptionSection";
+import { useTranscriptionSummary } from "@/features/raw/queries";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
+import { isQueued } from "@/lib/queue";
 import { Link, useRouter } from "@/lib/router";
 import type { Health, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ContextCard } from "./ContextCard";
 import {
+  useArtifactRun,
   useBuildPhases,
   useCancelJob,
   useElapsed,
@@ -67,6 +71,11 @@ function StageCard({ stage }: { stage: StageState }) {
   const blocked = Boolean(stage.blocked_reason);
   const missing = stage.status === "missing";
   const building = stage.status === "building";
+  // A queued build already marks the artifact, which is right — it is about to be
+  // rewritten — but a bar over a job that has not started claims work is happening. While
+  // it waits, the button says so instead, which is also the control that would cancel it.
+  const stageRun = useArtifactRun(stage.artifact);
+  const queued = building && isQueued(stageRun?.job);
 
   return (
     <Card
@@ -114,7 +123,7 @@ function StageCard({ stage }: { stage: StageState }) {
           <p className="text-small text-muted-foreground">Aprobado el {when(stage.approved_at)}</p>
         ) : null}
 
-        {building ? <BuildProgress artifact={stage.artifact} /> : null}
+        {building && !queued ? <BuildProgress artifact={stage.artifact} /> : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
           {/* While building there is nothing to review: the artifact's screen hides the existing one
@@ -127,7 +136,7 @@ function StageCard({ stage }: { stage: StageState }) {
               </Button>
             </Link>
           )}
-          {building ? null : (
+          {building && !queued ? null : (
             <BuildButton stage={stage} variant={missing ? "default" : "ghost"} />
           )}
         </div>
@@ -144,6 +153,7 @@ function RawSection() {
   const expanded = open || emptySlots.length > 0;
   const total = slots.reduce((sum, slot) => sum + slot.files.length, 0);
   const size = slots.reduce((sum, slot) => sum + slot.bytes, 0);
+  const transcription = useTranscriptionSummary(slots);
 
   return (
     <section className="space-y-3">
@@ -171,6 +181,11 @@ function RawSection() {
             {emptySlots.map((slot) => slot.label.toLowerCase()).join(" y ")} sin archivos
           </Badge>
         ) : null}
+        {transcription.running ? (
+          <Badge mark={<Spinner className="size-3" />}>transcribiendo</Badge>
+        ) : transcription.stale > 0 ? (
+          <Badge variant="attention">transcripción caducada</Badge>
+        ) : null}
         {!expanded ? (
           <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
             <UploadCloud />
@@ -179,7 +194,12 @@ function RawSection() {
         ) : null}
       </div>
 
-      {expanded ? <RawImport /> : null}
+      {expanded ? (
+        <>
+          <RawImport />
+          <TranscriptionSection slots={slots} />
+        </>
+      ) : null}
     </section>
   );
 }
