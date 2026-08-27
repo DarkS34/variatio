@@ -480,11 +480,21 @@ export interface GenerationDetail {
 
 /* Administration -------------------------------------------------------------------- */
 
+/**
+ * What an account is asked when it compares proposals, and nothing else.
+ *
+ * It is NOT an authorisation: no route reads it, so an account that administers the
+ * installation can be a teacher like any other. `null` means nobody said — the study
+ * reports it as unset and falls back to the teacher's wording.
+ */
+export type EvaluatorProfile = "teacher" | "student";
+
 export interface AdminAccount {
   id: number;
   username: string;
   name: string;
   is_admin: boolean;
+  evaluator_profile: EvaluatorProfile | null;
   disabled: boolean;
   created_at: string | null;
   workspaces: { slug: string; role: Role }[];

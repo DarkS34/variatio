@@ -254,10 +254,6 @@ class Invite(Base):
         ForeignKey("workspaces.id", ondelete="CASCADE"), default=None, index=True
     )
     role: Mapped[str] = mapped_column(String(16), default=EDITOR)
-    # Carried on the link so whoever redeems it is already classified. Whoever issues the
-    # invitation knows which subject the person teaches; the person redeeming it should not
-    # have to be asked, and an unanswered question here would be answered by a shrug.
-    evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )

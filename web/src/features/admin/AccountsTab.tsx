@@ -22,8 +22,9 @@ import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
+import { PROFILE_LABELS, PROFILES, profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
-import type { AdminAccount, AdminOverview, Role } from "@/lib/types";
+import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ROLE_HINTS, ROLE_LABELS, useSession } from "@/state/auth";
 import {
@@ -176,7 +177,9 @@ function AccountRows({
               </Badge>
             ) : null}
           </span>
-          <span className="block text-small text-muted-foreground">{account.name}</span>
+          <span className="block text-small text-muted-foreground">
+            {account.name} · {profileLabel(account.evaluator_profile).toLowerCase()}
+          </span>
         </TD>
         <TD className="px-3 py-2">
           <button
@@ -267,7 +270,7 @@ function AccountRows({
  * that are confirmed are the ones that somebody else feels at once.
  */
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
-  const { setAdmin, resetLink, revokeSessions, unlock } = useAccountActions();
+  const { setAdmin, setProfile, resetLink, revokeSessions, unlock } = useAccountActions();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
 
@@ -299,6 +302,24 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
       onError: (error: Error) =>
         toast({ title: "No se ha podido", description: error.message, tone: "danger" }),
     });
+  };
+
+  // Not confirmed, unlike everything else on this row: it grants nothing, nobody is locked
+  // out by it, and setting it back costs one more click.
+  const changeProfile = (value: string) => {
+    const profile = (value || null) as EvaluatorProfile | null;
+    setProfile.mutate(
+      { id: account.id, profile },
+      {
+        onSuccess: () =>
+          toast({
+            title: "Perfil de evaluador",
+            description: `${account.username} · ${profileLabel(profile).toLowerCase()}`,
+          }),
+        onError: (error: Error) =>
+          toast({ title: "No se ha podido cambiar", description: error.message, tone: "danger" }),
+      },
+    );
   };
 
   return (
@@ -353,7 +374,42 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           </Button>
         ) : null}
       </div>
-      <FormError error={setAdmin.error ?? resetLink.error ?? revokeSessions.error ?? unlock.error} />
+      {/* An administrator is a teacher or a student like anybody else: the profile decides
+          what somebody is asked when they compare, and `require_member` never reads it. It
+          lives here rather than beside the memberships for exactly that reason. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Label htmlFor={`profile-${account.id}`}>Perfil de evaluador</Label>
+        <Select
+          id={`profile-${account.id}`}
+          value={account.evaluator_profile ?? ""}
+          className="w-44"
+          disabled={setProfile.isPending}
+          onChange={(event) => changeProfile(event.target.value)}
+        >
+          <option value="">Sin especificar</option>
+          {PROFILES.map((option) => (
+            <option key={option} value={option}>
+              {PROFILE_LABELS[option]}
+            </option>
+          ))}
+        </Select>
+        <InfoHint label="Qué cambia">
+          Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el
+          estudio sus respuestas. No da ni quita ningún permiso. Sin especificar se le hacen
+          las preguntas de docente, y el reparto de comparaciones lo marca para que no se
+          quede así.
+        </InfoHint>
+      </div>
+
+      <FormError
+        error={
+          setAdmin.error ??
+          setProfile.error ??
+          resetLink.error ??
+          revokeSessions.error ??
+          unlock.error
+        }
+      />
       {resetLink.isSuccess ? (
         <CopyLink link={resetLink.data.link}>
           Pásaselo tú. Vale {resetLink.data.expires_in_minutes} minutos y una sola vez; quien lo
@@ -560,6 +616,8 @@ function InviteSection({ overview }: { overview: AdminOverview }) {
             ))}
           </Select>
         </div>
+        {/* No evaluator profile here: the link binds the access and nothing else, and whoever
+            registers says whether they teach or study. It is corrected from the table below. */}
         <Button
           onClick={() => create.mutate({ workspace: workspace || null, role })}
           disabled={create.isPending}

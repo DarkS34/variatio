@@ -6,6 +6,7 @@ import type {
   ArtifactName,
   BuildPhase,
   CommissionScope,
+  EvaluatorProfile,
   JobKind,
   Role,
   WorkspaceRow,
@@ -498,6 +499,11 @@ export function useAccountActions() {
     setAdmin: useMutation({
       mutationFn: ({ id, isAdmin }: { id: number; isAdmin: boolean }) =>
         api.adminSetAdmin(id, isAdmin),
+      onSuccess: refresh,
+    }),
+    setProfile: useMutation({
+      mutationFn: ({ id, profile }: { id: number; profile: EvaluatorProfile | null }) =>
+        api.adminSetProfile(id, profile),
       onSuccess: refresh,
     }),
     resetLink: useMutation({ mutationFn: (id: number) => api.adminResetLink(id) }),

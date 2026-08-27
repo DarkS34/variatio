@@ -148,11 +148,9 @@ def invite(args) -> int:
             ttl=INVITE_TTL,
             workspace_id=workspace_id,
             role=args.role,
-            evaluator_profile=getattr(args, "profile", None),
         )
 
     base = public_base_url() or "http://localhost:8000"
     print(f"{base}/invitacion?token={token}")
-    if getattr(args, "profile", None):
-        print(f"La cuenta que lo canjee nacerá como {PROFILE_LABELS[args.profile]}.")
+    print("Quien lo canjee elegirá su usuario y dirá si da clase o si estudia.")
     return 0

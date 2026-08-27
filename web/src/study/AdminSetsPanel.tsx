@@ -6,6 +6,7 @@ import { Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { EMPTY_FORM, type FormState } from "@/features/run/commission";
 import { Count, GenerateForm } from "@/features/run/GenerateForm";
+import { profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useActiveWorkspace, useKg, useKgGraph, useProfile } from "@/state/queries";
@@ -17,7 +18,7 @@ import {
   useEvaluationSets,
   useGenerateEvaluations,
 } from "./queries";
-import type { AssignableAccount, EvaluationSet } from "./types";
+import type { AssignableAccount, EvaluationSet, EvaluatorProfile } from "./types";
 
 /**
  * Handing comparisons out, in the order the decision is actually made.
@@ -34,12 +35,13 @@ import type { AssignableAccount, EvaluationSet } from "./types";
  * includes it is not an agreement about the exercises.
  */
 
-const PROFILE_LABEL: Record<string, string> = { teacher: "docente", student: "alumno" };
-
-function Profile({ value }: { value: string | null }) {
+// The label is shared with «Cuentas y accesos», which is where it is set; what belongs to
+// this screen is the MARK on an account nobody classified — here it decides which wording
+// that person will be asked, so it is something to act on before handing anything over.
+function Profile({ value }: { value: EvaluatorProfile | null }) {
   return (
     <span className={cn("text-small", value ? "text-muted-foreground" : "text-attention")}>
-      {value ? PROFILE_LABEL[value] : "sin perfil"}
+      {profileLabel(value).toLowerCase()}
     </span>
   );
 }

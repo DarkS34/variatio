@@ -1010,7 +1010,8 @@ function Cuenta() {
           No hay registro abierto. Una cuenta existe porque alguien te pasó un{" "}
           <strong>enlace de invitación de un solo uso</strong> y tú elegiste tu nombre de usuario
           al abrirlo. Ese enlace <em>es</em> la invitación: no está atado a ningún correo, así que
-          no lo dejes en un sitio compartido.
+          no lo dejes en un sitio compartido. Al abrirlo eliges también tu contraseña —la que
+          quieras, o la que te sugiera tu gestor— y dices si das clase o si estudias.
         </Paragraph>
         <Paragraph>
           La invitación puede traer ya un workspace y un papel dentro de él, o no traer ninguno:
@@ -1261,9 +1262,12 @@ function Repartir() {
           clase, así que preguntarle lo primero solo sacaría una respuesta de compromiso.
         </Paragraph>
         <Paragraph>
-          Se fija al crear la cuenta —a mano o en el propio enlace de invitación— y se corrige
-          desde «Cuentas y accesos». Las cuentas sin perfil salen marcadas para que no se
-          queden así: mientras tanto se les hacen las preguntas de docente.
+          Lo dice cada persona al crear su cuenta desde la invitación: el enlace no lo trae,
+          porque quien invita no tiene por qué saberlo y una pregunta a mitad de una
+          comparación se contesta de cualquier manera. Se corrige después desde «Cuentas y
+          accesos», y ahí también se le pone perfil a una cuenta creada desde la línea de
+          órdenes. Las cuentas sin perfil salen marcadas para que no se queden así: mientras
+          tanto se les hacen las preguntas de docente.
         </Paragraph>
       </Block>
 

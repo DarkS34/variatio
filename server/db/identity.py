@@ -285,14 +285,12 @@ def create_invite(
     workspace_id: int | None = None,
     role: str = EDITOR,
     created_by: int | None = None,
-    evaluator_profile: str | None = None,
 ) -> Invite:
     invite = Invite(
         token_hash=token_hash,
         workspace_id=workspace_id,
         role=role,
         created_by=created_by,
-        evaluator_profile=evaluator_profile,
         expires_at=now() + ttl,
     )
     session.add(invite)

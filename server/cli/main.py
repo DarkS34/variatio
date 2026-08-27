@@ -102,12 +102,6 @@ def build_parser():
         "--workspace", default="", help="workspace al que suma; vacío para ninguno"
     )
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
-    inviter.add_argument(
-        "--profile",
-        default=None,
-        choices=("teacher", "student"),
-        help="perfil con el que nacerá la cuenta que canjee el enlace",
-    )
     inviter.set_defaults(func=guarded(accounts.invite))
 
     check = subparsers.add_parser("db-check", help="comprueba la conexión con la base de datos")

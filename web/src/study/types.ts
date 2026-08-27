@@ -3,7 +3,7 @@
  * for the same reason the Python does: the study is measured against the system, not part
  * of it. `lib/types.ts` keeps only the two counters the admin overview prints. */
 
-import type { ItemChecks } from "@/lib/types";
+import type { EvaluatorProfile, ItemChecks } from "@/lib/types";
 
 /* Evaluation ----------------------------------------------------------------------- */
 
@@ -41,7 +41,10 @@ export type Usability = "as_is" | "with_edits" | "no";
  *  same question: `as_is` would be a lie in a student's row. */
 export type TriageValue = "yes" | "partly" | "no";
 
-export type EvaluatorProfile = "teacher" | "student";
+/* The profile is a property of the ACCOUNT — set when it comes into existence, read here —
+ * so its type sits with the account's, exactly as `EVALUATOR_PROFILES` sits in
+ * `server/db/models.py` and not in `study/`. */
+export type { EvaluatorProfile };
 
 /**
  * What this account is asked, served by the API rather than written here.

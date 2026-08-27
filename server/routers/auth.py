@@ -54,6 +54,7 @@ class AcceptBody(BaseModel):
     username: str
     name: str = ""
     password: str
+    evaluator_profile: str | None = None
 
 
 class PasswordBody(BaseModel):
@@ -268,7 +269,6 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
     return {
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
-        "evaluator_profile": invite.evaluator_profile,
         "expires_at": invite.expires_at.isoformat(),
     }
 
@@ -299,15 +299,23 @@ def accept_invite(
     if error:
         raise HTTPException(422, error)
 
-    # The profile travels on the link and is not asked for here: whoever issued the
-    # invitation knows which subject this person teaches, and the person redeeming it has no
-    # reason to classify themselves for a study they have not seen yet.
+    # Answered by whoever is registering, and required here alone: this is the one moment
+    # the person is in front of the form, and NULL — «nobody said» — has to stay reachable
+    # for the accounts the command line creates and for every account older than the
+    # question. It is not a permission and never becomes one; an administrator corrects it
+    # from the panel afterwards.
+    error = identity.profile_error(body.evaluator_profile)
+    if error:
+        raise HTTPException(422, error)
+    if body.evaluator_profile is None:
+        raise HTTPException(422, "Di si das clase o si estudias: decide qué se te preguntará.")
+
     user = identity.create_user(
         session,
         username=username,
         name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
-        evaluator_profile=invite.evaluator_profile,
+        evaluator_profile=body.evaluator_profile,
     )
     _apply_membership(session, invite, user)
     identity.consume_invite(session, invite, user.id)

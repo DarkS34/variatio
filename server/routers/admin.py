@@ -39,12 +39,11 @@ router = APIRouter(
 class InviteBody(BaseModel):
     """`workspace` is a slug, or nothing: an invitation that grants no membership creates
     an account and no access, which is the honest way to add someone who will be given a
-    workspace later. `evaluator_profile` rides along so the account is already classified
-    the moment it exists."""
+    workspace later. There is no evaluator profile here on purpose — the link binds nothing
+    beyond the access, and the profile is answered by whoever registers."""
 
     workspace: str | None = None
     role: str = EDITOR
-    evaluator_profile: str | None = None
 
 
 class MembershipBody(BaseModel):
@@ -156,9 +155,6 @@ def create_invite(
     throttle("invite", request, admin.username)
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
-    error = identity.profile_error(body.evaluator_profile)
-    if error:
-        raise HTTPException(422, error)
 
     workspace = None
     if body.workspace:
@@ -174,7 +170,6 @@ def create_invite(
         workspace_id=workspace.id if workspace else None,
         role=body.role,
         created_by=admin.id,
-        evaluator_profile=body.evaluator_profile,
     )
 
     # The link IS the invitation: single-use, expiring, and handed over by whoever issued
@@ -500,7 +495,6 @@ def _invite(db: DbSession, invite: Invite) -> dict:
     return {
         "id": invite.id,
         "role": invite.role,
-        "evaluator_profile": invite.evaluator_profile,
         "workspace": workspace.name if workspace else None,
         "workspace_slug": workspace.slug if workspace else None,
         "created_at": invite.created_at.isoformat(),
