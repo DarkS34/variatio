@@ -102,7 +102,7 @@ export function AcceptInvite({ token }: { token: string }) {
       description={
         invite.workspace
           ? `Te han invitado a «${invite.workspace}» con permiso de ${ROLE_LABELS[invite.role].toLowerCase()}.`
-          : "Te han invitado al generador de variantes."
+          : "Te han invitado a Variatio."
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">

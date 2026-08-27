@@ -252,7 +252,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-4">
             <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
               <Logo className="size-5 text-primary" />
-              <span className="hidden 2xl:inline">Generador de variantes</span>
+              <span className="hidden lg:inline">Variatio</span>
             </Link>
 
             <WorkspaceSwitcher />

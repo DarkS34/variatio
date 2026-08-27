@@ -208,7 +208,7 @@ def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps
             mail.send(
                 user.email,
                 "Restablece tu contraseña",
-                "Has pedido restablecer la contraseña del generador de variantes.\n\n"
+                "Has pedido restablecer tu contraseña de Variatio.\n\n"
                 f"Abre este enlace en menos de {minutes} minutos:\n{link}\n\n"
                 "Si no has sido tú, ignora este mensaje: la contraseña actual sigue valiendo.",
             )

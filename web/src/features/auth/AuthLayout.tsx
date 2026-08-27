@@ -26,7 +26,7 @@ export function AuthLayout({
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-2 font-semibold">
           <Logo className="size-5 text-primary" />
-          Generador de variantes
+          Variatio
         </div>
 
         <Card className="p-6">

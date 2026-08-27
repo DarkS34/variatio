@@ -80,8 +80,8 @@ function Empezar() {
     <div className="space-y-6">
       <SectionHead eyebrow="Primeros pasos" title="Qué es y cómo se recorre">
         <p>
-          Este sistema genera <strong>ítems de aprendizaje</strong> —ejercicios, problemas,
-          tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
+          <strong>Variatio</strong> genera <strong>ítems de aprendizaje</strong> —ejercicios,
+          problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
           en abstracto: parte de tres artefactos que describen tu asignatura y produce variantes
           que respetan lo que el alumno ya ha visto y lo que todavía no.
         </p>

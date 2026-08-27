@@ -14,7 +14,7 @@ from .serve import serve
 def build_parser():
     parser = argparse.ArgumentParser(
         prog=PROG,
-        description="Arranca la API del generador de variantes y administra su base de datos.",
+        description="Arranca la API de Variatio y administra su base de datos.",
     )
     subparsers = parser.add_subparsers(dest="command")
 
