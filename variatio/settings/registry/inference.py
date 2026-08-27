@@ -14,145 +14,156 @@ revisando un grafo — se llega habiéndose ido. Recargar los tres modelos cuest
 es ruido al lado de cualquier construcción y de sobra tolerable en una generación suelta.
 0 lo desactiva."""
 
-_MODELS_MAIN_DOC = """ONE generative model, since 2026-08-17: the three tiers did not fit together on the A40
-(~45 GiB) and were evicting each other all day, and `gemma4:e4b-it-q8_0` (10.1 GiB) did not
-fit alongside a 30B-class one either, which made every JSON repair inside the extraction
-loop cost TWO ~10 s loads. That decision stands; only WHICH model changed.
+_MODELS_MAIN_DOC = """UN SOLO modelo generativo, desde el 2026-08-17: los tres niveles no cabían juntos en la A40
+(~45 GiB) y se desalojaban entre sí todo el día, y `gemma4:e4b-it-q8_0` (10.1 GiB) tampoco
+cabía junto a uno de clase 30B, lo que hacía que cada reparación de JSON dentro del bucle
+de extracción costase DOS cargas de ~10 s. Esa decisión sigue en pie; lo único que cambió
+es CUÁL es el modelo.
 
-What stays resident is three models that DO fit at once — measured at 29.05 GiB of ~45 with
-the context sizes below — so nothing evicts anything: this one, the guardrail and the
-embedder. There is 16 GiB of headroom now, where the previous MoE left 3.5.
+Lo que queda residente son tres modelos que SÍ caben a la vez — medidos en 29.05 GiB de
+~45 con las ventanas de contexto de abajo —, así que nada desaloja nada: este, el
+guardarraíl y el embebedor. Ahora quedan 16 GiB de margen, donde el MoE anterior dejaba 3.5.
 
-The standing measurement against a 30B-class MoE was taggability: over the reference
-draft's largest domain (73 non-taggables) `gemma4:31b` returned 75 and `qwen3.6:35b-a3b`
-66, i.e. the MoE under-excludes, the direction `review_taggable_concepts_prompt` legislates
-against. `qwen3.8:27b` is dense and reasons, so it is expected to do better here — but that
-is a PREDICTION, not a measurement, and it is the first thing to re-check on a real build.
+La medición vigente frente a un MoE de clase 30B era la etiquetabilidad: sobre el dominio
+más grande del borrador de referencia (73 no etiquetables) `gemma4:31b` devolvió 75 y
+`qwen3.6:35b-a3b` 66, es decir, el MoE excluye de MENOS, que es justo la dirección contra
+la que legisla `review_taggable_concepts_prompt`. `qwen3.8:27b` es denso y razona, así que
+se espera que aquí lo haga mejor — pero eso es una PREDICCIÓN, no una medición, y es lo
+primero que hay que volver a comprobar en una construcción real.
 
-`qwen3.8:27b-q4_K_M` since 2026-08-18, replacing `qwen3.6:35b-a3b-q8_0` and reversing the
-2026-08-16 revert, by explicit user request. What reopened the question is that Ollama can
-now cap how much a reasoning model deliberates: `think` takes an EFFORT LEVEL, not just a
-boolean, and the per-phase `reasoning.effort.*` settings pin every reasoning call to the
-cheapest one by default.
+`qwen3.8:27b-q4_K_M` desde el 2026-08-18, en sustitución de `qwen3.6:35b-a3b-q8_0` y
+revirtiendo la vuelta atrás del 2026-08-16, por petición explícita del usuario. Lo que
+reabrió la cuestión es que Ollama ya puede acotar cuánto delibera un modelo de
+razonamiento: `think` acepta un NIVEL DE ESFUERZO y no solo un booleano, y los ajustes por
+fase `reasoning.effort.*` fijan por defecto cada llamada con razonamiento en el más barato.
 
-The revert's reasons were real and are only PARTLY answered, so the numbers are here in
-full. All of them on the A40, on the same call — `link_domain_relations_prompt` over the
-reference draft's largest domain, 43 concepts, 5 441 characters, temperature 0:
+Los motivos de aquella vuelta atrás eran reales y solo están respondidos EN PARTE, así que
+los números van aquí enteros. Todos en la A40, sobre la misma llamada —
+`link_domain_relations_prompt` sobre el dominio más grande del borrador de referencia, 43
+conceptos, 5 441 caracteres, temperatura 0:
 
   qwen3.6:35b-a3b-q8_0  think=true    128 s   37 264 car. de razonamiento   92.0 tok/s
   qwen3.8:27b-q4_K_M    think="low"   443 s   40 894                        29.1 tok/s
   qwen3.8:27b-q8_0      think="low"   649 s   38 796                        19.0 tok/s
   qwen3.8:27b-q8_0      think="high"  777 s   58 953        RESPUESTA VACÍA 19.2 tok/s
 
-Three things to read off that table before touching any of this:
+Tres cosas que leer en esa tabla antes de tocar nada de esto:
 
-1. THE EFFORT LEVEL DOES NOT REDUCE THE DELIBERATION MUCH. `low` still emits ~41 000
-   characters, i.e. about what the old MoE emitted with a plain `think=true`. What the
-   level moves is the CEILING (58 953 at `high`), not the floor. Anyone hoping to make
-   this model cheap by lowering the effort further will find there is nothing below `low`
-   except `think=False`, which turns reasoning off altogether.
-2. THE COST IS THE DENSE DECODE, and it is the price of this decision: 29.1 tok/s against
-   the MoE's 92.0, so a curation call goes 128 s → 443 s and a build lengthens ~3.5x.
-   Accepted knowingly on 2026-08-18.
-3. THE QUANTISATION IS NOT INTERCHANGEABLE HERE. The q4_K_M is 53 % faster than the q8_0
-   (29.1 vs 19.0 tok/s) and 16.5 GB against 27.9, and it obeys the effort level exactly
-   the same — measured, not assumed, in the token table under `reasoning.effort.*`. Unlike
-   `qwen3.6:35b-a3b-q4_K_M`, which is broken on this box above ~4 490 characters, this q4
-   answered the 5 441-character prompt with valid JSON. Do not "upgrade" it to the q8."""
+1. EL NIVEL DE ESFUERZO NO REDUCE MUCHO LA DELIBERACIÓN. `low` sigue emitiendo ~41 000
+   caracteres, o sea más o menos lo que emitía el MoE antiguo con un `think=true` a secas.
+   Lo que mueve el nivel es el TECHO (58 953 en `high`), no el suelo. Quien espere abaratar
+   este modelo bajando más el esfuerzo se encontrará con que por debajo de `low` no hay
+   nada salvo `think=False`, que apaga el razonamiento del todo.
+2. EL COSTE ES LA DECODIFICACIÓN DENSA, y es el precio de esta decisión: 29.1 tok/s frente
+   a los 92.0 del MoE, así que una llamada de curación pasa de 128 s a 443 s y una
+   construcción se alarga ~3.5x. Aceptado a sabiendas el 2026-08-18.
+3. LA CUANTIZACIÓN NO ES INTERCAMBIABLE AQUÍ. La q4_K_M es un 53 % más rápida que la q8_0
+   (29.1 frente a 19.0 tok/s) y ocupa 16.5 GB contra 27.9, y obedece el nivel de esfuerzo
+   exactamente igual — medido, no supuesto, en la tabla de tokens de `reasoning.effort.*`.
+   A diferencia de `qwen3.6:35b-a3b-q4_K_M`, que está rota en esta máquina por encima de
+   ~4 490 caracteres, esta q4 respondió al prompt de 5 441 caracteres con JSON válido. No
+   la «mejores» a la q8."""
 
-_TEMPERATURE_DOC = """HOW FAR THE SAMPLER MAY WANDER. Ollama's own default is 0.8, and a handful of Modelfiles
-declare 1.0 — a WRITING temperature, applied indiscriminately to calls that are not writing
-anything: reading the concepts out of a chunk, deciding whether two names are the same
-concept, answering yes/no. Left at that default those calls redraw a different graph from
-the same corpus on every build, and the difference between two runs is not evidence of
-anything. Every generative call in the project now names one of these three.
+_TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8, y unos
+cuantos Modelfiles declaran 1.0 — una temperatura de REDACCIÓN, aplicada sin distinción a
+llamadas que no redactan nada: leer los conceptos de un fragmento, decidir si dos nombres
+son el mismo concepto, responder sí o no. Con ese valor por defecto, esas llamadas
+redibujan un grafo distinto a partir del mismo corpus en cada construcción, y la diferencia
+entre dos ejecuciones no es evidencia de nada. Toda llamada generativa del proyecto nombra
+ahora una de estas tres.
 
-1. DETERMINISTIC — the answer is a reading of the input and there is one right one:
-   extraction, the domain names and their assignment, the bank and profile scans, the
-   guardrail's verdict, the concept descriptions that get embedded and cached. Greedy, so a
-   rebuild is a rebuild and not a redraw. What makes 0 safe at every one of these sites and
-   not at the ones below is that they are all `think=False` AND grammar-constrained: the
-   answer starts at `{` and the schema bounds how long it can go on for.
-2. REASONING — the `think=True` judgements over an inventory that is already fixed: merging
-   aliases, dropping what does not name a concept, ordering prerequisites, taggability.
-   Deliberately NOT 0, and it is the one value here chosen against determinism. Greedy
-   decoding inside a reasoning channel is where deliberation degenerates into a repetition
-   loop, and it degenerates SILENTLY on this stack — `KG_DOMAINS_MODEL` records one call
-   that reasoned for 36 929 characters, hit its stop token and returned an empty response
-   that nothing upstream could tell from a real answer. This is enough entropy to leave
-   such a loop and far below the 0.6 the model card suggests for open-ended thinking,
-   because none of these calls is open-ended: the inventory they judge is closed.
-3. GENERATION — the end of the pipeline, and the only call in the project that is genuinely
-   writing. It stays low all the same, because what makes a variant worth keeping is that
-   it obeys its commission — the target concepts, the pinned fields, the curriculum, the
-   instructions — and temperature is exactly what buys drift away from all four. The
-   variety between the `n` items of one run is paid for in the PROMPT, which shows the
-   model the statements it has already written, and in the random few-shot sample; it is
-   not the sampler's job here."""
+1. DETERMINISTA — la respuesta es una lectura de la entrada y solo hay una correcta:
+   extracción, los nombres de dominio y su asignación, los escaneos del banco y del perfil,
+   el veredicto del guardarraíl, las descripciones de concepto que se embeben y se
+   cachean. Voraz, para que reconstruir sea reconstruir y no volver a dibujar. Lo que hace
+   que 0 sea seguro en todos estos sitios y no en los de abajo es que todos son
+   `think=False` Y están acotados por una gramática: la respuesta empieza en `{` y el
+   esquema limita cuánto puede seguir.
+2. RAZONAMIENTO — los juicios con `think=True` sobre un inventario que ya está fijado:
+   fusionar alias, descartar lo que no nombra un concepto, ordenar prerrequisitos,
+   etiquetabilidad. Deliberadamente NO es 0, y es el único valor de aquí elegido en contra
+   del determinismo. La decodificación voraz dentro de un canal de razonamiento es donde la
+   deliberación degenera en un bucle de repetición, y degenera EN SILENCIO en esta pila —
+   `KG_DOMAINS_MODEL` documenta una llamada que razonó durante 36 929 caracteres, alcanzó
+   su token de parada y devolvió una respuesta vacía que nada aguas arriba podía distinguir
+   de una de verdad. Es entropía suficiente para salir de un bucle así y queda muy por
+   debajo del 0.6 que la ficha del modelo sugiere para pensar sin límites, porque ninguna
+   de estas llamadas es abierta: el inventario que juzgan está cerrado.
+3. GENERACIÓN — el final del pipeline, y la única llamada del proyecto que redacta de
+   verdad. Aun así se queda baja, porque lo que hace que una variante merezca guardarse es
+   que obedezca su encargo — los conceptos objetivo, los campos fijados, el currículo, las
+   instrucciones — y la temperatura es exactamente lo que compra desviarse de los cuatro.
+   La variedad entre los `n` ítems de una misma tanda se paga en el PROMPT, que le enseña
+   al modelo los enunciados que ya ha escrito, y en la muestra aleatoria de ejemplos; aquí
+   no es tarea del muestreador."""
 
-_TEMPERATURE_REPAIR_DOC = """Its own constant although it happens to equal the reasoning one, because it is not there
-for the same reason and would not move with it: repair is a RETRY loop, and a retry at 0 is
-not a retry. Attempt N+1's prompt is attempt N's output, so a model that hands back what it
-was given rebuilds the identical prompt and, greedy, writes the identical answer — the
-whole budget spent on one byte-identical reply, which is the failure `parse_with_repair`
-already documents having paid for once."""
+_TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no está ahí por el mismo
+motivo y no se movería con ella: reparar es un bucle de REINTENTO, y un reintento a 0 no es
+un reintento. El prompt del intento N+1 es la salida del intento N, así que un modelo que
+devuelve lo que se le dio reconstruye el prompt idéntico y, siendo voraz, escribe la
+respuesta idéntica — el presupuesto entero gastado en una sola réplica byte a byte igual,
+que es el fallo que `parse_with_repair` ya documenta haber pagado una vez."""
 
-_CONTEXT_WINDOW_DOC = """These are what make the three models co-resident, so they are not free to grow: measured
-on the A40 through `/api/ps`, `LLM_MAIN` at 65536 + guardrail + embedder come to 29.05 GiB
-of ~45 (19.49 + 5.49 + 4.07). The guardrail's used to be 8192, which cost 1 GiB of KV cache
-and pushed the old total to 45.17 — just over, and the symptom was that screening one
-commission evicted the embedder. It only ever reads `GENERATION_INSTRUCTIONS_MAX_CHARS`
-(600 characters, ~200 tokens), so 4096 is still a tenfold margin.
+_CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en
+la A40 a través de `/api/ps`, `LLM_MAIN` a 65536 + guardarraíl + embebedor suman 29.05 GiB
+de ~45 (19.49 + 5.49 + 4.07). La del guardarraíl era 8192, que costaba 1 GiB de caché KV y
+subía el total antiguo a 45.17 — pasado por poco, y el síntoma era que filtrar un encargo
+desalojaba al embebedor. Como mucho lee `GENERATION_INSTRUCTIONS_MAX_CHARS` (600
+caracteres, ~200 tokens), así que 4096 sigue siendo un margen de diez veces.
 
-`LLM_MAIN`'s doubled from 32768 on 2026-08-18, with the move to a reasoning model. The rule
-changed underneath it: with `think` on, the window is no longer sized by the PROMPT but by
-prompt + deliberation, and the deliberation is the big half — the largest prompt in the
-pipeline is ~8 000 tokens while one `low` curation call spends ~13 000 on reasoning alone.
-The headroom freed by the lighter q4 is what pays for it, so it costs nothing to hold.
+La de `LLM_MAIN` se dobló desde 32768 el 2026-08-18, con el paso a un modelo de
+razonamiento. La regla cambió por debajo: con `think` encendido, la ventana ya no la
+dimensiona el PROMPT sino prompt + deliberación, y la deliberación es la mitad grande — el
+prompt más largo del pipeline son ~8 000 tokens, mientras que una sola llamada de curación
+en `low` gasta ~13 000 solo en razonar. El margen que liberó la q4, más ligera, es lo que
+lo paga, así que mantenerla no cuesta nada.
 
-What it does NOT fix, measured, is the empty answer `curate_graph_domains_prompt` gave
-while it still asked for the whole partition: over 203 concepts that call returned
-`response == ""` at 32768 AND at 65536, byte for byte the same (36 929 characters of
-reasoning, 11 611 tokens — about 13 200 in total, a fifth of the smaller window). The
-window was never the constraint there; see `KG_DOMAINS_MODEL`.
+Lo que NO arregla, medido, es la respuesta vacía que daba `curate_graph_domains_prompt`
+mientras seguía pidiendo la partición entera: sobre 203 conceptos, esa llamada devolvió
+`response == ""` a 32768 Y a 65536, byte a byte lo mismo (36 929 caracteres de
+razonamiento, 11 611 tokens — unos 13 200 en total, una quinta parte de la ventana más
+pequeña). Allí la ventana nunca fue la restricción; véase `KG_DOMAINS_MODEL`.
 
-Lowering this truncates silently, as always — and now it truncates the reasoning first, so
-the symptom is an empty or half-written answer rather than a missing tail of prompt."""
+Bajarla trunca en silencio, como siempre — y ahora trunca primero el razonamiento, así que
+el síntoma es una respuesta vacía o a medio escribir, y no una cola de prompt que falta."""
 
-_CONTEXT_WINDOW_OVERRIDES_DOC = """The window of every phase model that is NOT the main, the guardrail or the embedder. Before
-this existed such a model had no entry in `LLM_CONTEXT` and Ollama sized its KV cache from
-the Modelfile, which for `qwen3.6:35b-a3b-q8_0` (34.88 GiB of weights on its own) is the
-difference between fitting beside the embedder and not. One value and not one per phase: on
-2026-08-23 the only override is that MoE, placed on the build phases that read documents
-(`transcribe`, `ep_scan`, `eb_extract`, `kg_extract`, the two `kg_clean_*` and
-the two `kg_link_*`) while `LLM_MAIN` stays `qwen3.8:27b-q4_K_M` for judging and generating.
-The two never need to be resident together — a build loads the MoE once and the 27b comes
-back on the next generation — so the co-residency arithmetic is still three models.
+_CONTEXT_WINDOW_OVERRIDES_DOC = """La ventana de todo modelo de fase que NO sea el principal, el guardarraíl o el embebedor.
+Antes de que esto existiera, un modelo así no tenía entrada en `LLM_CONTEXT` y Ollama
+dimensionaba su caché KV a partir del Modelfile, lo que para `qwen3.6:35b-a3b-q8_0` (34.88
+GiB solo de pesos) es la diferencia entre caber junto al embebedor y no caber. Un único
+valor y no uno por fase: a 2026-08-23 la única sobrescritura es ese MoE, puesto en las
+fases de construcción que leen documentos (`transcribe`, `ep_scan`, `eb_extract`,
+`kg_extract`, las dos `kg_clean_*` y las dos `kg_link_*`), mientras `LLM_MAIN` sigue siendo
+`qwen3.8:27b-q4_K_M` para juzgar y generar. Los dos nunca necesitan estar residentes a la
+vez — una construcción carga el MoE una vez y el 27b vuelve en la siguiente generación —,
+así que la aritmética de convivencia sigue siendo de tres modelos.
 
-65536 because the same rule as `context_window.main` applies (prompt plus deliberation
-where a phase reasons), and because lowering it truncates silently."""
+65536 porque aplica la misma regla que `context_window.main` (prompt más deliberación allí
+donde una fase razona), y porque bajarla trunca en silencio."""
 
-_TRANSCRIBE_DOC = """Page transcription from the rendered image — shared by ALL THREE builders and by BOTH raw
-slots, so there is one constant and not three that could drift and produce two different
-markdowns for the same file. Since 2026-08-27, by explicit user request, `raw/raw_corpus/`
-goes through this route too: quality weighs more than speed, and Docling is left with the
-`.docx` that has no page to render.
+_TRANSCRIBE_DOC = """Transcripción de una página a partir de su imagen renderizada — compartida por LOS TRES
+constructores y por LOS DOS orígenes en bruto, así que hay una sola constante y no tres que
+pudieran divergir y producir dos markdowns distintos del mismo fichero. Desde el
+2026-08-27, por petición explícita del usuario, `raw/raw_corpus/` pasa también por esta
+ruta: la calidad pesa más que la velocidad, y a Docling le queda el `.docx`, que no tiene
+página que renderizar.
 
-What carries fidelity here is the PROMPT, not the model. Measured on Prog1_PEC1 p.1:
-without the character-by-character clause of `transcribe_page_prompt`, gemma4:31b
-rewrote `a -= 1` as `a = a - 1`, invented `8 - (n-i)` for `(n-i)`, and turned
-`x = x - 1` into `x = x + 1` — which inverts the answer to the very question being
-transcribed. With the clause, both 30B-class models come back faithful. Weakening that
-instruction silently reintroduces corrupt code into the bank.
+Lo que sostiene la fidelidad aquí es el PROMPT, no el modelo. Medido sobre Prog1_PEC1 p.1:
+sin la cláusula de copia carácter a carácter de `transcribe_page_prompt`, gemma4:31b
+reescribió `a -= 1` como `a = a - 1`, se inventó `8 - (n-i)` donde había `(n-i)` y
+convirtió `x = x - 1` en `x = x + 1` — lo que invierte la respuesta de la mismísima
+pregunta que estaba transcribiendo. Con la cláusula, los dos modelos de clase 30B vuelven
+fieles. Debilitar esa instrucción reintroduce en silencio código corrupto en el banco.
 
-The fidelity comparison behind that (accents and a docstring's line break kept where
-gemma4:31b lost both, 20s against 31s a page) was measured on `qwen3.6:35b-a3b-q8_0`,
-which no longer holds this job — it followed `LLM_MAIN` into `qwen3.8:27b-q4_K_M` on
-2026-08-18. The new model has the `vision` capability, checked, so the call works; whether
-it transcribes as faithfully is NOT measured yet. This is the cheapest thing in the
-pipeline to re-check (one page) and the most damaging to get wrong, since a corrupted
-transcription lands in the bank as an exercise whose answer has changed and, since the
-corpus joined this route, in the graph as a concept the syllabus never taught."""
+La comparación de fidelidad que hay detrás (acentos y el salto de línea de un docstring
+conservados donde gemma4:31b perdió ambos, 20s frente a 31s por página) se midió sobre
+`qwen3.6:35b-a3b-q8_0`, que ya no ocupa este puesto — siguió a `LLM_MAIN` hasta
+`qwen3.8:27b-q4_K_M` el 2026-08-18. El modelo nuevo tiene la capacidad `vision`,
+comprobado, así que la llamada funciona; si transcribe con la misma fidelidad NO está
+medido todavía. Es lo más barato de volver a comprobar de todo el pipeline (una página) y
+lo más dañino si se falla, porque una transcripción corrupta aterriza en el banco como un
+ejercicio cuya respuesta ha cambiado y, desde que el corpus se sumó a esta ruta, en el
+grafo como un concepto que el temario nunca enseñó."""
 
 _TRANSCRIBE_SEAM_DOC = """La costura entre dos páginas transcritas por separado: el modelo CLASIFICA cómo se pegan
 —`none`/`space`/`newline`/`paragraph`— y cuántas líneas iniciales de la segunda son
@@ -169,22 +180,23 @@ por costura y solo cuando el detector no tiene certeza (una valla de código abi
 es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 
 
-_PHASE_SHARED_DOC = """One constant per model call is still the unit of retuning, and that is the whole reason
-they survive a consolidation: pointing them all at `LLM_MAIN` is a decision, not a
-collapse, and any single phase can be moved off it without touching the other twelve."""
+_PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la
+razón de que sobrevivan a una consolidación: apuntarlas todas a `LLM_MAIN` es una decisión,
+no un colapso, y cualquier fase suelta puede moverse fuera sin tocar las otras doce."""
 
-_KG_DOMAINS_DOC = """The one phase whose call had to give up reasoning outright when `LLM_MAIN` became a
-reasoning model: asked to partition the whole inventory it answered inside the reasoning
-channel and returned nothing. It only names the domains now — `assign_round` places the
-concepts, batch by batch — and both calls stay constrained by a grammar and therefore
-without thinking. The measurement is at the call site, in
-`knowledge_graph_builder/curation.py:curate_domains`. It is not the model that was wrong
-here, so this still points at `LLM_MAIN`; it was the thinking."""
+_KG_DOMAINS_DOC = """La única fase cuya llamada tuvo que renunciar del todo al razonamiento cuando `LLM_MAIN`
+pasó a ser un modelo que razona: pedirle que particionase el inventario entero hacía que
+respondiera dentro del canal de razonamiento y no devolviera nada. Ahora solo nombra los
+dominios — `assign_round` coloca los conceptos, tanda a tanda — y las dos llamadas siguen
+acotadas por una gramática y por tanto sin pensar. La medición está en el sitio de la
+llamada, en `knowledge_graph_builder/curation.py:curate_domains`. Aquí el que estaba mal no
+era el modelo, así que esto sigue apuntando a `LLM_MAIN`; era el pensar."""
 
-_REPAIR_DOC = """Repair is the one call that fires from INSIDE a per-element loop, so it is also the one
-that must never be a model of its own: a separate small model does not fit next to
-`LLM_MAIN` on this box, and each repair would evict it and pay two ~10 s loads in the
-middle of a corpus. Whatever else moves off `LLM_MAIN`, this follows it."""
+_REPAIR_DOC = """Reparar es la única llamada que se dispara DESDE DENTRO de un bucle por elemento, así que
+es también la única que nunca debe tener modelo propio: un modelo pequeño aparte no cabe
+junto a `LLM_MAIN` en esta máquina, y cada reparación lo desalojaría y pagaría dos cargas
+de ~10 s en mitad de un corpus. Se mueva lo que se mueva fuera de `LLM_MAIN`, esta lo
+sigue."""
 
 _VACIO_SENTINEL = "Vacío significa que sigue al modelo principal."
 

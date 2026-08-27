@@ -3,13 +3,14 @@ from ..types import Impact, Setting
 SETTINGS: list[Setting] = [
     Setting(key="retrieval.query_prefix", name="EMBEDDING_QUERY_PREFIX", kind="str",
             default="Instruct: Dado el enunciado de un ejercicio, recupera la descripción del concepto del currículo que el ejercicio hace practicar al alumno, no la de los que solo usa como herramienta\nQuery: ",
-            group="Recuperación", impact=Impact.REINDEX, doc="""It still says «el enunciado de un ejercicio» although `embed_fields` may now append the
-code the item hands the student. Generalising it to «un ejercicio» was tried and MEASURED
-WORSE, so the wording stays: on the reference bank it moved 17/152 top-1s and cost margin
-(0.0345 → 0.0328), dropping the lowest top-1 from 0.4065 to 0.3902 — under the threshold
-below, i.e. one item that got candidates stops getting any. On the multi-field test bank,
-where it should have paid off, it was a wash (top-1 0.6153 → 0.6045, margin +0.0014).
-Same lesson as embeddinggemma: a prefix is a measured claim, never an intuition."""),
+            group="Recuperación", impact=Impact.REINDEX, doc="""Sigue diciendo «el enunciado de un ejercicio» aunque `embed_fields` pueda añadir ahora el
+código que el ítem le entrega al alumno. Generalizarlo a «un ejercicio» se probó y SE MIDIÓ
+PEOR, así que la redacción se queda: sobre el banco de referencia movió 17 de 152 top-1 y
+costó margen (0.0345 → 0.0328), bajando el top-1 más bajo de 0.4065 a 0.3902 — por debajo
+del umbral de más abajo, es decir, un ítem que recibía candidatos deja de recibir ninguno.
+Sobre el banco de pruebas multicampo, donde debería haber salido a cuenta, quedó en tablas
+(top-1 0.6153 → 0.6045, margen +0.0014). La misma lección que con embeddinggemma: un
+prefijo es una afirmación medida, nunca una intuición."""),
     Setting(key="retrieval.document_prefix", name="EMBEDDING_DOCUMENT_PREFIX", kind="str",
             default="", group="Recuperación", impact=Impact.REINDEX,
             doc="""Vacío a propósito: el uso prescrito de qwen3-embedding lleva prefijo en la consulta pero
