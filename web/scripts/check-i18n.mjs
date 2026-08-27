@@ -7,9 +7,13 @@
 // all — a literal sitting in the JSX, which renders in Spanish whatever the account says.
 //
 // So this measures ONE thing: user-visible text that is not going through `t()`. The
-// `exempt` list is the mechanism of the migration and not an excuse — a screen task starts
-// by deleting its file from the list so the script goes red, and it is done when the
-// script goes green again.
+// `exempt` list WAS the mechanism of the migration — a screen task started by deleting its
+// file from the list so the script went red, and it was done when the script went green
+// again. The migration is over, and the three entries left are not leftovers: each is a
+// file that must NOT go through the catalogue, and says why in its own comment.
+//
+// It also checks the one thing the guide's two trees put beyond a text scan: that they
+// answer for the same set of sections.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, relative, sep } from "node:path";
@@ -108,10 +112,14 @@ const EXEMPT = new Set([
   "components/ErrorBoundary.tsx",
 ]);
 
-// The last tree still to migrate, listed as a prefix so a new file inside it does not make
-// the gate go red before its screen has been touched at all.
+// THE GUIDE'S BODIES ARE A TREE PER LANGUAGE, NOT A CATALOGUE ENTRY PER PARAGRAPH — see
+// `features/guide/sections.tsx` for why. So `guide/es/` really is written in Spanish and
+// `guide/en/` really is written in English, and both are correct: what makes that checkable
+// is not this script but that `useGuideBody` picks one by the reader's language, and that
+// `BODIES` in the two files has to hold the same slugs.
 const EXEMPT_TREES = [
-  "features/guide/",
+  "features/guide/es/",
+  "features/guide/en/",
 ];
 
 const exempt = (path) =>
@@ -199,7 +207,29 @@ if (findings.length) {
   process.exit(1);
 }
 
+// The guide is prose per language rather than keys, so nothing above can see it. What can
+// be checked is that the two trees answer for the same sections: a section written in one
+// and not the other renders nothing at all for half the readers.
+const slugsOf = (file) =>
+  new Set(
+    [...readFileSync(resolve(SRC, file), "utf8").matchAll(/^\s{2}(\w+):\s*\w+,$/gm)].map(
+      (match) => match[1],
+    ),
+  );
+const esSlugs = slugsOf("features/guide/es/sections.tsx");
+const enSlugs = slugsOf("features/guide/en/sections.tsx");
+const onlyEs = [...esSlugs].filter((slug) => !enSlugs.has(slug));
+const onlyEn = [...enSlugs].filter((slug) => !esSlugs.has(slug));
+
+if (onlyEs.length || onlyEn.length) {
+  console.error("✗ Las dos versiones de la guía no cubren las mismas secciones:\n");
+  for (const slug of onlyEs) console.error(`  ${slug} — solo en es/`);
+  for (const slug of onlyEn) console.error(`  ${slug} — solo en en/`);
+  process.exit(1);
+}
+
 console.log(
-  `✓ ${migrated} fichero(s) migrado(s) sin texto suelto; ` +
-    `${EXEMPT.size + EXEMPT_TREES.length} entrada(s) todavía en la lista de pendientes.`,
+  `✓ ${migrated} fichero(s) sin texto de interfaz fuera del catálogo; ` +
+    `${esSlugs.size} secciones de guía en los dos idiomas; ` +
+    `${EXEMPT.size + EXEMPT_TREES.length} exclusión(es) deliberada(s).`,
 );

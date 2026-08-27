@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/misc";
 import { Link } from "@/lib/router";
 import { cn } from "@/lib/utils";
-import { GUIDE_SECTIONS, type GuideSection } from "./sections";
+import { useT, type Key } from "@/lib/i18n";
+import { GUIDE_SECTIONS, useGuideBody, type GuideSection } from "./sections";
 
 const fold = (text: string) =>
   Array.from(text.normalize("NFD"))
@@ -14,17 +15,18 @@ const fold = (text: string) =>
     .join("")
     .toLowerCase();
 
-function grouped(sections: GuideSection[]): { title: string; sections: GuideSection[] }[] {
-  const groups: { title: string; sections: GuideSection[] }[] = [];
+function grouped(sections: GuideSection[]): { key: Key; sections: GuideSection[] }[] {
+  const groups: { key: Key; sections: GuideSection[] }[] = [];
   for (const section of sections) {
     const last = groups[groups.length - 1];
-    if (last && last.title === section.group) last.sections.push(section);
-    else groups.push({ title: section.group, sections: [section] });
+    if (last && last.key === section.groupKey) last.sections.push(section);
+    else groups.push({ key: section.groupKey, sections: [section] });
   }
   return groups;
 }
 
 export function GuideScreen({ slug }: { slug: string }) {
+  const { t } = useT();
   const [query, setQuery] = useState("");
   const [navOpen, setNavOpen] = useState(false);
 
@@ -38,22 +40,20 @@ export function GuideScreen({ slug }: { slug: string }) {
     return grouped(
       GUIDE_SECTIONS.filter(
         (section) =>
-          fold(section.label).includes(needle) || fold(section.group).includes(needle),
+          fold(t(section.labelKey)).includes(needle) ||
+          fold(t(section.groupKey)).includes(needle),
       ),
     );
-  }, [query]);
+  }, [query, t]);
 
-  const Body = active.body;
+  const Body = useGuideBody(active.slug);
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="font-display font-expanded text-display">Guía</h1>
-          <p className="max-w-[74ch] text-body text-muted-foreground">
-            Qué hace cada parte del sistema, en qué orden se usan y qué mirar cuando algo no sale.
-            Nada de lo que hay aquí cambia el estado de tu instancia: es lectura.
-          </p>
+          <h1 className="font-display font-expanded text-display">{t("guide.title")}</h1>
+          <p className="max-w-[74ch] text-body text-muted-foreground">{t("guide.intro")}</p>
         </div>
 
         <div className="relative w-full sm:w-64">
@@ -62,8 +62,8 @@ export function GuideScreen({ slug }: { slug: string }) {
             className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground"
           />
           <Input
-            aria-label="Buscar una sección"
-            placeholder="Buscar una sección"
+            aria-label={t("guide.search")}
+            placeholder={t("guide.search")}
             className="pl-9"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -84,21 +84,23 @@ export function GuideScreen({ slug }: { slug: string }) {
           aria-expanded={navOpen}
           onClick={() => setNavOpen((was) => !was)}
         >
-          <span className="min-w-0 truncate">Secciones · {active.label}</span>
+          <span className="min-w-0 truncate">
+            {t("guide.sectionsOf", { label: t(active.labelKey) })}
+          </span>
           <ChevronDown className={cn("transition-transform", navOpen && "rotate-180")} />
         </Button>
 
         <nav
-          aria-label="Secciones de la guía"
+          aria-label={t("guide.nav")}
           className={cn(
             "space-y-4 lg:sticky lg:top-20 lg:block",
             navOpen ? "block" : "hidden",
           )}
         >
           {groups.map((group) => (
-            <div key={group.title} className="space-y-0.5">
+            <div key={group.key} className="space-y-0.5">
               <p className="px-2.5 pb-1 text-micro font-condensed uppercase text-muted-foreground">
-                {group.title}
+                {t(group.key)}
               </p>
               {group.sections.map((section) => {
                 const Icon = section.icon;
@@ -115,7 +117,7 @@ export function GuideScreen({ slug }: { slug: string }) {
                     )}
                   >
                     <Icon className="size-4 shrink-0" />
-                    <span className="min-w-0 truncate">{section.label}</span>
+                    <span className="min-w-0 truncate">{t(section.labelKey)}</span>
                   </Link>
                 );
               })}
@@ -124,7 +126,7 @@ export function GuideScreen({ slug }: { slug: string }) {
 
           {groups.length === 0 ? (
             <p className="px-2.5 text-small text-muted-foreground">
-              Nada coincide con esa búsqueda.
+              {t("guide.noMatch")}
             </p>
           ) : null}
         </nav>
@@ -141,9 +143,9 @@ export function GuideScreen({ slug }: { slug: string }) {
               >
                 <span>
                   <span className="block text-micro font-condensed uppercase text-muted-foreground">
-                    Siguiente
+                    {t("guide.next")}
                   </span>
-                  <span className="text-body font-medium">{next.label}</span>
+                  <span className="text-body font-medium">{t(next.labelKey)}</span>
                 </span>
                 <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
               </Link>
