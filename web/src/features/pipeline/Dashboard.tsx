@@ -3,7 +3,6 @@ import {
   Activity,
   ArrowRight,
   Ban,
-  ChevronRight,
   CircleAlert,
   CircleCheck,
   Cpu,
@@ -11,14 +10,12 @@ import {
   Lock,
   Pencil,
   Server,
-  UploadCloud,
   WifiOff,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
-import { RawImport } from "@/components/RawImport";
 import { useActiveRun } from "@/components/RunDrawer";
 import { StageBadge } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, PhaseBar, Progress, Skeleton, Spinner } from "@/components/ui/misc";
-import { TranscriptionSection } from "@/features/raw/TranscriptionSection";
-import { useTranscriptionSummary } from "@/features/raw/queries";
+import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
+import { RawSection } from "@/features/raw/RawSection";
 import { api } from "@/lib/api";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
@@ -48,7 +44,6 @@ import {
   useJobRunning,
   keys,
   usePipeline,
-  useRaw,
   useStream,
 } from "@/state/queries";
 import { useT, type Key } from "@/lib/i18n";
@@ -145,70 +140,6 @@ function StageCard({ stage }: { stage: StageState }) {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function RawSection() {
-  const { t, plural } = useT();
-  const raw = useRaw();
-  const slots = raw.data?.slots ?? [];
-  const emptySlots = slots.filter((slot) => slot.files.length === 0);
-  const [open, setOpen] = useState(false);
-  const expanded = open || emptySlots.length > 0;
-  const total = slots.reduce((sum, slot) => sum + slot.files.length, 0);
-  const size = slots.reduce((sum, slot) => sum + slot.bytes, 0);
-  const transcription = useTranscriptionSummary(slots);
-
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          disabled={emptySlots.length > 0}
-          className="flex items-center gap-1.5 text-body font-medium disabled:cursor-default"
-        >
-          {emptySlots.length > 0 ? (
-            <UploadCloud className="size-4 text-attention" />
-          ) : (
-            <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} />
-          )}
-          {t("dash.rawData")}
-        </button>
-        {total > 0 ? (
-          <span className="text-small text-muted-foreground">
-            {plural("dash.fileCount", total)} · {bytes(size)}
-          </span>
-        ) : null}
-        {emptySlots.length > 0 ? (
-          <Badge variant="attention">
-            {t("dash.slotsEmpty", {
-              slots: emptySlots
-                .map((slot) => slot.label.toLowerCase())
-                .join(t("common.listJoin")),
-            })}
-          </Badge>
-        ) : null}
-        {transcription.running ? (
-          <Badge mark={<Spinner className="size-3" />}>{t("dash.transcribing")}</Badge>
-        ) : transcription.stale > 0 ? (
-          <Badge variant="attention">{t("dash.transcriptionStale")}</Badge>
-        ) : null}
-        {!expanded ? (
-          <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-            <UploadCloud />
-            {t("common.import")}
-          </Button>
-        ) : null}
-      </div>
-
-      {expanded ? (
-        <>
-          <RawImport />
-          <TranscriptionSection slots={slots} />
-        </>
-      ) : null}
-    </section>
   );
 }
 
@@ -374,15 +305,19 @@ function ModelsRow({ models }: { models: Health["models"] }) {
 }
 
 /**
- * What the system is doing right now — the one place it is said.
+ * What is running, under the machine that runs it.
  *
- * The header carried this state and competed for width with the tabs until it pushed them
- * into a horizontal scroll, so it moves down here whole. It speaks of *any* job, not of the
- * mode that launched it: building, indexing, tagging, generating and evaluating come out of
- * the same stream and read the same. The step by step stays in the run drawer; this only
- * answers «what is running, how long has it been, and can I stop it».
+ * It speaks of *any* job, not of the mode that launched it: building, indexing, tagging,
+ * generating and evaluating come out of the same stream and read the same. The step by step
+ * stays in the run drawer; this only answers «what is running, how long has it been, and can
+ * I stop it».
+ *
+ * Idle, that is one line — which is the whole reason it stopped being a card of its own. A
+ * heading, a border and an (i) around «Nada en ejecución» is a box built for the exception,
+ * and the exception brings its own bar, its own numbers and its own cancel button when it
+ * arrives.
  */
-function ActivityCard() {
+function ActivityBlock() {
   const { t, plural } = useT();
   const run = useActiveRun();
   const stream = useStream();
@@ -401,136 +336,137 @@ function ActivityCard() {
   const phases = useBuildPhases(run?.job?.artifact ?? undefined);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="size-4 text-muted-foreground" />
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5">
+        <Activity className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="text-micro font-condensed uppercase text-muted-foreground">
           {t("dash.activity")}
-          <InfoHint label={t("dash.whatIsHere")}>
-            {t("dash.activityBody")}
-          </InfoHint>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-body">
-        {stream.connected ? null : (
-          <p className="flex items-center gap-1.5 text-small text-attention">
-            <WifiOff className="size-3.5 shrink-0" />
-            {t("dash.disconnected")}
+        </span>
+        <InfoHint label={t("dash.whatIsHere")}>{t("dash.activityBody")}</InfoHint>
+      </div>
+
+      {stream.connected ? null : (
+        <p className="flex items-center gap-1.5 text-small text-attention">
+          <WifiOff className="size-3.5 shrink-0" />
+          {t("dash.disconnected")}
+        </p>
+      )}
+
+      {!run?.job ? (
+        // «Nada en ejecución» would be a lie when the one GPU is busy with another
+        // workspace: your own screen is idle and the next job you launch will wait,
+        // and nothing else on the page would say why.
+        pipeline.data?.engine_busy_elsewhere ? (
+          <p className="flex items-start gap-1.5 text-small text-muted-foreground">
+            <Hourglass className="mt-0.5 size-3.5 shrink-0" />
+            {t("dash.busyElsewhere")}
           </p>
-        )}
-
-        {!run?.job ? (
-          // «Nada en ejecución» would be a lie when the one GPU is busy with another
-          // workspace: your own screen is idle and the next job you launch will wait,
-          // and nothing else on the page would say why.
-          pipeline.data?.engine_busy_elsewhere ? (
-            <p className="flex items-start gap-1.5 text-small text-muted-foreground">
-              <Hourglass className="mt-0.5 size-3.5 shrink-0" />
-              {t("dash.busyElsewhere")}
-            </p>
-          ) : (
-            <p className="text-muted-foreground">{t("dash.nothingRunning")}</p>
-          )
         ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="relative flex size-2 shrink-0">
-                {active ? (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
-                ) : null}
-                <span
-                  className={cn(
-                    "relative inline-flex size-2 rounded-full",
-                    active ? "bg-primary" : "bg-muted-foreground",
-                  )}
-                />
-              </span>
-              <span className="font-medium">{run.job.label}</span>
-            </div>
+          <p className="text-muted-foreground">{t("dash.nothingRunning")}</p>
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="relative flex size-2 shrink-0">
+              {active ? (
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+              ) : null}
+              <span
+                className={cn(
+                  "relative inline-flex size-2 rounded-full",
+                  active ? "bg-primary" : "bg-muted-foreground",
+                )}
+              />
+            </span>
+            <span className="font-medium">{run.job.label}</span>
+          </div>
 
-            {/* The explanation goes as text and not behind an (i): it was in both places at once, and
-                of the two the one that gets read is the one already on screen. */}
-            <p className="text-small text-muted-foreground">
-              {explain ? t(explain.what) : t("run.working")}
-            </p>
+          {/* The explanation goes as text and not behind an (i): it was in both places at once, and
+              of the two the one that gets read is the one already on screen. */}
+          <p className="text-small text-muted-foreground">
+            {explain ? t(explain.what) : t("run.working")}
+          </p>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
-              <span className={cn("font-medium", JOB_STATUS[status!]?.tone)}>
-                {JOB_STATUS[status!] ? t(JOB_STATUS[status!].labelKey) : status}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
+            <span className={cn("font-medium", JOB_STATUS[status!]?.tone)}>
+              {JOB_STATUS[status!] ? t(JOB_STATUS[status!].labelKey) : status}
+            </span>
+            <span className="flex items-center gap-1 nums text-muted-foreground">
+              <Hourglass className="size-3" />
+              {duration(active ? elapsed : run.job.elapsed_ms)}
+            </span>
+            {status === "queued" && ahead !== null ? (
+              <span className="text-muted-foreground">
+                {ahead === 0 ? t("dash.nextToStart") : plural("dash.jobsAhead", ahead)}
               </span>
-              <span className="flex items-center gap-1 nums text-muted-foreground">
-                <Hourglass className="size-3" />
-                {duration(active ? elapsed : run.job.elapsed_ms)}
-              </span>
-              {status === "queued" && ahead !== null ? (
-                <span className="text-muted-foreground">
-                  {ahead === 0 ? t("dash.nextToStart") : plural("dash.jobsAhead", ahead)}
+            ) : queued > 0 ? (
+              <span className="text-muted-foreground">{t("dash.inQueue", { n: queued })}</span>
+            ) : null}
+          </div>
+
+          {/* With no overall percentage the bar is indeterminate on purpose: a step can be at 8/8
+              and still have half a run ahead. */}
+          {active ? (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-small">
+                  {overall?.label ?? step?.label ?? t("progress.preparing")}
                 </span>
-              ) : queued > 0 ? (
-                <span className="text-muted-foreground">{t("dash.inQueue", { n: queued })}</span>
+                <span className="shrink-0 text-small font-medium nums">
+                  {overall
+                    ? `${overall.percent} %`
+                    : step?.total
+                      ? `${step.current ?? 0}/${step.total}`
+                      : "—"}
+                </span>
+              </div>
+              {overall && phases.length > 0 ? (
+                <PhaseBar phases={phases} percent={overall.percent} activeKey={overall.key} />
+              ) : (
+                <Progress
+                  value={overall ? overall.percent : (step?.current ?? 0)}
+                  max={overall ? 100 : (step?.total ?? null)}
+                />
+              )}
+              {overall?.detail ? (
+                <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
               ) : null}
             </div>
+          ) : null}
 
-            {/* With no overall percentage the bar is indeterminate on purpose: a step can be at 8/8
-                and still have half a run ahead. */}
-            {active ? (
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate text-small">
-                    {overall?.label ?? step?.label ?? t("progress.preparing")}
-                  </span>
-                  <span className="shrink-0 text-small font-medium nums">
-                    {overall
-                      ? `${overall.percent} %`
-                      : step?.total
-                        ? `${step.current ?? 0}/${step.total}`
-                        : "—"}
-                  </span>
-                </div>
-                {overall && phases.length > 0 ? (
-                  <PhaseBar
-                    phases={phases}
-                    percent={overall.percent}
-                    activeKey={overall.key}
-                  />
-                ) : (
-                  <Progress
-                    value={overall ? overall.percent : (step?.current ?? 0)}
-                    max={overall ? 100 : (step?.total ?? null)}
-                  />
-                )}
-                {overall?.detail ? (
-                  <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
-                ) : null}
-              </div>
-            ) : null}
+          {run.job.error ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
+              {run.job.error}
+            </p>
+          ) : null}
 
-            {run.job.error ? (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
-                {run.job.error}
-              </p>
-            ) : null}
-
-            {active ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={() => cancel.mutate(run.job!.id)}
-                disabled={cancel.isPending}
-              >
-                <Ban />
-                {t("common.cancel")}
-              </Button>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          {active ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => cancel.mutate(run.job!.id)}
+              disabled={cancel.isPending}
+            >
+              <Ban />
+              {t("common.cancel")}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
 
-function SystemCard() {
+/**
+ * ONE CARD FOR THE MACHINE AND FOR WHAT IT IS DOING WITH IT.
+ *
+ * «Sistema» and «Actividad» were two cards asking one question — is the thing that does the
+ * work available, and is it working — and the split cost a heading, a border and an (i) to
+ * say «Nada en ejecución», which is what the panel says most of the time. Together they are
+ * four lines at rest and one card with a bar while a job runs.
+ */
+function MachineCard() {
   const { t } = useT();
   const health = useHealth();
   const invalidate = useInvalidateChain();
@@ -544,7 +480,7 @@ function SystemCard() {
     if (!warming) client.invalidateQueries({ queryKey: keys.health });
   }, [warming, client]);
 
-  if (health.isLoading) return <Skeleton className="h-40" />;
+  if (health.isLoading) return <Skeleton className="h-56" />;
   if (!health.data) {
     return (
       <Alert tone="danger" title={t("dash.noServer")}>
@@ -588,9 +524,7 @@ function SystemCard() {
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             {t("dash.modelsInMemory")}
-            <InfoHint label={t("dash.warmHint")}>
-              {t("dash.warmBody")}
-            </InfoHint>
+            <InfoHint label={t("dash.warmHint")}>{t("dash.warmBody")}</InfoHint>
           </span>
           {cold.length === 0 ? (
             <Badge variant="settled">{t("dash.warm")}</Badge>
@@ -611,6 +545,10 @@ function SystemCard() {
             </div>
           )}
         </div>
+
+        <Separator />
+
+        <ActivityBlock />
       </CardContent>
     </Card>
   );
@@ -643,14 +581,15 @@ export function Dashboard() {
         </InfoHint>
       </header>
 
-      <RawSection />
-
+      {/* THE ONE BLUE THING ON THE SCREEN. `--attention` means «act here», and the frontier
+          is exactly what this sentence names: the first stage of the chain that is not
+          resolved yet. Everything else on the panel reports, and reports achromatically. */}
       {next ? (
         <Alert
-          tone="info"
+          tone="attention"
           title={t("dash.nextStep", { label: next.label })}
           action={
-            <Button size="sm" onClick={() => navigate(SCREEN[next.artifact])}>
+            <Button size="sm" variant="attention" onClick={() => navigate(SCREEN[next.artifact])}>
               {t("dash.go")}
               <ArrowRight />
             </Button>
@@ -682,16 +621,22 @@ export function Dashboard() {
             <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
-        {/* «Sistema» opens the column: it is what gets checked at a glance — whether the engine
-            answers, what it has loaded — and at the very bottom one had to scroll to find it. It is
-            also the shortest of the three, so it does not push the other two away. */}
+        {/* «Sistema» opens the column: it is what gets checked at a glance — whether the
+            engine answers, what it has loaded, what it is doing — and the subject sits
+            under it, which is read once and edited rarely. */}
         <div className="space-y-4">
-          <SystemCard />
-          <ActivityCard />
+          <MachineCard />
           <ContextCard />
         </div>
       </div>
 
+      {/* Last, and that is the reading order the chain deserves. The raw material is what
+          you touch once at the start and then hardly ever, so opening the panel with it —
+          expanded, because a slot was empty, which is the state every new workspace starts
+          in — spent the top of the screen on the first ten minutes of an instance's life.
+          An empty origin still announces itself: its row opens by itself, and the alert
+          above already says the stage it feeds cannot be built. */}
+      <RawSection />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  ChevronLeft,
   ChevronRight,
   RefreshCw,
   Search,
@@ -15,7 +16,7 @@ import { BankLive } from "./BankLive";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
@@ -23,7 +24,14 @@ import { Alert, Checkbox, Progress, Skeleton, Spinner } from "@/components/ui/mi
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
-import type { BankItem, BankItemType, KgConcept, StageState } from "@/lib/types";
+import type {
+  BankItem,
+  BankItemType,
+  BankListing,
+  Coverage,
+  KgConcept,
+  StageState,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useActiveWorkspace,
@@ -233,10 +241,15 @@ function ItemRow({
 
   return (
     <>
+      {/* `group` is what lets the row's own actions appear on hover. They are two icons
+          repeated on every one of forty rows, so at rest they are forty pieces of furniture
+          that say the same thing; on the row you are pointing at they are the two things
+          there are to do with it. `focus-within` is the other half and is not optional: a
+          control that only exists under a mouse pointer does not exist for a keyboard. */}
       <TR
         selected={selected}
         className={cn(
-          "align-top",
+          "group align-top",
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         )}
       >
@@ -248,13 +261,12 @@ function ItemRow({
             className="mt-1"
           />
         </TD>
-        <TD className="py-2 pl-2 font-mono text-small text-muted-foreground">{item.id}</TD>
-        {typeLabel ? (
-          <TD className="py-2 pl-2">
-            <Badge variant="outline">{typeLabel}</Badge>
-          </TD>
-        ) : null}
         <TD className="min-w-0 py-2 pl-2 pr-3">
+          {/* The id rides above the statement instead of holding a column of its own: it is
+              how you name an item when talking about it, not something anybody scans down. */}
+          <span className="font-mono text-micro tracking-normal text-muted-foreground">
+            {item.id}
+          </span>
           <button onClick={onEdit} className="block text-left text-body hover:underline">
             {truncate(text, 200)}
           </button>
@@ -300,6 +312,11 @@ function ItemRow({
             </div>
           ) : null}
         </TD>
+        {typeLabel ? (
+          <TD className="py-2 pl-2">
+            <Badge variant="outline">{typeLabel}</Badge>
+          </TD>
+        ) : null}
         <TD className="py-2 pr-3">
           <div className="flex max-w-64 flex-wrap gap-1">
             {untagged ? (
@@ -317,22 +334,154 @@ function ItemRow({
           </div>
         </TD>
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
-          <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label={t("bank.detail")}>
-            <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onDelete}
-            disabled={locked}
-            title={locked ? t(LOCKED_HINT) : "Eliminar"}
-            aria-label={t("bank.delete")}
+          <div
+            className={cn(
+              "inline-flex transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
+              // The expanded row keeps its chevron visible: the control that opened it is
+              // the control that closes it, and hiding it would leave the detail with no
+              // visible way back.
+              open ? "opacity-100" : "opacity-0",
+            )}
           >
-            <Trash2 />
-          </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label={t("bank.detail")}>
+              <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onDelete}
+              disabled={locked}
+              title={locked ? t(LOCKED_HINT) : t("bank.delete")}
+              aria-label={t("bank.delete")}
+            >
+              <Trash2 />
+            </Button>
+          </div>
         </TD>
       </TR>
     </>
+  );
+}
+
+/**
+ * WHAT THE BANK IS WORTH, AS ONE STRIP.
+ *
+ * It was three cards across a full row — tagging, coverage, thresholds — each with its own
+ * heading, border and (i), sitting above a forty-row table. Three boxes is what you build
+ * when three numbers arrive from three places, and it reads as three subjects; there is
+ * only one, «is this bank good enough to generate from», and the three answer it in
+ * descending order of how much you can do about it.
+ *
+ * So: the two that are progress get the width and the meters, and the thresholds — which
+ * are read here and changed in «Configuración» — become the small print they always were.
+ *
+ * THE TWO GLOBAL RE-TAG ACTIONS MOVE HERE, next to the number they act on. They were in
+ * different places at different weights: «Re-etiquetar los N» inside the tagging card,
+ * «Re-etiquetar todo» beside it, and «Re-etiquetar selección» in a bar that appears at the
+ * bottom of the page — three affordances for one verb, and the only way to know which
+ * scope you were about to hit was to notice where you had clicked. The selection one stays
+ * where it is on purpose: it is contextual, it appears only when there is a selection, and
+ * it belongs to the rows it acts on rather than to the totals.
+ */
+function BankMeters({
+  listing,
+  coverage,
+  locked,
+  offline,
+  submitting,
+  onRetag,
+  onShowUntagged,
+}: {
+  listing: BankListing | undefined;
+  coverage: Coverage | undefined;
+  locked: boolean;
+  offline: string | null;
+  submitting: boolean;
+  onRetag: (params: Record<string, unknown>) => void;
+  onShowUntagged: () => void;
+}) {
+  const { t, plural } = useT();
+
+  if (!listing) return <Skeleton className="h-24" />;
+
+  const { items, tagged, untagged } = listing.totals;
+  const busy = locked || submitting || Boolean(offline);
+  const why = locked ? t(LOCKED_HINT) : offline;
+
+  return (
+    <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
+      <div className="flex-[1.2] space-y-2 p-4">
+        <div className="flex items-baseline justify-between gap-2 text-body">
+          <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
+          <span className="nums font-medium">
+            {tagged}/{items}
+          </span>
+        </div>
+        <Progress value={tagged} max={items} tone={untagged === 0 ? "settled" : "attention"} />
+        {untagged > 0 ? (
+          <button
+            onClick={onShowUntagged}
+            className="text-small text-attention transition-opacity hover:opacity-80"
+          >
+            {plural("bank.seeUntagged", untagged)}
+          </button>
+        ) : (
+          <p className="text-small text-muted-foreground">{t("bank.allTagged")}</p>
+        )}
+      </div>
+
+      <div className="flex-[1.2] space-y-2 p-4">
+        <div className="flex items-baseline justify-between gap-2 text-body">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            {t("bank.coverage")}
+            <InfoHint label={t("bank.coverageHint")}>{t("bank.coverageBody")}</InfoHint>
+          </span>
+          <span className="nums font-medium">
+            {coverage ? `${coverage.covered}/${coverage.total}` : "—"}
+          </span>
+        </div>
+        <Progress value={coverage?.covered ?? 0} max={coverage?.total ?? null} tone="settled" />
+        <p className="text-small text-muted-foreground">{t("bank.conceptsWithExample")}</p>
+      </div>
+
+      <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
+        <div className="flex flex-wrap gap-2">
+          {untagged > 0 ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              title={why ?? plural("bank.retagUntaggedHint", untagged)}
+              onClick={() => onRetag({})}
+            >
+              {submitting ? <Spinner /> : <RefreshCw />}
+              {t("bank.retagUntagged", { n: untagged })}
+            </Button>
+          ) : null}
+          {items > 0 ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              title={why ?? t("bank.retagAllHint", { n: items })}
+              onClick={() => {
+                if (window.confirm(t("bank.confirmRetagAll", { n: items }))) onRetag({ all: true });
+              }}
+            >
+              {t("bank.retagAll")}
+            </Button>
+          ) : null}
+        </div>
+        {/* Read here, changed in «Configuración»: small print, not a card. */}
+        <p className="mt-auto flex items-center gap-1.5 text-small nums text-muted-foreground">
+          {t("bank.thresholdsLine", {
+            similarity: listing.thresholds.similarity,
+            k: listing.thresholds.top_k,
+          })}
+          <InfoHint label={t("bank.thresholdsHint")}>{t("bank.thresholdsBody")}</InfoHint>
+        </p>
+      </div>
+    </Card>
   );
 }
 
@@ -454,133 +603,18 @@ t("bank.stage.description")
       }}
     >
       <div className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>{t("bank.tagging")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {listing ? (
-                <>
-                  <div className="flex items-baseline justify-between text-body">
-                    <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
-                    <span className="nums">
-                      {listing.totals.tagged}/{listing.totals.items}
-                    </span>
-                  </div>
-                  <Progress
-                    value={listing.totals.tagged}
-                    max={listing.totals.items}
-                    tone={listing.totals.untagged === 0 ? "settled" : "attention"}
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    {listing.totals.untagged > 0 ? (
-                      <button
-                        onClick={() => {
-                          setUntagged(true);
-                          setPage(1);
-                        }}
-                        className="text-small text-[var(--attention)] hover:underline"
-                      >
-                        {plural("bank.seeUntagged", listing.totals.untagged)}
-                      </button>
-                    ) : (
-                      <span />
-                    )}
-                    <div className="flex gap-2">
-                      {listing.totals.untagged > 0 ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={locked || submit.isPending || Boolean(offline)}
-                          title={
-                            locked
-                              ? t(LOCKED_HINT)
-                              : (offline ??
-                                plural("bank.retagUntaggedHint", listing.totals.untagged))
-                          }
-                          onClick={() => submit.mutate({ kind: "tag", params: {} })}
-                        >
-                          {submit.isPending ? <Spinner /> : <RefreshCw />}
-                          {t("bank.retagUntagged", { n: listing.totals.untagged })}
-                        </Button>
-                      ) : null}
-                      {hasItems ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={locked || submit.isPending || Boolean(offline)}
-                          title={
-                            locked
-                              ? t(LOCKED_HINT)
-                              : (offline ??
-                                t("bank.retagAllHint", { n: listing.totals.items }))
-                          }
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                t("bank.confirmRetagAll", { n: listing.totals.items }),
-                              )
-                            )
-                              submit.mutate({ kind: "tag", params: { all: true } });
-                          }}
-                        >
-                          {submit.isPending ? <Spinner /> : <RefreshCw />}
-                          {t("bank.retagAll")}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <Skeleton className="h-12" />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-1.5">
-                <CardTitle>{t("bank.coverage")}</CardTitle>
-                <InfoHint label={t("bank.coverageHint")}>{t("bank.coverageBody")}</InfoHint>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {coverage.data ? (
-                <>
-                  <div className="flex items-baseline justify-between text-body">
-                    <span className="text-muted-foreground">{t("bank.conceptsWithExample")}</span>
-                    <span className="nums">
-                      {coverage.data.covered}/{coverage.data.total}
-                    </span>
-                  </div>
-                  <Progress value={coverage.data.covered} max={coverage.data.total} />
-                </>
-              ) : (
-                <Skeleton className="h-12" />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-1.5">
-                <CardTitle>{t("bank.thresholds")}</CardTitle>
-                <InfoHint label={t("bank.thresholdsHint")}>{t("bank.thresholdsBody")}</InfoHint>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-1 text-body">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("bank.minSimilarity")}</span>
-                <span className="nums">{listing?.thresholds.similarity ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("bank.candidatesPerItem")}</span>
-                <span className="nums">{listing?.thresholds.top_k ?? "—"}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <BankMeters
+          listing={listing}
+          coverage={coverage.data}
+          locked={locked}
+          offline={offline}
+          submitting={submit.isPending}
+          onRetag={(params) => submit.mutate({ kind: "tag", params })}
+          onShowUntagged={() => {
+            setUntagged(true);
+            setPage(1);
+          }}
+        />
 
 
         <div className="flex flex-wrap items-center gap-2">
@@ -673,11 +707,10 @@ t("bank.stage.description")
                       }
                     />
                   </TH>
-                  <TH className="w-16">id</TH>
-                  {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
                   <TH>{primaryHeader}</TH>
+                  {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
                   <TH className="w-72">{t("bank.column.concepts")}</TH>
-                  <TH className="w-24" />
+                  <TH className="w-20" />
                 </TR>
               </THead>
               <TBody>
@@ -703,65 +736,81 @@ t("bank.stage.description")
                 {t("bank.noneWithFilters")}
               </p>
             ) : null}
+
+            {/* THE FOOT OF THE TABLE, and both things it says are about the table.
+                The selection used to be a bar of its own BELOW the pagination, so a page
+                could carry the filters at the top, a floating bar at the bottom and the
+                page controls between them — three strips around one list. Where you are in
+                the bank and what you have picked out of it belong on the same line, and
+                the line belongs inside the card they describe.
+
+                What has NOT come back is a whole-bank «Etiquetar pendientes»: extracting
+                and tagging are one job since the extractor tags each document as it comes
+                out. The scoped retries are the strip above (what the verifier rejected, and
+                the whole bank with a confirmation) and this one, which re-runs the tagger
+                over items chosen by hand, whatever their state. */}
+            {listing.items.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3 py-2.5 text-body">
+                <span className="text-small nums text-muted-foreground">
+                  {plural("bank.pageOf", listing.total, { page: listing.page, pages })}
+                </span>
+                {pages > 1 ? (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={t("common.previous")}
+                      title={t("common.previous")}
+                      disabled={page <= 1}
+                      onClick={() => setPage((value) => value - 1)}
+                    >
+                      <ChevronLeft />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={t("common.next")}
+                      title={t("common.next")}
+                      disabled={page >= pages}
+                      onClick={() => setPage((value) => value + 1)}
+                    >
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                ) : null}
+
+                <span className="flex-1" />
+
+                {selected.size > 0 ? (
+                  <>
+                    <span className="text-small font-medium">
+                      {plural("bank.selectedCount", selected.size)}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={locked || submit.isPending || Boolean(offline)}
+                      title={
+                        locked
+                          ? t(LOCKED_HINT)
+                          : (offline ?? plural("bank.retagSelectedHint", selected.size))
+                      }
+                      onClick={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
+                    >
+                      {submit.isPending ? <Spinner /> : <RefreshCw />}
+                      {t("bank.retagSelected")}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                      {t("bank.deselect")}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <Skeleton className="h-96" />
         )}
-
-        {listing && pages > 1 ? (
-          <div className="flex items-center justify-between text-body">
-            <span className="text-muted-foreground">
-              {plural("bank.pageOf", listing.total, { page: listing.page, pages })}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((value) => value - 1)}
-              >
-                {t("common.previous")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= pages}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                {t("common.next")}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Corrections on concrete items, and it only appears with something selected. There is
-            still no header-level «Etiquetar pendientes»: extracting and tagging are one job since
-            the extractor tags each document as soon as it comes out. The retry for what the
-            verifier rejected lives on the «Etiquetado» card («Re-etiquetar los N», the `tag` job
-            with no ids, which is exactly `pending_ids`); this bar re-runs the tagger over items
-            chosen by hand, whatever their state. */}
-        {selected.size > 0 ? (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-body">
-            <span>{plural("bank.selectedCount", selected.size)}</span>
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-              {t("bank.deselect")}
-            </Button>
-            <Button
-              size="sm"
-              className="ml-auto"
-              disabled={locked || submit.isPending || Boolean(offline)}
-              title={
-                locked
-                  ? t(LOCKED_HINT)
-                  : (offline ?? plural("bank.retagSelectedHint", selected.size))
-              }
-              onClick={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
-            >
-              {submit.isPending ? <Spinner /> : <RefreshCw />}
-              {t("bank.retagSelected")}
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       {editing && listing ? (

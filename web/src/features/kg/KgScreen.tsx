@@ -568,14 +568,9 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               place={place}
               unitStats={(unit) => unitStats.get(unit) ?? { total: 0, covered: 0 }}
               hasCurriculum={Boolean(curriculumSet)}
+              filtering={Boolean(query.trim())}
               selected={selected}
               onSelect={setSelected}
-              onTaggable={(name, next) =>
-                api
-                  .updateConcept({ name, taggable: next })
-                  .then(refresh)
-                  .catch((e) => setError(e.message))
-              }
               onRenameUnit={(name) => {
                 const next = window.prompt(t("kg.renameUnitPrompt"), name);
                 if (next?.trim() && next !== name)
@@ -620,18 +615,25 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            <Card className="overflow-hidden">
-              <div className="flex items-center justify-between gap-2 p-3 pb-2">
-                <span className="text-micro font-condensed uppercase text-muted-foreground">
-                  {t("kg.map")}
-                </span>
-                <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
-                  <Maximize2 />
-                  {t("kg.enlarge")}
-                </Button>
-              </div>
-              <div className="h-72 border-y border-border">{canvas(true)}</div>
+          /* ONE CARD, NOT THREE. The map, the curriculum and the frontier key were three
+             stacked boxes down the right-hand side, each with its own border and its own
+             micro heading — and the second and third are three lines and a legend that only
+             mean anything ABOUT the map beside them. They are its footer now, so the column
+             reads as one object: here is the graph, here is how far the course has got
+             through it, here is what the colours on it mean. */
+          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-2 p-3 pb-2">
+              <span className="text-micro font-condensed uppercase text-muted-foreground">
+                {t("kg.map")}
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
+                <Maximize2 />
+                {t("kg.enlarge")}
+              </Button>
+            </div>
+            <div className="h-72 shrink-0 border-y border-border">{canvas(true)}</div>
+
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
 
               {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
               <div className="p-1">
@@ -679,54 +681,39 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
                   );
                 })}
               </div>
-            </Card>
+            </div>
 
             {curriculumSet ? (
-              <Card>
-                <div className="space-y-2 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-micro font-condensed uppercase text-muted-foreground">
-                      {t("kg.courseCurriculum")}
-                    </span>
-                    <span className="nums text-small text-muted-foreground">
-                      {covered}/{totals.concepts}
-                    </span>
-                  </div>
-                  <span className="block h-1 w-full bg-muted">
-                    <span
-                      className="block h-full bg-settled"
-                      style={{
-                        width: `${Math.round((covered / Math.max(1, totals.concepts)) * 100)}%`,
-                      }}
-                    />
-                  </span>
-                  <p className="text-small text-muted-foreground">
+              <div className="shrink-0 space-y-2 border-t border-border p-3">
+                <FrontierKey />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 text-small text-muted-foreground">
                     {covered === 0
                       ? t("kg.noCurriculum")
                       : t("kg.curriculumSaved", {
                           when: when(curriculum.data?.updated_at ?? null),
                           frontier: plural("kg.frontierCount", frontierNames?.size ?? 0),
                         })}
-                  </p>
-                  <Button size="sm" variant="outline" onClick={onGoToCurriculum}>
-                    <Waypoints />
-                    {t("kg.editCurriculum")}
-                  </Button>
-                </div>
-              </Card>
-            ) : null}
-
-            {curriculumSet ? (
-              <Card>
-                <div className="space-y-2 p-3">
-                  <span className="text-micro font-condensed uppercase text-muted-foreground">
-                    {t("kg.frontier")}
                   </span>
-                  <FrontierKey />
+                  <span className="shrink-0 nums text-small text-muted-foreground">
+                    {covered}/{totals.concepts}
+                  </span>
                 </div>
-              </Card>
+                <span className="block h-1 w-full bg-muted">
+                  <span
+                    className="block h-full bg-settled"
+                    style={{
+                      width: `${Math.round((covered / Math.max(1, totals.concepts)) * 100)}%`,
+                    }}
+                  />
+                </span>
+                <Button size="sm" variant="ghost" onClick={onGoToCurriculum}>
+                  <Waypoints />
+                  {t("kg.editCurriculum")}
+                </Button>
+              </div>
             ) : null}
-          </div>
+          </Card>
         )}
       </div>
 
@@ -837,42 +824,47 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
       stage={stage}
       title={t("kg.stage.title")}
       description={t("kg.stage.description")}
-      actions={
-        <>
-          <Button
-            size="sm"
-            variant={reviewed ? "outline" : "default"}
-            disabled={Boolean(reviewReason) || submitReview.isPending}
-            title={
-              reviewReason ??
-              (reviewed ? t("kg.review.again") : t("kg.review.first"))
-            }
-            onClick={() => submitReview.mutate({ kind: "review_taggability" })}
-          >
-            {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
-            {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
-          </Button>
-          <Tabs
-            items={[
-              { value: "graph", label: t("kg.tab.graph") },
-              {
-                value: "descriptions",
-                label: t("kg.tab.descriptions"),
-                badge:
-                  missing > 0 ? (
-                    <Badge variant="attention" className="ml-1">
-                      {missing}
-                    </Badge>
-                  ) : undefined,
-              },
-              { value: "curriculum", label: t("kg.tab.curriculum") },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-        </>
-      }
     >
+      {/* THE TABS COME OUT OF THE HEADER. They were in `StageGate`'s `actions` slot, which
+          put a three-way view switch on the same line as «Construir de nuevo», «Aprobar»
+          and the taggability review: six controls in a row, of which three change what you
+          are looking at and three change the artifact. They are different kinds of thing
+          and they now sit on different lines.
+
+          The review stays beside the tabs rather than in the header for the same reason it
+          is not in the notice below: it is something you do TO the graph, it exists in both
+          states — a first review and a re-run — and the notice only exists in one of them. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <Tabs
+          items={[
+            { value: "graph", label: t("kg.tab.graph") },
+            {
+              value: "descriptions",
+              label: t("kg.tab.descriptions"),
+              badge:
+                missing > 0 ? (
+                  <Badge variant="attention" className="ml-1">
+                    {missing}
+                  </Badge>
+                ) : undefined,
+            },
+            { value: "curriculum", label: t("kg.tab.curriculum") },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+        <Button
+          size="sm"
+          variant={reviewed ? "ghost" : "attention"}
+          disabled={Boolean(reviewReason) || submitReview.isPending}
+          title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
+          onClick={() => submitReview.mutate({ kind: "review_taggability" })}
+        >
+          {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
+          {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
+        </Button>
+      </div>
+
       {reviewing || reviewRun?.job?.status === "failed" ? (
         <JobProgress
           run={reviewRun}

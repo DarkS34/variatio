@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
@@ -15,9 +16,10 @@ import { keys, useContentContext } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 
 // The paragraph is paid for in every call the system makes and may reach 900 characters
-// (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to recognise it, not to review it:
-// in full it turned a card of the column into a wall. It is shown whole when editing.
-const PREVIEW_CHARS = 200;
+// (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to RECOGNISE it — «yes, this is
+// the right subject» — not to review it, and the `line-clamp-2` beside this is the half
+// that holds whatever the character count lets through. It is shown whole when editing.
+const PREVIEW_CHARS = 160;
 
 const FACT_LABEL: Record<string, string> = {
   subject: "Materia",
@@ -78,10 +80,15 @@ export function ContextCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
+        {/* What this is FOR goes behind the (i), like every other card in this column: it
+            is three lines of prose about a file that is read here to be recognised, not to
+            be studied, and on a panel of eight blocks it was the longest thing on the
+            screen that nobody was going to act on. */}
         <div className="flex items-center gap-2">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-1.5">
             <BookOpen className="size-4 text-muted-foreground" />
             {t("context.title")}
+            <InfoHint label={t("context.whatIsThis")}>{t("context.interpolated")}</InfoHint>
           </CardTitle>
           {data.source ? (
             <Badge variant="outline" className="ml-auto">
@@ -89,9 +96,6 @@ export function ContextCard() {
             </Badge>
           ) : null}
         </div>
-        <p className="text-small text-muted-foreground">
-          {t("context.interpolated")}
-        </p>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -148,20 +152,20 @@ export function ContextCard() {
         ) : (
           <>
             {data.narrative ? (
-              <p className="text-body" title={data.narrative}>
+              <p className="line-clamp-2 text-small text-muted-foreground" title={data.narrative}>
                 {truncate(data.narrative, PREVIEW_CHARS)}
               </p>
             ) : data.block ? (
-              <pre className="whitespace-pre-wrap font-mono text-small text-muted-foreground">
+              <pre className="line-clamp-2 whitespace-pre-wrap font-mono text-small text-muted-foreground">
                 {truncate(data.block, PREVIEW_CHARS)}
               </pre>
             ) : null}
 
             {canEdit ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                   <Pencil />
-                  {data.exists ? "Editar" : "Escribirlo"}
+                  {data.exists ? t("common.edit") : t("context.write")}
                 </Button>
                 {/* A build always writes the draft, so with a curated context the latest synthesis sits
                     there unread. The notice that said so with the whole text inside left the panel; what

@@ -13,7 +13,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useStageLocked } from "@/components/StageGate";
-import { Switch } from "@/components/ui/misc";
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -45,9 +44,15 @@ export type CurriculumPlace = "covered" | "frontier" | "ahead";
 // switch — because a column you cannot press is worth less on a phone than one you can.
 // The cells themselves carry `hidden md:…`, so a hidden cell occupies no track and the
 // four that remain land on the four the narrow template declares.
+// The taggable column is gone and its track with it. It was a `Switch` on every row —
+// 36 px of chrome, 131 times — reporting exactly what the dot at the start of the same row
+// already reports: filled is a taggable target, hollow is structure. Two drawings of one
+// fact, and the more expensive of the two was also a control, so a list you read scrolled
+// under a column you could change by accident. It is set where the concept is edited, in
+// the detail panel, which had it all along.
 const COLUMNS =
-  "grid grid-cols-[1.25rem_minmax(0,1fr)_2.5rem_1rem] items-center gap-x-2 px-2 " +
-  "md:grid-cols-[1.5rem_minmax(0,1fr)_7rem_5.5rem_5.5rem_3rem_1.25rem] md:px-3";
+  "grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-x-2 px-2 " +
+  "md:grid-cols-[1.5rem_minmax(0,1fr)_7rem_5.5rem_3rem_1.25rem] md:px-3";
 
 // `hint` is what a row says on hover, `means` what the key says under the map. They are
 // deliberately two fields and not one split in half: the row explains the state, the key
@@ -229,17 +234,14 @@ function ConceptRow({
   place,
   selected,
   onSelect,
-  onTaggable,
 }: {
   concept: KgConcept;
   colour: string;
   place: CurriculumPlace | null;
   selected: boolean;
   onSelect: () => void;
-  onTaggable: (next: boolean) => void;
 }) {
   const { t } = useT();
-  const locked = useStageLocked();
 
   return (
     <div
@@ -261,10 +263,17 @@ function ConceptRow({
         selected && "bg-primary/[0.09]",
       )}
     >
-      {/* The same code as the canvas: filled is a taggable target, hollow is structure. */}
-      <span className="flex justify-center">
+      {/* The same code as the canvas: filled is a taggable target, hollow is structure. It
+          carries the name of the state as well as the shape now that it is the only place
+          the row says it — shape alone is not a label. */}
+      <span
+        className="flex justify-center"
+        title={concept.taggable ? t("kg.taggable") : t("canvas.notTaggable")}
+      >
         <span
           className="block size-2 rounded-full"
+          role="img"
+          aria-label={concept.taggable ? t("kg.taggable") : t("canvas.notTaggable")}
           style={concept.taggable ? { background: colour } : { border: `1.5px solid ${colour}` }}
         />
       </span>
@@ -302,19 +311,6 @@ function ConceptRow({
         )}
       </span>
 
-      {/* The switch is the row's own control, so it must not also open the concept. */}
-      <span
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <Switch
-          checked={concept.taggable}
-          disabled={locked}
-          onCheckedChange={onTaggable}
-          label={t("outline.taggableOf", { name: concept.name })}
-        />
-      </span>
-
       <span className="nums hidden text-right text-small text-muted-foreground md:block">
         {concept.degree}
       </span>
@@ -331,9 +327,9 @@ export function ConceptOutline({
   place,
   unitStats,
   hasCurriculum,
+  filtering,
   selected,
   onSelect,
-  onTaggable,
   onRenameUnit,
   onMoveUnit,
   onDeleteUnit,
@@ -350,9 +346,12 @@ export function ConceptOutline({
    *  count in «eliminar la unidad y sus N» have to come from the whole thing. */
   unitStats: (unit: string) => { total: number; covered: number };
   hasCurriculum: boolean;
+  /** Whether `concepts` is a NARROWED list. It is what makes a search work against units
+   *  that are shut by default: a query that draws six headers and no rows reads as «no hay
+   *  nada», which is the opposite of what it found. */
+  filtering: boolean;
   selected: string | null;
   onSelect: (name: string | null) => void;
-  onTaggable: (name: string, next: boolean) => void;
   onRenameUnit: (name: string) => void;
   onMoveUnit: (name: string, delta: number) => void;
   onDeleteUnit: (name: string, count: number) => void;
@@ -360,7 +359,39 @@ export function ConceptOutline({
 }) {
   const { plural, t } = useT();
   const locked = useStageLocked();
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  /**
+   * UNITS ARE SHUT UNTIL SOMETHING OPENS THEM.
+   *
+   * A real syllabus is six to eight units of ten to thirty concepts, so open-by-default
+   * meant the list arrived as a hundred and thirty rows and the units — which are the thing
+   * you navigate by — were six headings lost inside it. Shut, the first screen IS the
+   * syllabus: the units in the order they are taught, each with its count and its coverage.
+   *
+   * `overrides` holds only what a person has DECIDED, so it never fights the two states
+   * that open a unit on their own — a search narrowing the list, and the unit holding the
+   * concept that is selected. A click always wins over both, in either direction, which is
+   * what keeps «lo cerré a propósito» from being undone by the next keystroke.
+   */
+  const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
+  const selectedUnit = useMemo(
+    () => concepts.find((concept) => concept.name === selected)?.domain ?? null,
+    [concepts, selected],
+  );
+
+  // Choosing a concept — on the map, most of the time — is NEWER than having shut its unit
+  // a minute ago, so it drops that unit's override rather than losing to it. Without this,
+  // clicking a node answered with an inspector on the right and a list on the left that
+  // refused to show the row it was about.
+  useEffect(() => {
+    if (!selectedUnit) return;
+    setOverrides((current) => {
+      if (!current.has(selectedUnit)) return current;
+      const next = new Map(current);
+      next.delete(selectedUnit);
+      return next;
+    });
+  }, [selectedUnit]);
 
   const byUnit = useMemo(() => {
     const map = new Map<string, KgConcept[]>();
@@ -391,7 +422,6 @@ export function ConceptOutline({
         <span>{t("outline.column.concept")}</span>
         <span className="hidden md:block">{hasCurriculum ? t("outline.column.curriculum") : ""}</span>
         <span className="hidden md:block">{t("outline.column.description")}</span>
-        <span>{t("outline.column.taggable")}</span>
         <span className="hidden text-right md:block">{t("outline.column.degree")}</span>
         <span />
       </div>
@@ -399,7 +429,7 @@ export function ConceptOutline({
       {shown.map(([unit, items]) => {
         const order = units.indexOf(unit);
         const colour = domainColour(Math.max(0, groups.indexOf(unit)), Math.max(1, groups.length));
-        const open = !collapsed.has(unit);
+        const open = overrides.get(unit) ?? (filtering || unit === selectedUnit);
         const undescribed = items.filter((concept) => !concept.description).length;
         const { total, covered } = unitStats(unit);
         const partial = items.length !== total;
@@ -411,10 +441,9 @@ export function ConceptOutline({
               <button
                 type="button"
                 onClick={() =>
-                  setCollapsed((current) => {
-                    const next = new Set(current);
-                    if (next.has(unit)) next.delete(unit);
-                    else next.add(unit);
+                  setOverrides((current) => {
+                    const next = new Map(current);
+                    next.set(unit, !open);
                     return next;
                   })
                 }
@@ -480,7 +509,6 @@ export function ConceptOutline({
                     place={place(concept.name)}
                     selected={selected === concept.name}
                     onSelect={() => onSelect(concept.name)}
-                    onTaggable={(next) => onTaggable(concept.name, next)}
                   />
                 ))
               : null}

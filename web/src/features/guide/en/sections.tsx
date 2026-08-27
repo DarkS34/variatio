@@ -411,7 +411,7 @@ function Grafo() {
             {
               key: "temario",
               head: "Syllabus",
-              body: "The domains and their concepts, with the graph canvas beside them. Drag to move, scroll to zoom, and clicking a node selects it in the table too.",
+              body: "The domains and their concepts, with the graph canvas beside them. Units start closed: open one, or search and the ones with matches open by themselves. Drag to move, scroll to zoom, and clicking a node selects it in the table too, opening its unit.",
             },
             {
               key: "curriculo",

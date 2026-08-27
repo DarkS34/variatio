@@ -1,12 +1,12 @@
-import { Ban, Clock, Copy, Download, Eraser, Lock, Pencil, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Copy, Download, Eraser, Lock, Pencil, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import { isQueued, queuedLabel, waitOf, waitReason } from "@/lib/queue";
+import { isQueued, waitOf, waitReason } from "@/lib/queue";
 import { Link } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ import { takeDraft } from "./draft";
 import { GenerateForm, summarize } from "./GenerateForm";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
+import { RunStrip, useRunDetail } from "./RunStrip";
 import { useT, type Key } from "@/lib/i18n";
 
 /** The job error the guardrail raises, recognised so it can be shown on its own step. */
@@ -81,6 +82,7 @@ export function GenerateScreen() {
   const queued = isQueued(run?.job);
   const active = running || queued;
   const wait = waitOf(run?.job, lanes);
+  const detail = useRunDetail(running);
 
   const results = useMemo<Result[]>(() => {
     if (!run) return [];
@@ -182,12 +184,22 @@ export function GenerateScreen() {
 
   const runPane = run ? (
     <div className="space-y-4">
-      <RunPanel
+      <RunStrip
         run={run}
         running={running}
-        waiting={queued ? (wait ? waitReason(wait, split, tr) : t("generate.queued")) : null}
-        profile={profile}
+        queued={queued}
+        wait={wait}
+        expanded={detail.expanded}
+        onToggle={detail.toggle}
       />
+      {detail.expanded ? (
+        <RunPanel
+          run={run}
+          running={running}
+          waiting={queued ? (wait ? waitReason(wait, split, tr) : t("generate.queued")) : null}
+          profile={profile}
+        />
+      ) : null}
       {results.length > 0 && profile ? (
         <Results results={results} profile={profile} run={run} savedCount={savedCount} />
       ) : null}
@@ -197,7 +209,7 @@ export function GenerateScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-center gap-2">
-        <h1 className="font-display font-expanded text-display">Generar variantes</h1>
+        <h1 className="font-display font-expanded text-display">{t("generate.title")}</h1>
         <InfoHint label={t("generate.howItWorks")}>
           {t("generate.howItWorks.body")}
         </InfoHint>
@@ -230,74 +242,129 @@ export function GenerateScreen() {
         </Alert>
       ) : null}
 
-      {collapsed ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-            <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
-              {summarize(again, profile, tr)}
-            </p>
-            {/* The wait replaces the progress, never sits beside it: nothing is being
-                generated yet, and the count of jobs in front is the only honest measure of
-                how far off it is — there is no estimate of when, here or anywhere. */}
-            {queued ? (
-              <span
-                className="flex shrink-0 items-center gap-1.5 text-body font-medium"
-                title={wait ? waitReason(wait, split, tr) : undefined}
-              >
-                <Clock className="size-3.5" />
-                {queuedLabel(wait, tr)}
-              </span>
-            ) : null}
-            {active ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => run?.job && cancel.mutate(run.job.id)}
-                disabled={cancel.isPending}
-              >
-                <Ban />
-                {t("common.cancel")}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setForm(again);
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil />
-                  {t("generate.changeCommission")}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={relaunch}
-                  disabled={!canLaunch || submit.isPending}
-                  title={offline ?? undefined}
-                >
-                  {submit.isPending ? <Spinner /> : <Sparkles />}
-                  {again.n === 1 ? t("generate.another") : t("generate.anotherN", { n: again.n })}
-                </Button>
-              </>
-            )}
-          </div>
+      {/* ONE COLUMN, AT A READING WIDTH.
+          This screen used to split into two once anything had run — the five-step form on
+          the left, the run and the items on the right at 1.1fr — so the thing you came for
+          arrived at half the width of the window, beside a form you had already filled in.
+          The commission collapses to a line, the run to a strip, and what is left is the
+          items, at a width you can read a statement and a block of code in. */}
+      <div className="mx-auto w-full max-w-4xl space-y-4">
+        {collapsed ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+              <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
+                {summarize(again, profile, tr)}
+              </p>
+              {active ? null : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setForm(again);
+                      setEditing(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("generate.changeCommission")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={relaunch}
+                    disabled={!canLaunch || submit.isPending}
+                    title={offline ?? undefined}
+                  >
+                    {submit.isPending ? <Spinner /> : <Sparkles />}
+                    {again.n === 1 ? t("generate.another") : t("generate.anotherN", { n: again.n })}
+                  </Button>
+                </>
+              )}
+            </div>
 
-          {runPane}
-        </div>
-      ) : (
+            {runPane}
+          </>
+        ) : (
+          <>
+            {formPanel}
+            {hasRun ? runPane : null}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The three ways out of here, behind the one question they answer. */
+function ExportMenu({
+  className,
+  onCopy,
+  onJson,
+  onMarkdown,
+}: {
+  className?: string;
+  onCopy: () => void;
+  onJson: () => void;
+  onMarkdown: () => void;
+}) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const holder = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: MouseEvent) => {
+      if (!holder.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  const entries: { label: string; icon: typeof Copy; run: () => void }[] = [
+    { label: t("generations.copyJson"), icon: Copy, run: onCopy },
+    { label: t("generate.downloadJson"), icon: Download, run: onJson },
+    { label: t("generate.downloadMarkdown"), icon: Download, run: onMarkdown },
+  ];
+
+  return (
+    <div className={cn("relative", className)} ref={holder}>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((was) => !was)}
+      >
+        <Download />
+        {t("generate.export")}
+      </Button>
+      {open ? (
         <div
-          className={cn(
-            hasRun
-              ? "grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
-              : "mx-auto w-full max-w-3xl",
-          )}
+          role="menu"
+          className="animate-fade-in absolute right-0 z-20 mt-1 min-w-48 rounded-lg border border-border bg-popover p-1 shadow-overlay"
         >
-          {formPanel}
-          {hasRun ? runPane : null}
+          {entries.map((entry) => (
+            <button
+              key={entry.label}
+              role="menuitem"
+              onClick={() => {
+                entry.run();
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-body transition-colors hover:bg-accent"
+            >
+              <entry.icon className="size-4 shrink-0 text-muted-foreground" />
+              {entry.label}
+            </button>
+          ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -337,28 +404,15 @@ function Results({
             {t("generate.partial", { produced, requested })}
           </Badge>
         ) : null}
-        <div className="ml-auto flex gap-1">
-          <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(asJson)}>
-            <Copy />
-            Copiar JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => download("items.json", asJson, "application/json")}
-          >
-            <Download />
-            JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => download("items.md", toMarkdown(results, profile, t), "text/markdown")}
-          >
-            <Download />
-            Markdown
-          </Button>
-        </div>
+        {/* One control where there were three. «Copiar JSON», «JSON» and «Markdown» sat in
+            a row above the items at the same weight as everything else on the line, and the
+            three of them are one question — how do I take this out of here — asked once. */}
+        <ExportMenu
+          className="ml-auto"
+          onCopy={() => navigator.clipboard.writeText(asJson)}
+          onJson={() => download("items.json", asJson, "application/json")}
+          onMarkdown={() => download("items.md", toMarkdown(results, profile, t), "text/markdown")}
+        />
       </div>
 
       {results.map((result, index) => (

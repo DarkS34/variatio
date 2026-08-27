@@ -391,7 +391,7 @@ function Grafo() {
             {
               key: "temario",
               head: "Temario",
-              body: "Los dominios y sus conceptos, con el lienzo del grafo al lado. Arrastra para mover, rueda para acercar, y al pulsar un nodo se selecciona también en la tabla.",
+              body: "Los dominios y sus conceptos, con el lienzo del grafo al lado. Las unidades vienen plegadas: ábrelas, o busca y se abren solas las que tengan resultados. Arrastra para mover, rueda para acercar, y al pulsar un nodo se selecciona también en la tabla, abriendo su unidad.",
             },
             {
               key: "curriculo",
