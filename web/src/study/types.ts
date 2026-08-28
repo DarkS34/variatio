@@ -357,5 +357,22 @@ export interface AssignableAccount {
   name: string;
   evaluator_profile: EvaluatorProfile | null;
   is_admin: boolean;
-  workspaces: { slug: string; name: string; role: string }[];
+  workspaces: AssignableWorkspace[];
+}
+
+/**
+ * One instance this account can open, and whether anything can be commissioned in it.
+ *
+ * `ready` is the same gate `POST /evaluations/generate` enforces, so the screen never
+ * offers what the endpoint would refuse; `pending` names the stages still to be approved
+ * as ARTIFACT KEYS, which `lib/names.ts` says in the reader's own language rather than
+ * the API's. Both are optional because an API older than this bundle sends neither, and
+ * the panel reads that as «no lo sabe» — offered, not blocked.
+ */
+export interface AssignableWorkspace {
+  slug: string;
+  name: string;
+  role: string;
+  ready?: boolean;
+  pending?: string[];
 }

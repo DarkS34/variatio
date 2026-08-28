@@ -133,7 +133,7 @@ function ItemEditor({
             <div key={field} className="space-y-1">
               <Label>
                 {field}
-                {field === primaryField ? " · primario" : ""}
+                {field === primaryField ? t("bank.primaryField") : ""}
               </Label>
               <Textarea
                 value={values[field] ?? ""}

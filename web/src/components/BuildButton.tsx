@@ -3,6 +3,7 @@ import { Clock, Hammer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
 import { isQueued, prospectNote, queuedLabel, waitOf, waitReason } from "@/lib/queue";
+import { slotLabelOf } from "@/lib/raw";
 import type { StageState } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import {
@@ -15,6 +16,7 @@ import {
   useSubmitJob,
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
+import { artifactName } from "@/lib/names";
 
 /** What the two halves of the action are called on a given screen, when the generic
  *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
@@ -86,7 +88,7 @@ export function BuildButton({
     : stage.blocked_reason
       ? stage.blocked_reason
       : rawMissing
-        ? t("build.rawMissing", { slot: rawMissing })
+        ? t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! })
         : offline
           ? offline
           : submit.isPending
@@ -114,8 +116,8 @@ export function BuildButton({
       title={
         reason ??
         (missing
-          ? t("build.create", { stage: stage.label.toLowerCase(), note: queueNote })
-          : t("build.redo", { stage: stage.label.toLowerCase(), note: queueNote }))
+          ? t("build.create", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote })
+          : t("build.redo", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote }))
       }
       onClick={launch}
     >
@@ -123,8 +125,8 @@ export function BuildButton({
       {waiting
         ? queuedLabel(wait, tr)
         : missing
-          ? (labels?.create ?? "Construir")
-          : (labels?.redo ?? "Reconstruir")}
+          ? (labels?.create ?? t("build.createDefault"))
+          : (labels?.redo ?? t("build.redoDefault"))}
     </Button>
   );
 }

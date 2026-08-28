@@ -130,7 +130,7 @@ export function ConceptPicker({
               key={name}
               variant={primary === name ? "default" : "secondary"}
               className="pr-1"
-              title={primary === name ? "Concepto principal" : undefined}
+              title={primary === name ? t("concept.isPrimary") : undefined}
             >
               <span
                 className="size-1.5 shrink-0 rounded-full"
@@ -163,7 +163,9 @@ export function ConceptPicker({
         )}
         {selected.length > MAX_VISIBLE_CHIPS ? (
           <Button variant="ghost" size="sm" onClick={() => setShowAllSelected((v) => !v)}>
-            {showAllSelected ? "Ver menos" : t("concept.more", { n: selected.length - MAX_VISIBLE_CHIPS })}
+            {showAllSelected
+              ? t("common.showLess")
+              : t("concept.more", { n: selected.length - MAX_VISIBLE_CHIPS })}
           </Button>
         ) : null}
         {selected.length > 1 && !disabled ? (

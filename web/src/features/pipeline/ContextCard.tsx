@@ -13,7 +13,7 @@ import { api } from "@/lib/api";
 import { truncate } from "@/lib/format";
 import { useCanEdit } from "@/state/auth";
 import { keys, useContentContext } from "@/state/queries";
-import { useT } from "@/lib/i18n";
+import { useT, type Key } from "@/lib/i18n";
 
 // The paragraph is paid for in every call the system makes and may reach 900 characters
 // (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to RECOGNISE it — «yes, this is
@@ -21,10 +21,10 @@ import { useT } from "@/lib/i18n";
 // that holds whatever the character count lets through. It is shown whole when editing.
 const PREVIEW_CHARS = 160;
 
-const FACT_LABEL: Record<string, string> = {
-  subject: "Materia",
-  educational_level: "Nivel",
-  language_of_instruction: "Idioma",
+const FACT_LABEL: Record<string, Key> = {
+  subject: "context.fact.subject",
+  educational_level: "context.fact.level",
+  language_of_instruction: "context.fact.language",
 };
 
 /**
@@ -123,7 +123,7 @@ export function ContextCard() {
 
             <div className="grid gap-2 sm:grid-cols-3">
               {factKeys.map((key) => (
-                <Field key={key} label={FACT_LABEL[key] ?? key}>
+                <Field key={key} label={FACT_LABEL[key] ? t(FACT_LABEL[key]) : key}>
                   <Input
                     value={facts[key] ?? ""}
                     className="h-8"

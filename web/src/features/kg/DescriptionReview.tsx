@@ -22,6 +22,7 @@ import {
   useSubmitJob,
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
+import { jobName, stepName } from "@/lib/names";
 
 /**
  * What the chain writes on its own, put where it can be read and corrected.
@@ -54,7 +55,10 @@ function WritingProgress() {
       <CardContent className="space-y-2 py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Spinner />
-          <p className="text-body font-medium">{step?.label ?? run.job?.label}</p>
+          <p className="text-body font-medium">
+            {(step ? stepName(step.id, t, step.label) : null) ??
+              (run.job ? jobName(run.job.kind, t, run.job.label) : null)}
+          </p>
           <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}

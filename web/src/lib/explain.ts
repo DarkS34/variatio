@@ -1,5 +1,6 @@
 import type { VgEvent } from "./types";
 import type { Key, Translate } from "@/lib/i18n";
+import { jobName, stepName } from "@/lib/names";
 
 /**
  * What the pipeline is doing, in words.
@@ -55,28 +56,37 @@ const STEP_IDS = [
   "build_exemplars_profile",
   "build_knowledge_graph",
   "build_exemplars_bank",
-  "sample",
-  "infer_profile",
   "kg_convert",
   "kg_extract",
-  "kg_clean",
   "kg_merge",
   "kg_drop",
   "kg_domains",
   "kg_link",
   "kg_curate",
-  "kg_taggability",
+  "taggability",
   "convert",
   "transcribe_documents",
   "transcribe",
   "transcribe_seam",
   "extract",
   "extract_batches",
+  "scan",
+  "consolidate",
+  "eval.arms",
+  "eval.guardrail",
+  "eval.admissibility",
+  "eval_rag_index",
 ];
 
 // Derived rather than written out: a step id and its key differ by a prefix, and two lists
-// of the same 32 names is one more thing to keep in step. The `Key` cast is checked by
-// `explain.test.ts`, which asserts every id resolves to a key the catalogue declares.
+// of the same names is one more thing to keep in step.
+//
+// IT HAS TO MATCH WHAT THE SERVER ACTUALLY EMITS, and for a while it did not. Four ids
+// here named nothing — `sample` and `infer_profile` predate the profile builder emitting
+// `convert`/`scan`/`consolidate`, `kg_clean` predates the split into `kg_merge`/`kg_drop`,
+// and `kg_taggability` was a misspelling of `taggability`. That last one cost the
+// taggability review its (i) entirely: the step drew with no explanation while a perfectly
+// good paragraph sat in both catalogues under a key nothing could ask for.
 export const STEP_EXPLAIN: Record<string, Key> = Object.fromEntries(
   STEP_IDS.map((id) => [id, `step.${id}` as Key]),
 );
@@ -104,7 +114,12 @@ export function describeEvent(
   event: VgEvent,
   tr: Translate,
 ): { text: string; tone: ActivityTone } | null {
-  const jobLabel = event.job?.label ?? tr.t("activity.job.name");
+  // The job's own name, said in the reader's language: the label the event carries is
+  // the API's. `describeEvent` takes a translator rather than a hook precisely so this
+  // stays callable from the store and from a test.
+  const jobLabel = event.job
+    ? jobName(event.job.kind, tr.t, event.job.label)
+    : tr.t("activity.job.name");
   switch (event.kind) {
     case "job.queued":
       return { text: tr.t("activity.job.queued", { label: jobLabel }), tone: "info" };
@@ -125,8 +140,12 @@ export function describeEvent(
       return { text: tr.t("activity.job.cancelled"), tone: "warn" };
 
     case "step.started":
+      // The step's own name, for the same reason as the job's above: the label the event
+      // carries is the API's. Through `tr.t` and not a hook, so this stays pure.
       return {
-        text: event.label ?? tr.t("activity.step.generic", { id: event.id ?? "" }),
+        text: event.label
+          ? stepName(event.id, tr.t, event.label)
+          : tr.t("activity.step.generic", { id: event.id ?? "" }),
         tone: "info",
       };
     case "step.finished":

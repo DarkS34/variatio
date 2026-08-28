@@ -16,7 +16,7 @@ import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
 import { studyApi } from "./api";
 import type { AdminEvaluations, AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
 import { useSelection } from "./useSelection";
-import { useT, type Key } from "@/lib/i18n";
+import { useT, type Key, type Language } from "@/lib/i18n";
 
 /** A three-way blind choice: what pure chance would produce. Every share is read
  *  against it, and the panel never shows one without drawing the other. */
@@ -113,7 +113,7 @@ export function StudyTab({
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}
           >
             <Download />
-            CSV{filtered ? " (filtrado)" : ""}
+            CSV{filtered ? t("adminStudy.csvFiltered") : ""}
           </a>
         </div>
 
@@ -230,10 +230,11 @@ const percent = (value: number | null | undefined) =>
 
 /** A p-value is written as a threshold, not as a verdict: the panel reports, it does not
  *  conclude. `< 0.001` rather than a wall of zeros, and never a "significativo" label. */
-function pValue(p: number | null | undefined): string {
+function pValue(p: number | null | undefined, language: Language): string {
   if (p == null) return "—";
-  if (p < 0.001) return "p < 0,001";
-  return `p = ${p.toFixed(3).replace(".", ",")}`;
+  const decimal = (value: string) => (language === "es" ? value.replace(".", ",") : value);
+  if (p < 0.001) return `p < ${decimal("0.001")}`;
+  return `p = ${decimal(p.toFixed(3))}`;
 }
 
 /**
@@ -291,7 +292,10 @@ function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
               </dd>
               <dd className="ml-auto nums text-muted-foreground">
                 {slice.ci95_usable
-                  ? `IC95 ${percent(slice.ci95_usable[0])}–${percent(slice.ci95_usable[1])}`
+                  ? t("adminStudy.ci95", {
+                      low: percent(slice.ci95_usable[0]),
+                      high: percent(slice.ci95_usable[1]),
+                    })
                   : "—"}
               </dd>
             </div>
@@ -312,7 +316,7 @@ function Triage({ aggregates }: { aggregates: EvaluationAggregates }) {
  * Cohen's κ proper, and the memoria has to say so instead of calling the number κ.
  */
 function Measurement({ data }: { data: AdminEvaluations }) {
-  const { plural, t } = useT();
+  const { plural, t, language } = useT();
   const { agreement, aggregates } = data;
   const position = aggregates.position;
   const duration = aggregates.duration;
@@ -364,7 +368,7 @@ function Measurement({ data }: { data: AdminEvaluations }) {
             A: <span className="nums text-foreground">{position.counts["1"] ?? 0}</span> · B:{" "}
             <span className="nums text-foreground">{position.counts["2"] ?? 0}</span> · C:{" "}
             <span className="nums text-foreground">{position.counts["3"] ?? 0}</span> ·{" "}
-            <span className="nums">{pValue(position.p)}</span>
+            <span className="nums">{pValue(position.p, language)}</span>
             {t("adminStudy.position.vsUniform")}
           </p>
         ) : (

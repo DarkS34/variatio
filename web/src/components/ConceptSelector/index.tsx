@@ -72,7 +72,7 @@ export function ConceptSelector({
   open,
   onClose,
   onConfirm,
-  confirmLabel = "Hecho",
+  confirmLabel,
 }: ConceptSelectorProps) {
   const { t } = useT();
   const [query, setQuery] = useState("");
@@ -317,7 +317,7 @@ export function ConceptSelector({
         onRemove={toggle}
         onClear={() => onChange([])}
         onConfirm={onConfirm ?? onClose}
-        confirmLabel={confirmLabel}
+        confirmLabel={confirmLabel ?? t("concept.done")}
       />
     </div>,
     document.body,

@@ -279,9 +279,10 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
   const locked = account.locked_seconds > 0;
 
   const confirmAdmin = () => {
-    const message = account.is_admin
-      ? `¿Quitar la administración a «${account.username}»?\n\nDeja de entrar en todos los workspaces y de ver este panel; conserva los accesos que tenga como miembro.`
-      : `¿Hacer administrador a «${account.username}»?\n\nEntrará en todos los workspaces sin ser miembro, verá este panel y podrá dar accesos y borrar instancias.`;
+    const message = t(
+      account.is_admin ? "acc.confirmRemoveAdmin" : "acc.confirmMakeAdmin",
+      { username: account.username },
+    );
     if (!window.confirm(message)) return;
     setAdmin.mutate(
       { id: account.id, isAdmin: !account.is_admin },

@@ -66,7 +66,11 @@ export function WorkspaceSwitcher() {
         onClick={() => setOpen((was) => !was)}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={active ? `Workspace: ${active.name}` : "Elegir workspace"}
+        title={
+          active
+            ? t("workspace.switcher.current", { name: active.name })
+            : t("workspace.switcher.choose")
+        }
         className={cn(
           "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-body transition-colors hover:bg-accent",
           open && "bg-accent",

@@ -57,7 +57,7 @@ export function CurriculumTab() {
   const client = useQueryClient();
   const kg = useKg();
   const graph = useKgGraph();
-  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: getCurriculum });
+  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: () => getCurriculum() });
 
   const [draft, setDraft] = useState<string[] | null>(null);
   const [closePrerequisites, setClosePrerequisites] = useState(false);

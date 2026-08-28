@@ -289,7 +289,7 @@ function GenerationCard({
               title={t("generations.againHint")}
               onClick={() => {
                 stashDraft(fromGeneration(row));
-                navigate("/generar");
+                navigate("/generate");
               }}
             >
               <Sparkles />
@@ -330,7 +330,7 @@ function GenerationCard({
           onClick={onToggle}
           className="text-small font-medium text-primary underline-offset-4 hover:underline"
         >
-          {expanded ? "Ver menos" : t("generations.viewFull")}
+          {expanded ? t("common.showLess") : t("generations.viewFull")}
         </button>
       </CardContent>
     </Card>
@@ -340,12 +340,14 @@ function GenerationCard({
 /** The parameters the item was asked for with. Without them the statement is unreadable
  *  as evidence: «demasiado fácil» means nothing until you know what curriculum it had. */
 function Commission({ row }: { row: GenerationRow }) {
+  const { t } = useT();
   const entries: [string, string][] = [];
-  if (row.curriculum.length > 0) entries.push(["Currículo", row.curriculum.join(" · ")]);
+  if (row.curriculum.length > 0)
+    entries.push([t("generations.curriculum"), row.curriculum.join(" · ")]);
   for (const [field, value] of Object.entries(row.fixed)) {
     entries.push([field, String(value)]);
   }
-  if (row.instructions) entries.push(["Instrucciones", row.instructions]);
+  if (row.instructions) entries.push([t("generations.instructions"), row.instructions]);
   if (entries.length === 0) return null;
 
   return (

@@ -21,6 +21,7 @@ import {
   useDeleteArtifact,
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
+import { artifactName } from "@/lib/names";
 
 /**
  * The installation's instances, and what this panel writes about them: removing them, or
@@ -151,12 +152,13 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
 }
 
 function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
+  const { t } = useT();
   const { disk } = workspace;
   const parts = [
-    ["bruto", disk.raw],
-    ["instancia", disk.instance],
-    ["caché", disk.cache],
-    ["historial", disk.history],
+    [t("ws.disk.raw"), disk.raw],
+    [t("ws.disk.instance"), disk.instance],
+    [t("ws.disk.cache"), disk.cache],
+    [t("ws.disk.history"), disk.history],
   ] as const;
   return (
     <span
@@ -165,7 +167,12 @@ function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
     >
       {bytes(disk.total)}
       <span className="ml-1 text-micro text-muted-foreground">
-        ({parts.filter(([, size]) => size > 0).map(([label, size]) => `${label} ${bytes(size)}`).join(", ") || "vacío"})
+        (
+        {parts
+          .filter(([, size]) => size > 0)
+          .map(([label, size]) => `${label} ${bytes(size)}`)
+          .join(", ") || t("ws.disk.empty")}
+        )
       </span>
     </span>
   );
@@ -311,8 +318,8 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
             disabled={empty || discard.isPending}
             title={
               empty
-                ? t("ws.stageMissing", { label: stage.label })
-                : t("ws.clearStage", { label: stage.label, slug: workspace.slug })
+                ? t("ws.stageMissing", { label: artifactName(stage.artifact, t, stage.label) })
+                : t("ws.clearStage", { label: artifactName(stage.artifact, t, stage.label), slug: workspace.slug })
             }
             onClick={() => confirm(stage)}
             className={cn(
@@ -321,7 +328,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
             )}
           >
             <Badge variant={meta.tone as never}>
-              {stage.label.split(" ")[0]} · {t(meta.labelKey).toLowerCase()}
+              {artifactName(stage.artifact, t, stage.label).split(" ")[0]} · {t(meta.labelKey).toLowerCase()}
             </Badge>
           </button>
         );

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import { useArtifactRun, useBuildPhases, useCancelJob, useElapsed } from "@/state/queries";
 import { useT } from "@/lib/i18n";
+import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 
 /**
  * What a build is doing right now, on the screen of the thing being built.
@@ -96,6 +97,15 @@ export function JobProgress({
   // `build.progress` yet keeps saying «—»: taking the step's number there would print a
   // percentage beside a segmented bar still drawn at zero, and the two would disagree.
   const percent = overall?.percent ?? (phases.length === 0 ? stepPercent(step) : null);
+  // The running phase, or the running step when there is no plan. Both arrive with the
+  // API's own sentence and are named here; a phase key only means something inside its
+  // plan, which is the artifact a build writes or, for a job that writes none, its kind.
+  const running =
+    (overall?.label
+      ? phaseName(phasePlan(run.job), overall.key, t, overall.label)
+      : null) ??
+    (step ? stepName(step.id, t, step.label) : null) ??
+    t("progress.preparing");
 
   return (
     <Card className={className}>
@@ -115,7 +125,7 @@ export function JobProgress({
           {/* No (i): this card appears under the artifact's header, which already explains what it
               is, and the job name plus the running phase say what is happening. The job's explanation
               is still given once, in the run drawer. */}
-          <p className="text-body font-medium">{run.job.label}</p>
+          <p className="text-body font-medium">{jobName(run.job.kind, t, run.job.label)}</p>
           <span className="flex items-center gap-1 text-small nums text-muted-foreground">
             <Hourglass className="size-3" />
             {duration(elapsed)}
@@ -144,7 +154,7 @@ export function JobProgress({
                   {position + 1}/{phases.length}
                 </span>
               ) : null}
-              {overall?.label ?? step?.label ?? t("progress.preparing")}
+              {running}
             </p>
             <span className="shrink-0 text-body font-medium nums">
               {percent === null ? "—" : `${percent} %`}

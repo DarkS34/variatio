@@ -6,7 +6,8 @@ export interface TranscriptionDocument {
   name: string;
   pages: number;
   state: DocumentState;
-  reason: string | null;
+  /** Stable codes, not sentences: `lib/raw.ts` turns them into the reader's language. */
+  reasons: string[];
   chars: number;
   seams_merged: number;
   failed_pages: number;

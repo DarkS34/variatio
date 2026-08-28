@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useCancelJob, useLanes, useSplitEngine, useStream } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 import { useT } from "@/lib/i18n";
+import { jobName } from "@/lib/names";
 
 export type DrawerTab = "progress" | "logs";
 
@@ -47,7 +48,7 @@ export function RunDrawer({
   onTab: (next: DrawerTab) => void;
 }) {
   const tr = useT();
-  const { t } = useT();
+  const { t, plural } = useT();
   const run = useActiveRun();
   const stream = useStream();
   const cancel = useCancelJob();
@@ -72,7 +73,7 @@ export function RunDrawer({
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2 sm:px-4">
         <ListTree className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 items-center gap-1.5">
-          <p className="truncate text-body font-medium">{run?.job?.label ?? "Ejecución"}</p>
+          <p className="truncate text-body font-medium">{run?.job ? jobName(run.job.kind, t, run.job.label) : t("run.untitled")}</p>
           {explain ? (
             <InfoHint label={t("run.whatThisJobDoes")}>
               <p>{t(explain.what)}</p>
@@ -185,10 +186,10 @@ export function RunDrawer({
                   {t("run.whatHappened")}
                 </h4>
                 {run.items.length > 0 ? (
-                  <Badge variant="settled">{run.items.length} ítem(s)</Badge>
+                  <Badge variant="settled">{plural("run.itemCount", run.items.length)}</Badge>
                 ) : null}
                 {run.taggedCount > 0 ? (
-                  <Badge variant="default">{run.taggedCount} etiquetado(s)</Badge>
+                  <Badge variant="default">{plural("run.taggedCount", run.taggedCount)}</Badge>
                 ) : null}
               </div>
               <ActivityFeed lines={run.activity} />

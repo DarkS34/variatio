@@ -1,4 +1,4 @@
-import type { Key } from "@/lib/i18n";
+import { localeStore, type Key, type Language } from "@/lib/i18n";
 import type { ArtifactStatus, JobStatus } from "./types";
 
 export function duration(ms: number | null | undefined): string {
@@ -25,13 +25,25 @@ export const ENGINE_LABEL: Record<string, string> = {
   ollama: "Ollama",
 };
 
+/**
+ * A month abbreviation is prose, so it answers to the reader and not to the server.
+ *
+ * `en-GB` and not `en-US` because the shape is the decision: day first and a 24-hour clock,
+ * which is what every timestamp in this app already looked like. Read from the store rather
+ * than taken as an argument — these two are called from ~30 places, all of them inside a
+ * tree that `localeStore` re-renders when the language changes.
+ */
+const DATE_LOCALES: Record<Language, string> = { es: "es-ES", en: "en-GB" };
+
+const dateLocale = () => DATE_LOCALES[localeStore.getSnapshot()];
+
 export function clock(ts: number): string {
-  return new Date(ts * 1000).toLocaleTimeString("es-ES", { hour12: false });
+  return new Date(ts * 1000).toLocaleTimeString(dateLocale(), { hour12: false });
 }
 
 export function when(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-ES", {
+  return new Date(iso).toLocaleString(dateLocale(), {
     day: "2-digit",
     month: "short",
     hour: "2-digit",

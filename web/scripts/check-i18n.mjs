@@ -12,8 +12,10 @@
 // again. The migration is over, and the three entries left are not leftovers: each is a
 // file that must NOT go through the catalogue, and says why in its own comment.
 //
-// It also checks the one thing the guide's two trees put beyond a text scan: that they
-// answer for the same set of sections.
+// It also checks the two things the guide puts beyond a text scan: that its two prose trees
+// answer for the same set of sections, and that every section the registry ANNOUNCES has a
+// body somewhere. The second is not a refinement of the first — two trees that agree on not
+// having a section satisfy it perfectly, which is how a blank page shipped green.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, relative, sep } from "node:path";
@@ -91,16 +93,23 @@ const JSX_BLOCK = /(?<![=-])[>}]([^<>{}='"`]{3,800}?)[<{]/g;
 // exactly where a single word lives. Everything alphabetic is suspect; the allow-list is
 // the technical vocabulary that reads the same in both languages.
 // The closing boundary is any `<`, not `</`: «Resultados» sat in front of a `<span>` and
-// so escaped both this rule and the two-word floor above it.
-const LONE_WORD = /(?<![=-])[>}]\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,20})\s*</g;
+// so escaped both this rule and the two-word floor above it. It is also any `{`, because
+// «Página {page.index}» is a text node that ENDS at the interpolation — one word before a
+// `{` is neither a sentence for `JSX_BLOCK` nor a `<` for this rule, and it shipped.
+const LONE_WORD = /(?<![=-])[>}]\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,20})\s*[<{]/g;
 const TECHNICAL_WORDS = new Set([
   "JSON", "Markdown", "Cerebras", "Ollama", "GPU", "CPU", "API", "URL", "CSV", "SSH", "VRAM",
   "Python", "Docling", "Postgres", "SQL", "HTML", "PDF", "few", "shot", "prompt", "prompts",
   "Variatio",
   "token", "tokens", "workspace", "workspaces", "kNN", "RAG", "npz", "docx", "pdf", "md",
   // A `}` closing a block, a newline, and `return <Something />` is code and reads as a
-  // one-word text node. These are the keywords that can legally sit in that position.
+  // one-word text node. These are the keywords that can legally sit in that position —
+  // the second row is what a `}` followed by `{` produces once the rule above accepts an
+  // interpolation as a closing boundary.
   "return", "default", "case", "else", "new", "void", "null", "true", "false", "await",
+  "try", "catch", "finally", "do", "while", "switch", "export", "const", "let", "var",
+  "function", "class", "interface", "type", "enum", "import", "from", "extends", "async",
+  "static", "get", "set", "throw", "delete", "typeof", "instanceof", "this", "super",
 ]);
 
 // The migration's remaining surface. Every one of these still speaks Spanish directly, and
@@ -156,7 +165,12 @@ for (const full of walk(SRC)) {
 
     for (const candidate of candidates) {
       const prose = SPANISH.test(candidate) || SPANISH_WORDS.test(candidate);
-      if (!prose || !SENTENCE.test(candidate) || looksLikeClasses(candidate)) continue;
+      // The two-word floor is what keeps a route and a `data-*` value out, and it does not
+      // apply to a literal carrying Spanish ORTHOGRAPHY: «caché», «vacío», «Currículo»,
+      // «Ejecución» are one word each and every one of them shipped as a label. An accent
+      // in a quoted string is prose whatever its length.
+      const floor = SPANISH.test(candidate) ? true : SENTENCE.test(candidate);
+      if (!prose || !floor || looksLikeClasses(candidate)) continue;
       findings.push(`${path}:${index + 1}  ${candidate.trim().slice(0, 90)}`);
       return;
     }
@@ -228,8 +242,36 @@ if (onlyEs.length || onlyEn.length) {
   process.exit(1);
 }
 
+// COMPARAR LOS DOS ÁRBOLES ENTRE SÍ NO BASTA, Y ESTE ES EL AGUJERO POR EL QUE SE COLÓ UNA
+// PÁGINA EN BLANCO EN PRODUCCIÓN. `GUIDE_SECTIONS` es lo que dibuja el índice, la búsqueda y
+// el enlace «Siguiente», y una entrada suya sin cuerpo en NINGUNO de los dos árboles pasaba
+// la comprobación de arriba sin despeinarse: los dos árboles coincidían perfectamente en no
+// tenerla. El resultado es una entrada de navegación que existe, un `GuideLink` que apunta a
+// ella, y una ruta que renderiza `null` — que es exactamente lo que este proyecto se niega a
+// hacer en cualquier otra pantalla.
+//
+// El registro es la fuente: el cuerpo se busca a partir de él y no al revés.
+const registrySlugs = [
+  ...readFileSync(resolve(SRC, "features/guide/sections.tsx"), "utf8").matchAll(
+    /\bslug:\s*"([\w-]+)"/g,
+  ),
+].map((match) => match[1]);
+const bodyless = registrySlugs.filter((slug) => !esSlugs.has(slug) && !enSlugs.has(slug));
+
+if (bodyless.length) {
+  console.error("✗ La guía anuncia secciones que no tienen texto en ningún idioma:\n");
+  for (const slug of bodyless) console.error(`  ${slug} — está en GUIDE_SECTIONS, no en BODIES`);
+  console.error(
+    `\nCada una es una entrada del índice que abre una página en blanco.\n` +
+      `Escribe su componente en src/features/guide/es/sections.tsx y en en/sections.tsx,\n` +
+      `y añádelo al mapa BODIES de los dos.`,
+  );
+  process.exit(1);
+}
+
 console.log(
   `✓ ${migrated} fichero(s) sin texto de interfaz fuera del catálogo; ` +
-    `${esSlugs.size} secciones de guía en los dos idiomas; ` +
+    `${esSlugs.size} secciones de guía en los dos idiomas, ` +
+    `las ${registrySlugs.length} del registro con cuerpo; ` +
     `${EXEMPT.size + EXEMPT_TREES.length} exclusión(es) deliberada(s).`,
 );

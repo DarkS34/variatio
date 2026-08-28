@@ -10,6 +10,7 @@ import type { RunView } from "@/state/runStore";
 
 import { FewShotPanel } from "./FewShotPanel";
 import { useT } from "@/lib/i18n";
+import { jobName } from "@/lib/names";
 
 export function RunPanel({
   run,
@@ -33,7 +34,11 @@ export function RunPanel({
           {run.guardrail && !run.guardrail.checked ? (
             <Badge variant="attention">{t("run.uncheckedInstructions")}</Badge>
           ) : null}
-          {run.job ? <Badge variant={running ? "default" : "outline"}>{run.job.label}</Badge> : null}
+          {run.job ? (
+            <Badge variant={running ? "default" : "outline"}>
+              {jobName(run.job.kind, t, run.job.label)}
+            </Badge>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

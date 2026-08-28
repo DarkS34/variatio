@@ -29,24 +29,19 @@ function draftMark(text: string): PageMark {
   return text.trim() ? "ok" : "empty";
 }
 
-const MARK_LABEL: Record<PageMark, string> = {
-  failed: "fallida",
-  empty: "vacía",
-  ok: "",
-};
-
 function PageMarkBadge({ mark }: { mark: PageMark }) {
+  const { t } = useT();
   if (mark === "failed") {
     return (
       <Badge variant="danger" mark={<CircleAlert />}>
-        {MARK_LABEL.failed}
+        {t("doc.mark.failed")}
       </Badge>
     );
   }
   if (mark === "empty") {
     return (
       <Badge variant="attention" mark={<CircleSlash />}>
-        {MARK_LABEL.empty}
+        {t("doc.mark.empty")}
       </Badge>
     );
   }
@@ -233,7 +228,7 @@ export function DocumentDialog({
                             page.index === shown && "font-expanded",
                           )}
                         >
-                          Página {page.index}
+                          {t("doc.pageNumber", { n: page.index })}
                         </span>
                         <PageMarkBadge mark={mark} />
                       </span>

@@ -6,6 +6,7 @@ import { StatusMark } from "@/components/ui/status";
 import { Progress } from "@/components/ui/misc";
 import { stepExplain } from "@/lib/explain";
 import { duration } from "@/lib/format";
+import { stepName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { StepView } from "@/state/runStore";
 import { useT } from "@/lib/i18n";
@@ -110,6 +111,10 @@ export function RunTimeline({
         const running = step.status === "running";
         const hasBar = running && Boolean(step.total);
         const explain = stepExplain(step.id);
+        // The step's own name in the reader's language; the label the event carries is the
+        // API's, and it stays as the fallback for the steps whose sentence the server
+        // builds around a filename.
+        const name = stepName(step.id, t, step.label);
         return (
           <Fragment key={step.key}>
             {slot ? <Insert last={false}>{slot}</Insert> : null}
@@ -141,13 +146,13 @@ export function RunTimeline({
                         step.status === "failed" && "text-destructive",
                       )}
                     >
-                      {step.label}
+                      {name}
                     </span>
                     {/* The (i) only while the sentence is NOT in view. The running step already prints it in
                         full under the title, so there the icon was a second copy of the same sentence a
                         centimetre from the first: when both say the same thing, the visible one stays. */}
                     {explain && !running ? (
-                      <InfoHint label={t("run.whatItDoes", { step: step.label })}>{t(explain)}</InfoHint>
+                      <InfoHint label={t("run.whatItDoes", { step: name })}>{t(explain)}</InfoHint>
                     ) : null}
                   </span>
                   <span className="shrink-0 text-small nums text-muted-foreground">

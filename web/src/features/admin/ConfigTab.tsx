@@ -147,7 +147,7 @@ const SECTIONS: Section[] = [
     labelKey: "cfg.section.retrieval",
     icon: ScanSearch,
     descriptionKey: "cfg.section.retrievalDesc",
-    groups: ["Recuperación"],
+    groups: ["Recuperación"], // i18n-exempt
   },
   {
     key: "generacion",
@@ -163,7 +163,7 @@ const SECTIONS: Section[] = [
     labelKey: "cfg.section.evaluation",
     icon: FlaskConical,
     descriptionKey: "cfg.section.evaluationDesc",
-    groups: ["Evaluación"],
+    groups: ["Evaluación"], // i18n-exempt
   },
   {
     key: "registro",

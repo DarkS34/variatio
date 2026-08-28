@@ -57,7 +57,7 @@ def test_a_document_never_transcribed_is_pending(ws):
     assert status["pending"] == 1
     assert status["done"] == 0
     assert status["documents"][0]["state"] == "pending"
-    assert status["documents"][0]["reason"] is None
+    assert status["documents"][0]["reasons"] == []
 
 
 def test_a_transcribed_document_is_done_and_counts_its_pages(ws):
@@ -82,15 +82,15 @@ def test_a_changed_configuration_makes_it_stale_and_says_what_changed(ws):
     status = transcribe.transcription_status(ws, "corpus")
     assert status["stale"] == 1
     assert status["documents"][0]["state"] == "stale"
-    assert "prompt de transcripción" in status["documents"][0]["reason"]
+    assert set(status["documents"][0]["reasons"]) == {"prompt", "dpi"}
 
 
 def test_a_changed_document_is_stale_because_of_the_document(ws):
     source = transcribed(ws, "corpus", "apuntes.md", "una pregunta")
     source.write_text("otra pregunta muy distinta", encoding="utf-8")
-    assert transcribe.transcription_status(ws, "corpus")["documents"][0]["reason"] == (
-        "el documento cambió"
-    )
+    assert transcribe.transcription_status(ws, "corpus")["documents"][0]["reasons"] == [
+        "document"
+    ]
 
 
 def test_the_status_reads_no_model_and_survives_an_engine_that_is_not_there(ws, monkeypatch):

@@ -58,7 +58,7 @@ export function AcceptInvite({ token }: { token: string }) {
 
   if (accept.isSuccess) {
     return (
-      <AuthLayout title="Cuenta creada" description={t("invite.alreadyIn")}>
+      <AuthLayout title={t("invite.accountCreated")} description={t("invite.alreadyIn")}>
         <Spinner />
       </AuthLayout>
     );
@@ -229,7 +229,7 @@ export function AcceptInvite({ token }: { token: string }) {
             <button
               type="button"
               onClick={() => setVisible((was) => !was)}
-              title={visible ? "Ocultar" : "Ver"}
+              title={visible ? t("password.hide") : t("password.show")}
               className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
             >
               {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

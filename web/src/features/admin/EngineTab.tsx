@@ -45,6 +45,7 @@ import {
   useEngineActions,
 } from "@/state/queries";
 import { useT, type Key } from "@/lib/i18n";
+import { jobName } from "@/lib/names";
 
 /**
  * The machine and the process, as one screen.
@@ -747,7 +748,7 @@ function QueueSection() {
     const message =
       t("eng.queue.confirm", {
         verb,
-        label: job.label,
+        label: jobName(job.kind, t, job.label),
         workspace: job.workspace,
         by: job.user_name ? t("eng.queue.confirmBy", { name: job.user_name }) : "",
       }) + (job.status === "running" ? t("eng.queue.confirmRunning") : "");
@@ -757,7 +758,7 @@ function QueueSection() {
         toast({
           title:
             job.status === "running" ? t("eng.queue.cancelRequested") : t("eng.queue.removed"),
-          description: t("eng.queue.jobOf", { label: job.label, workspace: job.workspace }),
+          description: t("eng.queue.jobOf", { label: jobName(job.kind, t, job.label), workspace: job.workspace }),
           tone: "attention",
         }),
       onError: (error: Error) =>
@@ -800,7 +801,7 @@ function QueueSection() {
                     <TD align="num" className="px-3 py-2 nums text-muted-foreground">
                       {active ? "—" : index + (running ? 0 : 1)}
                     </TD>
-                    <TD className="px-3 py-2">{job.label}</TD>
+                    <TD className="px-3 py-2">{jobName(job.kind, t, job.label)}</TD>
                     <TD className="px-3 py-2 font-mono text-small">{job.workspace}</TD>
                     <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
                     <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
@@ -870,7 +871,7 @@ function HistorySection() {
               {jobs.map((job) => (
                 <TR key={job.id}>
                   <TD className="px-3 py-2">
-                    {job.label}
+                    {jobName(job.kind, t, job.label)}
                     {job.error ? (
                       <span className="block truncate text-micro text-destructive" title={job.error}>
                         {job.error}

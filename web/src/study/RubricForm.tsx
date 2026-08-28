@@ -67,7 +67,7 @@ function Scale({
       </div>
       <div className="flex justify-between text-[11px] text-muted-foreground">
         <span>{ends[0]}</span>
-        {target ? <span className="text-attention">{target} = justo</span> : null}
+        {target ? <span className="text-attention">{t("rubric.target", { target })}</span> : null}
         <span>{ends[1]}</span>
       </div>
     </div>

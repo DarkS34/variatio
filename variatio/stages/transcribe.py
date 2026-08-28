@@ -29,16 +29,23 @@ TRANSCRIBE_PHASES = (("transcribe", "Transcribiendo los documentos", 100),)
 # What each fingerprint field means in the sentence the screen shows. The point of naming
 # them is that expiry has to be VISIBLE: a build that quietly re-transcribed a whole corpus
 # because somebody nudged the DPI is exactly what this is here to stop.
+#
+# They are CODES and not sentences: the reader's interface has a language of its own, so
+# the wording lives in `web/src/lib/i18n/` beside every other sentence and what travels is
+# the stable name of what moved. Two fields answer to `document` on purpose — a person is
+# told the document changed, never which half of its fingerprint said so.
 _REASONS = {
-    "source_sha256": "el documento cambió",
-    "source_bytes": "el documento cambió",
-    "mode": "la ruta de transcripción cambió",
-    "model": "el modelo de transcripción cambió",
-    "dpi": "la resolución de render cambió",
-    "ocr": "el OCR cambió",
-    "prompt_version": "el prompt de transcripción cambió",
-    "temperature": "la temperatura de transcripción cambió",
+    "source_sha256": "document",
+    "source_bytes": "document",
+    "mode": "route",
+    "model": "model",
+    "dpi": "dpi",
+    "ocr": "ocr",
+    "prompt_version": "prompt",
+    "temperature": "temperature",
 }
+
+_UNKNOWN_REASON = "config"
 
 
 def slot_dir(ws: Workspace, slot: str) -> Path:
@@ -83,7 +90,7 @@ def _expected_fingerprint(source: Path, slot: str) -> dict:
     )
 
 
-def _reason(stored: dict, expected: dict) -> str:
+def _reasons(stored: dict, expected: dict) -> list[str]:
     changed = [
         key
         for key in expected
@@ -91,10 +98,10 @@ def _reason(stored: dict, expected: dict) -> str:
     ]
     said: list[str] = []
     for key in changed:
-        text = _REASONS[key]
-        if text not in said:
-            said.append(text)
-    return "; ".join(said) or "la configuración de transcripción cambió"
+        code = _REASONS[key]
+        if code not in said:
+            said.append(code)
+    return said or [_UNKNOWN_REASON]
 
 
 def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
@@ -108,7 +115,7 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
             "name": source.name,
             "pages": _source_docs.page_count(source) if source.suffix.lower() == ".pdf" else 0,
             "state": PENDING,
-            "reason": None,
+            "reasons": [],
             "chars": 0,
             "seams_merged": 0,
             "failed_pages": 0,
@@ -120,7 +127,7 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
         "name": source.name,
         "pages": len(pages),
         "state": DONE if current else STALE,
-        "reason": None if current else _reason(stored, expected),
+        "reasons": [] if current else _reasons(stored, expected),
         "chars": sum(len(page) for page in pages),
         "seams_merged": _merged(meta),
         "failed_pages": len(meta.get("failed_pages") or []),

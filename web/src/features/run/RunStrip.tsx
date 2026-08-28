@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCancelJob, useElapsed } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 import { useT, type Translate } from "@/lib/i18n";
+import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 
 /**
  * THE RUN, AS TWO LINES ABOVE THE THING IT PRODUCES.
@@ -67,7 +68,7 @@ export function RunStrip({
           />
         </span>
 
-        <span className="font-medium">{run.job?.label}</span>
+        <span className="font-medium">{run.job ? jobName(run.job.kind, t, run.job.label) : null}</span>
 
         {status ? (
           <span className={cn("text-small font-medium", JOB_STATUS[status]?.tone)}>
@@ -122,7 +123,14 @@ export function RunStrip({
         <div className="space-y-1.5 px-3 pb-2.5">
           <div className="flex items-baseline justify-between gap-2">
             <span className="min-w-0 truncate text-small text-muted-foreground">
-              {overall?.label ?? step?.label ?? t("progress.preparing")}
+              {/* The running phase, or the running step when there is no plan: both arrive
+                  with the API's own sentence, and a phase key only means something inside
+                  the plan it belongs to. */}
+              {(overall?.label
+                ? phaseName(phasePlan(run.job), overall.key, t, overall.label)
+                : null) ??
+                (step ? stepName(step.id, t, step.label) : null) ??
+                t("progress.preparing")}
             </span>
             <span className="shrink-0 text-small font-medium nums">
               {overall

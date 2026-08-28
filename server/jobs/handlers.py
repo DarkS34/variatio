@@ -133,7 +133,10 @@ def handle_warm_models(job: Job, control: JobControl) -> dict:
         stage = None
         models = inference.runtime_models()
         label = "de la instancia"
-    with progress.step("warm_models", f"Cargando en memoria los modelos {label}"):
+    # The step's label is static so it can be translated; `label` still qualifies the
+    # LOG line, which is Spanish by rule. A sentence built around a stage name cannot
+    # be a catalogue entry, and this was the last one the interface read.
+    with progress.step("warm_models", "Cargando los modelos en memoria"):
         inference.ensure_models(models, label)
     resident = {info["model"] for info in inference.running_models()}
     return {"stage": stage, "models": models, "loaded": [m for m in models if m in resident]}

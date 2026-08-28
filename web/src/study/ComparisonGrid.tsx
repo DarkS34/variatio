@@ -73,7 +73,7 @@ function ProposalCard({
         </span>
         <div className="min-w-0">
           <p className="truncate text-body font-medium">
-            {meta ? t(meta.labelKey) : `Propuesta ${letter}`}
+            {meta ? t(meta.labelKey) : t("grid.proposal", { letter })}
           </p>
           {meta ? (
             <p className="truncate font-mono text-[11px] text-muted-foreground">
