@@ -57,8 +57,14 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(middleware.SecurityHeaders)
+    # ORDER IS LOAD-BEARING, AND IT READS BACKWARDS: `add_middleware` inserts at the front
+    # of the list and the stack is built by wrapping in reverse, so the LAST call is the
+    # OUTERMOST layer. Adding `SecurityHeaders` first left it inside `OriginCheck`, and the
+    # 403 that `_refused()` returns never passed through it — a refused request went out
+    # with no `nosniff` and no CSP, which is exactly the response an attacker gets to look
+    # at. `SecurityHeaders` goes last so every response is covered, refusals included.
     app.add_middleware(middleware.OriginCheck)
+    app.add_middleware(middleware.SecurityHeaders)
 
     # Gone from the default configuration: with a session cookie, a permissive CORS policy
     # is what turns another origin's page into a logged-in client. Vite proxies `/api` and

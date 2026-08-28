@@ -181,6 +181,25 @@ function parseBlocks(source: string): Block[] {
 const INLINE =
   /(`+)([\s\S]+?)\1|\*\*([\s\S]+?)\*\*|__([\s\S]+?)__|(?<![\w*])\*(?!\s)([\s\S]+?)(?<!\s)\*|(?<![\w_])_(?!\s)([\s\S]+?)(?<!\s)_|~~([\s\S]+?)~~|\[([^\]]+)\]\(([^)\s]+)[^)]*\)/;
 
+// What this renderer is handed is a generated item field or a bank statement — text a
+// poisoned raw corpus reaches through the model — so a link's scheme is attacker input and
+// `[pulsa aquí](javascript:…)` is a live anchor unless something says otherwise. The
+// allowlist is that something: today only the CSP stands between that anchor and a click.
+//
+// Relative URLs stay allowed because they cost nothing to allow and cannot carry script;
+// everything with a scheme has to be one of the three. The strip is not decoration — a
+// browser removes C0 controls before it parses the scheme, so `java\x01script:` is a URL
+// the allowlist would otherwise never recognise.
+const SAFE_SCHEMES = new Set(["http", "https", "mailto"]);
+const SCHEME = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
+
+export function safeHref(href: string): string | null {
+  const cleaned = href.replace(/[\u0000-\u0020\u007f]/g, "");
+  const scheme = SCHEME.exec(cleaned);
+  if (!scheme) return cleaned;
+  return SAFE_SCHEMES.has(scheme[1].toLowerCase()) ? cleaned : null;
+}
+
 /** Inline spans, plus the newline-as-break rule the block layer relies on. */
 function renderInline(text: string, key = "i"): ReactNode[] {
   const out: ReactNode[] = [];
@@ -223,16 +242,23 @@ function renderInline(text: string, key = "i"): ReactNode[] {
         </span>,
       );
     } else if (label !== undefined) {
+      const safe = safeHref(href);
+      // A refused scheme keeps its label and loses only the link: the sentence a student
+      // is reading still reads, and dropping the words would be the more visible damage.
       out.push(
-        <a
-          key={id}
-          href={href}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="text-primary underline underline-offset-2"
-        >
-          {renderInline(label, id)}
-        </a>,
+        safe === null ? (
+          <Fragment key={id}>{renderInline(label, id)}</Fragment>
+        ) : (
+          <a
+            key={id}
+            href={safe}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-primary underline underline-offset-2"
+          >
+            {renderInline(label, id)}
+          </a>
+        ),
       );
     }
 

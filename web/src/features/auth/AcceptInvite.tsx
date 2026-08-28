@@ -15,6 +15,7 @@ import { useT } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useAcceptInvite } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
+import { useStripTokenFromUrl } from "./token";
 
 /**
  * The only way an account comes into existence from the browser.
@@ -27,7 +28,12 @@ import { AuthLayout, FormError } from "./AuthLayout";
  * — including this preview, which the still-mounted screen immediately refetched and got
  * a 404 for. The account had been created and the person was already logged in, and they
  * were being told their link had expired. Landing on the app is both the fix and what
- * should have happened anyway; the effect strips the token from the URL on the way.
+ * should have happened anyway.
+ *
+ * The token leaves the URL on MOUNT and no longer on the way out: stripping it only on
+ * success meant an expired or refused invitation kept a bearer secret in the address bar
+ * for as long as the tab stayed open, which is the case where somebody is most likely to
+ * paste the address to somebody else and ask why it does not work.
  */
 export function AcceptInvite({ token }: { token: string }) {
   const { t } = useT();
@@ -51,6 +57,7 @@ export function AcceptInvite({ token }: { token: string }) {
   const [language, setLanguage] = useState<Language>(useLanguage());
   const accept = useAcceptInvite();
   const { navigate } = useRouter();
+  useStripTokenFromUrl();
 
   useEffect(() => {
     if (accept.isSuccess) navigate("/", { replace: true });

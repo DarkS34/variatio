@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/misc";
 import { useResetPassword } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
+import { useStripTokenFromUrl } from "./token";
 import { useT } from "@/lib/i18n";
 
 export function ResetPassword({ token }: { token: string }) {
@@ -13,6 +14,7 @@ export function ResetPassword({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const reset = useResetPassword();
+  useStripTokenFromUrl();
 
   const mismatch = repeat.length > 0 && password !== repeat;
 

@@ -22,7 +22,7 @@ import contextlib
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from .. import runtime
+from .. import middleware, runtime
 from ..auth import authenticate_socket
 
 router = APIRouter()
@@ -55,6 +55,21 @@ UNAUTHORISED = 4401
 
 @router.websocket("/ws")
 async def stream(websocket: WebSocket) -> None:
+    # The origin is asked here and not by `OriginCheck`, which is a `BaseHTTPMiddleware`
+    # and lets every non-`http` scope past untouched. Nothing was exploitable — a `Lax`
+    # session cookie is not attached to a cross-site handshake — but the HTTP path
+    # deliberately does not rely on `SameSite`, and the socket is the one place that was.
+    # Same rule as over HTTP, from the same function: refuse on positive evidence of
+    # cross-site, which leaves a CLI with no `Origin` connecting as it always did.
+    #
+    # 4401 and not a code of its own: our own client is same-origin, so the only thing that
+    # can reach this branch is a page that is not ours, and a distinct code would tell it
+    # apart from "no session" for free. Reusing it also means a deployment that misconfigures
+    # `PUBLIC_BASE_URL` stops reconnecting instead of looping on an unknown code.
+    if middleware.cross_site(websocket):
+        await websocket.close(code=UNAUTHORISED)
+        return
+
     access = await asyncio.to_thread(authenticate_socket, websocket)
     if access is None:
         await websocket.close(code=UNAUTHORISED)
