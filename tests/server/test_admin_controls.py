@@ -7,6 +7,7 @@ from server import tunnel
 from server.auth.rate_limit import RateLimiter
 from variatio import config
 from variatio import settings as vg_settings
+from variatio.core import paths
 from variatio.core.workspace import Workspace
 from variatio.settings import store
 
@@ -133,7 +134,10 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     assert usage == {"raw": 10, "instance": 20, "cache": 7, "history": 5, "total": 42}
 
 
-def test_clear_cache_removes_vectors_and_markdown_but_keeps_descriptions(tmp_path):
+def test_clear_cache_removes_vectors_and_markdown_but_keeps_descriptions(tmp_path, monkeypatch):
+    # Emptying a cache refuses a root that does not hang from `WORKSPACES_DIR`, exactly as
+    # destroying one does, so the tree under test has to sit where a real workspace sits.
+    monkeypatch.setattr(paths, "WORKSPACES_DIR", tmp_path)
     ws = Workspace(tmp_path / "w", slug="w")
     (ws.cache_dir / "embeddings").mkdir(parents=True)
     (ws.cache_dir / "embeddings" / "c.npz").write_bytes(b"x" * 7)

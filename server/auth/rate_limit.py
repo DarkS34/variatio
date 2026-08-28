@@ -64,6 +64,15 @@ class RateLimiter:
 
 limiter = RateLimiter()
 
+FALLBACK_LIMITS: dict[str, tuple[int, float]] = {"accept": (10, 3600.0)}
+
+
+def limits(bucket: str) -> tuple[int, float]:
+    from .. import settings
+
+    declared = settings.RATE_LIMITS.get(bucket)
+    return declared if declared is not None else FALLBACK_LIMITS[bucket]
+
 
 # The two-key check as a route reads it. It lives here, and not in the router that first
 # needed it, because there is now more than one: invitations moved to the administration
@@ -71,10 +80,9 @@ limiter = RateLimiter()
 # this. Importing `settings` inside keeps this module free of the import cycle its callers
 # are on either side of.
 def throttle(bucket: str, request: Request, account: str) -> None:
-    from .. import settings
     from .deps import client_ip
 
-    limit, window = settings.RATE_LIMITS[bucket]
+    limit, window = limits(bucket)
     limiter.sweep()
     for key in (client_ip(request), account):
         wait = limiter.check(bucket, key, limit, window)
@@ -90,9 +98,7 @@ def throttle(bucket: str, request: Request, account: str) -> None:
 # a name, and what «Desbloquear» clears. The IP half is not addressed by account and is not
 # what a locked-out person is asking about.
 def locked_seconds(bucket: str, account: str) -> float:
-    from .. import settings
-
-    limit, window = settings.RATE_LIMITS[bucket]
+    limit, window = limits(bucket)
     return limiter.wait_for(bucket, account, limit, window)
 
 

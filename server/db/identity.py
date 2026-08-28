@@ -9,7 +9,7 @@ is it, so a duplicate differing in case cannot enter through a second door.
 import re
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from variatio.core import languages
@@ -132,8 +132,25 @@ def set_ui_language(session: Session, user: User, language: str) -> User:
     return user
 
 
+# Setting a password also retires every reset link the account still has pending: whoever
+# holds one is a click away from the account, so a change made out of a suspicion has to
+# close that door in the same transaction it revokes the sessions. The login's `needs_rehash`
+# comes through here too and that is deliberate — it is the one place every password write
+# passes, the cost of closing early is one «pide otro enlace», and a helper called from the
+# two deliberate paths is a third path away from being forgotten.
 def set_password(session: Session, user: User, password_hash: str) -> None:
     user.password_hash = password_hash
+    moment = now()
+    session.execute(
+        update(PasswordReset)
+        .where(
+            PasswordReset.user_id == user.id,
+            PasswordReset.used_at.is_(None),
+            PasswordReset.expires_at > moment,
+        )
+        .values(used_at=moment)
+        .execution_options(synchronize_session=False)
+    )
     session.flush()
 
 
@@ -322,8 +339,25 @@ def live_invite(session: Session, token_hash: str) -> Invite | None:
     return invite
 
 
-def consume_invite(session: Session, invite: Invite, user_id: int) -> None:
-    invite.used_at = now()
+# The single use is decided by the database, not by the `live_invite` that read the row a
+# moment ago: hashing a password takes a fifth of a second, and two people redeeming the
+# same link inside that window both passed the read and both got an account. The conditional
+# UPDATE is the whole claim — the second one matches no row, because the first has already
+# written `used_at` — so whoever calls it does everything else only after it returns True.
+def claim_invite(session: Session, invite: Invite) -> bool:
+    result = session.execute(
+        update(Invite)
+        .where(Invite.id == invite.id, Invite.used_at.is_(None))
+        .values(used_at=now())
+        .execution_options(synchronize_session=False)
+    )
+    session.flush()
+    return result.rowcount == 1
+
+
+# The other half, once there is a user to point at: `used_by` is a foreign key and the row
+# had to be claimed before the account existed.
+def attribute_invite(session: Session, invite: Invite, user_id: int) -> None:
     invite.used_by = user_id
     session.flush()
 

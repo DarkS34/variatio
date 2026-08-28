@@ -20,7 +20,7 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.auth import passwords
+from server.auth import passwords, rate_limit
 from server.db import identity
 from server.db.models import Base
 from server.routers.admin import InviteBody, create_invite
@@ -48,6 +48,14 @@ def admin(db):
     return identity.create_user(
         db, username="admin", name="admin", password_hash="x", is_admin=True
     )
+
+
+# `/accept` is throttled by IP and by invitation, and the limiter is one object for the
+# whole process: every request below comes from the same fake address, so without this the
+# run itself trips the `accept` bucket and a test reads 429 where it asserted 422.
+@pytest.fixture(autouse=True)
+def forget_the_address():
+    rate_limit.unlock("accept", "10.0.0.1")
 
 
 def _request() -> Request:

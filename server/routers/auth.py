@@ -308,8 +308,20 @@ def accept_invite(
     response: Response,
     session: DbSession = Depends(deps.db),
 ) -> dict:
-    invite = identity.live_invite(session, tokens.digest(body.token))
+    # Keyed on the invitation and not on the username: the name is what an attacker varies
+    # to read the 409 off a link they got hold of, so counting attempts by name would count
+    # nothing. The invite holder is a legitimate party and still gets told a name is taken.
+    token_hash = tokens.digest(body.token)
+    throttle("accept", request, token_hash)
+
+    invite = identity.live_invite(session, token_hash)
     if invite is None:
+        raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
+
+    # Claimed before anything else, and in particular before the ~200 ms of Argon2 below:
+    # `live_invite` is a read, and two people redeeming the same link raced through it and
+    # both got an account. Losing the claim is the same answer as a spent invitation.
+    if not identity.claim_invite(session, invite):
         raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
 
     username = identity.normalise_username(body.username)
@@ -355,7 +367,7 @@ def accept_invite(
         ui_language=body.ui_language,
     )
     _apply_membership(session, invite, user)
-    identity.consume_invite(session, invite, user.id)
+    identity.attribute_invite(session, invite, user.id)
     _issue_session(session, user, request, response)
     return _me(session, user)
 
@@ -428,7 +440,7 @@ def _issue_session(session: DbSession, user: User, request: Request, response: R
         user_agent=request.headers.get("user-agent"),
     )
     response.set_cookie(
-        settings.SESSION_COOKIE,
+        settings.session_cookie(),
         token,
         max_age=int(settings.SESSION_ABSOLUTE.total_seconds()),
         httponly=True,
@@ -438,8 +450,17 @@ def _issue_session(session: DbSession, user: User, request: Request, response: R
     )
 
 
+# The deletion carries the same attributes the cookie was set with, `Secure` included: a
+# `Set-Cookie` that does not meet the `__Host-` rules is discarded whole by the browser, so
+# a logout written without them would leave the session cookie sitting in the jar.
 def _clear_cookie(response: Response) -> None:
-    response.delete_cookie(settings.SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        settings.session_cookie(),
+        path="/",
+        httponly=True,
+        secure=settings.cookie_secure(),
+        samesite="lax",
+    )
 
 
 def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:

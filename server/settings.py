@@ -19,7 +19,10 @@ from variatio.core.workspace import Workspace
 # every entry point fell back to, so the panel had to refuse the name to keep somebody
 # from creating a second thing that answered to it. With the fallback gone the name is
 # free, and one workspace fewer is a special case.
-SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
+# `\A`/`\Z` and not `^`/`$`: Python's `$` also matches just before a trailing newline, so
+# `abc\n` passed as a slug while `paths.workspace` stripped it back to `abc` — two rows
+# pointing at one directory, and either of them able to delete the other's tree.
+SLUG_PATTERN = re.compile(r"\A[a-z0-9][a-z0-9-]{1,62}[a-z0-9]\Z")
 
 
 def workspace_for(slug: str) -> Workspace:
@@ -55,11 +58,16 @@ def provision(ws: Workspace) -> None:
 # The check that the directory hangs from `WORKSPACES_DIR` is not decorative: the slug
 # arriving here comes from a request, and `shutil.rmtree` on a mis-resolved path cannot
 # be undone. `Workspace.__post_init__` already resolves it, so comparing is enough.
-def destroy(ws: Workspace) -> bool:
+def _contained_root(ws: Workspace) -> Path:
     root = ws.root
     parent = Path(paths.WORKSPACES_DIR).resolve()
     if root.parent != parent or root == parent:
         raise ValueError(f"'{root}' no está dentro de '{parent}': no se borra nada.")
+    return root
+
+
+def destroy(ws: Workspace) -> bool:
+    root = _contained_root(ws)
     if not root.is_dir():
         return False
     shutil.rmtree(root)
@@ -95,11 +103,14 @@ def disk_usage(ws: Workspace) -> dict[str, int]:
 # anchoring stay — they are written by the model against the corpus and cost a long run,
 # and emptying a stage is where they go when the artifact they describe goes.
 def clear_cache(ws: Workspace) -> dict:
+    root = _contained_root(ws)
     targets = [ws.cache_dir / "embeddings", ws.markdown_cache_dir]
     removed = 0
     freed = 0
     for target in targets:
         if not target.is_dir():
+            continue
+        if not target.resolve().is_relative_to(root):
             continue
         for entry in target.rglob("*"):
             if entry.is_file():
@@ -158,6 +169,16 @@ def cookie_secure() -> bool:
     return _flag("VARIATIO_COOKIE_SECURE", default=is_production())
 
 
+# The cookie already meets every `__Host-` precondition — `Secure`, path `/`, no `Domain` —
+# so claiming the prefix costs nothing and buys a browser-enforced version of them: no
+# subdomain and no plain-http page can overwrite the session. The name has to follow
+# `cookie_secure()` rather than be a literal, because a browser refuses a `__Host-` cookie
+# without `Secure` and local development is served over http. Every read, write and delete
+# goes through here, or login and logout would disagree about which cookie they mean.
+def session_cookie() -> str:
+    return f"__Host-{SESSION_COOKIE}" if cookie_secure() else SESSION_COOKIE
+
+
 # Where the links in an invitation or a reset mail point. Unset means "derive it from the
 # request that asked", which is right for a single-domain deployment and for localhost.
 def public_base_url() -> str | None:
@@ -174,9 +195,13 @@ def trust_proxy() -> bool:
 
 # Attempts allowed per window, as (limit, seconds). Two keys are checked against each of
 # these, the client IP and the account, so neither a spray nor a fixation gets through.
+# `accept` is the one whose second key is not an account: there is no account yet, and the
+# username is precisely what somebody holding a link varies to read «ya está cogido» off
+# it, so the key there is the invitation itself.
 RATE_LIMITS: dict[str, tuple[int, float]] = {
     "login": (8, 300.0),
     "invite": (20, 3600.0),
+    "accept": (10, 3600.0),
     "forgot": (5, 900.0),
     "reset": (10, 900.0),
     "password": (10, 900.0),

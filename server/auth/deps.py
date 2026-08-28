@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, Request, WebSocket
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import Session as DbSession
@@ -74,28 +75,50 @@ def db() -> Iterator[DbSession]:
 
 
 def session_token(request: Request | WebSocket) -> str | None:
-    return request.cookies.get(settings.SESSION_COOKIE)
+    return request.cookies.get(settings.session_cookie())
 
 
-# Where the links in an invitation or a reset mail point. `PUBLIC_BASE_URL` wins; failing
-# that the caller's own `Origin`, which is right for development, where the browser is on
-# Vite's port and the API's `base_url` would send it to the wrong one. Reading `Origin` is
-# safe because a state-changing request only gets here after `OriginCheck` accepted it.
+# Where the links in an invitation or a reset mail point, so what is at stake is who the
+# link sends its holder to. `PUBLIC_BASE_URL` is the answer, and the reflected `Origin` is
+# no longer the fallback: `POST /forgot` is public and passes the origin check when the
+# request carries neither header, so a mail could be minted pointing wherever the caller
+# asked. The warning fires once, and only in production: an installation serving the real
+# thing without the variable set is deriving its own address from the request, and should
+# not be, while in development that is exactly what is wanted and saying so every run is
+# noise.
+_UNCONFIGURED_BASE_URL_REPORTED = False
+
+
 def base_url(request: Request) -> str:
+    global _UNCONFIGURED_BASE_URL_REPORTED
+
     configured = settings.public_base_url()
     if configured:
         return configured
-    origin = request.headers.get("origin")
-    if origin:
-        return origin.rstrip("/")
+    if settings.is_production() and not _UNCONFIGURED_BASE_URL_REPORTED:
+        _UNCONFIGURED_BASE_URL_REPORTED = True
+        logger.warning(
+            "PUBLIC_BASE_URL no está configurado: los enlaces de invitación y de "
+            "restablecimiento se deducen de la petición. Fíjalo en '.env'"
+        )
     return str(request.base_url).rstrip("/")
 
 
+# `X-Forwarded-For` is a list the proxies append to, so the entry written by the one proxy
+# we trust is the LAST one and everything to its left is whatever the client sent. Reading
+# the leftmost is reading the client: behind nginx's `$proxy_add_x_forwarded_for` or a CDN
+# it lets anyone choose their own key for the per-IP limit, which is the same as not having
+# one. Caddy overwrites the header rather than appending, so both readings agree there —
+# the rightmost is the one that stays right when the proxy changes.
 def client_ip(request: Request | WebSocket) -> str:
     if settings.trust_proxy():
-        forwarded = request.headers.get("x-forwarded-for", "")
+        forwarded = [
+            part.strip()
+            for part in request.headers.get("x-forwarded-for", "").split(",")
+            if part.strip()
+        ]
         if forwarded:
-            return forwarded.split(",")[0].strip()
+            return forwarded[-1]
     return request.client.host if request.client else ""
 
 
