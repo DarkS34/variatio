@@ -37,7 +37,7 @@ def run(
     progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
     with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
         progress.checkpoint()
-        concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts)
+        concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts, prompts=prompts)
         if not concepts_by_domains:
             concepts_by_domains = order_domains(
                 curate_domains(

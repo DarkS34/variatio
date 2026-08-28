@@ -28,6 +28,7 @@ def run(
     chunk_size: int,
     cache_dir: Path,
     max_attempts: int,
+    prompts,
     recursive: bool = False,
 ) -> dict:
     documents = convert_corpus(
@@ -36,11 +37,14 @@ def run(
         converter=converter,
         chunk_size=chunk_size,
         cache_dir=cache_dir,
+        prompts=prompts,
     )
     if not documents:
         return {}
 
-    found = extract_documents(documents, schema=schema, max_attempts=max_attempts)
+    found = extract_documents(
+        documents, schema=schema, max_attempts=max_attempts, prompts=prompts
+    )
     if not found["origins"]:
         logger.error("Ningún concepto extraído del corpus")
         return {}

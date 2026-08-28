@@ -89,7 +89,7 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
                 ws, exemplars_profile, KnowledgeGraph(kg_path), content_context
             )
             state["embedder"] = embedder
-            state["tagger"] = make_tagger(embedder, exemplars_profile, content_context)
+            state["tagger"] = make_tagger(ws, embedder, exemplars_profile, content_context)
         return state["embedder"], state["tagger"]
 
     def annotate(bank: dict, new_ids: list[str]) -> dict:
