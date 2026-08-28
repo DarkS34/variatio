@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 /**
  * The mark: the knowledge frontier, on one rule.
  *
@@ -45,5 +47,29 @@ export function Logo({ className, tight = false }: { className?: string; tight?:
       <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="var(--attention)" />
       <rect x="17.4" y="9.7" width="4.6" height="4.6" stroke="currentColor" strokeWidth={1.6} />
     </svg>
+  );
+}
+
+/**
+ * The lockup: the mark with the wordmark set under it.
+ *
+ * It is the application's identity wherever the application names itself, and it exists
+ * as one component because it was drawn three different ways — the navbar stacked it and
+ * the two screens rendered before a session put the 24-square mark beside the word, where
+ * the band is a strip floating in the middle of an empty box. The stacked form is the one
+ * that survives: it lets the MARK be the larger half without spending the width a
+ * horizontal lockup takes on a header's centre line.
+ *
+ * `compact` is the navbar's alone: below `lg` a 360 px header has room for the mark and
+ * nothing else. A screen whose only identity is this one always says the name.
+ */
+export function Lockup({ className, compact = false }: { className?: string; compact?: boolean }) {
+  return (
+    <span className={cn("flex flex-col items-center gap-1 leading-none", className)}>
+      <Logo tight className="h-3.5 w-[2.9rem] text-primary" />
+      <span className={cn("text-micro font-condensed uppercase", compact && "hidden lg:inline")}>
+        Variatio
+      </span>
+    </span>
   );
 }

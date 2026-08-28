@@ -96,6 +96,9 @@ export function MaintenanceSwitch() {
           >
             <Textarea
               value={message}
+              // Empty is a legitimate state, so the placeholder is the very sentence the
+              // waiting screen falls back to — in the reader's own language, there and here.
+              placeholder={t("maintenance.defaultMessage")}
               maxLength={400}
               rows={2}
               onFocus={() => setEditing(true)}

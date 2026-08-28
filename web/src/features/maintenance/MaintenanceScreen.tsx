@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Logo } from "@/components/ui/logo";
+import { Lockup } from "@/components/ui/logo";
 import type { MaintenanceState } from "@/lib/types";
 import { LoginScreen } from "@/features/auth/LoginScreen";
 import { useT, type Translate } from "@/lib/i18n";
@@ -43,10 +43,7 @@ export function MaintenanceScreen({
   return (
     <div className="flex min-h-full items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
-        <div className="mb-6 flex items-center gap-2 font-semibold">
-          <Logo className="size-5 text-primary" />
-          Variatio
-        </div>
+        <Lockup className="mb-6" />
 
         <Card className="p-6 sm:p-8">
           <div className="flex items-center gap-3">
@@ -61,7 +58,12 @@ export function MaintenanceScreen({
             </h1>
           </div>
 
-          <p className="mt-5 text-body text-foreground">{state.message}</p>
+          {/* Whoever closed the door writes the notice; with none written the sentence is
+              the catalogue's, because the interface language belongs to the account and a
+              default sent by the API could only ever be right for half the readers. */}
+          <p className="mt-5 text-body text-foreground">
+            {state.message || t("maintenance.defaultMessage")}
+          </p>
 
           <p className="mt-2 text-small text-muted-foreground">
             {elapsed

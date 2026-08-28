@@ -26,7 +26,9 @@ from variatio.core import json_io, paths
 
 STATE_PATH = paths.PROJECT_ROOT / ".maintenance.json"
 
-DEFAULT_MESSAGE = "Estamos aplicando cambios en el sistema. Volvemos en unos minutos."
+# An empty notice is a state, not a missing value: it means nobody wrote one, and the
+# sentence shown in its place is the CLIENT's — the interface language belongs to the
+# account, so a default written here could only ever be right for half the readers.
 
 # What fits on a notice read at a glance. A longer message is not read, it is skipped.
 MAX_MESSAGE_CHARS = 400
@@ -38,7 +40,7 @@ _stamp: int | None = None
 
 
 def _blank() -> dict:
-    return {"active": False, "message": DEFAULT_MESSAGE, "since": None, "by": None}
+    return {"active": False, "message": "", "since": None, "by": None}
 
 
 def _read() -> dict:
@@ -50,7 +52,7 @@ def _read() -> dict:
         return _blank()
     return {
         "active": bool(raw.get("active")),
-        "message": str(raw.get("message") or DEFAULT_MESSAGE)[:MAX_MESSAGE_CHARS],
+        "message": str(raw.get("message") or "")[:MAX_MESSAGE_CHARS],
         "since": raw.get("since") or None,
         "by": raw.get("by") or None,
     }
@@ -77,7 +79,7 @@ def active() -> bool:
 
 def set_state(is_active: bool, message: str | None, by: str | None) -> dict:
     current = state()
-    text = (message or "").strip() or DEFAULT_MESSAGE
+    text = (message or "").strip()
     # It closes once: rewording the notice while it is already closed does not restart the
     # clock, because what the screen reports is how long it has been closed.
     keeps_clock = is_active and current["active"] and current["since"]

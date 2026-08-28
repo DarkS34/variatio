@@ -46,8 +46,10 @@ def test_reopening_clears_the_notice(door):
     assert reopened["by"] is None
 
 
-def test_an_empty_message_falls_back_to_the_default(door):
-    assert door.set_state(True, "   ", "ana")["message"] == door.DEFAULT_MESSAGE
+# The notice is written by a person or it is not written at all: the sentence read in its
+# place is the client's, in the reader's own language, so the API must not invent one.
+def test_an_empty_message_stays_empty(door):
+    assert door.set_state(True, "   ", "ana")["message"] == ""
 
 
 def test_a_broken_state_file_reads_as_open(door):

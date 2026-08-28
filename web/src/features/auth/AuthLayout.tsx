@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Card } from "@/components/ui/card";
-import { Logo } from "@/components/ui/logo";
+import { Lockup } from "@/components/ui/logo";
 
 /**
  * The shell the three unauthenticated screens share.
@@ -24,10 +24,7 @@ export function AuthLayout({
   return (
     <div className="flex min-h-full items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center gap-2 font-semibold">
-          <Logo className="size-5 text-primary" />
-          Variatio
-        </div>
+        <Lockup className="mb-6" />
 
         <Card className="p-6">
           <h1 className="text-title">{title}</h1>

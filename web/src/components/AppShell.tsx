@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/ui/logo";
+import { Lockup } from "@/components/ui/logo";
 import { Rail, type RailStop } from "@/components/ui/rail";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
@@ -339,20 +339,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
           {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
               Side by side with only a gap between, the workspace name read as part of the
-              product's own name. The mark is also the larger half of the lockup now, with
-              the wordmark set under it in the micro step — the mark is what identifies the
-              application at a glance, and stacking lets it grow without taking the width a
-              horizontal lockup would spend on the nav's centre line. Below `lg` the
-              wordmark goes and the mark stands alone, which is what a 360 px header has
-              room for. */}
+              product's own name. The lockup itself is `ui/logo.tsx`'s, and `compact` is
+              what drops the wordmark below `lg`. */}
           <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-3">
             <Link
               to="/"
               aria-label="Variatio" // i18n-exempt: es el nombre del producto
-              className="flex shrink-0 flex-col items-center gap-1 leading-none"
+              className="shrink-0"
             >
-              <Logo tight className="h-3.5 w-[2.9rem] text-primary" />
-              <span className="hidden text-micro font-condensed uppercase lg:inline">Variatio</span>
+              <Lockup compact />
             </Link>
 
             <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
@@ -402,7 +397,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             everybody else is looking at the notice — so the strip is a reminder rather than
             a warning: the risk is forgetting it is on, not failing to notice. */}
         {maintenance.data?.active ? (
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-small sm:px-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-center text-small sm:px-4">
             <Wrench className="size-3.5 shrink-0" />
             <span>{t("shell.maintenance")}</span>
             <Link to="/admin" className="font-medium underline underline-offset-4">
@@ -414,12 +409,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* The consequence goes in the sentence itself: it was all the (i) beside it said, and a
             warning one has to open in order to understand is not a warning. */}
         {offline || missingModels.length > 0 ? (
-          <div className="flex items-start gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-3 py-1.5 text-small sm:items-center sm:px-4">
-            {offline ? (
-              <span>{t("shell.engineOffline", { host: health.data?.host ?? "" })}</span>
-            ) : (
-              <span>{t("shell.missingModels", { models: missingModels.join(", ") })}</span>
-            )}
+          <div className="flex items-start justify-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-3 py-1.5 text-center text-small sm:items-center sm:px-4">
+            {/* Neither the host nor the model names belong here: the strip says what does
+                not work and what still does, and where the engine lives and which model is
+                missing are «Administración → Motor»'s, which is where one acts on them. */}
+            <span>{offline ? t("shell.engineOffline") : t("shell.missingModels")}</span>
           </div>
         ) : null}
       </header>
