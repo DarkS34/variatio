@@ -1,13 +1,4 @@
-import {
-  BookOpen,
-  LogOut,
-  Monitor,
-  Moon,
-  ShieldCheck,
-  Sparkles,
-  Sun,
-  UserRound,
-} from "lucide-react";
+import { BookOpen, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +17,13 @@ import { cn } from "@/lib/utils";
  * tabs of «Mi perfil», and administering the installation is its own screen, moved out of
  * the navbar so that the tabs up there stay the chain and nothing else. What is left is a
  * list of destinations plus the one action that belongs nowhere else — leaving.
+ *
+ * «Mis variantes» is no longer one of those destinations (2026-08-28, explicit user
+ * request): it is a pill of its own in the header, two elements to the left. It is the one
+ * entry here that was wanted daily, and a menu is where a daily destination goes to be
+ * un-findable — the same reason the password and the variants stopped being dialogs. It is
+ * not duplicated back into the list: «Mi perfil» reaches it as a tab, which is one way in
+ * from here and one from the header, not three.
  */
 export function AccountMenu() {
   const { t } = useT();
@@ -55,17 +53,29 @@ export function AccountMenu() {
 
   return (
     <div className="relative" ref={holder}>
+      {/* A GLYPH AND NOT INITIALS (2026-08-28, explicit user request). Two letters cut out
+          of a username are a puzzle before they are an identity — «oleksandr» became «O»,
+          which is a letter, not a person — and they only ever work where a photograph is
+          missing from a place that expects one. Nothing here expects one: this is a
+          closed group with hand-issued accounts and no avatars anywhere in the product.
+          So the button says what it OPENS rather than guessing who you are, and the name
+          it could not have carried legibly is the first line of the menu behind it, in
+          full.
+
+          The ring is the ground's own, not a colour: structure in this palette is
+          achromatic, and an avatar is structure — the account is not a frontier action. */}
       <button
         onClick={() => setOpen((was) => !was)}
         title={user.username}
+        aria-label={t("menu.openAccount", { name: user.username })}
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          "flex size-8 items-center justify-center rounded-full bg-secondary text-small font-semibold uppercase text-secondary-foreground transition-colors hover:bg-accent",
-          open && "ring-2 ring-ring",
+          "flex size-8 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+          open && "bg-accent text-foreground ring-2 ring-ring",
         )}
       >
-        {initials(user.name || user.username)}
+        <UserRound aria-hidden className="size-4" />
       </button>
 
       {open ? (
@@ -89,11 +99,6 @@ export function AccountMenu() {
               icon={<UserRound className="size-4" />}
               label={t("menu.profile")}
               onClick={() => go("/account")}
-            />
-            <MenuItem
-              icon={<Sparkles className="size-4" />}
-              label={t("menu.savedVariants")}
-              onClick={() => go("/account/variants")}
             />
             {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
                 and not in the bar because it appears for an installation-wide account and the bar is the
@@ -197,9 +202,4 @@ function MenuItem({
       {label}
     </button>
   );
-}
-
-function initials(name: string) {
-  const parts = name.split(/[\s@._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).slice(0, 2) || "?";
 }

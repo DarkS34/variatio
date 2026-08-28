@@ -1,4 +1,5 @@
 import {
+  Archive,
   BookPlus,
   Brain,
   Copy,
@@ -160,7 +161,10 @@ export function GenerationsPanel() {
         <Skeleton className="h-64" />
       ) : rows.length === 0 ? (
         <EmptyState
-          icon={<Sparkles className="size-6" />}
+          // The same glyph the header's «Mis variantes» pill carries: an empty state is
+          // the first thing a new account sees of this screen, and it should be looking at
+          // the icon it just pressed. `Sparkles` stays below, where it means GENERATING.
+          icon={<Archive className="size-6" />}
           title={search ? t("generations.noMatch") : t("generations.empty")}
         >
           {search ? t("generations.noMatchHint") : t("generations.emptyHint")}

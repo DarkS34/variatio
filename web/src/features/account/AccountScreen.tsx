@@ -68,12 +68,24 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <h1 className="w-full font-display font-expanded text-display">{t("account.title")}</h1>
+      {/* THREE LINES, AND WHO YOU ARE IS THE THIRD (2026-08-28, explicit user request).
+          The title, its (i) and the guide link are about the SCREEN; the username and the
+          administrator badge are about the ACCOUNT the screen is showing. They were all
+          wrapping in one flow, so the identity landed on the same line as the guide link
+          and read as part of it. Same shape as a stage's header, which learned this first:
+          the title row carries the (i), the guide link gets a line of its own below it,
+          and anything that is not about the screen goes under both — here with a step of
+          separation, because it is a different subject and not one more chip. */}
+      <header className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <h1 className="font-display font-expanded text-display">{t("account.title")}</h1>
+          <InfoHint label={t("account.whatIsHere")}>{t("account.whatIsHere.body")}</InfoHint>
+        </div>
         <GuideLink slug="account" />
-        <InfoHint label={t("account.whatIsHere")}>{t("account.whatIsHere.body")}</InfoHint>
-        <span className="font-mono text-body text-muted-foreground">{user.username}</span>
-        {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
+        <div className="flex flex-wrap items-center gap-2 pt-1.5">
+          <span className="font-mono text-body text-muted-foreground">{user.username}</span>
+          {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
+        </div>
       </header>
 
       <Tabs

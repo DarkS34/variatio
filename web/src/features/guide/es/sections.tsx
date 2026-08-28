@@ -1412,7 +1412,7 @@ function Runs() {
             {
               key: "registro",
               head: <>«{t("shell.log")}»</>,
-              body: "Arriba a la derecha, con el número de líneas de la sesión. Es el mismo cajón, por la otra pestaña.",
+              body: "El segundo botón de esa misma píldora, con el número de líneas de la sesión. Es el mismo cajón, por la otra pestaña.",
             },
           ]}
         />
@@ -1473,8 +1473,9 @@ function Account() {
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.account")}>
         <p>
           Todo lo que es tuyo y no es parte de la cadena vive en «{t("account.title")}», detrás
-          del avatar de arriba a la derecha — el mismo menú desde el que has llegado aquí, y donde
-          están también «{t("menu.savedVariants")}» y «{t("admin.title")}».
+          del icono de cuenta de arriba a la derecha — el mismo menú desde el que has llegado
+          aquí, y donde está también «{t("admin.title")}». «{t("nav.myVariants")}» tiene su
+          propio botón justo al lado, porque se abre a diario.
         </p>
       </SectionHead>
 

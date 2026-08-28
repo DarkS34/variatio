@@ -1436,7 +1436,7 @@ function Runs() {
             {
               key: "registro",
               head: <>"{t("shell.log")}"</>,
-              body: "Top right, with the session's line count. It is the same drawer, on the other tab.",
+              body: "The second button of that same pill, with the session's line count. It is the same drawer, on the other tab.",
             },
           ]}
         />
@@ -1497,8 +1497,9 @@ function Account() {
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.account")}>
         <p>
           Everything that is yours and is not part of the chain lives in "{t("account.title")}",
-          behind the avatar at the top right — the same menu you got here from, and where
-          "{t("menu.savedVariants")}" and "{t("admin.title")}" live too.
+          behind the account icon at the top right — the same menu you got here from, and where
+          "{t("admin.title")}" lives too. "{t("nav.myVariants")}" has a button of its own right
+          beside it, because it is opened daily.
         </p>
       </SectionHead>
 

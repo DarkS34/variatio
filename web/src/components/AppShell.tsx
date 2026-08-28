@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Files, Play, Scale, ScrollText, Wrench } from "lucide-react";
+import { Activity, Archive, Files, Play, Scale, ScrollText, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Lockup } from "@/components/ui/logo";
 import { Rail, type RailStop } from "@/components/ui/rail";
 import { AccountMenu } from "@/features/auth/AccountMenu";
@@ -60,9 +60,10 @@ import { useT, type Key } from "@/lib/i18n";
  * borrowing a state colour that means something else. See `index.css`.
  *
  * Two destinations are deliberately NOT here, and for the reason the rail exists: the navbar
- * is the chain and the two things that consume it. «Variantes guardadas» is a personal
- * archive and «Administración» is the installation seen from outside; both live in the
- * account menu.
+ * is the chain and the two things that consume it. «Mis variantes» is a personal archive and
+ * «Administración» is the installation seen from outside, so neither is a block of this
+ * navigation — «Administración» lives in the account menu, and «Mis variantes» is a pill in
+ * the header's RIGHT flank, beside the account it belongs to and away from the chain.
  */
 const STAGES = [
   { path: "/prepare/profile", label: "nav.profile", artifact: "exemplars_profile" },
@@ -364,22 +365,33 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
 
           <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              // Below `sm` the button is the icon and the count: the word is the first
-              // thing to give up when the row is 360 px wide and the workspace name is
-              // the one piece of it nobody can guess.
-              className="px-2 sm:px-3"
-              onClick={() => openDrawer("logs")}
-              title={t("shell.viewFullLog")}
+            {/* THE LOG GAVE THIS CORNER UP TO «Mis variantes» (2026-08-28, explicit user
+                request), and nothing was lost by it: the log is diagnostics and is already
+                one press away in the floating «Ver ejecución» pill, WITH its unread count,
+                which is also where a person is already looking while a job runs. The saved
+                variants are the product of every run and were reachable only by opening a
+                menu — the one destination of the four in that menu that is used daily.
+
+                It is a pill and not a stop on the rail, for the rail's own reason: the
+                variants are a personal archive, they write no artifact and nothing
+                downstream depends on them. It reuses `buttonVariants` rather than
+                restating a ghost button, so it cannot drift from the one the header had. */}
+            <Link
+              to="/account/variants"
+              title={t("nav.myVariants")}
+              aria-current={path === "/account/variants" ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                // Below `lg` it is the icon alone: the word is the first thing to give up
+                // when the row is 360 px wide and the workspace name is the one piece of
+                // it nobody can guess.
+                "px-2 text-muted-foreground hover:text-foreground sm:px-2.5",
+                path === "/account/variants" && "bg-accent text-foreground",
+              )}
             >
-              <ScrollText />
-              <span className="hidden lg:inline">{t("shell.log")}</span>
-              {stream.logs.length > 0 ? (
-                <span className="nums text-muted-foreground">{stream.logs.length}</span>
-              ) : null}
-            </Button>
+              <Archive />
+              <span className="hidden lg:inline">{t("nav.myVariants")}</span>
+            </Link>
             <AccountMenu />
           </div>
         </div>
