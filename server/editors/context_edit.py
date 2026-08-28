@@ -12,6 +12,8 @@ from variatio.instance.content_context import ContentContext
 
 from .. import storage
 
+HISTORY_NAME = "content_context"
+
 
 def load(ws: Workspace) -> dict:
     curated = ws.content_context_path
@@ -40,7 +42,7 @@ def save(ws: Workspace, narrative: str, facts: dict[str, str]) -> dict:
     context = ContentContext({"narrative": narrative, **facts})
     # Through `storage`, not `ContentContext.save`, so the edit gets a history snapshot
     # like every other artifact edit does.
-    storage.write_json(ws.content_context_path, context.as_dict())
+    storage.write_json(ws.content_context_path, context.as_dict(), ws=ws, artifact=HISTORY_NAME)
     return load(ws)
 
 

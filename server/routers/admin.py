@@ -21,6 +21,7 @@ content; they no longer decide who else exists.
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
