@@ -28,6 +28,12 @@ Transcribe in the order a person would read it. Each statement must stay next to
 # CODE
 Code goes in blocks delimited by ``` keeping its line breaks and indentation EXACTLY. It is what survives a careless transcription worst and what does the most damage: a code fragment with flattened indentation or a changed operator stops being the exercise it was.
 
+# MATHEMATICAL NOTATION
+Formulas and mathematical expressions are copied with their notation, symbol by symbol and unit by unit. If the original typesets them (fractions, subscripts, integrals, vectors), transcribe them in LaTeX — `$…$` inline, `$$…$$` on their own — and use that same convention through the WHOLE document. If the original writes them in plain text, leave them in plain text. Do not solve, do not simplify, do not swap the notation for an equivalent one.
+
+# FIGURES
+A figure that cannot be transcribed as text (a diagram, a plot, a schematic, a photograph) is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN — the axes and magnitudes of a plot, the components of a schematic — without reading values that cannot be read clearly: `[illegible]` is already there for an illegible datum. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+
 # MARKED ANSWERS
 If one answer option is visually highlighted with respect to the others — a different colour, bold, underline, a box, a mark in the margin — add ` {CORRECT_ANSWER_MARK}` at the end of that line and nothing else. It is the only mark you may add to the text. If none is highlighted, mark none: do not deduce which one is correct.
 

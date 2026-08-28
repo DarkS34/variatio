@@ -28,6 +28,12 @@ Transcribe en el orden en que lo leería una persona. Cada enunciado debe quedar
 # CÓDIGO
 El código va en bloques delimitados por ``` conservando EXACTAMENTE sus saltos de línea y su indentación. Es lo que peor sobrevive a una transcripción descuidada y lo que más daño hace: un fragmento de código con la indentación aplanada o un operador cambiado deja de ser el ejercicio que era.
 
+# NOTACIÓN MATEMÁTICA
+Las fórmulas y expresiones matemáticas se copian con su notación, símbolo a símbolo y unidad a unidad. Si el original las compone tipográficamente (fracciones, subíndices, integrales, vectores), transcríbelas en LaTeX — `$…$` en línea, `$$…$$` aparte — y usa esa misma convención en TODO el documento. Si el original las escribe en texto plano, déjalas en texto plano. No resuelvas, no simplifiques, no cambies la notación por otra equivalente.
+
+# FIGURAS
+Una figura que no puede transcribirse como texto (un diagrama, una gráfica, un esquema, una fotografía) se anota en su sitio como `[figura: qué muestra]`, en una frase. Di lo que se VE — los ejes y magnitudes de una gráfica, los componentes de un esquema — sin leer valores que no se lean con claridad: para un dato ilegible ya está `[ilegible]`. La anotación nunca sustituye al texto que acompaña a la figura, que se transcribe como todo lo demás.
+
 # RESPUESTAS MARCADAS
 Si una opción de respuesta está destacada visualmente respecto a las demás — color distinto, negrita, subrayado, recuadro, una marca al margen — añade ` {CORRECT_ANSWER_MARK}` al final de esa línea y nada más. Es la única marca que puedes añadir al texto. Si ninguna está destacada, no marques ninguna: no deduzcas cuál es la correcta.
 
