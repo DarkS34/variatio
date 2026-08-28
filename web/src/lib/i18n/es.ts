@@ -782,6 +782,7 @@ export const es = {
   "bank.retagUntagged": "Re-etiquetar los {n}",
   "bank.noConcept": "sin concepto",
   "bank.primaryField": " · primario",
+  "bank.listField": "una entrada por línea",
   "bank.seeUntagged": { one: "Ver el ítem sin concepto →", other: "Ver los {n} sin concepto →" },
   "bank.retagAll": "Re-etiquetar todo",
   "bank.retagAllHint": "Vuelve a etiquetar los {n} ítems del banco desde cero",

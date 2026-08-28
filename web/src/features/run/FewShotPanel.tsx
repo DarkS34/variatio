@@ -9,6 +9,7 @@ import type { ExemplarsProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/type
 import { cn } from "@/lib/utils";
 
 import { isCodeField } from "@/features/bank/BankScreen";
+import { fieldText, isEmptyField } from "@/lib/fields";
 import { useT } from "@/lib/i18n";
 
 function primaryText(exemplar: FewShotExemplar, spec: ItemTypeSpec | null): string {
@@ -80,14 +81,16 @@ function Exemplar({
         <div className="animate-fade-in space-y-2 border-t border-border px-2.5 py-2">
           {others.map((field) => {
             const value = exemplar.item[field];
-            if (value === null || value === undefined || value === "") return null;
+            if (isEmptyField(value)) return null;
             return (
               <div key={field} className="space-y-1">
                 <Label>{field}</Label>
                 {isCodeField(field) ? (
-                  <CodeBlock code={String(value)} maxHeight="14rem" />
+                  <CodeBlock code={fieldText(value)} maxHeight="14rem" />
                 ) : (
-                  <p className="text-small text-muted-foreground">{String(value)}</p>
+                  <p className="whitespace-pre-wrap text-small text-muted-foreground">
+                    {fieldText(value)}
+                  </p>
                 )}
               </div>
             );

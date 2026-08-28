@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
+import { fieldText, isEmptyField } from "@/lib/fields";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,7 @@ export function ItemFields({
   item: Record<string, unknown>;
   spec: ItemTypeSpec | null;
 }) {
-  const primary = spec ? String(item[spec.primary_field] ?? "") : "";
+  const primary = spec ? fieldText(item[spec.primary_field]) : "";
   const others = Object.keys(spec?.fields ?? {}).filter((f) => f !== spec?.primary_field);
 
   return (
@@ -46,11 +47,11 @@ export function ItemFields({
       <Markdown>{primary}</Markdown>
       {others.map((field) => {
         const value = item[field];
-        if (value === null || value === undefined || value === "") return null;
+        if (isEmptyField(value)) return null;
         return (
           <div key={field} className="space-y-1">
             <Label>{field}</Label>
-            <FieldValue field={field} value={String(value)} />
+            <FieldValue field={field} value={fieldText(value)} />
           </div>
         );
       })}
@@ -203,14 +204,14 @@ export function toMarkdown(
         ? `${heading} · ${typeLabel(profile, item_type ?? null, t)}`
         : heading,
       "",
-      spec ? String(item[spec.primary_field] ?? "") : "",
+      spec ? fieldText(item[spec.primary_field]) : "",
       "",
     );
     for (const field of Object.keys(spec?.fields ?? {})) {
       if (field === spec?.primary_field) continue;
       const value = item[field];
-      if (value === null || value === undefined || value === "") continue;
-      const text = String(value);
+      if (isEmptyField(value)) continue;
+      const text = fieldText(value);
       // Fencing something that already fences itself nests the blocks and breaks both.
       const fence = isCodeField(field) && !isFenced(text);
       lines.push(`### ${field}`, "");

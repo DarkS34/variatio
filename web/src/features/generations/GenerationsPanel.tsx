@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/run/draft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
+import { fieldText } from "@/lib/fields";
 import { when } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
@@ -244,7 +245,7 @@ function GenerationCard({
   const { navigate } = useRouter();
   const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
   const manyTypes = profile ? Object.keys(profile.item_types).length > 1 : false;
-  const primary = spec ? String(row.item[spec.primary_field] ?? "") : "";
+  const primary = spec ? fieldText(row.item[spec.primary_field]) : "";
 
   return (
     <Card>

@@ -23,6 +23,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Alert, Checkbox, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { fieldText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
 import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
 import type {
   BankItem,
@@ -61,11 +62,14 @@ function ItemEditor({
 }) {
   const { t } = useT();
   const locked = useStageLocked();
+  const listFields = useMemo(
+    () => new Set(fields.filter((field) => Array.isArray(item[field]))),
+    [fields, item],
+  );
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const field of fields) {
-      const value = item[field];
-      initial[field] = value === null || value === undefined ? "" : String(value);
+      initial[field] = fieldToInput(item[field]);
     }
     return initial;
   });
@@ -77,8 +81,7 @@ function ItemEditor({
     mutationFn: () => {
       const payload: Record<string, unknown> = {};
       for (const field of fields) {
-        const raw = values[field];
-        payload[field] = raw === "" ? null : raw;
+        payload[field] = inputToField(values[field] ?? "", listFields.has(field));
       }
       return api.patchItem(item.id, payload);
     },
@@ -134,6 +137,7 @@ function ItemEditor({
               <Label>
                 {field}
                 {field === primaryField ? t("bank.primaryField") : ""}
+                {listFields.has(field) ? ` · ${t("bank.listField")}` : ""}
               </Label>
               <Textarea
                 value={values[field] ?? ""}
@@ -237,7 +241,7 @@ function ItemRow({
   const locked = useStageLocked();
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
-  const text = String(item[primaryField] ?? "");
+  const text = fieldText(item[primaryField]);
 
   return (
     <>
@@ -274,13 +278,15 @@ function ItemRow({
             <div className="mt-2 space-y-2">
               {secondaryFields.map((field) => {
                 const value = item[field];
-                if (value === null || value === undefined || value === "") return null;
+                if (isEmptyField(value)) return null;
                 return isCodeField(field) ? (
-                  <CodeBlock key={field} code={String(value)} maxHeight="16rem" />
+                  <CodeBlock key={field} code={fieldText(value)} maxHeight="16rem" />
                 ) : (
                   <div key={field} className="space-y-0.5">
                     <Label>{field}</Label>
-                    <p className="text-small text-muted-foreground">{String(value)}</p>
+                    <p className="whitespace-pre-wrap text-small text-muted-foreground">
+                      {fieldText(value)}
+                    </p>
                   </div>
                 );
               })}

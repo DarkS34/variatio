@@ -4,6 +4,7 @@ import { Tags } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { fieldText } from "@/lib/fields";
 import type { BankItem, BankItemType } from "@/lib/types";
 import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
 import { useT } from "@/lib/i18n";
@@ -64,7 +65,7 @@ export function BankLive() {
             {(item) => {
               const concepts = item.concepts ?? [];
               return (
-                <FeedRow id={item.id} text={String(item[primaryFieldOf(item)] ?? "")}>
+                <FeedRow id={item.id} text={fieldText(item[primaryFieldOf(item)])}>
                   {concepts.length === 0 ? (
                     <span className="flex items-center gap-1 text-small text-muted-foreground">
                       <Tags className="size-3" />

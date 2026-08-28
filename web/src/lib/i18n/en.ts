@@ -762,6 +762,7 @@ export const en: Catalogue = {
   "bank.retagUntagged": "Re-tag the {n}",
   "bank.noConcept": "no concept",
   "bank.primaryField": " · primary",
+  "bank.listField": "one entry per line",
   "bank.seeUntagged": { one: "See the item with no concept →", other: "See the {n} with no concept →" },
   "bank.retagAll": "Re-tag everything",
   "bank.retagAllHint": "Tags the bank's {n} items again from scratch",
