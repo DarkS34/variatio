@@ -68,6 +68,8 @@ export const en: Catalogue = {
   "account.identity.email.placeholder": "no email",
   "account.identity.email.help":
     "It is only there to receive the password-reset link. You do not sign in with it and nobody else sees it.",
+  "account.identity.email.help.noMail":
+    "This installation has no mail configured, so nothing is delivered here: the reset link is asked for from whoever administers. You may clear the address if you want.",
 
   // PASSWORD ----------------------------------------------------------------------------
   "password.title": "Password",

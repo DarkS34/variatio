@@ -1508,7 +1508,7 @@ function Account() {
           {
             key: "cuenta",
             head: t("tabs.account"),
-            body: "Your visible name, an optional email address, the password, and the language you read the application in. The address is not used to sign in: only to receive the link to reset it.",
+            body: "Your visible name, the password, and the language you read the application in. If the installation has mail configured there is also an optional address, which is not used to sign in: only to receive the password-reset link. Without mail configured the field is not there, because nothing could be delivered to it — the link is asked for from whoever administers.",
           },
           {
             key: "workspaces",

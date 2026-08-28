@@ -415,6 +415,16 @@ def _me(session: DbSession, user: User) -> dict:
         },
         "workspaces": workspaces,
         "active_workspace": active,
+        # AN INSTALLATION FACT, not a property of this account, and it travels here because
+        # every screen already reads this query and it is the one that exists before a
+        # workspace does. What the client does with it is stop offering the optional
+        # address in «Mi perfil» when nothing could ever deliver to it: with no SMTP the
+        # reset link is written to the log and handed back in the response, so a field
+        # promising to receive it by mail promises something that cannot happen. It is not
+        # a secret — it is the same thing anybody discovers by pressing «he olvidado la
+        # contraseña» — but it is behind a session anyway, because the public half of that
+        # flow must keep answering identically whatever the installation is configured for.
+        "mail_configured": mail.configured(),
         # Matches what `access_for` will decide on the next request, administrator bypass
         # included: a `null` here is what makes the panel offer «crea tu workspace», so it
         # must not say that to someone every route is about to let through.

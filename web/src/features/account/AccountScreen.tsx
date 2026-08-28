@@ -186,12 +186,24 @@ function AccountTabView() {
 }
 
 /**
- * The two fields an account may change about itself.
+ * The fields an account may change about itself.
  *
  * The username is not one of them and is shown as text: it is what every message prints
  * and what every row points at, so renaming it would quietly rewrite who wrote what. The
  * address is optional on purpose — invitations are handed over by hand here — and it says
  * what it is *for* rather than pretending to be a second identity.
+ *
+ * THE ADDRESS IS ONLY OFFERED WHERE IT COULD ARRIVE (2026-08-28, explicit user request).
+ * Its single use is receiving the password-reset link, and with no SMTP configured
+ * `mail.send` writes that link to the log and the API hands it back in the response — so
+ * on an installation without mail the field collects something nothing will ever read,
+ * under help text promising a delivery that cannot happen. It is HIDDEN there, not
+ * removed: the column, the `/forgot` flow and `mail.py` are untouched, so configuring
+ * `SMTP_HOST` brings the field back with no migration and no code change.
+ *
+ * The `||` is the half that matters and is not belt-and-braces: an account that already
+ * HAS an address keeps seeing it even where nothing can deliver, because hiding a field
+ * that holds data is hiding data — there would be no way left to read it or clear it.
  */
 function IdentityCard() {
   const { t } = useT();
@@ -204,6 +216,7 @@ function IdentityCard() {
 
   if (!user) return null;
   const dirty = name.trim() !== user.name || (email.trim() || null) !== user.email;
+  const offerEmail = (session.data?.mail_configured ?? false) || Boolean(user.email);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -246,20 +259,24 @@ function IdentityCard() {
             </p>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="account-email">{t("account.identity.email")}</Label>
-            <Input
-              id="account-email"
-              type="email"
-              autoComplete="email"
-              placeholder={t("account.identity.email.placeholder")}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <p className="text-small text-muted-foreground">
-              {t("account.identity.email.help")}
-            </p>
-          </div>
+          {offerEmail ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="account-email">{t("account.identity.email")}</Label>
+              <Input
+                id="account-email"
+                type="email"
+                autoComplete="email"
+                placeholder={t("account.identity.email.placeholder")}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <p className="text-small text-muted-foreground">
+                {session.data?.mail_configured
+                  ? t("account.identity.email.help")
+                  : t("account.identity.email.help.noMail")}
+              </p>
+            </div>
+          ) : null}
 
           <FormError error={update.error} />
 

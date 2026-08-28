@@ -1484,7 +1484,7 @@ function Account() {
           {
             key: "cuenta",
             head: t("tabs.account"),
-            body: "Tu nombre visible, un correo opcional, la contraseña y el idioma en el que lees la aplicación. El correo no sirve para entrar: solo para recibir el enlace de restablecerla.",
+            body: "Tu nombre visible, la contraseña y el idioma en el que lees la aplicación. Si la instalación tiene correo configurado aparece además una dirección opcional, que no sirve para entrar: solo para recibir el enlace de restablecer la contraseña. Sin correo configurado el campo no está, porque no habría nada que entregar ahí — el enlace se pide a quien administra.",
           },
           {
             key: "workspaces",

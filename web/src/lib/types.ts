@@ -430,6 +430,10 @@ export interface Session {
   active_workspace: string | null;
   /** Role in that workspace; null when the account is a member of nothing at all. */
   role: Role | null;
+  /** Whether this INSTALLATION has SMTP: an installation fact, not a property of the
+   *  account. False means the reset link is only ever logged and handed back in the
+   *  response, so nothing can be delivered to an address. */
+  mail_configured: boolean;
 }
 
 /* Workspaces ----------------------------------------------------------------------- */

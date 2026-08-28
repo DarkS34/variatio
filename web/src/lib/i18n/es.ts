@@ -78,6 +78,10 @@ export const es = {
   "account.identity.email.placeholder": "sin correo",
   "account.identity.email.help":
     "Solo sirve para recibir el enlace de restablecer la contraseña. No se entra con él y no lo ve nadie más.",
+  // Solo se ve cuando la cuenta YA tiene dirección en una instalación sin correo: el campo
+  // se esconde en cuanto está vacío, pero un dato guardado nunca se oculta.
+  "account.identity.email.help.noMail":
+    "Esta instalación no tiene correo configurado, así que aquí no se entrega nada: el enlace de restablecer se pide a quien administra. Puedes borrar la dirección si quieres.",
 
   // PASSWORD ----------------------------------------------------------------------------
   "password.title": "Contraseña",
