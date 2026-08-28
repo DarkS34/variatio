@@ -12,6 +12,7 @@ this at a workspace you are not a member of costs a 403 and never a read.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
@@ -171,6 +172,68 @@ def remove(
     db.flush()
     deps.invalidate(ws.slug, "workspace eliminado")
     return {"deleted": slug, "path": str(ws.root)}
+
+
+# LEAVING one, which is a different act from deleting it and only sometimes has the same
+# consequence. `remove` above is the OWNER disposing of a shared instance; this is a person
+# disposing of their own access, and any member may do it whatever their role — it acts on
+# their own membership row and on nothing else.
+#
+# The two collapse into one when the person leaving is the last one linked to it: with the
+# seat empty there is nobody left for the workspace to belong to, so the row goes with them.
+# That holds even when the leaver is not the owner — the case exists (an owner's account was
+# deleted, and `memberships` went with it), and refusing there would strand an instance that
+# nobody but an administrator could ever open again.
+#
+# The DIRECTORY TREE IS LEFT ALONE, exactly as in `remove` and for the same reason: it holds
+# the user's own uploaded documents, and a web request that quietly removes hundreds of
+# megabytes of somebody's lecture notes is not a request anyone expects to be irreversible.
+# An administrator can still re-import the tree.
+#
+# There is deliberately no «last workspace of the installation» guard here. `remove` has one
+# and it predates the decision that an installation may hold ZERO workspaces and an account
+# may belong to none — both are normal states the app renders on purpose, and refusing to
+# let the last person out of the last instance would make «no workspace» reachable only by
+# an administrator.
+@router.delete("/{slug}/membership")
+def leave(
+    slug: str,
+    user: User = Depends(auth.current_user),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe el workspace '{slug}'.")
+
+    # An administrator reaches every instance through the bypass and usually holds no row
+    # at all. There is nothing for them to leave, and deleting somebody else's workspace
+    # from this route would be a different act wearing this one's name.
+    membership = identity.membership(db, workspace.id, user.id)
+    if membership is None:
+        raise HTTPException(
+            409,
+            f"No formas parte de '{slug}': no hay acceso tuyo que quitar. "
+            "Un administrador lo borra desde «Administración».",
+        )
+
+    others = [m for m, _ in identity.members_of(db, workspace.id) if m.user_id != user.id]
+    ws = settings.workspace_for(slug)
+
+    if others:
+        db.delete(membership)
+        db.flush()
+        if user.active_workspace_id == workspace.id:
+            user.active_workspace_id = None
+        logger.info(f"[workspace] «{user.username}» salió de «{slug}»")
+        return {"left": slug, "deleted": False, "members_left": len(others)}
+
+    db.delete(workspace)
+    db.flush()
+    if user.active_workspace_id == workspace.id:
+        user.active_workspace_id = None
+    deps.invalidate(slug, "workspace eliminado al salir su último miembro")
+    logger.info(f"[workspace] «{user.username}» era el último de «{slug}»; se eliminó")
+    return {"left": slug, "deleted": True, "members_left": 0, "path": str(ws.root)}
 
 
 # The chain of a workspace other than the active one, so the switcher can show what state
