@@ -125,6 +125,8 @@ def upload(
 ) -> dict:
     try:
         result = raw_data.save(access.ws, kind, files)
+    except raw_data.RawLimitError as exc:
+        raise HTTPException(413, str(exc)) from exc
     except raw_data.RawError as exc:
         raise _not_found(exc) from exc
 

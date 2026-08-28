@@ -1,8 +1,25 @@
+def _slug_error(*slugs: str | None) -> str | None:
+    from ..settings import slug_error
+
+    for slug in slugs:
+        if slug is None:
+            continue
+        error = slug_error(slug)
+        if error:
+            return f"«{slug}» no vale como workspace. {error}"
+    return None
+
+
 def import_instance(args) -> int:
     from variatio.core import paths
 
     from ..db import session_scope
     from ..db.instance_io import import_instance as load
+
+    error = _slug_error(args.slug, args.from_workspace)
+    if error:
+        print(error)
+        return 1
 
     ws = paths.workspace(args.from_workspace or args.slug)
     with session_scope() as session:
@@ -20,6 +37,11 @@ def export_instance(args) -> int:
 
     from ..db import session_scope
     from ..db.instance_io import export_instance as dump
+
+    error = _slug_error(args.slug, args.to_workspace)
+    if error:
+        print(error)
+        return 1
 
     ws = paths.workspace(args.to_workspace or args.slug)
     with session_scope() as session:

@@ -20,6 +20,9 @@ from . import review
 
 CHUNK = 1024 * 1024
 MAX_BYTES = 512 * 1024 * 1024
+MAX_FILES = 100
+MAX_REQUEST_BYTES = 1024 * 1024 * 1024
+MAX_SLOT_BYTES = 4 * 1024 * 1024 * 1024
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"
@@ -54,6 +57,10 @@ class RawError(Exception):
     pass
 
 
+class RawLimitError(RawError):
+    pass
+
+
 def directory(ws: Workspace, kind: str) -> Path:
     dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
     if kind not in dirs:
@@ -65,6 +72,9 @@ def listing(ws: Workspace) -> dict:
     return {
         "supported_extensions": list(SUPPORTED_EXTS),
         "max_bytes": MAX_BYTES,
+        "max_files": MAX_FILES,
+        "max_request_bytes": MAX_REQUEST_BYTES,
+        "max_slot_bytes": MAX_SLOT_BYTES,
         "slots": [slot(ws, kind) for kind in SLOTS],
     }
 
@@ -102,10 +112,19 @@ def _files(path: Path) -> list[dict]:
 
 def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
     path = directory(ws, kind)
+    if len(uploads) > MAX_FILES:
+        raise RawLimitError(
+            f"Son {len(uploads)} archivos y el máximo por envío es {MAX_FILES}: "
+            "súbelos en varias tandas."
+        )
     path.mkdir(parents=True, exist_ok=True)
 
     added: list[dict] = []
     rejected: list[dict] = []
+    request_left = MAX_REQUEST_BYTES
+    # Counted against what the slot already holds, or the cap is walked past one
+    # request at a time.
+    slot_left = MAX_SLOT_BYTES - _slot_bytes(path)
 
     for upload in uploads:
         name = _safe_name(upload.filename or "")
@@ -118,20 +137,50 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
             )
             continue
 
+        limit, reason = _budget(request_left, slot_left)
         target = _free_path(path, name)
         try:
-            written = _write(upload, target)
+            written = _write(upload, target, limit, reason)
         except RawError as exc:
             target.unlink(missing_ok=True)
             rejected.append({"name": name, "reason": str(exc)})
             continue
 
+        request_left -= written
+        slot_left -= written
         added.append({"name": target.name, "bytes": written, "renamed": target.name != name})
 
     return {"added": added, "rejected": rejected}
 
 
-def _write(upload: UploadFile, target: Path) -> int:
+def _slot_bytes(path: Path) -> int:
+    if not path.is_dir():
+        return 0
+    return sum(entry.stat().st_size for entry in path.iterdir() if entry.is_file())
+
+
+def _budget(request_left: int, slot_left: int) -> tuple[int, str]:
+    options = [
+        (MAX_BYTES, f"Supera el máximo de {_mb(MAX_BYTES)} MB por archivo"),
+        (request_left, f"El envío supera el máximo de {_mb(MAX_REQUEST_BYTES)} MB en total"),
+        (
+            slot_left,
+            f"El origen supera el máximo de {_gb(MAX_SLOT_BYTES)} GB: "
+            "borra documentos antes de subir más",
+        ),
+    ]
+    return min(options, key=lambda option: option[0])
+
+
+def _mb(size: int) -> int:
+    return size // (1024 * 1024)
+
+
+def _gb(size: int) -> int:
+    return size // (1024 * 1024 * 1024)
+
+
+def _write(upload: UploadFile, target: Path, limit: int, reason: str) -> int:
     written = 0
     with target.open("wb") as out:
         while True:
@@ -139,8 +188,8 @@ def _write(upload: UploadFile, target: Path) -> int:
             if not chunk:
                 break
             written += len(chunk)
-            if written > MAX_BYTES:
-                raise RawError(f"Supera el máximo de {MAX_BYTES // (1024 * 1024)} MB")
+            if written > limit:
+                raise RawError(reason)
             out.write(chunk)
     if written == 0:
         raise RawError("El archivo está vacío")

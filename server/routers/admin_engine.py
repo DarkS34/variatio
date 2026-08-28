@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config
 from variatio.core import cerebras_budget, inference
 
-from .. import auth, deps, jobs, runtime
+from .. import auth, csv_safe, deps, jobs, runtime
 from ..db import Base, database_url
 from ..db.models import User
 from ..tunnel import TunnelError
@@ -145,15 +145,19 @@ def cerebras_export() -> Response:
         ceiling = entry["windows"]["day"]["tokens_limit"] or 1
         for row in entry["phases"]:
             writer.writerow(
-                {
-                    "modelo": entry["model"],
-                    "fase": row["phase"],
-                    "peticiones": row["requests"],
-                    "tokens_entrada": row["prompt_tokens"],
-                    "tokens_salida": row["completion_tokens"],
-                    "tokens": row["tokens"],
-                    "porcentaje_del_dia": f"{row['tokens'] * 100 / ceiling:.2f}".replace(".", ","),
-                }
+                csv_safe.row(
+                    {
+                        "modelo": entry["model"],
+                        "fase": row["phase"],
+                        "peticiones": row["requests"],
+                        "tokens_entrada": row["prompt_tokens"],
+                        "tokens_salida": row["completion_tokens"],
+                        "tokens": row["tokens"],
+                        "porcentaje_del_dia": f"{row['tokens'] * 100 / ceiling:.2f}".replace(
+                            ".", ","
+                        ),
+                    }
+                )
             )
     return Response(
         content="﻿" + buffer.getvalue(),

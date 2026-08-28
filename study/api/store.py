@@ -25,6 +25,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
+from server import csv_safe
 from server.db.models import EvalSession
 
 from .. import ARMS, EvaluationSession
@@ -741,7 +742,7 @@ def export_csv(headers: list[dict]) -> str:
             line[f"{arm}_ms"] = (row.get("arm_elapsed_ms") or {}).get(arm, "")
         for name in RATING_SCALES:
             line[name] = rating.get(name, "")
-        writer.writerow(line)
+        writer.writerow(csv_safe.row(line))
     return buffer.getvalue()
 
 

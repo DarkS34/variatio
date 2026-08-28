@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 
@@ -16,7 +17,9 @@ def write_json(path: str | Path, data, sort_keys: bool = False) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(f"{path.suffix}.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
+    tmp.unlink(missing_ok=True)
+    fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o666)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=sort_keys)
     tmp.replace(path)
     return path
