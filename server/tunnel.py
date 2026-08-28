@@ -22,7 +22,13 @@ def local_port() -> int:
     host = config.OLLAMA_HOST
     if "://" not in host:
         host = f"http://{host}"
-    port = urlsplit(host).port
+    # `urlsplit(...).port` does not answer «no hay puerto» for a port that is not a number:
+    # it raises `ValueError`, which turned a mistyped OLLAMA_HOST into a 500 on three
+    # endpoints instead of the readable refusal the missing-port case already gets.
+    try:
+        port = urlsplit(host).port
+    except ValueError:
+        port = None
     if port is None:
         raise TunnelError(f"'{config.OLLAMA_HOST}' no dice en qué puerto local escuchar")
     return port
@@ -35,6 +41,16 @@ def ssh_command() -> list[str]:
     host = config.OLLAMA_SSH_HOST.strip()
     if not host:
         raise TunnelError("No hay destino: rellena OLLAMA_SSH_HOST en la configuración")
+    # The destination goes last and ssh has no `--` to close its own options, so a value
+    # starting with '-' would be read as one of them — `-oProxyCommand=…` is the one that
+    # matters — instead of as a machine. It is not reachable from the API: the `tunnel.*`
+    # block is `editable=False, secret=True` and comes from the environment alone. This is
+    # defence in depth, so the only way to write it wrong is also the way that says so.
+    if host.startswith("-"):
+        raise TunnelError(
+            f"El destino '{host}' empieza por '-': ssh lo leería como una opción suya y no "
+            "como una máquina. Corrige OLLAMA_SSH_HOST en el entorno"
+        )
     command = [
         ssh,
         "-N",
@@ -175,5 +191,5 @@ class SshTunnel:
 def _safe_local_port() -> int | None:
     try:
         return local_port()
-    except TunnelError:
+    except (TunnelError, ValueError):
         return None

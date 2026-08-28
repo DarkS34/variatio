@@ -242,9 +242,20 @@ siendo 'ollama'.""",
         group="Motor",
         impact=Impact.ENGINE,
         env="CEREBRAS_BASE_URL",
-        doc="""La raíz OpenAI-compatible de la API de Cerebras. Solo la usa el motor 'cerebras+ollama';
-existe como ajuste porque es lo que permite apuntar a un proxy o a un mock en pruebas sin
-tocar código.""",
+        editable=False,
+        doc="""La raíz OpenAI-compatible de la API de Cerebras. Solo la usa el motor 'cerebras+ollama'.
+
+SOLO DEL ENTORNO: no se puede cambiar en caliente. El cliente se construye con esta raíz y
+con `Authorization: Bearer CEREBRAS_API_KEY` en la cabecera de cada llamada, así que quien
+pudiera reescribirla desde el panel recibiría en su propio host la clave que
+`engine.cerebras_api_key` marca `secret` y `editable=False` precisamente para que nunca
+salga de la API. Cambiar la dirección es cambiar a quién se le entrega la credencial, y eso
+no es una preferencia de configuración.
+
+No es un secreto —la raíz pública de Cerebras no lo es—, así que se sigue viendo en el panel
+y guardando en `config.json`; lo que no puede es ser reescribible en caliente. Apuntar a un
+proxy o a un mock en pruebas sigue funcionando: se hace por la variable de entorno
+`CEREBRAS_BASE_URL` (o el `.env` ignorado por git), como el bloque `tunnel.*`.""",
     ),
     Setting(
         key="engine.cerebras_api_key",
@@ -378,10 +389,21 @@ respondiendo mientras se aguanta.""",
         group="Motor",
         impact=Impact.ENGINE,
         env="OLLAMA_HOST",
+        editable=False,
         doc="""El host de Ollama como `host:puerto` (o una URL `http(s)://` completa). `config.py` lo
 lee de la variable de entorno `OLLAMA_HOST` y normaliza un `host:puerto` desnudo
 anteponiéndole `http://`; el registro guarda el valor desnudo y ese prefijo se añade en
-otro sitio, no aquí.""",
+otro sitio, no aquí.
+
+SOLO DEL ENTORNO: no se puede cambiar en caliente. Es la dirección a la que este proceso
+manda TODAS sus llamadas al motor, así que reescribirla desde el panel es pedirle al
+servidor que llame a donde diga quien la reescribe —cualquier dirección de la red interna a
+la que la máquina llegue— y devolver por pantalla lo que conteste. Es la misma razón por la
+que el bloque `tunnel.*`, que describe el resto de la dirección de esta instalación, tampoco
+se toca desde el panel.
+
+Apuntarlo a otra máquina, o al puerto local que abre el túnel, se hace por la variable de
+entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
     ),
     Setting(
         key="engine.idle_unload_seconds",

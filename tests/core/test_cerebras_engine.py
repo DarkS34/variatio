@@ -230,12 +230,13 @@ def test_a_429_is_retried_with_the_wait_the_server_asks_for(monkeypatch):
     assert resp.response == "ok"
 
 
-def test_a_readable_error_names_the_status_and_the_body():
+def test_a_readable_error_names_the_status_and_the_endpoint_but_not_the_body():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(400, text="reasoning_effort is not supported")
 
-    with pytest.raises(InferenceError, match="400.*reasoning_effort"):
+    with pytest.raises(InferenceError, match="400.*chat/completions") as error:
         _engine_with(handler).generate("gemma-4-31b", "hola")
+    assert "reasoning_effort is not supported" not in str(error.value)
 
 
 def test_generate_stream_splits_the_two_channels():

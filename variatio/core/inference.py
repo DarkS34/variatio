@@ -122,6 +122,20 @@ def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResp
     )
 
 
+# The engine's own reply is not ours to hand back: `ollama.ResponseError` carries the raw
+# upstream response body, and these messages travel to the panel. What an operator needs is
+# what failed, against which host, and with which status; the body goes to the log at debug.
+def _upstream_error(action: str, e: Exception) -> str:
+    logger.debug(f"[ollama] {action}, contra '{config.OLLAMA_HOST}': {e}")
+    status = getattr(e, "status_code", None)
+    if status:
+        return f"{action}: el motor en '{config.OLLAMA_HOST}' respondió {status}"
+    return (
+        f"{action}: no se pudo hablar con el motor en '{config.OLLAMA_HOST}' "
+        f"({type(e).__name__})"
+    )
+
+
 class OllamaEngine:
     name = "ollama"
 
@@ -232,7 +246,7 @@ class OllamaEngine:
                 **self._context_option(model, self._temperature(temperature)),
             )
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
+            raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
         return split_thinking(resp.response, getattr(resp, "thinking", None))
 
     def generate_stream(
@@ -277,7 +291,7 @@ class OllamaEngine:
                 progress.checkpoint()
             take(splitter.flush())
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Ollama generation failed for model '{model}': {e}") from e
+            raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
 
         return GenerationResponse(
             response="".join(answer).strip(), thinking="".join(thinking).strip() or None
@@ -305,7 +319,7 @@ class OllamaEngine:
                 model=model, prompt=text, **self._context_option(model)
             )["embedding"]
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Ollama embedding failed for model '{model}': {e}") from e
+            raise InferenceError(_upstream_error(f"Falló el embedding con '{model}'", e)) from e
 
     def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -313,7 +327,9 @@ class OllamaEngine:
         try:
             return list(self._client.embed(model=model, input=texts, **self._context_option(model))["embeddings"])
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Ollama batch embedding failed for model '{model}': {e}") from e
+            raise InferenceError(
+                _upstream_error(f"Falló el embedding por lotes con '{model}'", e)
+            ) from e
 
     def installed_models(self) -> list[str]:
         return [info["model"] for info in self.installed_models_detail()]
@@ -325,7 +341,9 @@ class OllamaEngine:
         try:
             listing = self._client.list()["models"]
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Could not list Ollama models: {e}") from e
+            raise InferenceError(
+                _upstream_error("No se pudieron listar los modelos de Ollama", e)
+            ) from e
         detail = [
             {"model": info["model"], "size": int(info["size"]) if info.get("size") else None}
             for info in listing
@@ -341,7 +359,9 @@ class OllamaEngine:
         try:
             response = self._client.ps()
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Could not read the resident Ollama models: {e}") from e
+            raise InferenceError(
+                _upstream_error("No se pudieron leer los modelos residentes", e)
+            ) from e
         return [
             {
                 "model": info.model or info.name or "",
@@ -429,7 +449,7 @@ class OllamaEngine:
                 if on_progress is not None:
                     on_progress(completed, total)
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"Falló la descarga de '{model}': {e}") from e
+            raise InferenceError(_upstream_error(f"Falló la descarga de '{model}'", e)) from e
         self._capabilities.pop(model, None)
         self._installed = None
         logger.success(f"Modelo '{model}' descargado")
@@ -438,7 +458,9 @@ class OllamaEngine:
         try:
             self._client.delete(model)
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(f"No se pudo borrar '{model}' del disco: {e}") from e
+            raise InferenceError(
+                _upstream_error(f"No se pudo borrar '{model}' del disco", e)
+            ) from e
         self._capabilities.pop(model, None)
         self._installed = None
         logger.info(f"Modelo '{model}' borrado del disco del motor")

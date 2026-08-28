@@ -156,9 +156,12 @@ class CerebrasEngine:
         except httpx.HTTPError as e:
             raise InferenceError(f"No se pudo leer el catálogo de Cerebras: {e}") from e
         if response.status_code != 200:
+            # The body stays in the log and out of the message: this one is returned verbatim
+            # to the panel as `{"error": …}`, and a reply from upstream is not ours to reflect.
+            logger.debug(f"[cerebras] Cuerpo del error al listar modelos: {response.text[:300]}")
             raise InferenceError(
-                f"Cerebras respondió {response.status_code} al listar sus modelos: "
-                f"{response.text[:200]}"
+                f"Cerebras respondió {response.status_code} al listar sus modelos "
+                f"({_endpoint_label('/models')}); el detalle está en el registro"
             )
         models = sorted(str(row.get("id", "")) for row in response.json().get("data", []))
         models = [model for model in models if model]
@@ -222,8 +225,7 @@ class CerebrasEngine:
                     response.read()
                     ledger.record(model, phase, 0, 0, response.headers)
                     raise InferenceError(
-                        f"Cerebras respondió {response.status_code} para '{model}': "
-                        f"{response.text[:300]}"
+                        _remote_error(response.status_code, model, response.text)
                     )
                 for line in response.iter_lines():
                     if not line.startswith("data: "):
@@ -335,10 +337,7 @@ class CerebrasEngine:
                 time.sleep(wait)
                 continue
             if response.status_code != 200:
-                raise InferenceError(
-                    f"Cerebras respondió {response.status_code} para '{model}': "
-                    f"{response.text[:300]}"
-                )
+                raise InferenceError(_remote_error(response.status_code, model, response.text))
             return response
         raise InferenceError(f"Cerebras agotó los reintentos para '{model}'")
 
@@ -381,6 +380,21 @@ def _prompt_text(body: dict) -> str:
         elif isinstance(content, list):
             parts.extend(str(p.get("text", "")) for p in content if isinstance(p, dict))
     return "\n".join(parts)
+
+
+def _endpoint_label(path: str) -> str:
+    return f"{str(config.CEREBRAS_BASE_URL).rstrip('/')}{path}"
+
+
+# Same rule as `inference._upstream_error`, in Cerebras' half: what a remote API answers is
+# its text, not ours, and these messages travel to the panel as the job's failure. The
+# status and the endpoint are what an operator acts on; the body goes to the log at debug.
+def _remote_error(status: int, model: str, body: str) -> str:
+    logger.debug(f"[cerebras] Cuerpo del error {status} para '{model}': {body[:300]}")
+    return (
+        f"Cerebras respondió {status} para '{model}' "
+        f"({_endpoint_label('/chat/completions')}); el detalle está en el registro"
+    )
 
 
 def _retry_wait(response: httpx.Response, attempt: int) -> float:

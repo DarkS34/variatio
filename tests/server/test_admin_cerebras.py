@@ -104,3 +104,23 @@ def test_an_empty_ledger_exports_a_header_and_nothing_else(ledger):
     body = admin_engine.cerebras_export().body.decode("utf-8")
     assert _rows(body) == []
     assert "modelo;fase" in body
+
+
+# This file exists to be opened in Excel by hand, which is exactly what makes a cell opening
+# with `=`, `+`, `-`, `@` or a control character a program rather than a string. The phase and
+# the model are the two columns whose text does not come from this module.
+def test_a_cell_that_looks_like_a_formula_is_defused(ledger):
+    ledger.record("gemma-4-31b", "=cmd|' /c calc'!A1", prompt_tokens=10, completion_tokens=0, headers={})
+
+    assert _rows(admin_engine.cerebras_export().body.decode("utf-8"))[0]["fase"] == "'=cmd|' /c calc'!A1"
+
+
+def test_the_numbers_are_still_numbers(ledger, monkeypatch):
+    monkeypatch.setattr(config, "CEREBRAS_MAX_TOKENS_DAY", 1_000_000)
+    ledger.record("gemma-4-31b", "kg_extract", prompt_tokens=8, completion_tokens=2, headers={})
+
+    row = _rows(admin_engine.cerebras_export().body.decode("utf-8"))[0]
+    assert row["modelo"] == "gemma-4-31b"
+    assert row["peticiones"] == "1"
+    assert row["tokens"] == "10"
+    assert row["porcentaje_del_dia"] == "0,00"

@@ -61,14 +61,14 @@ def concept_cache_is_valid(path: Path, fingerprint: str) -> bool:
     if not path.exists():
         return False
     try:
-        data = np.load(path, allow_pickle=True)
+        data = np.load(path, allow_pickle=False)
         return str(data["fingerprint"]) == fingerprint
     except Exception:
         return False
 
 
 def load_concept_cache(path: Path) -> dict[str, np.ndarray]:
-    data = np.load(path, allow_pickle=True)
+    data = np.load(path, allow_pickle=False)
     return dict(zip(data["keys"], data["vectors"]))
 
 
@@ -90,7 +90,7 @@ def save_concept_cache(path: Path, index: dict[str, np.ndarray], fingerprint: st
 
 
 def load_bank_cache(path: Path) -> tuple[dict[str, np.ndarray], dict[str, dict], dict[str, str], str]:
-    data = np.load(path, allow_pickle=True)
+    data = np.load(path, allow_pickle=False)
     index = dict(zip(data["keys"], data["vectors"]))
     assignments = json.loads(str(data["assignments"]))
     bank = {

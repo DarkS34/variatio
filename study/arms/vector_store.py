@@ -118,7 +118,7 @@ class FlatBankIndex:
         if not self.cache_path.exists():
             return False
         try:
-            data = np.load(self.cache_path, allow_pickle=True)
+            data = np.load(self.cache_path, allow_pickle=False)
             if str(data["fingerprint"]) != self._fingerprint():
                 return False
             self.ids = [str(key) for key in data["keys"]]
