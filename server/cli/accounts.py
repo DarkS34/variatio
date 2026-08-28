@@ -152,6 +152,6 @@ def invite(args) -> int:
         )
 
     base = public_base_url() or "http://localhost:8000"
-    print(f"{base}/invitacion?token={token}")
+    print(f"{base}/invite?token={token}")
     print("Quien lo canjee elegirá su usuario y dirá si da clase o si estudia.")
     return 0

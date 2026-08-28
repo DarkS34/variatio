@@ -376,7 +376,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
   // and when the workspace has none, because an empty set means "covered nothing yet",
   // which is a different statement and would dim the whole graph.
-  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: getCurriculum });
+  const curriculum = useQuery({ queryKey: ["kg", "curriculum"], queryFn: () => getCurriculum() });
   const curriculumSet = useMemo(
     () => (curriculum.data ? new Set(curriculum.data.concepts) : undefined),
     [curriculum.data],
@@ -890,7 +890,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
           className="mt-4"
           title={t("kg.readyToTag")}
           action={
-            <Button size="sm" onClick={() => navigate("/preparar/banco")}>
+            <Button size="sm" onClick={() => navigate("/prepare/bank")}>
               {t("kg.goToBank")}
               <ArrowRight />
             </Button>

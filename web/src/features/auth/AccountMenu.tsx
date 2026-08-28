@@ -88,12 +88,12 @@ export function AccountMenu() {
             <MenuItem
               icon={<UserRound className="size-4" />}
               label={t("menu.profile")}
-              onClick={() => go("/perfil")}
+              onClick={() => go("/account")}
             />
             <MenuItem
               icon={<Sparkles className="size-4" />}
               label={t("menu.savedVariants")}
-              onClick={() => go("/perfil/variantes")}
+              onClick={() => go("/account/variants")}
             />
             {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
                 and not in the bar because it appears for an installation-wide account and the bar is the
@@ -102,13 +102,13 @@ export function AccountMenu() {
               <MenuItem
                 icon={<ShieldCheck className="size-4" />}
                 label={t("menu.admin")}
-                onClick={() => go("/administracion")}
+                onClick={() => go("/admin")}
               />
             ) : null}
             <MenuItem
               icon={<BookOpen className="size-4" />}
               label={t("menu.guide")}
-              onClick={() => go("/guia")}
+              onClick={() => go("/guide")}
             />
           </div>
 

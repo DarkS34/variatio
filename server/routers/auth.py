@@ -230,7 +230,7 @@ def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps
     if user is not None and user.active:
         token = tokens.new_token()
         identity.create_reset(session, user.id, tokens.digest(token), settings.RESET_TTL)
-        link = f"{deps.base_url(request)}/restablecer?token={token}"
+        link = f"{deps.base_url(request)}/reset?token={token}"
         minutes = int(settings.RESET_TTL.total_seconds() // 60)
         if user.email:
             mail.send(

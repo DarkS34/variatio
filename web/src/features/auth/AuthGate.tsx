@@ -29,10 +29,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const { path } = useRouter();
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
 
-  if (path === "/invitacion") {
+  if (path === "/invite") {
     return token ? <AcceptInvite token={token} /> : <MissingToken kind="auth.kindInvite" />;
   }
-  if (path === "/restablecer") {
+  if (path === "/reset") {
     return token ? <ResetPassword token={token} /> : <MissingToken kind="auth.kindLink" />;
   }
 
@@ -87,7 +87,7 @@ function Guarded({ children }: { children: ReactNode }) {
     return (
       <AuthLayout title={t("auth.serverDown")}>
         <p className="text-body text-muted-foreground">
-          {session.error instanceof Error ? session.error.message : "Error desconocido"}
+          {session.error instanceof Error ? session.error.message : t("auth.unknownError")}
         </p>
         <Button className="mt-4 w-full" onClick={() => session.refetch()}>
           {t("common.retry")}

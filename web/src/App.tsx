@@ -36,13 +36,24 @@ const ProfileScreen = lazy(() =>
 const GenerateScreen = lazy(() =>
   import("@/features/run/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
 );
+const RawScreen = lazy(() =>
+  import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
+);
 
 // Which destinations need an instance to mean anything. Everything not listed here is
 // about the person or the installation and works with no workspace at all: the guide is
 // reading, «Mi perfil» is the account, and administration is where an administrator hands
 // out access in the first place — locking them behind a workspace would leave the state
 // with no way out of itself.
-const NEEDS_WORKSPACE = ["/", "/preparar/perfil", "/preparar/grafo", "/preparar/banco", "/generar", "/evaluar"];
+const NEEDS_WORKSPACE = [
+  "/",
+  "/raw",
+  "/prepare/profile",
+  "/prepare/graph",
+  "/prepare/bank",
+  "/generate",
+  "/evaluate",
+];
 
 export function App() {
   const { t } = useT();
@@ -52,8 +63,8 @@ export function App() {
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
-    if (path === "/guia" || path.startsWith("/guia/")) {
-      return <GuideScreen slug={path.slice("/guia/".length)} />;
+    if (path === "/guide" || path.startsWith("/guide/")) {
+      return <GuideScreen slug={path.slice("/guide/".length)} />;
     }
 
     // One message rather than six 403s. It is drawn as the panel whatever the route was,
@@ -63,32 +74,36 @@ export function App() {
     switch (path) {
       case "/":
         return <Dashboard />;
-      case "/preparar/perfil":
+      // The raw material is not a stage — it writes no artifact and nobody approves it —
+      // so it is a destination of its own rather than a fourth `/prepare/…`.
+      case "/raw":
+        return <RawScreen />;
+      case "/prepare/profile":
         return <ProfileScreen stage={stage("exemplars_profile")} />;
-      case "/preparar/grafo":
+      case "/prepare/graph":
         return <KgScreen stage={stage("knowledge_graph")} />;
-      case "/preparar/banco":
+      case "/prepare/bank":
         return <BankScreen stage={stage("exemplars_bank")} />;
-      case "/generar":
+      case "/generate":
         return <GenerateScreen />;
-      case "/evaluar":
+      case "/evaluate":
         return <EvaluationScreen />;
       // The account of whoever is looking: their data, their variants and their accesses. Each
       // tab is a route so that «mis variantes» stays a link that can be bookmarked.
-      case "/perfil":
+      case "/account":
         return <AccountScreen tab="cuenta" />;
-      case "/perfil/variantes":
+      case "/account/variants":
         return <AccountScreen tab="variantes" />;
-      case "/perfil/accesos":
+      case "/account/access":
         return <AccountScreen tab="accesos" />;
       // Where the variants lived when they were a screen of their own. Redirected rather than
       // duplicating the screen: old links still lead to where they are now.
-      case "/variantes":
-        return <Redirect to="/perfil/variantes" />;
+      case "/variants":
+        return <Redirect to="/account/variants" />;
       // Guarded on the server by `require_admin`; the route exists for everyone because
       // hiding it in the client is not a permission, and the panel says so itself if a
       // non-administrator reaches it by typing the URL.
-      case "/administracion":
+      case "/admin":
         return <AdminScreen />;
       default:
         return (

@@ -17,7 +17,7 @@ import { useCreateWorkspace } from "@/state/queries";
  * «no tengo ninguno» was not a state the app could be in: an account either landed in
  * somebody's instance or was stopped by a full-page notice outside the shell, before the
  * navigation, the account menu and the guide had rendered. None of those needs a
- * workspace. So the message moved inside: the shell is up, `/guia` and `/perfil` are
+ * workspace. So the message moved inside: the shell is up, `/guide` and `/account` are
  * reachable, and what sits in the middle of the panel is the one thing there is to do
  * here — start an instance, which is what a workspace is.
  */

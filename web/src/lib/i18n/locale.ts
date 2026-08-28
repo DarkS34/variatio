@@ -7,7 +7,7 @@
  * instance whose prompts are English, and the app has to be able to say so.
  *
  * `localStorage` is the fallback and not the truth. It exists for the three routes that
- * render before there is a session — login, `/invitacion`, `/restablecer` — where there
+ * render before there is a session — login, `/invite`, `/reset` — where there
  * is no account to ask, and it is seeded from `navigator.language` so a browser set to
  * English does not greet somebody in Spanish. The moment the session arrives, `adopt`
  * replaces it with what the account says.

@@ -189,7 +189,7 @@ def create_invite(
     # username — which is why it must not be left anywhere its holder was not meant to be.
     return {
         "invite": _invite(db, invite),
-        "link": f"{auth.base_url(request)}/invitacion?token={token}",
+        "link": f"{auth.base_url(request)}/invite?token={token}",
     }
 
 
@@ -462,7 +462,7 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
     identity.create_reset(db, user.id, auth.digest(token), settings.RESET_TTL)
     return {
         "user_id": user.id,
-        "link": f"{auth.base_url(request)}/restablecer?token={token}",
+        "link": f"{auth.base_url(request)}/reset?token={token}",
         "expires_in_minutes": int(settings.RESET_TTL.total_seconds() // 60),
     }
 

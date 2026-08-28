@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
@@ -41,9 +42,9 @@ import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/q
  * can be sent, bookmarked and reloaded.
  */
 export const ACCOUNT_TABS = [
-  { value: "cuenta", label: "tabs.account", path: "/perfil" },
-  { value: "variantes", label: "tabs.variants", path: "/perfil/variantes" },
-  { value: "accesos", label: "tabs.access", path: "/perfil/accesos" },
+  { value: "cuenta", label: "tabs.account", path: "/account" },
+  { value: "variantes", label: "tabs.variants", path: "/account/variants" },
+  { value: "accesos", label: "tabs.access", path: "/account/access" },
 ] as const satisfies readonly { value: string; label: Key; path: string }[];
 
 export type AccountTab = (typeof ACCOUNT_TABS)[number]["value"];
@@ -58,8 +59,9 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("account.title")}</h1>
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <h1 className="w-full font-display font-expanded text-display">{t("account.title")}</h1>
+        <GuideLink slug="account" />
         <InfoHint label={t("account.whatIsHere")}>{t("account.whatIsHere.body")}</InfoHint>
         <span className="font-mono text-body text-muted-foreground">{user.username}</span>
         {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
