@@ -88,6 +88,36 @@ def create_app() -> FastAPI:
     return app
 
 
+# THE TWO HALVES OF THE BUNDLE ARE CACHED IN OPPOSITE WAYS, and getting it wrong is not a
+# performance detail — it breaks the app outright.
+#
+# Everything under `/assets` is content-hashed by Vite, so a given URL's bytes can never
+# change: it is cacheable forever, and saying so is what keeps a returning reader from
+# re-downloading React on every visit.
+#
+# `index.html` is the opposite. It is the one file whose URL is stable and whose CONTENT
+# changes on every build, because it names the hashed chunks. It used to go out with no
+# `Cache-Control` at all, which does not mean «do not cache» — it means the browser applies
+# its own heuristic, and it kept an old index.html naming chunks that the next build had
+# already deleted. The symptom is the one nobody can debug from inside the app: a tab that
+# has been open across a deploy fails to render a lazily-loaded screen with «Failed to fetch
+# dynamically imported module», and reloading does not help because the reload is served the
+# same stale document. `no-cache` is revalidate-before-use rather than never-store, so the
+# ETag still answers 304 on the common path and this costs one conditional request.
+#
+# The same applies to the handful of unhashed files beside it — `favicon.svg`, `theme.js` —
+# which change with a release and are addressed by a stable URL.
+IMMUTABLE = "public, max-age=31536000, immutable"
+REVALIDATE = "no-cache"
+
+
+class _Assets(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["cache-control"] = IMMUTABLE
+        return response
+
+
 def _mount_web(app: FastAPI) -> None:
     """Serve the built front-end when it exists, so `uvicorn` alone is the whole app."""
     dist = settings.WEB_DIST_DIR
@@ -96,7 +126,7 @@ def _mount_web(app: FastAPI) -> None:
 
     assets = dist / "assets"
     if assets.is_dir():
-        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+        app.mount("/assets", _Assets(directory=assets), name="assets")
 
     root = dist.resolve()
     index = dist / "index.html"
@@ -105,8 +135,8 @@ def _mount_web(app: FastAPI) -> None:
     def spa(path: str):
         candidate = (root / path).resolve()
         if path and candidate.is_relative_to(root) and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(index)
+            return FileResponse(candidate, headers={"cache-control": REVALIDATE})
+        return FileResponse(index, headers={"cache-control": REVALIDATE})
 
 
 app = create_app()
