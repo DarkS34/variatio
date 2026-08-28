@@ -430,15 +430,6 @@ export const api = {
   adminTunnelStart: () => post<TunnelStatus>("/api/admin/engine/tunnel/start"),
   adminTunnelStop: () => post<TunnelStatus>("/api/admin/engine/tunnel/stop"),
   adminSystem: () => request<AdminSystem>("/api/admin/system"),
-  // The same job the panel's «Calentar» launches, aimed at a chosen workspace rather than the
-  // active one: the header is the request's way of saying which instance it means.
-  adminWarmModels: (slug: string) =>
-    request<{ job: Job; since: number }>("/api/jobs", {
-      method: "POST",
-      body: JSON.stringify({ kind: "warm_models", params: {}, force: true }),
-      headers: { "X-Workspace": slug },
-    }),
-
   adminSetAdmin: (userId: number, isAdmin: boolean) =>
     post<{ user_id: number; is_admin: boolean }>(`/api/admin/accounts/${userId}/admin`, {
       is_admin: isAdmin,

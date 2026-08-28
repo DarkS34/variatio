@@ -18,7 +18,6 @@ GATES: dict[str, str | None] = {
     "build_bank": review.EXEMPLARS_BANK,
     "describe_concepts": None,
     "index": None,
-    "warm_models": None,
     "tag": review.EXEMPLARS_BANK,
     "generate": "__all__",
     "evaluate": "__all__",

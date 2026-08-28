@@ -33,7 +33,6 @@ const JOB_KEYS: Record<string, Key> = {
   transcribe: "job.transcribe.label",
   describe_concepts: "job.describe_concepts.label",
   index: "job.index.label",
-  warm_models: "job.warm_models.label",
   tag: "job.tag.label",
   review_taggability: "job.review_taggability.label",
   generate: "job.generate.label",
@@ -105,7 +104,6 @@ const PHASE_KEYS: Record<string, Record<string, Key>> = {
 
 const STEP_KEYS: Record<string, Key> = {
   context: "step.context.label",
-  warm_models: "step.warm_models.label",
   load_instance: "step.load_instance.label",
   descriptions: "step.descriptions.label",
   index_concepts: "step.index_concepts.label",

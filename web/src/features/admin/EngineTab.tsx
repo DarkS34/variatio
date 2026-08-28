@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
   Cable,
@@ -18,13 +17,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
+import {
+  EngineSaveBar,
+  SettingsPanel,
+  useEngineSettings,
+} from "@/features/admin/EngineSettings";
 import { FormError } from "@/features/auth/AuthLayout";
-import { api } from "@/lib/api";
 import { bytes, duration, JOB_STATUS, when } from "@/lib/format";
 import type {
   AdminEngine,
@@ -36,7 +39,6 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  keys,
   useAdminCancelJob,
   useAdminEngine,
   useAdminJobHistory,
@@ -58,6 +60,7 @@ import { jobName } from "@/lib/names";
  */
 export function EngineTab({ overview }: { overview: AdminOverview }) {
   const engine = useAdminEngine();
+  const config = useEngineSettings();
   if (engine.isLoading) return <Skeleton className="h-96" />;
   if (!engine.data) return null;
   const data = engine.data;
@@ -84,31 +87,73 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
   // remote half, which is the same thing the plain `ollama` engine means.
   const remote = data.cerebras?.active ?? false;
 
+  // THE TWO COLUMNS ENCODE A DISTINCTION, NOT A WIDTH (2026-08-28, explicit user request):
+  // the left one MEASURES — the VRAM three models share, the quota, the queue — and the
+  // right one SETS, holding the engine's own settings that used to live one tab away in
+  // «Configuración». Each one therefore sits beside the thing it governs.
+  //
+  // The remote half is drawn from TWO different readings on purpose. Its meters need the
+  // engine to be actually running Cerebras (`data.cerebras.active`), while its settings
+  // need only that somebody is ABOUT to: reading the draft is what lets a person switch the
+  // engine and fill in the key before saving, instead of saving blind and coming back.
+  const engineName = String(
+    ("engine.name" in config.draft ? config.draft["engine.name"] : config.stored.get("engine.name")) ??
+      "ollama",
+  );
+  const wantsRemote = engineName === "cerebras+ollama";
+
   return (
     <div className="space-y-5">
-      {remote ? <Half titleKey="eng.half.local" noteKey="eng.half.localNote" /> : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TunnelCard tunnel={data.tunnel} available={data.available} host={data.host} />
-        <ResidencyCard engine={data} overview={overview} />
+      {remote || wantsRemote ? <Half titleKey="eng.half.local" noteKey="eng.half.localNote" /> : null}
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        <div className="space-y-4">
+          <ResidencyCard engine={data} />
+          <TunnelCard tunnel={data.tunnel} available={data.available} host={data.host} />
+          <ModelsCard engine={data} />
+        </div>
+        <div className="space-y-4">
+          <SettingsPanel
+            titleKey="eng.cfg.engine"
+            noteKey="eng.cfg.engineNote"
+            settings={config.local}
+            config={config}
+          />
+          <SettingsPanel
+            titleKey="eng.cfg.tunnel"
+            noteKey="eng.cfg.tunnelNote"
+            settings={config.tunnel}
+            config={config}
+          />
+        </div>
       </div>
-      <ModelsCard engine={data} />
 
-      {remote ? (
+      {remote || wantsRemote ? (
         <>
           <Half titleKey="eng.half.remote" noteKey="eng.half.remoteNote" />
-          <CerebrasCard cerebras={data.cerebras!} />
+          <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+            {remote ? <CerebrasCard cerebras={data.cerebras!} /> : <div />}
+            <SettingsPanel
+              titleKey="eng.cfg.cerebras"
+              noteKey="eng.cfg.cerebrasNote"
+              settings={config.remote}
+              config={config}
+            />
+          </div>
         </>
       ) : null}
 
-      {remote ? (
+      {remote || wantsRemote ? (
         <Half titleKey="eng.half.process" noteKey="eng.half.processNote" />
       ) : null}
-      <QueueSection />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ContextsCard engine={data} overview={overview} />
-        <SystemCard />
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        <QueueSection />
+        <div className="space-y-4">
+          <ContextsCard engine={data} overview={overview} />
+          <SystemCard />
+        </div>
       </div>
       <HistorySection />
+      <EngineSaveBar config={config} />
     </div>
   );
 }
@@ -245,19 +290,10 @@ function TunnelCard({
 
 /* Residency ------------------------------------------------------------------------------ */
 
-function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: AdminOverview }) {
+function ResidencyCard({ engine }: { engine: AdminEngine }) {
   const { t, plural } = useT();
   const { release } = useEngineActions();
-  const client = useQueryClient();
   const toast = useToast();
-  const [slug, setSlug] = useState(overview.workspaces[0]?.slug ?? "");
-  const warm = useMutation({
-    mutationFn: (target: string) => api.adminWarmModels(target),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: keys.adminJobs });
-      toast({ title: t("eng.gpu.warmQueued"), description: slug });
-    },
-  });
   const vram = engine.running.reduce((sum, m) => sum + (m.size_vram ?? 0), 0);
   const idleMinutes = Math.floor(engine.idle.seconds / 60);
 
@@ -317,32 +353,8 @@ function ResidencyCard({ engine, overview }: { engine: AdminEngine; overview: Ad
             {release.isPending ? <Spinner /> : <Power />}
             {t("eng.gpu.release")}
           </Button>
-          <div className="space-y-1">
-            <Label htmlFor="warm-workspace">{t("eng.gpu.warmFor")}</Label>
-            <Select
-              id="warm-workspace"
-              value={slug}
-              className="w-48"
-              onChange={(event) => setSlug(event.target.value)}
-            >
-              {overview.workspaces.map((w) => (
-                <option key={w.slug} value={w.slug}>
-                  {w.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Button
-            variant="outline"
-            disabled={!slug || !engine.available || warm.isPending}
-            title={t("eng.gpu.warmHint")}
-            onClick={() => warm.mutate(slug)}
-          >
-            {warm.isPending ? <Spinner /> : <Flame />}
-            {t("eng.gpu.warm")}
-          </Button>
         </div>
-        <FormError error={release.error ?? warm.error} />
+        <FormError error={release.error} />
       </CardContent>
     </Card>
   );
@@ -509,12 +521,15 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                   <TH>{t("eng.models.col.model")}</TH>
                   <TH align="num">{t("eng.models.col.size")}</TH>
                   <TH>{t("eng.models.col.state")}</TH>
-                  <TH>{t("eng.models.col.askedBy")}</TH>
                   <TH />
                 </TR>
               </THead>
               <TBody>
                 {engine.installed.map((model) => {
+                  // Still read, and only for the delete guard: a model some setting names
+                  // cannot be removed. WHICH setting names it left the table on 2026-08-28
+                  // (explicit user request) — the reasoning pipeline says it in full, and
+                  // there it can also be changed.
                   const asked = model.asked_by.length > 0;
                   return (
                     <TR key={model.model}>
@@ -530,9 +545,6 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         ) : (
                           <Badge variant="outline">{t("eng.models.stored")}</Badge>
                         )}
-                      </TD>
-                      <TD className="px-3 py-2 text-small text-muted-foreground">
-                        {asked ? model.asked_by.join(", ") : t("eng.models.nobody")}
                       </TD>
                       <TD align="num" className="px-3 py-2">
                         <Button

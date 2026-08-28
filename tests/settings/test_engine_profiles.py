@@ -133,36 +133,36 @@ def sandbox(tmp_path):
 
 
 def test_update_writes_into_the_active_profile_and_preserves_the_other(sandbox):
-    vg_settings.update({"models.main": "qwen-mio"})
+    vg_settings.update({"models.phases.kg_extract": "qwen-mio"})
     vg_settings.update({"engine.name": "cerebras+ollama"})
-    assert vg_settings.values()["models.main"] == "gemma-4-31b"
-    vg_settings.update({"models.main": "gemma-mio"})
+    assert vg_settings.values()["models.phases.kg_extract"] == "gemma-4-31b"
+    vg_settings.update({"models.phases.kg_extract": "gemma-mio"})
     vg_settings.update({"engine.name": "ollama"})
-    assert vg_settings.values()["models.main"] == "qwen-mio"
+    assert vg_settings.values()["models.phases.kg_extract"] == "qwen-mio"
     written = json.loads(sandbox.read_text(encoding="utf-8"))
-    assert written["profiles"]["ollama"]["models"]["main"] == "qwen-mio"
-    assert written["profiles"]["cerebras+ollama"]["models"]["main"] == "gemma-mio"
+    assert written["profiles"]["ollama"]["models"]["phases"]["kg_extract"] == "qwen-mio"
+    assert written["profiles"]["cerebras+ollama"]["models"]["phases"]["kg_extract"] == "gemma-mio"
 
 
 def test_switching_engines_reports_the_impacts_of_the_swapped_values(sandbox):
-    vg_settings.update({"models.main": "qwen-mio"})
+    vg_settings.update({"models.phases.kg_extract": "qwen-mio"})
     impacts = vg_settings.update({"engine.name": "cerebras+ollama"})
     assert vg_settings.Impact.ENGINE in impacts
     assert vg_settings.Impact.CONTEXTS in impacts
 
 
 def test_reset_removes_the_key_from_the_active_profile_only(sandbox):
-    vg_settings.update({"models.main": "qwen-mio"})
+    vg_settings.update({"models.phases.kg_extract": "qwen-mio"})
     vg_settings.update({"engine.name": "cerebras+ollama"})
-    vg_settings.update({"models.main": "gemma-mio"})
-    vg_settings.reset(["models.main"])
-    assert vg_settings.values()["models.main"] == "gemma-4-31b"
+    vg_settings.update({"models.phases.kg_extract": "gemma-mio"})
+    vg_settings.reset(["models.phases.kg_extract"])
+    assert vg_settings.values()["models.phases.kg_extract"] == "gemma-4-31b"
     vg_settings.update({"engine.name": "ollama"})
-    assert vg_settings.values()["models.main"] == "qwen-mio"
+    assert vg_settings.values()["models.phases.kg_extract"] == "qwen-mio"
 
 
 def test_the_snapshot_default_follows_the_active_engine(sandbox):
     vg_settings.update({"engine.name": "cerebras+ollama"})
-    row = next(row for row in vg_settings.snapshot() if row["key"] == "models.main")
+    row = next(row for row in vg_settings.snapshot() if row["key"] == "models.phases.kg_extract")
     assert row["default"] == "gemma-4-31b"
     assert row["scope"] == "engine"

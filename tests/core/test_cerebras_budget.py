@@ -69,7 +69,7 @@ def test_each_model_has_its_own_bucket(tmp_path):
     spend(b, clock, 5)
 
     assert b.delay("gemma-4-31b", 100) > 0
-    assert b.delay("gpt-oss-120b", 100) == 0.0
+    assert b.delay("otro-modelo-31b", 100) == 0.0
 
 
 # THE DAY WINDOW: REFUSE -------------------------------------------------------------------

@@ -1,16 +1,16 @@
 """What is left of Cerebras' rate limits, and the throttle that keeps us inside them.
 
-Measured against the real API on 2026-08-26, with `gemma-4-31b` and `gpt-oss-120b`:
+Measured against the real API on 2026-08-26, with `gemma-4-31b` and a second model:
 
 - Every response carries `x-ratelimit-{limit,remaining}-{requests,tokens}-{minute,hour,day}`
   and **no `reset` header at all**, so the window has to be reconstructed from our own call
   timestamps. That is what this module is: a rolling ledger.
 - The `limit-*` headers report the MODEL's published quota (gemma: 500 req/min, 250 000
-  uncached tok/min; gpt-oss: 1 000 and 500 000) and not the account's. The account's real
+  uncached tok/min; the second model: 1 000 and 500 000) and not the account's. The account's real
   ceiling shows up only in `remaining-*`, which on the free tier sits two to three orders of
   magnitude lower: 5 req/min, 30 000 tok/min, 2 400 req/day, 1 000 000 tok/day. So the
   ceilings here are settings, seeded with those measured numbers, and `limit-*` is ignored.
-- The buckets are **per model**: a call to gpt-oss left `remaining-requests-day` at 2399 and
+- The buckets are **per model**: a call to the second model left `remaining-requests-day` at 2399 and
   the next call to gemma reported 2399 as well, each against its own 2 400.
 - The request counters are exact; the token counters lag. A 74-token call and a 20-token
   call each moved `remaining-tokens-day` by exactly 6. So `usage` — which is exact and

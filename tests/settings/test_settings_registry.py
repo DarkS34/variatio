@@ -97,8 +97,10 @@ def test_every_phase_key_is_declared_in_the_registry():
 # each page the judge is shown. The fifth is the bank builder's batch overlap, which is
 # what makes the same seam survive the extractor's own cut.
 def test_the_registry_holds_what_this_work_transcribed():
-    # 143 since `builders.kg_relation_schema` was retired: the relation vocabulary follows
-    # a workspace's own `prompt_language` now, and an installation-wide setting could only
-    # ever have given two instances in different languages the same one.
-    assert len(REGISTRY) == 143
-    assert len(BY_NAME) == 114
+    # 141 since `models.main` and `context_window.main` were retired on 2026-08-28: with
+    # every phase naming its own model there is nothing left for a main one to hand out,
+    # and its context window went with it (the phases share `context_window.overrides`).
+    # 143 before that, when `builders.kg_relation_schema` was retired: the relation
+    # vocabulary follows a workspace's own `prompt_language` now.
+    assert len(REGISTRY) == 141
+    assert len(BY_NAME) == 113

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Brain,
-  Cpu,
   FlaskConical,
   Hammer,
   RefreshCw,
@@ -10,7 +9,6 @@ import {
   ScrollText,
   SlidersHorizontal,
   Tags,
-  Undo2,
   Wrench,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,72 +16,28 @@ import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Select } from "@/components/ui/input";
-import { Alert, Checkbox, Skeleton, Spinner, Switch } from "@/components/ui/misc";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
-import { bytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReasoningLegend, ReasoningPipeline } from "@/features/admin/ReasoningPipeline";
-import { useT, type Key, type Translate } from "@/lib/i18n";
-import type {
-  ConfigImpact,
-  ConfigPayload,
-  ConfigSetting,
-  ConfigSource,
-  InstalledModel,
-  ReasoningLane,
-} from "@/lib/types";
-
-const SOURCE_LABELS: Record<ConfigSource, Key> = {
-  default: "cfg.source.default",
-  file: "cfg.source.file",
-  env: "cfg.source.env",
-};
-
-// Not tuning knobs of the same kind: `reindex` says so in its own message ("invalidará los
-// contextos Y..."), which is why it outranks `contexts` rather than sitting beside it.
-// `none` and `locked` carry no save-time warning of their own — nothing in the contract
-// says what one would read — so they simply never win the highest-severity comparison.
-const IMPACT_SEVERITY: Record<ConfigImpact, number> = {
-  none: 0,
-  engine: 1,
-  contexts: 2,
-  reindex: 3,
-  locked: 4,
-};
-
-const IMPACT_MESSAGES: Partial<Record<ConfigImpact, Key>> = {
-  contexts: "cfg.impact.contexts",
-  reindex: "cfg.impact.reindex",
-  engine: "cfg.impact.engine",
-};
-
-function sameValue(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if ((a ?? null) === null || (b ?? null) === null) return (a ?? null) === (b ?? null);
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, index) => sameValue(item, b[index]));
-  }
-  if (typeof a === "object" && typeof b === "object") {
-    return JSON.stringify(a) === JSON.stringify(b);
-  }
-  return false;
-}
-
-function formatValue(value: unknown, t: Translate["t"]): string {
-  if (value === null || value === undefined) return "—";
-  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
-  if (typeof value === "boolean") return t(value ? "cfg.on" : "cfg.off");
-  return String(value);
-}
+import {
+  DiffSummary,
+  GroupCard,
+  sameValue,
+  SettingRow,
+} from "@/features/admin/SettingFields";
+import { useT, type Key } from "@/lib/i18n";
+import type { ConfigPayload, ConfigSetting, ReasoningLane } from "@/lib/types";
 
 const REASONING_GROUP = "Razonamiento";
 const MODELS_GROUP = "Modelos";
 const PHASE_MODEL_PREFIX = "models.phases.";
 const OTHERS_KEY = "__otros__";
+export const ENGINE_GROUPS = ["Motor", "Túnel SSH"]; // i18n-exempt
 const CEREBRAS_KEYS = [
   "engine.cerebras_base_url",
   "engine.cerebras_api_key",
@@ -109,14 +63,6 @@ const SECTIONS: Section[] = [
   // Every `groups` entry is a REGISTRY group name, matched against what the server sends.
   // Translating one would stop it matching, which is why they are literals and the labels
   // beside them are keys.
-  {
-    key: "motor",
-    label: null,
-    labelKey: "cfg.section.engine",
-    icon: Cpu,
-    descriptionKey: "cfg.section.engineDesc",
-    groups: ["Motor", "Túnel SSH"], // i18n-exempt
-  },
   {
     key: "modelos",
     label: null,
@@ -236,10 +182,16 @@ export function ConfigTab() {
   );
   const hidden = new Set(engineName === "cerebras+ollama" ? [] : CEREBRAS_KEYS);
   const named = new Set(payload.groups);
-  const orphans = payload.settings.filter((setting) => !named.has(setting.group));
+  const orphans = payload.settings.filter(
+    (setting) => !named.has(setting.group) && !ENGINE_GROUPS.includes(setting.group),
+  );
   const byGroup = (group: string) =>
     payload.settings.filter((setting) => setting.group === group && !hidden.has(setting.key));
-  const claimed = new Set(SECTIONS.flatMap((section) => section.groups));
+  // «Motor» and «Túnel SSH» moved to «Administración → Motor» on 2026-08-28, so that each
+  // setting sits beside the thing it governs. They are claimed here WITHOUT a section, or
+  // the unclaimed-group fallback below would helpfully hand them a page of their own again
+  // and the move would silently undo itself.
+  const claimed = new Set([...SECTIONS.flatMap((section) => section.groups), ...ENGINE_GROUPS]);
   const sections: Section[] = [
     ...SECTIONS,
     ...payload.groups
@@ -463,51 +415,6 @@ export function ConfigTab() {
   );
 }
 
-function GroupCard({
-  title,
-  settings,
-  draft,
-  onChange,
-  onReset,
-  models,
-}: {
-  title: string | null;
-  settings: ConfigSetting[];
-  draft: Record<string, unknown>;
-  onChange: (key: string, value: unknown) => void;
-  onReset: (key: string) => void;
-  models: ConfigPayload["models"] | null;
-}) {
-  const current = (setting: ConfigSetting) =>
-    setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
-
-  return (
-    <Card>
-      {title ? (
-        <CardHeader className="pb-2">
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-      ) : null}
-      <CardContent className={cn("space-y-3", !title && "pt-4")}>
-        {settings.map((setting) => (
-          <SettingRow
-            key={setting.key}
-            setting={setting}
-            value={current(setting)}
-            onChange={(next) => onChange(setting.key, next)}
-            onReset={() => onReset(setting.key)}
-            models={models}
-          />
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-// One card for the two groups the pipeline drawing already covers: the three residents as
-// rows, then every phase as a node carrying its model, its reasoning switch AND, while it
-// reasons, its effort — a phase's three decisions are taken in one place. What no node
-// shows keeps its row below; what the nodes do show never gets a second row.
 function PipelineCard({
   lanes,
   settings,
@@ -558,9 +465,7 @@ function PipelineCard({
       <CardContent className="space-y-4 pt-4">
         {residents.map(row)}
         <p className="max-w-2xl text-small text-muted-foreground">
-          {t("cfg.pipelineNote", {
-            main: residents.find((s) => s.key === "models.main")?.name ?? "LLM_MAIN",
-          })}
+          {t("cfg.pipelineNote")}
         </p>
         <ReasoningPipeline
           lanes={lanes}
@@ -592,398 +497,3 @@ function PipelineCard({
 }
 
 /** The settings whose value is a model name: the three residents and every phase override. */
-function isModelSetting(setting: ConfigSetting): boolean {
-  return setting.key.startsWith("models.") && setting.kind === "str";
-}
-
-const OTHER = "__other__";
-
-// The choice is among what the engine has on disk, because a name typed by hand is a typo
-// waiting for the first call. «Otro…» keeps the free text for a model not pulled yet, and
-// a phase keeps «Seguir al principal» (null) as its first option, which is what every
-// override defaults to.
-function ModelSelect({
-  id,
-  label,
-  setting,
-  value,
-  disabled,
-  models,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  setting: ConfigSetting;
-  value: string | null;
-  disabled: boolean;
-  models: ConfigPayload["models"];
-  onChange: (next: unknown) => void;
-}) {
-  const { t } = useT();
-  const installed = models.installed;
-  const known = installed.some((m) => m.model === value);
-  const [other, setOther] = useState(() => Boolean(value) && !known);
-  const residentVram = new Map(models.running.map((m) => [m.model, m.size_vram]));
-
-  const describe = (model: InstalledModel) => {
-    if (model.remote) return t("cfg.modelRemote", { model: model.model });
-    const vram = residentVram.get(model.model);
-    if (vram) return t("cfg.modelLoaded", { model: model.model, size: bytes(vram) });
-    return model.size
-      ? t("cfg.modelOnDisk", { model: model.model, size: bytes(model.size) })
-      : model.model;
-  };
-
-  const selectValue = other ? OTHER : value ?? "";
-
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      <Select
-        id={id}
-        value={selectValue}
-        disabled={disabled}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (next === OTHER) {
-            setOther(true);
-            return;
-          }
-          setOther(false);
-          onChange(next === "" ? null : next);
-        }}
-      >
-        {setting.nullable ? <option value="">{t("cfg.followMain")}</option> : null}
-        {value && !known && !other ? (
-          <option value={value}>{t("cfg.notInstalled", { model: value })}</option>
-        ) : null}
-        {installed.map((model) => (
-          <option key={model.model} value={model.model}>
-            {describe(model)}
-          </option>
-        ))}
-        <option value={OTHER}>{t("cfg.other")}</option>
-      </Select>
-      {other ? (
-        <Input
-          aria-label={t("cfg.modelName", { label })}
-          placeholder={t("eng.models.pullPlaceholder")}
-          disabled={disabled}
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value || null)}
-        />
-      ) : null}
-      {installed.length === 0 ? (
-        <p className="text-small text-muted-foreground">
-          {t("cfg.noEngineList")}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function CerebrasModelsField({
-  id,
-  label,
-  value,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: unknown;
-  disabled: boolean;
-  onChange: (next: unknown) => void;
-}) {
-  const { t } = useT();
-  const catalog = useQuery({
-    queryKey: ["admin", "config", "cerebras-catalog"],
-    queryFn: api.adminCerebrasModels,
-    staleTime: 60_000,
-  });
-  const selected = Array.isArray(value) ? value.map(String) : [];
-  const listed = catalog.data?.source === "api" ? catalog.data.models : null;
-  const toggle = (model: string, next: boolean) =>
-    onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
-
-  if (catalog.isLoading) {
-    return (
-      <div className="space-y-1">
-        <span className="text-body">{label}</span>
-        <p className="flex items-center gap-2 text-small text-muted-foreground">
-          <Spinner />
-          {t("cfg.cerebrasLoading")}
-        </p>
-      </div>
-    );
-  }
-
-  if (!listed) {
-    return (
-      <div className="space-y-1">
-        <Label htmlFor={id}>{label}</Label>
-        <Input
-          id={id}
-          disabled={disabled}
-          value={selected.join(", ")}
-          onChange={(event) =>
-            onChange(
-              event.target.value
-                .split(",")
-                .map((part) => part.trim())
-                .filter(Boolean),
-            )
-          }
-        />
-        <p className="text-small text-muted-foreground">
-          {catalog.data?.error ?? t("cfg.cerebrasDown")} {t("cfg.commaSeparated")}
-        </p>
-      </div>
-    );
-  }
-
-  const extras = selected.filter((name) => !listed.includes(name));
-  return (
-    <div className="space-y-1.5">
-      <span className="text-body">{label}</span>
-      <ul className="space-y-1.5">
-        {listed.map((model) => (
-          <li key={model} className="flex items-center gap-2">
-            <Checkbox
-              checked={selected.includes(model)}
-              disabled={disabled}
-              onCheckedChange={(next) => toggle(model, next)}
-              label={t("cfg.routeTo", { model })}
-            />
-            <span className="font-mono text-body">{model}</span>
-          </li>
-        ))}
-        {extras.map((model) => (
-          <li key={model} className="flex items-center gap-2">
-            <Checkbox
-              checked
-              disabled={disabled}
-              onCheckedChange={(next) => toggle(model, next)}
-              label={t("cfg.routeTo", { model })}
-            />
-            <span className="font-mono text-body">{model}</span>
-            <Badge variant="outline">{t("cfg.offCatalog")}</Badge>
-          </li>
-        ))}
-      </ul>
-      <p className="text-small text-muted-foreground">
-        {t("cfg.cerebrasNote")}
-      </p>
-    </div>
-  );
-}
-
-function SettingRow({
-  setting,
-  value,
-  onChange,
-  onReset,
-  models,
-}: {
-  setting: ConfigSetting;
-  value: unknown;
-  onChange: (next: unknown) => void;
-  onReset: () => void;
-  models: ConfigPayload["models"] | null;
-}) {
-  const { t } = useT();
-  const label = setting.name || setting.key;
-  const id = `config-${setting.key}`;
-  const lockedByEnv = setting.source === "env";
-  const disabled = !setting.editable || lockedByEnv;
-  // Only a value that actually left the default has anything to go back to; a file value
-  // equal to the default is the same number with a different badge.
-  const resettable =
-    setting.source === "file" && !setting.secret && !sameValue(setting.value, setting.default);
-
-  return (
-    <div className="space-y-2 rounded-md border border-border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          {setting.secret ? (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-body">{label}</span>
-              <Badge variant="outline">
-                {setting.state === "configurada" ? t("cfg.configured") : t("cfg.absent")}
-              </Badge>
-            </div>
-          ) : setting.kind === "bool" ? (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-body">{label}</span>
-              <Switch
-                checked={Boolean(value)}
-                disabled={disabled}
-                onCheckedChange={onChange}
-                label={label}
-              />
-            </div>
-          ) : setting.key === "engine.cerebras_models" ? (
-            <CerebrasModelsField
-              id={id}
-              label={label}
-              value={value}
-              disabled={disabled}
-              onChange={onChange}
-            />
-          ) : models && isModelSetting(setting) ? (
-            <ModelSelect
-              id={id}
-              label={label}
-              setting={setting}
-              value={value as string | null}
-              disabled={disabled}
-              models={models}
-              onChange={onChange}
-            />
-          ) : setting.choices ? (
-            <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
-              <Select
-                id={id}
-                value={String(value ?? "")}
-                disabled={disabled}
-                onChange={(event) =>
-                  onChange(event.target.value === "" && setting.nullable ? null : event.target.value)
-                }
-              >
-                {setting.nullable ? <option value="">{t("cfg.unset")}</option> : null}
-                {setting.choices.map((choice) => (
-                  <option key={choice} value={choice}>
-                    {choice}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : setting.kind === "int" || setting.kind === "float" ? (
-            <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
-              <Input
-                id={id}
-                type="number"
-                min={setting.minimum ?? undefined}
-                max={setting.maximum ?? undefined}
-                step={setting.kind === "float" ? "any" : 1}
-                disabled={disabled}
-                value={value === null || value === undefined ? "" : String(value)}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  if (raw === "") {
-                    onChange(null);
-                    return;
-                  }
-                  const num = setting.kind === "int" ? Number.parseInt(raw, 10) : Number(raw);
-                  if (Number.isNaN(num)) return;
-                  onChange(num);
-                }}
-              />
-            </div>
-          ) : setting.kind === "list[str]" ? (
-            <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
-              <Input
-                id={id}
-                disabled={disabled}
-                value={Array.isArray(value) ? value.join(", ") : String(value ?? "")}
-                onChange={(event) =>
-                  onChange(
-                    event.target.value
-                      .split(",")
-                      .map((part) => part.trim())
-                      .filter(Boolean),
-                  )
-                }
-              />
-              <p className="text-small text-muted-foreground">{t("cfg.commaSeparated")}</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
-              <Input
-                id={id}
-                disabled={disabled}
-                value={String(value ?? "")}
-                onChange={(event) => onChange(event.target.value)}
-              />
-            </div>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <Badge variant={setting.source === "file" ? "secondary" : "outline"}>
-            {t(SOURCE_LABELS[setting.source])}
-          </Badge>
-          {resettable ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              title={t("cfg.backTo", { value: formatValue(setting.default, t) })}
-              onClick={onReset}
-            >
-              <Undo2 />
-              {t("cfg.default")}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {lockedByEnv ? (
-        <p className="text-small text-muted-foreground">
-          {t("cfg.fixedBy", { env: setting.env ?? "" })}
-        </p>
-      ) : null}
-
-      {setting.doc ? (
-        <details className="text-small text-muted-foreground">
-          <summary className="cursor-pointer select-none">{t("cfg.whyThisValue")}</summary>
-          <p className="mt-1 whitespace-pre-wrap">{setting.doc}</p>
-        </details>
-      ) : null}
-    </div>
-  );
-}
-
-function DiffSummary({
-  settings,
-  draft,
-}: {
-  settings: ConfigSetting[];
-  draft: Record<string, unknown>;
-}) {
-  const { t } = useT();
-  const touched = settings.filter((setting) => setting.key in draft);
-  if (touched.length === 0) return null;
-
-  const highest = touched.reduce<ConfigImpact>(
-    (acc, setting) => (IMPACT_SEVERITY[setting.impact] > IMPACT_SEVERITY[acc] ? setting.impact : acc),
-    "none",
-  );
-  const warning = IMPACT_MESSAGES[highest];
-
-  return (
-    <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-      <p className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-        {t("cfg.pending", { n: touched.length })}
-      </p>
-      <ul className="space-y-1 text-body">
-        {touched.map((setting) => (
-          <li key={setting.key} className="flex flex-wrap items-baseline gap-1.5">
-            <span className="font-medium">{setting.name || setting.key}</span>
-            <span className="text-muted-foreground">
-              {formatValue(setting.value ?? setting.default, t)} →{" "}
-              {formatValue(draft[setting.key], t)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {warning ? (
-        <Alert tone="attention" title={t("cfg.beforeSaving")}>
-          <p>{t(warning)}</p>
-        </Alert>
-      ) : null}
-    </div>
-  );
-}

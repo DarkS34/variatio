@@ -26,8 +26,6 @@ PHASES = {
 
 
 def derive(values: dict[str, object]) -> dict[str, object]:
-    main = values["models.main"]
-
     # The registry declares the bare `host:port` because that is what a person writes and
     # what `OLLAMA_HOST` has always held. Every consumer wants a URL, so the scheme is added
     # here rather than at each call site, and a value that already carries one is left alone.
@@ -38,15 +36,16 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "TEMPERATURE_DEFAULT": values["sampling.temperature_deterministic"],
     }
 
+    # Every phase names its own model and none may be empty, so there is nothing to
+    # resolve here: what the registry holds is what the call site gets.
     for key, name in PHASES.items():
-        out[name] = values.get(key) or main
+        out[name] = values[key]
 
     for phase in PHASE_KEYS:
         on = values[f"reasoning.phases.{phase}"]
         out[f"THINK_{phase.upper()}"] = values[f"reasoning.effort.{phase}"] if on else False
 
     out["LLM_CONTEXT"] = {
-        main: values["context_window.main"],
         values["models.guardrail"]: values["context_window.guardrail"],
         values["models.embedding"]: values["context_window.embedding"],
     }

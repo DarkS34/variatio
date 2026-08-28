@@ -99,18 +99,14 @@ def test_an_oversized_schema_loses_strict_but_not_the_shape():
 
 
 def test_reasoning_effort_speaks_cerebras():
-    assert cerebras.reasoning_effort(None, "gemma-4-31b") is None
-    assert cerebras.reasoning_effort(False, "gemma-4-31b") == "none"
-    assert cerebras.reasoning_effort(True, "gemma-4-31b") == "low"
-
-
-def test_think_false_floors_at_low_where_reasoning_has_no_off_switch():
-    assert cerebras.reasoning_effort(False, "gpt-oss-120b") == "low"
+    assert cerebras.reasoning_effort(None) is None
+    assert cerebras.reasoning_effort(False) == "none"
+    assert cerebras.reasoning_effort(True) == "low"
 
 
 def test_a_per_phase_effort_travels_as_itself():
-    assert cerebras.reasoning_effort("medium", "gemma-4-31b") == "medium"
-    assert cerebras.reasoning_effort("max", "gemma-4-31b") == "high"
+    assert cerebras.reasoning_effort("medium") == "medium"
+    assert cerebras.reasoning_effort("max") == "high"
 
 
 def test_the_shared_catalog_reuses_one_engine_per_base_url(monkeypatch):
@@ -159,15 +155,14 @@ def test_a_remote_model_cannot_be_pulled_or_deleted(hybrid):
         hybrid.delete("gemma-4-31b")
 
 
-def test_a_remote_model_warms_and_unloads_as_a_no_op(hybrid):
-    assert hybrid.warmup("gemma-4-31b") is None
+def test_a_remote_model_unloads_as_a_no_op(hybrid):
     assert hybrid.unload("gemma-4-31b") is True
 
 
 def test_the_remote_capabilities_are_declared_not_asked(hybrid):
     assert hybrid.supports_thinking("gemma-4-31b") is True
     assert hybrid.supports_vision("gemma-4-31b") is True
-    assert hybrid._cerebras.supports_vision("gpt-oss-120b") is False
+    assert hybrid._cerebras.supports_vision("otro-modelo-31b") is False
 
 
 def _engine_with(handler) -> CerebrasEngine:

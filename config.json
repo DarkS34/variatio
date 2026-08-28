@@ -85,8 +85,7 @@
       "groq"
     ],
     "models": {
-      "gemini": "gemini-3.6-flash",
-      "groq": "openai/gpt-oss-120b"
+      "gemini": "gemini-3.6-flash"
     },
     "timeout": 60.0
   },
@@ -106,17 +105,16 @@
   "profiles": {
     "cerebras+ollama": {
       "models": {
-        "main": "qwen3.8:27b-q4_K_M",
         "guardrail": "granite4.1-guardian:8b-q4_K_M",
         "embedding": "qwen3-embedding:4b",
         "phases": {
           "transcribe": "qwen3.6:35b-a3b-q8_0",
           "transcribe_seam": "qwen3.6:35b-a3b-q8_0",
-          "ep_scan": null,
+          "ep_scan": "qwen3.8:27b-q4_K_M",
           "ep_consolidate": "gemma-4-31b",
           "ep_context": "gemma-4-31b",
           "eb_extract": "gemma-4-31b",
-          "kg_extract": null,
+          "kg_extract": "qwen3.8:27b-q4_K_M",
           "kg_clean_merge": "gemma-4-31b",
           "kg_clean_drop": "gemma-4-31b",
           "kg_units": "gemma-4-31b",
@@ -126,11 +124,11 @@
           "kg_link_cross_domain": "gemma-4-31b",
           "kg_taggable": "gemma-4-31b",
           "kg_context": "gemma-4-31b",
-          "description_generation": null,
+          "description_generation": "qwen3.8:27b-q4_K_M",
           "concept_tagger": "gemma-4-31b",
           "variant_generation": "gemma-4-31b",
-          "admissibility": "gemma-4-31b",
-          "repair": null
+          "repair": "qwen3.8:27b-q4_K_M",
+          "admissibility": "gemma-4-31b"
         }
       },
       "reasoning": {
@@ -147,33 +145,33 @@
     },
     "ollama": {
       "models": {
-        "main": "qwen3.8:27b-q4_K_M",
         "guardrail": "granite4.1-guardian:8b-q4_K_M",
         "embedding": "qwen3-embedding:4b",
         "phases": {
-          "ep_scan": null,
-          "ep_consolidate": null,
-          "ep_context": null,
+          "transcribe": "qwen3.6:35b-a3b-q8_0",
+          "transcribe_seam": "qwen3.8:27b-q4_K_M",
+          "ep_scan": "qwen3.8:27b-q4_K_M",
+          "ep_consolidate": "qwen3.8:27b-q4_K_M",
+          "ep_context": "qwen3.8:27b-q4_K_M",
           "eb_extract": "qwen3.6:35b-a3b-q8_0",
           "kg_extract": "qwen3.6:35b-a3b-q8_0",
-          "kg_clean_merge": null,
-          "kg_clean_drop": null,
-          "kg_domains": null,
-          "kg_domains_leftovers": null,
-          "kg_link_domain": null,
-          "kg_link_cross_domain": null,
-          "kg_taggable": null,
-          "kg_context": null,
-          "description_generation": null,
-          "concept_tagger": null,
-          "variant_generation": null,
-          "admissibility": null,
-          "repair": null,
-          "transcribe": "qwen3.6:35b-a3b-q8_0"
+          "kg_clean_merge": "qwen3.8:27b-q4_K_M",
+          "kg_clean_drop": "qwen3.8:27b-q4_K_M",
+          "kg_units": "qwen3.8:27b-q4_K_M",
+          "kg_domains": "qwen3.8:27b-q4_K_M",
+          "kg_domains_leftovers": "qwen3.8:27b-q4_K_M",
+          "kg_link_domain": "qwen3.8:27b-q4_K_M",
+          "kg_link_cross_domain": "qwen3.8:27b-q4_K_M",
+          "kg_taggable": "qwen3.8:27b-q4_K_M",
+          "kg_context": "qwen3.8:27b-q4_K_M",
+          "description_generation": "qwen3.8:27b-q4_K_M",
+          "concept_tagger": "qwen3.8:27b-q4_K_M",
+          "variant_generation": "qwen3.8:27b-q4_K_M",
+          "repair": "qwen3.8:27b-q4_K_M",
+          "admissibility": "qwen3.8:27b-q4_K_M"
         }
       },
       "context_window": {
-        "main": 65536,
         "guardrail": 4096,
         "embedding": 4096,
         "overrides": 65536

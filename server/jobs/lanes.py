@@ -27,7 +27,7 @@ REMOTE = "remote"
 BACKENDS = (LOCAL, REMOTE)
 
 # A build's models are the builder's own declaration, so the phases and the lane cannot
-# drift apart: `stages.build_models` is the same list `warm_models` warms.
+# drift apart: `stages.build_models` is the same list the builder checks before it starts.
 _BUILD_ARTIFACT = {
     "build_profile": stages.EXEMPLARS_PROFILE,
     "build_kg": stages.KNOWLEDGE_GRAPH,
@@ -71,10 +71,6 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
     """The generative models a job of this kind will call, in declaration order."""
     if kind in _BUILD_ARTIFACT:
         models = stages.build_models(_BUILD_ARTIFACT[kind])
-    elif kind == "warm_models":
-        # Warming is the GPU being written to, which is the local lane by definition even
-        # when the model it warms would answer from somewhere else.
-        models = inference.runtime_models()
     else:
         models = [getattr(config, name, None) for name in _COMPONENT_MODELS.get(kind, ())]
 

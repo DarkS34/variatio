@@ -21,7 +21,6 @@ _UNSUPPORTED_KEYWORDS = ("pattern", "format", "minItems", "maxItems", "minLength
 _SUBSCHEMA_KEYS = ("items", "prefixItems", "anyOf", "allOf", "oneOf", "additionalProperties")
 _SCHEMA_MAPS = ("properties", "$defs", "definitions")
 _VISION_PREFIXES = ("gemma-4",)
-_NO_REASONING_OFF_PREFIXES = ("gpt-oss",)
 _RETRY_STATUSES = (429, 503)
 _MAX_ATTEMPTS = 5
 _CATALOG_TTL_SECONDS = 300.0
@@ -117,15 +116,16 @@ def response_format(format: dict | str | None) -> dict | None:
 # Cerebras has no "max", so the one level Ollama has above "high" maps down to it. A string
 # is a per-phase effort already resolved by `settings.derived`; `True` comes only from the
 # boolean callers (the study's `Commission`, the UI switch) and maps to the fixed
-# `DEFAULT_THINK_EFFORT`, exactly as in Ollama's dialect. Not every model has an off
-# switch: gpt-oss answers 400 «Unsupported reasoning effort: none. Supported values are
-# 'low', 'medium', and 'high'» (measured 2026-08-24, the RAG arm's `think=False`), so
-# `False` floors at its minimum instead.
-def reasoning_effort(think: bool | str | None, model: str) -> str | None:
+# `DEFAULT_THINK_EFFORT`, exactly as in Ollama's dialect.
+#
+# Note this assumes every routed model HAS an off switch. Some families answer 400
+# «Unsupported reasoning effort: none» and would need `False` floored at their minimum;
+# none is routed here today, so the translation is the same for every model.
+def reasoning_effort(think: bool | str | None) -> str | None:
     if think is None:
         return None
     if think is False:
-        return "low" if model.startswith(_NO_REASONING_OFF_PREFIXES) else "none"
+        return "none"
     effort = think if isinstance(think, str) else DEFAULT_THINK_EFFORT
     return "high" if effort == "max" else effort
 
@@ -305,7 +305,7 @@ class CerebrasEngine:
         body: dict = {"model": model, "messages": messages}
         if temperature is not None:
             body["temperature"] = temperature
-        effort = reasoning_effort(think, model)
+        effort = reasoning_effort(think)
         if effort is not None:
             body["reasoning_effort"] = effort
         shaped = response_format(format)
@@ -503,11 +503,6 @@ class HybridEngine:
             logger.warning(f"[cerebras] '{model}' no está en el catálogo de Cerebras")
             return False
         return True
-
-    def warmup(self, model: str, is_embedding: bool = False) -> None:
-        if self._remote(model):
-            return
-        self._ollama.warmup(model, is_embedding=is_embedding)
 
     def pull(self, model: str, on_progress=None) -> None:
         if self._remote(model):

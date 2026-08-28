@@ -26,7 +26,6 @@ export const JOB_EXPLAIN: Record<string, JobExplain> = Object.fromEntries(
     "build_bank",
     "describe_concepts",
     "index",
-    "warm_models",
     "tag",
     "generate",
     "evaluate",
@@ -42,7 +41,6 @@ export const JOB_EXPLAIN: Record<string, JobExplain> = Object.fromEntries(
 
 const STEP_IDS = [
   "context",
-  "warm_models",
   "load_instance",
   "descriptions",
   "index_concepts",

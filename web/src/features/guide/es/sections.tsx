@@ -1885,8 +1885,9 @@ const problems = (
           trabajo colgado horas sin explicación es peor que rechazarlo.
         </p>
         <p>
-          Las salidas son tres: esperar, cambiar el motor a «ollama» desde Administración →
-          Motor, o subir el techo en «Configuración» si la cuenta de verdad da para más.
+          Las salidas son tres: esperar, cambiar el motor a «ollama», o subir el techo si la
+          cuenta de verdad da para más. Las tres se hacen en Administración → Motor, donde los
+          ajustes están en la columna de la derecha, al lado de los medidores que los explican.
         </p>
         <p>
           Hay un tercer caso que no es de cuota gastada sino de tamaño: una llamada que necesita

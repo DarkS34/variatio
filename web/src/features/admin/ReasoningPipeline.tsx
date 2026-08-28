@@ -42,14 +42,6 @@ export function ReasoningPipeline({
   onChange: (key: string, value: unknown) => void;
 }) {
   const byKey = new Map(settings.map((setting) => [setting.key, setting]));
-  const current = (key: string) => {
-    const setting = byKey.get(key);
-    if (!setting) return null;
-    return key in draft ? draft[key] : (setting.value ?? setting.default);
-  };
-  const main = current("models.main");
-  const mainName = typeof main === "string" && main ? main : null;
-
   return (
     <ol className="grid items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-4">
       {lanes.map((lane) => (
@@ -65,7 +57,6 @@ export function ReasoningPipeline({
                 setting={phase.setting ? byKey.get(phase.setting) ?? null : null}
                 effortSetting={phase.effort ? byKey.get(phase.effort) ?? null : null}
                 modelSetting={byKey.get(phase.model) ?? null}
-                mainName={mainName}
                 draft={draft}
                 models={models}
                 last={index === lane.phases.length - 1}
@@ -95,7 +86,6 @@ function PhaseNode({
   setting,
   effortSetting,
   modelSetting,
-  mainName,
   draft,
   models,
   last,
@@ -105,7 +95,6 @@ function PhaseNode({
   setting: ConfigSetting | null;
   effortSetting: ConfigSetting | null;
   modelSetting: ConfigSetting | null;
-  mainName: string | null;
   draft: Record<string, unknown>;
   models: Models | null;
   last: boolean;
@@ -157,7 +146,6 @@ function PhaseNode({
             <NodeModel
               phase={phase}
               setting={modelSetting}
-              mainName={mainName}
               draft={draft}
               models={models}
               onChange={onChange}
@@ -222,14 +210,12 @@ const OTHER = "__other__";
 function NodeModel({
   phase,
   setting,
-  mainName,
   draft,
   models,
   onChange,
 }: {
   phase: ReasoningPhase;
   setting: ConfigSetting;
-  mainName: string | null;
   draft: Record<string, unknown>;
   models: Models | null;
   onChange: (key: string, value: unknown) => void;
@@ -244,7 +230,7 @@ function NodeModel({
   const residentVram = new Map((models?.running ?? []).map((m) => [m.model, m.size_vram]));
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
-  const effective = value ?? mainName;
+  const effective = value;
   const label = t("pipe.modelLabel", { phase: phase.label });
 
   const describe = (model: InstalledModel) => {
@@ -257,9 +243,7 @@ function NodeModel({
   };
   const title = [
     effective
-      ? t("pipe.modelTitle", {
-          model: `${effective}${value ? "" : t("pipe.model.followsMain")}`,
-        })
+      ? t("pipe.modelTitle", { model: effective })
       : t("pipe.model.none"),
     lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
   ]
@@ -280,7 +264,7 @@ function NodeModel({
             return;
           }
           setOther(false);
-          onChange(setting.key, next === "" ? null : next);
+          onChange(setting.key, next);
         }}
         className={cn(
           "h-7 px-1.5 font-mono text-micro",
@@ -288,11 +272,6 @@ function NodeModel({
           pending && "border-attention ring-1 ring-attention",
         )}
       >
-        {setting.nullable ? (
-          <option value="">
-            {mainName ? t("pipe.mainNamed", { model: mainName }) : t("pipe.main")}
-          </option>
-        ) : null}
         {value && !known && !other ? <option value={value}>{t("pipe.notInstalled", { model: value })}</option> : null}
         {installed.map((model) => (
           <option key={model.model} value={model.model}>

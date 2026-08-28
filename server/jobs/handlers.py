@@ -9,7 +9,7 @@ from loguru import logger
 
 from variatio import config, prompts, stages
 from variatio.concept_tagger import ConceptTagger
-from variatio.core import inference, progress
+from variatio.core import progress
 from variatio.core.workspace import Workspace
 from variatio.instance import locale
 from variatio.instance.exemplars_profile import ExemplarsProfile
@@ -119,27 +119,6 @@ def handle_index(job: Job, control: JobControl) -> dict:
         "concepts": len(context.embedder.concepts_index),
         "items": len(context.exemplars_bank),
     }
-
-
-def handle_warm_models(job: Job, control: JobControl) -> dict:
-    deps.require_inference()
-    ws = _workspace(job)
-    missing = stages.missing_artifacts(ws)
-    if missing:
-        stage = missing[0]
-        models = stages.build_models(stage)
-        label = f"para construir: {review.LABELS[stage].lower()}"
-    else:
-        stage = None
-        models = inference.runtime_models()
-        label = "de la instancia"
-    # The step's label is static so it can be translated; `label` still qualifies the
-    # LOG line, which is Spanish by rule. A sentence built around a stage name cannot
-    # be a catalogue entry, and this was the last one the interface read.
-    with progress.step("warm_models", "Cargando los modelos en memoria"):
-        inference.ensure_models(models, label)
-    resident = {info["model"] for info in inference.running_models()}
-    return {"stage": stage, "models": models, "loaded": [m for m in models if m in resident]}
 
 
 def handle_tag(job: Job, control: JobControl) -> dict:
@@ -359,7 +338,6 @@ HANDLERS = {
     "transcribe": handle_transcribe,
     "describe_concepts": handle_describe_concepts,
     "index": handle_index,
-    "warm_models": handle_warm_models,
     "tag": handle_tag,
     "review_taggability": handle_review_taggability,
     "generate": handle_generate,

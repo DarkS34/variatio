@@ -4,19 +4,17 @@ from variatio.settings import derived
 def base():
     values = {
         "engine.ollama_host": "localhost:13434",
-        "models.main": "principal",
         "models.guardrail": "guardarrail",
         "models.embedding": "embebedor",
         "builders.kg_relation_schema": "es",
         "sampling.temperature_deterministic": 0.0,
         "generation.max_few_shot_examples": 4,
-        "context_window.main": 65536,
         "context_window.guardrail": 4096,
         "context_window.embedding": 4096,
         "context_window.overrides": 32768,
     }
     for key in derived.PHASES:
-        values[key] = None
+        values[key] = "principal"
     for phase in derived.PHASE_KEYS:
         values[f"reasoning.phases.{phase}"] = False
         values[f"reasoning.effort.{phase}"] = "low"
@@ -27,13 +25,15 @@ def derive_ok():
     return derived.derive(base())
 
 
-def test_every_phase_follows_the_main_model_when_unset():
+# There is no main model to fall back to since 2026-08-28: what the registry holds for a
+# phase is what the call site gets, and a phase cannot be left empty.
+def test_every_phase_gets_exactly_what_its_setting_says():
     out = derive_ok()
     for name in derived.PHASES.values():
         assert out[name] == "principal", name
 
 
-def test_an_overridden_phase_does_not_follow_the_main_model():
+def test_one_phase_can_name_another_model_without_moving_the_rest():
     values = base()
     values["models.phases.kg_taggable"] = "otro-modelo"
     out = derived.derive(values)
@@ -44,23 +44,24 @@ def test_an_overridden_phase_does_not_follow_the_main_model():
 def test_llm_context_is_keyed_by_the_resolved_model_names():
     out = derive_ok()
     assert out["LLM_CONTEXT"] == {
-        "principal": 65536,
         "guardarrail": 4096,
         "embebedor": 4096,
+        "principal": 32768,
     }
 
 
-def test_a_phase_override_gets_the_overrides_window():
+def test_every_phase_model_gets_the_overrides_window():
     values = base()
     values["models.phases.kg_extract"] = "extractor"
     out = derived.derive(values)
     assert out["LLM_CONTEXT"]["extractor"] == 32768
-    assert out["LLM_CONTEXT"]["principal"] == 65536
+    assert out["LLM_CONTEXT"]["principal"] == 32768
 
 
-def test_changing_the_main_model_moves_the_context_key():
+def test_a_model_no_phase_names_any_more_leaves_the_context():
     values = base()
-    values["models.main"] = "otro-principal"
+    for key in derived.PHASES:
+        values[key] = "otro-principal"
     out = derived.derive(values)
     assert "otro-principal" in out["LLM_CONTEXT"]
     assert "principal" not in out["LLM_CONTEXT"]

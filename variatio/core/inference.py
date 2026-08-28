@@ -376,7 +376,7 @@ class OllamaEngine:
     # `ollama stop <model>`, which underneath is not an endpoint of its own: it is an ordinary
     # call with `keep_alive=0`, and the server unloads the weights when it finishes. It is sent
     # through the endpoint that matches the model — an embedder cannot generate and would
-    # answer 400 — and with an empty prompt, which is what `warmup` does.
+    # answer 400 — and with an empty prompt.
     def unload(self, model: str, is_embedding: bool = False) -> bool:
         try:
             if is_embedding:
@@ -412,12 +412,6 @@ class OllamaEngine:
         if model in self.installed_models():
             return True
         return self._pull(model)
-
-    def warmup(self, model: str, is_embedding: bool = False) -> None:
-        if is_embedding:
-            self.embed(model, "")
-        else:
-            self.generate(model, "")
 
     def _pull(self, model: str) -> bool:
         pbar = None
@@ -611,38 +605,25 @@ def required_models() -> dict[str, str]:
     """The models the registry asks for, keyed by the setting that asks for them."""
     from ..settings.derived import PHASES
 
-    names = ["LLM_MAIN", "GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
+    names = ["GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
     return {name: getattr(config, name) for name in names}
 
 
-def runtime_models() -> list[str]:
-    names = [
-        "LLM_MAIN",
-        "GUARDRAIL_LLM",
-        "EMBEDDING_LLM",
-        "DESCRIPTION_GENERATION_LLM",
-        "CONCEPT_TAGGER_LLM",
-        "VARIANT_GENERATION_LLM",
-        "ADMISSIBILITY_LLM",
-        "REPAIR_LLM",
-    ]
-    return list(dict.fromkeys(getattr(config, name) for name in names))
-
-
-def warmup(model: str, is_embedding: bool = False) -> None:
-    engine().warmup(model, is_embedding=is_embedding)
-
-
+# Checks and pulls; it does NOT load anything into memory. Loading eagerly bought nothing —
+# the weights are loaded by the first real call either way — and on an engine whose phases
+# name different models it cost more than it saved, warming a model that the next phase's
+# load then evicted. What survives is the fail-fast: a build that would die forty minutes in
+# for want of a model dies here instead, before the first phase.
 def ensure_models(models: list[str], label: str) -> None:
     unique = list(dict.fromkeys(models))
-    logger.info(f"Preparando los modelos {label}: {', '.join(unique)}")
+    logger.info(f"Comprobando los modelos {label}: {', '.join(unique)}")
 
-    failed = [m for m in unique if not ensure_model(m)]
+    failed = []
+    for m in unique:
+        progress.checkpoint()
+        if not ensure_model(m):
+            failed.append(m)
     if failed:
         raise RuntimeError(f"No se pudieron instalar los modelos: {', '.join(failed)}")
 
-    for m in unique:
-        progress.checkpoint()
-        warmup(m, is_embedding=(m in config.EMBEDDING_MODELS))
-
-    logger.success(f"Modelos {label} listos")
+    logger.success(f"Modelos {label} disponibles")

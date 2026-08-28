@@ -9,7 +9,6 @@ export type JobKind =
   | "transcribe"
   | "describe_concepts"
   | "index"
-  | "warm_models"
   | "tag"
   | "review_taggability"
   | "generate"

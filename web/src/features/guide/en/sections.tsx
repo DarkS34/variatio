@@ -1911,8 +1911,9 @@ const problems = (
           job hanging for hours with no explanation is worse than refusing it.
         </p>
         <p>
-          There are three ways forward: wait, switch the engine to "ollama" from Administration →
-          Engine, or raise the ceiling in "Settings" if the account really does allow more.
+          There are three ways forward: wait, switch the engine to "ollama", or raise the ceiling
+          if the account really does allow more. All three are done in Administration → Engine,
+          where the settings sit in the right-hand column beside the meters that explain them.
         </p>
         <p>
           There is a third case that is not about a spent quota but about size: a call needing

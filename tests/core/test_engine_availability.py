@@ -39,5 +39,5 @@ def test_a_200_reads_as_available(monkeypatch):
 
 def test_required_models_resolves_the_phase_registry():
     required = inference.required_models()
-    assert config.LLM_MAIN in required.values()
+    assert config.KG_EXTRACT_MODEL in required.values()
     assert config.EMBEDDING_LLM in required.values()

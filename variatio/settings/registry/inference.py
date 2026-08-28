@@ -14,7 +14,40 @@ revisando un grafo — se llega habiéndose ido. Recargar los tres modelos cuest
 es ruido al lado de cualquier construcción y de sobra tolerable en una generación suelta.
 0 lo desactiva."""
 
-_MODELS_MAIN_DOC = """UN SOLO modelo generativo, desde el 2026-08-17: los tres niveles no cabían juntos en la A40
+_TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8, y unos
+cuantos Modelfiles declaran 1.0 — una temperatura de REDACCIÓN, aplicada sin distinción a
+llamadas que no redactan nada: leer los conceptos de un fragmento, decidir si dos nombres
+son el mismo concepto, responder sí o no. Con ese valor por defecto, esas llamadas
+redibujan un grafo distinto a partir del mismo corpus en cada construcción, y la diferencia
+entre dos ejecuciones no es evidencia de nada. Toda llamada generativa del proyecto nombra
+ahora una de estas tres.
+
+1. DETERMINISTA — la respuesta es una lectura de la entrada y solo hay una correcta:
+   extracción, los nombres de dominio y su asignación, los escaneos del banco y del perfil,
+   el veredicto del guardarraíl, las descripciones de concepto que se embeben y se
+   cachean. Voraz, para que reconstruir sea reconstruir y no volver a dibujar. Lo que hace
+   que 0 sea seguro en todos estos sitios y no en los de abajo es que todos son
+   `think=False` Y están acotados por una gramática: la respuesta empieza en `{` y el
+   esquema limita cuánto puede seguir.
+2. RAZONAMIENTO — los juicios con `think=True` sobre un inventario que ya está fijado:
+   fusionar alias, descartar lo que no nombra un concepto, ordenar prerrequisitos,
+   etiquetabilidad. Deliberadamente NO es 0, y es el único valor de aquí elegido en contra
+   del determinismo. La decodificación voraz dentro de un canal de razonamiento es donde la
+   deliberación degenera en un bucle de repetición, y degenera EN SILENCIO en esta pila —
+   `KG_DOMAINS_MODEL` documenta una llamada que razonó durante 36 929 caracteres, alcanzó
+   su token de parada y devolvió una respuesta vacía que nada aguas arriba podía distinguir
+   de una de verdad. Es entropía suficiente para salir de un bucle así y queda muy por
+   debajo del 0.6 que la ficha del modelo sugiere para pensar sin límites, porque ninguna
+   de estas llamadas es abierta: el inventario que juzgan está cerrado.
+3. GENERACIÓN — el final del pipeline, y la única llamada del proyecto que redacta de
+   verdad. Aun así se queda baja, porque lo que hace que una variante merezca guardarse es
+   que obedezca su encargo — los conceptos objetivo, los campos fijados, el currículo, las
+   instrucciones — y la temperatura es exactamente lo que compra desviarse de los cuatro.
+   La variedad entre los `n` ítems de una misma tanda se paga en el PROMPT, que le enseña
+   al modelo los enunciados que ya ha escrito, y en la muestra aleatoria de ejemplos; aquí
+   no es tarea del muestreador."""
+
+_RESIDENT_MODELS_DOC = """UN SOLO modelo generativo, desde el 2026-08-17: los tres niveles no cabían juntos en la A40
 (~45 GiB) y se desalojaban entre sí todo el día, y `gemma4:e4b-it-q8_0` (10.1 GiB) tampoco
 cabía junto a uno de clase 30B, lo que hacía que cada reparación de JSON dentro del bucle
 de extracción costase DOS cargas de ~10 s. Esa decisión sigue en pie; lo único que cambió
@@ -64,39 +97,6 @@ Tres cosas que leer en esa tabla antes de tocar nada de esto:
    ~4 490 caracteres, esta q4 respondió al prompt de 5 441 caracteres con JSON válido. No
    la «mejores» a la q8."""
 
-_TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8, y unos
-cuantos Modelfiles declaran 1.0 — una temperatura de REDACCIÓN, aplicada sin distinción a
-llamadas que no redactan nada: leer los conceptos de un fragmento, decidir si dos nombres
-son el mismo concepto, responder sí o no. Con ese valor por defecto, esas llamadas
-redibujan un grafo distinto a partir del mismo corpus en cada construcción, y la diferencia
-entre dos ejecuciones no es evidencia de nada. Toda llamada generativa del proyecto nombra
-ahora una de estas tres.
-
-1. DETERMINISTA — la respuesta es una lectura de la entrada y solo hay una correcta:
-   extracción, los nombres de dominio y su asignación, los escaneos del banco y del perfil,
-   el veredicto del guardarraíl, las descripciones de concepto que se embeben y se
-   cachean. Voraz, para que reconstruir sea reconstruir y no volver a dibujar. Lo que hace
-   que 0 sea seguro en todos estos sitios y no en los de abajo es que todos son
-   `think=False` Y están acotados por una gramática: la respuesta empieza en `{` y el
-   esquema limita cuánto puede seguir.
-2. RAZONAMIENTO — los juicios con `think=True` sobre un inventario que ya está fijado:
-   fusionar alias, descartar lo que no nombra un concepto, ordenar prerrequisitos,
-   etiquetabilidad. Deliberadamente NO es 0, y es el único valor de aquí elegido en contra
-   del determinismo. La decodificación voraz dentro de un canal de razonamiento es donde la
-   deliberación degenera en un bucle de repetición, y degenera EN SILENCIO en esta pila —
-   `KG_DOMAINS_MODEL` documenta una llamada que razonó durante 36 929 caracteres, alcanzó
-   su token de parada y devolvió una respuesta vacía que nada aguas arriba podía distinguir
-   de una de verdad. Es entropía suficiente para salir de un bucle así y queda muy por
-   debajo del 0.6 que la ficha del modelo sugiere para pensar sin límites, porque ninguna
-   de estas llamadas es abierta: el inventario que juzgan está cerrado.
-3. GENERACIÓN — el final del pipeline, y la única llamada del proyecto que redacta de
-   verdad. Aun así se queda baja, porque lo que hace que una variante merezca guardarse es
-   que obedezca su encargo — los conceptos objetivo, los campos fijados, el currículo, las
-   instrucciones — y la temperatura es exactamente lo que compra desviarse de los cuatro.
-   La variedad entre los `n` ítems de una misma tanda se paga en el PROMPT, que le enseña
-   al modelo los enunciados que ya ha escrito, y en la muestra aleatoria de ejemplos; aquí
-   no es tarea del muestreador."""
-
 _TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no está ahí por el mismo
 motivo y no se movería con ella: reparar es un bucle de REINTENTO, y un reintento a 0 no es
 un reintento. El prompt del intento N+1 es la salida del intento N, así que un modelo que
@@ -105,13 +105,14 @@ respuesta idéntica — el presupuesto entero gastado en una sola réplica byte 
 que es el fallo que `parse_with_repair` ya documenta haber pagado una vez."""
 
 _CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en
-la A40 a través de `/api/ps`, `LLM_MAIN` a 65536 + guardarraíl + embebedor suman 29.05 GiB
+la A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman 29.05 GiB
 de ~45 (19.49 + 5.49 + 4.07). La del guardarraíl era 8192, que costaba 1 GiB de caché KV y
 subía el total antiguo a 45.17 — pasado por poco, y el síntoma era que filtrar un encargo
 desalojaba al embebedor. Como mucho lee `GENERATION_INSTRUCTIONS_MAX_CHARS` (600
 caracteres, ~200 tokens), así que 4096 sigue siendo un margen de diez veces.
 
-La de `LLM_MAIN` se dobló desde 32768 el 2026-08-18, con el paso a un modelo de
+La del modelo de juicio (hoy `context_window.overrides`, que la heredó al desaparecer
+`context_window.main` el 2026-08-28) se dobló desde 32768 el 2026-08-18, con el paso a un modelo de
 razonamiento. La regla cambió por debajo: con `think` encendido, la ventana ya no la
 dimensiona el PROMPT sino prompt + deliberación, y la deliberación es la mitad grande — el
 prompt más largo del pipeline son ~8 000 tokens, mientras que una sola llamada de curación
@@ -133,13 +134,15 @@ dimensionaba su caché KV a partir del Modelfile, lo que para `qwen3.6:35b-a3b-q
 GiB solo de pesos) es la diferencia entre caber junto al embebedor y no caber. Un único
 valor y no uno por fase: a 2026-08-23 la única sobrescritura es ese MoE, puesto en las
 fases de construcción que leen documentos (`transcribe`, `ep_scan`, `eb_extract`,
-`kg_extract`, las dos `kg_clean_*` y las dos `kg_link_*`), mientras `LLM_MAIN` sigue siendo
-`qwen3.8:27b-q4_K_M` para juzgar y generar. Los dos nunca necesitan estar residentes a la
+`kg_extract`, las dos `kg_clean_*` y las dos `kg_link_*`), mientras las fases de juicio y
+generación siguen en `qwen3.8:27b-q4_K_M`. Los dos nunca necesitan estar residentes a la
 vez — una construcción carga el MoE una vez y el 27b vuelve en la siguiente generación —,
 así que la aritmética de convivencia sigue siendo de tres modelos.
 
-65536 porque aplica la misma regla que `context_window.main` (prompt más deliberación allí
-donde una fase razona), y porque bajarla trunca en silencio."""
+65536 porque aplica la misma regla de siempre (prompt más deliberación allí donde una fase
+razona), y porque bajarla trunca en silencio. Desde el 2026-08-28 es también la ventana de
+las fases que antes seguían al modelo principal: `context_window.main` se fue con él, y su
+medición —doblada desde 32768 el 2026-08-18— es la de arriba, con el mismo número."""
 
 _TRANSCRIBE_DOC = """Transcripción de una página a partir de su imagen renderizada — compartida por LOS TRES
 constructores y por LOS DOS orígenes en bruto, así que hay una sola constante y no tres que
@@ -157,7 +160,7 @@ fieles. Debilitar esa instrucción reintroduce en silencio código corrupto en e
 
 La comparación de fidelidad que hay detrás (acentos y el salto de línea de un docstring
 conservados donde gemma4:31b perdió ambos, 20s frente a 31s por página) se midió sobre
-`qwen3.6:35b-a3b-q8_0`, que ya no ocupa este puesto — siguió a `LLM_MAIN` hasta
+`qwen3.6:35b-a3b-q8_0`, que ya no ocupa este puesto — pasó a
 `qwen3.8:27b-q4_K_M` el 2026-08-18. El modelo nuevo tiene la capacidad `vision`,
 comprobado, así que la llamada funciona; si transcribe con la misma fidelidad NO está
 medido todavía. Es lo más barato de volver a comprobar de todo el pipeline (una página) y
@@ -180,29 +183,40 @@ por costura y solo cuando el detector no tiene certeza (una valla de código abi
 es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 
 
-_PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la
-razón de que sobrevivan a una consolidación: apuntarlas todas a `LLM_MAIN` es una decisión,
-no un colapso, y cualquier fase suelta puede moverse fuera sin tocar las otras doce."""
+# What every phase defaults to on a fresh installation — the value the removed
+# `models.main` used to hand out. It is a default and nothing more: nothing resolves
+# through it at run time, and a phase that names another model simply names it.
+_MAIN = "qwen3.8:27b-q4_K_M"
+_MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
-_KG_DOMAINS_DOC = """La única fase cuya llamada tuvo que renunciar del todo al razonamiento cuando `LLM_MAIN`
-pasó a ser un modelo que razona: pedirle que particionase el inventario entero hacía que
+_PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la
+razón de que sobrevivan a una consolidación: apuntar varias al mismo modelo es una decisión,
+no un colapso, y cualquier fase suelta puede moverse sin tocar las otras veinte. Desde el
+2026-08-28, por petición explícita del usuario, NO HAY MODELO PRINCIPAL: cada fase nombra el
+suyo y ninguna admite un valor vacío, así que lo que un constructor va a cargar se lee en el
+propio ajuste y no resolviendo un defecto. Lo que sigue es la medición que vivía en aquel
+ajuste, porque es la del modelo que la mayoría de las fases comparten. Léela sabiendo que su
+primera premisa —«un solo modelo generativo»— ya no describe los perfiles que se envían: hoy
+las fases que leen documentos nombran un modelo distinto del que juzga y genera.
+
+""" + _RESIDENT_MODELS_DOC
+
+_KG_DOMAINS_DOC = """La única fase cuya llamada tuvo que renunciar del todo al razonamiento cuando el modelo que
+comparte con las demás pasó a ser uno que razona: pedirle que particionase el inventario entero hacía que
 respondiera dentro del canal de razonamiento y no devolviera nada. Ahora solo nombra los
 dominios — `assign_round` coloca los conceptos, tanda a tanda — y las dos llamadas siguen
 acotadas por una gramática y por tanto sin pensar. La medición está en el sitio de la
 llamada, en `knowledge_graph_builder/curation.py:curate_domains`. Aquí el que estaba mal no
-era el modelo, así que esto sigue apuntando a `LLM_MAIN`; era el pensar."""
+era el modelo, así que esto sigue apuntando al mismo que las demás; era el pensar."""
 
 _REPAIR_DOC = """Reparar es la única llamada que se dispara DESDE DENTRO de un bucle por elemento, así que
 es también la única que nunca debe tener modelo propio: un modelo pequeño aparte no cabe
-junto a `LLM_MAIN` en esta máquina, y cada reparación lo desalojaría y pagaría dos cargas
-de ~10 s en mitad de un corpus. Se mueva lo que se mueva fuera de `LLM_MAIN`, esta lo
-sigue."""
-
-_VACIO_SENTINEL = "Vacío significa que sigue al modelo principal."
-
+junto al de extracción en esta máquina, y cada reparación lo desalojaría y pagaría dos
+cargas de ~10 s en mitad de un corpus. Se mueva lo que se mueva, esta debe quedarse en el
+mismo modelo que la fase desde cuyo bucle se dispara."""
 
 def _phase_doc(sentence: str) -> str:
-    return _PHASE_SHARED_DOC + "\n\n" + sentence + "\n\n" + _VACIO_SENTINEL
+    return _PHASE_SHARED_DOC + "\n\n" + sentence
 
 
 SETTINGS: list[Setting] = [
@@ -427,17 +441,6 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         doc=_IDLE_DOC,
     ),
     Setting(
-        key="models.main",
-        name="LLM_MAIN",
-        kind="str",
-        default="qwen3.8:27b-q4_K_M",
-        group="Modelos",
-        impact=Impact.CONTEXTS,
-        scope="engine",
-        engine_defaults=(("cerebras+ollama", "gemma-4-31b"),),
-        doc=_MODELS_MAIN_DOC,
-    ),
-    Setting(
         key="models.guardrail",
         name="GUARDRAIL_LLM",
         kind="str",
@@ -445,7 +448,7 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        doc=_MODELS_MAIN_DOC,
+        doc=_RESIDENT_MODELS_DOC,
     ),
     Setting(
         key="models.embedding",
@@ -455,7 +458,7 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         group="Modelos",
         impact=Impact.REINDEX,
         scope="engine",
-        doc=_MODELS_MAIN_DOC,
+        doc=_RESIDENT_MODELS_DOC,
     ),
     Setting(
         key="sampling.temperature_deterministic",
@@ -502,17 +505,6 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         doc=_TEMPERATURE_REPAIR_DOC,
     ),
     Setting(
-        key="context_window.main",
-        name="",
-        kind="int",
-        default=65536,
-        group="Ventana de contexto",
-        scope="engine",
-        impact=Impact.CONTEXTS,
-        minimum=2048,
-        doc=_CONTEXT_WINDOW_DOC,
-    ),
-    Setting(
         key="context_window.guardrail",
         name="",
         kind="int",
@@ -549,33 +541,33 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.transcribe",
         name="TRANSCRIBE_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
-        doc=_TRANSCRIBE_DOC + "\n\n" + _VACIO_SENTINEL,
+        engine_defaults=_MAIN_BY_ENGINE,
+        doc=_TRANSCRIBE_DOC,
     ),
     Setting(
         key="models.phases.transcribe_seam",
         name="TRANSCRIBE_SEAM_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
-        doc=_TRANSCRIBE_SEAM_DOC + "\n\n" + _VACIO_SENTINEL,
+        engine_defaults=_MAIN_BY_ENGINE,
+        doc=_TRANSCRIBE_SEAM_DOC,
     ),
     Setting(
         key="models.phases.ep_scan",
         name="EP_SCAN_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de escaneo del generador de perfil de ejemplares (exemplars_profile_builder)."
         ),
@@ -584,77 +576,77 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.ep_consolidate",
         name="EP_CONSOLIDATE_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de consolidación del generador de perfil de ejemplares."),
     ),
     Setting(
         key="models.phases.ep_context",
         name="EP_CONTEXT_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de contexto del generador de perfil de ejemplares."),
     ),
     Setting(
         key="models.phases.eb_extract",
         name="EB_EXTRACT_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de extracción del generador del banco de ejemplares."),
     ),
     Setting(
         key="models.phases.kg_extract",
         name="KG_EXTRACT_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de extracción del constructor del grafo de conocimiento."),
     ),
     Setting(
         key="models.phases.kg_clean_merge",
         name="KG_CLEAN_MERGE_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de fusión de la limpieza del grafo de conocimiento."),
     ),
     Setting(
         key="models.phases.kg_clean_drop",
         name="KG_CLEAN_DROP_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc("Fase de descarte de la limpieza del grafo de conocimiento."),
     ),
     Setting(
         key="models.phases.kg_units",
         name="KG_UNITS_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de segmentación del temario del grafo de conocimiento: lee el índice de "
             "encabezados del corpus y dice cuáles abren unidad didáctica."
@@ -664,22 +656,22 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.kg_domains",
         name="KG_DOMAINS_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
-        doc=_KG_DOMAINS_DOC + "\n\n" + _VACIO_SENTINEL,
+        engine_defaults=_MAIN_BY_ENGINE,
+        doc=_KG_DOMAINS_DOC,
     ),
     Setting(
         key="models.phases.kg_domains_leftovers",
         name="KG_DOMAINS_LEFTOVERS_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de colocación de los conceptos sobrantes de la asignación de dominios "
             "del grafo de conocimiento."
@@ -689,11 +681,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.kg_link_domain",
         name="KG_LINK_DOMAIN_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de enlace de relaciones dentro de un mismo dominio del grafo de conocimiento."
         ),
@@ -702,11 +694,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.kg_link_cross_domain",
         name="KG_LINK_CROSS_DOMAIN_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de enlace de relaciones entre dominios distintos del grafo de conocimiento."
         ),
@@ -715,11 +707,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.kg_taggable",
         name="KG_TAGGABLE_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de revisión de etiquetabilidad de los conceptos del grafo de conocimiento."
         ),
@@ -728,11 +720,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.kg_context",
         name="KG_CONTEXT_MODEL",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de síntesis del contexto de la materia a partir del grafo de conocimiento."
         ),
@@ -741,11 +733,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.description_generation",
         name="DESCRIPTION_GENERATION_LLM",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de generación de descripciones de conceptos, en el pipeline en tiempo de "
             "ejecución (no en un build)."
@@ -755,11 +747,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.concept_tagger",
         name="CONCEPT_TAGGER_LLM",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de etiquetado de conceptos sobre el banco de ejemplares, en el pipeline en "
             "tiempo de ejecución."
@@ -769,11 +761,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.variant_generation",
         name="VARIANT_GENERATION_LLM",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de generación de variantes de contenido, en el pipeline en tiempo de "
             "ejecución."
@@ -783,11 +775,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.admissibility",
         name="ADMISSIBILITY_LLM",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
+        engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
             "Fase de admisibilidad: juzga si el texto libre del encargo pide algo que ya "
             "decide otro control de la pantalla. Va sobre el modelo principal por dos "
@@ -800,11 +792,11 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         key="models.phases.repair",
         name="REPAIR_LLM",
         kind="str",
-        default=None,
+        default=_MAIN,
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        nullable=True,
-        doc=_REPAIR_DOC + "\n\n" + _VACIO_SENTINEL,
+        engine_defaults=_MAIN_BY_ENGINE,
+        doc=_REPAIR_DOC,
     ),
 ]

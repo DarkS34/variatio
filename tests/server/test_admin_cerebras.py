@@ -39,12 +39,12 @@ def test_a_routed_model_that_has_never_been_called_still_shows(ledger):
 
 
 def test_a_model_called_after_leaving_the_routing_list_keeps_its_history(ledger, monkeypatch):
-    ledger.record("gpt-oss-120b", "kg_clean_merge", prompt_tokens=500, completion_tokens=0, headers={})
+    ledger.record("otro-modelo-31b", "kg_clean_merge", prompt_tokens=500, completion_tokens=0, headers={})
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
 
     state = admin_engine.cerebras_state()
     assert state["routed"] == ["gemma-4-31b"]
-    assert [entry["model"] for entry in state["usage"]] == ["gpt-oss-120b"]
+    assert [entry["model"] for entry in state["usage"]] == ["otro-modelo-31b"]
 
 
 def test_the_key_is_reported_as_present_and_never_returned(ledger):

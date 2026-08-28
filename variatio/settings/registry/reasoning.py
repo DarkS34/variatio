@@ -161,9 +161,8 @@ implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro (cu
 valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
 
 Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa
-(`xhigh` NO existe). Cerebras no tiene `max` (`reasoning_effort` lo baja a «high»); en
-`gemma-4-31b` los tres niveles activos son equivalentes y gpt-oss no puede apagarse
-(`False` queda en su mínimo, «low»)."""
+(`xhigh` NO existe). Cerebras no tiene `max` (`reasoning_effort` lo baja a «high») y en
+`gemma-4-31b` los tres niveles activos son equivalentes."""
 
 
 def _effort(phase: str) -> Setting:
