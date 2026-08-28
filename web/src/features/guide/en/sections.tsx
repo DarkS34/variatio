@@ -1,5 +1,6 @@
 import {
   Activity,
+  Files,
   Play,
   Scale,
   type LucideIcon,
@@ -7,18 +8,19 @@ import {
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Alert, PhaseBar } from "@/components/ui/misc";
+import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { Rail, type RailStop } from "@/components/ui/rail";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
-import { useT } from "@/lib/i18n";
+import { useT, type Translate } from "@/lib/i18n";
+import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
 
-const CHAIN: RailStop[] = [
-  { key: "perfil", label: "Profile", status: "approved" },
-  { key: "grafo", label: "Graph", status: "approved" },
-  { key: "banco", label: "Bank", status: "approved" },
+const chain = (tr: Translate): RailStop[] => [
+  { key: "perfil", label: tr.t("nav.profile"), status: "approved" },
+  { key: "grafo", label: tr.t("nav.graph"), status: "approved" },
+  { key: "banco", label: tr.t("nav.bank"), status: "approved" },
 ];
 
 const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "missing", "blocked"];
@@ -28,22 +30,28 @@ const STATE_HINTS: Record<StatusKey, string> = {
   draft: "Built but not reviewed. It can be edited; it does not count yet.",
   stale:
     "Something it depends on changed after it was approved. It has to be rebuilt or approved again.",
-  building: "A job is writing it right now. What was there is hidden until it finishes.",
+  building:
+    "The screen says which of three things is happening: it is being built for the first time and there is nothing to replace; it is being worked over what is already there, which stays saved and merely stops being shown; or the job is still queued and has not started, and then there is no bar.",
   missing: "It does not exist yet. The screen shows the header and a single button: build.",
   blocked:
-    "Not «it is not done», but «it is not your turn yet»: something it depends on is unapproved.",
+    'Not "it is not done", but "it is not your turn yet": something it depends on is unapproved.',
 };
 
-const BUILD_PLAN = [
-  { key: "convert", label: "Converting the corpus", weight: 11 },
-  { key: "extract", label: "Extraction", weight: 8 },
-  { key: "clean", label: "Cleaning and merging", weight: 25 },
-  { key: "domains", label: "Domains", weight: 9 },
-  { key: "link", label: "Linking", weight: 26 },
-  { key: "curate", label: "Curation", weight: 1 },
-];
-
 const ARM_ORDER = ["naive", "rag", "system"] as const;
+
+/**
+ * The graph builder's real plan, read from the API the way the panel reads it.
+ *
+ * It used to be copied out by hand in this file and it fell behind: it drew conversion at
+ * 10 % when conversion weighs a third, and it did not draw the context phase at all. The
+ * guide reads the app's own sources instead of restating them, so there is no hand-written
+ * fallback here either: with no plan, a skeleton.
+ */
+function BuildPlanBar() {
+  const phases = useBuildPhases("knowledge_graph");
+  if (!phases.length) return <Skeleton className="h-1.5 w-full" />;
+  return <PhaseBar phases={phases} percent={58} activeKey="clean" />;
+}
 
 function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone?: "study" }) {
   return (
@@ -60,13 +68,15 @@ function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; to
   );
 }
 
-function Empezar() {
+function Start() {
+  const tr = useT();
+  const { t } = tr;
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Getting started" title="What it is and how you move through it">
+      <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.start")}>
         <p>
-          <strong>Variatio</strong> generates <strong>learning items</strong> —exercises,
-          problems, assessment tasks— anchored to a course's syllabus. It does not write about a
+          <strong>Variatio</strong> generates <strong>learning items</strong> — exercises,
+          problems, assessment tasks — anchored to a course's syllabus. It does not write about a
           topic in the abstract: it starts from three artifacts that describe your subject and
           produces variants that respect what the student has already seen and what they have
           not.
@@ -76,14 +86,21 @@ function Empezar() {
       <Block title="The route, at a glance">
         <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4 sm:gap-6 sm:p-6">
           <div className="flex flex-col items-center gap-2">
-            <Pill icon={Activity} label="Panel" />
+            <Pill icon={Activity} label={t("nav.dashboard")} />
             <span className="text-small text-muted-foreground">watch</span>
           </div>
 
           <span aria-hidden className="w-px self-stretch bg-border" />
 
+          <div className="flex flex-col items-center gap-2">
+            <Pill icon={Files} label={t("nav.rawData")} />
+            <span className="text-small text-muted-foreground">what it is made of</span>
+          </div>
+
+          <span aria-hidden className="w-px self-stretch bg-border" />
+
           <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-2 sm:w-auto sm:min-w-[20rem]">
-            <Rail stops={CHAIN} className="max-w-[26rem]" />
+            <Rail stops={chain(tr)} className="max-w-[26rem]" />
             <span className="text-small text-muted-foreground">
               prepare the instance, in this order
             </span>
@@ -93,8 +110,8 @@ function Empezar() {
 
           <div className="flex flex-col items-center gap-2">
             <div className="flex gap-1.5">
-              <Pill icon={Play} label="Generate" />
-              <Pill icon={Scale} label="Evaluate" tone="study" />
+              <Pill icon={Play} label={t("nav.generate")} />
+              <Pill icon={Scale} label={t("nav.evaluate")} tone="study" />
             </div>
             <span className="text-small text-muted-foreground">use what was prepared</span>
           </div>
@@ -142,16 +159,22 @@ function Empezar() {
               left. Everything else lives inside one.
             </>,
             <>
-              From the <strong>Panel</strong>, upload the raw material: the documents with
-              example exercises, and the theory corpus.
+              From <strong>"{t("dash.rawData")}"</strong>, in the navigation, upload the
+              material: the documents with example exercises, and the theory corpus.
             </>,
             <>
-              Build the <strong>profile</strong>, review it field by field and approve it. It
-              takes minutes.
+              On that same screen, launch the <strong>transcription</strong> of each origin. It
+              is not required — skip it and every build transcribes its own along the way — but
+              it is the mechanical work that opens all three: done once, it stops being paid for
+              at the start of each one. It is also where you can read a page that came out badly
+              and correct it by hand.
             </>,
             <>
-              Launch the <strong>graph</strong>. It is the most expensive job in the chain
-              —hours—: you can close the tab, the server carries on.
+              Build the <strong>profile</strong>, review it field by field and approve it.
+            </>,
+            <>
+              Launch the <strong>graph</strong>. It is the most expensive job in the chain: you
+              can close the tab, the server carries on.
             </>,
             <>
               Review the graph's <strong>taggability</strong> and its{" "}
@@ -161,20 +184,32 @@ function Empezar() {
               Extract the <strong>bank</strong>, go over the items left with no concept, and
               approve it.
             </>,
-            <>With the three approved, «Generate» and «Evaluate» open up.</>,
+            <>
+              With the three approved, "{t("nav.generate")}" and "{t("nav.evaluate")}" open up.
+            </>,
           ]}
         />
+      </Block>
+
+      <Block title="Every screen brings you to its own page here">
+        <Paragraph>
+          Under the title of the important screens there is a "{t("guide.linkTo", {
+            section: t("guide.sec.graph"),
+          })}" link that opens exactly the section explaining them. No need to remember what it
+          is called: you read it from where you were, and the back button brings you back.
+        </Paragraph>
       </Block>
 
       <Detail title="Why does every stage have to be approved?">
         <p>
           What gets approved is the <em>file's hash</em>. While a stage is approved, its screen
-          offers no control that rewrites the artifact: to edit it again you have to press
-          «Reopen». Approving is what unlocks the next stage and, with all three, generation.
+          offers no control that rewrites the artifact: under the "{t("stage.reopen")}" button it
+          says so in as many words — "{t("stage.locked")}" — and that button is the only way
+          back. Approving is what unlocks the next stage and, with all three, generation.
         </p>
         <p>
-          What does <em>not</em> rewrite the artifact —the concept descriptions and the
-          curriculum— stays available with the stage approved.
+          What does <em>not</em> rewrite the artifact — the concept descriptions and the
+          curriculum — stays available with the stage approved.
         </p>
       </Detail>
     </div>
@@ -182,9 +217,10 @@ function Empezar() {
 }
 
 function Workspace() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Getting started" title="The workspace and the subject">
+      <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.workspace")}>
         <p>
           A <strong>workspace</strong> is a complete instance: its raw material, its three
           artifacts, its cache and its curriculum. Two subjects are two workspaces. Two very
@@ -204,6 +240,10 @@ function Workspace() {
             label: "What travels with you",
             value: "Nothing. Each workspace has its own, cache included.",
           },
+          {
+            label: "What is decided on creation",
+            value: "The prompt language. It cannot be changed later.",
+          },
         ]}
       />
 
@@ -216,9 +256,25 @@ function Workspace() {
           administers to give you access to one that already exists.
         </Paragraph>
         <Paragraph>
-          Meanwhile the application is not blocked: this guide, «My profile» and —if you
-          administer the installation— «Administration» work with no workspace at all. What waits
-          is everything that reads an instance: the three stages, «Generate» and «Evaluate».
+          Meanwhile the application is not blocked: this guide, "My profile" and — if you
+          administer the installation — "Administration" work with no workspace at all. What
+          waits is everything that reads an instance: the three stages, "Generate" and
+          "Evaluate".
+        </Paragraph>
+      </Block>
+
+      <Block title="The prompt language is chosen when the workspace is created">
+        <Paragraph>
+          Creating a workspace is where you choose which language the model is spoken to in
+          throughout the building of that instance. <strong>It cannot be changed afterwards</strong>
+          , and that is not an arbitrary restriction: the relation labels are written inside the
+          graph itself and the loader indexes by them, so the language is baked into the
+          artifacts from the first build onwards. The creation form says so on the spot.
+        </Paragraph>
+        <Paragraph>
+          It does not have to match the language you read the application in. Preparing an
+          instance whose prompts are English while working in Spanish is a case the split was
+          made for, and it is why these are two separate settings.
         </Paragraph>
       </Block>
 
@@ -234,17 +290,26 @@ function Workspace() {
 
       <Block title="The subject's context">
         <Paragraph>
-          It is the prose saying what this instance is about —subject, level, language of
-          instruction, conventions— and it goes into <em>every</em> call to the model. It is read
-          and edited on the <strong>Panel</strong>, on its own card: it is not a stage of the
-          chain, which is why it is not on the bar.
+          It is the prose saying what this instance is about — subject, level, language of
+          instruction, conventions — and it goes into <em>every</em> call to the model. It is
+          read and edited on the <strong>Panel</strong>, on the "{t("context.title")}" card: it
+          is not a stage of the chain, which is why it is not on the bar. Under the paragraph sit
+          three loose facts — {t("context.fact.subject").toLowerCase()},{" "}
+          {t("context.fact.level").toLowerCase()} and{" "}
+          {t("context.fact.language").toLowerCase()} — which are read separately and have to say
+          the same thing it does.
         </Paragraph>
-        <Alert tone="attention" title="«Unread draft»">
+        <Alert
+          tone="attention"
+          title={`"${t("context.draft")}" against "${t("context.curated")}"`}
+        >
           <p>
-            Every build writes a fresh draft of the context without touching yours. If the card
-            says so, there is a new synthesis waiting to be read: open it, keep what improves on
-            what you have, and discard the rest. Your curated text is never overwritten on its
-            own.
+            Every build writes a fresh draft of the context without touching yours, and the
+            card's badge says which of the two you are reading. When a new synthesis is waiting,
+            "{t("context.adopt")}" appears: adopting it{" "}
+            <strong>replaces your text wholesale</strong> with the latest draft, so if you only
+            want part of it, copy that part across yourself and edit. What never happens is that
+            it overwrites itself.
           </p>
         </Alert>
       </Block>
@@ -252,10 +317,13 @@ function Workspace() {
       <Block title="The curriculum">
         <Paragraph>
           The concepts the course <em>has already covered</em>. It is edited on the graph's
-          «Curriculum» tab and it is what bounds the scaffolding of every generation: an item may
+          "{t("kg.tab.curriculum")}" tab and it is what bounds the scaffolding of every generation: an item may
           lean on a covered concept; it may not depend on one that has not been taught yet.
         </Paragraph>
-        <Alert tone="info" title="Empty does not mean «nothing covered»: it means «no restriction»">
+        <Alert
+          tone="info"
+          title="&quot;Empty&quot; does not mean nothing covered: it means no restriction"
+        >
           <p>
             Reading it literally would forbid the whole syllabus, which is exactly the state a
             new instance starts in. Emptying it deliberately is saved as a decision, with its
@@ -264,7 +332,7 @@ function Workspace() {
         </Alert>
       </Block>
 
-      <Detail title="«Close prerequisites on save»">
+      <Detail title="&quot;Close prerequisites on save&quot;">
         <p>
           When saving the curriculum you can ask for the prerequisites of what you marked to be
           added too. It is applied <em>on save</em> and written into the file: it is not a rule
@@ -279,10 +347,223 @@ function Workspace() {
   );
 }
 
-function Perfil() {
+function Raw() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Preparing the instance · stage 1" title="Exemplars profile">
+      <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.raw")}>
+        <p>
+          The documents everything else comes out of. They have a screen of their own —{" "}
+          <strong>"{t("nav.rawData")}"</strong> in the navigation, at{" "}
+          <code className="font-mono text-small">/raw</code> — and a pill of their own, ahead
+          of the three stages and separated from them by a rule: the raw material feeds the
+          chain without being a step of it. It writes no artifact, nobody approves it, and that
+          is why it is not on the rail.
+        </p>
+      </SectionHead>
+
+      <Facts
+        items={[
+          {
+            label: "What it produces",
+            value: "No artifact: each document's pages turned into markdown, saved one by one.",
+          },
+          {
+            label: "What it costs",
+            value: "One call to the model per page, in both origins alike.",
+          },
+          {
+            label: "What it unlocks",
+            value: "Nothing, and that is deliberate: it brings forward work the builds would do anyway.",
+          },
+        ]}
+      />
+
+      <Block title="The two origins">
+        <Rows
+          items={[
+            {
+              key: "corpus",
+              head: t("raw.slot.corpus"),
+              body: t("raw.slot.corpus.purpose"),
+            },
+            {
+              key: "exemplars",
+              head: t("raw.slot.exemplars"),
+              body: t("raw.slot.exemplars.purpose"),
+            },
+          ]}
+        />
+        <Paragraph>
+          Each card carries under its title the stage it feeds, with the short names from the bar
+          at the top: "{t("nav.graph")}" for the corpus, "{t("nav.profile")}" and "
+          {t("nav.bank")}" for the exemplars. An empty origin does not draw an empty list: the
+          whole card becomes the area to drop files into, which is the only thing worth doing
+          there.
+        </Paragraph>
+      </Block>
+
+      <Alert tone="info" title="Transcribing brings work forward; it is never a requirement">
+        <p>
+          Turning the documents into markdown is the first thing <em>every</em> build does, and
+          it is mechanical work: doing it here once takes it out of the start of all three. Build
+          without having transcribed and the build does it on its own, with nothing stopping you
+          — <strong>nothing is ever refused for want of a transcription</strong>.
+        </p>
+        <p>
+          Which is why, while documents are still untranscribed, the "{t("nav.rawData")}" pill
+          carries a dot and the three stages on the bar at the top are <em>dimmed</em>, saying
+          why on hover. Dimmed is not disabled: they stay clickable and they still build. It
+          says where to start, it does not lock anything.
+        </p>
+      </Alert>
+
+      <Block title="Two buttons, and they do not have the same reach">
+        <Rows
+          items={[
+            {
+              key: "todo",
+              head: <>"{t("transcribe.startAll")}"</>,
+              body: "In the notice at the top of the screen. It launches in one go whichever origins have something to do, and it is the normal route.",
+            },
+            {
+              key: "origen",
+              head: <>"{t("transcribe.start")}"</>,
+              body: "One per origin, in its card's header, for doing them separately. The label changes with what is left: what is pending, what has expired, or both. With nothing to do it does not appear at all, because the badge beside it already says everything is up to date.",
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="How each document is doing">
+        <Rows
+          items={[
+            {
+              key: "done",
+              head: <Badge variant="settled">{t("transcribe.state.done")}</Badge>,
+              body: "Its pages are written and still hold. Builds reuse them as they are, without asking the model again.",
+            },
+            {
+              key: "pending",
+              head: <Badge variant="outline">{t("transcribe.state.pending")}</Badge>,
+              body: "It has not been read yet. Not a problem: if you do not read it first, the build will.",
+            },
+            {
+              key: "stale",
+              head: <Badge variant="attention">{t("transcribe.state.stale")}</Badge>,
+              body: "It was transcribed, but something it depended on has changed. The row says what: the document itself, the transcription route, the model, the render resolution, the OCR, or the prompt.",
+            },
+            {
+              key: "failed",
+              head: <Badge variant="danger">{t("transcribe.failedCount", { n: "N" })}</Badge>,
+              body: "It sits beside the state rather than in its place: a document can be transcribed and up to date and still hold pages the model could not read. That badge is the only sign that text is missing there, and it is fixed by opening the document.",
+            },
+          ]}
+        />
+        <Paragraph>
+          The reason sits on the document's own row rather than hidden inside a tally: "2
+          expired" reports the state and keeps quiet about the very half you act on. A state
+          with no reason is not a state, and what is underneath is a list of pages the next build
+          was about to redo in silence.
+        </Paragraph>
+      </Block>
+
+      <Alert tone="settled" title="Stopping it loses nothing">
+        <p>
+          Pages are written document by document, so a cancelled transcription keeps everything
+          that had already come out, and relaunching it carries on from where it was. The button
+          says so on the spot, because one that might be throwing work away is one nobody
+          presses.
+        </p>
+      </Alert>
+
+      <Block title="Correcting a page by hand">
+        <Steps
+          items={[
+            <>
+              Hover over the document's row and press the pencil. It opens with the index of
+              pages on the left and the markdown of whichever you pick on the right.
+            </>,
+            <>
+              Edit and save. You can also <strong>insert</strong> a blank page right after the
+              one you are looking at, or <strong>delete</strong> it: both renumber the ones that
+              follow, and the screen says so before doing it.
+            </>,
+            <>
+              Leaving with unsaved changes asks before discarding them, and so does switching
+              page.
+            </>,
+          ]}
+        />
+        <Paragraph>
+          Only two kinds of page are flagged, because they are the only ones that need a person:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "failed",
+              head: <Badge variant="danger">{t("doc.mark.failed")}</Badge>,
+              body: t("doc.failedPage"),
+            },
+            {
+              key: "empty",
+              head: <Badge variant="attention">{t("doc.mark.empty")}</Badge>,
+              body: t("doc.emptyPage"),
+            },
+          ]}
+        />
+        <Detail title="Why what you correct by hand wins">
+          <p>
+            Later builds read these pages from disk instead of asking the model again, so a
+            correction of yours <strong>beats what the model said and survives every build that
+            comes after</strong>. Editing does not mark the document as expired either: all that
+            is discarded are the two seams around the page you touched, because they were decided
+            against text that is no longer there.
+          </p>
+          <p>
+            The last remaining page cannot be deleted. A document with zero pages reads as "
+            {t("transcribe.state.pending")}", and the next build would silently redo everything
+            that had been corrected.
+          </p>
+          <p>
+            While an origin is being transcribed you can review and correct the documents that
+            have already come out. The only one that will not open is the one being rewritten at
+            that instant: its row says so with an activity indicator and with "
+            {t("transcribe.transcribing")}" in place of its state.
+          </p>
+        </Detail>
+      </Block>
+
+      <Detail title="Both origins take the same route, and it costs what it costs">
+        <p>
+          Corpus and exemplars are transcribed by the same algorithm: each page is drawn and the
+          model is asked to copy it character by character, completing nothing and correcting
+          nothing. One call per page, no exceptions, because the page image is the honest source
+          — a table split across two sheets, a code block with its indentation, or a formula
+          survive that way and no other.
+        </p>
+        <p>
+          Every join between two pages gets a second, far shorter call that decides only{" "}
+          <em>how</em> they are glued: whether the sentence carries on, which separator goes in
+          between, and how many repeated header lines to drop. It rewrites nothing — that is
+          what keeps "copy character by character" true. Which is why the progress bar moves
+          through pages first and through seams afterwards, within the same document.
+        </p>
+        <p>
+          The consequence shows in the phase bar explained in "{t("guide.sec.runs")}": the
+          corpus conversion is now the widest section of the graph build. Taking it out of there,
+          and being able to watch it while it happens, is exactly what this screen exists for.
+        </p>
+      </Detail>
+    </div>
+  );
+}
+
+function Profile() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={`${t("guide.group.prepare")} · stage 1`} title={t("guide.sec.profile")}>
         <p>
           It defines what an item is: its fields, their types, and the guidance the model follows
           when extracting and when generating them. It is the piece that instantiates the use
@@ -296,7 +577,10 @@ function Perfil() {
             label: "What it produces",
             value: <code className="font-mono text-small">exemplars_profile.json</code>,
           },
-          { label: "How long it takes", value: "Minutes. One long pass over the sample." },
+          {
+            label: "What it costs",
+            value: "One long pass over a sample of the corpus, not over all of it.",
+          },
           {
             label: "What it unlocks",
             value: "The bank's extraction and the graph's taggability review.",
@@ -312,19 +596,35 @@ function Perfil() {
               exemplars slot. With no material, the build button is off and says why.
             </>,
             <>
-              Press «Build». What comes out is a <strong>draft</strong>, not a final result.
+              Press "Build". What comes out is a <strong>draft</strong>, not a final result.
             </>,
             <>
-              Go over each field: its name, its type, the extraction guidance, the generation
-              guidance and who decides its value.
+              Go over each <strong>modality</strong> and, inside it, each field: its name, its
+              type, the description, the extraction guidance and who decides its value.
             </>,
             <>
-              Go over the <strong>general generation rules</strong>: they are the ones that
-              govern how a whole item is written.
+              Go over each modality's <strong>"{t("modality.rules")}"</strong>: they are the only
+              thing the profile tells the generator about the <em>shape</em> of an exercise.
             </>,
             <>Approve. The stage closes and the screen stops offering anything that rewrites it.</>,
           ]}
         />
+        <Paragraph>
+          At the very top there are two tabs: "{t("profileEditor.tab.form")}", where the work
+          happens, and "{t("profileEditor.tab.raw")}", the file as it stands, for when pasting a
+          block by hand is quicker. Beside them, always visible, the notice saying whether the
+          profile <em>loads</em> — and while it does not, saving is disabled, which is what keeps
+          the instance from being left with a broken schema.
+        </Paragraph>
+      </Block>
+
+      <Block title="Modalities, and why they show up everywhere else">
+        <Paragraph>{t("modality.whatAre.body")}</Paragraph>
+        <Paragraph>
+          Which is why the modality comes back later as a column and a filter in the bank, and as
+          the first question on the generation form. A profile with a single modality draws
+          neither: a dropdown with one option chooses nothing.
+        </Paragraph>
       </Block>
 
       <Block title="What a field has">
@@ -332,37 +632,50 @@ function Perfil() {
           items={[
             {
               key: "tipo",
-              head: "Type",
-              body: "Text, number, list, or a closed enumeration of values.",
+              head: t("field.type.label"),
+              body: "Text, number, list, or a closed enumeration of values. Depending on which, the length, the range or the list of permitted values appears underneath.",
+            },
+            {
+              key: "obligatorio",
+              head: t("field.required.label"),
+              body: t("field.required.hint"),
+            },
+            {
+              key: "descripcion",
+              head: t("field.description.label"),
+              body: t("field.description.hint"),
             },
             {
               key: "extraccion",
-              head: "Extraction guidance",
-              body: "How to recognise that field inside a raw document.",
+              head: t("field.extraction.label"),
+              body: t("field.extraction.hint"),
             },
             {
               key: "generacion",
-              head: "Generation guidance",
-              body: "How to write it when generating. It is written by hand: what the builder proposes are general rules, not one per field.",
+              head: t("field.generation.label"),
+              body: t("field.generation.description"),
             },
             {
               key: "decidido",
-              head: "Decided by",
-              body: "The model, or you. The ones you decide appear as controls on the generation form.",
+              head: t("field.decidedBy.label"),
+              body: t("field.decidedBy.hint"),
             },
             {
               key: "primario",
-              head: "Primary field",
-              body: "The one carrying the statement. It is the one turned into a vector to match against concepts.",
+              head: t("field.primary.badge"),
+              body: "The one carrying the statement. It is the one turned into a vector to match against concepts, and only a text field can be it.",
             },
           ]}
         />
+        <Detail title={`And beside the primary one: "${t("modality.indexed")}"`}>
+          <p>{t("modality.indexed.hint")}</p>
+        </Detail>
       </Block>
 
       <Alert tone="danger" title="Touching it after extracting the bank invalidates the bank">
         <p>
           The bank's items were extracted against the previous schema. If you change the fields,
-          the bank goes to «Stale» and has to be extracted again.
+          the bank goes to "Stale" and has to be extracted again.
         </p>
       </Alert>
 
@@ -378,10 +691,11 @@ function Perfil() {
   );
 }
 
-function Grafo() {
+function Graph() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Preparing the instance · stage 2" title="Knowledge graph">
+      <SectionHead eyebrow={`${t("guide.group.prepare")} · stage 2`} title={t("guide.sec.graph")}>
         <p>
           The system's vocabulary. Everything tagged and generated afterwards comes from here:
           neither the model nor you can use a concept that is not in the graph.
@@ -395,8 +709,9 @@ function Grafo() {
             value: <code className="font-mono text-small">knowledge_graph.json</code>,
           },
           {
-            label: "How long it takes",
-            value: "Hours. It is the most expensive job in the whole chain.",
+            label: "What it costs",
+            value:
+              "It is the most expensive job in the chain: one call per page of the corpus, and several that reason over the whole inventory.",
           },
           {
             label: "What it unlocks",
@@ -405,25 +720,48 @@ function Grafo() {
         ]}
       />
 
-      <Block title="The two views">
+      <Block title="The three views">
         <Rows
           items={[
             {
               key: "temario",
-              head: "Syllabus",
-              body: "The domains and their concepts, with the graph canvas beside them. Units start closed: open one, or search and the ones with matches open by themselves. Drag to move, scroll to zoom, and clicking a node selects it in the table too, opening its unit.",
+              head: t("kg.tab.graph"),
+              body: "The domains and their concepts, with the graph canvas beside them. Units start closed: open one, or search and the ones with matches open by themselves. Clicking a node selects it in the table too, opening its unit.",
+            },
+            {
+              key: "descripciones",
+              head: t("kg.tab.descriptions"),
+              body: "Each concept's prose, to read and to correct. If any concepts are still undescribed, the tab itself carries the count beside its name; with nothing outstanding, it carries nothing.",
             },
             {
               key: "curriculo",
-              head: "Curriculum",
+              head: t("kg.tab.curriculum"),
               body: "What has been covered already. This is where it is marked, and where it is saved with or without closing prerequisites.",
             },
           ]}
         />
         <Paragraph>
-          The canvas has two layouts: <strong>forces</strong>, which groups by neighbourhood, and{" "}
-          <strong>curriculum</strong>, which orders by prerequisite levels. Switching from one to
-          the other rebuilds nothing: the nodes ease across to their new positions.
+          The <strong>"{t("kg.review.button")}"</strong> button sits to the right of the tabs
+          rather than in the header: switching view and changing the artifact are two different
+          kinds of thing and do not share a line. The review exists in both states — a first pass
+          and a re-run — which is why it lives there and not in the notice below.
+        </Paragraph>
+        <Paragraph>
+          On "{t("kg.tab.graph")}" the list is the work and the map is the reference, so the list
+          takes the width. The map is a single card on the right, footed by the curriculum's
+          progress and the key to the <strong>frontier</strong>: what is settled, what you are on
+          now, and what is not reachable yet. {t("kg.mapDescription")} The expand button opens it
+          full-screen <em>with the inspector beside it</em>, so whatever you pick there can be
+          changed without going back.
+        </Paragraph>
+        <Paragraph>
+          The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which groups
+          each concept next to the ones it is related to, and{" "}
+          <strong>"{t("canvas.layout.curriculum")}"</strong>, which orders by prerequisite
+          levels. Switching from one to the other rebuilds nothing: the nodes ease across to
+          their new positions. A level is a <em>band</em> and not a row, because a real graph
+          spreads its prerequisites very unevenly; below three levels the canvas says so itself,
+          because that is a fact about the graph and not a broken view.
         </Paragraph>
       </Block>
 
@@ -437,9 +775,9 @@ function Grafo() {
               </p>
               <p className="text-small text-muted-foreground">
                 Which concepts work as a <em>label</em>. The ones that would fit any item at all
-                —«coding», «design»— are marked as non-taggable: they still exist and still work
-                through their relations, they simply stop being able to be what an exercise is
-                about. When in doubt, exclude: a vague label pollutes the whole corpus.
+                — "coding", "design" — are marked as non-taggable: they still exist and still
+                work through their relations, they simply stop being able to be what an exercise
+                is about. When in doubt, exclude: a vague label pollutes the whole corpus.
               </p>
             </>,
             <>
@@ -481,17 +819,20 @@ function Grafo() {
             Around the concepts you ask for, the system derives two lists from the graph and puts
             them into the prompt:
           </p>
-          <ul className="space-y-1">
-            <li>
-              <span className="font-medium text-settled">Assumed known</span> — prerequisites that
-              are also in the curriculum. The exercise may lean on them, but must not turn them
-              into the difficulty. They travel with their description, not as a bare name.
-            </li>
-            <li>
-              <span className="font-medium text-destructive">Forbidden</span> — what comes after
-              the target and has not been taught yet. It must not appear.
-            </li>
-          </ul>
+          <Rows
+            items={[
+              {
+                key: "sabido",
+                head: <span className="text-settled">Assumed known</span>,
+                body: "Prerequisites that are also in the curriculum. The exercise may lean on them, but must not turn them into the difficulty. They travel with their description, not as a bare name.",
+              },
+              {
+                key: "prohibido",
+                head: <span className="text-destructive">Forbidden</span>,
+                body: "What comes after the target and has not been taught yet. It must not appear.",
+              },
+            ]}
+          />
           <p>
             Both lists walk the whole graph, not one hop: they are transitive closures bounded by
             the curriculum. On the generation screen they are drawn before launching, so you can
@@ -503,14 +844,15 @@ function Grafo() {
   );
 }
 
-function Banco() {
+function Bank() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Preparing the instance · stage 3" title="Exemplars bank">
+      <SectionHead eyebrow={`${t("guide.group.prepare")} · stage 3`} title={t("guide.sec.bank")}>
         <p>
           The items extracted from your documents and tagged with concepts from the graph. They
-          are the examples that accompany every generation: this is where «here is how exercises
-          are written in this subject» comes from, for the model to imitate.
+          are the examples that accompany every generation: this is where "here is how exercises
+          are written in this subject" comes from, for the model to imitate.
         </p>
       </SectionHead>
 
@@ -521,8 +863,8 @@ function Banco() {
             value: <code className="font-mono text-small">exemplars_bank.json</code>,
           },
           {
-            label: "How long it takes",
-            value: "Tens of minutes, depending on how many documents there are.",
+            label: "What it costs",
+            value: "It grows with the number of documents: all of them are walked, one after another.",
           },
           {
             label: "It is saved",
@@ -533,22 +875,51 @@ function Banco() {
 
       <Alert tone="info" title="Extracting and tagging are one single job">
         <p>
-          Each document is tagged as it comes out of the extractor, so there is no «tag
-          everything» button: that step no longer exists on its own. What there is, is the
-          correction of what came out wrong.
+          Each document is tagged as it comes out of the extractor, so by the time extraction
+          finishes the bank is already tagged: there is no intermediate step to launch. What is
+          left is correcting what came out wrong, and there are three separate controls for that.
         </p>
       </Alert>
+
+      <Block title="The strip of meters says two different things">
+        <Rows
+          items={[
+            {
+              key: "etiquetados",
+              head: t("bank.taggedItems"),
+              body: "How many items of the bank carry at least one concept. It is the correcting still ahead of you, and it has beside it the two controls that act on that very number.",
+            },
+            {
+              key: "cobertura",
+              head: t("bank.coverage"),
+              body: t("bank.coverageBody"),
+            },
+            {
+              key: "umbrales",
+              head: t("bank.thresholds"),
+              body: t("bank.thresholdsBody"),
+            },
+          ]}
+        />
+        <Paragraph>
+          The first two look in opposite directions and are worth keeping apart: one counts{" "}
+          <em>items with no concept</em>, the other <em>concepts with no item</em>. The whole
+          bank can be tagged while half the syllabus has not a single example to imitate.
+        </Paragraph>
+      </Block>
 
       <Block title="It is reviewed by suspicion, not top to bottom">
         <Steps
           items={[
             <>
-              First, the ones <strong>left with no concept</strong>. The tagging card counts them
-              and «See the N with no concept» filters them.
+              First, the ones <strong>left with no concept</strong>. The strip of meters at the
+              top counts them and "{t("bank.seeUntagged", { n: "N" })}" filters them.
             </>,
             <>
               Then the decisions <strong>won by a narrow margin</strong>: that is where the
-              matching goes wrong without saying so.
+              matching goes wrong without saying so. The order dropdown above the table has
+              "{t("bank.orderBySuspicion")}" for exactly this: it puts the ones left with no
+              concept first and, behind them, the ones decided by a hair.
             </>,
             <>
               Correct the <strong>primary concept</strong> by hand where needed: it is the one
@@ -558,21 +929,48 @@ function Banco() {
         />
       </Block>
 
-      <Block title="The two re-tag buttons, which do not do the same thing">
+      <Block title="The three ways to re-tag, which do not do the same thing">
         <Rows
           items={[
             {
               key: "pendientes",
-              head: "«Re-tag the N»",
-              body: "With no selection: it runs over exactly the items left with no concept, never over the whole bank.",
+              head: <>"{t("bank.retagUntagged", { n: "N" })}"</>,
+              body: "With no selection: it runs over exactly the items left with no concept, never over the whole bank. It sits in the strip of meters, next to the number it acts on.",
+            },
+            {
+              key: "todo",
+              head: <>"{t("bank.retagAll")}"</>,
+              body: "The whole bank, from scratch. It overwrites the current tags, the ones you corrected by hand included, which is why it asks for confirmation before it runs.",
             },
             {
               key: "seleccion",
-              head: "«Re-tag selection»",
-              body: "With items ticked by hand: only those are re-tagged, even if they already had a concept.",
+              head: <>"{t("bank.retagSelected")}"</>,
+              body: "Only the items ticked by hand, even if they already had a concept. It lives at the foot of the table, because it is contextual: it belongs to the rows and not to the totals.",
             },
           ]}
         />
+      </Block>
+
+      <Block title="Finding one particular item">
+        <Paragraph>
+          Above the table there are four filters that combine: a <strong>search</strong> over the
+          statement's text or by id, the <strong>modality</strong> — the ones your profile
+          declares, each with how many items it has across the whole bank — the{" "}
+          <strong>source document</strong>, and a <strong>"{t("bank.untagged")}"</strong> toggle.
+          If your profile declares a single modality, that dropdown does not appear: a menu with
+          one option filters nothing.
+        </Paragraph>
+        <Paragraph>
+          At the end of the row, and apart from the filters because it adds and removes nothing,
+          the <strong>order</strong>: "{t("bank.orderById")}", which is the order of extraction,
+          or "{t("bank.orderBySuspicion")}".
+        </Paragraph>
+        <Paragraph>
+          Filtering by modality moved nothing about tagging by concept, which is the heart of the
+          bank: the meters, "{t("bank.seeUntagged", { n: "N" })}", the three re-tag buttons, the
+          concepts column and the editor's primary-concept picker are all exactly where they
+          were.
+        </Paragraph>
       </Block>
 
       <Detail title="Retrying makes sense: the index improves between passes">
@@ -590,64 +988,90 @@ function Banco() {
   );
 }
 
-function Generar() {
+function Generate() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Using it" title="Generate variants">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          One commission, one batch of variants. The form is five questions: they are answered
-          top to bottom and each one collapses to a single line once answered, so changing the
+          One commission, one batch of variants. The form is an accordion: it is answered top to
+          bottom and each question collapses to a single line once answered, so changing the
           concepts again costs one click and no scrolling.
+        </p>
+        <p>
+          There are <strong>up to five</strong> questions, not always five: two of them appear
+          only if your instance needs them, and the numbering counts the ones that get drawn.
         </p>
       </SectionHead>
 
-      <Block title="The five questions">
+      <Block title="The questions, in the order they are asked">
         <Steps
           items={[
             <>
-              <p className="font-medium">What kind of item?</p>
-              <p className="text-small text-muted-foreground">
-                The modality, from the ones your profile declares. It determines which fields
-                have to be filled in afterwards.
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {t("form.type.title")}
+                <Badge variant="outline">only with several modalities</Badge>
               </p>
-            </>,
-            <>
-              <p className="font-medium">What has been covered already?</p>
               <p className="text-small text-muted-foreground">
-                The curriculum for <em>this</em> commission. It arrives filled in with the
-                workspace's own; emptying it here means «no restriction», for this run only.
-              </p>
-            </>,
-            <>
-              <p className="font-medium">What has to be practised?</p>
-              <p className="text-small text-muted-foreground">
-                The target concepts. Only the <strong>taggable</strong> ones are offered: this is
-                where you choose what the exercise is about, and a generic concept is no use for
-                that.
+                {t("form.type.hint")} If your profile declares a single one, this question is not
+                asked.
               </p>
             </>,
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
-                Fixed fields
-                <Badge variant="outline">optional</Badge>
+                {t("form.taught.title")}
+                <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                The fields your profile marks as decided by the user: difficulty, answer format,
-                whatever you have declared.
+                The curriculum for <em>this</em> commission, and it arrives <strong>off</strong>:
+                no restriction. Turning it on offers the workspace's own, already ticked — "
+                {t("form.taught.usePreset", { n: "N" })}" — and you can refuse it and pick the
+                covered concepts by hand for this run alone. {t("form.taught.hint")}
+              </p>
+            </>,
+            <>
+              <p className="font-medium">{t("form.practise.title")}</p>
+              <p className="text-small text-muted-foreground">
+                {t("form.practise.hint")} Only the <strong>taggable</strong> concepts are
+                offered: this is where you choose what the exercise is about, and a generic
+                concept is no use for that.
               </p>
             </>,
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
-                Additional instructions
-                <Badge variant="outline">optional</Badge>
+                {t("form.decisions.titleMany")}
+                <Badge variant="outline">only if the profile leaves something to you</Badge>
+              </p>
+              <p className="text-small text-muted-foreground">{t("form.decisions.hint")}</p>
+            </>,
+            <>
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {t("form.instructions.title")}
+                <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                Free text for what none of the controls above decides. It goes through two
-                filters before entering the prompt.
+                Free text for what none of the controls above decides, capped at 600 characters
+                which the box itself counts down. It goes through two filters before entering the
+                prompt.
               </p>
             </>,
           ]}
         />
+      </Block>
+
+      <Block title="Before launching, what the graph is about to tell the model">
+        <Paragraph>
+          Under the chosen concepts, "{t("form.graphSays")}" appears with the two lists the
+          prompt will carry: "{t("form.given")}" and "{t("form.forbidden")}". They come out of
+          the graph and of this question's curriculum, and they are visible <em>before</em>{" "}
+          anything is spent.
+        </Paragraph>
+        <Paragraph>
+          The same box warns about <strong>zero-shot</strong>: if a chosen concept has no
+          exemplar in the bank — or none of the modality asked for — the batch is generated with
+          no example to imitate and quality usually drops. A switch hides the concepts with no
+          exemplars from the list; turning it off is what lets you ask for them knowingly.
+        </Paragraph>
       </Block>
 
       <Block title="What happens to what you write in the free text">
@@ -656,7 +1080,7 @@ function Generar() {
             {
               key: "guardrail",
               head: "1 · Guardrail",
-              body: "A fixed check blocks orders to override instructions («forget everything above…»), and then a judge model decides whether there is anything harmful or an attempt to get around the exercise's own restrictions.",
+              body: 'A fixed check blocks orders to override instructions ("forget everything above…"), and then a judge model decides whether there is anything harmful or an attempt to get around the exercise\'s own restrictions.',
             },
             {
               key: "admisibilidad",
@@ -683,25 +1107,59 @@ function Generar() {
         </Paragraph>
       </Block>
 
+      <Block title="While it runs">
+        <Paragraph>
+          On launching, the form folds into one line holding the commission's summary, and a
+          strip appears above the results: the job's name, its status, how long it has been
+          going, and — while it is waiting its turn — "{t("queue.queuedAhead", { n: "N" })}"{" "}
+          <em>instead of</em> the bar. The cancel button lives there, and only there.
+        </Paragraph>
+        <Paragraph>
+          Everything else folds behind "{t("run.detail")}" on that same strip: the steps, the
+          text as it is written, the bank exemplars the model was given, and the technical
+          details of the call. It opens by itself while the job runs and closes when it ends,
+          unless you touch it.
+        </Paragraph>
+      </Block>
+
       <Block title="What you see when it finishes">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-start gap-3">
-            <Badge variant="settled">saved</Badge>
-            <p className="max-w-[64ch] flex-1 text-body text-muted-foreground">
-              Every variant is saved into «My variants» <em>the moment it validates</em>, with
-              its whole commission. A batch cancelled at the third keeps three.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-start gap-3">
-            <Badge variant="attention">2 signals</Badge>
-            <p className="max-w-[64ch] flex-1 text-body text-muted-foreground">
-              What the system can check without judging the exercise: whether it names something
-              not yet taught, whether it looks too much like an example or another one in the
-              batch, and whether the tagger recognises it as the concept you asked for.{" "}
-              <strong>They are signals for whoever reads, not a rejection.</strong>
-            </p>
-          </div>
-        </div>
+        <Rows
+          items={[
+            {
+              key: "guardada",
+              head: <Badge variant="settled">{t("result.saved")}</Badge>,
+              body: (
+                <>
+                  Every variant is saved into "{t("menu.savedVariants")}"{" "}
+                  <em>the moment it validates</em>, with its whole commission. A batch cancelled
+                  at the third keeps three.
+                </>
+              ),
+            },
+            {
+              key: "senales",
+              head: <Badge variant="attention">2 signals</Badge>,
+              body: (
+                <>
+                  What the system can check without judging the exercise: whether it names
+                  something not yet taught, whether it looks too much like an example or another
+                  one in the batch, and whether the tagger recognises it as the concept you asked
+                  for. The first two make the generator <em>try again</em> before handing you the
+                  item; what arrives flagged is what still did not come out clean, and at that
+                  point <strong>it is a signal for whoever reads, not a rejection</strong>.
+                </>
+              ),
+            },
+            {
+              key: "reintentada",
+              head: <Badge variant="outline">{t("result.retried", { n: "N" })}</Badge>,
+              body: "How many times the call had to be repeated because of those two signals. It does not say the variant is bad: it says what it cost.",
+            },
+          ]}
+        />
+        <Paragraph>
+          A variant with nothing to flag says so just as plainly: "{t("result.noFlags")}".
+        </Paragraph>
       </Block>
 
       <Block title="And afterwards">
@@ -709,18 +1167,23 @@ function Generar() {
           items={[
             {
               key: "cambiar",
-              head: "«Change the commission»",
-              body: "Reopens the form with everything filled in and leaves the results in view until you launch another batch.",
+              head: <>"{t("generate.changeCommission")}"</>,
+              body: 'Reopens the form with everything filled in and leaves the results in view until you launch another batch. Reopening also brings up "Start over", for when what you want is a different commission rather than a variation on the same one.',
             },
             {
               key: "otras",
-              head: "«Generate another N»",
-              body: "Repeats the same commission, new batch.",
+              head: <>"{t("generate.anotherN", { n: "N" })}"</>,
+              body: 'Repeats the same commission, new batch. With a single item the label reads "Generate another".',
+            },
+            {
+              key: "exportar",
+              head: <>"{t("generate.export")}"</>,
+              body: "A menu with three ways out for the whole batch: copy the JSON, download it, or download it as Markdown.",
             },
             {
               key: "como-esta",
-              head: "«Generate more like this one»",
-              body: "It is in «My variants» and recovers the commission of one particular variant, even from another day.",
+              head: <>"{t("generations.moreLikeThis")}"</>,
+              body: 'It is in "My variants" and recovers the commission of one particular variant, even from another day.',
             },
           ]}
         />
@@ -729,11 +1192,11 @@ function Generar() {
   );
 }
 
-function Evaluar() {
+function Evaluate() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Using it" title="Evaluate">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.evaluate")}>
         <p>
           The same commission solved by three different architectures and presented{" "}
           <strong>blind</strong>, so that you choose without knowing which is which. It is the
@@ -748,7 +1211,10 @@ function Evaluar() {
 
       <Facts
         items={[
-          { label: "How long it takes", value: "A couple of minutes per comparison." },
+          {
+            label: "What you are asked for",
+            value: "Reading three proposals, one question per card, and one choice.",
+          },
           {
             label: "What it produces",
             value: "A saved session with the three proposals and your judgement.",
@@ -762,21 +1228,26 @@ function Evaluar() {
           items={[
             {
               key: "asignadas",
-              head: "Assigned",
+              head: t("eval.tab.queue"),
               body: "What somebody has prepared for you. It is where the screen opens and where almost all your work will be. At the top, the next one not yet judged; below, the ones left and the ones you already closed.",
             },
             {
               key: "encargo",
-              head: "Your own commission",
-              body: "In case you want to ask for a particular exercise yourself. It is the same «Generate» form, without two controls: how many items, and whether the model reasons. If your account is a student's, this tab does not appear.",
+              head: t("eval.tab.compose"),
+              body: 'In case you want to ask for a particular exercise yourself. It is the same "Generate" form, without two controls: how many items, and whether the model reasons. If your account is a student\'s, this tab does not appear.',
             },
             {
               key: "sesiones",
-              head: "My sessions",
+              head: t("eval.tab.history"),
               body: "Your history. You can reread any closed session, reveal included.",
             },
           ]}
         />
+        <Paragraph>
+          While a comparison is open the tabs disappear, and so do the log and the technical
+          detail: they would say which architecture each proposal comes from before you have read
+          it. The button in the header takes you back to the list.
+        </Paragraph>
       </Block>
 
       <Block title="How a comparison goes">
@@ -800,6 +1271,10 @@ function Evaluar() {
               If you feel like it, you rate the system's one on four scales. It is{" "}
               <strong>optional</strong>: the comparison was already recorded when you chose.
             </>,
+            <>
+              Below it, "{t("eval.nextInQueue", { pending: "N" })}" jumps straight to the next
+              one not yet judged, without going through the list.
+            </>,
           ]}
         />
       </Block>
@@ -815,7 +1290,7 @@ function Evaluar() {
       <Block title="If it is not your area, say so">
         <Paragraph>
           At the bottom right there is a discreet link:{" "}
-          <strong>«I have no basis for judging this»</strong>. Evaluators come from different
+          <strong>"I have no basis for judging this"</strong>. Evaluators come from different
           subjects and different years, so running into an exercise that is not yours is normal
           and is not a failing of yours.
         </Paragraph>
@@ -856,6 +1331,12 @@ function Evaluar() {
           The colour appears <strong>only after the reveal</strong>. While the comparison is
           blind, a coloured card would be a card carrying information.
         </p>
+        <p>
+          Exactly what each one receives is written out, row by row, under the "
+          {t("eval.tab.compose")}" form: it is the "{t("fair.title")}" table, and it says who
+          sees the concepts, who the descriptions, who the bank's examples, who the
+          prerequisites. {t("fair.footnote")}
+        </p>
       </Detail>
 
       <Detail title="Why the order of the cards is different for each person">
@@ -887,15 +1368,17 @@ function Evaluar() {
   );
 }
 
-function Ejecucion() {
+function Runs() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Day to day" title="Following a run">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.runs")}>
         <p>
-          One GPU, one job at a time. You can close the tab: the job runs on the server and you
-          find it where it was when you come back. What is being done is watched from the{" "}
-          <strong>Panel</strong> and from the run drawer.
+          Jobs queue <strong>per engine</strong>: two that need the same one wait for each other,
+          while a local job and a remote one run at the same time because they contend for
+          nothing. You can close the tab: the job runs on the server and you find it where it was
+          when you come back. What is being done is watched from the{" "}
+          <strong>{t("nav.dashboard")}</strong> and from the run drawer.
         </p>
       </SectionHead>
 
@@ -904,29 +1387,34 @@ function Ejecucion() {
           No state is told apart by colour alone: each has its own shape, and that shape is the
           same on the bar at the top, on the panel's cards and in each stage's header.
         </Paragraph>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
-          {STATE_ORDER.map((key) => (
-            <div key={key} className="flex items-center gap-4 p-3">
-              <StatusMark
-                status={key === "blocked" ? "missing" : key}
-                blocked={key === "blocked"}
-                size="md"
-              />
-              <span className="w-32 shrink-0 text-body font-medium">{t(STATUS[key].labelKey)}</span>
-              <span className="text-small text-muted-foreground">{STATE_HINTS[key]}</span>
-            </div>
-          ))}
-        </div>
+        <Rows
+          items={STATE_ORDER.map((key) => ({
+            key,
+            head: (
+              <span className="flex items-center gap-3">
+                <StatusMark
+                  status={key === "blocked" ? "missing" : key}
+                  blocked={key === "blocked"}
+                  size="md"
+                />
+                {t(STATUS[key].labelKey)}
+              </span>
+            ),
+            body: STATE_HINTS[key],
+          }))}
+        />
       </Block>
 
       <Block title="The bar is the plan">
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <PhaseBar phases={BUILD_PLAN} percent={42} activeKey="clean" />
+          <BuildPlanBar />
           <Paragraph>
-            Each section is a phase, and its width is that phase's <em>measured weight</em>: that
-            is why cleaning and linking take up half the bar and the final curation is a hairline.
-            The one that moves is the one running. There is no time estimate anywhere, and that
-            is deliberate: changing model changes the cost of each call by multiples, and a false
+            This is the graph builder's real plan, read from the API and not copied out here.
+            Each section is a phase and its width is that phase's <em>measured weight</em>: which
+            is why transcribing the corpus takes up a third of the bar on its own, linking and
+            cleaning almost half of it between them, and the final curation is a hairline. The
+            one that moves is the one running. There is no time estimate anywhere, and that is
+            deliberate: changing model changes the cost of each call by multiples, and a false
             figure is worse than none.
           </Paragraph>
         </div>
@@ -936,25 +1424,50 @@ function Ejecucion() {
         <Rows
           items={[
             {
+              key: "panel",
+              head: <>"{t("dash.activity")}"</>,
+              body: 'The panel\'s card. It says which job of yours is running, how long it has been going and how it is doing, and offers to cancel it. When you have none but the machine is busy with another instance\'s, it says that too: "nothing running" would be false at exactly the moment whatever you launch is going to wait.',
+            },
+            {
               key: "ejecucion",
-              head: "«See run»",
+              head: <>"{t("shell.viewRun")}"</>,
               body: "The pill at the bottom right, always present. It opens the drawer on the progress tab: the steps, the phase and what is being written.",
             },
             {
               key: "registro",
-              head: "«Log»",
+              head: <>"{t("shell.log")}"</>,
               body: "Top right, with the session's line count. It is the same drawer, on the other tab.",
             },
           ]}
         />
+        <Paragraph>
+          With the engine split in two halves there can be <strong>two jobs running at once</strong>,
+          one on each. Every screen finds its own by the kind of job it launched, not by "the last
+          one that moved", which with two lanes no longer identifies anybody.
+        </Paragraph>
+      </Block>
+
+      <Block title="&quot;Queued&quot; is not &quot;running&quot;">
+        <Paragraph>
+          A job waiting its turn says so with "{t("queue.queuedAhead", { n: "N" })}" and{" "}
+          <strong>draws no progress bar</strong>: a bar over something that has not started
+          claims work is being done that nobody is doing. The same holds on the panel's card, in
+          the stage's header and on the button that launched it.
+        </Paragraph>
+        <Paragraph>
+          The number in brackets counts jobs, not minutes, and it only counts the ones on the{" "}
+          <em>same engine</em>: if yours is remote and what is running is local, you are behind
+          nothing at all. A queued commission is a commission made, so the form stays collapsed
+          and what you are offered is to cancel it, not to launch it again.
+        </Paragraph>
       </Block>
 
       <Alert tone="attention" title="Cancelling and rebuilding">
         <p>
           Cancelling does not cut off mid-call: it stops at the next safe point, so it can take a
           while. And a rebuild <em>hides</em> the artifact it is about to replace without
-          deleting it —the builder writes at the end— which is why cancelling brings it straight
-          back, untouched and with no restore step.
+          deleting it — the builder writes at the end — which is why cancelling brings it
+          straight back, untouched and with no restore step.
         </p>
       </Alert>
 
@@ -965,18 +1478,27 @@ function Ejecucion() {
           working: what is already built can always still be read, what fails is starting new
           jobs.
         </p>
+        <p>
+          That ribbon is <em>everything</em> the day to day says about the machine, and that is
+          deliberate: the engine's state, which models are loaded, how much VRAM they share and
+          the installation's whole queue are properties of the installation rather than of your
+          instance, so they live in "{t("admin.tab.engine")}", inside "{t("admin.title")}". What
+          appears here is only what is stopping you working.
+        </p>
       </Detail>
     </div>
   );
 }
 
-function Cuenta() {
+function Account() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Day to day" title="Your account and the installation">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.account")}>
         <p>
-          Everything that is yours and is not part of the chain lives in «My profile», behind the
-          avatar at the top right — the same menu you got here from.
+          Everything that is yours and is not part of the chain lives in "{t("account.title")}",
+          behind the avatar at the top right — the same menu you got here from, and where
+          "{t("menu.savedVariants")}" and "{t("admin.title")}" live too.
         </p>
       </SectionHead>
 
@@ -984,21 +1506,69 @@ function Cuenta() {
         items={[
           {
             key: "cuenta",
-            head: "Account",
-            body: "Your visible name, an optional email address and the password. The address is not used to sign in: only to receive the link to reset it.",
+            head: t("tabs.account"),
+            body: "Your visible name, an optional email address, the password, and the language you read the application in. The address is not used to sign in: only to receive the link to reset it.",
           },
           {
             key: "variantes",
-            head: "Variants",
-            body: "Everything you have generated, with the commission that produced it. «More like this one» is relaunched from here.",
+            head: t("tabs.variants"),
+            body: 'Everything you have generated, with the commission that produced it: it can be searched, narrowed to yours or widened to the whole workspace, relaunched as "more like this one", and deleted.',
           },
           {
             key: "accesos",
-            head: "Access",
+            head: t("tabs.access"),
             body: "Which workspaces you are in and with what role. It is read-only: access is granted by whoever administers.",
           },
         ]}
       />
+
+      <Block title="The interface language">
+        <Paragraph>
+          Three buttons on the "{t("tabs.account")}" tab: which language the screens, this guide and the
+          error messages are shown to you in. It is yours and nobody else's — not even whoever
+          administers touches it — and you can change it as often as you like with no
+          consequences: it translates nothing that is already written.
+        </Paragraph>
+        <Detail title="Three languages that are not the same one">
+          <Rows
+            items={[
+              {
+                key: "interfaz",
+                head: "The interface's",
+                body: "What YOU read. It lives on your account, changes whenever you want, and affects nothing else.",
+              },
+              {
+                key: "prompts",
+                head: "The prompts'",
+                body: "The one the MODEL IS SPOKEN TO in. It lives on the workspace, is chosen when the workspace is created and never after: the relation labels end up written inside the graph and the loader indexes by them.",
+              },
+              {
+                key: "material",
+                head: "The generated material's",
+                body: "The one the exercises are WRITTEN in. Nobody chooses it: it comes from the subject's context, which in turn comes from the corpus.",
+              },
+            ]}
+          />
+          <p>
+            They cross without trouble. You can read in English an instance whose prompts are
+            Spanish and which produces exercises in Spanish, and all three decisions stay
+            independent of one another.
+          </p>
+        </Detail>
+      </Block>
+
+      <Block title="A variant can go back into the bank">
+        <Paragraph>
+          In "{t("tabs.variants")}", every variant offers "{t("generations.promote")}":{" "}
+          {t("generations.promoteHint")}
+        </Paragraph>
+        <Paragraph>
+          It is how something that came out well stops being a loose result and becomes an
+          example the model imitates next time. What to keep in mind is the second half of that
+          sentence: the bank goes stale and has to be approved again, so it is worth promoting
+          several at once rather than one at a time.
+        </Paragraph>
+      </Block>
 
       <Block title="Two things that come as a surprise">
         <Alert tone="info" title="The username cannot be changed">
@@ -1021,8 +1591,8 @@ function Cuenta() {
           There is no open sign-up. An account exists because somebody passed you a{" "}
           <strong>single-use invitation link</strong> and you chose your username on opening it.
           That link <em>is</em> the invitation: it is not tied to any address, so do not leave it
-          in a shared place. On opening it you also choose your password —whichever you like, or
-          the one your manager suggests— and say whether you teach or study.
+          in a shared place. On opening it you also choose your password — whichever you like, or
+          the one your manager suggests — and say whether you teach or study.
         </Paragraph>
         <Paragraph>
           The invitation may already carry a workspace and a role inside it, or carry none: in
@@ -1039,29 +1609,26 @@ function Cuenta() {
         </Paragraph>
       </Block>
 
-      <Block title="Administration">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">administrators only</Badge>
-        </div>
+      <Block title={t("admin.title")}>
+        <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          The installation seen from outside, in five tabs: <strong>Evaluations</strong> (the
-          study), <strong>Accounts and access</strong> (invitations, roles, unlocks),{" "}
-          <strong>Workspaces</strong> (disk usage, export, delete), <strong>Engine</strong>{" "}
-          (resident models, downloads, the SSH tunnel to the GPU box) and{" "}
-          <strong>Settings</strong> (every setting, each with what it cost to measure it and with
-          what it will invalidate on saving).
+          The installation seen from outside, in five tabs: "{t("admin.tab.study")}" (the study),
+          "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
+          {t("admin.tab.workspaces")}" (disk usage, export, delete), "{t("admin.tab.engine")}"
+          and "{t("admin.tab.config")}" (every setting, each with what it cost to measure it and
+          with what it will invalidate on saving). It has a section of its own next door: "
+          {t("guide.sec.admin")}".
         </Paragraph>
       </Block>
 
       <Block title="Closing the installation while it is being worked on">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">administrators only</Badge>
-        </div>
+        <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          At the very top of Administration there is a <strong>maintenance</strong> switch.
-          Closed, every other account sees a notice screen instead of the application — with
-          whatever text is written there — and the API refuses their requests; whoever
-          administers still gets in, which is what makes it possible to open it again.
+          At the very top of "{t("admin.title")}", above the tabs rather than inside any of them,
+          there is a <strong>"{t("maint.title")}"</strong> switch. Closed, every other account
+          sees a notice screen instead of the application — with whatever text is written there —
+          and the API refuses their requests; whoever administers still gets in, which is what
+          makes it possible to open it again.
         </Paragraph>
         <Paragraph>
           It is for applying changes without leaving anybody halfway through: updating the
@@ -1074,10 +1641,231 @@ function Cuenta() {
   );
 }
 
-const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
+function Admin() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.admin")}>
+        <p>
+          The installation seen from outside: who exists, where each of them gets in, what the
+          instances weigh and what the machine is doing. It lives behind the avatar, under{" "}
+          <strong>"{t("admin.title")}"</strong>, and only whoever administers the installation
+          sees it.
+        </p>
+        <p>
+          There are five tabs. "{t("admin.tab.study")}" has a section of its own — "
+          {t("guide.sec.assign")}", right beside this one — and this covers the other four.
+        </p>
+      </SectionHead>
+
+      <Block title={t("admin.tab.accounts")}>
+        <Paragraph>
+          This is where it is decided who exists and where they get in.{" "}
+          <strong>There is no open sign-up</strong>, and that is a decision rather than a gap: an
+          account exists because somebody opened a single-use invitation link, or because it was
+          created from the command line. The link <em>is</em> the invitation and it is tied to no
+          address, so it is handed over by hand and not left in a shared place. Whoever opens it
+          chooses their username, their password, and whether they teach or study.
+        </Paragraph>
+        <Paragraph>
+          The invitation may already carry a workspace and a role inside it, or carry none.
+          Access is granted and revoked afterwards, account by account and workspace by
+          workspace, from this same table; there are three roles:
+        </Paragraph>
+        <Rows
+          items={[
+            { key: "viewer", head: t("role.viewer"), body: t("role.viewer.hint") },
+            { key: "editor", head: t("role.editor"), body: t("role.editor.hint") },
+            { key: "owner", head: t("role.owner"), body: t("role.owner.hint") },
+          ]}
+        />
+        <Paragraph>And beside the access, every row offers four more things:</Paragraph>
+        <Rows
+          items={[
+            {
+              key: "admin",
+              head: <>"{t("acc.makeAdmin")}"</>,
+              body: "Whoever administers gets into every workspace without being a member of any. It cannot be taken away from oneself: that is what stops the installation being left with nobody to administer it.",
+            },
+            {
+              key: "reset",
+              head: <>"{t("acc.resetLink")}"</>,
+              body: "The same link the \"I have forgotten my password\" mail would send, generated here so it can be handed over by hand. It lasts a few minutes and works once.",
+            },
+            {
+              key: "unlock",
+              head: <>"{t("acc.badge.locked")}"</>,
+              body: "After several failed attempts the rate limiter closes that account's login for a while. From here it is opened without waiting, and from here every open session of theirs can be closed too.",
+            },
+            {
+              key: "perfil",
+              head: <>"{t("acc.profileLabel")}"</>,
+              body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the study groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
+            },
+            {
+              key: "sesiones",
+              head: <>"{t("acc.seeSessions")}"</>,
+              body: 'Only if that account has evaluated anything: it jumps to "Evaluations" with the filter already set to them.',
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="Closing an account: two different things">
+        <Rows
+          items={[
+            {
+              key: "desactivar",
+              head: <>"{t("acc.deactivate")}"</>,
+              body: "Shuts the door without deleting anything. They can no longer get in and everything of theirs stays where it was, with their name on it. It is what you do when somebody stops taking part.",
+            },
+            {
+              key: "eliminar",
+              head: <>"{t("common.delete")}"</>,
+              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated variants and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the study does not lose the comparisons it counted.",
+            },
+          ]}
+        />
+        <Paragraph>
+          Neither is offered on your own row, and neither is "{t("acc.makeAdmin")}": that is what
+          keeps the installation from being left with nobody to administer it.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("admin.tab.workspaces")}>
+        <Paragraph>
+          Every instance of the installation with its members, its variants and the state of its
+          chain. What each one weighs is broken down by role — {t("ws.disk.raw")},{" "}
+          {t("ws.disk.instance")}, {t("ws.disk.cache")} and {t("ws.disk.history")} — which is the
+          only way to see that the expensive part is almost never the artifacts.
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "cache",
+              head: "Empty the cache",
+              body: "It deletes only the vectors and the converted markdown, which the next job recomputes. The concept descriptions and the corpus anchoring stay: the model wrote them against the corpus and they cost a long pass.",
+            },
+            {
+              key: "export",
+              head: "Export",
+              body: "Downloads the instance exactly as the files have it — artifacts, context, approvals and curriculum — in a single JSON.",
+            },
+            {
+              key: "borrar",
+              head: "Delete",
+              body: "Deleting a workspace from here takes its directory tree off the disk too, the raw documents included. The dialog enumerates what disappears, and the instance's identifier has to be typed to confirm. It is not offered on the last workspace left.",
+            },
+          ]}
+        />
+        <Paragraph>
+          <strong>Emptying one particular stage</strong> is done from its own badge in the chain
+          column: press the stage's badge and confirm. It does not touch the history, so if you
+          get it wrong it is restored from the artifact's own screen.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("admin.tab.engine")}>
+        <Paragraph>
+          It is one engine with as many halves as the engine has. With a single one it is a panel
+          about one machine and carries no headings at all: "{t("eng.half.local")}" with no "
+          {t("eng.half.remote")}" beside it divides nothing. With the engine split, three ruled
+          sections appear.
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "local",
+              head: t("eng.half.local"),
+              body: (
+                <>
+                  {t("eng.half.localNote")}. The SSH tunnel to the GPU machine, raised and
+                  stopped from here and keeping ssh's last lines of error; the resident models
+                  and how they share the VRAM; and the ones on disk, with their downloads.
+                </>
+              ),
+            },
+            {
+              key: "remote",
+              head: t("eng.half.remote"),
+              body: (
+                <>
+                  {t("eng.half.remoteNote")}: meters per minute and per day, and under them the
+                  breakdown of what was spent per phase, which downloads as CSV.
+                </>
+              ),
+            },
+            {
+              key: "process",
+              head: t("eng.half.process"),
+              body: (
+                <>
+                  {t("eng.half.processNote")}. The installation's whole queue, across every
+                  workspace: what is running, what is waiting, and whose each one is.
+                </>
+              ),
+            },
+          ]}
+        />
+        <Detail title="Three things the panel refuses to do">
+          <p>
+            <strong>Delete a model the configuration names.</strong> It tells you which settings
+            ask for it: change those first.
+          </p>
+          <p>
+            <strong>Put a download in the queue.</strong> Pulling a model is network and disk,
+            never the GPU, so it runs beside the queue rather than behind a two-hour build.
+          </p>
+          <p>
+            <strong>Release the GPU or invalidate a context while a job is running.</strong> That
+            would be pulling the weights out from under something that is working.
+          </p>
+        </Detail>
+      </Block>
+
+      <Block title={t("admin.tab.config")}>
+        <Paragraph>
+          Every setting of the installation, each one with the measurement that justifies it
+          beside it, laid out in sections with their own index and their own <strong>search
+          box</strong> — which is what makes a setting findable when you only remember half a
+          word of it.
+        </Paragraph>
+        <Paragraph>
+          Each row says where its value comes from — "{t("cfg.source.default")}", "
+          {t("cfg.source.file")}" or "{t("cfg.source.env")}" — and what the environment fixes
+          always wins: there the control is shown disabled and says what fixes it, rather than
+          letting you edit something that is about to be overwritten. Only a row that is "
+          {t("cfg.source.file")}" and actually differs from the factory value offers to go back
+          to it.
+        </Paragraph>
+        <Paragraph>
+          What makes this screen useful is that it{" "}
+          <strong>says what it is going to invalidate before you save</strong>, not twenty
+          minutes afterwards. Touching a model's context window forces the warm contexts to be
+          rebuilt; touching the embedding model re-embeds the whole concept index; touching the
+          engine restarts the connection. The warnings appear under "{t("cfg.beforeSaving")}",
+          beside the list of pending changes.
+        </Paragraph>
+        <Paragraph>
+          Reasoning is not a global switch but a <strong>per-phase</strong> one, and it is drawn
+          as what it is: four columns read top to bottom — the three builds and generation — each
+          stop a call to the model. Under the stop's name, which model serves it; the circle says
+          whether it deliberates before answering and, while it does, the selector beside it sets
+          how much. Three stops carry no switch and say so with a dashed circle: the guardrail
+          because its model does not reason, the variant because each commission decides that,
+          and the repair because it runs under a grammar and a grammar leaves no room to reason.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
+const problems = (
+  t: Translate["t"],
+): { key: string; question: string; answer: ReactNode }[] => [
   {
     key: "mantenimiento",
-    question: "«Under maintenance»",
+    question: `"${t("maintenance.title")}"`,
     answer: (
       <>
         <p>
@@ -1086,15 +1874,16 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
           variants and evaluations read exactly the same when it opens again.
         </p>
         <p>
-          There is no expected time of return, and there is none because nobody knows it. «Check
-          again» asks once more; the screen also does it by itself every few seconds.
+          There is no expected time of return, and there is none because nobody knows it. "
+          {t("maintenance.checkAgain")}" asks once more; the screen also does it by itself every
+          few seconds.
         </p>
       </>
     ),
   },
   {
     key: "ollama",
-    question: "«Ollama does not answer on …»",
+    question: '"Ollama does not answer on …"',
     answer: (
       <>
         <p>
@@ -1110,8 +1899,36 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
     ),
   },
   {
+    key: "cerebras",
+    question: `"${t("cere.refusing")}"`,
+    answer: (
+      <>
+        <p>
+          Not a failure either. The remote engine works under two quotas — one per minute and one
+          per day — and the notice says which one ran out and how long until it frees up. The
+          minute waits itself out with nothing for you to do; the day does not, because leaving a
+          job hanging for hours with no explanation is worse than refusing it.
+        </p>
+        <p>
+          There are three ways forward: wait, switch the engine to "ollama" from Administration →
+          Engine, or raise the ceiling in "Settings" if the account really does allow more.
+        </p>
+        <p>
+          There is a third case that is not about a spent quota but about size: a call needing
+          more tokens than the whole window holds is refused at once, because no amount of
+          waiting makes it fit.
+        </p>
+        <p>
+          What it <strong>does not</strong> do is fall back to the local engine on its own. That
+          would silently change which engine produced an artifact, and that has to be something
+          one can state.
+        </p>
+      </>
+    ),
+  },
+  {
     key: "modelo",
-    question: "A model shows as «not installed»",
+    question: `A model shows as "${t("model.notInstalled")}"`,
     answer: (
       <p>
         Only the jobs that use that model fail; the rest of the chain works. It is downloaded
@@ -1122,7 +1939,7 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
   },
   {
     key: "obsoleto",
-    question: "A stage says «Stale»",
+    question: `A stage says "${t(STATUS.stale.labelKey)}"`,
     answer: (
       <p>
         Something it depends on changed after you approved it. Open the stage: either rebuild
@@ -1133,24 +1950,54 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
   },
   {
     key: "bloqueado",
-    question: "A stage says «Blocked»",
+    question: `A stage says "${t(STATUS.blocked.labelKey)}"`,
     answer: (
       <p>
-        It is not «it is not done», it is «it is not your turn yet»: something it depends on is
+        It is not "it is not done", it is "it is not your turn yet": something it depends on is
         unapproved. The screen itself says which, with a link.
       </p>
+    ),
+  },
+  {
+    key: "aprobada",
+    question: "An approved stage will not let me change anything",
+    answer: (
+      <>
+        <p>
+          That is what approving means. What gets approved is the file exactly as it stands, so
+          while the stage is closed the screen offers no control that rewrites it: the fields are
+          visible, but read-only.
+        </p>
+        <p>
+          The way back is the "{t("stage.reopen")}" button in the header, with the notice
+          underneath saying it in as many words: "{t("stage.locked")}". Reopening removes the
+          approval and nothing else — it deletes nothing, it rebuilds nothing — and approving
+          again costs one click.
+        </p>
+        <p>
+          Two things keep working with the stage approved, because they do not touch the
+          artifact: the concept descriptions and the curriculum.
+        </p>
+      </>
     ),
   },
   {
     key: "boton",
     question: "The build button is off",
     answer: (
-      <p>
-        Hover over it: it says why. There are only four reasons — raw material is missing, a job
-        is already running, the engine does not answer, or the previous stage is not approved. If
-        it is the first, the link on the notice itself takes you to the Panel to upload the
-        material.
-      </p>
+      <>
+        <p>
+          Hover over it: it says why. There are five reasons, checked in this order — your
+          permission on the instance is read-only; the previous stage is not approved; the raw
+          slot has no documents in it; the engine does not answer; or this same build is already
+          queued. If it is the one about material, the link on the notice itself takes you to
+          upload it.
+        </p>
+        <p>
+          Another job running is not a reason: the build queues behind it, and the button says
+          how many it goes behind.
+        </p>
+      </>
     ),
   },
   {
@@ -1158,9 +2005,9 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
     question: "There are bank items with no concept at all",
     answer: (
       <p>
-        That is normal on the first pass. Use «Re-tag the N»: it runs only over those, never over
-        the whole bank. And repeating makes sense, because the index improves with every
-        well-tagged item. If one keeps resisting, set its concept by hand.
+        That is normal on the first pass. Use "{t("bank.retagUntagged", { n: "N" })}": it runs
+        only over those, never over the whole bank. And repeating makes sense, because the index
+        improves with every well-tagged item. If one keeps resisting, set its concept by hand.
       </p>
     ),
   },
@@ -1180,18 +2027,19 @@ const PROBLEMS: { key: string; question: string; answer: ReactNode }[] = [
     question: "It has been hours and I do not know if it is progressing",
     answer: (
       <p>
-        Building the graph takes hours: it is the most expensive job in the chain. The phase bar
-        says which one it is on and the section that moves is the one running; the run drawer
-        shows the particular step. You can close the tab and come back later.
+        Building the graph is the most expensive job in the chain. The phase bar says which one
+        it is on and the section that moves is the one running; the run drawer shows the
+        particular step. You can close the tab and come back later.
       </p>
     ),
   },
 ];
 
-function Repartir() {
+function Assign() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Day to day" title="Handing out evaluations">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.assign")}>
         <p>
           How the work evaluators find already done gets prepared. It lives in{" "}
           <strong>Administration → Evaluations</strong> and only whoever administers the
@@ -1200,8 +2048,8 @@ function Repartir() {
         <p>
           The idea behind it: <strong>whoever hands out decides who is able to judge what</strong>
           . With evaluators from different subjects and different years there is no automatic
-          rule that can hand out well, because the information needed —who teaches what— is in no
-          table.
+          rule that can hand out well, because the information needed — who teaches what — is in
+          no table.
         </p>
       </SectionHead>
 
@@ -1209,17 +2057,24 @@ function Repartir() {
         <Steps
           items={[
             <>
-              <strong>To whom?</strong> You choose the person first, not the comparison. That way
-              «can they judge this?» is the first question and not one asked at the end.
+              <strong>{t("sets.step1")}</strong> You choose the person first, not the comparison.
+              That way "can they judge this?" is the first question and not one asked at the end.
+              There is a search box — "{t("sets.searchAccounts")}" — that ignores accents and
+              case, and each candidate comes with their evaluator profile and how many workspaces
+              they are in.
             </>,
             <>
-              <strong>In which of their workspaces?</strong> Only the ones that person can really
-              open show up. Assigning them something from a subject they have no access to would
-              put an entry in their queue that errors when pressed.
+              <strong>{t("sets.step2")}</strong> Only the ones that person can really open show
+              up. Assigning them something from a subject they have no access to would put an
+              entry in their queue that errors when pressed. The ones whose chain is not approved
+              yet are shown but cannot be chosen, and say underneath exactly what is left to
+              approve. If that account is in no workspace at all, the step says so and sends you
+              to grant one first.
             </>,
             <>
-              <strong>Which ones?</strong> You tick the comparisons that are theirs and assign
-              them. The ones you do not hand out <strong>stay stored</strong> for somebody else.
+              <strong>{t("sets.step3")}</strong> You tick the comparisons that are theirs and
+              assign them. The ones you do not hand out <strong>stay stored</strong> for somebody
+              else.
             </>,
           ]}
         />
@@ -1227,7 +2082,7 @@ function Repartir() {
 
       <Block title="Preparing comparisons in advance">
         <Paragraph>
-          On the third step, «Commission more comparisons» opens the same «Generate» form and
+          On the third step, "Commission more comparisons" opens the same "Generate" form and
           prepares several in one go. They are done one after another in the queue, and appear in
           the list as they finish.
         </Paragraph>
@@ -1237,12 +2092,12 @@ function Repartir() {
           <strong>spread the commissions across domains and exercise types deliberately</strong>{" "}
           instead of letting each evaluator ask for their two favourite concepts.
         </Paragraph>
-        <Alert tone="attention" title="To commission, you have to have that workspace open">
+        <Alert tone="info" title="It commissions in the step 2 workspace, not in the one you have open">
           <p>
-            The form reads the graph and the concepts of the workspace you have active at the very
-            top. If it does not match the one chosen in step 2, the button is disabled on purpose:
-            composing a commission with one subject's concepts to run it in another would not end
-            well. Handing out what already exists does work from anywhere.
+            The form reads the graph, the profile and the concepts of the subject you chose there,
+            whether or not it is the one you have open at the very top. All it needs is that
+            subject to have its chain approved; the ones still missing a step cannot be chosen in
+            step 2, and say right there what is left to approve.
           </p>
         </Alert>
       </Block>
@@ -1255,13 +2110,15 @@ function Repartir() {
           be built on purpose.
         </Paragraph>
         <Paragraph>
-          Each person gets the <strong>same exercises in an order of their own</strong>, so that
-          what they share is the judgement and not the position of the cards.
+          Each person gets the <strong>same exercises in an order of their own</strong> — the
+          panel says so on the spot as you tick — so that what they share is the judgement and
+          not the position of the cards.
         </Paragraph>
         <Paragraph>
-          There is also a tick-box to repeat a comparison for somebody who has already judged it.
-          That measures something else —whether a person is consistent with themselves— and that
-          is why it has to be asked for explicitly.
+          What you <em>cannot</em> do from here is hand somebody back a comparison they already
+          have: that row is dimmed and stamped "{t("sets.alreadyHas")}", and its tick-box will
+          not take a click. Handing the same evaluator more of the same would duplicate a measure
+          without meaning to, and the panel would rather not offer it.
         </Paragraph>
       </Block>
 
@@ -1276,8 +2133,8 @@ function Repartir() {
         <Paragraph>
           Each person says so when creating their account from the invitation: the link does not
           carry it, because whoever invites has no reason to know and a question in the middle of
-          a comparison gets answered any old way. It is corrected afterwards from «Accounts and
-          access», and that is also where an account created from the command line is given a
+          a comparison gets answered any old way. It is corrected afterwards from "Accounts and
+          access", and that is also where an account created from the command line is given a
           profile. Accounts with no profile are flagged so they do not stay that way: meanwhile
           they get the teacher's questions.
         </Paragraph>
@@ -1311,10 +2168,11 @@ function Repartir() {
   );
 }
 
-function Problemas() {
+function Troubleshooting() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow="Day to day" title="When something goes wrong">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.troubleshooting")}>
         <p>
           Almost nothing that appears here breaks anything: what is already built can always
           still be read. What fails is starting new work.
@@ -1322,7 +2180,7 @@ function Problemas() {
       </SectionHead>
 
       <div className="space-y-2">
-        {PROBLEMS.map((problem) => (
+        {problems(t).map((problem) => (
           <Detail key={problem.key} title={problem.question}>
             {problem.answer}
           </Detail>
@@ -1332,8 +2190,10 @@ function Problemas() {
       <Alert tone="info" title="General rule: hover over whatever is switched off">
         <p>
           No disabled control stays silent in this application. The build button decides in one
-          single place every reason not to offer itself —material missing, a job running, the
-          engine not answering, the previous stage unapproved— and says them in its own tooltip.
+          single place every reason not to offer itself — read-only permission, the previous
+          stage unapproved, the raw slot empty, the engine not answering, that same build already
+          queued — and says them in its own tooltip. Another job running is not on the list: that
+          resolves itself by waiting your turn, and the button does the counting.
         </p>
       </Alert>
     </div>
@@ -1341,15 +2201,17 @@ function Problemas() {
 }
 
 export const BODIES: Record<string, () => ReactNode> = {
-  empezar: Empezar,
+  start: Start,
   workspace: Workspace,
-  perfil: Perfil,
-  grafo: Grafo,
-  banco: Banco,
-  generar: Generar,
-  evaluar: Evaluar,
-  ejecucion: Ejecucion,
-  cuenta: Cuenta,
-  repartir: Repartir,
-  problemas: Problemas,
+  raw: Raw,
+  profile: Profile,
+  graph: Graph,
+  bank: Bank,
+  generate: Generate,
+  evaluate: Evaluate,
+  runs: Runs,
+  account: Account,
+  admin: Admin,
+  assign: Assign,
+  troubleshooting: Troubleshooting,
 };

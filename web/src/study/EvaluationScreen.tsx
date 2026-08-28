@@ -2,6 +2,7 @@ import { Ban, Clock, EyeOff, Lock, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, type FormState } from "@/features/run/commission";
@@ -123,7 +124,9 @@ function Running({
               <span className="flex size-8 items-center justify-center rounded-lg bg-muted font-mono text-heading text-muted-foreground">
                 {letterFor(position)}
               </span>
-              <span className="text-body text-muted-foreground">Propuesta {letterFor(position)}</span>
+              <span className="text-body text-muted-foreground">
+                {t("grid.proposal", { letter: letterFor(position) })}
+              </span>
             </div>
             <div className="flex-1 space-y-2 p-3">
               <Skeleton className="h-3 w-full" />
@@ -249,8 +252,9 @@ export function EvaluationScreen() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("eval.title")}</h1>
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <h1 className="w-full font-display font-expanded text-display">{t("eval.title")}</h1>
+        <GuideLink slug="evaluate" />
         <InfoHint label={t("eval.whatFor")}>{t("eval.whatFor.body")}</InfoHint>
         {showComparison ? (
           <Button variant="outline" size="sm" className="ml-auto" onClick={closeSession}>

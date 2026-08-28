@@ -1,21 +1,16 @@
 import { ArrowRight, ChevronDown, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/misc";
+import { Separator, Skeleton } from "@/components/ui/misc";
 import { Link } from "@/lib/router";
+import { fold } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
 import { GUIDE_SECTIONS, useGuideBody, type GuideSection } from "./sections";
 
-const fold = (text: string) =>
-  Array.from(text.normalize("NFD"))
-    .filter((glyph) => glyph.charCodeAt(0) < 0x300 || glyph.charCodeAt(0) > 0x36f)
-    .join("")
-    .toLowerCase();
-
-function grouped(sections: GuideSection[]): { key: Key; sections: GuideSection[] }[] {
+function grouped(sections: readonly GuideSection[]): { key: Key; sections: GuideSection[] }[] {
   const groups: { key: Key; sections: GuideSection[] }[] = [];
   for (const section of sections) {
     const last = groups[groups.length - 1];
@@ -108,7 +103,7 @@ export function GuideScreen({ slug }: { slug: string }) {
                 return (
                   <Link
                     key={section.slug}
-                    to={`/guia/${section.slug}`}
+                    to={`/guide/${section.slug}`}
                     aria-current={on ? "page" : undefined}
                     onClick={() => setNavOpen(false)}
                     className={cn(
@@ -132,13 +127,19 @@ export function GuideScreen({ slug }: { slug: string }) {
         </nav>
 
         <div className="min-w-0 space-y-6">
-          <Body />
+          {/* The boundary goes HERE and not around the screen. `App` already wraps every
+              route in one, but that one would replace the whole page — nav, search and
+              all — while a prose tree loads, which reads as having navigated away rather
+              than as a section arriving. */}
+          <Suspense fallback={<Skeleton className="h-96" />}>
+            <Body />
+          </Suspense>
 
           {next ? (
             <>
               <Separator />
               <Link
-                to={`/guia/${next.slug}`}
+                to={`/guide/${next.slug}`}
                 className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
               >
                 <span>

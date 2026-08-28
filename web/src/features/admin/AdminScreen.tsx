@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
+import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -18,6 +19,7 @@ import { EngineTab } from "./EngineTab";
 import { MaintenanceSwitch } from "./MaintenanceSwitch";
 import { WorkspacesTab } from "./WorkspacesTab";
 import { useT } from "@/lib/i18n";
+import { jobName } from "@/lib/names";
 
 /**
  * The installation seen from outside: five tabs, one per thing an administrator runs.
@@ -50,9 +52,12 @@ export function AdminScreen() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("admin.title")}</h1>
-        <InfoHint label={t("admin.whatIsThis")}>{t("admin.whatIsThis.body")}</InfoHint>
+      <header className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display font-expanded text-display">{t("admin.title")}</h1>
+          <InfoHint label={t("admin.whatIsThis")}>{t("admin.whatIsThis.body")}</InfoHint>
+        </div>
+        <GuideLink slug="admin" />
       </header>
 
       <MaintenanceSwitch />
@@ -126,7 +131,7 @@ function Totals({ overview }: { overview: AdminOverview }) {
         hint={
           engine.busy
             ? t("admin.stat.busyHint", {
-                label: engine.job?.label ?? t("admin.stat.job"),
+                label: engine.job ? jobName(engine.job.kind, t, engine.job.label) : t("admin.stat.job"),
                 n: engine.queued,
               })
             : plural("admin.warmContexts", engine.warm_contexts.length)

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { isQueued, waitOf, waitReason } from "@/lib/queue";
@@ -208,11 +209,14 @@ export function GenerateScreen() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("generate.title")}</h1>
-        <InfoHint label={t("generate.howItWorks")}>
-          {t("generate.howItWorks.body")}
-        </InfoHint>
+      <header className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display font-expanded text-display">{t("generate.title")}</h1>
+          <InfoHint label={t("generate.howItWorks")}>
+            {t("generate.howItWorks.body")}
+          </InfoHint>
+        </div>
+        <GuideLink slug="generate" />
       </header>
 
       {/* Without an engine nothing is generated: the server refuses with a 503 and the whole form
@@ -432,7 +436,7 @@ function Results({
       {savedCount > 0 ? (
         <p className="text-small text-muted-foreground">
           {plural("generate.savedNotice", savedCount)}{" "}
-          <Link to="/perfil/variantes" className="text-primary underline-offset-4 hover:underline">
+          <Link to="/account/variants" className="text-primary underline-offset-4 hover:underline">
             {t("menu.savedVariants")}
           </Link>
           .
