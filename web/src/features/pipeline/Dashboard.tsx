@@ -1,37 +1,23 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Activity,
-  ArrowRight,
-  Ban,
-  CircleAlert,
-  CircleCheck,
-  Cpu,
-  Hourglass,
-  Lock,
-  Pencil,
-  Server,
-  WifiOff,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, ArrowRight, Ban, Hourglass, Lock, Pencil, WifiOff } from "lucide-react";
+import { useMemo } from "react";
 
 import { BuildButton } from "@/components/BuildButton";
+import { GuideLink } from "@/components/GuideLink";
 import { BuildProgress } from "@/components/BuildProgress";
 import { useActiveRun } from "@/components/RunDrawer";
 import { StageBadge } from "@/components/StageGate";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, PhaseBar, Progress, Separator, Skeleton, Spinner } from "@/components/ui/misc";
-import { RawSection } from "@/features/raw/RawSection";
-import { api } from "@/lib/api";
+import { Alert, PhaseBar, Progress, Skeleton } from "@/components/ui/misc";
 import { JOB_EXPLAIN } from "@/lib/explain";
-import { ENGINE_LABEL, JOB_STATUS, bytes, duration, when } from "@/lib/format";
+import { JOB_STATUS, duration, when } from "@/lib/format";
 import { isQueued } from "@/lib/queue";
 import { Link, useRouter } from "@/lib/router";
-import type { Health, StageState } from "@/lib/types";
+import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+import { useTranscriptionSummary } from "@/features/raw/queries";
 
 import { ContextCard } from "./ContextCard";
 import {
@@ -39,19 +25,17 @@ import {
   useBuildPhases,
   useCancelJob,
   useElapsed,
-  useHealth,
-  useInvalidateChain,
-  useJobRunning,
-  keys,
   usePipeline,
+  useRaw,
   useStream,
 } from "@/state/queries";
 import { useT, type Key } from "@/lib/i18n";
+import { artifactName, jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 
 const SCREEN: Record<string, string> = {
-  exemplars_profile: "/preparar/perfil",
-  knowledge_graph: "/preparar/grafo",
-  exemplars_bank: "/preparar/banco",
+  exemplars_profile: "/prepare/profile",
+  knowledge_graph: "/prepare/graph",
+  exemplars_bank: "/prepare/bank",
 };
 
 const EXPLAIN: Record<string, Key> = {
@@ -88,8 +72,8 @@ function StageCard({ stage }: { stage: StageState }) {
             circle also turned green, so it was a third drawing of the same fact. */}
         <div className="flex items-center gap-2">
           <div className="flex flex-1 items-center gap-1.5">
-            <CardTitle>{stage.label}</CardTitle>
-            <InfoHint label={t("stage.whatIs", { title: stage.label })}>
+            <CardTitle>{artifactName(stage.artifact, t, stage.label)}</CardTitle>
+            <InfoHint label={t("stage.whatIs", { title: artifactName(stage.artifact, t, stage.label) })}>
               {t(EXPLAIN[stage.artifact])}
             </InfoHint>
           </div>
@@ -143,181 +127,23 @@ function StageCard({ stage }: { stage: StageState }) {
   );
 }
 
-/** `PHASE_LLM` → "Phase": the config constant is what asks for the model, but the tail
- *  of its name is noise once they are grouped under the model they all point at. */
-function settingLabel(name: string): string {
-  const stem = name.replace(/_(LLM|MODEL)$/, "").replace(/_/g, " ").toLowerCase();
-  return stem.charAt(0).toUpperCase() + stem.slice(1);
-}
-
 /**
- * Which models the engine has loaded NOW, not how many constants name them.
- *
- * This row used to count the distinct models that appear in `config.py`, and that measures
- * the configuration file, not the machine: a named constant is not a loaded model, and with
- * all of them pointing at the same value the number was almost always the same whatever the
- * GPU said. What does answer «what is this using» is `/api/ps`: what is resident, how much
- * VRAM it takes and until when — the only honest reading of residency from here, because the
- * server does not run on the GPU machine.
- *
- * The ones the instance *asks for* stay reachable by opening the list, because that is where
- * one sees whether one is not installed and which phase would go without it.
- */
-function ModelsRow({ models }: { models: Health["models"] }) {
-  const { t, plural } = useT();
-  const [open, setOpen] = useState(false);
-
-  const resident = useMemo(
-    () => [...models.running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0)),
-    [models.running],
-  );
-  const vram = resident.reduce((sum, entry) => sum + (entry.size_vram ?? 0), 0);
-
-  const required = useMemo(() => {
-    const byModel = new Map<string, string[]>();
-    for (const [setting, model] of Object.entries(models.required)) {
-      if (!byModel.has(model)) byModel.set(model, []);
-      byModel.get(model)!.push(setting);
-    }
-    return [...byModel.entries()]
-      .map(([model, settings]) => ({
-        model,
-        settings: settings.sort(),
-        missing: models.missing.includes(model),
-        remote: (models.remote ?? []).includes(model),
-        loaded: resident.some((entry) => entry.model === model),
-      }))
-      .sort((a, b) => b.settings.length - a.settings.length || a.model.localeCompare(b.model));
-  }, [models, resident]);
-
-  return (
-    <>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-muted-foreground">{t("dash.modelsLoaded")}</span>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          title={t("dash.modelsHint")}
-          className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {models.missing.length > 0 ? (
-            <Badge variant="danger" className="cursor-pointer hover:opacity-85">
-              {plural("dash.modelsMissing", models.missing.length)}
-            </Badge>
-          ) : resident.length === 0 ? (
-            <Badge variant="outline" className="cursor-pointer hover:opacity-85">
-              {t("dash.noneResident")}
-            </Badge>
-          ) : (
-            <Badge variant="settled" className="cursor-pointer hover:opacity-85">
-              {resident.length} · {bytes(vram)}
-            </Badge>
-          )}
-        </button>
-      </div>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("dash.modelsTitle")}
-        description={t("dash.modelsDescription")}
-        className="max-w-2xl"
-      >
-        <div className="space-y-4">
-          <section className="space-y-2">
-            <h3 className="text-micro font-condensed uppercase text-muted-foreground">
-              {t("dash.inMemoryNow", { n: resident.length })}
-            </h3>
-            {resident.length === 0 ? (
-              <p className="text-body text-muted-foreground">
-                {t("dash.noModelLoaded")}
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {resident.map((entry) => (
-                  <li key={entry.model} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code className="font-mono text-body">{entry.model}</code>
-                      <span className="ml-auto text-micro nums text-muted-foreground">
-                        {entry.size_vram
-                          ? t("dash.inVram", { size: bytes(entry.size_vram) })
-                          : t("dash.noVram")}
-                      </span>
-                    </div>
-                    <p className="mt-1 flex flex-wrap gap-x-3 text-small text-muted-foreground">
-                      {entry.context_length ? (
-                        <span className="nums">
-                          {t("dash.context", { n: entry.context_length.toLocaleString() })}
-                        </span>
-                      ) : null}
-                      {entry.expires_at ? (
-                        <span>{t("dash.residentUntil", { when: when(entry.expires_at) })}</span>
-                      ) : null}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {vram > 0 ? (
-              <p className="text-small nums text-muted-foreground">
-                {t("dash.vramTotal", { size: bytes(vram) })}
-              </p>
-            ) : null}
-          </section>
-
-          <section className="space-y-2 border-t border-border pt-3">
-            <h3 className="text-micro font-condensed uppercase text-muted-foreground">
-              {t("dash.requiredBy", { n: required.length })}
-            </h3>
-            <ul className="space-y-2">
-              {required.map(({ model, settings, missing, remote, loaded }) => (
-                <li key={model} className="rounded-lg border border-border p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-mono text-body">{model}</code>
-                    {remote ? (
-                      <Badge variant="outline">{t("model.remote")}</Badge>
-                    ) : missing ? (
-                      <Badge variant="danger">{t("model.notInstalled")}</Badge>
-                    ) : loaded ? (
-                      <Badge variant="settled">{t("model.loaded")}</Badge>
-                    ) : (
-                      <Badge variant="outline">{t("model.onDisk")}</Badge>
-                    )}
-                    <span className="ml-auto text-micro nums text-muted-foreground">
-                      {plural("dash.phases", settings.length)}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {settings.map((setting) => (
-                      <Badge key={setting} variant="secondary" title={setting}>
-                        {settingLabel(setting)}
-                      </Badge>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </Dialog>
-    </>
-  );
-}
-
-/**
- * What is running, under the machine that runs it.
+ * WHAT IS RUNNING. Not what it is running ON.
  *
  * It speaks of *any* job, not of the mode that launched it: building, indexing, tagging,
- * generating and evaluating come out of the same stream and read the same. The step by step
- * stays in the run drawer; this only answers «what is running, how long has it been, and can
- * I stop it».
+ * transcribing, generating and evaluating come out of the same stream and read the same.
+ * The step by step stays in the run drawer; this only answers «what is running, how long
+ * has it been, and can I stop it».
  *
- * Idle, that is one line — which is the whole reason it stopped being a card of its own. A
- * heading, a border and an (i) around «Nada en ejecución» is a box built for the exception,
- * and the exception brings its own bar, its own numbers and its own cancel button when it
- * arrives.
+ * It shared a card with «Sistema» until now — the engine, the resident models, their VRAM
+ * and a warm-up button. That block is GONE from the panel, and not merely folded: every
+ * line of it is a property of the installation rather than of this instance, and all of it
+ * is already in «Administración → Motor», where it is drawn against the quota and the
+ * tunnel that give it meaning. What the panel actually needed from it survives in two
+ * places that cost no card at all — the header's own strip already says when the engine
+ * does not answer or a model is missing, which is the only reading anybody acted on.
  */
-function ActivityBlock() {
+function ActivityCard() {
   const { t, plural } = useT();
   const run = useActiveRun();
   const stream = useStream();
@@ -336,15 +162,15 @@ function ActivityBlock() {
   const phases = useBuildPhases(run?.job?.artifact ?? undefined);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-1.5">
-        <Activity className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="text-micro font-condensed uppercase text-muted-foreground">
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="size-4 shrink-0 text-muted-foreground" />
           {t("dash.activity")}
-        </span>
-        <InfoHint label={t("dash.whatIsHere")}>{t("dash.activityBody")}</InfoHint>
-      </div>
-
+          <InfoHint label={t("dash.whatIsHere")}>{t("dash.activityBody")}</InfoHint>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-body">
       {stream.connected ? null : (
         <p className="flex items-center gap-1.5 text-small text-attention">
           <WifiOff className="size-3.5 shrink-0" />
@@ -378,7 +204,7 @@ function ActivityBlock() {
                 )}
               />
             </span>
-            <span className="font-medium">{run.job.label}</span>
+            <span className="font-medium">{jobName(run.job.kind, t, run.job.label)}</span>
           </div>
 
           {/* The explanation goes as text and not behind an (i): it was in both places at once, and
@@ -410,7 +236,14 @@ function ActivityBlock() {
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="min-w-0 truncate text-small">
-                  {overall?.label ?? step?.label ?? t("progress.preparing")}
+                  {/* The running phase, or the running step when there is no plan: both
+                      arrive with the API's own sentence, and a phase key only means
+                      something inside the plan it belongs to. */}
+                  {(overall?.label
+                    ? phaseName(phasePlan(run?.job), overall.key, t, overall.label)
+                    : null) ??
+                    (step ? stepName(step.id, t, step.label) : null) ??
+                    t("progress.preparing")}
                 </span>
                 <span className="shrink-0 text-small font-medium nums">
                   {overall
@@ -454,109 +287,16 @@ function ActivityBlock() {
           ) : null}
         </>
       )}
-    </div>
-  );
-}
-
-/**
- * ONE CARD FOR THE MACHINE AND FOR WHAT IT IS DOING WITH IT.
- *
- * «Sistema» and «Actividad» were two cards asking one question — is the thing that does the
- * work available, and is it working — and the split cost a heading, a border and an (i) to
- * say «Nada en ejecución», which is what the panel says most of the time. Together they are
- * four lines at rest and one card with a bar while a job runs.
- */
-function MachineCard() {
-  const { t } = useT();
-  const health = useHealth();
-  const invalidate = useInvalidateChain();
-  const client = useQueryClient();
-  const warm = useMutation({
-    mutationFn: () => api.submitJob("warm_models", {}, true),
-    onSuccess: invalidate,
-  });
-  const warming = useJobRunning("warm_models");
-  useEffect(() => {
-    if (!warming) client.invalidateQueries({ queryKey: keys.health });
-  }, [warming, client]);
-
-  if (health.isLoading) return <Skeleton className="h-56" />;
-  if (!health.data) {
-    return (
-      <Alert tone="danger" title={t("dash.noServer")}>
-        <p>{t("dash.noServerBody")}</p>
-      </Alert>
-    );
-  }
-
-  const { available, engine, models } = health.data;
-  const wanted = [...new Set(Object.values(models.required))];
-  const cold = wanted.filter((m) => !models.running.some((entry) => entry.model === m));
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Server className="size-4 text-muted-foreground" />
-          {t("dash.system")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-body">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">{t("dash.engine")}</span>
-          <span className="flex items-center gap-1.5">
-            {/* Reachable or not used to be one dot in two hues, which is the worst case
-                of colour-only encoding: it is the single line this panel is read for. */}
-            {available ? (
-              <CircleCheck className="size-3.5 shrink-0 text-settled" />
-            ) : (
-              <CircleAlert className="size-3.5 shrink-0 text-destructive" />
-            )}
-            <span className="font-medium">{ENGINE_LABEL[engine] ?? engine}</span>
-            {available ? null : (
-              <span className="text-small text-destructive">{t("dash.offline")}</span>
-            )}
-          </span>
-        </div>
-
-        <ModelsRow models={models} />
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            {t("dash.modelsInMemory")}
-            <InfoHint label={t("dash.warmHint")}>{t("dash.warmBody")}</InfoHint>
-          </span>
-          {cold.length === 0 ? (
-            <Badge variant="settled">{t("dash.warm")}</Badge>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {cold.length === wanted.length ? t("dash.cold") : t("dash.someCold", { n: cold.length })}
-              </Badge>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => warm.mutate()}
-                disabled={warm.isPending || warming || !available}
-              >
-                {warm.isPending || warming ? <Spinner /> : <Cpu />}
-                {t("dash.warmUp")}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        <ActivityBlock />
       </CardContent>
     </Card>
   );
 }
 
 export function Dashboard() {
-  const { t } = useT();
+  const { t, plural } = useT();
   const pipeline = usePipeline();
+  const raw = useRaw();
+  const summary = useTranscriptionSummary(raw.data?.slots ?? []);
   const { navigate } = useRouter();
 
   if (pipeline.isLoading) {
@@ -574,20 +314,57 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("nav.dashboard")}</h1>
-        <InfoHint label={t("dash.howTheChainWorks")}>
-          {t("dash.chainBody")}
-        </InfoHint>
+      <header className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display font-expanded text-display">{t("nav.dashboard")}</h1>
+          <InfoHint label={t("dash.howTheChainWorks")}>
+            {t("dash.chainBody")}
+          </InfoHint>
+        </div>
+        <GuideLink slug="start" />
       </header>
 
       {/* THE ONE BLUE THING ON THE SCREEN. `--attention` means «act here», and the frontier
-          is exactly what this sentence names: the first stage of the chain that is not
-          resolved yet. Everything else on the panel reports, and reports achromatically. */}
-      {next ? (
+          is exactly what this sentence names: the first thing between here and a generated
+          item. Everything else on the panel reports, and reports achromatically.
+
+          THE RAW MATERIAL COMES FIRST, and that is a claim about order rather than about
+          permission. An empty origin means a stage that cannot be built at all; documents
+          that are not transcribed yet mean three builds that will each stop to transcribe
+          them. Neither is a gate — every builder keeps its own conversion phase and the
+          stage cards below stay pressable throughout — but both are what a person should
+          do before spending an hour on a build. Once the material is in and read, the
+          sentence goes back to naming the first unapproved stage. */}
+      {raw.data && summary.empty ? (
         <Alert
           tone="attention"
-          title={t("dash.nextStep", { label: next.label })}
+          title={t("dash.next.import")}
+          action={
+            <Button size="sm" variant="attention" onClick={() => navigate("/raw")}>
+              {t("dash.goRaw")}
+              <ArrowRight />
+            </Button>
+          }
+        >
+          <p>{t("dash.next.importBody")}</p>
+        </Alert>
+      ) : summary.todo > 0 ? (
+        <Alert
+          tone="attention"
+          title={plural("dash.next.transcribe", summary.todo)}
+          action={
+            <Button size="sm" variant="attention" onClick={() => navigate("/raw")}>
+              {t("dash.goRaw")}
+              <ArrowRight />
+            </Button>
+          }
+        >
+          <p>{t("dash.next.transcribeBody")}</p>
+        </Alert>
+      ) : next ? (
+        <Alert
+          tone="attention"
+          title={t("dash.nextStep", { label: artifactName(next.artifact, t, next.label) })}
           action={
             <Button size="sm" variant="attention" onClick={() => navigate(SCREEN[next.artifact])}>
               {t("dash.go")}
@@ -607,7 +384,7 @@ export function Dashboard() {
           tone="settled"
           title={t("dash.chainApproved")}
           action={
-            <Button size="sm" onClick={() => navigate("/generar")}>
+            <Button size="sm" onClick={() => navigate("/generate")}>
               {t("nav.generate")}
               <ArrowRight />
             </Button>
@@ -621,22 +398,16 @@ export function Dashboard() {
             <StageCard key={stage.artifact} stage={stage} />
           ))}
         </div>
-        {/* «Sistema» opens the column: it is what gets checked at a glance — whether the
-            engine answers, what it has loaded, what it is doing — and the subject sits
-            under it, which is read once and edited rarely. */}
+        {/* What is happening, and what it is about. «Sistema» used to open this column
+            and it has left the panel entirely — see `ActivityCard`. The raw material left
+            too, for a destination of its own: it is the one part of an instance that is
+            neither watched nor approved here, and folded into the last card of the panel
+            it could only ever be a disclosure inside a disclosure. */}
         <div className="space-y-4">
-          <MachineCard />
+          <ActivityCard />
           <ContextCard />
         </div>
       </div>
-
-      {/* Last, and that is the reading order the chain deserves. The raw material is what
-          you touch once at the start and then hardly ever, so opening the panel with it —
-          expanded, because a slot was empty, which is the state every new workspace starts
-          in — spent the top of the screen on the first ten minutes of an instance's life.
-          An empty origin still announces itself: its row opens by itself, and the alert
-          above already says the stage it feeds cannot be built. */}
-      <RawSection />
     </div>
   );
 }

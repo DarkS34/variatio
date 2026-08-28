@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Play, Scale, ScrollText, Wrench } from "lucide-react";
+import { Activity, Files, Play, Scale, ScrollText, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
@@ -18,23 +18,30 @@ import {
   useInvalidateChain,
   useMaintenance,
   usePipeline,
+  useRaw,
   useStream,
 } from "@/state/queries";
 import { runStore } from "@/state/runStore";
+import { useTranscriptionSummary } from "@/features/raw/queries";
 import { useT, type Key } from "@/lib/i18n";
 
 /**
- * THREE BLOCKS, AND ONLY THE MIDDLE ONE IS A CHAIN.
+ * FOUR BLOCKS, AND ONLY ONE OF THEM IS A CHAIN.
  *
- * The rail used to run under all six destinations, which said something false: that «Panel»
+ * The rail used to run under every destination, which said something false: that «Panel»
  * comes before «Perfil» in the same sense that «Perfil» comes before «Banco». It does not —
- * the panel is where the chain is WATCHED, from outside it. So the rail now spans exactly
- * the three instance artifacts, which really are a sequence with dependencies, and the
- * other three destinations are pills that do not pretend to be stops on it.
+ * the panel is where the chain is WATCHED, from outside it. So the rail spans exactly the
+ * three instance artifacts, which really are a sequence with dependencies, and everything
+ * else is a pill that does not pretend to be a stop on it.
  *
- * The three blocks, left to right:
+ * The blocks, left to right:
  *   - «Panel» — watching. Its own pill, separated by a rule, because it is about the chain
- *     rather than a step of it.
+ *     rather than a step of it, and BOUNDED rather than flat for the same reason: it is
+ *     the view of the whole thing, not one more destination beside the others.
+ *   - «Datos en bruto» — what the chain is MADE OF. Also its own pill, also before the
+ *     rail, because the raw documents feed the stages without being one: they write no
+ *     artifact, nobody approves them, and one origin feeds two stages at once. It carries
+ *     a dot while something there is waiting to be transcribed.
  *   - Perfil → Grafo → Banco — the instance being PREPARED, in the order it is prepared in.
  *     This order has to keep matching `server/review.ARTIFACTS`: the panel lays its cards
  *     out in that tuple and this array is a second copy of the same decision. Neither place
@@ -58,9 +65,9 @@ import { useT, type Key } from "@/lib/i18n";
  * account menu.
  */
 const STAGES = [
-  { path: "/preparar/perfil", label: "nav.profile", artifact: "exemplars_profile" },
-  { path: "/preparar/grafo", label: "nav.graph", artifact: "knowledge_graph" },
-  { path: "/preparar/banco", label: "nav.bank", artifact: "exemplars_bank" },
+  { path: "/prepare/profile", label: "nav.profile", artifact: "exemplars_profile" },
+  { path: "/prepare/graph", label: "nav.graph", artifact: "knowledge_graph" },
+  { path: "/prepare/bank", label: "nav.bank", artifact: "exemplars_bank" },
 ] as const;
 
 function stageStops(stages: StageState[], path: string, t: (key: Key) => string): RailStop[] {
@@ -80,9 +87,21 @@ function stageStops(stages: StageState[], path: string, t: (key: Key) => string)
 /**
  * A destination that is not a stop on the rail.
  *
- * `tone` is what separates «Evaluar» from the other two, and it only ever takes the two
- * values below — a third would mean the navigation had started encoding something else.
- * The tint is `color-mix` over the header's own ground rather than a second token, so the
+ * `tone` is what separates the three kinds, and it only ever takes the values below — a
+ * fourth would mean the navigation had started encoding something else.
+ *
+ *   - `plain` — an ordinary destination: «Datos en bruto», «Generar».
+ *   - `overview` — «Panel», and it is the only one. It is not a destination ALONGSIDE the
+ *     others, it is the view of the whole chain from outside it, so it is bounded: a
+ *     border, the card's own ground and one step of lift. The palette forbids saying that
+ *     with a colour — structure here is achromatic and colour is evidence — so it is said
+ *     with FORM, which is the same device the rail's surface already uses to mean «this is
+ *     one object».
+ *   - `study` — «Evaluar», tinted even when it is NOT the current page: what the tint says
+ *     is "this destination is a different kind of thing", which is true from wherever you
+ *     are looking at it. Active only deepens it.
+ *
+ * The tints are `color-mix` over the header's own ground rather than second tokens, so a
  * pill sits on the translucent header without a seam.
  */
 function NavPill({
@@ -92,15 +111,19 @@ function NavPill({
   active,
   tone = "plain",
   disabledReason,
+  mark,
 }: {
   to: string;
   label: string;
   icon: typeof Activity;
   active: boolean;
-  tone?: "plain" | "study";
+  tone?: "plain" | "overview" | "study";
   disabledReason?: string | null;
+  /** A dot the pill carries when the destination behind it has something waiting. */
+  mark?: boolean;
 }) {
   const study = tone === "study";
+  const overview = tone === "overview";
   return (
     <Link
       to={to}
@@ -108,11 +131,11 @@ function NavPill({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium transition-colors",
-        !study && "text-muted-foreground hover:bg-accent hover:text-foreground",
-        !study && active && "bg-accent text-foreground",
-        // The study pill is tinted even when it is NOT the current page: what the tint says
-        // is "this destination is a different kind of thing", which is true from wherever
-        // you are looking at it. Active only deepens it.
+        !study && !overview && "text-muted-foreground hover:bg-accent hover:text-foreground",
+        !study && !overview && active && "bg-accent text-foreground",
+        overview &&
+          "border border-border bg-card px-3 font-semibold text-foreground shadow-raised hover:bg-accent",
+        overview && active && "bg-accent",
         study &&
           "text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)] hover:bg-[color-mix(in_oklch,var(--study)_16%,transparent)]",
         study && active && "bg-[color-mix(in_oklch,var(--study)_18%,transparent)]",
@@ -121,6 +144,7 @@ function NavPill({
     >
       <Icon className="size-4" />
       {label}
+      {mark ? <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-attention" /> : null}
     </Link>
   );
 }
@@ -130,7 +154,7 @@ function NavRule() {
 }
 
 /**
- * The three blocks, once, rendered in one of two places.
+ * The four blocks, once, rendered in one of two places.
  *
  * Above `lg` it sits on the header's centre line, between the two flanks. Below it, the
  * flanks alone fill the row — a workspace name plus an avatar is already most of a phone's
@@ -144,11 +168,14 @@ function MainNav({
   path,
   stages,
   locked,
+  rawWaiting,
   className,
 }: {
   path: string;
   stages: StageState[];
   locked: string | null;
+  /** Why the rail is dimmed, or null. See the surface below — it is a hint, not a gate. */
+  rawWaiting: string | null;
   className?: string;
 }) {
   const { t } = useT();
@@ -159,32 +186,80 @@ function MainNav({
         className,
       )}
     >
-      <NavPill to="/" label={t("nav.dashboard")} icon={Activity} active={path === "/"} />
+      <NavPill
+        to="/"
+        label={t("nav.dashboard")}
+        icon={Activity}
+        active={path === "/"}
+        tone="overview"
+      />
+
+      <NavRule />
+
+      {/* The raw material feeds the chain but is NOT a step of it: it writes no artifact,
+          nobody approves it, and it is upstream of two stages at once. So it is its own
+          pill before the rail rather than a fourth stop on it. */}
+      <NavPill
+        to="/raw"
+        label={t("nav.rawData")}
+        icon={Files}
+        active={path === "/raw"}
+        mark={Boolean(rawWaiting)}
+      />
 
       <NavRule />
 
       {/* The rail gets a surface of its own so the three stages read as ONE object
           with three parts rather than as three pills that happen to be adjacent.
           That is the whole point of separating it: the line between the marks means
-          a dependency, and it only means that if it is visibly bounded. */}
-      <div className="shrink-0 rounded-lg border border-border/70 bg-secondary/50 px-2 py-1 sm:px-3">
+          a dependency, and it only means that if it is visibly bounded.
+
+          DIMMED IS NOT DISABLED, and the distinction is a closed decision rather than a
+          nicety. Transcribing the raw documents is an accelerator and never a gate — every
+          builder keeps its own conversion phase — so with documents still untranscribed
+          the block recedes and says why, and every stop stays clickable and buildable.
+
+          WHAT RECEDES IS THE SURFACE, NOT THE TEXT, and that was measured rather than
+          preferred. The obvious `opacity-45` puts the stops' own labels — `text-micro` at
+          `--muted-foreground`, already the lowest tier the palette has — at about 1.6:1
+          against the header, and there is NO opacity that both reads as attenuated and
+          clears 3:1: full strength is 4.7 and 0.8 is already down to 2.7. So the SURFACE
+          carries it and every label keeps the contrast it was verified at.
+
+          The surface is tinted with `--attention` rather than drained to grey, and that is
+          a claim and not a decoration. Grey is what this palette says about things that are
+          merely downstream, and it read as switched-off — which is the one thing this state
+          is not. What is true here is that the block is waiting on the frontier, and the
+          frontier is exactly what `--attention` names: the wash rhymes with the dot on
+          «Datos en bruto» two pills to the left, so the state and the thing to do about it
+          are visibly the same fact. The border stays dashed, which is the rail's own idiom
+          for «not resolved yet», now in the hue that says why. */}
+      <div
+        title={rawWaiting ?? undefined}
+        className={cn(
+          "shrink-0 rounded-lg border px-2 py-1 transition-colors sm:px-3",
+          rawWaiting
+            ? "border-dashed border-[color-mix(in_oklch,var(--attention)_45%,transparent)] bg-[color-mix(in_oklch,var(--attention)_7%,transparent)]"
+            : "border-border/70 bg-secondary/50",
+        )}
+      >
         <Rail stops={stageStops(stages, path, t)} size="sm" className="min-w-[12.5rem] sm:min-w-[15rem]" />
       </div>
 
       <NavRule />
 
       <NavPill
-        to="/generar"
+        to="/generate"
         label={t("nav.generate")}
         icon={Play}
-        active={path === "/generar"}
+        active={path === "/generate"}
         disabledReason={locked}
       />
       <NavPill
-        to="/evaluar"
+        to="/evaluate"
         label={t("nav.evaluate")}
         icon={Scale}
-        active={path === "/evaluar"}
+        active={path === "/evaluate"}
         tone="study"
         disabledReason={locked}
       />
@@ -200,6 +275,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pipeline = usePipeline();
   const health = useHealth();
   const maintenance = useMaintenance();
+  const raw = useRaw();
   const stream = useStream();
   const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
@@ -238,6 +314,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     ? null
     : t("nav.needsApproved");
 
+  // A HINT AND NOT A GATE, which is the whole reason it is a tooltip on a dimmed surface
+  // rather than a `disabledReason`: the sentence says the builds will run anyway. Only
+  // asked while the account is in a workspace — with none, the two queries behind it would
+  // just 403.
+  const rawSlots = raw.data?.slots ?? [];
+  const rawSummary = useTranscriptionSummary(hasWorkspace ? rawSlots : []);
+  const rawWaiting =
+    rawSummary.todo > 0 ? t("nav.rawWaiting", { n: rawSummary.todo }) : null;
+
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
@@ -252,11 +337,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             can shrink: a flank with `basis-0` has a shrink weight of zero, so the squeeze
             lands where there is a scroller to absorb it. */}
         <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-4">
-            <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
-              <Logo className="size-5 text-primary" />
-              <span className="hidden lg:inline">Variatio</span>
+          {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
+              Side by side with only a gap between, the workspace name read as part of the
+              product's own name. The mark is also the larger half of the lockup now, with
+              the wordmark set under it in the micro step — the mark is what identifies the
+              application at a glance, and stacking lets it grow without taking the width a
+              horizontal lockup would spend on the nav's centre line. Below `lg` the
+              wordmark goes and the mark stands alone, which is what a 360 px header has
+              room for. */}
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-3">
+            <Link
+              to="/"
+              aria-label="Variatio" // i18n-exempt: es el nombre del producto
+              className="flex shrink-0 flex-col items-center gap-1 leading-none"
+            >
+              <Logo tight className="h-3.5 w-[2.9rem] text-primary" />
+              <span className="hidden text-micro font-condensed uppercase lg:inline">Variatio</span>
             </Link>
+
+            <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
 
             <WorkspaceSwitcher />
           </div>
@@ -265,6 +364,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             path={path}
             stages={stages}
             locked={locked}
+            rawWaiting={rawWaiting}
             className="hidden lg:flex"
           />
 
@@ -294,6 +394,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           path={path}
           stages={stages}
           locked={locked}
+          rawWaiting={rawWaiting}
           className="flex border-t border-border px-3 py-1.5 lg:hidden"
         />
 
@@ -304,7 +405,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-small sm:px-4">
             <Wrench className="size-3.5 shrink-0" />
             <span>{t("shell.maintenance")}</span>
-            <Link to="/administracion" className="font-medium underline underline-offset-4">
+            <Link to="/admin" className="font-medium underline underline-offset-4">
               {t("shell.reopen")}
             </Link>
           </div>

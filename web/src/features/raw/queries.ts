@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { BuildPhase, JobKind, RawKind, RawSlot } from "@/lib/types";
-import { useBuildPlans, useStream } from "@/state/queries";
+import type { BuildPhase, Job, JobKind, RawKind, RawSlot } from "@/lib/types";
+import { useJobPhases, useStream } from "@/state/queries";
 import { runStore, type RunView } from "@/state/runStore";
 
 import { rawApi } from "./api";
@@ -34,8 +34,7 @@ export function useTranscribing(kind: RawKind): boolean {
 }
 
 export function useTranscribePhases(): BuildPhase[] {
-  const plans = useBuildPlans();
-  return plans.data?.jobs?.[TRANSCRIBE_JOB] ?? [];
+  return useJobPhases(TRANSCRIBE_JOB);
 }
 
 export function useTranscription(kind: RawKind, enabled = true) {
@@ -48,6 +47,14 @@ export function useTranscription(kind: RawKind, enabled = true) {
   });
 }
 
+/**
+ * The whole workspace's raw material as one answer, because both the panel and the raw
+ * screen have to decide the same thing from it: what the next step is.
+ *
+ * `todo` is what a global button would act on and `stocked` is what makes that button
+ * meaningful at all — an installation with two empty origins has nothing to transcribe and
+ * a different first step entirely.
+ */
 export function useTranscriptionSummary(slots: RawSlot[]) {
   const stocked = (kind: RawKind) =>
     slots.some((slot) => slot.kind === kind && slot.files.length > 0);
@@ -58,10 +65,21 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   const exemplarsRunning = useTranscribing("exemplars");
 
   const states = [corpus.data, exemplars.data].filter((entry) => entry !== undefined);
+  const stale = states.reduce((sum, entry) => sum + entry.stale, 0);
+  const pending = states.reduce((sum, entry) => sum + entry.pending, 0);
+
   return {
     running: corpusRunning || exemplarsRunning,
-    stale: states.reduce((sum, entry) => sum + entry.stale, 0),
-    pending: states.reduce((sum, entry) => sum + entry.pending, 0),
+    stale,
+    pending,
+    todo: stale + pending,
+    done: states.reduce((sum, entry) => sum + entry.done, 0),
+    files: slots.reduce((sum, slot) => sum + slot.files.length, 0),
+    empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
+    // Undefined until at least one stocked slot has answered: «nothing to do» and «we have
+    // not asked yet» are the same shape and must not read the same, or the panel would
+    // announce the chain is ready during the first second of every load.
+    known: slots.length === 0 || states.length > 0 || slots.every((s) => s.files.length === 0),
   };
 }
 
@@ -72,6 +90,49 @@ export function useStartTranscription() {
     onSuccess: ({ job }, kind) => {
       runStore.setCurrentJob(job.id);
       client.invalidateQueries({ queryKey: rawKeys.transcription(kind) });
+    },
+  });
+}
+
+/**
+ * TRANSCRIBE EVERYTHING, as one press over as many jobs as there are origins.
+ *
+ * Deliberately a fan-out in the client and not a job of its own on the server: a
+ * transcription is scoped to a slot everywhere else — its progress, its cancel button, its
+ * duplicate guard and its `params.slot` all key on it — and a third job kind covering both
+ * would have to reproduce every one of those. Two jobs is also the honest picture of what
+ * happens: they reserve the same lane, so the second waits for the first, and the queue
+ * says so by itself.
+ *
+ * Sequential rather than concurrent because the submit is what claims the lane, and the
+ * one submitted first should be the one that runs first. A slot that refuses — already
+ * transcribing, nothing to do — must not stop the other, so each is caught on its own.
+ */
+export function useStartAllTranscriptions() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (kinds: RawKind[]) => {
+      const started: Job[] = [];
+      const refused: string[] = [];
+      for (const kind of kinds) {
+        try {
+          const { job } = await rawApi.startTranscription(kind);
+          started.push(job);
+        } catch (exception) {
+          refused.push((exception as Error).message);
+        }
+      }
+      if (started.length === 0 && refused.length > 0) throw new Error(refused.join(" · "));
+      return { started, refused };
+    },
+    onSuccess: ({ started }, kinds) => {
+      // The first one, because that is the one that is actually running: `setCurrentJob`
+      // decides which run the drawer opens on, and pointing it at the queued one would
+      // show a bar that has not started.
+      if (started[0]) runStore.setCurrentJob(started[0].id);
+      for (const kind of kinds) {
+        client.invalidateQueries({ queryKey: rawKeys.transcription(kind) });
+      }
     },
   });
 }

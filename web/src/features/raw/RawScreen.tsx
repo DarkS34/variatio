@@ -1,0 +1,153 @@
+import { Ban, ScanText } from "lucide-react";
+
+import { GuideLink } from "@/components/GuideLink";
+import { Button } from "@/components/ui/button";
+import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { useT } from "@/lib/i18n";
+import type { RawKind } from "@/lib/types";
+import { useCanEdit } from "@/state/auth";
+import { useCancelJob, useEngineOffline, useRaw } from "@/state/queries";
+
+import { useStartAllTranscriptions, useTranscribeRun, useTranscriptionSummary } from "./queries";
+import { SlotCard } from "./SlotCard";
+
+/**
+ * THE RAW MATERIAL, AS A DESTINATION OF ITS OWN.
+ *
+ * It was the last card of the panel until now, and that placement was a compromise between
+ * two true things: the raw documents are touched once at the start of an instance's life,
+ * and they are also the thing that decides how long every build takes. Folded into a card
+ * it could only serve the first. As a screen it can serve both — a document is one row
+ * with its size, its pages, its state and the two operations on it, and the transcription
+ * is a first-class step rather than a disclosure inside a disclosure.
+ *
+ * The colour budget is one `--attention`, and it is the alert at the top: import, or
+ * transcribe, or nothing. Everything else on the screen reports, achromatically. The
+ * per-origin buttons are therefore `default` — the global one in the alert is the frontier
+ * action, and two ultramarine buttons would be none.
+ *
+ * What this screen must NOT become is a gate. Transcribing is an accelerator: every
+ * builder keeps its own conversion phase, so nothing here is ever a precondition for
+ * anything, and the copy says so where a person can read it before pressing.
+ */
+export function RawScreen() {
+  const { t, plural } = useT();
+  const raw = useRaw();
+  const canEdit = useCanEdit();
+  const offline = useEngineOffline();
+  const cancel = useCancelJob();
+  const startAll = useStartAllTranscriptions();
+
+  const slots = raw.data?.slots ?? [];
+  const summary = useTranscriptionSummary(slots);
+  const corpusRun = useTranscribeRun("corpus");
+  const exemplarsRun = useTranscribeRun("exemplars");
+
+  if (raw.isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-24" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!raw.data) {
+    return (
+      <Alert tone="danger" title={t("raw.unreadable")}>
+        <p>{t("raw.noApi")}</p>
+      </Alert>
+    );
+  }
+
+  // Only the origins that hold something: an empty slot has nothing to transcribe, and one
+  // already at work answers 409 — which `useStartAllTranscriptions` swallows per slot so
+  // the other still starts.
+  const stocked: RawKind[] = slots
+    .filter((slot) => slot.files.length > 0)
+    .map((slot) => slot.kind);
+
+  const running = corpusRun?.job?.status === "running" || corpusRun?.job?.status === "queued"
+    ? corpusRun
+    : exemplarsRun?.job?.status === "running" || exemplarsRun?.job?.status === "queued"
+      ? exemplarsRun
+      : null;
+
+  const blocked = !canEdit ? t("build.readOnly") : offline ? offline : null;
+
+  return (
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="font-display font-expanded text-display">{t("nav.rawData")}</h1>
+        <GuideLink slug="raw" />
+        <p className="max-w-[78ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
+      </header>
+
+      {/* THE ONE BLUE THING ON THE SCREEN, and only when there is something to press. */}
+      {summary.running ? (
+        <Alert
+          tone="info"
+          title={t("transcribe.runningTitle")}
+          action={
+            running?.job ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={cancel.isPending}
+                onClick={() => cancel.mutate(running.job!.id)}
+              >
+                <Ban />
+                {t("common.stop")}
+              </Button>
+            ) : undefined
+          }
+        >
+          <p>{t("transcribe.runningNote")}</p>
+        </Alert>
+      ) : summary.empty ? (
+        <Alert tone="attention" title={t("raw.nothingYet")}>
+          <p>{t("raw.nothingYetBody")}</p>
+        </Alert>
+      ) : summary.todo > 0 ? (
+        <Alert
+          tone="attention"
+          title={plural("transcribe.todoTitle", summary.todo)}
+          action={
+            <Button
+              size="sm"
+              variant="attention"
+              disabled={Boolean(blocked) || startAll.isPending}
+              title={blocked ?? undefined}
+              onClick={() => startAll.mutate(stocked)}
+            >
+              {startAll.isPending ? <Spinner /> : <ScanText />}
+              {t("transcribe.startAll")}
+            </Button>
+          }
+        >
+          <p>{t("transcribe.notAGate")}</p>
+        </Alert>
+      ) : summary.known && summary.files > 0 ? (
+        <Alert tone="settled" title={t("transcribe.allUpToDate")}>
+          <p>{plural("transcribe.allUpToDateBody", summary.done)}</p>
+        </Alert>
+      ) : null}
+
+      {startAll.isError ? (
+        <p className="text-small text-destructive">{(startAll.error as Error).message}</p>
+      ) : null}
+
+      {/* Stretched cells on purpose: an empty origin's dropzone grows to the height of the
+          stocked one beside it, which is what makes «importa aquí» the whole card rather
+          than a strip at the top of a blank one. */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        {slots.map((slot) => (
+          <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
+        ))}
+      </div>
+    </div>
+  );
+}
