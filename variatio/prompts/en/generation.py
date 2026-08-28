@@ -167,7 +167,7 @@ Conventions observed in the course's real material: how this course writes this 
 - No classroom voice: the statement sets the task and nothing else. No greetings, no introductions, no encouragement, no comments of your own about the exercise itself; no references to the class, the teacher, a submission or a grade. Whoever reads it may be practising on their own.
 
 # SETTING VARIATION
-The wrapping, the concrete situation the task is set in, is yours and must be new: choose a recognisable real-life setting that appears neither in the reference examples nor in the settings already used, and set the exercise in it. Changing the setting and not the substance is what forces the student to transfer the concept instead of recognising a memorised pattern. What does not change is the cognitive demand: the objective and its level are fixed by the previous sections, and the chosen setting adds no data and no rules that have to be deciphered.
+The wrapping, the concrete situation the task is set in, is yours and must be new. If the reference examples set the task in a scenario, choose a recognisable real-life setting that appears neither in them nor in the settings already used, and set the exercise in it. If the modality is set bare — the reference examples wrap the task in no scenario —, do not invent one for it: the variation then lies in the concrete data, objects and values, which repeat no example's. Changing the wrapping and not the substance is what forces the student to transfer the concept instead of recognising a memorised pattern. What does not change is the cognitive demand: the objective and its level are fixed by the previous sections, and the chosen variation adds no data and no rules that have to be deciphered.
 {instructions_section}{correction_section}
 # REFERENCE EXAMPLES
 Real exercises from the course's teaching material, on nearby concepts. They are a reference for form, register and length; their topic, their literal structure and their settings are not reused.
@@ -183,7 +183,7 @@ Exact skeleton of the output (fill in the values):
 # BEFORE ANSWERING, CHECK
 - Every target concept passes the validity test: without it, the exercise cannot be solved.
 - No concept from what is not yet taught appears or is needed, beyond the minimum the objective itself demands.
-- The statement's setting is not in the reference examples or in the settings already used.
+- The statement's setting — or its data and values, if the modality is set with no scenario — repeats neither the reference examples nor the settings already used.
 - The statement stands on its own, admits a single reading and has no classroom voice.
 - The keys are exactly those of the skeleton and the pinned values are copied as they are.
 

@@ -41,7 +41,7 @@ def scan_item_types_prompt(content: str, location: str = "", excerpt_chars: int 
     return f"""\
 Analyse a FRAGMENT of raw teaching material (exercises, problems, activities, questions) and inventory the exercise MODALITIES that appear in it.
 
-A modality is a WAY of setting the student the task, defined by the exercise's anatomy: which pieces of information make it up. Examples of different modalities: a closed question with alternatives; a commission to write a program from scratch; a code fragment with a bug that has to be located and corrected; a template with gaps to fill in; a piece of code whose output has to be predicted.
+A modality is a WAY of setting the student the task, defined by the exercise's anatomy: which pieces of information make it up. Examples of different modalities: a closed question with alternatives; a numerical problem asking for a result computed from given data; a commission to write a program from scratch; a piece of starting material (code, a text, a schematic) with a mistake to locate and correct; a practical case to analyse and solve with written reasoning.
 
 This fragment is ONLY ONE PART of the material: do not try to describe the whole course and do not guess modalities that are not here. Inventory what you SEE in this fragment, and nothing else. A later step will gather the inventories of all the fragments.
 {where}
@@ -71,7 +71,7 @@ A single JSON object:
   ]
 }}
 
-- `key`: in English, `^[a-z][a-z0-9_]*$`, ASCII only. It names the MODALITY, not the topic: `multiple_choice`, `write_code`, `fix_error`, `complete_code`, `predict_output`, `theory_problem`.
+- `key`: in English, `^[a-z][a-z0-9_]*$`, ASCII only. It names the MODALITY, not the topic: `multiple_choice`, `numerical_problem`, `write_code`, `fix_error`, `case_analysis`, `theory_problem`.
 - `fields`: the pieces that make up THIS modality, with the canonical names below. Only the ones the fragment genuinely shows.
 - `excerpt`: a LITERAL copy, trimmed to {excerpt_chars} characters, of the specimen that best represents the modality. It is what the next step will see in order to write the extraction instructions, so choose a complete and typical one, not the strangest. Escape line breaks (`\\n`) and quotes (`\\"`).
 
@@ -184,7 +184,7 @@ Write them looking at the inventory's `excerpt`s and asking yourself what ALL th
 - COVER, when the material shows them consistently: what each written field must obligatorily contain; the NOTATION and formatting conventions particular to the course (how things are documented, which headings, which units, which symbols); the typical LENGTH and scope of a specimen; and the CONSISTENCY relations between fields (that the solution answers exactly what the statement asks, that the starting material and the solution fit together).
 - NO GENERIC DIDACTICS. «It must foster critical thinking», «it must be motivating», «fit the difficulty to the level»: the generator already takes care of all that, since it knows about didactics and knows nothing about this course. You contribute the second. If a rule would hold equally for any course in the world, it does not belong.
 - NO CONTENT. Do not fix the topic, the setting or the concepts of the exercises: each commission decides that against the curriculum graph. The rules talk about FORM.
-- ONLY ABOUT THIS MODALITY. A rule that only makes sense here (requiring a docstring and a test block) goes ONLY here. If it is true of all the modalities equally, then it describes the whole course and contributes nothing in any of them.
+- ONLY ABOUT THIS MODALITY. A rule that only makes sense here (requiring a docstring and a test block, requiring the result with its units and significant figures) goes ONLY here. If it is true of all the modalities equally, then it describes the whole course and contributes nothing in any of them.
 - QUANTITY: between 3 and 8. Fewer than 3 nearly always means you have not looked at the specimens; more than 8, that you are breaking one rule into its consequences or slipping in generic didactics.
 
 # primary_field

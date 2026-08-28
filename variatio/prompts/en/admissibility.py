@@ -50,10 +50,10 @@ Asking for something about them is NOT invading anything: they are the subject o
 
 # THE TEST
 An exercise USES many concepts and PRACTISES one or two. The question, for each request, is which of the two it is asking for.
-- «make it about a shopping list» USES the word list as a real-life setting: that is the `ambito` slot, not the concept «List».
+- «make it about a shopping list» USES the word list as a real-life setting: that is the `ambito` slot, not an invasion, even if the syllabus had a concept called «List».
 - «make it about a library that lends books» is a building with books: that is `ambito`.
 - «with a sample input and output» asks the statement to show a worked case: that is the `elementos` slot, even if the name of a concept appears inside the sentence.
-- «make it practise recursion too» asks for a concept to be PRACTISED: it invades `concepts`.
+- «make it practise another concept too» — one from the syllabus that is not among the targets — asks for a concept to be PRACTISED: it invades `concepts`.
 {difficulty_rule}
 - «write it in Spanish» changes the language, which the subject fixes: it invades `context`.
 A word in the text coinciding with the name of a concept is NOT an invasion: only asking for that concept to be PRACTISED is.

@@ -166,7 +166,7 @@ La extracción fragmento a fragmento solo ve una dependencia cuando dos concepto
 - La mayoría de los conceptos de una materia se apoyan en algo. Un concepto sin nada delante debería ser la excepción — los puntos de partida de verdad —, no la norma.
 - No encadenes lo que ya está implícito: enuncia la dependencia DIRECTA, no toda la ascendencia. Si A se apoya en B y B en C, no relaciones además A con C.
 - Ser cauto no sale gratis aquí: una dependencia que dejes fuera es una que ningún paso posterior puede recuperar.
-- Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación, llamadas de biblioteca y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
+- Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
 
 
 _KG_MATERIAL_ORDER_RULE = """\
@@ -491,7 +491,7 @@ Una etiqueta que encaja en casi todo no dice nada de nada.
 - Actividades o etapas genéricas del trabajo: escribir, ejecutar, diseñar, analizar, probar, documentar, mantener, resolver y similares.
 - Cualidades y virtudes transversales: calidad, eficiencia como virtud, legibilidad, corrección, utilidad — salvo que el corpus la trate como un objeto técnico con contenido y criterios propios.
 - Vocabulario del MATERIAL en vez de la materia: concepto, técnica, notación, ejemplo, resumen, lectura recomendada, introducción, principio, final, títulos de sección.
-- Lenguajes, herramientas, plataformas, bibliotecas, estándares y sus nombres.
+- Lenguajes, herramientas, plataformas, bibliotecas, estándares y sus nombres — salvo que la asignatura los tenga como objeto de estudio propio: si un ejercicio de estas modalidades puede TRATAR sobre uno de ellos, y no solo sobre algo hecho con él, es un concepto y se queda.
 - Un término padre cuyos hijos específicos están también en la lista y que no aporta nada más allá de ellos.
 - Letras y símbolos sueltos, valores aislados, y los objetos, personajes o escenarios de los ejemplos ilustrativos.
 

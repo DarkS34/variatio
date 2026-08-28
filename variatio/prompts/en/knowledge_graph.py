@@ -166,7 +166,7 @@ Passage-by-passage extraction only sees a dependency when two concepts are expla
 - Most concepts of a subject lean on something. A concept with nothing before it should be the exception — the genuine starting points — and not the norm.
 - Do not chain what is already implicit: state the DIRECT dependency, not the whole ancestry. If A leans on B and B on C, do not also relate A to C.
 - Being cautious is not free here: a dependency you leave out is one no later step can recover.
-- Prefer BOTH ends to be things a student is taught and could be examined on. The extraction also picked up tools, notation, library calls and vocabulary of the document; an order hanging off that describes the material and not the syllabus, and nothing downstream can use it. When a dependency is real but one of the ends is such a term, look for the taught concept behind it and relate that one."""
+- Prefer BOTH ends to be things a student is taught and could be examined on. The extraction also picked up tools, notation and vocabulary of the document; an order hanging off that describes the material and not the syllabus, and nothing downstream can use it. When a dependency is real but one of the ends is such a term, look for the taught concept behind it and relate that one."""
 
 
 _KG_MATERIAL_ORDER_RULE = """\
@@ -490,7 +490,7 @@ A label that fits almost everything says nothing at all.
 - Generic activities or stages of the work: writing, running, designing, analysing, testing, documenting, maintaining, solving and the like.
 - Cross-cutting qualities and virtues: quality, efficiency as a virtue, readability, correctness, usefulness — unless the corpus treats it as a technical object with content and criteria of its own.
 - Vocabulary of the MATERIAL rather than of the subject: concept, technique, notation, example, summary, recommended reading, introduction, beginning, end, section titles.
-- Languages, tools, platforms, libraries, standards and their names.
+- Languages, tools, platforms, libraries, standards and their names — unless the subject has them as an object of study in their own right: if an exercise in these modalities can BE ABOUT one of them, and not just about something done with it, it is a concept and it stays.
 - A parent term whose specific children are also on the list and which contributes nothing beyond them.
 - Single letters and symbols, isolated values, and the objects, characters or settings of the illustrative examples.
 

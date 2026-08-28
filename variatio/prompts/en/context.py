@@ -38,7 +38,7 @@ You are not describing a syllabus or a course programme. You are describing the 
 # WHAT THE TEXT MUST BE LIKE
 - CONTINUOUS PROSE, in the subject's language of instruction. One or two sentences running on; no lists, no bullets, no headings, no key-value pairs.
 - AT MOST {max_chars} CHARACTERS. It is a hard ceiling, and it exists because this text is paid for on every call the system makes.
-- NO ENUMERATED SYLLABUS. You may say in one sentence where the subject goes («it covers everything from the basic types to recursion»); you may not list the concepts or copy the names of the blocks one by one. The graph is there for that, and whoever reads this has it in front of them.
+- NO ENUMERATED SYLLABUS. You may say in one sentence where the subject goes («it covers everything from the elementary notions to the advanced techniques at the end of the course»); you may not list the concepts or copy the names of the blocks one by one. The graph is there for that, and whoever reads this has it in front of them.
 - NO METACOMMENTARY. Do not talk about the system, or about this task, or about what you did to write it. The text starts by describing the subject.
 - NO ADDRESSEE. Do not address anybody: no «you», no «the student must», no «bear in mind that». It is a description, not an instruction.
 

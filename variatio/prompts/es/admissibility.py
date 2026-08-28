@@ -52,10 +52,10 @@ Pedir algo sobre ellos NO es invadir nada: son el tema del ejercicio. Solo es in
 
 # LA PRUEBA
 Un ejercicio USA muchos conceptos y PRACTICA uno o dos. La pregunta, para cada petición, es cuál de las dos cosas pide.
-- «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no el concepto «Lista».
+- «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no una invasión, aunque el temario tuviera un concepto llamado «Lista».
 - «que vaya de una biblioteca que presta libros» es un edificio con libros: es `ambito`.
 - «con un ejemplo de entrada y salida» pide que el enunciado enseñe un caso resuelto: es el hueco `elementos`, aunque el nombre de un concepto aparezca dentro de la frase.
-- «que practique también recursividad» pide PRACTICAR un concepto: invade `concepts`.
+- «que practique también otro concepto» — uno del temario que no está entre los objetivos — pide PRACTICAR un concepto: invade `concepts`.
 {difficulty_rule}
 - «hazlo en inglés» cambia el idioma, que lo fija la asignatura: invade `context`.
 Que una palabra del texto coincida con el nombre de un concepto NO es una invasión: solo lo es pedir que ese concepto se PRACTIQUE.

@@ -165,7 +165,7 @@ Convenciones observadas en el material real de la asignatura: cómo escribe esta
 - Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, presentaciones, ánimos ni comentarios tuyos sobre el propio ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
 
 # VARIACIÓN DE CONTEXTO
-El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo: elige un ámbito reconocible de la vida real que no aparezca en los ejemplos de referencia ni en los escenarios ya usados, y plantea el ejercicio en él. Cambiar el contexto y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y el ámbito elegido no añade datos ni reglas que haya que descifrar.
+El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo. Si los ejemplos de referencia plantean la tarea en un escenario, elige un ámbito reconocible de la vida real que no aparezca en ellos ni en los escenarios ya usados, y plantea el ejercicio en él. Si la modalidad se plantea en seco — los ejemplos de referencia no envuelven la tarea en ningún escenario —, no le inventes uno: la variación está entonces en los datos, los objetos y los valores concretos, que no repiten los de ningún ejemplo. Cambiar el envoltorio y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y la variación elegida no añade datos ni reglas que haya que descifrar.
 {instructions_section}{correction_section}
 # EJEMPLOS DE REFERENCIA
 Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
@@ -181,7 +181,7 @@ Esqueleto exacto de la salida (rellena los valores):
 # ANTES DE RESPONDER, COMPRUEBA
 - Cada concepto objetivo supera la prueba de validez: sin él, el ejercicio no se resuelve.
 - Ningún concepto de lo todavía no impartido aparece ni hace falta, salvo el mínimo que el propio objetivo exige.
-- El ámbito del enunciado no está en los ejemplos de referencia ni en los escenarios ya usados.
+- El ámbito del enunciado — o sus datos y valores, si la modalidad se plantea sin escenario — no repite los ejemplos de referencia ni los escenarios ya usados.
 - El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
 - Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
 
