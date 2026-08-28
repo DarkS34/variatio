@@ -19,6 +19,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastProvider } from "./components/ui/toast";
 import { AuthGate } from "./features/auth/AuthGate";
 import { ApiError } from "./lib/api";
+import { ensureCatalogue, localeStore } from "./lib/i18n";
 import { RouterProvider } from "./lib/router";
 import "./index.css";
 
@@ -39,7 +40,7 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
+const tree = (
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       {/* Inside the router — a notice may want to link somewhere — and OUTSIDE AuthGate,
@@ -57,5 +58,15 @@ createRoot(document.getElementById("root")!).render(
         </ToastProvider>
       </RouterProvider>
     </QueryClientProvider>
-  </StrictMode>,
+  </StrictMode>
 );
+
+// THE FIRST PAINT WAITS FOR THE READER'S OWN CATALOGUE, and that is what makes the split
+// in `lib/i18n` invisible. `localeStore` resolves the pre-session language synchronously
+// at module load — `localStorage` first, then `navigator.language` — so which catalogue is
+// wanted is decidable before anything renders. A Spanish reader pays a microtask; an
+// English one pays the one round trip that would otherwise have shown a Spanish frame.
+// It never rejects, so there is no path where this leaves the page unrendered.
+void ensureCatalogue(localeStore.getSnapshot()).then(() => {
+  createRoot(document.getElementById("root")!).render(tree);
+});

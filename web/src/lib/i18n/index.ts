@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 
-import { en } from "./en";
 import { es, type Catalogue, type Key } from "./es";
 import { DEFAULT, type Language, localeStore } from "./locale";
 
@@ -15,7 +14,86 @@ export {
 export type { Language } from "./locale";
 export type { Key } from "./es";
 
-const CATALOGUES: Record<Language, Catalogue> = { es, en };
+/**
+ * ONE CATALOGUE SHIPS, THE OTHER IS FETCHED, AND THE FALLBACK WAS ALREADY WRITTEN.
+ *
+ * The two catalogues measured 225,599 bytes of the 653 kB entry chunk — 34.6 % of it —
+ * and no reader needs both. `es` stays static because it is three things at once: the
+ * DEFAULT, the typed source `en` is checked against, and the fallback `entry()` below has
+ * always fallen back to. `en` becomes a chunk of its own, fetched by the readers who read
+ * in English.
+ *
+ * What did NOT change is the contract: `translate` and `pluralise` are still synchronous,
+ * still take a language, and still answer on the first call. The window in which `en` has
+ * not landed yet renders Spanish prose rather than a raw key — the behaviour the comment
+ * on `entry()` already described for a half-applied hot reload. `main.tsx` closes even
+ * that window on the normal path by awaiting the catalogue before the first paint; what
+ * is left is the account adopting a language `localStorage` did not know, which can
+ * happen at most once per browser.
+ *
+ * The `Catalogue` type relationship is untouched, so a missing translation is still a
+ * `tsc` error rather than a runtime fallback nobody notices.
+ */
+const CATALOGUES: Partial<Record<Language, Catalogue>> = { es };
+
+const LOADERS: Partial<Record<Language, () => Promise<Catalogue>>> = {
+  en: () => import("./en").then((module) => module.en),
+};
+
+const inFlight = new Map<Language, Promise<void>>();
+
+// A counter and not the catalogue itself: `useSyncExternalStore` compares snapshots by
+// identity, and the language does not change when its catalogue arrives — so without a
+// second signal the screens that are already mounted would keep the fallback until
+// something else re-rendered them.
+let revision = 0;
+const arrivals = new Set<() => void>();
+
+function subscribeCatalogue(listener: () => void) {
+  arrivals.add(listener);
+  return () => {
+    arrivals.delete(listener);
+  };
+}
+
+function catalogueRevision() {
+  return revision;
+}
+
+/**
+ * Load a language's catalogue if it is not here yet. Idempotent, deduped, and it never
+ * rejects: a fetch that fails leaves the app on the fallback, which is a screen in the
+ * wrong language and not a screen that is gone.
+ */
+export function ensureCatalogue(language: Language): Promise<void> {
+  if (CATALOGUES[language]) return Promise.resolve();
+  const load = LOADERS[language];
+  if (!load) return Promise.resolve();
+
+  let pending = inFlight.get(language);
+  if (!pending) {
+    pending = load()
+      .then((catalogue) => {
+        CATALOGUES[language] = catalogue;
+        revision += 1;
+        for (const listener of arrivals) listener();
+      })
+      .catch(() => {})
+      .finally(() => {
+        inFlight.delete(language);
+      });
+    inFlight.set(language, pending);
+  }
+  return pending;
+}
+
+// Changing the language is the other way a catalogue is asked for, and it happens in three
+// places that do not know about each other — the account menu, `adopt` on the session
+// query, and the pre-session picker on the invitation screen. One subscription covers all
+// three rather than each remembering.
+localeStore.subscribe(() => {
+  void ensureCatalogue(localeStore.getSnapshot());
+});
 
 type Params = Record<string, string | number>;
 
@@ -28,9 +106,10 @@ function fill(template: string, params?: Params): string {
 
 function entry(language: Language, key: Key): Catalogue[Key] | undefined {
   // `es` is the source of truth for what a key is, so a language whose catalogue somehow
-  // lacks one falls back to it rather than rendering the key. TypeScript already makes
-  // that unreachable; this is what keeps a hot-reloaded half-edit from blanking a screen.
-  return CATALOGUES[language]?.[key] ?? CATALOGUES[DEFAULT][key];
+  // lacks one falls back to it rather than rendering the key. TypeScript already makes a
+  // MISSING key unreachable; what this now also covers is the catalogue that has not
+  // arrived yet, which is the same fallback for the same reason.
+  return CATALOGUES[language]?.[key] ?? CATALOGUES[DEFAULT]?.[key];
 }
 
 // Missing from BOTH catalogues is the case the types rule out and a half-applied hot
@@ -83,5 +162,8 @@ export function useLanguage(): Language {
  */
 export function useT(): Translate & { language: Language } {
   const language = useLanguage();
+  // Two subscriptions, because two different things move: the language, and whether its
+  // catalogue has landed. Neither implies the other.
+  useSyncExternalStore(subscribeCatalogue, catalogueRevision, catalogueRevision);
   return { language, ...translator(language) };
 }

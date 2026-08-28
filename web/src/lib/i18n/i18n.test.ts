@@ -1,8 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { en } from "./en";
 import { es } from "./es";
-import { LANGUAGES, localeStore, normalise, pluralise, translate } from "./index";
+import { ensureCatalogue, LANGUAGES, localeStore, normalise, pluralise, translate } from "./index";
+
+// `en` is fetched on demand now, so asking for an English string before it lands answers
+// in Spanish — the deliberate fallback. Without this the suite would go on passing while
+// testing the wrong catalogue, which is exactly what it did when the split was written:
+// `pluralise("en", "count.items", 1)` came back «1 ítem».
+beforeAll(() => ensureCatalogue("en"));
 
 describe("normalise", () => {
   it("folds the regional tag a browser actually sends", () => {
