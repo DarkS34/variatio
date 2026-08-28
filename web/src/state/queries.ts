@@ -463,6 +463,25 @@ function relandStream(client: QueryClient) {
   });
 }
 
+/**
+ * Move the tab out of an instance that has just stopped existing.
+ *
+ * The deletion's own answer says where this account lands, so the tab goes STRAIGHT there
+ * instead of to `null` and back — `me` would say the same thing a round trip later, and in
+ * between the header reads «ningún workspace» and the panel offers to create one, over a
+ * change that only moved you to the workspace next door. `set` before dropping the queries,
+ * so what refetches afterwards already carries the new `X-Workspace`.
+ *
+ * `relandStream` is still what reconnects: `me` is the authority on whether the landing is
+ * real, and a socket opened for an account in no workspace closes with 4401 — which reads
+ * as «la sesión ha caducado», the one thing that is not happening.
+ */
+function leaveDeleted(client: QueryClient, landed: string | null) {
+  workspaceStore.set(landed);
+  dropInstanceQueries(client);
+  relandStream(client);
+}
+
 function useLandIn<TInput, TResult extends object>(
   mutationFn: (input: TInput) => Promise<TResult>,
 ) {
@@ -496,22 +515,30 @@ export function useCreateWorkspace() {
   );
 }
 
-export function useRenameWorkspace() {
+/**
+ * The owner disposing of one of their own instances, which since 2026-08-28 is any one they
+ * own and not only the one they are standing in — the call carries its own `X-Workspace`.
+ *
+ * So it cannot go through `useLandIn` any more: that forgets the tab's slug unconditionally,
+ * which is right when what went is the instance on screen and pure churn when it is not.
+ * Deleting the one you are in takes the same door as switching — the tab drops its slug and
+ * `me` says where the account wakes up — and never `client.clear()`, which destroys
+ * `["auth","me"]` instead of emptying it and leaves the header naming a workspace that no
+ * longer exists.
+ */
+export function useDeleteWorkspace() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
-      api.renameWorkspace(slug, name),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["workspaces"] });
-      client.invalidateQueries({ queryKey: ["auth", "me"] });
+    mutationFn: (slug: string) => api.deleteWorkspace(slug),
+    onSuccess: ({ deleted, landed }) => {
+      if (deleted === activeWorkspace()) {
+        leaveDeleted(client, landed);
+      } else {
+        client.invalidateQueries({ queryKey: authKeys.me });
+      }
+      client.invalidateQueries({ queryKey: keys.workspaces });
     },
   });
-}
-
-export function useDeleteWorkspace() {
-  // Through the same door as entering one: leaving your last workspace is what turns the
-  // panel back into the offer to create one, and only a re-read of `me` says so.
-  return useLandIn((slug: string) => api.deleteWorkspace(slug));
 }
 
 /* Saved variants -------------------------------------------------------------------- */
@@ -780,16 +807,32 @@ export function useDeleteArtifact() {
  * name of a workspace that no longer exists. It takes the same door as switching now — the
  * tab forgets its slug, the instance's queries go, and `me` says where it wakes up.
  */
+/**
+ * Renaming an instance, which only an administrator does (2026-08-28, explicit user
+ * request). It invalidates the panel AND the switcher: the header carries the name of the
+ * workspace this tab has open, and it is the same row.
+ */
+export function useAdminRenameWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
+      api.adminRenameWorkspace(slug, name),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["admin"] });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: authKeys.me });
+    },
+  });
+}
+
 export function useAdminDeleteWorkspace() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (slug: string) => api.adminDeleteWorkspace(slug),
-    onSuccess: ({ deleted }) => {
+    onSuccess: ({ deleted, landed }) => {
       if (deleted === activeWorkspace()) {
         // Every request would otherwise carry the dead slug in `X-Workspace`.
-        workspaceStore.set(null);
-        dropInstanceQueries(client);
-        relandStream(client);
+        leaveDeleted(client, landed);
       } else {
         client.invalidateQueries({ queryKey: authKeys.me });
       }

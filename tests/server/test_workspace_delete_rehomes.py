@@ -40,6 +40,15 @@ def _workspace(db, slug: str):
     return repository.ensure_workspace(db, slug, slug.capitalize())
 
 
+# The route reports where the CALLER lands, so it needs one — every test here is about the
+# accounts that were inside the instance, and this administrator is a member of none of them.
+def _admin(db):
+    user = identity.create_user(db, username="root", name="root", password_hash="x")
+    user.is_admin = True
+    db.flush()
+    return user
+
+
 def _account(db, username: str, workspaces: list, active=None):
     user = identity.create_user(db, username=username, name=username, password_hash="x")
     for workspace in workspaces:
@@ -54,7 +63,7 @@ def test_deleting_the_active_workspace_lands_the_account_on_its_next_one(db):
     taller = _workspace(db, "taller")
     ana = _account(db, "ana", [aula, taller], active=taller)
 
-    result = delete_workspace("taller", db)
+    result = delete_workspace("taller", admin=_admin(db), db=db)
 
     assert result["deleted"] == "taller"
     assert result["rehomed"] == {"ana": "aula"}
@@ -67,7 +76,7 @@ def test_an_account_left_with_no_membership_lands_nowhere(db):
     _workspace(db, "taller")
     solo = _account(db, "solo", [aula])
 
-    delete_workspace("aula", db)
+    delete_workspace("aula", admin=_admin(db), db=db)
 
     assert solo.active_workspace_id is None
     assert auth_deps.current_workspace_for(db, solo) is None
@@ -79,7 +88,7 @@ def test_only_the_accounts_that_were_inside_it_are_moved(db):
     dentro = _account(db, "dentro", [aula, taller], active=taller)
     fuera = _account(db, "fuera", [aula, taller], active=aula)
 
-    result = delete_workspace("taller", db)
+    result = delete_workspace("taller", admin=_admin(db), db=db)
 
     assert set(result["rehomed"]) == {"dentro"}
     assert dentro.active_workspace_id == aula.id
@@ -97,14 +106,42 @@ def test_an_administrator_with_no_membership_lands_nowhere_either(db):
     jefa.active_workspace_id = taller.id
     db.flush()
 
-    delete_workspace("taller", db)
+    delete_workspace("taller", admin=_admin(db), db=db)
 
     assert jefa.active_workspace_id is None
     assert auth_deps.current_workspace_for(db, jefa) is None
     assert repository.get_workspace(db, "aula") is aula
 
 
-def test_the_last_workspace_of_the_installation_is_still_refused(db):
+# An installation holding ZERO workspaces is a normal state — the panel offers to create
+# one — and `leave` already deletes the last workspace when its last member walks out. The
+# guard that used to sit here refused the tidy way of doing what the untidy one allowed.
+def test_the_last_workspace_of_the_installation_can_be_deleted(db):
     _workspace(db, "aula")
-    with pytest.raises(Exception, match="único workspace"):
-        delete_workspace("aula", db)
+    delete_workspace("aula", admin=_admin(db), db=db)
+    assert repository.list_workspaces(db) == []
+
+
+# `rehomed` is about everybody; `landed` is the one entry the tab that made the request
+# needs. Without it the browser blanks to «ningún workspace» until `me` answers, which is
+# the flicker this field exists to remove.
+def test_the_answer_says_where_the_caller_itself_lands(db):
+    aula = _workspace(db, "aula")
+    taller = _workspace(db, "taller")
+    root = _admin(db)
+    identity.grant(db, aula.id, root.id, EDITOR)
+    identity.grant(db, taller.id, root.id, EDITOR)
+    root.active_workspace_id = taller.id
+    db.flush()
+
+    assert delete_workspace("taller", admin=root, db=db)["landed"] == "aula"
+
+
+# Not being in the instance that goes and having nowhere left to go are two different
+# states, and the panel draws both the same way: it stays where it is.
+def test_a_caller_who_was_not_inside_it_lands_nowhere_new(db):
+    _workspace(db, "aula")
+    taller = _workspace(db, "taller")
+    root = _admin(db)
+
+    assert delete_workspace("taller", admin=root, db=db)["landed"] is None

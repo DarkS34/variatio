@@ -1,4 +1,4 @@
-import { Check, ChevronDown, FolderPlus, Loader2, Pencil, Shield } from "lucide-react";
+import { Check, ChevronDown, FolderPlus, Loader2, Shield } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +13,7 @@ import {
   type Language,
 } from "@/lib/i18n";
 import { ROLE_LABEL_KEYS } from "@/state/auth";
-import {
-  useCreateWorkspace,
-  useRenameWorkspace,
-  useSwitchWorkspace,
-  useWorkspaces,
-} from "@/state/queries";
-import type { WorkspaceRow } from "@/lib/types";
+import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,7 +29,7 @@ export function WorkspaceSwitcher() {
   const listing = useWorkspaces();
   const switching = useSwitchWorkspace();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<"create" | "rename" | null>(null);
+  const [creating, setCreating] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,7 +37,7 @@ export function WorkspaceSwitcher() {
     const away = (event: MouseEvent) => {
       if (!holder.current?.contains(event.target as Node)) {
         setOpen(false);
-        setEditing(null);
+        setCreating(false);
       }
     };
     document.addEventListener("mousedown", away);
@@ -52,10 +46,8 @@ export function WorkspaceSwitcher() {
 
   const workspaces = listing.data?.workspaces ?? [];
   const active = workspaces.find((w) => w.active) ?? null;
-  // Mirrors the server: PATCH is `auth.MANAGE`, and only over the active workspace.
-  const canRename = Boolean(active && (active.as_admin || active.role === "owner"));
   const close = () => {
-    setEditing(null);
+    setCreating(false);
     setOpen(false);
   };
   if (listing.isLoading || workspaces.length === 0) return null;
@@ -130,25 +122,17 @@ export function WorkspaceSwitcher() {
           </div>
 
           <Separator />
-          {editing === "create" ? (
+          {/* Creating is offered here and renaming is NOT, and there is no owner-facing
+              route left for it either: a workspace is named when it is created, and after
+              that only an administrator renames it, from «Administración». What the name is
+              worth is that everybody means the same instance by it. */}
+          {creating ? (
             <CreateForm onDone={close} />
-          ) : editing === "rename" && active ? (
-            <RenameForm workspace={active} onDone={close} />
           ) : (
             <div className="p-1">
-              {canRename ? (
-                <button
-                  role="menuitem"
-                  onClick={() => setEditing("rename")}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
-                >
-                  <Pencil className="size-4 text-muted-foreground" />
-                  {t("ws.renameNamed", { name: active!.name })}
-                </button>
-              ) : null}
               <button
                 role="menuitem"
-                onClick={() => setEditing("create")}
+                onClick={() => setCreating(true)}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
               >
                 <FolderPlus className="size-4 text-muted-foreground" />
@@ -248,53 +232,6 @@ function CreateForm({ onDone }: { onDone: () => void }) {
         <Button type="submit" size="sm" className="flex-1" disabled={!valid || create.isPending}>
           {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <FolderPlus />}
           {t("common.create")}
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onDone}>
-          {t("common.cancel")}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-/**
- * Only the name changes. The slug stays: it names the directory tree, the `X-Workspace`
- * header and every row that points at the workspace, so renaming it is not a rename but a
- * migration nobody has asked for.
- */
-function RenameForm({ workspace, onDone }: { workspace: WorkspaceRow; onDone: () => void }) {
-  const { t } = useT();
-  const rename = useRenameWorkspace();
-  const [name, setName] = useState(workspace.name);
-  const trimmed = name.trim();
-  const valid = trimmed.length > 0 && trimmed.length <= 200 && trimmed !== workspace.name;
-
-  return (
-    <form
-      className="space-y-2 p-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (valid) rename.mutate({ slug: workspace.slug, name: trimmed }, { onSuccess: onDone });
-      }}
-    >
-      <Input
-        autoFocus
-        aria-label={t("workspace.newName")}
-        placeholder={t("workspace.namePlaceholder")}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
-      {rename.isError ? (
-        <p className="text-small text-destructive">{(rename.error as Error).message}</p>
-      ) : (
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {t("ws.slugUnchanged", { slug: workspace.slug })}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" className="flex-1" disabled={!valid || rename.isPending}>
-          {rename.isPending ? <Loader2 className="size-4 animate-spin" /> : <Pencil />}
-          {t("common.rename")}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onDone}>
           {t("common.cancel")}

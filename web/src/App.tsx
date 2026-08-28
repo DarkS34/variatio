@@ -88,14 +88,18 @@ export function App() {
         return <GenerateScreen />;
       case "/evaluate":
         return <EvaluationScreen />;
-      // The account of whoever is looking: their data, their variants and their accesses. Each
-      // tab is a route so that «mis variantes» stays a link that can be bookmarked.
+      // The account of whoever is looking: their data, the instances they can open and their
+      // variants. Each tab is a route so that «mis variantes» stays a link that can be
+      // bookmarked.
       case "/account":
         return <AccountScreen tab="cuenta" />;
+      case "/account/workspaces":
+        return <AccountScreen tab="workspaces" />;
       case "/account/variants":
         return <AccountScreen tab="variantes" />;
+      // Where the accesses lived while the tab was called «Accesos».
       case "/account/access":
-        return <AccountScreen tab="accesos" />;
+        return <Redirect to="/account/workspaces" />;
       // Where the variants lived when they were a screen of their own. Redirected rather than
       // duplicating the screen: old links still lead to where they are now.
       case "/variants":

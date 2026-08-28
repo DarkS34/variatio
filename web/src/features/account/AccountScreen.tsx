@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Check, KeyRound, Languages, UserRound } from "lucide-react";
+import { ArrowRight, Check, KeyRound, Languages, Trash2, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
@@ -22,7 +23,13 @@ import {
   useSetLanguage,
   useUpdateProfile,
 } from "@/state/auth";
-import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";
+import {
+  useActiveWorkspace,
+  useDeleteWorkspace,
+  useSwitchWorkspace,
+  useWorkspaces,
+} from "@/state/queries";
+import type { WorkspaceRow } from "@/lib/types";
 
 /**
  * Everything that belongs to the person using the app, in one place.
@@ -43,8 +50,10 @@ import { useActiveWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/q
  */
 export const ACCOUNT_TABS = [
   { value: "cuenta", label: "tabs.account", path: "/account" },
+  // Before the variants (2026-08-28, explicit user request): a variant belongs to an
+  // instance, so which instances this account can open is the question that comes first.
+  { value: "workspaces", label: "tabs.workspaces", path: "/account/workspaces" },
   { value: "variantes", label: "tabs.variants", path: "/account/variants" },
-  { value: "accesos", label: "tabs.access", path: "/account/access" },
 ] as const satisfies readonly { value: string; label: Key; path: string }[];
 
 export type AccountTab = (typeof ACCOUNT_TABS)[number]["value"];
@@ -77,8 +86,8 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
       />
 
       {tab === "cuenta" ? <AccountTabView /> : null}
+      {tab === "workspaces" ? <MyWorkspacesTab /> : null}
       {tab === "variantes" ? <GenerationsPanel /> : null}
-      {tab === "accesos" ? <AccessTab /> : null}
     </div>
   );
 }
@@ -377,11 +386,25 @@ function PasswordCard() {
  * Read-only on purpose: a membership is a row only the installation's administrator
  * writes, and a screen that offered to change it here would be offering a 403.
  */
-function AccessTab() {
+/**
+ * Which instances this account can open, and the one thing it may do to them: dispose of
+ * the ones it owns.
+ *
+ * Deleting used to have a route and no way to reach it — `DELETE /api/workspaces/{slug}`
+ * was written and never wired to a button — so «borrar un workspace mío» was not something
+ * the application could do at all. It belongs here and not in the switcher: the switcher is
+ * for moving between instances mid-work, and a destructive action one row away from the one
+ * you press twenty times a day is a mis-click waiting to happen.
+ *
+ * Renaming is deliberately NOT here. A workspace is named when it is created and only an
+ * administrator renames it afterwards, from «Administración».
+ */
+function MyWorkspacesTab() {
   const { t } = useT();
   const listing = useWorkspaces();
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
+  const [target, setTarget] = useState<WorkspaceRow | null>(null);
   const workspaces = listing.data?.workspaces ?? [];
   const current = active ?? listing.data?.active ?? null;
   const mine = workspaces.filter((workspace) => !workspace.as_admin);
@@ -438,10 +461,114 @@ function AccessTab() {
                   <ArrowRight />
                 </Button>
               )}
+              {/* Only over what you own. An administrator disposes of anybody's from
+                  «Administración», where the whole installation is on one screen. */}
+              {workspace.role === "owner" && !workspace.as_admin ? (
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  title={t("acc.ws.delete", { name: workspace.name })}
+                  onClick={() => setTarget(workspace)}
+                >
+                  <Trash2 />
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : null}
+
+      {target ? (
+        <DeleteMineDialog workspace={target} here={target.slug === current} onClose={() => setTarget(null)} />
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * What goes and what stays, said before it happens and confirmed by typing the slug.
+ *
+ * The slug rather than an «are you sure»: this deletes a course's worth of work, and a
+ * dialog whose confirmation is one click away from the button that opened it is not a
+ * confirmation. It is the same device the administrator's own deletion uses.
+ *
+ * THE FILE TREE SURVIVES, and saying so is half the point of the dialog: the raw documents
+ * this account uploaded stay on disk, because a web request that quietly removes hundreds of
+ * megabytes of somebody's lecture notes is not a request anyone expects to be irreversible.
+ * The administrator's deletion is the one that takes them, and it says the opposite.
+ */
+function DeleteMineDialog({
+  workspace,
+  here,
+  onClose,
+}: {
+  workspace: WorkspaceRow;
+  here: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const remove = useDeleteWorkspace();
+  const toast = useToast();
+  const [typed, setTyped] = useState("");
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("acc.ws.deleteTitle", { name: workspace.name })}
+      description={t("ws.cannotUndo")}
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={typed !== workspace.slug || remove.isPending}
+            onClick={() =>
+              remove.mutate(workspace.slug, {
+                onSuccess: ({ landed }) => {
+                  onClose();
+                  toast({
+                    title: t("ws.deleted"),
+                    description: !here
+                      ? t("acc.ws.deletedOther", { slug: workspace.slug })
+                      : landed
+                        ? t("acc.ws.deletedMoved", { slug: workspace.slug, next: landed })
+                        : t("acc.ws.deletedHere", { slug: workspace.slug }),
+                    tone: "attention",
+                  });
+                },
+              })
+            }
+          >
+            {remove.isPending ? <Spinner /> : <Trash2 />}
+            {t("common.delete")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-body">
+        <p>{t("acc.ws.whatGoes")}</p>
+        <p className="text-small text-muted-foreground">{t("acc.ws.filesStay")}</p>
+        <div className="space-y-1">
+          <Label htmlFor="confirm-slug">
+            {t("ws.typeToConfirm")}
+            <span className="font-mono normal-case">{workspace.slug}</span>
+            {t("ws.typeToConfirm.tail")}
+          </Label>
+          <Input
+            id="confirm-slug"
+            autoFocus
+            autoComplete="off"
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            className="font-mono"
+          />
+        </div>
+        <FormError error={remove.error} />
+      </div>
+    </Dialog>
   );
 }

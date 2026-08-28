@@ -1486,14 +1486,14 @@ function Account() {
             body: "Tu nombre visible, un correo opcional, la contraseña y el idioma en el que lees la aplicación. El correo no sirve para entrar: solo para recibir el enlace de restablecerla.",
           },
           {
+            key: "workspaces",
+            head: t("tabs.workspaces"),
+            body: "En qué workspaces estás y con qué papel, y desde cuál entrar a otro. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellos es eliminar uno tuyo — de los que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearlo y solo lo cambia quien administra.",
+          },
+          {
             key: "variantes",
             head: t("tabs.variants"),
             body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de todo el workspace, relanzar «más como esta» y borrar.",
-          },
-          {
-            key: "accesos",
-            head: t("tabs.access"),
-            body: "En qué workspaces estás y con qué papel. Es de solo lectura: los accesos los concede quien administra.",
           },
         ]}
       />

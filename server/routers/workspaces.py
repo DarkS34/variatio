@@ -20,6 +20,7 @@ from variatio.core import languages
 from variatio.instance import locale
 
 from .. import auth, deps, runtime, settings
+from ..auth import deps as auth_deps
 from ..db import generations, identity, repository
 from ..db.models import OWNER, VIEWER, User, Workspace
 
@@ -33,10 +34,6 @@ class CreateBody(BaseModel):
     # the relation labels a build writes into `knowledge_graph.json` are what the loader
     # indexes by, so once anything is built the choice is baked into the artifacts.
     prompt_language: str = languages.DEFAULT
-
-
-class RenameBody(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
 
 
 def _view(workspace: Workspace, role: str | None, active: bool, as_admin: bool = False) -> dict:
@@ -140,15 +137,14 @@ def activate(
     }
 
 
-@router.patch("/{slug}", dependencies=[auth.MANAGE])
-def rename(slug: str, body: RenameBody, access: auth.Access = auth.MANAGE) -> dict:
-    if slug != access.workspace.slug:
-        raise HTTPException(
-            409,
-            "Solo se puede renombrar el workspace activo; cambia a él antes.",
-        )
-    access.workspace.name = body.name.strip()
-    return {"workspace": _view(access.workspace, access.role, active=True)}
+# THE NAME IS NOT EDITABLE FROM HERE, and there is no route for it in this router
+# (2026-08-28, explicit user request). A workspace is named when it is created, and after
+# that only an administrator renames it, from «Administración». What the name is worth is
+# that everybody reading a screen, a message or an invitation means the same instance by
+# it; an owner renaming theirs under the people working in it is the one way that stops
+# being true, and the panel is where somebody sees every instance at once and can tell
+# whether the new name collides with another. `PATCH /api/admin/workspaces/{slug}` is the
+# only door — the client does not decide this, the server does.
 
 
 # Deleting is a real deletion, not a flag: the row cascades to artifacts, approvals, raw
@@ -164,14 +160,28 @@ def remove(
 ) -> dict:
     if slug != access.workspace.slug:
         raise HTTPException(409, "Solo se puede borrar el workspace activo.")
-    if len(repository.list_workspaces(db)) == 1:
-        raise HTTPException(409, "No se puede borrar el único workspace de la instalación.")
 
     ws = access.ws
+    # Whoever was sitting in it is moved to wherever they land now, before the row goes.
+    # The FK is `SET NULL`, so without this the database strands every one of them at «no
+    # workspace» — including the people who have another one to fall back to.
+    rehomed = auth_deps.rehome_accounts(db, access.workspace)
     db.delete(access.workspace)
     db.flush()
     deps.invalidate(ws.slug, "workspace eliminado")
-    return {"deleted": slug, "path": str(ws.root)}
+    # Heard only by whoever is looking at the instance that has just stopped existing,
+    # which is exactly who has to reload.
+    runtime.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    # WHERE THE CALLER ENDS UP, said in the answer rather than left for the browser to find
+    # out. `rehomed` is keyed by username and is about everybody; this is the one entry the
+    # tab that made the request needs, and having it here is what lets it move straight to
+    # the surviving instance instead of blanking to «ningún workspace» until `me` answers.
+    return {
+        "deleted": slug,
+        "path": str(ws.root),
+        "rehomed": rehomed,
+        "landed": rehomed.get(access.user.username),
+    }
 
 
 # LEAVING one, which is a different act from deleting it and only sometimes has the same

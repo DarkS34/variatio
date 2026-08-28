@@ -1,4 +1,4 @@
-import { Download, Eraser, Trash2 } from "lucide-react";
+import { Download, Eraser, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import {
   useActiveWorkspace,
   useAdminDeleteWorkspace,
+  useAdminRenameWorkspace,
   useClearCache,
   useDeleteArtifact,
 } from "@/state/queries";
@@ -24,26 +25,33 @@ import { useT } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
 /**
- * The installation's instances, and what this panel writes about them: removing them, or
- * the regenerable half of what they hold.
+ * The installation's instances, and what this panel writes about them: their name, their
+ * removal, or the regenerable half of what they hold.
  *
  * Emptying a stage and deleting the workspace are one decision at two scopes, so they live
  * in the same row: the stage is emptied from its badge, the workspace from the button at the
  * end. Neither builds nor approves anything — for that one enters the instance, which is
  * where what is being touched can be seen.
+ *
+ * RENAMING IS HERE AND NOWHERE ELSE (2026-08-28, explicit user request). It used to be the
+ * owner's, from the switcher; it is the administrator's now, and the owner-facing route is
+ * gone rather than merely hidden — the client never decides a permission. This is the screen
+ * where every instance is visible at once, which is what makes it the place to notice that a
+ * new name collides with another.
  */
 export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
   const remove = useAdminDeleteWorkspace();
   const toast = useToast();
   const [target, setTarget] = useState<AdminWorkspace | null>(null);
+  const [renaming, setRenaming] = useState<AdminWorkspace | null>(null);
   // Which one this tab has open, which is the one deletion has consequences for on screen:
   // the header, the cache and the stream all belong to it.
   const here = useActiveWorkspace();
-  // Mirrors the server, which refuses with a 409: an INSTALLATION with no workspace has
-  // nothing to offer anybody. An ACCOUNT with none is a different question and a normal
-  // state — that is what `NoWorkspace` is for.
-  const only = overview.workspaces.length === 1;
+  // There is deliberately no «it is the last one» guard, here or on the server: an
+  // installation holding zero workspaces is a normal state the panel draws — it offers to
+  // create one — and `leave` already reached it from the other side, by walking the last
+  // member out. The guard refused the tidy way of doing what the untidy one allowed.
   const total = overview.workspaces.reduce((sum, w) => sum + w.disk.total, 0);
 
   return (
@@ -94,17 +102,21 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                   {workspace.created_at ? when(workspace.created_at) : "—"}
                 </TD>
                 <TD align="num" className="whitespace-nowrap px-3 py-2">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title={t("ws.renameNamed", { name: workspace.name })}
+                    onClick={() => setRenaming(workspace)}
+                  >
+                    <Pencil />
+                  </Button>
                   <ExportButton workspace={workspace} />
                   <ClearCacheButton workspace={workspace} />
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    disabled={only || remove.isPending}
-                    title={
-                      only
-                        ? t("ws.onlyOne")
-                        : t("ws.deleteTitle")
-                    }
+                    disabled={remove.isPending}
+                    title={t("ws.deleteTitle")}
                     onClick={() => setTarget(workspace)}
                   >
                     <Trash2 />
@@ -118,6 +130,10 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
 
       <FormError error={remove.error} />
 
+      {renaming ? (
+        <RenameWorkspaceDialog workspace={renaming} onClose={() => setRenaming(null)} />
+      ) : null}
+
       {target ? (
         <DeleteWorkspaceDialog
           workspace={target}
@@ -126,14 +142,19 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
           onClose={() => setTarget(null)}
           onConfirm={() =>
             remove.mutate(target.slug, {
-              onSuccess: () => {
+              // Three outcomes, and the toast is the only place the middle one is visible:
+              // you were moved to another instance, you were left with none, or the one that
+              // went was not yours to be standing in.
+              onSuccess: ({ landed }) => {
                 setTarget(null);
                 toast({
                   title: t("ws.deleted"),
                   description:
-                    target.slug === here
-                      ? t("ws.deletedHere", { slug: target.slug })
-                      : t("ws.deletedOther", { slug: target.slug }),
+                    target.slug !== here
+                      ? t("ws.deletedOther", { slug: target.slug })
+                      : landed
+                        ? t("ws.deletedMoved", { slug: target.slug, next: landed })
+                        : t("ws.deletedHere", { slug: target.slug }),
                   tone: "attention",
                 });
               },
@@ -148,6 +169,62 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Only the NAME changes. The slug stays: it names the directory tree, the `X-Workspace`
+ * header and every row that points at the workspace, so renaming it is not a rename but a
+ * migration nobody has asked for — which is why it is shown, in monospace, and not offered.
+ */
+function RenameWorkspaceDialog({
+  workspace,
+  onClose,
+}: {
+  workspace: AdminWorkspace;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const rename = useAdminRenameWorkspace();
+  const [name, setName] = useState(workspace.name);
+  const trimmed = name.trim();
+  const valid = trimmed.length > 0 && trimmed.length <= 200 && trimmed !== workspace.name;
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("ws.renameNamed", { name: workspace.name })}
+      description={t("ws.slugUnchanged", { slug: workspace.slug })}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            disabled={!valid || rename.isPending}
+            onClick={() =>
+              rename.mutate({ slug: workspace.slug, name: trimmed }, { onSuccess: onClose })
+            }
+          >
+            {rename.isPending ? <Spinner /> : <Pencil />}
+            {t("common.rename")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <Label htmlFor="workspace-name">{t("workspace.newName")}</Label>
+        <Input
+          id="workspace-name"
+          autoFocus
+          value={name}
+          maxLength={200}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <FormError error={rename.error} />
+      </div>
+    </Dialog>
   );
 }
 

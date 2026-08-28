@@ -21,7 +21,7 @@ content; they no longer decide who else exists.
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from study.api import store as evaluation_store
@@ -245,21 +245,44 @@ def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db))
 
 # WORKSPACES ------------------------------------------------------------------------------
 #
-# The only thing this panel writes about instances, and it is deletion: it builds,
-# edits and approves nothing. It lives here and not under `/api/workspaces` because that
-# requires membership of the active workspace — when what is needed is to clean up the
-# installation, that forces entering each instance in order to remove it, the exact
-# opposite.
+# What this panel writes about instances: their name, and their removal. It builds, edits
+# and approves nothing. It lives here and not under `/api/workspaces` because that requires
+# membership of the ACTIVE workspace — when what is needed is to tidy up the installation,
+# that forces entering each instance in order to touch it, the exact opposite.
 
 
-@router.delete("/workspaces/{slug}")
-def delete_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
+class RenameBody(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+# Renaming is the administrator's and nobody else's (2026-08-28, explicit user request):
+# the owner's route is gone, so this is the only door. Only the NAME changes — the slug
+# names the directory tree, the `X-Workspace` header and every row that points at the
+# workspace, so renaming it would be a migration and not a rename.
+@router.patch("/workspaces/{slug}")
+def rename_workspace(slug: str, body: RenameBody, db: DbSession = Depends(auth.db)) -> dict:
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
-    if len(repository.list_workspaces(db)) == 1:
-        raise HTTPException(409, "No se puede borrar el único workspace de la instalación.")
+    workspace.name = body.name.strip()
+    db.flush()
+    logger.info(f"[admin] Workspace '{slug}' renombrado a «{workspace.name}»")
+    return {"slug": slug, "name": workspace.name}
 
+
+@router.delete("/workspaces/{slug}")
+def delete_workspace(
+    slug: str,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe el workspace '{slug}'.")
+    # There is deliberately NO «last workspace of the installation» guard: an installation
+    # holding zero workspaces is a normal state the app renders on purpose, and `leave`
+    # already deletes the last one when its last member walks out — so the guard refused
+    # the tidy way of doing what the untidy one allowed.
     ws = settings.workspace_for(slug)
     # The tree first: if the row goes and deleting the directory fails, files are left whose
     # owner is no longer on record. The other way round, a failure leaves the row and retries.
@@ -284,6 +307,10 @@ def delete_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
         "path": str(ws.root),
         "files_removed": removed,
         "rehomed": rehomed,
+        # Where the caller ends up, which is the one entry of `rehomed` the tab that made
+        # the request needs — and is `None` both when they were not in it and when they have
+        # nowhere left to go, two states the panel draws the same way: it stays put.
+        "landed": rehomed.get(admin.username),
     }
 
 

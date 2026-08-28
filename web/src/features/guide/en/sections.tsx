@@ -1510,14 +1510,14 @@ function Account() {
             body: "Your visible name, an optional email address, the password, and the language you read the application in. The address is not used to sign in: only to receive the link to reset it.",
           },
           {
+            key: "workspaces",
+            head: t("tabs.workspaces"),
+            body: "Which workspaces you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
+          },
+          {
             key: "variantes",
             head: t("tabs.variants"),
             body: 'Everything you have generated, with the commission that produced it: it can be searched, narrowed to yours or widened to the whole workspace, relaunched as "more like this one", and deleted.',
-          },
-          {
-            key: "accesos",
-            head: t("tabs.access"),
-            body: "Which workspaces you are in and with what role. It is read-only: access is granted by whoever administers.",
           },
         ]}
       />

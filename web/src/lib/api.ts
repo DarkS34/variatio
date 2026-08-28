@@ -41,6 +41,20 @@ import type {
   WorkspaceSummary,
 } from "./types";
 
+/**
+ * What both deletions answer. `rehomed` is about everybody who was inside the instance;
+ * `landed` is the one entry the tab that made the request needs — where THIS account ends
+ * up — so the browser can move there at once instead of blanking to «ningún workspace»
+ * until `me` comes back. `null` means it stays where it was, which covers both «I was not
+ * in it» and «I have nowhere left to go».
+ */
+export type WorkspaceGone = {
+  deleted: string;
+  path: string;
+  rehomed: Record<string, string | null>;
+  landed: string | null;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -199,11 +213,14 @@ export const api = {
     post<{ workspace: WorkspaceRow }>("/api/workspaces", { slug, name, prompt_language }),
   activateWorkspace: (slug: string) =>
     post<{ workspace: WorkspaceRow }>(`/api/workspaces/${encodeURIComponent(slug)}/activate`),
-  renameWorkspace: (slug: string, name: string) =>
-    patch<{ workspace: WorkspaceRow }>(`/api/workspaces/${encodeURIComponent(slug)}`, { name }),
+  // The route resolves its permission from the ACTIVE workspace, so the slug travels twice:
+  // in the path, and in this call's own `X-Workspace`. Without the second one, deleting a
+  // workspace from a list would mean switching into it first — three steps and a screen
+  // that reloads twice to do one thing.
   deleteWorkspace: (slug: string) =>
-    request<{ deleted: string; path: string }>(`/api/workspaces/${encodeURIComponent(slug)}`, {
+    request<WorkspaceGone>(`/api/workspaces/${encodeURIComponent(slug)}`, {
       method: "DELETE",
+      workspace: slug,
     }),
   workspaceSummary: (slug: string) =>
     request<WorkspaceSummary>(`/api/workspaces/${encodeURIComponent(slug)}/summary`),
@@ -363,8 +380,15 @@ export const api = {
   // The one thing the panel writes about instances, and it is deletion. It goes through
   // `/api/admin` and not `/api/workspaces` because the latter requires membership of the
   // active workspace, which would force entering each instance in order to remove it.
+  // Renaming is the administrator's and nobody else's: there is no owner-facing route for
+  // it any more, so this is the only door.
+  adminRenameWorkspace: (slug: string, name: string) =>
+    patch<{ slug: string; name: string }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}`,
+      { name },
+    ),
   adminDeleteWorkspace: (slug: string) =>
-    request<{ deleted: string; path: string; files_removed: boolean }>(
+    request<WorkspaceGone & { files_removed: boolean }>(
       `/api/admin/workspaces/${encodeURIComponent(slug)}`,
       { method: "DELETE" },
     ),
