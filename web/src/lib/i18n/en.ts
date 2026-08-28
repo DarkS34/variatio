@@ -103,7 +103,7 @@ export const en: Catalogue = {
   "acc.ws.delete": "Delete «{name}»",
   "acc.ws.deleteTitle": "Delete «{name}»",
   "acc.ws.whatGoes": "The graph, the profile, the bank, the approvals, the access of everybody who opens this instance, the saved variants and the evaluation sessions all go.",
-  "acc.ws.filesStay": "The raw documents you uploaded stay on disk: an administrator can import them again, or remove them for good from «Administration».",
+  "acc.ws.filesStay": "The raw documents you uploaded are deleted from disk too, unless somebody else still has access: then they stay, and an administrator can import them again.",
   "acc.ws.deletedMoved": "{slug}. It was the one you had open: you are now in «{next}».",
   "acc.ws.deletedHere": "{slug}. It was the one you had open and your account is in no other: the panel offers you to create one.",
   "acc.ws.deletedOther": "{slug}. You are still where you were.",

@@ -492,10 +492,15 @@ function MyWorkspacesTab() {
  * dialog whose confirmation is one click away from the button that opened it is not a
  * confirmation. It is the same device the administrator's own deletion uses.
  *
- * THE FILE TREE SURVIVES, and saying so is half the point of the dialog: the raw documents
- * this account uploaded stay on disk, because a web request that quietly removes hundreds of
- * megabytes of somebody's lecture notes is not a request anyone expects to be irreversible.
- * The administrator's deletion is the one that takes them, and it says the opposite.
+ * WHETHER THE FILE TREE SURVIVES DEPENDS ON WHO ELSE IS IN IT, and saying which is half the
+ * point of the dialog. Nobody else has access: the documents go too, because otherwise an
+ * abandoned instance piles up on disk under a slug that is on record nowhere. Somebody else
+ * does: they stay, because those are that person's lecture notes and they are losing the
+ * instance without having asked.
+ *
+ * The rule is stated rather than resolved, and that is deliberate: the listing behind this
+ * dialog knows each workspace's role and not its roster, and asking the server for a member
+ * count to phrase one sentence buys a round trip for something the sentence can just say.
  */
 function DeleteMineDialog({
   workspace,

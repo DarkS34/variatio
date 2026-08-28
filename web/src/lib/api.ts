@@ -47,12 +47,17 @@ import type {
  * up — so the browser can move there at once instead of blanking to «ningún workspace»
  * until `me` comes back. `null` means it stays where it was, which covers both «I was not
  * in it» and «I have nowhere left to go».
+ *
+ * `files_removed` says whether the directory tree went with the row. The administrator's
+ * deletion always takes it; an owner's own takes it only when nobody else was a member,
+ * which is why this is reported rather than assumed from which route was called.
  */
 export type WorkspaceGone = {
   deleted: string;
   path: string;
   rehomed: Record<string, string | null>;
   landed: string | null;
+  files_removed: boolean;
 };
 
 export class ApiError extends Error {
@@ -388,7 +393,7 @@ export const api = {
       { name },
     ),
   adminDeleteWorkspace: (slug: string) =>
-    request<WorkspaceGone & { files_removed: boolean }>(
+    request<WorkspaceGone>(
       `/api/admin/workspaces/${encodeURIComponent(slug)}`,
       { method: "DELETE" },
     ),

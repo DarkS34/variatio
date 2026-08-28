@@ -113,7 +113,7 @@ export const es = {
   "acc.ws.delete": "Eliminar «{name}»",
   "acc.ws.deleteTitle": "Eliminar «{name}»",
   "acc.ws.whatGoes": "Desaparecen el grafo, el perfil, el banco, las aprobaciones, los accesos de quien entra a esta instancia, las variantes guardadas y las sesiones de evaluación.",
-  "acc.ws.filesStay": "Los documentos en bruto que subiste siguen en el disco: quien administra la instalación puede volver a importarlos, o borrarlos del todo desde «Administración».",
+  "acc.ws.filesStay": "Los documentos en bruto que subiste se borran también del disco, a menos que quede alguien más con acceso: en ese caso siguen ahí y quien administra la instalación puede volver a importarlos.",
   "acc.ws.deletedMoved": "{slug}. Era el que tenías abierto: ahora estás en «{next}».",
   "acc.ws.deletedHere": "{slug}. Era el que tenías abierto y tu cuenta no está en ningún otro: el panel te ofrece crear uno.",
   "acc.ws.deletedOther": "{slug}. Sigues donde estabas.",

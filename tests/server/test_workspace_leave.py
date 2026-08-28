@@ -6,9 +6,10 @@ leaving is the last one linked to it: with the seat empty there is nobody left f
 workspace to belong to.
 
 What the tests pin is the arithmetic of that «exactly when», the two states the register
-calls normal — an installation with no workspaces, an account belonging to none — and the
-one thing that must NOT happen either way: the directory tree survives, because it holds
-documents the person uploaded and a web request does not silently delete those.
+calls normal — an installation with no workspaces, an account belonging to none — and what
+happens to the DIRECTORY TREE on each side of it: it goes when the seat it belonged to
+empties, because otherwise abandoned instances pile up under slugs that are on record
+nowhere, and it stays untouched when somebody merely walks out of a shared one.
 """
 
 import pytest
@@ -18,6 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from fastapi import HTTPException
 
+from server import settings
 from server.db import identity, repository
 from server.db.models import Base, EDITOR, OWNER
 from server.routers.workspaces import leave
@@ -34,7 +36,13 @@ def db():
     session.close()
 
 
+# The row AND the tree, because that pairing is half of what this file is about. The suite's
+# autouse fixture has already moved `WORKSPACES_DIR` into a tmp directory, so `provision`
+# writes nowhere near the installation's own instances.
 def _workspace(db, slug: str):
+    ws = settings.workspace_for(slug)
+    settings.provision(ws)
+    (ws.raw_corpus_dir / "apuntes.md").write_text("# Apuntes", encoding="utf-8")
     return repository.ensure_workspace(db, slug, slug.capitalize())
 
 
@@ -61,6 +69,10 @@ def test_the_last_member_out_takes_the_workspace_with_them(db):
     # An account that belongs to none is a normal account, so the pointer is cleared rather
     # than left aiming at a row that no longer exists.
     assert ana.active_workspace_id is None
+    # And the files go too: with nobody left holding it, what would survive is orphaned
+    # weight under a slug the installation no longer records anywhere.
+    assert result["files_removed"] is True
+    assert not settings.workspace_for("aula").root.exists()
 
 
 def test_leaving_a_shared_workspace_removes_only_that_seat(db):
@@ -77,6 +89,9 @@ def test_leaving_a_shared_workspace_removes_only_that_seat(db):
     assert identity.membership(db, aula.id, ana.id) is not None
     assert bruno.active_workspace_id is None
     assert ana.active_workspace_id == aula.id
+    # Nothing on disk moves: the instance still belongs to somebody, and one person walking
+    # out of it is not a reason to delete what the rest are working on.
+    assert (settings.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
 
 
 def test_the_last_member_takes_it_even_when_they_do_not_own_it(db):
@@ -122,3 +137,23 @@ def test_a_workspace_that_does_not_exist_is_a_404(db):
         leave("fantasma", user=ana, db=db)
 
     assert raised.value.status_code == 404
+
+
+def test_a_tree_that_cannot_be_removed_leaves_the_row_standing(db, monkeypatch):
+    # The order is the point, and it is `DELETE /api/admin/workspaces/{slug}`'s: the tree
+    # first, so a failure is retryable. Deleting the row first would strand the files whose
+    # owner is no longer on record — the exact state this deletion exists to prevent.
+    aula = _workspace(db, "aula")
+    ana = _account(db, "ana", [(aula, OWNER)], active=aula)
+
+    def refuse(ws):
+        raise OSError("dispositivo ocupado")
+
+    monkeypatch.setattr(settings, "destroy", refuse)
+
+    with pytest.raises(HTTPException) as raised:
+        leave("aula", user=ana, db=db)
+
+    assert raised.value.status_code == 409
+    assert repository.get_workspace(db, "aula") is not None
+    assert identity.membership(db, aula.id, ana.id) is not None

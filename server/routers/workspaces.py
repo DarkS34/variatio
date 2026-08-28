@@ -148,10 +148,21 @@ def activate(
 
 
 # Deleting is a real deletion, not a flag: the row cascades to artifacts, approvals, raw
-# documents, memberships, generations and evaluation sessions. The directory tree is left
-# alone on purpose — it holds the user's own uploaded documents, and a web request that
-# quietly removes hundreds of megabytes of somebody's lecture notes is not a request
-# anyone expects to be irreversible.
+# documents, memberships, generations and evaluation sessions.
+#
+# WHETHER THE DIRECTORY TREE GOES DEPENDS ON WHO ELSE HOLDS IT (2026-08-28, explicit user
+# request), and the condition is the same one `leave` applies: nobody left, nothing kept.
+# Deleting an instance that is only yours is disposing of your own documents, and leaving
+# them behind piles up hundreds of megabytes under a slug that is on record nowhere — with
+# only an administrator able to tell afterwards what any of those directories was. Deleting
+# one that OTHER people are still members of is a different act: their lecture notes are in
+# there, they are losing the instance without having asked, and a web request that silently
+# takes those with it is not one anybody expects to be irreversible. So the tree survives
+# exactly then, and an administrator can re-import it or finish the job from «Administración».
+#
+# The tree first, as in `DELETE /api/admin/workspaces/{slug}`: a failure leaves the row
+# standing and the call retryable, where the other order strands files nobody is on record
+# as owning.
 @router.delete("/{slug}", dependencies=[auth.MANAGE])
 def remove(
     slug: str,
@@ -162,6 +173,21 @@ def remove(
         raise HTTPException(409, "Solo se puede borrar el workspace activo.")
 
     ws = access.ws
+    # Read before the cascade takes the rows away. An administrator reaching this through
+    # the bypass holds no membership of their own, so this is «is anybody else in it», not
+    # «does it have members» — and for them the answer is the whole roster.
+    others = [
+        m
+        for m, _ in identity.members_of(db, access.workspace.id)
+        if m.user_id != access.user.id
+    ]
+    removed = False
+    if not others:
+        try:
+            removed = settings.destroy(ws)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
+
     # Whoever was sitting in it is moved to wherever they land now, before the row goes.
     # The FK is `SET NULL`, so without this the database strands every one of them at «no
     # workspace» — including the people who have another one to fall back to.
@@ -181,6 +207,9 @@ def remove(
         "path": str(ws.root),
         "rehomed": rehomed,
         "landed": rehomed.get(access.user.username),
+        # What the caller has to be able to say afterwards, because the dialog promised one
+        # of two different things depending on this.
+        "files_removed": removed,
     }
 
 
@@ -195,10 +224,17 @@ def remove(
 # deleted, and `memberships` went with it), and refusing there would strand an instance that
 # nobody but an administrator could ever open again.
 #
-# The DIRECTORY TREE IS LEFT ALONE, exactly as in `remove` and for the same reason: it holds
-# the user's own uploaded documents, and a web request that quietly removes hundreds of
-# megabytes of somebody's lecture notes is not a request anyone expects to be irreversible.
-# An administrator can still re-import the tree.
+# AND THE DIRECTORY TREE GOES WITH IT (2026-08-28, explicit user request), which is where
+# this parts company with `remove` above. The reason `remove` leaves the files standing does
+# not survive here: there it is one member disposing of an instance OTHERS still hold, so the
+# documents still have an owner to be irreversible for. Here nobody is left — the tree would
+# be hundreds of megabytes under a slug that is on record nowhere, and they would pile up one
+# per abandoned instance with only an administrator able to tell what any of them was.
+#
+# Same order as `DELETE /api/admin/workspaces/{slug}`, and for the same reason: the tree
+# first, so a failure leaves the row and the membership standing and the call can be retried.
+# The other way round strands files whose owner is no longer on record — which is the exact
+# state this is here to stop creating.
 #
 # There is deliberately no «last workspace of the installation» guard here. `remove` has one
 # and it predates the decision that an installation may hold ZERO workspaces and an account
@@ -237,13 +273,24 @@ def leave(
         logger.info(f"[workspace] «{user.username}» salió de «{slug}»")
         return {"left": slug, "deleted": False, "members_left": len(others)}
 
+    try:
+        removed = settings.destroy(ws)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
+
     db.delete(workspace)
     db.flush()
     if user.active_workspace_id == workspace.id:
         user.active_workspace_id = None
     deps.invalidate(slug, "workspace eliminado al salir su último miembro")
     logger.info(f"[workspace] «{user.username}» era el último de «{slug}»; se eliminó")
-    return {"left": slug, "deleted": True, "members_left": 0, "path": str(ws.root)}
+    return {
+        "left": slug,
+        "deleted": True,
+        "members_left": 0,
+        "path": str(ws.root),
+        "files_removed": removed,
+    }
 
 
 # The chain of a workspace other than the active one, so the switcher can show what state
