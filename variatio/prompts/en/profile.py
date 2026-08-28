@@ -154,10 +154,22 @@ For each field:
 - `guidance.extraction`: how to EXTRACT this field from a source document. **Write it in more detail and with more precision than the rest of the texts**: it feeds a later extraction process that has to be exact and deterministic, so be concrete and actionable, and lean on the literal fragments in the inventory. Cover, where they apply: what to copy and whether it goes VERBATIM or normalised; the BOUNDARIES with the neighbouring fields (what belongs to this field and what does NOT, so they do not overlap); the concrete markers or headings in the document that delimit it (e.g. "Solution:", "Proposed exercises"); what to EXCLUDE (enumeration labels, section headers, page artefacts); and, only in fields that admit absence under the NULL POLICY, when the field goes to null. It applies to every field that can be located in the material.
 - `guidance.generation`: **do NOT write it. Ever.** It exists in the format, but it is a field filled in by hand by whoever administers the course when a particular field needs a nuance the rules do not cover. You leave only `extraction` in `guidance`. Whatever you know about how this modality is WRITTEN goes entirely into `general_generation_rules`.
 
-# NULL POLICY — `null` IS THE LAST RESORT
-A field admits `null` ONLY when the content it represents MAY NOT EXIST in an exercise of that modality (e.g. the solution of an exercise set unsolved). The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself.
+# NULL POLICY — IT DEPENDS ON WHETHER THE FIELD IS COPIED OR DEDUCED
+The question is not "does this modality usually bring this field?", but "could ONE SINGLE exercise of this modality be missing it?". The answer depends on where the value comes from, and there are two cases with OPPOSITE rules.
 
-Therefore, for every CLASSIFYING field (level, category…):
+## Fields COPIED from the document (statement, solution, starting material, options, explanation)
+They admit `null` UNLESS the exercise does not stand up without them. The only safe exception is the `primary_field`: an exercise with no statement is not an exercise. Declare a copied field mandatory only when its absence would break the whole modality: the `options` of a closed question, the code to be fixed in an error correction.
+
+The two mistakes do NOT cost the same, and that asymmetry is the rule:
+- Declaring it nullable when the content is always there costs nothing: the extractor will always fill it in, because it always finds it.
+- Declaring it mandatory when it may be missing FORCES IT TO BE INVENTED. Downstream this field enters the extractor's grammar as mandatory, so faced with an exercise that does not bring it the model cannot answer "it is not there": it fabricates one, and out comes false teaching material indistinguishable from the real thing.
+
+Two signs that do NOT prove a copied field is always present:
+- The inventory not bringing a single exemplar without it. The inventory is a SAMPLE of fragments, not the whole corpus.
+- What the documents are called. A whole corpus of "solutions" files typically resolves the theory part and leaves the practical part's statements bare.
+
+## Fields DEDUCED by observing the exercise (the CLASSIFYING ones: level, category…)
+Here `null` IS THE LAST RESORT, for the opposite reason: their value is not to be found in the document, it is to be judged, and it can always be judged. The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself.
 - Do NOT declare it optional by default. If its value is deducible by observing the exercise, the field does NOT carry `null`.
 - Its `description` must include an INTERNAL CLASSIFICATION CRITERION particular to the course: enumerate each possible value together with the OBSERVABLE SIGNALS that identify it (which constructs, what complexity, what demand or what prior knowledge the exercise presupposes). The criterion must cover ALL the material, so that any exercise can be classified without exception.
 - Its `guidance.extraction` must say: if the document brings an explicit label, that one is used; if it does NOT, the criterion defined in `description` is applied to the exercise's content. NEVER "if there is no label, null".
@@ -190,9 +202,9 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
 - Return ONE SINGLE JSON object. Nothing before, nothing after.
 - No ```json, no backticks, no comments, no explanations.
 - The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`, `general_generation_rules`) in the language of the material.
-- Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` only where the content may not exist.
+- Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` on every field copied from the document that may be missing in some exercise, and on no deducible one.
 - Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
-- BEFORE ANSWERING, check the six things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`.
+- BEFORE ANSWERING, check the seven things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it.
 
 <<<INVENTORY>>>
 {findings}

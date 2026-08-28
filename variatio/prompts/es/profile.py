@@ -154,10 +154,22 @@ Para cada campo:
 - `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
 - `guidance.generation`: **NO la escribas. Nunca.** Existe en el formato, pero es un campo que rellena a mano quien administra la asignatura cuando un campo concreto necesita un matiz que las reglas no cubren. Tú deja en `guidance` únicamente `extraction`. Lo que sepas sobre cómo se REDACTA esta modalidad va entero en `general_generation_rules`.
 
-# POLÍTICA DE NULOS — `null` ES EL ÚLTIMO RECURSO
-Un campo admite `null` SOLO cuando el contenido que representa PUEDE NO EXISTIR en un ejercicio de esa modalidad (p. ej. la solución de un ejercicio que se plantea sin resolver). Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido.
+# POLÍTICA DE NULOS — DEPENDE DE SI EL CAMPO SE COPIA O SE DEDUCE
+La pregunta no es «¿suele traer esta modalidad este campo?», sino «¿podría existir UN SOLO ejercicio de esta modalidad al que le falte?». La respuesta depende de dónde sale el valor, y son dos casos con reglas OPUESTAS.
 
-Por tanto, para todo campo CLASIFICATORIO (nivel, categoría…):
+## Campos que se COPIAN del documento (enunciado, solución, material de partida, opciones, explicación)
+Admiten `null` SALVO que el ejercicio no se sostenga sin ellos. La única excepción segura es el `primary_field`: un ejercicio sin enunciado no es un ejercicio. Declara obligatorio un campo copiado solo cuando su ausencia rompería la modalidad entera: las `opciones` de una pregunta cerrada, el código que hay que arreglar en una corrección de errores.
+
+Los dos errores NO cuestan lo mismo, y esa asimetría es la regla:
+- Declararlo nulable cuando el contenido siempre está no cuesta nada: el extractor lo rellenará siempre, porque siempre lo encuentra.
+- Declararlo obligatorio cuando puede faltar OBLIGA A INVENTARLO. Aguas abajo este campo entra como obligatorio en la gramática del extractor, así que ante un ejercicio que no lo trae el modelo no puede responder «no está»: lo fabrica, y sale material docente falso indistinguible del real.
+
+Dos indicios que NO demuestran que un campo copiado esté siempre:
+- Que el inventario no traiga ni un ejemplar sin él. El inventario es una MUESTRA de fragmentos, no el corpus entero.
+- Cómo se llaman los documentos. Un corpus entero de archivos «soluciones» resuelve típicamente la parte teórica y deja los enunciados de la parte práctica en crudo.
+
+## Campos que se DEDUCEN observando el ejercicio (los CLASIFICATORIOS: nivel, categoría…)
+Aquí `null` ES EL ÚLTIMO RECURSO, por la razón contraria: su valor no hay que encontrarlo en el documento, hay que juzgarlo, y siempre se puede juzgar. Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido.
 - NO lo declares opcional por defecto. Si su valor es deducible observando el ejercicio, el campo NO lleva `null`.
 - Su `description` debe incluir un CRITERIO INTERNO DE CLASIFICACIÓN propio de la asignatura: enumera cada valor posible junto a las SEÑALES OBSERVABLES que lo identifican (qué construcciones, qué complejidad, qué exigencia o qué conocimientos previos supone el ejercicio). El criterio debe cubrir TODO el material, de modo que cualquier ejercicio pueda clasificarse sin excepción.
 - Su `guidance.extraction` debe decir: si el documento trae una etiqueta explícita, se usa esa; si NO la trae, se aplica al contenido del ejercicio el criterio definido en `description`. NUNCA "si no hay etiqueta, null".
@@ -190,9 +202,9 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 - Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
 - Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`) en el idioma del material.
-- Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` únicamente donde el contenido pueda no existir.
+- Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` en todo campo copiado del documento que pueda faltar en algún ejercicio, y en ninguno deducible.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
-- ANTES DE RESPONDER, verifica las seis cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables.
+- ANTES DE RESPONDER, verifica las siete cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables; (7) cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga.
 
 <<<INVENTARIO>>>
 {findings}
