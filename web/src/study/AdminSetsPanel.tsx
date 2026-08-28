@@ -1,15 +1,18 @@
-import { Check, CircleSlash, Plus, Send, Sparkles } from "lucide-react";
+import { Check, CircleSlash, Plus, Search, Send, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { EMPTY_FORM, type FormState } from "@/features/run/commission";
 import { Count, GenerateForm } from "@/features/run/GenerateForm";
 import { profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
+import { artifactName } from "@/lib/names";
+import { fold } from "@/lib/text";
 import { cn } from "@/lib/utils";
-import { useActiveWorkspace, useKg, useKgGraph, useProfile } from "@/state/queries";
+import { useKg, useKgGraph, useProfile } from "@/state/queries";
 
 import { toStockParams } from "./commission";
 import {
@@ -18,7 +21,12 @@ import {
   useEvaluationSets,
   useGenerateEvaluations,
 } from "./queries";
-import type { AssignableAccount, EvaluationSet, EvaluatorProfile } from "./types";
+import type {
+  AssignableAccount,
+  AssignableWorkspace,
+  EvaluationSet,
+  EvaluatorProfile,
+} from "./types";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -60,6 +68,20 @@ function PersonStep({
   onChoose: (account: AssignableAccount | null) => void;
 }) {
   const { t } = useT();
+  const [query, setQuery] = useState("");
+
+  // Username AND display name, folded on both sides: the administrator handing sets out
+  // knows people by the name they are called, and the row is keyed by the one they log in
+  // with. `lib/text.fold` is the app's single accent rule, shared with the guide's search.
+  const shown = useMemo(() => {
+    const needle = fold(query.trim());
+    if (!needle) return accounts;
+    return accounts.filter(
+      (account) =>
+        fold(account.username).includes(needle) || fold(account.name).includes(needle),
+    );
+  }, [accounts, query]);
+
   if (chosen) {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -73,25 +95,47 @@ function PersonStep({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {accounts.map((account) => (
-        <button
-          key={account.id}
-          type="button"
-          onClick={() => onChoose(account)}
-          className="border border-border px-3 py-2 text-left transition-colors hover:bg-accent/40"
-        >
-          <span className="block text-body font-medium">{account.username}</span>
-          <span className="block">
-            <Profile value={account.evaluator_profile} />
-            <span className="text-small text-muted-foreground">
-              {" "}
-              · {account.workspaces.length} workspace
-              {account.workspaces.length === 1 ? "" : "s"}
-            </span>
-          </span>
-        </button>
-      ))}
+    <div className="space-y-3">
+      <div className="relative w-full sm:w-64">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground"
+        />
+        <Input
+          aria-label={t("sets.searchAccounts")}
+          placeholder={t("sets.searchAccounts")}
+          className="pl-9"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="text-small text-muted-foreground">
+          {t("sets.noAccountMatches", { query: query.trim() })}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {shown.map((account) => (
+            <button
+              key={account.id}
+              type="button"
+              onClick={() => onChoose(account)}
+              className="border border-border px-3 py-2 text-left transition-colors hover:bg-accent/40"
+            >
+              <span className="block text-body font-medium">{account.username}</span>
+              <span className="block">
+                <Profile value={account.evaluator_profile} />
+                <span className="text-small text-muted-foreground">
+                  {" "}
+                  · {account.workspaces.length} workspace
+                  {account.workspaces.length === 1 ? "" : "s"}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -130,20 +174,56 @@ function WorkspaceStep({
   }
 
   // Only the instances this person can actually open: the rest would 404 in their queue.
+  //
+  // An instance whose chain is not approved is drawn, and drawn UNSELECTABLE with the
+  // stages it is waiting on underneath. Hiding it would be the worse of the three options
+  // on offer: «no aparece» is indistinguishable from «no tiene acceso», and the thing to
+  // do about it — approve the profile, the graph, the bank — is exactly what the row would
+  // have said. It carries no colour: `--attention` is the screen's scarcest ink and means
+  // «act here», which an option that cannot be chosen is not.
   return (
     <div className="flex flex-wrap gap-2">
       {account.workspaces.map((entry) => (
-        <button
-          key={entry.slug}
-          type="button"
-          onClick={() => onChoose(entry.slug)}
-          className="border border-border px-3 py-2 text-left transition-colors hover:bg-accent/40"
-        >
-          <span className="block text-body font-medium">{entry.name}</span>
-          <span className="block font-mono text-small text-muted-foreground">{entry.slug}</span>
-        </button>
+        <WorkspaceOption key={entry.slug} entry={entry} onChoose={onChoose} />
       ))}
     </div>
+  );
+}
+
+function WorkspaceOption({
+  entry,
+  onChoose,
+}: {
+  entry: AssignableWorkspace;
+  onChoose: (slug: string) => void;
+}) {
+  const { t } = useT();
+  // `false` and not falsy: an API older than this bundle sends no verdict at all, and «no
+  // lo sabe» is not «no». Unknown stays selectable, and the server refuses the commission
+  // with the same gate if it turns out not to be ready.
+  const blocked = entry.ready === false;
+  const pending = (entry.pending ?? []).map((artifact) => artifactName(artifact, t));
+
+  return (
+    <button
+      type="button"
+      disabled={blocked}
+      onClick={() => onChoose(entry.slug)}
+      className={cn(
+        "max-w-full border border-border px-3 py-2 text-left transition-colors",
+        blocked ? "cursor-not-allowed opacity-60" : "hover:bg-accent/40",
+      )}
+    >
+      <span className="block text-body font-medium">{entry.name}</span>
+      <span className="block font-mono text-small text-muted-foreground">{entry.slug}</span>
+      {blocked ? (
+        <span className="mt-1 block max-w-64 text-small text-muted-foreground">
+          {pending.length > 0
+            ? t("sets.notReady", { stages: pending.join(", ") })
+            : t("sets.notReadyUnknown")}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -239,17 +319,34 @@ export function AdminSetsPanel() {
   const generate = useGenerateEvaluations();
   const toast = useToast();
 
-  // THE COMMISSION FORM READS THE ACTIVE WORKSPACE, NOT THE CHOSEN ONE, and there is no
-  // way round it here: the graph, the profile and the concept list all travel on the
-  // `X-Workspace` header the tab sets once. Building a commission against one instance's
-  // graph and running it in another's would either 422 at job time («Unknown concepts») or,
-  // where the two happen to share a name, quietly produce an exercise about the wrong
-  // syllabus. So encargar is offered ONLY while the two agree, and says how to make them.
-  const active = useActiveWorkspace();
-  const profileQuery = useProfile();
-  const kg = useKg();
-  const kgGraph = useKgGraph();
-  const sameInstance = Boolean(workspace) && workspace === active;
+  // THE CHOSEN WORKSPACE DRIVES THE DATA, not the one the tab happens to be standing in
+  // (2026-08-27, explicit user request, reversing the rule that used to be written here).
+  //
+  // What made this a restriction was that the graph, the profile and the concept list all
+  // travelled on the single `X-Workspace` header the tab sets once, so a commission
+  // composed here was always about the ACTIVE instance — and running it in another would
+  // either 422 at job time or, where the two share a concept name, quietly produce an
+  // exercise about the wrong syllabus. The fix is to name the instance on the request
+  // rather than to forbid the combination: `useProfile`/`useKg`/`useKgGraph` take a slug,
+  // it goes into the header and into the query key, and `GenerateForm` carries it into the
+  // two reads it makes for itself. An administrator reaches another instance through the
+  // bypass in `auth.deps.access_for`, which is the same door `assign_set` already uses.
+  //
+  // What still cannot happen is commissioning in an instance whose chain is not approved,
+  // and that is the WHERE step's business now: it draws such a workspace unselectable with
+  // the stages it is waiting on, from the same `gate_error` the endpoint enforces.
+  const profileQuery = useProfile(workspace);
+  const kg = useKg(workspace);
+  const kgGraph = useKgGraph(workspace);
+
+  // Now that the form reads the CHOSEN instance, a commission composed for one workspace
+  // is about concepts the next one does not have: leaving it in place would send names the
+  // target graph never heard of. Moving between instances therefore empties it and folds
+  // the composer, which is also what says the form is about to ask a different question.
+  const forgetCommission = () => {
+    setForm(EMPTY_FORM);
+    setComposing(false);
+  };
 
   const free = useMemo(
     () => (sets.data?.sets ?? []).filter((set) => !set.holders.some((h) => h.account_id === account?.id)),
@@ -337,6 +434,7 @@ export function AdminSetsPanel() {
             setAccount(next);
             setWorkspace(null);
             setPicked([]);
+            forgetCommission();
           }}
         />
       </Step>
@@ -349,6 +447,7 @@ export function AdminSetsPanel() {
             onChoose={(slug) => {
               setWorkspace(slug);
               setPicked([]);
+              forgetCommission();
             }}
           />
         </Step>
@@ -393,16 +492,7 @@ export function AdminSetsPanel() {
                     username: account.username,
                   })}
                 </Button>
-                <Button
-                  variant="outline"
-                  disabled={!sameInstance}
-                  onClick={() => setComposing((value) => !value)}
-                  title={
-                    sameInstance
-                      ? undefined
-                      : t("sets.switchToCommission", { slug: workspace })
-                  }
-                >
+                <Button variant="outline" onClick={() => setComposing((value) => !value)}>
                   <Plus />
                   {t("sets.commissionMore")}
                 </Button>
@@ -411,18 +501,7 @@ export function AdminSetsPanel() {
                 ) : null}
               </div>
 
-              {/* Repartir funciona en cualquier caso — lee del servidor por slug. Lo que
-                  no puede cruzar instancias es COMPONER un encargo. */}
-              {!sameInstance ? (
-                <p className="flex items-start gap-2 text-small text-attention">
-                  <Sparkles className="mt-0.5 size-3.5 shrink-0" />
-                  {t("sets.crossInstance", { slug: workspace })}
-                  {active ? t("sets.crossInstance.now", { slug: active }) : null}
-                  {t("sets.crossInstance.tail")}
-                </p>
-              ) : null}
-
-              {composing && sameInstance ? (
+              {composing ? (
                 <div className="animate-fade-in space-y-3 border border-border bg-muted/30 p-3">
                   <p className="flex items-start gap-2 text-small text-muted-foreground">
                     <Sparkles className="mt-0.5 size-3.5 shrink-0" />
@@ -449,6 +528,7 @@ export function AdminSetsPanel() {
                     error={generate.isError ? (generate.error as Error).message : null}
                     blockedInstructions={null}
                     variant="evaluation"
+                    workspace={workspace}
                     launchLabel={plural("sets.launchLabel", comparisons)}
                     onLaunch={launch}
                     onCancel={() => setComposing(false)}

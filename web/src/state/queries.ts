@@ -8,7 +8,8 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { api, getScope } from "@/lib/api";
-import { localeStore, translator, type Key, type Language } from "@/lib/i18n";
+import { localeStore, translator, useT, type Key, type Language } from "@/lib/i18n";
+import { phaseName } from "@/lib/names";
 import { isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
 import type {
   ArtifactName,
@@ -17,6 +18,7 @@ import type {
   EvaluatorProfile,
   JobKind,
   Lanes,
+  RawKind,
   Role,
   WorkspaceRow,
 } from "@/lib/types";
@@ -110,7 +112,7 @@ export function useJobRun(
  * The most recent run of this kind that THIS account launched.
  *
  * The stream carries the whole workspace, so `useJobRun` alone adopts a colleague's run:
- * with two evaluators on `/evaluar`, the second one's screen collapsed onto the first
+ * with two evaluators on `/evaluate`, the second one's screen collapsed onto the first
  * one's comparison — and then onto its 404. The generate and evaluation screens are
  * about a commission somebody made, so they filter by author; the build screens stay on
  * `useJobRun`, because an artifact under construction is under construction for everyone.
@@ -250,20 +252,39 @@ export function useSplitEngine(): boolean {
   return isSplitEngine(useHealth().data?.engine);
 }
 
-export function useProfile() {
-  return useQuery({ queryKey: keys.profile, queryFn: api.profile });
+/**
+ * The three reads a commission is composed from, optionally about a NAMED instance.
+ *
+ * With no argument they are what they always were: the tab's workspace, the tab's cache
+ * entry. With one, the slug goes into the query key as well as into the header — two
+ * instances sharing `["kg"]` would serve one graph as the other's, which is the whole
+ * class of bug the `X-Workspace` header exists to prevent, moved into the cache. The base
+ * key stays a prefix of the named one, so every `invalidateQueries` already written
+ * reaches both.
+ */
+const scoped = <K extends readonly unknown[]>(key: K, workspace?: string | null) =>
+  workspace ? ([...key, workspace] as const) : key;
+
+export function useProfile(workspace?: string | null) {
+  return useQuery({
+    queryKey: scoped(keys.profile, workspace),
+    queryFn: () => api.profile(workspace),
+  });
 }
 
 export function useContentContext() {
   return useQuery({ queryKey: keys.context, queryFn: api.context });
 }
 
-export function useKg() {
-  return useQuery({ queryKey: keys.kg, queryFn: api.kg });
+export function useKg(workspace?: string | null) {
+  return useQuery({ queryKey: scoped(keys.kg, workspace), queryFn: () => api.kg(workspace) });
 }
 
-export function useKgGraph() {
-  return useQuery({ queryKey: keys.kgGraph, queryFn: api.kgGraph });
+export function useKgGraph(workspace?: string | null) {
+  return useQuery({
+    queryKey: scoped(keys.kgGraph, workspace),
+    queryFn: () => api.kgGraph(workspace),
+  });
 }
 
 /**
@@ -287,8 +308,12 @@ export function useCoverage() {
   return useQuery({ queryKey: keys.coverage, queryFn: api.coverage });
 }
 
+// Gated like `useHealth`, and it became necessary the moment the shell started reading it:
+// `/api/raw` resolves a membership like every route, so an account that belongs to no
+// workspace would only ever get a 403 out of it. Every other consumer already sits behind
+// a screen that needs an instance.
 export function useRaw() {
-  return useQuery({ queryKey: keys.raw, queryFn: api.raw });
+  return useQuery({ queryKey: keys.raw, queryFn: api.raw, enabled: useHasWorkspace() });
 }
 
 /** The phase plan of every builder: what the segmented bar is a drawing of. */
@@ -300,12 +325,30 @@ export function useBuildPlans() {
   });
 }
 
+/**
+ * A plan with every phase named in the reader's language.
+ *
+ * Named here rather than in `PhaseBar`: the bar is handed a plan with no idea WHICH plan it
+ * is, and a phase key only means something inside its own — `convert` is three different
+ * phases across the three builders. The two hooks below are the one place that holds both
+ * halves, and naming it here is also what covers every bar at once.
+ */
+function namedPhases(
+  plan: string,
+  phases: BuildPhase[] | undefined,
+  t: (key: Key) => string,
+): BuildPhase[] {
+  if (!phases) return [];
+  return phases.map((phase) => ({ ...phase, label: phaseName(plan, phase.key, t, phase.label) }));
+}
+
 /** The phases of one build, in order. Empty until the plan has arrived, which is what
  *  makes the bar fall back to the plain one instead of drawing a single wrong segment. */
 export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[] {
   const plans = useBuildPlans();
+  const { t } = useT();
   if (!artifact) return [];
-  return plans.data?.artifacts?.[artifact] ?? [];
+  return namedPhases(artifact, plans.data?.artifacts?.[artifact], t);
 }
 
 /**
@@ -314,10 +357,10 @@ export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[]
  * `staleTime: Infinity` like the phase plan: it is derived from artifacts a generation
  * run cannot change, and switching workspace clears the whole cache anyway.
  */
-export function useScope(itemType: string | null) {
+export function useScope(itemType: string | null, workspace?: string | null) {
   return useQuery<CommissionScope>({
-    queryKey: keys.scope(itemType ?? ""),
-    queryFn: () => getScope(itemType!),
+    queryKey: scoped(keys.scope(itemType ?? ""), workspace),
+    queryFn: () => getScope(itemType!, workspace),
     enabled: Boolean(itemType),
     staleTime: Infinity,
   });
@@ -326,22 +369,25 @@ export function useScope(itemType: string | null) {
 /** The same for a job that writes no artifact and still has phases. */
 export function useJobPhases(kind: JobKind): BuildPhase[] {
   const plans = useBuildPlans();
-  return plans.data?.jobs?.[kind] ?? [];
+  const { t } = useT();
+  return namedPhases(kind, plans.data?.jobs?.[kind], t);
 }
 
 /**
- * The label of the raw slot this artifact needs and that has no documents, or null.
+ * The KIND of the raw slot this artifact needs and that has no documents, or null.
  *
  * Which slot feeds which artifact is declared by the server (`slot.feeds`), so the
- * screens never carry a second copy of that mapping.
+ * screens never carry a second copy of that mapping. What comes back is the kind and not
+ * the label, because the label is the API's own language: `lib/raw.slotLabelOf` is where
+ * it becomes the reader's.
  */
-export function useRawMissingFor(artifact: ArtifactName | undefined): string | null {
+export function useRawMissingFor(artifact: ArtifactName | undefined): RawKind | null {
   const raw = useRaw();
   if (!artifact) return null;
   const slot = (raw.data?.slots ?? []).find(
     (candidate) => candidate.feeds.includes(artifact) && candidate.files.length === 0,
   );
-  return slot?.label ?? null;
+  return slot?.kind ?? null;
 }
 
 /** Everything an artifact write can invalidate, in one place. */

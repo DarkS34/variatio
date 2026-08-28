@@ -104,6 +104,52 @@ def test_a_deleted_workspace_is_never_offered(db):
     assert [w["slug"] for w in _accounts(session)["admin"]["workspaces"]] == ["default"]
 
 
+# WHETHER ANYTHING CAN BE COMMISSIONED THERE ----------------------------------------------
+#
+# Since 2026-08-27 the commission form reads the workspace CHOSEN in step 2 rather than the
+# one the tab is standing in, so each instance has to say whether it can take a commission
+# at all — otherwise the only way to find out is a 409 after composing the whole thing.
+
+
+def test_each_workspace_says_whether_a_commission_can_be_composed_in_it(db):
+    session, _ = db
+    from server import review
+
+    # Neither of these instances has anything built, which is the state every workspace
+    # starts in: not ready, and the three stages named. The names are ARTIFACT KEYS and
+    # not the gate's Spanish sentence, because `web/src/lib/names.ts` is what says them in
+    # the reader's own language.
+    for entry in _accounts(session)["admin"]["workspaces"]:
+        assert entry["ready"] is False
+        assert entry["pending"] == list(review.ARTIFACTS)
+
+
+def test_an_approved_chain_is_offered_with_nothing_pending(db, monkeypatch):
+    session, _ = db
+    # The rule is `gate_error`'s and only `gate_error`'s — the same one the endpoint that
+    # generates enforces, so the screen can never offer what it would refuse.
+    monkeypatch.setattr("study.api.admin.gate_error", lambda ws, kind: None)
+
+    entry = _accounts(session)["ana"]["workspaces"][0]
+    assert entry["ready"] is True
+    assert entry["pending"] == []
+
+
+def test_the_gate_is_read_once_per_workspace_and_not_once_per_account(db, monkeypatch):
+    session, _ = db
+    # It touches the filesystem, and this endpoint loops over every account of the
+    # installation: three accounts over two instances used to mean three reads, of which
+    # one was «default» measured twice.
+    asked = []
+    monkeypatch.setattr(
+        "study.api.admin.gate_error",
+        lambda ws, kind: asked.append(ws.slug) or "Para generar hay que aprobar antes: X.",
+    )
+
+    _accounts(session)
+    assert sorted(asked) == ["default", "examenes-cs1"]
+
+
 # WHO CAN BE PICKED -----------------------------------------------------------------------
 
 

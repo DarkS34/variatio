@@ -131,6 +131,27 @@ def export(
 # `tests/study/test_route_order.py` is what keeps the next addition from landing below it.
 
 
+# Whether a commission can be composed for this instance at all, and if not, WHICH stages
+# are still pending. The rule is `gate_error`'s and stays `gate_error`'s — the same one
+# `POST /evaluations/generate` enforces below, so the screen cannot offer what the endpoint
+# would refuse. What is added here is the naming: the sentence it returns interpolates the
+# unapproved stages' Spanish labels, and this list of theirs goes to the browser as
+# ARTIFACT KEYS, which `web/src/lib/names.ts` already says in the reader's own language.
+# The second read only happens on the unhappy path, and only ever once per workspace.
+def _commission_gate(slug: str) -> dict:
+    ws = settings.workspace_for(slug)
+    if gate_error(ws, "evaluate") is None:
+        return {"ready": True, "pending": []}
+    return {
+        "ready": False,
+        "pending": [
+            stage["artifact"]
+            for stage in runtime.pipeline_snapshot(ws)
+            if stage["status"] != "approved"
+        ],
+    }
+
+
 # The flow starts with a PERSON, not with a set: an administrator knows which subject each
 # evaluator teaches, so «¿a quién?» comes before «¿cuál?». Each account carries the
 # workspaces it can actually open, because handing somebody a set of an instance they
@@ -138,6 +159,16 @@ def export(
 @router.get("/evaluations/accounts")
 def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
     everything = repository.list_workspaces(db)
+
+    # Per WORKSPACE and not per (account, workspace): reading whether a chain is approved
+    # touches the filesystem three times, and this endpoint loops over every account of the
+    # installation — the same instance would be measured once for each of them.
+    gates: dict[str, dict] = {}
+
+    def gate(slug: str) -> dict:
+        if slug not in gates:
+            gates[slug] = _commission_gate(slug)
+        return gates[slug]
 
     accounts = []
     for user in identity.list_users(db):
@@ -149,11 +180,12 @@ def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
         # behind it accepts. Anybody else gets exactly the instances they can open.
         if user.is_admin:
             reachable = [
-                {"slug": w.slug, "name": w.name, "role": "administración"} for w in everything
+                {"slug": w.slug, "name": w.name, "role": "administración", **gate(w.slug)}
+                for w in everything
             ]
         else:
             reachable = [
-                {"slug": w.slug, "name": w.name, "role": m.role}
+                {"slug": w.slug, "name": w.name, "role": m.role, **gate(w.slug)}
                 for m, w in identity.memberships_for(db, user.id)
             ]
         accounts.append(

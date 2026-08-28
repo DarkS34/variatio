@@ -51,20 +51,34 @@ export class ApiError extends Error {
   }
 }
 
-export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export interface RequestOptions extends RequestInit {
+  /**
+   * Read a NAMED instance instead of the one this tab is sitting in.
+   *
+   * Per request and never global: the tab's workspace stays what every other call means,
+   * and the caller that has a slug in its hand — the panel that hands comparisons out,
+   * which composes a commission for a workspace it is not standing in — says so on the
+   * one call it makes. Setting the store instead would move the whole app under it.
+   */
+  workspace?: string | null;
+}
+
+export async function request<T>(path: string, init?: RequestOptions): Promise<T> {
+  const { workspace, ...rest } = init ?? {};
   const response = await fetch(path, {
-    ...init,
+    ...rest,
     // The session is an httpOnly cookie, so nothing here ever reads or sends a token by
     // hand. Stated rather than left to the default because it is the whole auth scheme.
     credentials: "same-origin",
     // `X-Workspace` on EVERY call, in one place: a request that forgot it would silently
     // read whichever instance the account last activated, which is the bug this header
     // exists to prevent. It is a request, not a permission — the server checks membership
-    // whatever the header says.
+    // whatever the header says, and an administrator naming somebody else's instance gets
+    // in through the bypass in `auth.deps.access_for` and nowhere else.
     headers: {
-      ...workspaceHeader(),
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
+      ...(workspace ? { "X-Workspace": workspace } : workspaceHeader()),
+      ...(rest.body ? { "Content-Type": "application/json" } : {}),
+      ...rest.headers,
     },
   });
 
@@ -129,7 +143,11 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
 
 // Named exports rather than members of `api`, because the two screens that read the
 // curriculum — the graph's tab and the generation form — import them by name.
-export const getCurriculum = () => request<CurriculumState>("/api/kg/curriculum");
+//
+// The `workspace` argument is why every caller wraps this in an arrow: react-query hands
+// its own context to a bare `queryFn`, which would arrive here as a slug.
+export const getCurriculum = (workspace?: string | null) =>
+  request<CurriculumState>("/api/kg/curriculum", { workspace });
 
 export const putCurriculum = (concepts: string[], closePrerequisites: boolean) =>
   put<CurriculumState>("/api/kg/curriculum", {
@@ -139,8 +157,10 @@ export const putCurriculum = (concepts: string[], closePrerequisites: boolean) =
 
 // Named for the same reason: the generation form imports it directly. It 404s until the
 // graph and the profile are built, which is what keeps the block off a fresh workspace.
-export const getScope = (itemType: string) =>
-  request<CommissionScope>(`/api/pipeline/scope?item_type=${encodeURIComponent(itemType)}`);
+export const getScope = (itemType: string, workspace?: string | null) =>
+  request<CommissionScope>(`/api/pipeline/scope?item_type=${encodeURIComponent(itemType)}`, {
+    workspace,
+  });
 
 export const api = {
   me: () => request<Session>("/api/auth/me"),
@@ -219,13 +239,16 @@ export const api = {
     put<ContentContextState>("/api/context", { narrative, facts }),
   adoptContextDraft: () => post<ContentContextState>("/api/context/adopt-draft", {}),
 
-  profile: () => request<ProfilePayload>("/api/profile"),
+  // The three reads a commission is composed from, and the three that take a slug: the
+  // panel builds a form against the instance the work will RUN in, which is not always
+  // the one the tab is standing in. Omitted, they mean the tab's, exactly as before.
+  profile: (workspace?: string | null) => request<ProfilePayload>("/api/profile", { workspace }),
   validateProfile: (profile: ExemplarsProfile) =>
     post<{ valid: boolean; error: string | null }>("/api/profile/validate", { profile }),
   saveProfile: (profile: ExemplarsProfile) => put<{ pipeline: Pipeline }>("/api/profile", { profile }),
 
-  kg: () => request<KgSummary>("/api/kg"),
-  kgGraph: () => request<GraphView>("/api/kg/graph"),
+  kg: (workspace?: string | null) => request<KgSummary>("/api/kg", { workspace }),
+  kgGraph: (workspace?: string | null) => request<GraphView>("/api/kg/graph", { workspace }),
   kgRaw: () => request<{ graph: Record<string, any> }>("/api/kg/raw"),
   kgReplace: (graph: Record<string, any>) => put<{ pipeline: Pipeline }>("/api/kg/raw", { graph }),
   kgNeighbours: (concept: string) =>

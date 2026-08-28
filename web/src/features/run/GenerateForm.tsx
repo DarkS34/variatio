@@ -240,6 +240,7 @@ export function GenerateForm({
   variant = "generate",
   footnote,
   launchLabel,
+  workspace,
 }: {
   state: FormState;
   onChange: (next: FormState) => void;
@@ -261,6 +262,11 @@ export function GenerateForm({
   /** Overrides the launch button's text. The panel commissions a BATCH of comparisons,
    *  which «Comparar tres propuestas» would misreport as one. */
   launchLabel?: string;
+  /** Which instance this commission is FOR, when it is not the one the tab is in. The
+   *  concepts, the profile and the graph arrive as props, but two things the form reads
+   *  for itself — the preset curriculum and the free text's scope — would otherwise come
+   *  from the tab's workspace and describe a syllabus the run will never see. */
+  workspace?: string | null;
 }) {
   const tr = useT();
   const { t, plural } = tr;
@@ -274,8 +280,8 @@ export function GenerateForm({
   // The workspace's preset curriculum. `undefined` while it loads, and its absence is what
   // decides whether the second switch is offered at all.
   const { data: preset } = useQuery<CurriculumState>({
-    queryKey: ["kg", "curriculum"],
-    queryFn: getCurriculum,
+    queryKey: workspace ? ["kg", "curriculum", workspace] : ["kg", "curriculum"],
+    queryFn: () => getCurriculum(workspace),
   });
 
   // The restriction starts OFF whatever the workspace holds (2026-08-23, explicit user
@@ -305,7 +311,7 @@ export function GenerateForm({
   // The resolved key, not `state.itemType`: null there means the profile's first modality,
   // and that is the state the form starts in, so the raw value would leave the query off
   // in the commonest case of all.
-  const scope = useScope(typeKey);
+  const scope = useScope(typeKey, workspace);
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
