@@ -162,22 +162,36 @@ la columna `generations.think`, el interruptor de la UI) se traducen al «low» 
 
 `low` por defecto y no algo más alto, medido en la A40 con /api/generate:
 
-    modelo                prompt_eval_count con think = true / low / medium / high
-    qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57
-    qwen3.8:27b-q8_0                            15 /  45 /  15 /  57
-    qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15
+    modelo                prompt_eval_count con think = true / low / medium / high / max
+    qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57 /   -
+    qwen3.8:27b-q8_0                            14 /  44 /  14 /  56 /  56
+    qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15 /   -
 
-Léase en tres partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
+Léase en cuatro partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
 un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en la llamada
 de curación real (777 s) y devolvió una respuesta VACÍA; `low` sigue emitiendo ~41 000 ahí
 — el nivel mueve el TECHO de la deliberación, no el suelo — así que subir de `low` en una
-fase que corre en local es reabrir esa medición, no un ajuste fino. Y el nivel lo
-implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro (cuatro
-valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
+fase que corre en local es reabrir esa medición, no un ajuste fino.
 
-Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa
-(`xhigh` NO existe). Cerebras no tiene `max` (`reasoning_effort` lo baja a «high») y en
-`gemma-4-31b` los tres niveles activos son equivalentes."""
+`max` NO ES UN NIVEL DE `qwen3.8`: es `high` con otro nombre. Medido el 2026-08-29 sobre
+`qwen3.8:27b-q8_0` (Ollama 0.32.13, temperatura 0 y semilla fija), los dos rinden el mismo
+prompt de 56 tokens y devuelven una respuesta byte a byte idéntica, mientras que `low` (44)
+y `medium` (14) sí difieren entre sí y de ellos. O sea, este modelo tiene TRES niveles
+efectivos. La columna de la q4_K_M lleva guion porque `max` no se midió allí; sus otras
+cifras son de la medición del 2026-08-24 y difieren en un token de las de hoy porque el
+prompt de prueba no era el mismo — lo que importa de la tabla son las DIFERENCIAS entre
+columnas de una misma fila, no su valor absoluto.
+
+Y el nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro
+(cuatro valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
+Por eso las opciones de aquí siguen siendo cuatro: son las que ACEPTA el motor, y qué hace
+cada modelo con ellas se declara donde se sabe de qué modelo se habla —
+`web/src/features/run/models.ts` para el que elige el encargo, que ofrece tres.
+
+Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa:
+`xhigh` NO existe («invalid think value»), ni tampoco `none`. Cerebras no tiene `max`
+(`reasoning_effort` lo baja a «high») y en `gemma-4-31b` los tres niveles activos son
+equivalentes."""
 
 
 def _effort(phase: str) -> Setting:

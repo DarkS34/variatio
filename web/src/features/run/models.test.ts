@@ -51,14 +51,33 @@ describe("the declared families", () => {
 // edge case: a level the newly chosen model does not accept has to come down to one it does.
 describe("an effort a model does not accept", () => {
   it("comes down to the highest that model has", () => {
-    const gemma = familyOf("gemma-4-31b");
-    expect(gemma.levels).not.toContain("max" as EffortLevel);
-    expect(clampEffort("max", gemma)).toBe("high");
-    expect(clampEffort("low", gemma)).toBe("low");
+    for (const model of ["gemma-4-31b", "qwen3.8:27b-q8_0"]) {
+      const family = familyOf(model);
+      expect(family.levels).not.toContain("max" as EffortLevel);
+      expect(clampEffort("max", family)).toBe("high");
+      expect(clampEffort("low", family)).toBe("low");
+    }
   });
 
-  it("is left alone when the model does accept it", () => {
-    expect(clampEffort("max", familyOf("qwen3.8:27b-q8_0"))).toBe("max");
+  it("is left alone by a model nothing is known about", () => {
+    expect(clampEffort("max", familyOf("un-modelo-desconocido"))).toBe("max");
+  });
+});
+
+// Neither declared family reaches `max`, and for two different measured reasons: Cerebras
+// has no such level and lowers it to `high`, and on `qwen3.8` Ollama's renderer answers
+// `max` with byte-identical output to `high`. The scale keeps the fourth step for a model
+// that might implement it; a family may not offer a stop that changes nothing.
+describe("the top of the scale", () => {
+  it("is offered by no declared family", () => {
+    for (const family of MODEL_FAMILIES) {
+      expect(family.levels).not.toContain("max" as EffortLevel);
+    }
+  });
+
+  it("still exists for a model nothing is known about", () => {
+    expect(EFFORT_ORDER).toContain("max" as EffortLevel);
+    expect(familyOf("un-modelo-desconocido").levels).toContain("max" as EffortLevel);
   });
 });
 

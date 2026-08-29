@@ -43,7 +43,12 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     url: "https://ollama.com/library/qwen3.8:27b-q8_0",
     blurbKey: "model.blurb.qwen38",
     speed: "slow",
-    levels: ["low", "medium", "high", "max"],
+    // THREE and not four: `max` is not a level of this model, it is `high` under another
+    // name. Measured 2026-08-29 against Ollama 0.32.13 on `qwen3.8:27b-q8_0`, temperature 0
+    // and a fixed seed — `high` and `max` render the same 56-token prompt and return a
+    // byte-identical answer, where `low` is 44 and `medium` is 14, the model's own default.
+    // A fourth stop that cannot change anything is a stop that lies.
+    levels: ["low", "medium", "high"],
     warnAbove: "medium",
     warningKey: "effort.warn.qwen38",
   },
