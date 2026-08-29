@@ -3,7 +3,8 @@
 import pytest
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
 
-from server.cli.common import DB_HINT, guarded, refusal
+from server.cli.common import DB_HINT, guarded
+from server.db import refusal
 
 
 def _raising(exc):

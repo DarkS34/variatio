@@ -25,7 +25,32 @@ def mirror_artifact(slug: str, kind: str, stage: str, content) -> None:
             workspace = repo.ensure_workspace(session, slug)
             repo.save_artifact(session, workspace.id, kind, stage, content)
     except Exception as exc:  # noqa: BLE001 - the file is written; only its reflection failed
-        logger.warning(f"[bd] No se pudo reflejar «{kind}» de «{slug}»: {exc}")
+        _warn(kind, slug, exc)
+
+
+def _warn(kind: str, slug: str, exc: Exception) -> None:
+    """Say the mirror failed, and say WHETHER RETRYING COULD EVER WORK.
+
+    Best-effort was never meant to mean indistinguishable. A database that is down comes
+    back and the next write catches up; content the database REFUSES never will, and until
+    somebody notices, the row simply stops keeping up with the file — measured on a
+    reference installation, a bank whose extraction had left four NUL characters in it had
+    a file of 151 items and a row of 152, and the only trace was this line.
+
+    `refusal` is what keeps it readable: a `DBAPIError` stringifies to the whole statement
+    plus every bound parameter, which for an artifact is hundreds of kilobytes.
+    """
+    from sqlalchemy.exc import DataError, IntegrityError, ProgrammingError
+
+    from . import refusal
+
+    if isinstance(exc, (DataError, IntegrityError, ProgrammingError)):
+        logger.error(
+            f"[bd] La base de datos RECHAZA «{kind}» de «{slug}» y lo seguirá rechazando: "
+            f"{refusal(exc)}"
+        )
+        return
+    logger.warning(f"[bd] No se pudo reflejar «{kind}» de «{slug}»: {refusal(exc)}")
 
 
 def mirror_file(ws: FsWorkspace, path: Path) -> None:
@@ -75,4 +100,4 @@ def mirror_approval(
                 artifact_id=artifact.id,
             )
     except Exception as exc:  # noqa: BLE001 - the review state on disk is the truth
-        logger.warning(f"[bd] No se pudo reflejar «{kind}» de «{slug}»: {exc}")
+        _warn(kind, slug, exc)

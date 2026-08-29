@@ -74,3 +74,15 @@ def reset() -> None:
         _engine.dispose()
     _engine = None
     _factory = None
+
+
+def refusal(exc: Exception) -> str:
+    """The one readable line inside a SQLAlchemy error, without the SQL and the params.
+
+    `str()` of a `DBAPIError` carries the whole statement and every bound parameter, which
+    for an artifact is hundreds of kilobytes of JSON in a single log line. What says what
+    went wrong is the driver's own exception, and its first line is the sentence a person
+    can act on.
+    """
+    original = getattr(exc, "orig", None) or exc
+    return str(original).strip().splitlines()[0]

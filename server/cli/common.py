@@ -20,17 +20,6 @@ def database_hint() -> None:
     print(DB_HINT)
 
 
-def refusal(exc) -> str:
-    """The one readable line inside a SQLAlchemy error, without the SQL and the params.
-
-    `str()` of a `DBAPIError` carries the whole statement and every bound parameter, which
-    for an artifact is hundreds of kilobytes. What says what went wrong is the driver's own
-    exception, and its first line is the sentence a person can act on.
-    """
-    original = getattr(exc, "orig", None) or exc
-    return str(original).strip().splitlines()[0]
-
-
 def guarded(func):
     """Wrap a subcommand so a database failure prints a message instead of a stack trace.
 
@@ -53,6 +42,8 @@ def guarded(func):
             print(f"\nDetalle: {type(exc).__name__}")
             return 1
         except SQLAlchemyError as exc:
+            from ..db import refusal
+
             print(f"La base de datos rechazó la operación ({type(exc).__name__}):")
             print(f"  {refusal(exc)}")
             return 1

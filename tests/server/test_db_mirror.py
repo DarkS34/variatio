@@ -140,3 +140,40 @@ def test_a_database_failure_never_breaks_the_write(monkeypatch, ws):
     assert review.ReviewState(ws).state(review.KNOWLEDGE_GRAPH)["status"] == "approved"
     assert len(warnings) == 2
     assert all(w.startswith("[bd] No se pudo reflejar «knowledge_graph» de «espejo»") for w in warnings)
+
+
+# Best-effort was never meant to mean indistinguishable. A database that is down comes back
+# and the next write catches up; content the database REFUSES never will. Measured on a
+# reference installation: a bank whose extraction had left four NUL characters in it had a
+# file of 151 items and a row of 152, and the only trace was one warning among many.
+def test_a_refusal_is_reported_as_permanent_and_a_hiccup_as_a_hiccup():
+    from sqlalchemy.exc import DataError, OperationalError
+
+    from loguru import logger
+
+    from server.db import mirror
+
+    def caught(exc):
+        seen = []
+        sink = logger.add(lambda m: seen.append(m.record), level="WARNING")
+        try:
+            mirror._warn("exemplars_bank", "cs0-examenes", exc)
+        finally:
+            logger.remove(sink)
+        return seen[0]
+
+    refused = caught(
+        DataError("INSERT INTO artifacts …", {"content": "…" * 5000},
+                  Exception("unsupported Unicode escape sequence"))
+    )
+    assert refused["level"].name == "ERROR"
+    assert "seguirá rechazando" in refused["message"]
+    assert "unsupported Unicode escape sequence" in refused["message"]
+    # The statement and its parameters must not end up in a log line.
+    assert "INSERT INTO" not in refused["message"]
+
+    hiccup = caught(
+        OperationalError("SELECT 1", {}, Exception("server closed the connection"))
+    )
+    assert hiccup["level"].name == "WARNING"
+    assert "No se pudo reflejar" in hiccup["message"]
