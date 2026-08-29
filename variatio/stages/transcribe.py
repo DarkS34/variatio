@@ -43,6 +43,7 @@ _REASONS = {
     "ocr": "ocr",
     "prompt_version": "prompt",
     "temperature": "temperature",
+    "cleanup": "cleanup",
 }
 
 _UNKNOWN_REASON = "config"

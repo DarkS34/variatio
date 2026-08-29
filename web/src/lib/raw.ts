@@ -55,6 +55,7 @@ export const STALE_REASON_KEYS: Record<string, Key> = {
   ocr: "transcribe.reason.ocr",
   prompt: "transcribe.reason.prompt",
   temperature: "transcribe.reason.temperature",
+  cleanup: "transcribe.reason.cleanup",
   config: "transcribe.reason.config",
 };
 

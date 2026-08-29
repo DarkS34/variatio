@@ -629,6 +629,7 @@ export const en: Catalogue = {
   "transcribe.reason.ocr": "OCR changed",
   "transcribe.reason.prompt": "the transcription prompt changed",
   "transcribe.reason.temperature": "the transcription temperature changed",
+  "transcribe.reason.cleanup": "the converter cleanup changed",
   "transcribe.reason.config": "the transcription settings changed",
   "doc.onlyPage": "It is the document's only page.",
   "doc.deleteHint": "Deletes this page and renumbers the following ones.",

@@ -38,6 +38,14 @@ META_EXTRA = ("pages", "seams", "seams_merged", "seams_failed", "failed_pages")
 
 FAILED_PAGE_PREFIX = "> [TRANSCRIPCIÓN FALLIDA"
 
+# The version of `markdown.undo_converter_escapes`, the cleanup applied to Docling's output
+# and to nothing else. Bumping it expires the pages that cleanup produced, because what is
+# on disk is no longer what the converter says — and re-running Docling over a `.docx` is
+# seconds and not one model call. It is written into the DOCLING fingerprint only: adding a
+# key to the vlm one would expire every PDF ever transcribed, which is hours of model time
+# for a change that never touched them.
+CONVERTER_CLEANUP_VERSION = 1
+
 
 def document_cache_dir(source: str | Path, cache_dir: str | Path) -> Path:
     source = Path(source)
@@ -54,7 +62,7 @@ def _page_path(cache_dir: Path, index: int) -> Path:
 # moves every timestamp and would throw away a whole corpus of transcriptions.
 def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) -> dict:
     stat = source.stat()
-    return {
+    fingerprint = {
         "source": source.name,
         "source_sha256": source_hash(source),
         "source_bytes": stat.st_size,
@@ -65,6 +73,9 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
         "temperature": config.TRANSCRIBE_TEMPERATURE if mode == "vlm" else None,
     }
+    if mode == "docling":
+        fingerprint["cleanup"] = CONVERTER_CLEANUP_VERSION
+    return fingerprint
 
 
 def fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:

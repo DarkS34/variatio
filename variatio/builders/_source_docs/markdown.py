@@ -43,6 +43,30 @@ SPACING_ACCENTS = {"´": "́", "˜": "̃", "¨": "̈", "ˆ": "̂"}
 DOTLESS = {"ı": "i", "ȷ": "j"}
 TEX_ACCENT_RE = re.compile(f"([{''.join(SPACING_ACCENTS)}])([a-zA-Z{''.join(DOTLESS)}])")
 
+# Docling's markdown serializer post-processes every text span it writes with exactly two
+# escapes (`docling_core/transforms/serializer/markdown.py`): `re.sub(r"(?<!\\)_", r"\_")`
+# and `html.escape(res, quote=False)`. What comes out is not what the page said: an
+# annotation reading `float -> str` is written `float -&gt; str`, a precondition
+# `0 <= nota <= 10` becomes `0 &lt;= nota &lt;= 10`, and `nota_textual` becomes
+# `nota\_textual`. That text is the corpus: it reaches the exemplars bank verbatim and
+# then the few-shot block, so the model is shown an arrow and a comparison that no
+# language has. Measured over the three reference instances, the whole damage is those
+# four sequences and nothing else — 702 `\_`, 109 `&gt;`, 34 `&lt;`, 6 `&amp;` — which is
+# what the serializer says it should be.
+#
+# UNDONE ONLY FOR DOCLING'S OWN OUTPUT, never for a `.md` somebody wrote and never for a
+# transcribed page: `&gt;` typed by a person is `&gt;`, and the VLM writes `\|`, `\#` and
+# `\$` on purpose inside LaTeX and inside table cells, where restoring them would break
+# the construct. Fences are already masked when this runs, and that is load-bearing too —
+# Docling serialises code with both escapes OFF, so a `&gt;` inside one of its code blocks
+# is the document's own.
+#
+# `html.escape` writes `&` first, so a source `&lt;` leaves as `&amp;lt;`. One left-to-right
+# pass over all three inverts that exactly: `re.sub` never rescans what it has replaced.
+CONVERTER_ENTITY_RE = re.compile(r"&(amp|lt|gt);")
+CONVERTER_ENTITIES = {"amp": "&", "lt": "<", "gt": ">"}
+CONVERTER_UNDERSCORE_RE = re.compile(r"\\_")
+
 
 # The markdown is the real input of every builder, so it is materialised instead of being
 # rebuilt in memory on each run: Docling is the slowest and most fragile step, and once the
@@ -116,13 +140,15 @@ def to_markdown(
             # Re-tidied on the way out, and rewritten when that changes anything: Docling is
             # the expensive half and its output does not change, so an improvement to the
             # cleanup must not cost a reconversion of the whole corpus to take effect.
-            return _refresh(cached, tidy_markdown(cached.read_text(encoding="utf-8")))
+            return _refresh(
+                cached, tidy_markdown(cached.read_text(encoding="utf-8"), converted=True)
+            )
         logger.info(f"[{input_path.name}] the document changed; reconverting")
 
     # The one place a converter is ever used, and therefore the only place a lazy one has to
     # be resolved: everything above returns without Docling — plain text, and a cache hit.
     document = resolve_converter(converter).convert(str(input_path)).document
-    text = tidy_markdown(document.export_to_markdown())
+    text = tidy_markdown(document.export_to_markdown(), converted=True)
     if cached is not None:
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
@@ -142,14 +168,25 @@ def _refresh(path: Path, text: str) -> str:
 # rule that catches it ("a short line repeated many times") also eats legitimately repeated
 # lines like a "Solución:" label in an exercise sheet, and this text feeds the bank builder
 # too. Materialising the markdown is precisely what makes that a reviewable step later.
-def tidy_markdown(text: str) -> str:
+def tidy_markdown(text: str, converted: bool = False) -> str:
     masked, fences = mask_fences(text)
     masked = TRAILING_WS_RE.sub("", masked)
+    if converted:
+        masked = undo_converter_escapes(masked)
     masked = HYPHEN_BREAK_RE.sub(r"\1\2", masked)
     masked = _recompose_accents(masked)
     masked = PAGE_NUMBER_RE.sub("", masked)
     masked = BLANK_RUN_RE.sub("\n\n", masked)
     return restore_fences(masked, fences).strip() + "\n"
+
+
+# The inverse of Docling's two post-processing escapes, and of nothing else. A literal
+# backslash-underscore in the source is the one thing it cannot tell from an escaped one —
+# Docling writes both as `\_` — and it is given up deliberately: `\_` is not a valid escape
+# in Python, in a regex or in prose, while `nota\_textual` is on 702 lines of this corpus.
+def undo_converter_escapes(text: str) -> str:
+    text = CONVERTER_ENTITY_RE.sub(lambda m: CONVERTER_ENTITIES[m.group(1)], text)
+    return CONVERTER_UNDERSCORE_RE.sub("_", text)
 
 
 # Only rewrite when the pair really composes into one character: `˜` before a letter that

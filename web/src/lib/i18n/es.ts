@@ -649,6 +649,7 @@ export const es = {
   "transcribe.reason.ocr": "el OCR cambió",
   "transcribe.reason.prompt": "el prompt de transcripción cambió",
   "transcribe.reason.temperature": "la temperatura de transcripción cambió",
+  "transcribe.reason.cleanup": "la limpieza del conversor cambió",
   "transcribe.reason.config": "la configuración de transcripción cambió",
   "doc.onlyPage": "Es la única página del documento.",
   "doc.deleteHint": "Borra esta página y renumera las siguientes.",
