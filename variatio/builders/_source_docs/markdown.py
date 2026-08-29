@@ -1,3 +1,11 @@
+"""Markdown for the builders: converting a document to it, caching it and tidying it up.
+
+The markdown is the real input of every builder, so it is materialised on disk rather than
+rebuilt in memory on each run: conversion is the slowest and most fragile step, a rebuild
+then needs no Docling at all, and a bad extraction can be blamed on the right stage by
+reading the file.
+"""
+
 import json
 import re
 import unicodedata
@@ -20,72 +28,50 @@ SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
 FENCE_TOKEN_RE = re.compile(r"§§FENCE(\d+)§§")
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
-# Where a page ENDED, kept in the joined markdown so the transcription of a document can
-# still be read page by page, and removed before anything is chunked: an HTML comment that
-# survived into a chunk would be quoted back as an item's statement or as a concept's
-# corpus passage. Written only on a seam that is a paragraph break anyway, so it never
-# lands inside a fence, a table or a sentence.
+# Where a page ENDED, kept in the joined markdown so a transcription can still be read page
+# by page and removed before anything is chunked: a comment that survived into a chunk would
+# be quoted back as an item's statement or as a concept's corpus passage.
 PAGE_MARK_RE = re.compile(r"^[ \t]*<!--\s*pág\.\s*\d+\s*-->[ \t]*(?:\n|$)", re.MULTILINE)
 PAGE_NUMBER_RE = re.compile(r"^[ \t]*\d{1,4}[ \t]*$", re.MULTILINE)
 HYPHEN_BREAK_RE = re.compile(r"(\w)-\n(\w)")
 BLANK_RUN_RE = re.compile(r"\n{3,}")
 TRAILING_WS_RE = re.compile(r"[ \t]+$", re.MULTILINE)
 
-# PDFs typeset with TeX carry their accents as a separate glyph placed BEFORE the vowel,
-# and every PDF backend hands them over that way: `M´etodo`, `tama˜no`, `n´umero`. Docling
-# does not recompose them, so the corruption reaches the concept names ("Documentaci´on")
-# and, worse, splits one concept into an accented and an unaccented spelling that no merge
-# pass can see as the same word. Only the SPACING accent characters are listed: the ASCII
-# backtick, `~` and `^` are markdown and would eat strikethrough and exponents.
+# PDFs typeset with TeX carry their accents as a separate glyph placed BEFORE the vowel
+# (`M´etodo`, `tama˜no`), and no PDF backend recomposes them, so the corruption reaches the
+# concept names and splits one concept into an accented and an unaccented spelling. Only the
+# SPACING accents are listed: the ASCII backtick, `~` and `^` are markdown and would eat
+# strikethrough and exponents.
 SPACING_ACCENTS = {"´": "́", "˜": "̃", "¨": "̈", "ˆ": "̂"}
-# TeX writes an accented i as \'\i, so the vowel underneath arrives DOTLESS: `l´ınea` is
-# not `l´inea`. Restoring the dot is part of recomposing, not a separate concern.
+# TeX writes an accented i as \'\i, so the vowel underneath arrives DOTLESS: `l´ınea`.
 DOTLESS = {"ı": "i", "ȷ": "j"}
 TEX_ACCENT_RE = re.compile(f"([{''.join(SPACING_ACCENTS)}])([a-zA-Z{''.join(DOTLESS)}])")
 
 # Docling's markdown serializer post-processes every text span it writes with exactly two
-# escapes (`docling_core/transforms/serializer/markdown.py`): `re.sub(r"(?<!\\)_", r"\_")`
-# and `html.escape(res, quote=False)`. What comes out is not what the page said: an
-# annotation reading `float -> str` is written `float -&gt; str`, a precondition
-# `0 <= nota <= 10` becomes `0 &lt;= nota &lt;= 10`, and `nota_textual` becomes
-# `nota\_textual`. That text is the corpus: it reaches the exemplars bank verbatim and
-# then the few-shot block, so the model is shown an arrow and a comparison that no
-# language has. Measured over the three reference instances, the whole damage is those
-# four sequences and nothing else — 702 `\_`, 109 `&gt;`, 34 `&lt;`, 6 `&amp;` — which is
-# what the serializer says it should be.
-#
-# UNDONE ONLY FOR DOCLING'S OWN OUTPUT, never for a `.md` somebody wrote and never for a
-# transcribed page: `&gt;` typed by a person is `&gt;`, and the VLM writes `\|`, `\#` and
-# `\$` on purpose inside LaTeX and inside table cells, where restoring them would break
-# the construct. Fences are already masked when this runs, and that is load-bearing too —
-# Docling serialises code with both escapes OFF, so a `&gt;` inside one of its code blocks
-# is the document's own.
-#
-# `html.escape` writes `&` first, so a source `&lt;` leaves as `&amp;lt;`. One left-to-right
-# pass over all three inverts that exactly: `re.sub` never rescans what it has replaced.
+# escapes: `re.sub(r"(?<!\\)_", r"\_")` and `html.escape(res, quote=False)`. Measured over
+# the three reference instances the whole damage is those four sequences and nothing else.
+# `html.escape` writes `&` first, so a source `&lt;` leaves as `&amp;lt;`; one left-to-right
+# pass over all three entities inverts that exactly, since `re.sub` never rescans a
+# replacement.
 CONVERTER_ENTITY_RE = re.compile(r"&(amp|lt|gt);")
 CONVERTER_ENTITIES = {"amp": "&", "lt": "<", "gt": ">"}
 CONVERTER_UNDERSCORE_RE = re.compile(r"\\_")
 
 
-# The markdown is the real input of every builder, so it is materialised instead of being
-# rebuilt in memory on each run: Docling is the slowest and most fragile step, and once the
-# text is on disk a rebuild needs no Docling at all and a failed extraction can be blamed on
-# the right stage by reading the file. Freshness is the SOURCE'S BYTES, recorded beside the
-# markdown: a hand-fixed markdown survives until the original document itself changes, and
-# a document that was merely copied or restored has not changed. Make-style mtime is kept
-# only for a cache written before the sidecar existed, which has nothing else to go on.
 def markdown_cache_path(source: str | Path, cache_dir: str | Path) -> Path:
+    """Where the markdown of a source document is cached."""
     source = Path(source)
     return Path(cache_dir) / source.parent.name / f"{source.name}.md"
 
 
 def markdown_meta_path(cached: str | Path) -> Path:
+    """Where the sidecar recording which bytes a cached markdown came from lives."""
     cached = Path(cached)
     return cached.with_name(cached.name + META_SUFFIX)
 
 
 def _recorded_source(cached: Path) -> str | None:
+    """Return the source digest the sidecar records, or `None` when there is none."""
     meta_path = markdown_meta_path(cached)
     if not meta_path.exists():
         return None
@@ -97,6 +83,7 @@ def _recorded_source(cached: Path) -> str | None:
 
 
 def _record_source(cached: Path, source: Path, digest: str) -> None:
+    """Write the sidecar naming the source document and its digest."""
     markdown_meta_path(cached).write_text(
         json.dumps(
             {"source": source.name, "source_sha256": digest},
@@ -108,6 +95,13 @@ def _record_source(cached: Path, source: Path, digest: str) -> None:
 
 
 def _is_current(cached: Path, input_path: Path, digest: str) -> bool:
+    """Say whether the cached markdown still corresponds to the source document.
+
+    Freshness is the source's BYTES, so a hand-fixed markdown survives until the original
+    changes and a document that was merely copied or restored has not changed. Make-style
+    mtime is only for a cache written before the sidecar existed, which has nothing else to
+    go on.
+    """
     recorded = _recorded_source(cached)
     if recorded is not None:
         return recorded == digest
@@ -120,6 +114,7 @@ def to_markdown(
     use_cache: bool = True,
     cache_dir: str | Path | None = None,
 ) -> str:
+    """Convert one document to markdown, through the cache when there is one."""
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
     if suffix in PLAIN_TEXT_EXTS:
@@ -137,9 +132,8 @@ def to_markdown(
         if _is_current(cached, input_path, digest):
             logger.debug(f"[{input_path.name}] markdown reused from {cached}")
             _record_source(cached, input_path, digest)
-            # Re-tidied on the way out, and rewritten when that changes anything: Docling is
-            # the expensive half and its output does not change, so an improvement to the
-            # cleanup must not cost a reconversion of the whole corpus to take effect.
+            # Re-tidied on the way out: conversion is the expensive half and its output does
+            # not change, so improving the cleanup must not cost a whole reconversion.
             return _refresh(
                 cached, tidy_markdown(cached.read_text(encoding="utf-8"), converted=True)
             )
@@ -158,17 +152,20 @@ def to_markdown(
 
 
 def _refresh(path: Path, text: str) -> str:
+    """Rewrite the cached file when re-tidying changed it, and return the text."""
     if text != path.read_text(encoding="utf-8"):
         path.write_text(text, encoding="utf-8")
         logger.debug(f"[{path.name}] cached markdown reformatted")
     return text
 
 
-# Only what is unambiguous. Header/footer boilerplate is NOT removed here on purpose: the
-# rule that catches it ("a short line repeated many times") also eats legitimately repeated
-# lines like a "Solución:" label in an exercise sheet, and this text feeds the bank builder
-# too. Materialising the markdown is precisely what makes that a reviewable step later.
 def tidy_markdown(text: str, converted: bool = False) -> str:
+    """Clean up markdown, undoing the converter's own escapes when it wrote it.
+
+    Only what is unambiguous. Header/footer boilerplate is deliberately NOT removed: the
+    rule that catches it ("a short line repeated many times") also eats a legitimately
+    repeated `Solución:` label, and this text feeds the exemplars bank too.
+    """
     masked, fences = mask_fences(text)
     masked = TRAILING_WS_RE.sub("", masked)
     if converted:
@@ -180,31 +177,40 @@ def tidy_markdown(text: str, converted: bool = False) -> str:
     return restore_fences(masked, fences).strip() + "\n"
 
 
-# The inverse of Docling's two post-processing escapes, and of nothing else. A literal
-# backslash-underscore in the source is the one thing it cannot tell from an escaped one —
-# Docling writes both as `\_` — and it is given up deliberately: `\_` is not a valid escape
-# in Python, in a regex or in prose, while `nota\_textual` is on 702 lines of this corpus.
 def undo_converter_escapes(text: str) -> str:
+    """Invert Docling's two post-processing escapes, and nothing else.
+
+    For converter output only — never a `.md` a person wrote, where `&gt;` is what they
+    typed, and never a transcribed page, where the VLM writes `\\|`, `\\#` and `\\$` on
+    purpose inside LaTeX and table cells. Fences are already masked when this runs, which is
+    load-bearing: Docling serialises code with both escapes off. A literal backslash-
+    underscore in the source is the one thing it cannot tell from an escaped one, and that
+    is given up deliberately.
+    """
     text = CONVERTER_ENTITY_RE.sub(lambda m: CONVERTER_ENTITIES[m.group(1)], text)
     return CONVERTER_UNDERSCORE_RE.sub("_", text)
 
 
-# Only rewrite when the pair really composes into one character: `˜` before a letter that
-# takes no tilde must be left exactly as it was, not turned into a letter with a dangling
-# combining mark, which would be worse than the corruption it tries to fix.
 def _recompose_accents(text: str) -> str:
+    """Glue a spacing accent onto the letter that follows it, where the two compose."""
+
     def _compose(match: re.Match) -> str:
+        """Compose one accent/letter pair, or leave it exactly as it was."""
         letter = DOTLESS.get(match.group(2), match.group(2))
         composed = unicodedata.normalize("NFC", letter + SPACING_ACCENTS[match.group(1)])
+        # Only when the pair really becomes ONE character: a letter left carrying a dangling
+        # combining mark is worse than the corruption this tries to fix.
         return composed if len(composed) == 1 else match.group(0)
 
     return TEX_ACCENT_RE.sub(_compose, text)
 
 
 def mask_fences(text: str) -> tuple[str, list[str]]:
+    """Replace every code fence with a token, returning the text and the fences."""
     fences: list[str] = []
 
     def _stash(match):
+        """Store one fence and return the token standing in for it."""
         fences.append(match.group(0))
         return f"§§FENCE{len(fences) - 1}§§"
 
@@ -212,10 +218,12 @@ def mask_fences(text: str) -> tuple[str, list[str]]:
 
 
 def restore_fences(text: str, fences: list[str]) -> str:
+    """Put the masked code fences back where their tokens are."""
     return FENCE_TOKEN_RE.sub(lambda m: fences[int(m.group(1))], text)
 
 
 def headings_by_level(text: str) -> dict[int, list[str]]:
+    """The document's headings, deduplicated case-insensitively and grouped by level."""
     masked, _ = mask_fences(text)
     levels: dict[int, list[str]] = {}
     seen: dict[int, set[str]] = {}
@@ -234,16 +242,19 @@ def headings_by_level(text: str) -> dict[int, list[str]]:
 
 
 def page_mark(index: int) -> str:
+    """The comment marking where page `index` ended."""
     return f"<!-- pág. {index} -->"
 
 
 def strip_page_marks(text: str) -> str:
+    """Remove the page marks, leaving the ones inside a code fence alone."""
     masked, fences = mask_fences(text)
     masked = BLANK_RUN_RE.sub("\n\n", PAGE_MARK_RE.sub("", masked))
     return restore_fences(masked, fences).strip()
 
 
 def split_blocks(text: str) -> list[str]:
+    """Split the document into blocks, on `---` rules when it has any and on blank lines."""
     masked, fences = mask_fences(strip_page_marks(text))
     pieces = (
         SEPARATOR_RE.split(masked)

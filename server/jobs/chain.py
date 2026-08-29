@@ -1,18 +1,17 @@
 """What follows a build on its own, and how far it may go.
 
-A phase that HAS to happen should not be a button. Once the graph is built the
-descriptions have to be written — without them no concept has a vector and tagging does
-not exist —, the concepts that work as labels have to be decided, and the indices warmed.
-That was three clicks on two different screens and none of the three was optional, so
-the build that leaves them pending chains them.
+A phase that HAS to happen should not be a button. Once the graph is built the descriptions
+have to be written — without them no concept has a vector and tagging does not exist —, the
+concepts that work as labels have to be decided, and the indices warmed, so the build that
+leaves all three pending chains them.
 
 What is NOT chained is whatever depends on an artifact that may not exist yet. Each link
-declares its condition: if it does not hold the link is skipped, the log says so and the
+declares its condition; if it does not hold the link is skipped, the log says so and the
 chain goes on with the next one. In a freshly created workspace — graph first, no profile
-yet — all three are skipped and the build ends at the graph, as before.
+yet — all three are skipped and the build ends at the graph.
 
-A link that fails or is cancelled cuts the chain: `advance` is only called after a job
-that finished well.
+A link that fails or is cancelled cuts the chain: `advance` is only called after a job that
+finished well.
 """
 
 from loguru import logger
@@ -31,15 +30,19 @@ CHAINS: dict[str, tuple[str, ...]] = {
 
 
 def _profile_exists(ws: Workspace) -> str | None:
+    """Why describing cannot follow, or `None` when it can."""
     if stages.exemplars_profile_path(ws) is None:
         return "este workspace todavía no tiene perfil de ejemplares"
     return None
 
 
-# Taggability is judged against the profile's modalities and against real items, so its
-# gate is the same as `routers/jobs.NEEDS_APPROVED`'s: an approved profile. With the
-# profile built but not approved it is skipped and the chain goes on; it is not an error.
 def _profile_approved(ws: Workspace) -> str | None:
+    """Why the taggability review cannot follow, or `None` when it can.
+
+    Taggability is judged against the profile's modalities and against real items, so the
+    gate is `routers/jobs.NEEDS_APPROVED`'s: an approved profile. Built but unapproved is a
+    skip, not an error.
+    """
     reason = _profile_exists(ws)
     if reason is not None:
         return reason
@@ -49,6 +52,7 @@ def _profile_approved(ws: Workspace) -> str | None:
 
 
 def _indexable(ws: Workspace) -> str | None:
+    """Why indexing cannot follow, or `None` when it can."""
     reason = _profile_exists(ws)
     if reason is not None:
         return reason
@@ -65,6 +69,11 @@ REQUIRES = {
 
 
 def advance(runner, job: Job) -> None:
+    """Queue the next link of the chain this job belongs to, skipping what cannot run yet.
+
+    Only ever the next one: each job carries the rest of its chain in `params`, so the
+    condition of every link is read when that link's turn comes and not before.
+    """
     remaining = list(job.params.get("chain") or CHAINS.get(job.kind) or ())
     if not remaining:
         return

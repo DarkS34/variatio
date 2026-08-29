@@ -1,3 +1,11 @@
+"""The concepts a course has actually covered, per workspace.
+
+Host state rather than an artifact (`instance/.curriculum.json`, gitignored), because two
+courses over one graph disagree about it. It is validated against the graph on every read,
+not on write alone, so a rename or a deletion surfaces as a named casualty instead of a
+silent shrink.
+"""
+
 import json
 from datetime import datetime, timezone
 
@@ -8,6 +16,7 @@ from . import storage
 
 
 def _read(ws: Workspace) -> dict:
+    """Read the stored list, treating a missing or corrupt file as an empty one."""
     if not ws.curriculum_path.exists():
         return {"concepts": [], "updated_at": None}
     try:
@@ -23,6 +32,11 @@ def _read(ws: Workspace) -> dict:
 
 
 def load(ws: Workspace, graph: KnowledgeGraph) -> dict:
+    """Partition the stored list into concepts the graph still holds and `dropped` ones.
+
+    An empty list is not short-circuited: emptying a curriculum is a save, so it keeps its
+    timestamp.
+    """
     data = _read(ws)
     existing = set(graph.all_concepts)
     kept = sorted({c for c in data["concepts"] if c in existing})
@@ -31,6 +45,7 @@ def load(ws: Workspace, graph: KnowledgeGraph) -> dict:
 
 
 def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:
+    """Store the concepts the graph knows about and hand back the reloaded state."""
     existing = set(graph.all_concepts)
     kept = sorted({c for c in concepts if c in existing})
     storage.write_json(
@@ -41,10 +56,20 @@ def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:
 
 
 def closure(concepts: list[str], graph: KnowledgeGraph, relation: str) -> list[str]:
+    """Grow a selection with everything it depends on.
+
+    An opt-in on the WRITE path only, materialised at save time: applied on read, the file
+    would stop meaning what it says.
+    """
     return sorted(set(concepts) | set(graph.prerequisite_closure(concepts, relation)))
 
 
 def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> list[str] | None:
+    """Choose between a commission's own curriculum and the workspace's.
+
+    Absent and `[]` are different requests and only absent falls back: an empty list is how
+    a single commission says «sin restricción».
+    """
     if param is not None:
         return param
     return load(ws, graph)["concepts"] or None

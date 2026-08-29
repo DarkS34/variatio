@@ -1,3 +1,5 @@
+"""The job queue: what runs, on which backend, in what order, and who hears about it."""
+
 from . import chain, lanes
 from .bus import EventBus
 from .handlers import HANDLERS

@@ -27,21 +27,24 @@ router = APIRouter(
 
 
 # What tells `jobs.evaluator_of` that a session is stock rather than somebody's own
-# commission. The two routes reach the SAME handler, so without a mark in the parameters
-# they are indistinguishable at the point the session is saved — and the panel is this
-# flag's only writer.
+# commission. Both routes reach the SAME handler, so without a mark in the parameters they
+# are indistinguishable where the session is saved. The panel is this flag's only writer.
 STOCK_PARAM = "stock"
 
 
 class DeleteBody(BaseModel):
+    """The sessions to remove."""
+
     ids: list[str]
 
 
 class AssignBody(BaseModel):
-    """Who gets these three items. `repeat` is the deliberate exception: handing the same
-    set to somebody who already judged it measures how consistent one person is with
-    themselves, which is the only reliability an evaluator alone in their subject can
-    provide. It is refused unless asked for, because the usual cause is a double click."""
+    """Who gets these three items.
+
+    `repeat` is the deliberate exception: handing the same set to somebody who already
+    judged it is test-retest, the only reliability an evaluator alone in their subject can
+    contribute. Refused unless asked for, because the usual cause is a double click.
+    """
 
     accounts: list[int]
     repeat: bool = False
@@ -71,6 +74,7 @@ def evaluations(
     account: int | None = None,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Return the whole study: the aggregates, the four groupings and every session."""
     headers = _headers(db, workspace=workspace)
     if account is not None:
         headers = [h for h in headers if h.get("account_id") == account]
@@ -86,14 +90,13 @@ def evaluations(
         "filters": {
             "workspace": workspace,
             "account": account,
-            # Every workspace of the installation, NOT the ones that happen to appear in a
-            # recorded session. Deriving the list from the sessions was a chicken and egg:
-            # with nothing evaluated yet the filter was empty, so no workspace could be
-            # picked, so nothing could be handed out, so nothing was ever evaluated.
+            # Every workspace of the INSTALLATION, not the ones appearing in a recorded
+            # session: deriving it from the sessions is a chicken and egg, since with
+            # nothing evaluated yet the filter is empty and nothing can be handed out.
             "workspaces": [row.slug for row in repository.list_workspaces(db)],
         },
-        # Newest first, and every one openable: the point of the panel is being able to
-        # go from «este evaluador nunca elige el sistema» to the sessions that say so.
+        # Newest first, and every one openable: the point of the panel is going from «este
+        # evaluador nunca elige el sistema» to the sessions that say so.
         "sessions": [_row(h) for h in sorted(
             headers, key=lambda h: h.get("created_at") or 0, reverse=True
         )],
@@ -106,6 +109,7 @@ def export(
     account: int | None = None,
     db: DbSession = Depends(auth.db),
 ) -> Response:
+    """Return the study's raw data, one row per session, as a CSV attachment."""
     headers = _headers(db, workspace=workspace)
     if account is not None:
         headers = [h for h in headers if h.get("account_id") == account]
@@ -119,26 +123,24 @@ def export(
 # HANDING SETS OUT --------------------------------------------------------------------------
 #
 # The administrator is the one who knows which subject each evaluator teaches, so who gets
-# which three items is decided here by hand rather than by a rule. That is the whole design:
-# a panel drawn from different subjects cannot be given a shared workload automatically
-# without asking somebody to judge a syllabus they have never taught.
+# which three items is decided here by hand rather than by a rule: a panel drawn from
+# different subjects cannot be given a shared workload without asking somebody to judge a
+# syllabus they have never taught.
 #
-# EVERY ROUTE WITH A FIXED PATH GOES ABOVE `/evaluations/{session_id}`, and that is not
-# tidiness — FastAPI matches in declaration order, so a wildcard declared first swallows
-# `/evaluations/accounts` as a session called «accounts» and answers 404 «No existe la
-# sesión». The failure is silent in the worst way: a plausible 404 from a route nobody
-# meant to call. `export.csv` was already up there for the same reason.
+# EVERY ROUTE WITH A FIXED PATH GOES ABOVE `/evaluations/{session_id}`. FastAPI matches in
+# declaration order, so a wildcard declared first swallows `/evaluations/accounts` as a
+# session called «accounts» and answers a plausible 404 from a route nobody meant to call.
 # `tests/study/test_route_order.py` is what keeps the next addition from landing below it.
 
 
-# Whether a commission can be composed for this instance at all, and if not, WHICH stages
-# are still pending. The rule is `gate_error`'s and stays `gate_error`'s — the same one
-# `POST /evaluations/generate` enforces below, so the screen cannot offer what the endpoint
-# would refuse. What is added here is the naming: the sentence it returns interpolates the
-# unapproved stages' Spanish labels, and this list of theirs goes to the browser as
-# ARTIFACT KEYS, which `web/src/lib/names.ts` already says in the reader's own language.
-# The second read only happens on the unhappy path, and only ever once per workspace.
 def _commission_gate(slug: str) -> dict:
+    """Say whether a commission can be composed for this instance, and name what is pending.
+
+    The rule is `gate_error`'s and stays `gate_error`'s — the same one `generate` enforces
+    below, so the screen cannot offer what the endpoint would refuse. The pending stages go
+    to the browser as ARTIFACT KEYS, which `web/src/lib/names.ts` says in the reader's own
+    language; that second read only happens on the unhappy path.
+    """
     ws = settings.workspace_for(slug)
     if gate_error(ws, "evaluate") is None:
         return {"ready": True, "pending": []}
@@ -152,20 +154,22 @@ def _commission_gate(slug: str) -> dict:
     }
 
 
-# The flow starts with a PERSON, not with a set: an administrator knows which subject each
-# evaluator teaches, so «¿a quién?» comes before «¿cuál?». Each account carries the
-# workspaces it can actually open, because handing somebody a set of an instance they
-# cannot reach produces a queue entry that 404s when they click it.
 @router.get("/evaluations/accounts")
 def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
+    """List every active account with the workspaces it can actually open.
+
+    The flow starts with a PERSON and not with a set, so «¿a quién?» comes before «¿cuál?»,
+    and handing somebody a set of an instance they cannot reach would produce a queue entry
+    that 404s when they click it.
+    """
     everything = repository.list_workspaces(db)
 
-    # Per WORKSPACE and not per (account, workspace): reading whether a chain is approved
-    # touches the filesystem three times, and this endpoint loops over every account of the
-    # installation — the same instance would be measured once for each of them.
+    # Memoised per WORKSPACE and not per (account, workspace): reading whether a chain is
+    # approved touches the filesystem three times, and this loops over every account.
     gates: dict[str, dict] = {}
 
     def gate(slug: str) -> dict:
+        """Return this workspace's gate, reading it at most once per request."""
         if slug not in gates:
             gates[slug] = _commission_gate(slug)
         return gates[slug]
@@ -174,10 +178,9 @@ def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
     for user in identity.list_users(db):
         if not user.active:
             continue
-        # THE SAME RULE `assign_set` ENFORCES, and it has to be: an administrator reaches
-        # every instance through the bypass in `auth.deps.access_for`, so listing only
-        # their membership rows would have this screen refuse an assignment the endpoint
-        # behind it accepts. Anybody else gets exactly the instances they can open.
+        # THE SAME RULE `assign_set` ENFORCES: an administrator reaches every instance
+        # through the bypass in `auth.deps.access_for`, so listing only their membership
+        # rows would have this screen refuse an assignment the endpoint behind it accepts.
         if user.is_admin:
             reachable = [
                 {"slug": w.slug, "name": w.name, "role": "administración", **gate(w.slug)}
@@ -201,16 +204,17 @@ def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
     return {"accounts": accounts}
 
 
-# Stocking a workspace with comparisons to hand out. They are generated ONCE and belong to
-# whoever launched them; assigning copies the three items to somebody else. What is not
-# assigned simply stays here, which is the point — an administrator prepares a batch and
-# then decides who is competent to judge which part of it.
 @router.post("/evaluations/generate", status_code=202)
 def generate(
     body: GenerateBody,
     db: DbSession = Depends(auth.db),
     admin: User = Depends(auth.require_admin),
 ) -> dict:
+    """Stock a workspace with N comparisons, belonging to nobody until they are assigned.
+
+    What is not handed out simply stays: an administrator prepares a batch and then decides
+    who is competent to judge which part of it.
+    """
     if not body.concepts:
         raise HTTPException(422, "Hay que elegir al menos un concepto objetivo.")
     if not 1 <= body.n <= 10:
@@ -226,8 +230,8 @@ def generate(
     graph = kg_edit.load_graph(ws)
     curriculum = curriculum_store.resolve(ws, graph, body.curriculum)
 
-    # One job per comparison: the handler produces exactly one session, and the queue is
-    # one deep, so they run one after another on the single GPU.
+    # One job per comparison: the handler produces exactly one session, and the lane
+    # serialises them on the single GPU.
     jobs = [
         runtime.runner.submit(
             "evaluate",
@@ -255,6 +259,7 @@ def generate(
 
 @router.get("/evaluations/sets")
 def sets(workspace: str, db: DbSession = Depends(auth.db)) -> dict:
+    """List a workspace's distinct sets with who holds each, plus who could hold one."""
     row = repository.get_workspace(db, workspace)
     if row is None:
         raise HTTPException(404, f"No existe el workspace '{workspace}'.")
@@ -284,10 +289,9 @@ def sets(workspace: str, db: DbSession = Depends(auth.db)) -> dict:
                 "item_type": representative.item_type or "",
                 "instructions": representative.instructions or "",
                 "think": bool(representative.think),
-                # One entry per person holding these items, so the panel can show at a
-                # glance who still owes a judgement and who already gave one. Stock has no
-                # evaluator and therefore no entry: listing it would draw the row nobody
-                # holds as «cuenta borrada», which is the opposite of «sin repartir».
+                # One entry per person holding these items. Stock has no evaluator and
+                # therefore no entry: listing it would draw the row nobody holds as
+                # «cuenta borrada», which is the opposite of «sin repartir».
                 "holders": [
                     {
                         "session_id": copy.id,
@@ -318,6 +322,11 @@ def assign_set(
     db: DbSession = Depends(auth.db),
     admin: User = Depends(auth.require_admin),
 ) -> dict:
+    """Hand a copy of these three items to each named account.
+
+    Each copy gets a fresh shuffle and every answer cleared, so what two evaluators end up
+    agreeing about is the exercises and not the seating.
+    """
     existing = queries.sessions_in_set(db, set_id)
     if not existing:
         raise HTTPException(404, f"No existe el conjunto '{set_id}'.")
@@ -352,11 +361,13 @@ def assign_set(
     return {"set_id": set_id, "assigned": created, "already_had_it": skipped}
 
 
-# The full trace of one session, reveal included. An administrator reading this is reading
-# research data they are entitled to; the evaluator's own blinding is unaffected, because
-# nothing here writes and the session is already judged or already theirs to judge.
 @router.get("/evaluations/{session_id}")
 def session_detail(session_id: str, db: DbSession = Depends(auth.db)) -> dict:
+    """Return one session's full trace, reveal included.
+
+    The evaluator's own blinding is unaffected: nothing here writes, so reading a session
+    cannot change what its holder will be shown.
+    """
     row = queries.get_evaluation(db, session_id)
     if row is None:
         raise HTTPException(404, f"No existe la sesión '{session_id}'.")
@@ -373,6 +384,7 @@ def delete_sessions(
     db: DbSession = Depends(auth.db),
     admin: User = Depends(auth.require_admin),
 ) -> dict:
+    """Delete any sessions of the installation, reporting the ids that did not exist."""
     ids = list(dict.fromkeys(i for i in body.ids if i))
     if not ids:
         raise HTTPException(422, "No se ha indicado ninguna sesión.")
@@ -384,6 +396,7 @@ def delete_sessions(
 
 
 def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:
+    """Read the population the panel aggregates over, optionally narrowed to a workspace."""
     workspace_id = None
     if workspace:
         row = repository.get_workspace(db, workspace)
@@ -394,6 +407,7 @@ def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:
 
 
 def _row(header: dict) -> dict:
+    """Shape one session for the panel's table, reveal and all."""
     return {
         "id": header["id"],
         "created_at": header.get("created_at"),

@@ -26,14 +26,10 @@ STALE = "stale"
 
 TRANSCRIBE_PHASES = (("transcribe", "Transcribiendo los documentos", 100),)
 
-# What each fingerprint field means in the sentence the screen shows. The point of naming
-# them is that expiry has to be VISIBLE: a build that quietly re-transcribed a whole corpus
-# because somebody nudged the DPI is exactly what this is here to stop.
-#
-# They are CODES and not sentences: the reader's interface has a language of its own, so
-# the wording lives in `web/src/lib/i18n/` beside every other sentence and what travels is
-# the stable name of what moved. Two fields answer to `document` on purpose — a person is
-# told the document changed, never which half of its fingerprint said so.
+# What each fingerprint field means in the sentence the screen shows: expiry has to be
+# VISIBLE, or a build quietly re-transcribes a whole corpus because somebody nudged the DPI.
+# They are CODES and not sentences — the reader's interface has a language of its own — and
+# two fields answer to `document` on purpose, since nobody is told which half moved.
 _REASONS = {
     "source_sha256": "document",
     "source_bytes": "document",
@@ -50,6 +46,7 @@ _UNKNOWN_REASON = "config"
 
 
 def slot_dir(ws: Workspace, slot: str) -> Path:
+    """Return the `raw/` directory one slot reads from."""
     if slot == CORPUS:
         return ws.raw_corpus_dir
     if slot == EXEMPLARS:
@@ -58,16 +55,19 @@ def slot_dir(ws: Workspace, slot: str) -> Path:
 
 
 def _slot_ocr(slot: str) -> bool:
+    """Return whether this slot's documents are read with OCR."""
     return config.EXEMPLARS_OCR if slot == EXEMPLARS else False
 
 
 def _slot_converter(slot: str):
+    """Return the slot's lazily-opened Docling converter, still unbuilt."""
     if slot == EXEMPLARS:
         return _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
     return _source_docs.LazyConverter(table_structure=False)
 
 
 def _sources(ws: Workspace, slot: str) -> list[Path]:
+    """List the supported documents a slot holds, or nothing when it has no directory."""
     root = slot_dir(ws, slot)
     if not root.is_dir():
         return []
@@ -75,6 +75,11 @@ def _sources(ws: Workspace, slot: str) -> list[Path]:
 
 
 def _source_for(ws: Workspace, slot: str, name: str) -> Path:
+    """Resolve a document name against the files the slot actually holds.
+
+    A name arriving in a request is checked, never sanitised and used; the library checks
+    again further in.
+    """
     for source in _sources(ws, slot):
         if source.name == name:
             return source
@@ -82,16 +87,19 @@ def _source_for(ws: Workspace, slot: str, name: str) -> Path:
 
 
 def _cache_dir_for(ws: Workspace, source: Path) -> Path:
+    """Return where one document's transcribed pages live."""
     return _source_docs.document_cache_dir(source, ws.markdown_cache_dir)
 
 
 def _expected_fingerprint(source: Path, slot: str) -> dict:
+    """Return the fingerprint this document would be transcribed under right now."""
     return _source_docs.fingerprint_for(
         source, config.TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
     )
 
 
 def _reasons(stored: dict, expected: dict) -> list[str]:
+    """Name what changed, deduped and in fingerprint order; `config` when nothing is named."""
     changed = [
         key
         for key in expected
@@ -106,6 +114,7 @@ def _reasons(stored: dict, expected: dict) -> list[str]:
 
 
 def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
+    """Report one document as `done` / `pending` / `stale`, and why it is stale."""
     cache_dir = _cache_dir_for(ws, source)
     meta = _source_docs.read_meta(cache_dir)
     pages = _source_docs.read_pages(cache_dir) if meta else []
@@ -136,10 +145,12 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
 
 
 def _merged(meta: dict) -> int:
+    """Return how many page seams the model decided to join."""
     return _source_docs.seams_merged(meta.get("seams"))
 
 
 def transcription_status(ws: Workspace, slot: str) -> dict:
+    """Report a whole slot: every document's state, and the three tallies over them."""
     documents = [_document_status(source, ws, slot) for source in _sources(ws, slot)]
     return {
         "slot": slot,
@@ -152,6 +163,11 @@ def transcription_status(ws: Workspace, slot: str) -> dict:
 
 
 def transcribe_slot(ws: Workspace, slot: str) -> dict:
+    """Transcribe every document of one slot, page by page, and report what came out.
+
+    Pages are written per document, so a cancelled run keeps what it produced and a
+    relaunch carries on. One unreadable document is logged and skipped, never fatal.
+    """
     sources = _sources(ws, slot)
     summary = {
         "slot": slot,
@@ -218,10 +234,11 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 # A page a human corrected is the whole point of writing the pages out, so none of these
 # touches the fingerprint: editing must never make the document look re-transcribable. What
 # they do drop are the SEAM records around the page they moved, which were decided against
-# text that is no longer there — the deterministic rule takes those seams back.
+# text that is no longer there.
 
 
 def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:
+    """List one document's pages, numbered from 1, flagging the ones the model failed on."""
     source = _source_for(ws, slot, name)
     pages = _source_docs.read_pages(_cache_dir_for(ws, source))
     failed = set(_source_docs.failed_pages(pages))
@@ -239,6 +256,7 @@ def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:
 def write_document_page(
     ws: Workspace, slot: str, name: str, index: int, text: str
 ) -> None:
+    """Replace one page with a hand-corrected version."""
     cache_dir, meta, pages = _open(ws, slot, name)
     _check_index(index, len(pages))
     pages[index - 1] = text
@@ -250,6 +268,7 @@ def write_document_page(
 def insert_document_page(
     ws: Workspace, slot: str, name: str, after: int, text: str
 ) -> int:
+    """Insert a page after `after` (0 for the front) and return its new number."""
     cache_dir, meta, pages = _open(ws, slot, name)
     count = len(pages)
     if after < 0 or after > count:
@@ -262,6 +281,11 @@ def insert_document_page(
 
 
 def delete_document_page(ws: Workspace, slot: str, name: str, index: int) -> None:
+    """Delete one page, refusing to remove the last one.
+
+    A document with zero pages reads as `pending`, and the next build would throw away
+    every hand correction without a word.
+    """
     cache_dir, meta, pages = _open(ws, slot, name)
     count = len(pages)
     _check_index(index, count)
@@ -275,6 +299,7 @@ def delete_document_page(ws: Workspace, slot: str, name: str, index: int) -> Non
 
 
 def _open(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, list[str]]:
+    """Resolve a document and read back its cache directory, metadata and pages."""
     source = _source_for(ws, slot, name)
     cache_dir = _cache_dir_for(ws, source)
     pages = _source_docs.read_pages(cache_dir)
@@ -284,11 +309,13 @@ def _open(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, list[str]]:
 
 
 def _check_index(index: int, count: int) -> None:
+    """Raise unless `index` names an existing page, counting from 1."""
     if index < 1 or index > count:
         raise ValueError(f"No page {index}; the document has {count}")
 
 
 def _save(cache_dir: Path, meta: dict, pages: list[str], dropped: set[int]) -> None:
+    """Write the pages back under the SAME fingerprint, dropping the named seam records."""
     seams = [
         record
         for record in _source_docs.valid_seams(meta.get("seams"))

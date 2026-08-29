@@ -1,3 +1,11 @@
+"""Reflecting a write into the database, best-effort.
+
+The files stay the operational truth; these keep the rows beside them current. Any
+database failure is ONE warning and never an exception — a hiccup must not break an edit
+or a build. Each function opens its own short session, and `mirror_artifact` is
+idempotent through the content hash.
+"""
+
 import json
 from pathlib import Path
 
@@ -11,6 +19,7 @@ from .session import session_scope
 
 
 def mirror_artifact(slug: str, kind: str, stage: str, content) -> None:
+    """Save this content as the workspace's current version of `kind`/`stage`."""
     try:
         with session_scope() as session:
             workspace = repo.ensure_workspace(session, slug)
@@ -20,6 +29,7 @@ def mirror_artifact(slug: str, kind: str, stage: str, content) -> None:
 
 
 def mirror_file(ws: FsWorkspace, path: Path) -> None:
+    """Mirror a JSON file that was just written, when it is one of the artifacts."""
     located = locate(ws, path)
     if located is None or not Path(path).is_file():
         return
@@ -36,6 +46,10 @@ def mirror_file(ws: FsWorkspace, path: Path) -> None:
 def mirror_approval(
     slug: str, kind: str, approved: bool, upstream: tuple[str, ...] = ()
 ) -> None:
+    """Mirror an approval, re-deriving the upstream hashes from the current rows.
+
+    `approved=False` deletes the row instead, which is what reopening a stage means.
+    """
     try:
         with session_scope() as session:
             workspace = repo.get_workspace(session, slug)

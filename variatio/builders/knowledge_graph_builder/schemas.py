@@ -1,22 +1,22 @@
-# One schema per shape the prompts already draw in their `# OUTPUT` block, stated where the
-# decoder can enforce it. Only the two passes that do NOT think are constrained at the call
-# itself; the rest reach these through their repair, which is where an unusable answer was
-# costing three calls that could not fix a schema error.
-#
-# A triple is pinned to three strings and no further. Naming the middle element with an
-# `enum` needs `prefixItems`, and Ollama's converter ACCEPTS it and then ignores it, which
-# is worse than refusing: asked for `[string, <relation key>, string]` it happily answered
-# `["Bucle while", "Variable", "tiene como prerrequisito"]` — the type in slot 2. A schema
-# this engine accepts is not necessarily one it enforces, so `valid_relations` stays the
+"""One schema per shape the KG prompts already draw in their `# OUTPUT` block.
+
+Only the two passes that do NOT think are constrained at the call itself; the rest reach
+these through their repair, which is where an unusable answer was costing three calls that
+could not fix a schema error.
+"""
+
+# A triple is pinned to three strings and NO further. Naming the middle element with an
+# `enum` needs `prefixItems`, which Ollama's converter accepts and then ignores — asked for
+# `[string, <relation key>, string]` it answered with the type in slot 2. A schema this
+# engine accepts is not necessarily one it enforces, so `valid_relations` stays the
 # authority on the vocabulary and on the order.
 _RELATIONS_SCHEMA = {
     "type": "array",
     "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3},
 }
 
-# A concept carries its one-line definition from the chunk that introduced it. Every later
-# pass — merging, dropping, placing, linking — used to judge a bare name, and a bare name
-# is what the tagger was forbidden to judge long ago («centroids over names»).
+# A concept carries its one-line definition from the chunk that introduced it, so every
+# later pass — merging, dropping, placing, linking — judges an idea and not a bare name.
 _CONCEPT_SCHEMA = {
     "type": "object",
     "properties": {"name": {"type": "string"}, "definition": {"type": "string"}},
@@ -58,9 +58,8 @@ MERGE_SCHEMA = {
 }
 
 # `drop`, `domains` and `non_taggable` are open-ended maps — the keys are concept or domain
-# names the model writes — so they are `additionalProperties`, which Ollama's converter
-# accepts. What the schema pins is the ENVELOPE: the top-level key and the value type. The
-# `drop` parser also accepts a bare list, and that tolerance stays for the unconstrained path.
+# names the model writes — so what the schema pins is the ENVELOPE: the top-level key and
+# the value type. The `drop` parser also accepts a bare list, for the unconstrained path.
 DROP_SCHEMA = {
     "type": "object",
     "properties": {"drop": {"type": "object", "additionalProperties": {"type": "string"}}},

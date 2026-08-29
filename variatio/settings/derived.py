@@ -1,3 +1,5 @@
+"""What the registry does not store: the phase models, the context map and the efforts."""
+
 from .registry.reasoning import PHASE_KEYS
 
 PHASES = {
@@ -26,9 +28,12 @@ PHASES = {
 
 
 def derive(values: dict[str, object]) -> dict[str, object]:
-    # The registry declares the bare `host:port` because that is what a person writes and
-    # what `OLLAMA_HOST` has always held. Every consumer wants a URL, so the scheme is added
-    # here rather than at each call site, and a value that already carries one is left alone.
+    """Compute the `config` attributes no setting holds, from the resolved values.
+
+    A phase's `THINK_*` is `False` or its effort as a string, never `True`: the boolean is
+    turned into a level at the last hop, by the engine.
+    """
+    # The registry declares the bare `host:port` a person writes; every consumer wants a URL.
     host = str(values["engine.ollama_host"])
     out: dict[str, object] = {
         "OLLAMA_HOST": host if host.startswith(("http://", "https://")) else f"http://{host}",
@@ -36,8 +41,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "TEMPERATURE_DEFAULT": values["sampling.temperature_deterministic"],
     }
 
-    # Every phase names its own model and none may be empty, so there is nothing to
-    # resolve here: what the registry holds is what the call site gets.
+    # Every phase names its own model and none may be empty: there is nothing to resolve.
     for key, name in PHASES.items():
         out[name] = values[key]
 

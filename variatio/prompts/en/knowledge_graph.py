@@ -1,7 +1,12 @@
-# The JSON keys these prompts draw — `concepts`, `relations`, `merges`, `canonical`,
-# `aliases`, `drop`, `domains`, `non_taggable` — stay English in both languages: they are
-# the grammar `schemas.py` pins and what the parsers read. SOURCE and TARGET name the two
-# slots of a triple and must match `relations.py`'s English scaffolding.
+"""The calls that build a knowledge graph, from one chunk of corpus to the whole syllabus.
+
+The JSON keys they draw — `concepts`, `relations`, `merges`, `canonical`, `aliases`, `drop`,
+`domains`, `non_taggable` — are English in both sets: they are the grammar `schemas.py` pins
+and what the parsers read, so a translated key yields a well-formed answer that parses to
+nothing. The two slots of a triple are SOURCE and TARGET in this set's prose and must match
+the words `relations.py` puts in the catalogue. The rule blocks below are shared so eight
+prompts cannot describe one block format in eight ways.
+"""
 
 _KG_LANGUAGE_RULE = """\
 # LANGUAGE
@@ -10,6 +15,12 @@ The keys of the relation types listed below are FIXED IDENTIFIERS, not words fro
 
 
 def _kg_type_preference_rule(schema) -> str:
+    """Render how to choose a relation type, which turns on the schema having a fallback.
+
+    With no catch-all relation the instruction is to emit nothing when no type clearly
+    applies; with one it is to prefer the specific types and not to treat the fallback as a
+    default drawer.
+    """
     if schema.fallback is None:
         return (
             "- Emit a relation only when one of the types above clearly applies. If none "
@@ -44,6 +55,15 @@ A single JSON object with exactly this shape:
 
 
 def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> str:
+    """Ask one chunk of corpus for its concepts and the typed relations among them.
+
+    The answer is `concepts`, each with a one-sentence definition, and `relations` as
+    [source, type, target] triples whose two endpoints both appear in `concepts`. One call
+    per chunk and hundreds per corpus, and the results are merged BY NAME — which is why the
+    naming canon is the longest section of the prompt: two chunks naming one idea differently
+    produce two concepts that never reconcile. `location` is the heading path of the section
+    the chunk came from, so neighbouring chunks name things as this part of the syllabus does.
+    """
     location_block = ""
     if location:
         location_block = (
@@ -98,9 +118,6 @@ Each relation is a triple [source, type, target]. The direction matters: choose 
 JSON:"""
 
 
-# The second reading of a chunk. Shown the inventory the first one wrote, it is asked only
-# for what is missing — the «gleaning» pass of GraphRAG and LightRAG — and its answer is
-# merged into the first, never replacing it.
 def glean_typed_graph_prompt(
     source_text: str,
     schema,
@@ -109,6 +126,13 @@ def glean_typed_graph_prompt(
     definitions: dict[str, str],
     relations: list[list[str]],
 ) -> str:
+    """Ask a SECOND reading of the same chunk for what the first one left out.
+
+    Shown the inventory the first pass wrote, it is asked only for what is missing — the
+    «gleaning» pass of GraphRAG and LightRAG — and above all for relations the text supports
+    between concepts already named. Its answer is merged into the first and never replaces
+    it: `concepts` carries only the new ones, while `relations` may name anything known.
+    """
     location_line = f"Section: {location}\n" if location else ""
     found_concepts = "\n".join(
         f"- {name} — {definitions[name]}" if definitions.get(name) else f"- {name}"
@@ -179,6 +203,15 @@ The concepts are listed in the ORDER IN WHICH THE MATERIAL INTRODUCES THEM, from
 
 
 def link_domain_relations_prompt(domain: str, nodes_block: str, schema) -> str:
+    """Ask for the relations MISSING between the concepts of one syllabus block.
+
+    Chunk-by-chunk extraction only sees a dependency when two concepts are explained
+    together, which is exactly when the material need not state it, so the teaching order is
+    almost entirely absent and recovering it is the main reason this step exists. The
+    concepts arrive in the order the material introduces them, which is the evidence the
+    prompt leans on. The answer is `relations` alone, as triples over the names listed, and
+    `{"relations": []}` when nothing is missing.
+    """
     return f"""\
 You are given the concepts of ONE syllabus block, «{domain}», of a knowledge graph built from the teaching material of a single course. Each concept is listed with the relations already known about it, as evidence.
 
@@ -214,6 +247,13 @@ JSON:"""
 
 
 def link_cross_domain_relations_prompt(domains_block: str, schema) -> str:
+    """Ask only for the relations that CROSS from one syllabus block to another.
+
+    The scaffolding that orders the syllabus as a whole, which no reading of a single block
+    could reveal: a relation between two concepts of the same block is discarded. The blocks
+    arrive in the order the material presents them, and so do the concepts inside each. The
+    answer is `relations` alone, as triples over the names listed.
+    """
     return f"""\
 You are given the concepts of a knowledge graph built from the teaching material of a single course, grouped into the SYLLABUS BLOCKS of the syllabus. The relations inside each block have already been proposed.
 
@@ -249,6 +289,14 @@ JSON:"""
 
 
 def merge_candidate_groups_prompt(groups_block: str) -> str:
+    """Ask, inside each small group of look-alike names, which of them are ONE concept.
+
+    The groups were formed by name similarity alone, which is a suspicion and not a verdict,
+    so many of them merge nothing. The test is the glossary's: one entry or two? The answer
+    is `merges`, each entry a `canonical` copied from its own group plus its `aliases`, and
+    never names from two groups in one entry. Over-merging costs more than under-merging,
+    because a concept lost in a merge is not recovered afterwards.
+    """
     return f"""\
 You are given SMALL GROUPS of node names from a knowledge graph automatically extracted from a corpus of teaching material, each name with its outgoing relations as evidence. The extraction was passage by passage and each passage named things in its own words, so the SAME idea arrives several times dressed in different grammar. The groups were formed ONLY by name similarity, which is a suspicion, not a verdict: many groups contain names that merely resemble each other and must be left alone.
 
@@ -285,6 +333,14 @@ JSON:"""
 
 
 def filter_graph_nodes_prompt(nodes_block: str) -> str:
+    """Ask which extracted nodes do not name a concept at all, so they can be dropped.
+
+    Extraction is noisy: document metadata, incidental example scenarios and sentence
+    fragments come out beside the subject's concepts. The only question asked here is whether
+    the string NAMES something — whether what it names works as a LABEL for exercises is the
+    taggability review's, later and with the exemplars profile in hand. The answer is `drop`,
+    a map from an exact node name to a reason of ten words at most; the unlisted stay.
+    """
     return f"""\
 You are given part of the NODES of a knowledge graph automatically extracted from a corpus of teaching material of a single course, each one with its outgoing relations as evidence. The extraction is noisy: alongside the subject's concepts it picked up metadata, incidental settings and sentence fragments.
 
@@ -332,6 +388,14 @@ JSON:"""
 
 
 def segment_syllabus_prompt(outline_block: str) -> str:
+    """Ask which headings of the corpus open a teaching unit, and what each unit is called.
+
+    The answer is `units`, each with a `name` and the `opens_at` line number of the heading
+    that opens it — between 3 and 12 of them, since more than that is splitting by section
+    rather than by unit. Everything from one opening heading to the next belongs to that
+    unit, which is why only the start is asked for. The outline arrives in the material's own
+    order and the result is sorted by `opens_at`, so any reordering attempted is discarded.
+    """
     return f"""\
 You are given the TABLE OF CONTENTS of a corpus of teaching material of a single course: all its headings, in the exact order in which they appear in the material and numbered from 1.
 
@@ -367,6 +431,15 @@ JSON:"""
 
 
 def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> str:
+    """Ask for the NAMES of the syllabus blocks the subject is made of, and nothing more.
+
+    Placing the concepts is a separate and later question, asked in small batches, so
+    anything written here about which concept goes where is discarded. This call sees every
+    concept — a syllabus's units cannot be named from a sample — and answers `domains`, a
+    handful of strings with no catch-all among them, that name being the leftovers pass's
+    own sentinel. `documents_block` offers the corpus's document titles as a starting point,
+    because teaching material is already organised by topic.
+    """
     sources_block = ""
     sources_rule = ""
     if documents_block:
@@ -418,11 +491,16 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-# Asked to partition several hundred concepts in one turn, the model reliably forgets a
-# fifth of them however loudly the prompt insists on completeness. Rather than insisting
-# harder, the leftovers are handed back as their own, much smaller question, with the
-# domains already decided so this pass cannot invent more.
 def assign_leftover_concepts_prompt(domains_block: str, nodes_block: str) -> str:
+    """Ask for the concepts a domain pass overlooked to be placed in the EXISTING domains.
+
+    Asked to partition several hundred concepts in one turn the model reliably forgets a
+    fifth of them however loudly the prompt insists on completeness. Rather than insisting
+    harder, the leftovers come back as their own much smaller question with the domain names
+    fixed, so this pass cannot invent any. The answer is `domains`, a map from an existing
+    name to the concepts placed under it, each concept placed exactly once and into the least
+    alien domain when none fits: there is no catch-all to fall into.
+    """
     return f"""\
 The concepts of a knowledge graph built from the teaching material of a single course have already been grouped into thematic domains. The concepts below WERE LEFT OUT of that grouping — not because they are wrong, but because they were overlooked.
 
@@ -460,6 +538,16 @@ def review_taggable_concepts_prompt(
     modalities_block: str,
     samples_block: str = "",
 ) -> str:
+    """Ask which concepts of ONE domain are useless AS A LABEL and leave the tagging.
+
+    Taggability is not a property of the graph: a concept is useless as a label only relative
+    to the shapes of item this instance sets, which is why the modalities and real statements
+    from the bank travel with the question. The test is discrimination — could an item have
+    this concept as its objective, and would the same label fit items from unrelated parts of
+    the syllabus? — and the tie-break is to exclude, because an excluded concept keeps working
+    through its relations while a vague label pollutes the whole corpus. The answer is
+    `non_taggable`, a map from an exact name to a reason of twelve words at most.
+    """
     context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
     samples_section = (
         "\n# REAL EXERCISES FROM THIS COURSE'S MATERIAL (what an exercise looks like here)\n"

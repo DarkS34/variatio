@@ -1,3 +1,12 @@
+"""The SSH port forward to the GPU box, owned by the API process.
+
+It runs the system `ssh` binary rather than paramiko because that is what already resolves
+keys, the agent, `~/.ssh/config` and `known_hosts`; `BatchMode=yes` so a password prompt
+fails instead of hanging. A watchdog relaunches a dead `ssh` with backoff while the tunnel
+is still wanted, and the last lines of its stderr are kept so a key problem reaches the
+panel.
+"""
+
 import shutil
 import subprocess
 import threading
@@ -15,16 +24,16 @@ STDERR_LINES = 20
 
 
 class TunnelError(RuntimeError):
-    pass
+    """The tunnel cannot be opened, with a sentence saying what to fix."""
 
 
 def local_port() -> int:
+    """The port `OLLAMA_HOST` names, which is the local end of the forward."""
     host = config.OLLAMA_HOST
     if "://" not in host:
         host = f"http://{host}"
-    # `urlsplit(...).port` does not answer «no hay puerto» for a port that is not a number:
-    # it raises `ValueError`, which turned a mistyped OLLAMA_HOST into a 500 on three
-    # endpoints instead of the readable refusal the missing-port case already gets.
+    # `urlsplit(...).port` raises `ValueError` on a non-numeric port rather than answering
+    # «no hay puerto», so a mistyped OLLAMA_HOST would 500 instead of being refused.
     try:
         port = urlsplit(host).port
     except ValueError:
@@ -35,17 +44,16 @@ def local_port() -> int:
 
 
 def ssh_command() -> list[str]:
+    """Build the `ssh -N -L` command line, or raise saying what the configuration lacks."""
     ssh = shutil.which("ssh")
     if ssh is None:
         raise TunnelError("No hay un cliente 'ssh' en el PATH del servidor")
     host = config.OLLAMA_SSH_HOST.strip()
     if not host:
         raise TunnelError("No hay destino: rellena OLLAMA_SSH_HOST en la configuración")
-    # The destination goes last and ssh has no `--` to close its own options, so a value
-    # starting with '-' would be read as one of them — `-oProxyCommand=…` is the one that
-    # matters — instead of as a machine. It is not reachable from the API: the `tunnel.*`
-    # block is `editable=False, secret=True` and comes from the environment alone. This is
-    # defence in depth, so the only way to write it wrong is also the way that says so.
+    # The destination goes last and ssh has no `--` to close its own options, so a host
+    # starting with '-' would be read as one — `-oProxyCommand=…` above all. Defence in
+    # depth: the `tunnel.*` settings are environment-only and unreachable from the API.
     if host.startswith("-"):
         raise TunnelError(
             f"El destino '{host}' empieza por '-': ssh lo leería como una opción suya y no "
@@ -67,7 +75,10 @@ def ssh_command() -> list[str]:
 
 
 class SshTunnel:
+    """One `ssh` subprocess, kept alive while it is wanted."""
+
     def __init__(self) -> None:
+        """Start with no process and nothing wanted."""
         self._lock = threading.RLock()
         self._process: subprocess.Popen | None = None
         self._wanted = False
@@ -79,9 +90,11 @@ class SshTunnel:
         self._stopping = threading.Event()
 
     def configured(self) -> bool:
+        """Whether the installation names a host to forward to."""
         return bool(config.OLLAMA_SSH_HOST.strip())
 
     def start(self) -> dict:
+        """Open the tunnel and want it open, so the watchdog reopens it if it dies."""
         with self._lock:
             command = ssh_command()
             if self._process is None or self._process.poll() is not None:
@@ -100,6 +113,7 @@ class SshTunnel:
         return self.status()
 
     def stop(self) -> dict:
+        """Stop wanting the tunnel and kill it, which is also what stops the watchdog."""
         with self._lock:
             self._wanted = False
             self._stopping.set()
@@ -108,6 +122,7 @@ class SshTunnel:
         return self.status()
 
     def status(self) -> dict:
+        """Everything the panel draws, the last lines of `ssh`'s stderr included."""
         with self._lock:
             running = self._process is not None and self._process.poll() is None
             return {
@@ -126,6 +141,7 @@ class SshTunnel:
             }
 
     def _launch(self, command: list[str]) -> None:
+        """Spawn `ssh` and start draining its stderr."""
         self._attempts += 1
         self._stderr.clear()
         logger.info(f"Abriendo el túnel SSH hacia '{config.OLLAMA_SSH_HOST}' (intento {self._attempts})")
@@ -144,6 +160,7 @@ class SshTunnel:
         ).start()
 
     def _drain(self, process: subprocess.Popen) -> None:
+        """Keep the tail of `ssh`'s stderr, which is where a key problem is stated."""
         if process.stderr is None:
             return
         for line in process.stderr:
@@ -152,6 +169,7 @@ class SshTunnel:
                 self._stderr.append(text)
 
     def _terminate(self) -> None:
+        """Ask `ssh` to stop, and kill it if it will not."""
         process = self._process
         if process is None or process.poll() is not None:
             return
@@ -162,6 +180,7 @@ class SshTunnel:
             process.kill()
 
     def _watch(self) -> None:
+        """Relaunch a dead `ssh` with 5→60 s backoff for as long as the tunnel is wanted."""
         backoff = BACKOFF_MIN
         while not self._stopping.wait(1.0):
             with self._lock:
@@ -189,6 +208,7 @@ class SshTunnel:
 
 
 def _safe_local_port() -> int | None:
+    """The local port for the status payload, or None when it cannot be read."""
     try:
         return local_port()
     except (TunnelError, ValueError):

@@ -54,14 +54,15 @@ TRANSCRIBE_JOB = "transcribe"
 
 
 class RawError(Exception):
-    pass
+    """A raw-slot operation the caller asked for and cannot have."""
 
 
 class RawLimitError(RawError):
-    pass
+    """A raw-slot operation refused for exceeding a size or count cap."""
 
 
 def directory(ws: Workspace, kind: str) -> Path:
+    """Return the workspace directory one slot writes into."""
     dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
     if kind not in dirs:
         raise RawError(f"Origen desconocido: '{kind}'")
@@ -69,6 +70,7 @@ def directory(ws: Workspace, kind: str) -> Path:
 
 
 def listing(ws: Workspace) -> dict:
+    """Describe both slots and the caps that govern an upload."""
     return {
         "supported_extensions": list(SUPPORTED_EXTS),
         "max_bytes": MAX_BYTES,
@@ -80,6 +82,7 @@ def listing(ws: Workspace) -> dict:
 
 
 def slot(ws: Workspace, kind: str) -> dict:
+    """Describe one slot: what it feeds, what it holds and what that weighs."""
     path = directory(ws, kind)
     files = _files(path)
     return {
@@ -92,6 +95,7 @@ def slot(ws: Workspace, kind: str) -> dict:
 
 
 def _files(path: Path) -> list[dict]:
+    """List the supported documents of a slot directory, by name."""
     if not path.is_dir():
         return []
     out = []
@@ -111,6 +115,11 @@ def _files(path: Path) -> list[dict]:
 
 
 def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
+    """Write uploads into a slot, reporting per file what was kept and what was refused.
+
+    One bad file is a rejection with a reason, never a failed request: the browser uploads
+    a whole drop at once.
+    """
     path = directory(ws, kind)
     if len(uploads) > MAX_FILES:
         raise RawLimitError(
@@ -154,12 +163,14 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
 
 
 def _slot_bytes(path: Path) -> int:
+    """Total the bytes a slot directory already holds."""
     if not path.is_dir():
         return 0
     return sum(entry.stat().st_size for entry in path.iterdir() if entry.is_file())
 
 
 def _budget(request_left: int, slot_left: int) -> tuple[int, str]:
+    """Return the tightest of the three caps and the sentence that explains it."""
     options = [
         (MAX_BYTES, f"Supera el máximo de {_mb(MAX_BYTES)} MB por archivo"),
         (request_left, f"El envío supera el máximo de {_mb(MAX_REQUEST_BYTES)} MB en total"),
@@ -173,14 +184,21 @@ def _budget(request_left: int, slot_left: int) -> tuple[int, str]:
 
 
 def _mb(size: int) -> int:
+    """Render a byte count in whole megabytes."""
     return size // (1024 * 1024)
 
 
 def _gb(size: int) -> int:
+    """Render a byte count in whole gigabytes."""
     return size // (1024 * 1024 * 1024)
 
 
 def _write(upload: UploadFile, target: Path, limit: int, reason: str) -> int:
+    """Stream one upload to disk, raising `RawError` the moment it passes `limit`.
+
+    Checked per chunk rather than from a declared size: the length a client announces is
+    not evidence.
+    """
     written = 0
     with target.open("wb") as out:
         while True:
@@ -197,6 +215,7 @@ def _write(upload: UploadFile, target: Path, limit: int, reason: str) -> int:
 
 
 def delete(ws: Workspace, kind: str, name: str) -> dict:
+    """Remove one document from a slot."""
     path = directory(ws, kind)
     safe = _safe_name(name)
     target = path / safe
@@ -207,12 +226,17 @@ def delete(ws: Workspace, kind: str, name: str) -> dict:
 
 
 def _stage():
+    """Import the transcription stage lazily, so listing a slot costs no pipeline import."""
     from variatio.stages import transcribe
 
     return transcribe
 
 
 def document(ws: Workspace, kind: str, name: str) -> str:
+    """Resolve a requested name against the files the slot actually holds.
+
+    Checked rather than sanitised and used; the library checks again in `_source_for`.
+    """
     path = directory(ws, kind)
     safe = _safe_name(name)
     if not safe or safe not in {entry["name"] for entry in _files(path)}:
@@ -221,34 +245,41 @@ def document(ws: Workspace, kind: str, name: str) -> str:
 
 
 def transcription(ws: Workspace, kind: str) -> dict:
+    """Report a slot's transcription state, document by document."""
     directory(ws, kind)
     return _stage().transcription_status(ws, kind)
 
 
 def transcription_document(ws: Workspace, kind: str, name: str) -> dict:
+    """Return one document's transcribed pages, for the correction dialog."""
     safe = document(ws, kind, name)
     return {"name": safe, "pages": _stage().document_pages_listing(ws, kind, safe)}
 
 
 def write_page(ws: Workspace, kind: str, name: str, index: int, text: str) -> None:
+    """Replace one transcribed page with a hand-written correction."""
     _stage().write_document_page(ws, kind, document(ws, kind, name), index, text)
 
 
 def insert_page(ws: Workspace, kind: str, name: str, after: int, text: str) -> int:
+    """Insert a page after the given index and return its new number."""
     return _stage().insert_document_page(ws, kind, document(ws, kind, name), after, text)
 
 
 def delete_page(ws: Workspace, kind: str, name: str, index: int) -> None:
+    """Remove one transcribed page, renumbering the rest."""
     _stage().delete_document_page(ws, kind, document(ws, kind, name), index)
 
 
 def _safe_name(name: str) -> str:
+    """Reduce a client-supplied filename to a plain basename, or to an empty string."""
     base = Path(name.replace("\\", "/")).name.strip()
     base = _UNSAFE.sub("_", base).strip(". ")
     return base[:180]
 
 
 def _free_path(directory_path: Path, name: str) -> Path:
+    """Return a path in the slot that no file occupies, suffixing «(n)» when needed."""
     target = directory_path / name
     if not target.exists():
         return target

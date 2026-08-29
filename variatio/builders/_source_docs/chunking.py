@@ -1,9 +1,12 @@
+"""Cutting a document into the pieces one model call is handed."""
+
 import re
 
 from .markdown import HEADING_RE, mask_fences, restore_fences, strip_page_marks
 
 
 def chunk_text(text: str, max_chars: int) -> list[str]:
+    """Pack the paragraphs of `text` into chunks of at most `max_chars`."""
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", strip_page_marks(text)) if p.strip()]
     chunks: list[str] = []
     current = ""
@@ -19,16 +22,19 @@ def chunk_text(text: str, max_chars: int) -> list[str]:
 
 
 def chunk_markdown(text: str, max_chars: int) -> list[tuple[str, str]]:
+    """`chunk_sections` without the per-chunk heading list: `(heading path, body)`."""
     return [(path, body) for path, _headings, body in chunk_sections(text, max_chars)]
 
 
-# A chunk that starts mid-section is a fragment nobody can name consistently: the extractor
-# sees prose with no idea which part of the syllabus it belongs to, and the same idea comes
-# out named differently from two neighbouring chunks. Cutting on headings instead, and
-# handing the heading path over with the text, is what lets the naming canon be applied.
-# Sections are PACKED up to the budget rather than emitted one per heading, because a
-# heavily subdivided document would otherwise multiply the number of model calls.
 def chunk_sections(text: str, max_chars: int) -> list[tuple[str, list[str], str]]:
+    """Cut on headings, returning `(heading path, headings, body)` per chunk.
+
+    A chunk that starts mid-section is a fragment nobody can name consistently: the
+    extractor sees prose with no idea which part of the syllabus it belongs to, and the same
+    idea comes out named differently from two neighbouring chunks. Sections are PACKED up to
+    the budget rather than emitted one per heading, or a heavily subdivided document would
+    multiply the number of model calls.
+    """
     sections = split_sections(text)
     if not sections:
         return [("", [], chunk) for chunk in chunk_text(text, max_chars)]
@@ -39,6 +45,7 @@ def chunk_sections(text: str, max_chars: int) -> list[tuple[str, list[str], str]
     headings: list[str] = []
 
     def flush() -> None:
+        """Close the pending buffer as one chunk."""
         if buffer:
             chunks.append((common_path(paths), list(headings), "\n\n".join(buffer)))
             buffer.clear()
@@ -65,6 +72,7 @@ def chunk_sections(text: str, max_chars: int) -> list[tuple[str, list[str], str]
 
 
 def split_sections(text: str) -> list[tuple[str, str, str]]:
+    """Split `text` at its headings into `(heading path, title, body)` sections."""
     masked, fences = mask_fences(strip_page_marks(text))
     stack: list[str] = []
     sections: list[tuple[str, str, list[str]]] = []
@@ -73,6 +81,7 @@ def split_sections(text: str) -> list[tuple[str, str, str]]:
     title = ""
 
     def close() -> None:
+        """Store the lines gathered so far as a section, unless they are all blank."""
         if any(line.strip() for line in current):
             sections.append((path, title, list(current)))
         current.clear()
@@ -100,6 +109,7 @@ def split_sections(text: str) -> list[tuple[str, str, str]]:
 
 
 def common_path(paths: list[str]) -> str:
+    """Return the deepest heading path every one of `paths` starts with."""
     parts = [p.split(" > ") for p in paths if p]
     if not parts:
         return ""

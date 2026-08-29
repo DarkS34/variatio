@@ -21,12 +21,9 @@ from ..instance.content_context import ContentContext
 from ..instance.knowledge_graph import KnowledgeGraph
 from .vectors import embed_normalized
 
-# Grammar-constrained decoding, and not a bare `think=False`. `DESCRIPTION_GENERATION_LLM`
-# is a reasoning model, and with the reasoning channel closed it reasons INSIDE the answer:
-# on the reference instance, the description of «Error de compilación» is 9 000 characters
-# of English deliberation — «The user is asking for…», «Let's re-read the relations
-# carefully» — stored as is and indexed as if it were prose. Under the grammar the first
-# token already has to be `{`, so that failure has nowhere to go.
+# Grammar-constrained decoding, not a bare `think=False`: with the reasoning channel closed
+# this model reasons INSIDE the answer, and thousands of characters of deliberation end up
+# stored as a description and indexed as prose. Under the grammar the first token must be `{`.
 DESCRIPTION_SCHEMA = {
     "type": "object",
     "properties": {"description": {"type": "string"}},
@@ -34,12 +31,13 @@ DESCRIPTION_SCHEMA = {
 }
 
 
-# The batch answer's keys are pinned to the exact concept names and every one is required,
-# which is the same move `tagging_schema` makes with its `enum`: the prompt already demands
-# «una entrada por cada concepto, ni una más ni una menos», and this is that rule stated
-# where the decoder enforces it instead of hoping. Without it a batch that silently drops
-# three concepts looks like a successful call.
 def _batch_schema(concepts: list[str]) -> dict:
+    """Build the grammar for one domain's batch: every concept a required key.
+
+    The prompt already demands one entry per concept and no more; pinning the keys is that
+    rule stated where the decoder enforces it, so a batch that drops three concepts cannot
+    look like a successful call.
+    """
     return {
         "type": "object",
         "properties": {
@@ -54,6 +52,7 @@ def _batch_schema(concepts: list[str]) -> dict:
 
 
 def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | None, str | None]:
+    """Parse a domain batch, returning `(descriptions, None)` or `(None, reason)`."""
     try:
         data = json.loads(response)
     except json.JSONDecodeError as e:
@@ -73,12 +72,13 @@ def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | N
     return out, None
 
 
-# The descriptions file is a `{concepto: texto}` cache and nothing else: reading or writing
-# it needs neither the graph nor the exemplars profile. These live outside `ConceptDescriber`
-# because demanding the whole describer to touch the file coupled reading the GRAPH to an
-# artifact the graph does not depend on — which is exactly why the graph screen answered 404
-# while the profile was missing. `review.UPSTREAM` states it: the graph has no upstreams.
 def load_descriptions(path: str | Path) -> dict[str, str]:
+    """Read the `{concept: text}` cache — the file alone, no graph and no profile.
+
+    Outside `ConceptDescriber` on purpose: demanding the whole describer to touch the file
+    coupled reading the GRAPH to an artifact the graph does not depend on, and
+    `review.UPSTREAM` states that the graph has no upstreams.
+    """
     path = Path(path)
     if not path.exists():
         return {}
@@ -87,14 +87,16 @@ def load_descriptions(path: str | Path) -> dict[str, str]:
 
 
 def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
+    """Write the `{concept: text}` cache."""
     write_json(path, descriptions)
 
 
-# The corpus anchoring the graph build writes: `{"documents": [...], "concepts":
-# {concept: [{document, location, text}]}}`. It is read the way the descriptions are read
-# — only the file — because a workspace whose graph arrived imported does not have it, and
-# that is not an error: it is described from the relations, as before it existed.
 def load_sources(path: str | Path) -> dict:
+    """Read the corpus anchoring a graph build wrote, tolerating its absence.
+
+    A workspace whose graph arrived imported has none, and that is not an error: such a
+    concept is described from its relations, as before the anchoring existed.
+    """
     path = Path(path)
     empty = {"documents": [], "concepts": {}}
     if not path.exists():
@@ -114,6 +116,7 @@ def load_sources(path: str | Path) -> dict:
 
 
 def _parse_description(response: str) -> tuple[str | None, str | None]:
+    """Parse one description, returning `(text, None)` or `(None, reason)`."""
     try:
         data = json.loads(response)
     except json.JSONDecodeError as e:
@@ -127,6 +130,8 @@ def _parse_description(response: str) -> tuple[str | None, str | None]:
 
 
 class ConceptDescriber:
+    """Writes, refreshes and contrasts the prose each concept is retrieved by."""
+
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
@@ -137,6 +142,7 @@ class ConceptDescriber:
         siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
         collision_similarity: float = config.DESCRIPTION_COLLISION_SIMILARITY,
     ):
+        """Bind a graph and its corpus anchoring to the cache they are described into."""
         self.knowledge_graph = knowledge_graph
         self.context = context
         self.prompts = prompts
@@ -153,45 +159,43 @@ class ConceptDescriber:
         self.name_documents = len(sources["documents"]) > 1
 
     def load(self) -> dict[str, str]:
+        """Read the descriptions cache."""
         return load_descriptions(self.path)
 
     def save(self, descriptions: dict[str, str]) -> None:
+        """Write the descriptions cache."""
         save_descriptions(self.path, descriptions)
 
     # FRESHNESS -------------------------------------------------------------------------------
 
-    # A description is written from a concept's domain and relations, so it goes stale when
-    # those change — and nothing noticed: a graph rebuilt twice kept describing `Caso base`
-    # with the text of `Recursividad`, from a graph two versions old, because the concept
-    # name still existed and the cache is keyed by name alone. The fingerprints live in a
-    # sidecar so the descriptions file stays the plain {concept: text} map the editors read.
-    # A concept with no recorded fingerprint adopts the current one instead of regenerating:
-    # a cache written before this existed is not evidence of staleness.
     @property
     def fingerprints_path(self) -> Path:
+        """The sidecar recording what each description was written against.
+
+        A sidecar, so the descriptions file stays the plain `{concept: text}` map the
+        editors read.
+        """
         return self.path.with_suffix(".fingerprints.json")
 
     def _fingerprint(self, concept: str) -> str:
+        """Digest everything a description is written from, so a change makes it stale.
+
+        The cache is keyed by concept NAME alone, so without this a rebuilt graph kept
+        describing a concept with text written against a version two graphs old. The
+        anchoring and the subject context are in here because both reach the prompt.
+        """
         payload = {
             "prompt": config.DESCRIPTION_PROMPT_VERSION,
             "domain": self.knowledge_graph.concept_domain[concept],
             "relations": {v: sorted(ns) for v, ns in self.collect_relations(concept).items()},
-            # The anchoring enters the fingerprint because it enters the prompt: rebuilding the graph
-            # over another corpus changes what the concept means here, and a description written
-            # against the previous paragraphs no longer describes the same thing.
             "passages": [p.get("text", "") for p in self.passages.get(concept, [])],
-            # The context enters too, and that was a gap: the prompt reads it to fix the subject, the
-            # level and the language, so changing subject changes what a description should say.
-            # Without this, editing the context left descriptions written against the previous one
-            # intact. It is cheaper than it looks: the context is one for the whole instance, so
-            # either nothing changes or all of them are rewritten, which is exactly right in that
-            # case.
             "context": self.context.prompt_block(),
         }
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:12]
 
     def _load_fingerprints(self) -> dict[str, str]:
+        """Read the sidecar; an absent or corrupt one means nothing is known to be stale."""
         if not self.fingerprints_path.exists():
             return {}
         try:
@@ -200,13 +204,20 @@ class ConceptDescriber:
         except (OSError, json.JSONDecodeError):
             return {}
 
-    # Merged, never replaced: `ensure(concepts=[...])` describes a subset, and writing only
-    # that subset's fingerprints would mark every other concept as never-seen.
     def _save_fingerprints(self, fingerprints: dict[str, str]) -> None:
+        """Merge into the sidecar, never replace it.
+
+        `ensure(concepts=[…])` describes a subset, and writing only that subset's
+        fingerprints would mark every other concept as never-seen.
+        """
         merged = {**self._load_fingerprints(), **fingerprints}
         write_json(self.fingerprints_path, merged, sort_keys=True)
 
     def restamp(self, dry_run: bool = False) -> tuple[int, int]:
+        """Stamp the written descriptions against the current graph without rewriting them.
+
+        Returns `(how many were stale, how many are written)`.
+        """
         descriptions = self.load()
         written = [c for c in self.knowledge_graph.taggable_concepts if descriptions.get(c)]
         current = {c: self._fingerprint(c) for c in written}
@@ -219,6 +230,11 @@ class ConceptDescriber:
     def _pending(
         self, targets: list[str], descriptions: dict[str, str], current: dict[str, str]
     ) -> list[str]:
+        """Return what has to be written: the missing ones, then the stale ones.
+
+        A concept with no recorded fingerprint counts as fresh — a cache written before the
+        sidecar existed is not evidence of staleness — and adopts the current stamp.
+        """
         stored = self._load_fingerprints()
         missing = [c for c in targets if c not in descriptions]
         stale = [
@@ -240,6 +256,12 @@ class ConceptDescriber:
         overwrite: bool = False,
         refine: bool = True,
     ) -> dict[str, str]:
+        """Write whatever is missing or stale, then rewrite whatever collides.
+
+        The refine pass runs even when nothing was pending, because that is precisely the
+        state a damaged cache sits in — all present, two of them identical, and no reason
+        to look. It costs one batch of embeddings; only a real collision costs a call.
+        """
         descriptions = self.load() if descriptions is None else dict(descriptions)
         targets = concepts if concepts is not None else self.knowledge_graph.taggable_concepts
 
@@ -251,16 +273,6 @@ class ConceptDescriber:
         else:
             logger.info(f"{len(targets)} concept description(s) reused from the cache")
 
-        # The second pass is NOT run over everything that has siblings. It was, and it
-        # doubled the calls to fix a problem most concepts do not have — while the ones that
-        # do have it were being produced by the FIRST pass, which showed a whole domain at
-        # once and got imitation instead of contrast (three pairs came back byte-identical).
-        # So: contrast against a handful of near names on the way in, then measure what
-        # actually collided and rewrite only that, against the concept it collided with.
-        #
-        # It runs even when nothing was pending, because that is precisely the state a
-        # damaged cache sits in — all present, two of them identical, and no reason to look.
-        # The check itself is one batch of embeddings; only a real collision costs a call.
         written = len(pending)
         if refine:
             collisions = self._collisions(descriptions, list(targets))
@@ -280,9 +292,11 @@ class ConceptDescriber:
         descriptions: dict[str, str],
         against: dict[str, list[str]] | None = None,
     ) -> None:
-        # `against` is the refine pass rewriting one description against the one it collided
-        # with, which is a per-concept question and stays per-concept. Everything else goes out
-        # one domain at a time.
+        """Write a plan one domain at a time, falling back to one call per concept.
+
+        `against` is the refine pass rewriting one description against the one it collided
+        with, which is a per-concept question and stays per-concept.
+        """
         if against is not None:
             self._write_one_by_one(plan, descriptions, against)
             return
@@ -313,6 +327,7 @@ class ConceptDescriber:
     def _write_one_by_one(
         self, plan: list[str], descriptions: dict[str, str], against: dict[str, list[str]]
     ) -> None:
+        """Describe concepts one call at a time, falling back offline when the model fails."""
         for concept in plan:
             progress.checkpoint()
             try:
@@ -327,6 +342,7 @@ class ConceptDescriber:
             self.save(descriptions)
 
     def _by_domain(self, concepts: list[str]) -> list[str]:
+        """Order concepts by domain, so `_write` batches them in as few calls as it can."""
         return sorted(concepts, key=lambda c: (self.knowledge_graph.concept_domain[c], c))
 
     def describe(
@@ -335,6 +351,7 @@ class ConceptDescriber:
         descriptions: dict[str, str] | None = None,
         against: list[str] | None = None,
     ) -> str:
+        """Write one concept's description, contrasted against its siblings."""
         domain = self.knowledge_graph.concept_domain[concept]
         relations = self.collect_relations(concept)
         written = descriptions or {}
@@ -372,8 +389,11 @@ class ConceptDescriber:
         return parsed
 
     def simple_describe(self, concept: str) -> str:
-        """The offline fallback. It delegates to `collect_relations` so the two can never
-        disagree about which relations feed a description."""
+        """Compose a description offline, from the graph alone.
+
+        It delegates to `collect_relations` so the two can never disagree about which
+        relations feed a description.
+        """
         domain = self.knowledge_graph.concept_domain[concept]
         lines = [f'Concepto: "{concept}".', f'Dominio: "{domain}"']
         lines.extend(
@@ -384,10 +404,12 @@ class ConceptDescriber:
 
     # CONTRAST --------------------------------------------------------------------------------
 
-    # Contrast is only useful against the few concepts this one could be confused WITH.
-    # Pasting the whole domain — up to 35 descriptions here — buries the instruction to
-    # differentiate under a wall of prose to imitate, which is exactly what happened.
     def siblings(self, concept: str) -> list[str]:
+        """Return the few concepts this one could be confused with.
+
+        Pasting the whole domain buries the instruction to differentiate under a wall of
+        prose to imitate, which is what the shortlist exists to avoid.
+        """
         domain = self.knowledge_graph.concept_domain[concept]
         pool = [
             c
@@ -398,10 +420,12 @@ class ConceptDescriber:
             return pool
         return self._nearest_names(concept, pool, self.siblings_top_k) or pool[: self.siblings_top_k]
 
-    # The shortlist for contrast comes from the NAMES, which is cheap and needs nothing
-    # written yet; whether two descriptions really collide is then measured on the
-    # descriptions themselves, in `_collisions`, once they exist.
     def _nearest_names(self, concept: str, pool: list[str], k: int) -> list[str]:
+        """Shortlist the k nearest concepts by NAME — cheap, and needs nothing written yet.
+
+        Whether two descriptions really collide is measured on the descriptions themselves,
+        in `_collisions`, once they exist.
+        """
         vectors = self._names()
         if vectors is None or concept not in vectors:
             return []
@@ -411,17 +435,20 @@ class ConceptDescriber:
         return [c for _, c in scored[:k]]
 
     def _names(self) -> dict[str, np.ndarray] | None:
+        """Embed every taggable concept NAME once, or None when the engine cannot answer."""
         if self._name_vectors is None:
             concepts = self.knowledge_graph.taggable_concepts
             matrix = embed_normalized(concepts, "concept names")
             self._name_vectors = {} if matrix is None else dict(zip(concepts, matrix))
         return self._name_vectors or None
 
-    # Collisions are looked for across ALL concepts, not just within a domain: the pairs
-    # that hurt retrieval are the ones the index cannot separate, and the domain partition
-    # has no say in that (`Concatenación` and `operaciones con cadenas` landed in different
-    # domains and still scored 0.896).
     def _collisions(self, descriptions: dict[str, str], targets: list[str]) -> dict[str, list[str]]:
+        """Return each description that sits too close to another, with the ones it hits.
+
+        Looked for across ALL concepts and not within a domain: the pairs that hurt
+        retrieval are the ones the index cannot separate, and the domain partition has no
+        say in that.
+        """
         written = [c for c in targets if descriptions.get(c)]
         if len(written) < 2:
             return {}
@@ -447,15 +474,15 @@ class ConceptDescriber:
 
     # BATCH -----------------------------------------------------------------------------------
 
-    # One call per domain instead of one per concept. Writing them one at a time made
-    # differentiation a REQUEST — the siblings block asks for it and the model answered by
-    # copying the sibling and changing its first verb («Detectar y corregir…» against
-    # «Identificar y corregir…», cosine 0.969). Written together it is a CONSTRAINT: the
-    # competing descriptions are in the same answer, so separating them is the task and not
-    # an afterthought.
     def describe_domain(
         self, domain: str, concepts: list[str], written: dict[str, str] | None = None
     ) -> dict[str, str]:
+        """Describe a whole domain in one call, so differentiating is the task itself.
+
+        Written one at a time, differentiation is only a REQUEST and the model answers by
+        copying the sibling and changing its first verb. Written together the competing
+        descriptions are in the same answer, so separating them is a constraint.
+        """
         prompt = self.prompts.describe_domain_concepts_prompt(
             domain=domain,
             concepts_block=self._batch_concepts_block(concepts),
@@ -486,6 +513,7 @@ class ConceptDescriber:
         return parsed
 
     def _batch_concepts_block(self, concepts: list[str]) -> str:
+        """Render the batch's concepts with their relations, one indented line each."""
         lines = []
         for concept in concepts:
             lines.append(f"- {concept}")
@@ -493,13 +521,17 @@ class ConceptDescriber:
                 lines.append(f"    · {verbose}: {', '.join(neighbors)}")
         return "\n".join(lines)
 
-    # Each distinct passage once, with the concepts it yielded. A core passage feeds up to
-    # eight of them, so per-concept repetition would spend the window on the same paragraphs
-    # over and over — and, worse, would hide the very fact the model has to act on: that these
-    # concepts came out of the SAME text and are therefore the ones at risk of collapsing
-    # into one another.
-    def _batch_passages_block(self, concepts: list[str]) -> str:
-        wanted = set(concepts)
+    def _passage_place(self, entry: dict) -> str:
+        """Return where one passage came from, naming its document only if there are several."""
+        place = entry.get("location") or ""
+        if self.name_documents:
+            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+        return place
+
+    def _group_passages(
+        self, concepts: list[str]
+    ) -> tuple[dict[str, list[str]], dict[str, str]]:
+        """Group each distinct passage with the concepts it yielded, and where it is from."""
         by_text: dict[str, list[str]] = {}
         places: dict[str, str] = {}
         for concept in concepts:
@@ -510,10 +542,19 @@ class ConceptDescriber:
                 by_text.setdefault(text, [])
                 if concept not in by_text[text]:
                     by_text[text].append(concept)
-                place = entry.get("location") or ""
-                if self.name_documents:
-                    place = " · ".join(p for p in (entry.get("document") or "", place) if p)
-                places.setdefault(text, place)
+                places.setdefault(text, self._passage_place(entry))
+        return by_text, places
+
+    def _batch_passages_block(self, concepts: list[str]) -> str:
+        """Render each distinct passage once, naming the concepts it yielded.
+
+        A core passage feeds up to eight of them, so per-concept repetition would spend the
+        window on the same paragraphs and — worse — hide the fact the model has to act on:
+        that these concepts came out of the SAME text and are the ones at risk of
+        collapsing into one another.
+        """
+        wanted = set(concepts)
+        by_text, places = self._group_passages(concepts)
 
         blocks = []
         for text, owners in by_text.items():
@@ -522,9 +563,12 @@ class ConceptDescriber:
             blocks.append(f"{head}\nCONCEPTOS EXTRAÍDOS DE AQUÍ: {named}\n\n{text}")
         return "\n\n---\n\n".join(blocks)
 
-    # A partial batch still has to separate itself from the siblings it is NOT rewriting,
-    # or an incremental top-up would land on top of a description nobody asked to change.
     def _existing_block(self, domain: str, batch: list[str], written: dict[str, str]) -> str:
+        """Render the domain's descriptions the batch is NOT rewriting.
+
+        A partial batch still has to separate itself from them, or an incremental top-up
+        lands on top of a description nobody asked to change.
+        """
         taggable = set(self.knowledge_graph.taggable_concepts)
         rest = [
             c
@@ -534,6 +578,7 @@ class ConceptDescriber:
         return "\n".join(f"- {c}: {' '.join(written[c].split())}" for c in rest)
 
     def _domains_block(self, current: str) -> str:
+        """Render every domain and its concepts, marking the one being described."""
         lines = []
         for domain, names in self.knowledge_graph.concepts_by_domains.items():
             mark = " (el que estás describiendo)" if domain == current else ""
@@ -542,8 +587,11 @@ class ConceptDescriber:
 
     # RELATIONS -------------------------------------------------------------------------------
 
-    # Only relations flagged `use_in_embedding` feed a description.
     def collect_relations(self, concept: str) -> dict[str, list[str]]:
+        """Return a concept's neighbours by relation, both directions named separately.
+
+        Only relations flagged `use_in_embedding` feed a description.
+        """
         kg = self.knowledge_graph
         relations: dict[str, list[str]] = {}
 

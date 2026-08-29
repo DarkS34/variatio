@@ -1,27 +1,16 @@
-# The two prompts of the reference arms of the Evaluation mode. Not the "best" ones: they
-# are deliberately poor, because they measure what the system's additions contribute.
-#
-# What they DO carry, and why:
-#   · the concept names — an ordinary user writes the topic;
-#   · the teaching context — whoever asks for the exercise, student or teacher, knows
-#     which subject and at what level they want it;
-#   · the list of output keys — without it the arm returns prose and the comparison
-#     would measure format instead of content, an artifact that invalidates the experiment;
-#   · one register line — the commercial model opened the statement greeting and
-#     commenting on the exercise. That is conversational format, not didactics: leaving it
-#     would measure politeness instead of item quality, exactly the same artifact that
-#     justifies the previous line. It says what NOT to put, not how to write the exercise.
-# What they can NEVER carry: concept descriptions, prerequisites, posteriors, curriculum,
-# or any didactic section of `generate_content_prompt`. All of that only exists thanks to
-# the graph, which is precisely what is being measured.
+"""The Spanish baseline prompts of the reference arms. Deliberately poor, and measured.
+
+They carry exactly four things and no more: the concept names, the teaching context, the
+list of output keys (without it the arm returns prose and the comparison measures format
+instead of content) and one register line saying what NOT to put, because a commercial
+model that greets and comments would have the comparison measure politeness.
+
+What they may NEVER carry: concept descriptions, prerequisites, posteriors, curriculum, or
+any didactic section of `generate_content_prompt`. All of that exists thanks to the graph,
+which is precisely what is being measured.
+"""
 
 
-# The one prompt that does NOT take the rendered block. It composes a sentence -- "Eres
-# experto en X, a nivel de Y. Redáctalo en Z." -- because that is what a person who has
-# never seen this system would type, and a paragraph of synthesised prose is not that. So
-# the three canonical facts stay addressable by name in `ContentContext`, and this arm
-# reads them and nothing else. Handing it the narrative would change a measured baseline
-# and make old evaluation sessions incomparable.
 def naive_generation_prompt(
     subject: str,
     educational_level: str,
@@ -31,6 +20,12 @@ def naive_generation_prompt(
     fixed: dict[str, object] | None = None,
     instructions: str = "",
 ) -> str:
+    """Compose the sentence a person who had never seen this system would type.
+
+    The one prompt that does NOT take the context's rendered block: it reads the three
+    canonical facts by name, and handing it the synthesised narrative instead would change
+    a measured baseline and make recorded sessions incomparable.
+    """
     subject = subject or "la asignatura"
     level = educational_level
     language = language_of_instruction
@@ -61,6 +56,7 @@ def rag_generation_prompt(
     rules_block: str,
     schema: str,
 ) -> str:
+    """Wrap the naive prompt with the retrieved exemplars, the writing rules and a schema."""
     exemplars_section = ""
     if exemplars_block.strip():
         exemplars_section = (

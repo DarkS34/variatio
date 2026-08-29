@@ -1,3 +1,5 @@
+"""Phase 2 — generating variants from an initialised pipeline context."""
+
 from collections.abc import Callable
 
 from ..variatio import GeneratedVariant
@@ -16,6 +18,12 @@ def generate(
     avoid: list[str] | None = None,
     on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
 ) -> list[GeneratedVariant]:
+    """Generate `n` variants, defaulting to the bank's most frequent concepts.
+
+    `curriculum` is passed through as it arrives, the empty list included — the server
+    resolves a workspace's own before calling, because a run has to record the curriculum
+    that ran and not the one that was asked for.
+    """
     targets = concepts or _top_tagged_concepts(context.exemplars_bank, n)
     if not targets:
         raise ValueError(
@@ -35,6 +43,7 @@ def generate(
 
 
 def _top_tagged_concepts(bank: dict, k: int) -> list[str]:
+    """Return the k concepts the bank tags most often."""
     counts: dict[str, int] = {}
     for item in bank.values():
         for concept in item.get("concepts") or []:

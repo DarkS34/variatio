@@ -1,3 +1,11 @@
+"""The safety screen over the commission's free text.
+
+A regex catches prompt injection before any model is asked; the rest is one call per
+criterion of `config.GUARDRAIL_CRITERIA`, stopping at the first that flags. A criterion
+the model cannot answer is logged and skipped rather than blocking, but it clears
+`checked` so the caller knows the screen was only partial.
+"""
+
 import re
 from dataclasses import dataclass
 
@@ -29,6 +37,7 @@ _INJECTION = re.compile(
     rf"|\b(?:{_OVERRIDE_OBJECTS}) (?:anterior(?:es)?|previ[ao]s?|de arriba)\b"
     r"|\b(?:system|previous|prior) prompt\b"
     r"|\bprompt del sistema\b"
+    # The lookahead spares «instrucciones del sistema operativo», a legitimate subject.
     r"|\binstrucciones del sistema\b(?! ?operativ)"
 )
 
@@ -46,21 +55,31 @@ _LABELS = {
 
 @dataclass(frozen=True)
 class Verdict:
+    """The screen's outcome; `checked` is false when a criterion could not be judged."""
+
     blocked_by: str | None
     checked: bool
 
     @property
     def blocked(self) -> bool:
+        """True when a criterion flagged the text."""
         return self.blocked_by is not None
 
     @property
     def reason(self) -> str:
+        """What blocked the text, in the wording the screen shows, or an empty string."""
         if self.blocked_by is None:
             return ""
         return _LABELS.get(self.blocked_by, self.blocked_by)
 
 
 def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> Verdict:
+    """Screen one free text and return the verdict.
+
+    The injection regex runs first, over the folded text and before any model call: an
+    instruction aimed at the system needs no criterion to be recognised. The criteria are
+    then evaluated in order and the first to flag stops the loop.
+    """
     if _INJECTION.search(fold(text)):
         verdict = Verdict(blocked_by="instruction_override", checked=True)
         progress.emit("guardrail", ok=False, criteria=verdict.blocked_by, checked=True)
@@ -94,6 +113,7 @@ def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> V
 
 
 def _score(text: str, criterion: str) -> bool | None:
+    """Ask the guardrail model about one criterion; None when the answer is unreadable."""
     try:
         response = inference.generate(
             model=config.GUARDRAIL_LLM,

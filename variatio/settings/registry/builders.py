@@ -1,3 +1,5 @@
+"""The «Constructores» settings: transcription, chunking and each builder's own knobs."""
+
 from ..types import Impact, Setting
 
 SETTINGS: list[Setting] = [

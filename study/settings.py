@@ -1,3 +1,9 @@
+"""The study's six settings, declared beside the code that reads them.
+
+`variatio/settings/registry/__init__.py` picks these up through an optional import — the
+one place the pipeline names the study, and the single exception to the boundary.
+"""
+
 from variatio.settings.types import Impact, Setting
 
 SETTINGS: list[Setting] = [

@@ -1,21 +1,18 @@
 """The installation's own panel: the accounts, the workspaces and how the study is going.
 
-This router is the documented exception to phase 2's «an administrator runs the
-installation, they do not read other people's instances». Taken by explicit user request
-in phase 3, because the evaluation is a study whose unit of analysis is a session and
-whose interesting question — «¿va ganando el sistema, y con qué evaluadores?» — cannot be
-answered from inside one account. The bypass lives in `auth.deps.access_for`, one `if`,
-and every route here is behind `require_admin`.
+Every route here is behind `require_admin`, and the whole router exists under `/api/admin`
+because `/api/workspaces`'s `auth.MANAGE` only ever reaches the ACTIVE workspace — tidying
+up the installation from there would mean entering each instance in order to touch it.
 
-What it is NOT: a second way into the pipeline. Nothing here builds, edits or approves
+INVITATIONS AND MEMBERSHIP ARE THE INSTALLATION ADMINISTRATOR'S ALONE. There is no
+owner-scoped door: an owner owns their workspace's content and does not decide who else
+exists. Two screens for one question is how an installation ends up with two answers.
+
+What this is NOT: a second way into the pipeline. Nothing here builds, edits or approves
 anything. It reads what the installation has recorded, hands out access, and exports a CSV.
-
-Handing out access is new: issuing invitations and moving people between workspaces used
-to be an owner's job, done from a dialog in the account menu, while this panel listed the
-same accounts and could only enable or disable them. Two screens for one question is how
-you end up with two answers, so they are one — this one — and only the installation's
-administrator gets it, by explicit user request. An owner still owns their workspace's
-content; they no longer decide who else exists.
+The one thing it reads across accounts is the study — whose unit of analysis is a session,
+and whose interesting question cannot be answered from inside one account. That bypass
+lives in `auth.deps.access_for`, in one `if`, and nowhere else.
 """
 
 from datetime import datetime
@@ -40,29 +37,40 @@ router = APIRouter(
 
 
 class InviteBody(BaseModel):
-    """`workspace` is a slug, or nothing: an invitation that grants no membership creates
-    an account and no access, which is the honest way to add someone who will be given a
-    workspace later. There is no evaluator profile here on purpose — the link binds nothing
-    beyond the access, and the profile is answered by whoever registers."""
+    """What an invitation grants: a workspace and a role, or nothing at all.
+
+    `workspace` may be absent — an invitation granting no membership creates an account
+    and no access, which is the honest way to add somebody who will be given a workspace
+    later. There is no evaluator profile here on purpose: the link binds the access and
+    nothing else, and whoever registers answers for themselves.
+    """
 
     workspace: str | None = None
     role: str = EDITOR
 
 
 class MembershipBody(BaseModel):
+    """The instance somebody is being let into, and with what role."""
+
     workspace: str
     role: str = EDITOR
 
 
 class AdminBody(BaseModel):
+    """Whether this account runs the installation."""
+
     is_admin: bool
 
 
 class ProfileBody(BaseModel):
+    """The evaluator profile being corrected: `teacher`, `student` or nothing."""
+
     evaluator_profile: str | None = None
 
 
 class MaintenanceBody(BaseModel):
+    """Whether the door is shut, and the notice shown while it is."""
+
     active: bool
     message: str | None = None
 
@@ -70,11 +78,13 @@ class MaintenanceBody(BaseModel):
 # WHO AND WHAT ----------------------------------------------------------------------------
 
 
-# A list per lane and not one job: the remote lane holds as many as
-# `CEREBRAS_MAX_CONCURRENT_JOBS` allows, so the oldest of them is not the answer to «what is
-# this half of the engine doing». `capacity` travels with it, because N jobs means nothing
-# without the room they are filling.
 def _lane_jobs() -> dict:
+    """Report what is holding each lane, as a list and with the room it is filling.
+
+    A list per lane and not one job: the remote lane holds as many as
+    `CEREBRAS_MAX_CONCURRENT_JOBS` allows, so the oldest of them does not answer «what is
+    this half of the engine doing», and N jobs means nothing without the capacity.
+    """
     return {
         backend: {
             "capacity": jobs_lanes.capacity(backend),
@@ -84,8 +94,51 @@ def _lane_jobs() -> dict:
     }
 
 
+def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) -> dict:
+    """Render one account for the panel: what it is, what it holds and what it produced."""
+    return {
+        "id": user.id,
+        "username": user.username,
+        "name": user.name,
+        "is_admin": user.is_admin,
+        "evaluator_profile": user.evaluator_profile,
+        "disabled": not user.active,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "workspaces": [
+            {"slug": w.slug, "role": m.role}
+            for m, w in identity.memberships_for(db, user.id)
+        ],
+        "generations": generated.get(user.id, 0),
+        "evaluations": by_account.get(user.id, {}).get("sessions", 0),
+        "decided": by_account.get(user.id, {}).get("decided", 0),
+        "sessions": identity.count_live_sessions(db, user.id),
+        "locked_seconds": locked_seconds("login", user.username),
+        "email": user.email,
+    }
+
+
+def _workspace_view(db: DbSession, workspace) -> dict:
+    """Render one instance for the panel, chain included.
+
+    `stages` reads three files per workspace so a stage can be emptied from here without
+    switching to it. It does not mount the instance's index.
+    """
+    return {
+        "id": workspace.id,
+        "slug": workspace.slug,
+        "name": workspace.name,
+        "created_at": workspace.created_at.isoformat() if workspace.created_at else None,
+        "members": len(identity.members_of(db, workspace.id)),
+        "generations": generations.count_generations(db, workspace.id),
+        "warm": workspace.slug in deps.warm_slugs(),
+        "stages": _chain(workspace.slug),
+        "disk": settings.disk_usage(settings.workspace_for(workspace.slug)),
+    }
+
+
 @router.get("/overview")
 def overview(db: DbSession = Depends(auth.db)) -> dict:
+    """Answer the whole panel: totals, every account, every instance and the queue."""
     workspaces = repository.list_workspaces(db)
     users = identity.list_users(db)
     generated = generations.generations_per_user(db)
@@ -102,45 +155,9 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             "decided": sum(1 for h in headers if h.get("chosen_at")),
         },
         "accounts": [
-            {
-                "id": user.id,
-                "username": user.username,
-                "name": user.name,
-                "is_admin": user.is_admin,
-                "evaluator_profile": user.evaluator_profile,
-                "disabled": not user.active,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-                "workspaces": [
-                    {"slug": w.slug, "role": m.role}
-                    for m, w in identity.memberships_for(db, user.id)
-                ],
-                "generations": generated.get(user.id, 0),
-                "evaluations": by_account.get(user.id, {}).get("sessions", 0),
-                "decided": by_account.get(user.id, {}).get("decided", 0),
-                "sessions": identity.count_live_sessions(db, user.id),
-                "locked_seconds": locked_seconds("login", user.username),
-                "email": user.email,
-            }
-            for user in users
+            _account_view(db, user, generated, by_account) for user in users
         ],
-        "workspaces": [
-            {
-                "id": workspace.id,
-                "slug": workspace.slug,
-                "name": workspace.name,
-                "created_at": workspace.created_at.isoformat()
-                if workspace.created_at
-                else None,
-                "members": len(identity.members_of(db, workspace.id)),
-                "generations": generations.count_generations(db, workspace.id),
-                "warm": workspace.slug in deps.warm_slugs(),
-                # Each instance's chain, so a stage can be emptied from here without switching to it. It
-                # is reading three files per workspace, not mounting its index.
-                "stages": _chain(workspace.slug),
-                "disk": settings.disk_usage(settings.workspace_for(workspace.slug)),
-            }
-            for workspace in workspaces
-        ],
+        "workspaces": [_workspace_view(db, workspace) for workspace in workspaces],
         "engine": {
             "busy": bool(running),
             "job": running[0].to_dict() if running else None,
@@ -158,6 +175,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
 
 @router.get("/invites")
 def invites(db: DbSession = Depends(auth.db)) -> dict:
+    """List the invitations still live."""
     return {"invites": [_invite(db, row) for row in identity.pending_invites(db)]}
 
 
@@ -168,8 +186,13 @@ def create_invite(
     admin: User = Depends(auth.require_admin),
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    # An administrator session is not a licence to mint credentials without limit, and the
-    # bucket already existed for the owner-scoped route this replaces.
+    """Mint one single-use invitation and answer the link that IS the invitation.
+
+    It is handed over by hand: expiring, bound to no address, and whoever redeems it
+    chooses their own username — which is why it must not be left where its holder was
+    not meant to be. An administrator session is not a licence to mint credentials
+    without limit, hence the throttle.
+    """
     throttle("invite", request, admin.username)
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
@@ -190,9 +213,6 @@ def create_invite(
         created_by=admin.id,
     )
 
-    # The link IS the invitation: single-use, expiring, and handed over by whoever issued
-    # it. There is no address bound to it, so the person redeeming it chooses their own
-    # username — which is why it must not be left anywhere its holder was not meant to be.
     return {
         "invite": _invite(db, invite),
         "link": f"{auth.base_url(request)}/invite?token={token}",
@@ -201,6 +221,7 @@ def create_invite(
 
 @router.delete("/invites/{invite_id}")
 def revoke_invite(invite_id: int, db: DbSession = Depends(auth.db)) -> dict:
+    """Withdraw an invitation before anybody redeems it."""
     invite = db.get(Invite, invite_id)
     if invite is None:
         raise HTTPException(404, "Esa invitación no existe.")
@@ -211,6 +232,7 @@ def revoke_invite(invite_id: int, db: DbSession = Depends(auth.db)) -> dict:
 def grant_membership(
     user_id: int, body: MembershipBody, db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Let one account into one instance, with a role."""
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'.")
     user = identity.get_user_by_id(db, user_id)
@@ -224,11 +246,14 @@ def grant_membership(
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
 
 
-# Correcting a profile after the fact, for the accounts that predate it and for the ones
-# invited with the wrong one. It changes the wording of one question and how the study
-# groups the results; it grants and withholds nothing, which is why it is not `MembershipBody`.
 @router.post("/accounts/{user_id}/profile")
 def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db)) -> dict:
+    """Correct an account's evaluator profile, administrators included.
+
+    It changes the wording of one question and how the study groups its results; it
+    grants and withholds nothing, which is why withholding this control from anybody
+    would be a restriction with no reason.
+    """
     error = identity.profile_error(body.evaluator_profile)
     if error:
         raise HTTPException(422, error)
@@ -242,6 +267,7 @@ def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db
 
 @router.delete("/accounts/{user_id}/memberships/{slug}")
 def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db)) -> dict:
+    """Take one account's access to one instance away."""
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
@@ -251,22 +277,23 @@ def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db))
 
 # WORKSPACES ------------------------------------------------------------------------------
 #
-# What this panel writes about instances: their name, and their removal. It builds, edits
-# and approves nothing. It lives here and not under `/api/workspaces` because that requires
-# membership of the ACTIVE workspace — when what is needed is to tidy up the installation,
-# that forces entering each instance in order to touch it, the exact opposite.
+# What this panel writes about instances: their name and their removal. It builds, edits
+# and approves nothing.
 
 
 class RenameBody(BaseModel):
+    """A workspace's new display name."""
+
     name: str = Field(min_length=1, max_length=200)
 
 
-# Renaming is the administrator's and nobody else's (2026-08-28, explicit user request):
-# the owner's route is gone, so this is the only door. Only the NAME changes — the slug
-# names the directory tree, the `X-Workspace` header and every row that points at the
-# workspace, so renaming it would be a migration and not a rename.
 @router.patch("/workspaces/{slug}")
 def rename_workspace(slug: str, body: RenameBody, db: DbSession = Depends(auth.db)) -> dict:
+    """Rename one instance. The only door — there is no owner-scoped route for it.
+
+    Only the NAME changes: the slug names the directory tree, the `X-Workspace` header
+    and every row that points at the workspace, so renaming that would be a migration.
+    """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
@@ -282,24 +309,29 @@ def delete_workspace(
     admin: User = Depends(auth.require_admin),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Delete one instance and its directory tree, whoever else is a member of it.
+
+    Unconditional, unlike `DELETE /api/workspaces/{slug}`, which keeps the files when
+    other people are still in it: this is the installation being tidied up, and an
+    administrator is who finishes the job the other door leaves half done.
+
+    There is deliberately NO «last workspace of the installation» guard: an installation
+    holding zero workspaces is a normal state the app renders on purpose, and `leave`
+    already deletes the last one when its last member walks out.
+    """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
-    # There is deliberately NO «last workspace of the installation» guard: an installation
-    # holding zero workspaces is a normal state the app renders on purpose, and `leave`
-    # already deletes the last one when its last member walks out — so the guard refused
-    # the tidy way of doing what the untidy one allowed.
     ws = settings.workspace_for(slug)
-    # The tree first: if the row goes and deleting the directory fails, files are left whose
-    # owner is no longer on record. The other way round, a failure leaves the row and retries.
+    # Tree before row: this way a failure leaves the row standing and the call retryable,
+    # where the other order strands files nobody is on record as owning.
     try:
         removed = settings.destroy(ws)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
-    # Whoever was sitting in it is moved to wherever they land now, before the row goes:
-    # leaving the pointer dangling left them holding a slug the API answers 404 for, on
-    # every request, with the switcher offering no way back.
+    # Whoever was sitting in it is moved before the row goes: a dangling pointer leaves
+    # them holding a slug the API answers 404 for, with the switcher offering no way back.
     rehomed = auth_deps.rehome_accounts(db, workspace)
 
     db.delete(workspace)
@@ -313,19 +345,22 @@ def delete_workspace(
         "path": str(ws.root),
         "files_removed": removed,
         "rehomed": rehomed,
-        # Where the caller ends up, which is the one entry of `rehomed` the tab that made
-        # the request needs — and is `None` both when they were not in it and when they have
-        # nowhere left to go, two states the panel draws the same way: it stays put.
+        # Where the caller ends up: the one entry of `rehomed` the calling tab needs. It is
+        # `None` both when they were not in it and when they have nowhere left to go, two
+        # states the panel draws the same way — it stays put.
         "landed": rehomed.get(admin.username),
     }
 
 
-# Empty a stage. Leaves the workspace standing and its artifact «missing», which is what
-# allows rebuilding it: what is deleted is the curated file, the draft and the cache
-# derivations that spoke of it. `.history/` is untouched, so a mistaken deletion is undone
-# from «Restaurar» on the artifact's screen.
 @router.delete("/workspaces/{slug}/artifacts/{artifact}")
 def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) -> dict:
+    """Empty one stage, leaving the workspace standing and the artifact «missing».
+
+    What goes is the curated file, the draft and the cache derivations that spoke of it,
+    which is what allows rebuilding. `.history/` is untouched, so a mistaken deletion is
+    undone from «Restaurar» on the artifact's own screen — and that is what makes this
+    button safe to offer at all.
+    """
     if artifact not in review.ARTIFACTS:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'.")
     workspace = repository.get_workspace(db, slug)
@@ -343,14 +378,17 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
     return {"workspace": slug, **result}
 
 
-# The regenerable half of the cache — vectors and converted markdown. Refused while the
-# workspace has work running or waiting, because that work is what reads those files.
 @router.delete("/workspaces/{slug}/cache")
 def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
+    """Drop the regenerable half of a cache: the vectors and the converted markdown.
+
+    The descriptions and the concept sources stay — they cost a model run. Refused while
+    the workspace has work running or waiting, because that work reads these files.
+    """
     if repository.get_workspace(db, slug) is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
-    # Every run of this workspace, on either lane: asking `current()` alone would miss the
-    # one on the second lane whenever somebody else's older job holds the first.
+    # Every run of this workspace, on either lane: `current()` alone would miss the one on
+    # the second lane whenever somebody else's older job holds the first.
     if runtime.runner.running(slug) or runtime.runner.pending(slug):
         raise HTTPException(409, "Ese workspace tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = settings.workspace_for(slug)
@@ -359,11 +397,13 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     return {"workspace": slug, **result}
 
 
-# The instance as the files say it is — what a checkout would need to run it elsewhere.
-# Read from disk and not from the database rows, because the files are the operational
-# truth (2026-08-23) and the rows mirror them.
 @router.get("/workspaces/{slug}/export")
 def export_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
+    """Answer the instance as the FILES say it is: what a checkout needs to run it.
+
+    Read from disk and not from the database rows, because the files are the operational
+    truth and the rows are their mirror.
+    """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
@@ -390,10 +430,13 @@ def export_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
 # THE QUEUE -------------------------------------------------------------------------------
 
 
-# `running` is the oldest of them, kept as it was; `lanes` is the honest picture now that
-# the queue serialises per backend and two jobs can be in flight at once.
 @router.get("/jobs")
 def job_queue() -> dict:
+    """Answer the queue of the whole installation, lane by lane.
+
+    `running` is the oldest job, kept as it was; `lanes` is the honest picture now that
+    the queue serialises per backend and two jobs can be in flight at once.
+    """
     running = runtime.runner.running()
     return {
         "running": running[0].to_dict() if running else None,
@@ -407,6 +450,7 @@ def job_queue() -> dict:
 
 @router.delete("/jobs/{job_id}")
 def cancel_job(job_id: str) -> dict:
+    """Cancel any job of the installation, whatever workspace it belongs to."""
     if runtime.runner.get(job_id) is None:
         raise HTTPException(404, f"No existe el trabajo '{job_id}'.")
     return {"cancelled": runtime.runner.cancel(job_id)}
@@ -419,6 +463,7 @@ def cancel_job(job_id: str) -> dict:
 def disable(
     user_id: int, admin: User = Depends(auth.require_admin), db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Shut the door on one account, revoking its sessions, without deleting anything."""
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -431,6 +476,7 @@ def disable(
 
 @router.post("/accounts/{user_id}/enable")
 def enable(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
+    """Let a disabled account back in."""
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -438,18 +484,18 @@ def enable(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
     return {"enabled": user_id}
 
 
-# The other half of `disable`, and deliberately not the same thing: disabling keeps the
-# account and shuts the door, this removes the account and leaves standing what it made.
-# Both exist because they answer different questions — «esta persona ya no entra» and «esta
-# cuenta no debería haber existido» — and having only the first left the panel unable to
-# clean up after a mistyped invitation.
-#
-# Deleting yourself is refused, which is also what keeps the installation from losing its
-# last administrator: whoever is calling this is an active one, and stays.
 @router.delete("/accounts/{user_id}")
 def delete_account(
     user_id: int, admin: User = Depends(auth.require_admin), db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Delete one account. What it produced survives it.
+
+    Deliberately not `disable`: that keeps the account and shuts the door, this removes
+    the account and leaves standing what it made — `generations.user_id` and
+    `evaluation_sessions.user_id` are `SET NULL`, so deleting somebody must not delete the
+    material a course was built on. Deleting yourself is refused, which is also what keeps
+    the installation from losing its last administrator.
+    """
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -461,9 +507,6 @@ def delete_account(
     return {"deleted": user_id, "username": username}
 
 
-# Administration is a flag on the account and the bypass it buys lives in one `if`
-# (`auth.deps.access_for`). Taking it from yourself is refused for the same reason
-# deleting yourself is: whoever calls this is an administrator, and stays one.
 @router.post("/accounts/{user_id}/admin")
 def set_admin(
     user_id: int,
@@ -471,6 +514,11 @@ def set_admin(
     admin: User = Depends(auth.require_admin),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Grant or withdraw administration, never from oneself.
+
+    A flag on the account; the bypass it buys lives in one `if`, `auth.deps.access_for`.
+    Taking it from yourself is refused for the same reason deleting yourself is.
+    """
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -481,11 +529,13 @@ def set_admin(
     return {"user_id": user.id, "is_admin": user.is_admin}
 
 
-# The same link `/forgot` would mail, handed to the administrator instead: with no SMTP the
-# only route to a locked-out person is by hand, and this is where the administrator is. It
-# is issued, not sent, and it expires like any other.
 @router.post("/accounts/{user_id}/reset-link")
 def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db)) -> dict:
+    """Issue the same link `/forgot` would mail, handed over by hand instead.
+
+    With no SMTP the only route to a locked-out person is by hand, and this is where the
+    administrator already is. It is issued, not sent, and it expires like any other.
+    """
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -502,6 +552,7 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
 
 @router.delete("/accounts/{user_id}/sessions")
 def revoke_sessions(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
+    """Log one account out everywhere without touching the account itself."""
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -510,6 +561,7 @@ def revoke_sessions(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
 
 @router.post("/accounts/{user_id}/unlock")
 def unlock_login(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
+    """Clear the login rate limiter for one account. Its key only, never the IP's."""
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
@@ -520,11 +572,9 @@ def unlock_login(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
 # THE DOOR --------------------------------------------------------------------------------
 
 
-# Closing the installation is written here and nowhere else, like everything that decides
-# who gets in. Reading it does NOT go through here: `GET /api/maintenance` asks for no
-# session, because the notice has to reach whoever has not got in yet.
 @router.get("/maintenance")
 def read_maintenance() -> dict:
+    """Answer the door's state with who closed it, which the public route withholds."""
     return maintenance.state()
 
 
@@ -532,6 +582,11 @@ def read_maintenance() -> dict:
 def set_maintenance(
     body: MaintenanceBody, admin: User = Depends(auth.require_admin)
 ) -> dict:
+    """Open or shut the installation. Written here and nowhere else.
+
+    Reading it does NOT go through here: `GET /api/maintenance` asks for no session,
+    because the notice has to reach whoever has not got in yet.
+    """
     return maintenance.set_state(body.active, body.message, admin.username)
 
 
@@ -539,6 +594,7 @@ def set_maintenance(
 
 
 def _chain(slug: str) -> list[dict]:
+    """Read one workspace's three stages from its files, without mounting its index."""
     ws = settings.workspace_for(slug)
     return [
         {
@@ -552,6 +608,7 @@ def _chain(slug: str) -> list[dict]:
 
 
 def _invite(db: DbSession, invite: Invite) -> dict:
+    """Render one invitation for the panel. Never its token — that is handed over once."""
     workspace = invite.workspace
     author = identity.get_user_by_id(db, invite.created_by) if invite.created_by else None
     return {

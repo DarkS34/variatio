@@ -1,3 +1,9 @@
+"""The «Razonamiento» settings: one switch and one effort per phase, plus the lane table.
+
+`PIPELINE` is what the panel draws as the reasoning pipeline. A phase's lane says what the
+call is ABOUT, not which job pays for it.
+"""
+
 from dataclasses import dataclass
 
 from ..types import Impact, Setting
@@ -134,6 +140,7 @@ _DEFAULTS = {
 
 
 def _toggle(phase: str) -> Setting:
+    """Declare one phase's `THINK_<PHASE>` switch, defaulting to what its call did before."""
     default, doc = _DEFAULTS[phase]
     return Setting(
         key=f"reasoning.phases.{phase}",
@@ -174,6 +181,7 @@ Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier 
 
 
 def _effort(phase: str) -> Setting:
+    """Declare one phase's effort level, unnamed because only `derived` ever reads it."""
     return Setting(
         key=f"reasoning.effort.{phase}",
         name="",
@@ -202,6 +210,8 @@ MODEL = "model"
 
 @dataclass(frozen=True)
 class Phase:
+    """One model call on the pipeline: its model, and either a switch or a fixed reason."""
+
     key: str
     label: str
     model: str
@@ -213,12 +223,15 @@ class Phase:
 
 @dataclass(frozen=True)
 class Lane:
+    """One column of the pipeline: the phases of a build, or of a run."""
+
     key: str
     label: str
     phases: tuple[Phase, ...]
 
 
 def _switch(key: str, label: str, note: str = "") -> Phase:
+    """Build a phase whose reasoning is decided by its own switch and effort settings."""
     return Phase(
         key=key,
         label=label,
@@ -238,6 +251,7 @@ _SHARED_SEAM_NOTE = (
 
 
 def _transcription() -> tuple[Phase, ...]:
+    """Return the two transcription phases, drawn in all three lanes from one setting."""
     return (
         _switch("transcribe", "Transcripción", _SHARED_TRANSCRIBE_NOTE),
         _switch("transcribe_seam", "Costura", _SHARED_SEAM_NOTE),

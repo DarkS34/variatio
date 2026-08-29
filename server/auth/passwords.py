@@ -1,5 +1,9 @@
 """Argon2id, and the only rule about what a password may be.
 
+Hashing is `t=3, m=64 MiB, p=4`, aimed at ~100-250 ms per verification on the target VPS
+(4 vCPU, 8 GB). The parameters live inside the hash, so raising them later re-hashes each
+account on its next login through `needs_rehash` and nothing has to migrate.
+
 The policy is length plus a rejection of the obvious, not composition rules: a
 requirement to add a digit and a capital produces `Password1!`, which is on every
 list there is. Length is what actually costs an attacker anything.
@@ -13,9 +17,6 @@ from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 MIN_LENGTH = 12
 
-# Aimed at ~100-250 ms per verification on the target VPS (4 vCPU, 8 GB). The parameters
-# are stored inside the hash, so raising them later re-hashes on next login and nothing
-# has to migrate — `needs_rehash` below is what makes that automatic.
 _hasher = PasswordHasher(
     time_cost=3,
     memory_cost=64 * 1024,
@@ -45,10 +46,12 @@ _COMMON = {
 
 
 def hash_password(password: str) -> str:
+    """Return the Argon2id hash to store for this password."""
     return _hasher.hash(_normalise(password))
 
 
 def verify_password(password_hash: str, password: str) -> bool:
+    """Return True when the password matches the stored hash."""
     try:
         return _hasher.verify(password_hash, _normalise(password))
     except (VerifyMismatchError, InvalidHashError, ValueError):
@@ -56,20 +59,27 @@ def verify_password(password_hash: str, password: str) -> bool:
 
 
 def needs_rehash(password_hash: str) -> bool:
+    """Return True when this hash was made with weaker parameters than the ones in force.
+
+    The parameters are inside the hash, so raising them re-hashes each account on its
+    next login instead of migrating anything.
+    """
     try:
         return _hasher.check_needs_rehash(password_hash)
     except (InvalidHashError, ValueError):
         return False
 
 
-# The decoy for "that address does not exist": a login against a non-existent account has
-# to cost the same as one against a real account, or the response time answers the
-# question the deliberately identical error message refuses to answer. Built on first use
-# so that importing this module does not pay for an Argon2 hash.
+# Built on first use so that importing this module does not pay for an Argon2 hash.
 _decoy: str | None = None
 
 
 def waste_time() -> None:
+    """Verify a decoy hash, so a missing account costs the same as a wrong password.
+
+    Without it the response time answers the question the deliberately identical error
+    message refuses to answer, and username enumeration is open again.
+    """
     global _decoy
     if _decoy is None:
         _decoy = _hasher.hash("decoy-for-timing-parity")
@@ -80,7 +90,7 @@ def waste_time() -> None:
 
 
 def policy_error(password: str, *, account: str = "", name: str = "") -> str | None:
-    """The reason this password is not acceptable, in the user's language, or None."""
+    """Return why this password is not acceptable, in the user's language, or None."""
     password = _normalise(password)
     if len(password) < MIN_LENGTH:
         return f"La contraseña necesita al menos {MIN_LENGTH} caracteres."
@@ -105,16 +115,17 @@ def policy_error(password: str, *, account: str = "", name: str = "") -> str | N
 
 
 def _normalise(password: str) -> str:
-    # NFKC so that a password typed with a composed accent verifies against the same one
-    # typed with a combining accent: the two are the same password to the person typing.
+    """Fold to NFKC, so a composed accent verifies against the same combining one."""
     return unicodedata.normalize("NFKC", password)
 
 
 def _stripped(text: str) -> str:
+    """Return the text with its accents removed."""
     return "".join(c for c in unicodedata.normalize("NFD", text) if not unicodedata.combining(c))
 
 
 def _is_sequence(text: str) -> bool:
+    """Return True when the whole password is a run along a keyboard row or the alphabet."""
     if len(text) < MIN_LENGTH:
         return False
     rows = ("abcdefghijklmnopqrstuvwxyz", "0123456789", "qwertyuiop", "asdfghjkl", "zxcvbnm")

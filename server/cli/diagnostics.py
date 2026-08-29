@@ -1,4 +1,11 @@
+"""`db-check`: does the database answer, and where was it looked for?"""
+
+
 def db_check(_args) -> int:
+    """Report whether the database answers, and at which host.
+
+    Deliberately outside `guarded()`: reporting that failure is this command's whole job.
+    """
     from ..db import database_url, is_available
 
     url = database_url()

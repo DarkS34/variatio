@@ -14,19 +14,22 @@ from variatio.instance.relations import RelationSchema
 
 
 def _slug(text: str) -> str:
+    """Fold a label down to an ASCII identifier the client can use as a colour key."""
     stripped = "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
     )
     return re.sub(r"[^a-z0-9]+", "_", stripped.lower()).strip("_") or "relation"
 
 
-# `key` is the verbose label because that is the name the edit endpoints speak.
-# `type` is the schema key when the relation is one the builder knows about: it is
-# what gives a relation the same colour and the same meaning across instances.
-# The schema and the prerequisite label are the WORKSPACE's, not the installation's: they
-# are written into `knowledge_graph.json` in the language the instance was built in, so
-# reading a global here drew one instance's graph with another instance's vocabulary.
 def _relation_entry(verbose: str, details: dict, schema: RelationSchema) -> dict:
+    """Describe one relation for the canvas, with an empty edge count to fill in.
+
+    `key` is the verbose label because that is the name the edit endpoints speak; `type` is
+    the schema key, which is what fixes a relation's colour across instances. The schema is
+    the WORKSPACE's — the labels are written into `knowledge_graph.json` in the language
+    the instance was built in, so a global here draws one instance with another's
+    vocabulary.
+    """
     known = schema.by_verbose(verbose)
     return {
         "key": verbose,
@@ -40,29 +43,29 @@ def _relation_entry(verbose: str, details: dict, schema: RelationSchema) -> dict
     }
 
 
-def build(
-    graph_raw: dict,
-    kg: KnowledgeGraph,
-    schema: RelationSchema,
-    title: str = "Grafo de conocimiento",
-) -> dict:
-    names = list(kg.all_concepts)
-    node_index = {name: i for i, name in enumerate(names)}
-
+def _groups(kg: KnowledgeGraph, names: list[str]) -> list[dict]:
+    """List the domains that actually hold a concept, in the graph's own order."""
     counts: dict[str, int] = defaultdict(int)
     for name in names:
         counts[kg.concept_domain[name]] += 1
-    groups = [
+    return [
         {"name": domain, "count": counts[domain]} for domain in kg.domains if counts[domain]
     ]
-    group_index = {group["name"]: i for i, group in enumerate(groups)}
 
-    relations = [
-        _relation_entry(verbose, details, schema)
-        for verbose, details in kg.relation_details.items()
-    ]
-    relation_index = {relation["key"]: i for i, relation in enumerate(relations)}
 
+def _links(
+    kg: KnowledgeGraph,
+    names: list[str],
+    relations: list[dict],
+    relation_index: dict[str, int],
+) -> tuple[list[list[int]], list[int]]:
+    """Flatten every relation's edges into `[source, target, relation]` triples.
+
+    Fills in each relation's `count` in place and returns the per-node degree beside the
+    links. Self-loops have nothing to draw, and a symmetric relation stated in both
+    directions is one edge rather than two lines on top of each other.
+    """
+    node_index = {name: i for i, name in enumerate(names)}
     links: list[list[int]] = []
     seen: set[tuple] = set()
     degree = [0] * len(names)
@@ -71,8 +74,6 @@ def build(
         symmetric = not nx_graph.is_directed()
         for source, target in nx_graph.edges():
             s, t = node_index.get(source), node_index.get(target)
-            # Self-loops have nothing to draw; a symmetric relation stated in both
-            # directions is one edge, not two lines on top of each other.
             if s is None or t is None or s == t:
                 continue
             signature = (min(s, t), max(s, t), r) if symmetric else (s, t, r)
@@ -83,6 +84,28 @@ def build(
             relations[r]["count"] += 1
             degree[s] += 1
             degree[t] += 1
+    return links, degree
+
+
+def build(
+    graph_raw: dict,
+    kg: KnowledgeGraph,
+    schema: RelationSchema,
+    title: str = "Grafo de conocimiento",
+) -> dict:
+    """Render the whole graph as the payload `GraphCanvas` reads."""
+    names = list(kg.all_concepts)
+
+    groups = _groups(kg, names)
+    group_index = {group["name"]: i for i, group in enumerate(groups)}
+
+    relations = [
+        _relation_entry(verbose, details, schema)
+        for verbose, details in kg.relation_details.items()
+    ]
+    relation_index = {relation["key"]: i for i, relation in enumerate(relations)}
+
+    links, degree = _links(kg, names, relations, relation_index)
 
     nodes = [
         [

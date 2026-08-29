@@ -1,18 +1,15 @@
 """Which backend each job kind competes for, so two of them can run at once.
 
-There are two scarce things behind this queue and they are not the same thing. Ollama
-serves from one GPU, so two local jobs would only swap weights; Cerebras serves over the
-network under a rolling quota, so two remote jobs would only race for the same budget.
-But a local job and a remote one contend for nothing at all, and until now one waited for
-the other for no reason.
+Two scarce things sit behind this queue and they are not the same one: Ollama serves from a
+single GPU, Cerebras over the network under a rolling quota. A local job and a remote one
+contend for nothing at all.
 
-A lane is reserved by the GENERATIVE models a job kind calls. The embedder and the
-guardrail are deliberately outside the count: both are small, both stay on Ollama whatever
-the engine is, and the three co-reside — they are not what the wait is about. What that
-buys is that a job whose generative work is remote reserves only `REMOTE`, even though it
-still embeds locally all the way through.
+A lane is reserved by the GENERATIVE models a job kind calls. The embedder and the guardrail
+are deliberately outside the count — both small, both on Ollama whatever the engine is, and
+all three co-resident — so a job whose generative work is remote reserves only `REMOTE` even
+though it embeds locally throughout.
 
-Everything is read through `config.<NAME>` at the moment a job is queued, never cached
+Everything is read through `config.<NAME>` at the moment a job is queued and never cached
 here: the engine is switched from the panel while the process runs.
 """
 
@@ -26,22 +23,14 @@ REMOTE = "remote"
 
 BACKENDS = (LOCAL, REMOTE)
 
-# How many jobs a lane holds at once, and the two answers are not the same kind of answer.
-#
-# Local is one and is not a setting: the GPU is one, and the whole reason this queue exists
-# is that two jobs on it would do nothing but swap weights.
-#
-# Remote is a number, because what is scarce there is not a machine but a rolling quota —
-# and the quota is already administered call by call, in `core/cerebras_budget.py`, where
-# each call books its room in the ledger before it goes out. So two remote jobs do not
-# spend more than the same two run one after the other; they only stop waiting for each
-# other. With 1 the second person to ask for something waits for the first with no machine
-# busy anywhere, which is what this capacity exists to end.
+# One, and not a setting: the GPU is one, and two jobs on it would do nothing but swap
+# weights. The remote lane holds more than one because what is scarce there is a quota, not
+# a machine, and `core/cerebras_budget.py` already books it call by call.
 LOCAL_CAPACITY = 1
 
 
 def capacity(backend: str) -> int:
-    """How many jobs may hold this lane at once. Read live: the panel changes it hot."""
+    """Return how many jobs may hold this lane at once. Read live: the panel changes it hot."""
     if backend != REMOTE:
         return LOCAL_CAPACITY
     try:
@@ -51,20 +40,21 @@ def capacity(backend: str) -> int:
 
 
 def capacities() -> dict[str, int]:
+    """Return the room every lane has right now, for one pass of the dispatcher."""
     return {backend: capacity(backend) for backend in BACKENDS}
 
-# A build's models are the builder's own declaration, so the phases and the lane cannot
-# drift apart: `stages.build_models` is the same list the builder checks before it starts.
+# `stages.build_models` is the builder's own declaration, so the phases and the lane cannot
+# drift apart.
 _BUILD_ARTIFACT = {
     "build_profile": stages.EXEMPLARS_PROFILE,
     "build_kg": stages.KNOWLEDGE_GRAPH,
     "build_bank": stages.EXEMPLARS_BANK,
 }
 
-# The components, by the `config` name that holds each model. Written out rather than
-# introspected because what a handler calls is not derivable from anything: `index`, `tag`,
+# The components, by the `config` name holding each model. Written out rather than
+# introspected: what a handler calls is not derivable from anything, since `index`, `tag`,
 # `generate` and `evaluate` all raise a `PipelineContext`, and building one writes whatever
-# concept descriptions are missing — which is a model call the handler never mentions.
+# concept descriptions are missing — a model call the handler never mentions.
 _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     "transcribe": ("TRANSCRIBE_MODEL", "TRANSCRIBE_SEAM_MODEL"),
     "describe_concepts": ("DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
@@ -78,8 +68,8 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
         "DESCRIPTION_GENERATION_LLM",
         "REPAIR_LLM",
     ),
-    # The three arms together: the naive and rag baselines generate and repair, and the
-    # system arm is the whole generator, admissibility judge included.
+    # The three arms together: the two baselines generate and repair, and the system arm is
+    # the whole generator, admissibility judge included.
     "evaluate": (
         "VARIANT_GENERATION_LLM",
         "ADMISSIBILITY_LLM",
@@ -91,11 +81,12 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
 
 
 def _excluded() -> set[str]:
+    """Return the two models that reserve nothing: small, always local, and co-resident."""
     return {config.EMBEDDING_LLM, config.GUARDRAIL_LLM}
 
 
 def models_for(kind: str, params: dict | None = None) -> list[str]:
-    """The generative models a job of this kind will call, in declaration order."""
+    """Return the generative models a job of this kind will call, in declaration order."""
     if kind in _BUILD_ARTIFACT:
         models = stages.build_models(_BUILD_ARTIFACT[kind])
     else:
@@ -105,10 +96,12 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
     return [m for m in dict.fromkeys(models) if m and m not in excluded]
 
 
-# Asking the engine rather than comparing `config.INFERENCE_ENGINE` against a literal: the
-# plain Ollama engine answers with nothing remote, so one reading covers both. An engine
-# that cannot even be built serves nothing remotely either.
 def _remote_models() -> frozenset[str]:
+    """Return the models served remotely, and nothing at all if the engine will not build.
+
+    Asked of the engine rather than compared against `config.INFERENCE_ENGINE`: plain Ollama
+    answers with nothing remote, so one reading covers both engines.
+    """
     try:
         return inference.remote_models()
     except inference.InferenceError:
@@ -116,18 +109,18 @@ def _remote_models() -> frozenset[str]:
 
 
 def backend_of(model: str) -> str:
+    """Return the lane one model is served from."""
     return REMOTE if model in _remote_models() else LOCAL
 
 
 def backends_for(kind: str, params: dict | None = None) -> frozenset[str]:
-    """The lanes a job of this kind has to hold at once in order to run.
+    """Return the lanes a job of this kind has to hold at once in order to run.
 
-    Empty means it calls no generative model, and a job that reserves nothing never waits
-    for anything.
+    Empty means it calls no generative model, and a job that reserves nothing never waits.
 
     This runs on the submit path, so it fails CLOSED rather than raising: a builder whose
-    model list cannot be read is a reason to reserve everything and go back to one job at
-    a time, never a reason to turn `POST /api/jobs` into a 500.
+    model list cannot be read is a reason to reserve everything and go back to one job at a
+    time, never a reason to turn `POST /api/jobs` into a 500.
     """
     try:
         models = models_for(kind, params)

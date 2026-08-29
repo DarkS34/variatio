@@ -1,3 +1,5 @@
+"""The «Etiquetado y generación» settings: candidate bands, few-shot, guardrail and repair."""
+
 from ..types import Impact, Setting
 
 SETTINGS: list[Setting] = [

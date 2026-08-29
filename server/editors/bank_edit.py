@@ -25,9 +25,12 @@ PROMOTED_SOURCE = "Variante promovida"
 PROMOTED_ID_RE = re.compile(r"^G(\d+)$")
 
 
-# The listing sorts and searches over items the profile may no longer be able to place —
-# exactly the state a stale bank is in — so reading the primary text must never raise.
 def _primary_text(profile: ExemplarsProfile, item: dict) -> str:
+    """Read an item's primary field, empty when the profile can no longer place it.
+
+    The listing sorts and searches over items a stale profile may not recognise, so this
+    must never raise.
+    """
     try:
         return profile.primary_text(item)
     except ValueError:
@@ -35,10 +38,11 @@ def _primary_text(profile: ExemplarsProfile, item: dict) -> str:
 
 
 class BankError(ValueError):
-    pass
+    """A bank edit that the caller can be told about, in Spanish."""
 
 
 def _load_bank(ws: Workspace) -> dict:
+    """Read the bank. Raises BankError when the workspace has none yet."""
     bank = storage.read_json(ws.exemplars_bank_path)
     if bank is None:
         raise BankError("Todavía no hay banco de ejemplos")
@@ -46,6 +50,7 @@ def _load_bank(ws: Workspace) -> dict:
 
 
 def _profile(ws: Workspace) -> ExemplarsProfile:
+    """Load the profile that wins. Raises BankError when there is none."""
     path = review.current_path(ws, review.EXEMPLARS_PROFILE)
     if path is None:
         raise BankError("Falta el perfil de ejemplares")
@@ -53,6 +58,7 @@ def _profile(ws: Workspace) -> ExemplarsProfile:
 
 
 def _graph(ws: Workspace) -> KnowledgeGraph:
+    """Load the graph that wins. Raises BankError when there is none."""
     path = review.current_path(ws, review.KNOWLEDGE_GRAPH)
     if path is None:
         raise BankError("Falta el grafo de conocimiento")
@@ -60,7 +66,7 @@ def _graph(ws: Workspace) -> KnowledgeGraph:
 
 
 def _suspicion(item: dict) -> tuple[int, float]:
-    """Rank for review: untagged first, then narrow calls, then everything else.
+    """Rank an item for review: untagged first, then narrow calls, then everything else.
 
     An item with no concepts is dead weight — it can never be picked as a few-shot
     example — and a decision won by a hair is the one most worth a human glance.
@@ -75,6 +81,70 @@ def _suspicion(item: dict) -> tuple[int, float]:
     return (2, 1.0)
 
 
+def _matches(
+    row: dict,
+    profile: ExemplarsProfile,
+    concept: str | None,
+    untagged: bool | None,
+    query: str | None,
+    source: str | None,
+    item_type: str | None,
+) -> bool:
+    """Whether one row survives every filter the listing was given.
+
+    `untagged` is three-valued: `None` asks nothing, `True` keeps only the items with no
+    concepts and `False` only the tagged ones.
+    """
+    if concept and concept not in (row.get("concepts") or []):
+        return False
+    if untagged is True and row.get("concepts"):
+        return False
+    if untagged is False and not row.get("concepts"):
+        return False
+    if source and row.get("source") != source:
+        return False
+    if item_type and profile.type_key_of_safe(row) != item_type:
+        return False
+    if query:
+        needle = query.lower()
+        text = _primary_text(profile, row).lower()
+        if needle not in text and needle not in row["id"].lower():
+            return False
+    return True
+
+
+def _sort(rows: list[dict], order: str) -> None:
+    """Sort the rows in place by id, by review priority, or newest first."""
+    if order == "suspicion":
+        rows.sort(key=lambda r: (_suspicion(r), r["id"]))
+    elif order == "recent":
+        # Ids are C001, C002… in extraction order, so «the last thing written» is the tail
+        # of that list — which is what the live view reads while the builder still writes.
+        rows.sort(key=lambda r: r["id"], reverse=True)
+    else:
+        rows.sort(key=lambda r: r["id"])
+
+
+def _type_summaries(profile: ExemplarsProfile, all_items: list[dict]) -> list[dict]:
+    """Describe every modality the profile declares, with how many items carry it.
+
+    Declared by the profile and not gathered from the bank, so the caller can tell a
+    modality nobody has written from one the profile has never heard of.
+    """
+    return [
+        {
+            "key": key,
+            "label": t.label,
+            "description": t.description,
+            "primary_field": t.primary_field,
+            "embed_fields": list(t.embed_fields),
+            "fields": list(t.field_specs),
+            "count": sum(1 for i in all_items if profile.type_key_of_safe(i) == key),
+        }
+        for key, t in profile.item_types.items()
+    ]
+
+
 def listing(
     ws: Workspace,
     concept: str | None = None,
@@ -86,38 +156,15 @@ def listing(
     page: int = 1,
     page_size: int = 50,
 ) -> dict:
+    """Return one page of the bank, filtered and sorted, with the totals drawn around it."""
     bank = _load_bank(ws)
     profile = _profile(ws)
 
     rows = [{"id": item_id, **item} for item_id, item in bank.items()]
-
-    if concept:
-        rows = [r for r in rows if concept in (r.get("concepts") or [])]
-    if untagged is True:
-        rows = [r for r in rows if not r.get("concepts")]
-    elif untagged is False:
-        rows = [r for r in rows if r.get("concepts")]
-    if source:
-        rows = [r for r in rows if r.get("source") == source]
-    if item_type:
-        rows = [r for r in rows if profile.type_key_of_safe(r) == item_type]
-    if query:
-        needle = query.lower()
-        rows = [
-            r
-            for r in rows
-            if needle in _primary_text(profile, r).lower() or needle in r["id"].lower()
-        ]
-
-    if order == "suspicion":
-        rows.sort(key=lambda r: (_suspicion(r), r["id"]))
-    elif order == "recent":
-        # The ids are C001, C002… assigned in extraction order, so «the last thing written» is
-        # exactly the tail of that list. It is what the live view looks at while the builder is
-        # still writing the file.
-        rows.sort(key=lambda r: r["id"], reverse=True)
-    else:
-        rows.sort(key=lambda r: r["id"])
+    rows = [
+        r for r in rows if _matches(r, profile, concept, untagged, query, source, item_type)
+    ]
+    _sort(rows, order)
 
     total = len(rows)
     start = max(0, (page - 1) * page_size)
@@ -130,20 +177,7 @@ def listing(
         "total": total,
         "page": page,
         "page_size": page_size,
-        "item_types": [
-            {
-                "key": key,
-                "label": t.label,
-                "description": t.description,
-                "primary_field": t.primary_field,
-                "embed_fields": list(t.embed_fields),
-                "fields": list(t.field_specs),
-                "count": sum(
-                    1 for i in all_items if profile.type_key_of_safe(i) == key
-                ),
-            }
-            for key, t in profile.item_types.items()
-        ],
+        "item_types": _type_summaries(profile, all_items),
         "default_type": profile.default_type,
         "sources": sorted({str(i.get("source")) for i in all_items if i.get("source")}),
         "totals": {
@@ -159,7 +193,7 @@ def listing(
 
 
 def coverage(ws: Workspace) -> dict:
-    """Which KG concepts have at least one exemplar — i.e. which ones generate zero-shot."""
+    """Count the exemplars per concept — that is, say which concepts generate zero-shot."""
     bank = _load_bank(ws)
     graph = _graph(ws)
     counts: dict[str, int] = dict.fromkeys(graph.taggable_concepts, 0)
@@ -177,6 +211,7 @@ def coverage(ws: Workspace) -> dict:
 
 
 def _persist(ws: Workspace, bank: dict, note: str) -> dict:
+    """Write the bank, reopen its review and drop the cached context."""
     storage.write_json(ws.exemplars_bank_path, bank, ws=ws, artifact=ARTIFACT)
     review.ReviewState(ws).invalidate(ARTIFACT)
     deps.invalidate(ws.slug, note)
@@ -184,6 +219,7 @@ def _persist(ws: Workspace, bank: dict, note: str) -> dict:
 
 
 def patch_item(ws: Workspace, item_id: str, fields: dict) -> dict:
+    """Edit one item's fields, validated against the modality the result declares."""
     bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")
@@ -202,8 +238,8 @@ def patch_item(ws: Workspace, item_id: str, fields: dict) -> dict:
             f"Campos desconocidos para la modalidad '{item_type.key}': {unknown}"
         )
 
-    # Validate exactly what the schema declares; the extra keys (source, tags, trace)
-    # are ours and the model would reject or drop them.
+    # Validate exactly what the schema declares: the extra keys (source, tags, trace) are
+    # ours, and the model would reject or drop them.
     candidate = {k: v for k, v in merged.items() if k in schema_fields}
     try:
         item_type.content_item(**candidate)
@@ -224,6 +260,11 @@ def patch_item(ws: Workspace, item_id: str, fields: dict) -> dict:
 def set_concepts(
     ws: Workspace, item_id: str, concepts: list[str], primary_concept: str | None
 ) -> dict:
+    """Retag one item by hand, refusing any concept the graph does not hold as taggable.
+
+    The trace is marked `manual`, so a later reader can tell a person's decision from the
+    tagger's.
+    """
     bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")
@@ -251,6 +292,7 @@ def set_concepts(
 
 
 def has_item(ws: Workspace, item_id: str) -> bool:
+    """Whether the bank holds this item; False rather than an error when there is no bank."""
     try:
         return item_id in _load_bank(ws)
     except BankError:
@@ -264,6 +306,11 @@ def add_item(
     concepts: list[str],
     primary_concept: str | None = None,
 ) -> dict:
+    """Promote a generated variant into the bank under a fresh `G###` id.
+
+    Unlike `set_concepts`, a concept the graph does not hold is dropped rather than
+    refused: what is being promoted is a machine's answer, not somebody's decision.
+    """
     bank = _load_bank(ws)
     profile = _profile(ws)
     try:
@@ -299,6 +346,7 @@ def add_item(
 
 
 def _next_promoted_id(bank: dict) -> str:
+    """Mint the next `G###` id, one past the highest promoted item already in the bank."""
     highest = max(
         (int(m.group(1)) for k in bank if (m := PROMOTED_ID_RE.match(k))),
         default=0,
@@ -307,6 +355,7 @@ def _next_promoted_id(bank: dict) -> str:
 
 
 def delete_item(ws: Workspace, item_id: str) -> dict:
+    """Remove one item from the bank. Raises BankError when it is not there."""
     bank = _load_bank(ws)
     if item_id not in bank:
         raise BankError(f"El ítem '{item_id}' no existe")

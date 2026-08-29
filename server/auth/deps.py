@@ -1,9 +1,9 @@
 """The dependencies every route hangs from.
 
 Three questions, deliberately separate. `current_user` answers *who is this*, and needs
-only a session cookie. `resolve_workspace` answers *which instance is this request about*,
-which since phase 3 is a per-request question and not a process constant. `require_member`
-answers *may they touch it, at this level*, and is a membership row.
+only a session cookie. `resolve_workspace` answers *which instance is this request
+about*. `require_member` answers *may they touch it, at this level*, and is a membership
+row.
 
 Which workspace a request means comes from, in order: the `X-Workspace` header (so two
 browser tabs can sit in two different instances), then the account's `active_workspace`,
@@ -13,11 +13,10 @@ whichever way the slug arrived. When none of the three answers there is no fourt
 account with no workspace is a normal account, and every route that reads instance data
 tells it so with `NO_WORKSPACE` instead of picking an instance on its behalf.
 
-The one exception is the installation's administrator, who since phase 3 passes through
-`require_member` for any workspace. That is a deliberate departure from phase 2's «no
-admin bypass», taken by explicit user request so that one account can operate the whole
-installation and read the study's data across accounts. It is written here, in one place,
-so the exception is one `if` in a diff and not a habit spread over forty routes.
+The installation's administrator passes `require_member` for any workspace. That bypass
+is written in `access_for` and nowhere else, so the exception is one `if` in a diff and
+not a habit spread over forty routes, and `Access.as_admin` is how the UI is told it was
+used.
 """
 
 from collections.abc import Iterator
@@ -51,22 +50,29 @@ NO_WORKSPACE = (
 
 @dataclass(frozen=True)
 class Access:
+    """One request's answer to who, where, and at what level.
+
+    `ws` is the same workspace as a set of paths, resolved here so no route has to know
+    that a slug maps to a directory and so the mapping happens once per request.
+    `as_admin` is true when the request only got through because the account administers
+    the installation: routes do not branch on it, it is what the UI is told so an
+    administrator can see they are looking at somebody else's instance.
+    """
+
     user: User
     workspace: Workspace
     role: str
-    # The same workspace as a set of paths. Resolved here so no route has to know that a
-    # slug maps to a directory, and so the mapping happens exactly once per request.
     ws: PathWorkspace
-    # True when this request only got through because the account administers the
-    # installation. Routes do not branch on it; it is what the UI is told, so an admin
-    # can see that they are looking at somebody else's instance.
     as_admin: bool = False
 
 
-# Only the connection-level failures become "the database is not responding". Catching
-# every `SQLAlchemyError` here would turn a duplicate-key violation raised by the route
-# into that same message, which is a lie that sends whoever reads it to check Docker.
 def db() -> Iterator[DbSession]:
+    """Yield a session, turning an unreachable database into a 503 with a hint.
+
+    Only the connection-level failures become «la base de datos no responde». Catching
+    every `SQLAlchemyError` here would give a duplicate-key violation raised by the route
+    that same message, which is a lie that sends whoever reads it to check Docker.
+    """
     try:
         with session_scope() as session:
             yield session
@@ -75,21 +81,22 @@ def db() -> Iterator[DbSession]:
 
 
 def session_token(request: Request | WebSocket) -> str | None:
+    """Return the session cookie of this request or handshake, if it carries one."""
     return request.cookies.get(settings.session_cookie())
 
 
-# Where the links in an invitation or a reset mail point, so what is at stake is who the
-# link sends its holder to. `PUBLIC_BASE_URL` is the answer, and the reflected `Origin` is
-# no longer the fallback: `POST /forgot` is public and passes the origin check when the
-# request carries neither header, so a mail could be minted pointing wherever the caller
-# asked. The warning fires once, and only in production: an installation serving the real
-# thing without the variable set is deriving its own address from the request, and should
-# not be, while in development that is exactly what is wanted and saying so every run is
-# noise.
 _UNCONFIGURED_BASE_URL_REPORTED = False
 
 
 def base_url(request: Request) -> str:
+    """Return the origin the links in an invitation or a reset mail point at.
+
+    `PUBLIC_BASE_URL` is the answer, and the reflected `Origin` is deliberately not the
+    fallback: `POST /forgot` is public and passes the origin check when the request
+    carries neither header, so a mail could be minted pointing wherever the caller asked.
+    The warning fires once, and only in production — deriving the address from the
+    request is exactly what is wanted in development.
+    """
     global _UNCONFIGURED_BASE_URL_REPORTED
 
     configured = settings.public_base_url()
@@ -104,13 +111,16 @@ def base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-# `X-Forwarded-For` is a list the proxies append to, so the entry written by the one proxy
-# we trust is the LAST one and everything to its left is whatever the client sent. Reading
-# the leftmost is reading the client: behind nginx's `$proxy_add_x_forwarded_for` or a CDN
-# it lets anyone choose their own key for the per-IP limit, which is the same as not having
-# one. Caddy overwrites the header rather than appending, so both readings agree there —
-# the rightmost is the one that stays right when the proxy changes.
 def client_ip(request: Request | WebSocket) -> str:
+    """Return the address the per-IP half of the rate limit is keyed on.
+
+    `X-Forwarded-For` is a list the proxies append to, so the entry written by the one
+    proxy we trust is the LAST one and everything to its left is whatever the client
+    sent. Reading the leftmost is reading the client: behind nginx's
+    `$proxy_add_x_forwarded_for` or a CDN it lets anyone choose their own key, which is
+    the same as not having one. Caddy overwrites the header rather than appending, so
+    both readings agree there.
+    """
     if settings.trust_proxy():
         forwarded = [
             part.strip()
@@ -122,19 +132,25 @@ def client_ip(request: Request | WebSocket) -> str:
     return request.client.host if request.client else ""
 
 
-# The socket carries no headers a browser can set, so it asks with a query parameter.
-# Same string either way, and it goes through the same membership check.
 def requested_slug(request: Request | WebSocket) -> str | None:
+    """Return the workspace this request asks for, from the header or the query string.
+
+    The socket carries no header a browser can set, so it asks with `?workspace=`. Same
+    string either way, and it goes through the same membership check.
+    """
     header = request.headers.get(WORKSPACE_HEADER, "").strip()
     if header:
         return header
     return (request.query_params.get("workspace") or "").strip() or None
 
 
-# Resolving a cookie to a user is the same work over HTTP and over the WebSocket
-# handshake, and it must stay that way: the socket is the one place where forgetting it
-# leaks another user's tokens rather than merely their metadata.
 def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] | None:
+    """Turn a session cookie into its row and its account, sliding the expiry.
+
+    The same work over HTTP and over the WebSocket handshake, and it must stay that way:
+    the socket is the one place where forgetting it leaks another user's tokens rather
+    than merely their metadata.
+    """
     if not token:
         return None
     found = identity.live_session(session, digest(token))
@@ -148,6 +164,7 @@ def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] |
 
 
 def current_user(request: Request, session: DbSession = Depends(db)) -> User:
+    """Return the account behind the session cookie, or raise 401."""
     found = resolve(session, session_token(request))
     if found is None:
         raise HTTPException(401, "Inicia sesión para continuar.")
@@ -157,6 +174,7 @@ def current_user(request: Request, session: DbSession = Depends(db)) -> User:
 
 
 def optional_user(request: Request, session: DbSession = Depends(db)) -> User | None:
+    """Return the account behind the session cookie, or None when there is not one."""
     found = resolve(session, session_token(request))
     if found is None:
         return None
@@ -166,16 +184,20 @@ def optional_user(request: Request, session: DbSession = Depends(db)) -> User | 
 
 
 def require_admin(user: User = Depends(current_user)) -> User:
+    """Require that the account administers the installation, or raise 403."""
     if not user.is_admin:
         raise HTTPException(403, "Hace falta ser administrador de la instalación.")
     return user
 
 
-# The two routes that write without resolving a membership — creating a workspace and
-# activating one — are the only ones the door in `access_for` cannot see, because there is
-# no instance yet to be a member of. They declare this instead, so «the installation is
-# closed» is true rather than nearly true.
 def require_open(user: User = Depends(current_user)) -> User:
+    """Refuse a non-administrator while the installation is closed for maintenance.
+
+    The two routes that write without resolving a membership — creating a workspace and
+    activating one — are the only ones the door in `access_for` cannot see, because there
+    is no instance yet to be a member of. They declare this instead, so «the installation
+    is closed» is true rather than nearly true.
+    """
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
     return user
@@ -184,17 +206,10 @@ def require_open(user: User = Depends(current_user)) -> User:
 # WORKSPACE -----------------------------------------------------------------------------
 
 
-# Which instance this account lands in when the request does not name one. It is the
-# account's own last choice, or the first workspace it belongs to, and nothing else:
-# «the default workspace» stopped existing on 2026-08-26, so an account that belongs
-# nowhere lands nowhere, and the panel says so and offers to create one. That used to
-# have one exception — an administrator with no membership was dropped into the first
-# workspace of the installation — and it went with the rest: entering somebody else's
-# instance because it happened to be first is not landing anywhere on purpose, and the
-# switcher already lists every one of them for an administrator to open by hand.
 def first_membership(
     session: DbSession, user: User, excluding: int | None = None
 ) -> Workspace | None:
+    """Return the first workspace this account belongs to, skipping `excluding`."""
     for _, workspace in identity.memberships_for(session, user.id):
         if workspace.id != excluding:
             return workspace
@@ -202,26 +217,34 @@ def first_membership(
 
 
 def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
+    """Return which instance this account lands in when the request does not name one.
+
+    Its own last choice, then its first membership, and nothing else: «the default
+    workspace» does not exist, so an account that belongs nowhere lands nowhere and the
+    panel says so and offers to create one. An administrator with no membership is NOT
+    dropped into the first workspace of the installation — entering somebody else's
+    instance because it happened to be first is not landing anywhere on purpose, and the
+    switcher already lists every one of them to open by hand.
+    """
     if user.active_workspace_id is not None:
         workspace = session.get(Workspace, user.active_workspace_id)
-        # The preference only counts while the access behind it does. Since the
-        # administrator can revoke a membership from the panel, the workspace an account
-        # last used may be one it can no longer open — and landing there means a 403 on
-        # every route with no way back, even for someone who is a member of two others.
+        # The preference only counts while the access behind it does: the administrator
+        # can revoke a membership, and landing on a revoked one is a 403 on every route
+        # with no way back, even for someone who is a member of two others.
         if workspace is not None and workspace.deleted_at is None:
             if user.is_admin or identity.membership(session, workspace.id, user.id):
                 return workspace
     return first_membership(session, user)
 
 
-# Where an account goes when the instance it was sitting in stops existing. The criterion
-# is the same one `current_workspace_for` applies with the last choice gone — its first
-# membership, and nothing if it has none, which is a normal state the panel draws.
-#
-# Run BEFORE the row is deleted and told which workspace is leaving, because the two
-# backends disagree about when a `SET NULL` lands and `memberships_for` would otherwise
-# still offer the instance being removed.
 def rehome_accounts(session: DbSession, workspace: Workspace) -> dict[str, str | None]:
+    """Move every account sitting in this workspace to wherever it lands next.
+
+    The criterion is the one `current_workspace_for` applies with the last choice gone.
+    Run BEFORE the row is deleted and told which workspace is leaving, because the two
+    backends disagree about when a `SET NULL` lands and `memberships_for` would otherwise
+    still offer the instance being removed.
+    """
     stranded = (
         session.execute(select(User).where(User.active_workspace_id == workspace.id))
         .scalars()
@@ -236,6 +259,11 @@ def rehome_accounts(session: DbSession, workspace: Workspace) -> dict[str, str |
 
 
 def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Workspace:
+    """Return the workspace this request means, without deciding anything about access.
+
+    Raises 404 for a slug that names none, and 403 `NO_WORKSPACE` when the request named
+    none and the account belongs to none.
+    """
     if slug:
         workspace = repository.get_workspace(session, slug)
         if workspace is None:
@@ -249,11 +277,17 @@ def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Works
 
 
 def access_for(session: DbSession, user: User, workspace: Workspace, minimum: str) -> Access:
-    # The installation's door, here for the same reason the administrator bypass is: this
-    # is the one place every route that touches an instance goes through, so closing it is
-    # one `if` in a diff and not a habit spread over forty routes. The administrator gets
-    # in anyway — they are the one applying the change, and a door that shuts on them too
-    # has nothing left to reopen it from.
+    """Resolve this account's membership of this workspace, at least at `minimum`.
+
+    The administrator bypass lives here and nowhere else: an account that administers the
+    installation gets in as the owner with `as_admin` set, whether the membership is
+    missing or merely too junior. The installation's maintenance door is here for the
+    same reason — this is the one place every route that touches an instance goes through
+    — and the administrator gets through that too, since a door that shuts on them has
+    nothing left to reopen it from.
+
+    Raises 403 without a membership and without the flag, and 503 while it is closed.
+    """
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
 
@@ -283,11 +317,14 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
 
 
 def require_member(minimum: str = VIEWER):
+    """Build the dependency demanding at least `minimum` in the requested workspace."""
+
     def dependency(
         request: Request,
         user: User = Depends(current_user),
         session: DbSession = Depends(db),
     ) -> Access:
+        """Resolve the workspace this request names and the access the account has to it."""
         workspace = resolve_workspace(session, user, requested_slug(request))
         return access_for(session, user, workspace, minimum)
 
@@ -297,9 +334,13 @@ def require_member(minimum: str = VIEWER):
 # WEBSOCKET -----------------------------------------------------------------------------
 
 
-# Authentication happens *before* `accept()`, which is why this cannot reuse the HTTP
-# dependency: a socket that has been accepted has already been told it is welcome.
 def authenticate_socket(websocket: WebSocket) -> Access | None:
+    """Resolve a socket's access before `accept()`, returning None to refuse it.
+
+    This cannot reuse the HTTP dependency: a socket that has been accepted has already
+    been told it is welcome. No database means no way to prove the socket belongs to
+    anyone, and the only safe answer to that is the same as an invalid cookie.
+    """
     try:
         with session_scope() as session:
             found = resolve(session, session_token(websocket))
@@ -319,6 +360,4 @@ def authenticate_socket(websocket: WebSocket) -> Access | None:
             except HTTPException:
                 return None
     except (OperationalError, InterfaceError):
-        # No database means no way to prove the socket belongs to anyone, and the only
-        # safe answer to that is the same as an invalid cookie.
         return None

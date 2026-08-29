@@ -1,10 +1,15 @@
+"""The relation vocabulary a knowledge graph is built and read with, one schema per language.
+
+A schema declares the relation types, which of them is the prerequisite and which is the
+fallback, and the words its catalogue is framed in. The `verbose` labels are what the graph
+loader indexes by, so they are baked into `knowledge_graph.json` at build time.
+"""
+
 from dataclasses import dataclass
 
-# The two slot names of a triple, and the words that frame a catalogue entry. They exist
-# here rather than in the prompts because a relation's `definition` and `reading` are
-# written using them, so the schema and its rendering cannot be in different languages.
-# The prose of the KG prompts uses the same two words: `es/knowledge_graph.py` says
-# ORIGEN → DESTINO and `en/knowledge_graph.py` says SOURCE → TARGET.
+# The two slot names of a triple, and the words framing a catalogue entry. They live here
+# and not in the prompts because a relation's `definition` and `reading` are written using
+# them, so a schema and the prompt set that interpolates it cannot be in two languages.
 CATALOG_WORDS: dict[str, dict[str, str]] = {
     "es": {
         "source": "ORIGEN",
@@ -29,6 +34,8 @@ CATALOG_WORDS: dict[str, dict[str, str]] = {
 
 @dataclass(frozen=True)
 class RelationType:
+    """One relation of the vocabulary, with the prose the model is shown about it."""
+
     key: str
     verbose: str
     definition: str
@@ -39,6 +46,7 @@ class RelationType:
     use_in_embedding: bool = True
 
     def __post_init__(self):
+        """Raise unless the relation is usable, and freeze its examples into tuples."""
         if not self.key or self.key.split() != [self.key]:
             raise ValueError(f"Relation key must be a single whitespace-free token: {self.key!r}")
         if not self.verbose:
@@ -48,6 +56,7 @@ class RelationType:
         object.__setattr__(self, "examples", tuple(tuple(pair) for pair in self.examples))
 
     def details(self) -> dict:
+        """Return what the artifact stores about this relation."""
         return {
             "verbose": self.verbose,
             "directed": self.directed,
@@ -55,12 +64,13 @@ class RelationType:
             "use_in_embedding": self.use_in_embedding,
         }
 
-    # The scaffolding of the catalogue entry, per language. It lives here and not in the
-    # prompts because the DEFINITIONS interpolated below are written in the schema's own
-    # language and name its own slots: an English definition under a «Lectura:» heading,
-    # next to ORIGEN and DESTINO, is the exact mismatch that kept `RELATION_SCHEMA_EN`
-    # unselectable until now.
     def catalog_entry(self, language: str = "es") -> str:
+        """Render this relation's entry of the catalogue the KG prompts interpolate.
+
+        The scaffolding is chosen by language because the definition and reading below are
+        written in the schema's own: an English definition under a «Lectura:» heading,
+        beside ORIGEN and DESTINO, is the mismatch this pairing removes.
+        """
         words = CATALOG_WORDS[language]
         lines = [f"- `{self.key}` — {self.definition}"]
         if self.reading:
@@ -77,15 +87,18 @@ class RelationType:
 
 @dataclass(frozen=True)
 class RelationSchema:
+    """A whole relation vocabulary: its types, its two pointers and its language."""
+
     types: tuple[RelationType, ...]
     fallback: str | None = None
     prerequisite: str | None = None
-    # Which language its definitions, readings and slot names are written in. It decides how
-    # `catalog_block` renders, so a schema and the prompt set that interpolates it always
-    # agree — `derived` resolves both from the workspace's own `prompt_language`.
+    # The language of its definitions, readings and slot names. It decides how
+    # `catalog_block` renders, so a schema and its prompt set always agree — both are
+    # resolved from the workspace's own `prompt_language`.
     language: str = "es"
 
     def __post_init__(self):
+        """Raise unless the schema is coherent: known language, unique keys, live pointers."""
         object.__setattr__(self, "types", tuple(self.types))
         if self.language not in CATALOG_WORDS:
             raise ValueError(f"Unknown relation-schema language: {self.language!r}")
@@ -103,58 +116,66 @@ class RelationSchema:
 
     @property
     def keys(self) -> tuple[str, ...]:
+        """The declared relation keys, in order."""
         return tuple(relation.key for relation in self.types)
 
     def __iter__(self):
+        """Iterate the relation types in declaration order."""
         return iter(self.types)
 
     def __len__(self) -> int:
+        """The number of relation types declared."""
         return len(self.types)
 
     def __contains__(self, key: object) -> bool:
+        """Return whether a key names one of the declared relations."""
         return key in self.keys
 
     def __getitem__(self, key: str) -> RelationType:
+        """Return a relation by key, raising `KeyError` when it is not declared."""
         for relation in self.types:
             if relation.key == key:
                 return relation
         raise KeyError(key)
 
     def get(self, key: str) -> RelationType | None:
+        """Return a relation by key, or None."""
         return next((relation for relation in self.types if relation.key == key), None)
 
     def by_verbose(self, verbose: str) -> RelationType | None:
+        """Return a relation by the verbose label a stored graph is indexed under."""
         return next((relation for relation in self.types if relation.verbose == verbose), None)
 
     @property
     def prerequisite_verbose(self) -> str | None:
+        """The verbose label of the prerequisite relation, if this schema declares one."""
         return None if self.prerequisite is None else self[self.prerequisite].verbose
 
     def specific_keys(self) -> tuple[str, ...]:
+        """Every key but the fallback — the relations that say something specific."""
         return tuple(key for key in self.keys if key != self.fallback)
 
     def catalog_block(self) -> str:
+        """Render the whole catalogue for a prompt."""
         return "\n".join(relation.catalog_entry(self.language) for relation in self.types)
 
     @property
     def source_slot(self) -> str:
+        """The name a triple's first slot goes by in this schema's language."""
         return CATALOG_WORDS[self.language]["source"]
 
     @property
     def target_slot(self) -> str:
+        """The name a triple's second slot goes by in this schema's language."""
         return CATALOG_WORDS[self.language]["target"]
 
     def key_list(self) -> str:
+        """Render the declared keys as a quoted list, for a prompt."""
         return ", ".join(f'"{key}"' for key in self.keys)
 
 
-# Selected by a workspace whose `prompt_language` is `en`. Its scaffolding is rendered from
-# `CATALOG_WORDS["en"]`, so the definitions below — which name SOURCE and TARGET — come out
-# under English headings and beside the English prompt set that interpolates them.
-#
-# Note what this does NOT change: the `verbose` labels are what the loader indexes a graph
-# by, so they are baked into `knowledge_graph.json` at build time. A workspace's language is
-# therefore chosen when it is created and not afterwards.
+# Selected by a workspace whose `prompt_language` is `en`, so its SOURCE/TARGET definitions
+# come out under English headings beside the English prompt set.
 RELATION_SCHEMA_EN = RelationSchema(
     language="en",
     fallback="related_to",
@@ -219,10 +240,9 @@ RELATION_SCHEMA_EN = RelationSchema(
 )
 
 
-# Spanish counterpart, and the one `config.KG_RELATION_SCHEMA` selects. Every field is
-# Spanish now: `key`, `verbose` and `examples` because they surface in the output, and
-# `definition` and `reading` because the KG prompts that interpolate them are Spanish too.
-# ORIGEN/DESTINO are the slot names `catalog_entry` and those prompts use; they must agree.
+# The Spanish counterpart and the default. Every field is Spanish: `key`, `verbose` and
+# `examples` because they surface in the output, `definition` and `reading` because the KG
+# prompts interpolating them are. ORIGEN/DESTINO must match what those prompts say.
 RELATION_SCHEMA_ES = RelationSchema(
     language="es",
     fallback="relacionado",
@@ -292,11 +312,11 @@ BUILTIN_SCHEMAS = {
     "es": RELATION_SCHEMA_ES,
 }
 
-# Keyed by the same codes `core.languages` declares, because a workspace's prompt language
-# is what selects the schema: the definitions it interpolates are prose, and prose in one
-# language under a prompt written in another is the mismatch this pairing removes.
+# Keyed by the same codes `core.languages` declares: a workspace's prompt language is what
+# selects the schema.
 RELATION_SCHEMAS = BUILTIN_SCHEMAS
 
 
 def schema_for(language: str | None) -> RelationSchema:
+    """Return the relation vocabulary of one language, falling back to Spanish."""
     return BUILTIN_SCHEMAS.get(str(language or ""), RELATION_SCHEMA_ES)

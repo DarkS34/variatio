@@ -4,9 +4,10 @@
 over the bank, no graph at all) and `system` (this pipeline, untouched). They receive the
 same commission and return the same shape, so a fourth arm is one more file.
 
-This package is not part of the system it measures, and its position says so: `study`
-imports `variatio`, never the reverse, and nothing under `variatio/`
-names the study at all. The evaluation observes the pipeline from outside it.
+The boundary is the point, and `tests/study/test_study_boundary.py` pins both halves of
+it: `study` imports `variatio` and never the reverse, and this module never imports
+`study.api`, which is what keeps `import study` free of FastAPI and SQLAlchemy for a
+runtime-only consumer.
 """
 
 from dataclasses import dataclass, field
@@ -42,6 +43,10 @@ class Commission:
     random from its own seed, so across enough sessions the reasoning mode is a measured
     condition instead of a habit. It is identical for the three arms within a session,
     which is what keeps it out of the comparison between them.
+
+    `ruling` is the scope verdict, screened ONCE for the session so the `system` arm reuses
+    it instead of paying the judge a second time. Untyped on purpose: naming
+    `admissibility.Ruling` would put a pipeline type in the study's own contract.
     """
 
     concepts: list[str]
@@ -50,14 +55,13 @@ class Commission:
     curriculum: list[str] = field(default_factory=list)
     instructions: str = ""
     think: bool = True
-    # The scope ruling, screened ONCE for the session and carried here so the `system` arm
-    # reuses it instead of paying the judge a second time. Untyped on purpose: naming
-    # `admissibility.Ruling` would put a pipeline type in the study's own contract.
     ruling: object | None = None
 
 
 @dataclass
 class ArmResult:
+    """What one architecture produced, and what it cost, in the shape all three share."""
+
     arm: str
     status: str
     item: dict | None
@@ -72,6 +76,7 @@ class ArmResult:
     retried: int = 0
 
     def to_dict(self) -> dict:
+        """Render the result as the JSON the session's trace stores."""
         return {
             "arm": self.arm,
             "status": self.status,
@@ -96,6 +101,11 @@ class EvaluationSession:
     blinding is auditable after the fact from `seed` alone. `think` comes out of that same
     seed and is recorded next to it because it is the second condition of the experiment:
     whether the local arms reasoned before answering.
+
+    `set_id` groups the sessions holding the same three items and `assigned_by` says who
+    handed them over, which is the only way two people's judgements of one set of exercises
+    can be compared. `triage` is stored BY POSITION, because that is what the evaluator
+    actually saw; `triage_by_arm` re-keys it from `shuffle` at read time.
     """
 
     id: str
@@ -110,12 +120,8 @@ class EvaluationSession:
     arms: dict[str, ArmResult]
     think: bool = True
     job_id: str | None = None
-    # Which three items these are, and who handed them over. A session generated on its own
-    # is its own set; a copy an administrator assigned carries the source's, which is the
-    # only way two people's judgements of the same exercises can ever be compared.
     set_id: str | None = None
     assigned_by: int | None = None
-    # One answer per POSITION, given blind, before anything is revealed.
     triage: dict[str, str] = field(default_factory=dict)
     choice: int | None = None
     choice_arm: str | None = None
@@ -125,31 +131,39 @@ class EvaluationSession:
     evaluator_note: str | None = None
     rating: dict | None = None
 
-    # Two different questions, and collapsing them is what would corrupt the counts.
-    # `decided` is «hay una preferencia registrada» and is what every per-arm number is
-    # computed over; `finished` is «esta sesión ya no admite juicio», which a decline also
-    # satisfies without ever having expressed a preference.
     @property
     def decided(self) -> bool:
+        """Say whether a preference was registered, which every per-arm number counts over."""
         return self.chosen_at is not None
 
     @property
     def declined(self) -> bool:
+        """Say whether the evaluator declared themselves unable to judge these three items."""
         return self.declined_at is not None
 
     @property
     def finished(self) -> bool:
+        """Say whether the session still admits a judgement.
+
+        Deliberately not the same question as `decided`: a decline ends the session without
+        ever expressing a preference, and collapsing the two corrupts the counts.
+        """
         return self.decided or self.declined
 
     def arm_at(self, position: int) -> str:
+        """Return which architecture was shown at this 1-based position."""
         return self.shuffle[position - 1]
 
     def position_of(self, arm: str) -> int:
+        """Return the 1-based position this architecture was shown at."""
         return self.shuffle.index(arm) + 1
 
-    # What the evaluator answered, re-keyed by architecture. Derived and never stored: the
-    # stored form is by position, because that is what they actually saw.
     def triage_by_arm(self) -> dict[str, str]:
+        """Re-key the blind per-card answers by architecture, from `shuffle`.
+
+        Derived and never stored: the stored form is by position, because that is what the
+        evaluator actually saw.
+        """
         return {
             self.arm_at(int(position)): value
             for position, value in self.triage.items()
@@ -157,6 +171,7 @@ class EvaluationSession:
         }
 
     def to_dict(self) -> dict:
+        """Render the whole session as the JSON stored in the row's `trace`."""
         return {
             "id": self.id,
             "created_at": self.created_at,
@@ -184,6 +199,7 @@ class EvaluationSession:
 
     @classmethod
     def from_dict(cls, data: dict) -> "EvaluationSession":
+        """Rebuild a session from its stored trace, defaulting what older records lack."""
         return cls(
             id=data["id"],
             created_at=data["created_at"],
@@ -194,14 +210,13 @@ class EvaluationSession:
             instructions=data.get("instructions") or "",
             seed=int(data.get("seed") or 0),
             shuffle=list(data.get("shuffle") or []),
-            # Sessions recorded before the reasoning became a condition all ran with it on.
+            # A record with no `think` predates the condition and ran with reasoning on.
             think=bool(data.get("think", True)),
             arms={
                 name: ArmResult(**payload) for name, payload in (data.get("arms") or {}).items()
             },
             job_id=data.get("job_id"),
-            # A session recorded before sets existed is its own: nobody had been handed a
-            # copy of anybody else's, because there was no way to hand one over.
+            # A session nobody was handed a copy of is its own set.
             set_id=data.get("set_id") or data["id"],
             assigned_by=data.get("assigned_by"),
             triage=dict(data.get("triage") or {}),
@@ -216,6 +231,11 @@ class EvaluationSession:
 
 
 def run_arm(arm: str, commission: Commission, context) -> ArmResult:
+    """Run one architecture over the commission, raising ValueError for an unknown arm.
+
+    The arms are imported inside the call because each of them imports this module back
+    for the contract above.
+    """
     from .arms import naive, rag, system
 
     runners = {"naive": naive.run, "rag": rag.run, "system": system.run}

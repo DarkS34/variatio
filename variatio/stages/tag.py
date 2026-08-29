@@ -1,3 +1,5 @@
+"""Assigning knowledge-graph concepts to the exemplars bank, and persisting the result."""
+
 from pathlib import Path
 
 from loguru import logger
@@ -8,6 +10,7 @@ from .initialize import PipelineContext
 
 
 def save_bank(bank: dict, path: str | Path) -> Path:
+    """Write the exemplars bank."""
     return write_json(path, bank)
 
 
@@ -35,11 +38,10 @@ def tag_bank(
         context.apply_bank(context.exemplars_bank)
         return context.exemplars_bank
 
-    # Persist as we go: tagging 150 items takes minutes, and a cancel halfway
-    # through should keep every decision already made.
     working = dict(context.exemplars_bank)
 
     def checkpoint(item_id: str, item: dict) -> None:
+        """Persist as we go: tagging 150 items takes minutes, and a cancel keeps them."""
         working[item_id] = item
         save_bank(working, path)
 

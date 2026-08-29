@@ -1,4 +1,9 @@
-"""Where the server keeps its own state, next to the instance it manages."""
+"""The server's own configuration: workspace trees, environment switches, cookies, mail.
+
+Everything here is the installation's rather than a workspace's, and everything that reads
+the environment reads it through one function, so there is a single switch to get wrong
+rather than five.
+"""
 
 import os
 import re
@@ -9,27 +14,24 @@ from pathlib import Path
 from variatio.core import paths
 from variatio.core.workspace import Workspace
 
-# One process now serves MANY workspaces, so there is no `workspace()` any more: a
-# function with no argument is exactly the process-global that made two users overwrite
-# each other's graph. Every server entry point resolves a slug — `require_member` does it
-# once per request from the header or the account's active workspace — and passes the
-# resulting `Workspace` down. A module that needs a path takes it as an argument.
-#
-# There is no reserved slug either, since 2026-08-26: `default` used to be the instance
-# every entry point fell back to, so the panel had to refuse the name to keep somebody
-# from creating a second thing that answered to it. With the fallback gone the name is
-# free, and one workspace fewer is a special case.
 # `\A`/`\Z` and not `^`/`$`: Python's `$` also matches just before a trailing newline, so
-# `abc\n` passed as a slug while `paths.workspace` stripped it back to `abc` — two rows
-# pointing at one directory, and either of them able to delete the other's tree.
+# `abc\n` would pass as a slug while `paths.workspace` stripped it back to `abc` — two rows
+# pointing at one directory, either able to delete the other's tree. No name is reserved.
 SLUG_PATTERN = re.compile(r"\A[a-z0-9][a-z0-9-]{1,62}[a-z0-9]\Z")
 
 
 def workspace_for(slug: str) -> Workspace:
+    """Resolve a slug to its `Workspace`.
+
+    There is deliberately no no-argument `workspace()`: that IS the process global which
+    made two users overwrite each other's graph. Every entry point resolves a slug once and
+    passes the result down.
+    """
     return paths.workspace(slug)
 
 
 def slug_error(slug: str) -> str | None:
+    """Say what is wrong with a proposed workspace slug, or return None."""
     if not SLUG_PATTERN.match(slug):
         return (
             "El identificador admite minúsculas, cifras y guiones, entre 3 y 64 "
@@ -38,10 +40,12 @@ def slug_error(slug: str) -> str | None:
     return None
 
 
-# A workspace is a directory tree before it is a database row: the builders write files
-# and the readers read them, so creating the row without the tree would leave every
-# screen reporting a missing artifact for a reason nobody could act on.
 def provision(ws: Workspace) -> None:
+    """Create a workspace's directory tree.
+
+    A workspace is a tree before it is a row: the row without the tree leaves every screen
+    reporting a missing artifact for a reason nobody could act on.
+    """
     for directory in (
         ws.instance_dir,
         ws.cache_dir,
@@ -51,14 +55,13 @@ def provision(ws: Workspace) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-# The other half of `provision`, used only by the administration panel: deleting a
-# workspace from the database while leaving its tree on disk leaves hundreds of orphaned
-# megabytes under a slug that is no longer on record anywhere.
-#
-# The check that the directory hangs from `WORKSPACES_DIR` is not decorative: the slug
-# arriving here comes from a request, and `shutil.rmtree` on a mis-resolved path cannot
-# be undone. `Workspace.__post_init__` already resolves it, so comparing is enough.
 def _contained_root(ws: Workspace) -> Path:
+    """Return the workspace root, refusing anything that is not a direct child of the tree.
+
+    Not decorative: the slug arrives in a request and `shutil.rmtree` on a mis-resolved
+    path cannot be undone. `Workspace.__post_init__` already resolves it, so comparing is
+    enough.
+    """
     root = ws.root
     parent = Path(paths.WORKSPACES_DIR).resolve()
     if root.parent != parent or root == parent:
@@ -67,6 +70,7 @@ def _contained_root(ws: Workspace) -> Path:
 
 
 def destroy(ws: Workspace) -> bool:
+    """Delete a workspace's whole tree, and report whether there was one."""
     root = _contained_root(ws)
     if not root.is_dir():
         return False
@@ -75,6 +79,7 @@ def destroy(ws: Workspace) -> bool:
 
 
 def _tree_size(path: Path) -> int:
+    """Total the bytes of a file or of everything under a directory."""
     if not path.exists():
         return 0
     if path.is_file():
@@ -82,9 +87,12 @@ def _tree_size(path: Path) -> int:
     return sum(entry.stat().st_size for entry in path.rglob("*") if entry.is_file())
 
 
-# What each part of the tree weighs. `instance` excludes the host state it contains, which
-# is reported on its own: the history is the one thing that grows without a build.
 def disk_usage(ws: Workspace) -> dict[str, int]:
+    """What each part of the tree weighs, by role.
+
+    `instance` excludes the host state it contains, which is reported on its own: the
+    history is the one thing that grows without a build.
+    """
     history = _tree_size(ws.history_dir)
     runs = _tree_size(ws.runs_dir)
     instance = _tree_size(ws.instance_dir) - history - runs
@@ -98,11 +106,12 @@ def disk_usage(ws: Workspace) -> dict[str, int]:
     return usage
 
 
-# The regenerable half of `cache/`: the vectors and the converted markdown, which the next
-# index or build rewrites from the artifacts. The concept descriptions and the corpus
-# anchoring stay — they are written by the model against the corpus and cost a long run,
-# and emptying a stage is where they go when the artifact they describe goes.
 def clear_cache(ws: Workspace) -> dict:
+    """Empty the regenerable half of `cache/`: the vectors and the converted markdown.
+
+    The concept descriptions and the corpus anchoring stay — they cost a long model run,
+    and emptying a stage is what removes them with the artifact they describe.
+    """
     root = _contained_root(ws)
     targets = [ws.cache_dir / "embeddings", ws.markdown_cache_dir]
     removed = 0
@@ -121,22 +130,24 @@ def clear_cache(ws: Workspace) -> dict:
 
 
 def _flag(name: str, default: bool = False) -> bool:
+    """Read a boolean environment variable."""
     raw = os.environ.get(name)
     if raw is None:
         return default
     return raw.strip().lower() in ("1", "true", "yes", "on", "sí", "si")
 
 
-# Everything that gets stricter in production reads this one answer, so there is a single
-# switch to get wrong rather than five. Anything other than "development" is production:
-# an unset or misspelled value must not be the permissive one.
 def is_production() -> bool:
+    """The one switch everything that gets stricter in production reads.
+
+    Anything other than «development» is production: an unset or misspelled value must not
+    be the permissive one.
+    """
     return os.environ.get("VARIATIO_ENV", "development").strip().lower() not in ("development", "dev")
 
 
-# Vite's dev server. It proxies `/api` and `/ws`, so the browser is already same-origin in
-# development and CORS is not needed at all: the middleware is only mounted when someone
-# explicitly asks for it with VARIATIO_DEV_CORS=1, and never in production.
+# Vite's dev server, which proxies `/api` and `/ws` — so the browser is already
+# same-origin in development and these are only for pointing the SPA straight at the API.
 DEV_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -144,6 +155,7 @@ DEV_ORIGINS = [
 
 
 def dev_cors_origins() -> list[str]:
+    """The CORS origins to allow, which is none unless VARIATIO_DEV_CORS asks in development."""
     if is_production() or not _flag("VARIATIO_DEV_CORS"):
         return []
     return list(DEV_ORIGINS)
@@ -163,33 +175,43 @@ SESSION_TOUCH_INTERVAL = timedelta(minutes=5)
 INVITE_TTL = timedelta(days=7)
 RESET_TTL = timedelta(minutes=45)
 
-# `Secure` would make the browser drop the cookie over plain http, which is how the app is
-# served in local development; in production Caddy terminates TLS and it goes on.
+
 def cookie_secure() -> bool:
+    """Whether the session cookie carries `Secure`.
+
+    Off in local development, where the app is served over plain http and a browser would
+    drop the cookie; on in production, where Caddy terminates TLS.
+    """
     return _flag("VARIATIO_COOKIE_SECURE", default=is_production())
 
 
-# The cookie already meets every `__Host-` precondition — `Secure`, path `/`, no `Domain` —
-# so claiming the prefix costs nothing and buys a browser-enforced version of them: no
-# subdomain and no plain-http page can overwrite the session. The name has to follow
-# `cookie_secure()` rather than be a literal, because a browser refuses a `__Host-` cookie
-# without `Secure` and local development is served over http. Every read, write and delete
-# goes through here, or login and logout would disagree about which cookie they mean.
 def session_cookie() -> str:
+    """The session cookie's name, `__Host-` prefixed wherever the cookie is `Secure`.
+
+    The prefix buys a browser-enforced version of preconditions the cookie already meets:
+    no subdomain and no plain-http page can overwrite the session. It cannot be a literal,
+    because a browser refuses a `__Host-` cookie without `Secure`. Every read, write and
+    delete goes through here, or login and logout disagree about which cookie they mean.
+    """
     return f"__Host-{SESSION_COOKIE}" if cookie_secure() else SESSION_COOKIE
 
 
-# Where the links in an invitation or a reset mail point. Unset means "derive it from the
-# request that asked", which is right for a single-domain deployment and for localhost.
 def public_base_url() -> str | None:
+    """Where the links in an invitation or a reset mail point.
+
+    None means «derive it from the request that asked», which is right for a single-domain
+    deployment and for localhost.
+    """
     raw = os.environ.get("PUBLIC_BASE_URL", "").strip()
     return raw.rstrip("/") or None
 
 
-# `X-Forwarded-For` is only evidence when something trustworthy wrote it. Reading it
-# unconditionally would let anyone pick their own key for the per-IP rate limit, which is
-# the same as having no per-IP limit at all.
 def trust_proxy() -> bool:
+    """Whether `X-Forwarded-*` may be believed.
+
+    Only evidence when something trustworthy wrote it: read unconditionally, anyone could
+    pick their own key for the per-IP rate limit, which is the same as having none.
+    """
     return _flag("VARIATIO_TRUST_PROXY", default=is_production())
 
 
@@ -218,7 +240,9 @@ MAIL_FROM = os.environ.get("MAIL_FROM", "Variatio <no-reply@localhost>")
 
 
 def smtp_host() -> str:
+    """The SMTP server to send through, empty when the installation configures none."""
     return os.environ.get("SMTP_HOST", "").strip()
+
 
 WEB_DIST_DIR: Path = paths.PROJECT_ROOT / "web" / "dist"
 

@@ -20,44 +20,50 @@ from . import store as evaluation_store
 
 
 # WHAT THE EVALUATION IS ALLOWED TO SAY WHILE IT RUNS -------------------------------------------
-#
-# The run drawer is global and always visible, so without a filter the system gives away
-# its own blinding: `VariantGenerator` emits `prompt` and `few_shot` unasked, the RAG arm
-# announces its retrieval, and the token stream reads like a signature.
-#
-# A whitelist rather than a blacklist, because ANY inner step identifies its arm — only
-# the system's arm has a guardrail step, only the RAG arm has an index step. What survives
-# is the heartbeat this stage emits about itself, whose ids all start with `eval.` and
-# which counts work done without ever naming a position.
+
 _EVAL_STEP_PREFIX = "eval."
 
 
 class _BlindEmitter:
+    """Let through only this stage's own heartbeat, and drop everything the arms emit.
+
+    The run drawer is global and always visible, so without this the system gives away its
+    own blinding: the generator emits `prompt` and `few_shot` unasked and the token stream
+    reads like a signature. A whitelist rather than a blacklist, because ANY inner step
+    identifies its arm — only the system's has a guardrail step, only the RAG arm an index
+    one — and the ids that survive count work done without ever naming a position.
+    """
+
     def __init__(self, inner):
+        """Wrap the emitter the job publishes through."""
         self._inner = inner
 
     def emit(self, kind: str, payload: dict) -> None:
+        """Forward the event only when it is one of this stage's own `eval.` steps."""
         if kind.startswith("step.") and str(payload.get("id", "")).startswith(_EVAL_STEP_PREFIX):
             self._inner.emit(kind, payload)
 
     def should_cancel(self) -> bool:
+        """Defer the cancellation question to the emitter underneath."""
         return self._inner.should_cancel()
 
 
 # WHO HAS TO JUDGE WHAT THIS PRODUCES ----------------------------------------------------
-#
-# A comparison ordered from the administration panel is STOCK: three items nobody has been
-# handed yet, waiting for somebody to be judged competent for them. Recording it under
-# whoever pressed the button put it in that person's own «Mis sesiones» and let them answer,
-# unassigned, what they had prepared for somebody else — and since no answer ever rewrites
-# `user_id`, the judgement would have been filed under that name too.
-#
-# So stock has no evaluator, and `store.assign` is the only thing that gives a set one.
+
+
 def evaluator_of(job: Job) -> int | None:
+    """Return who owns the session this job produces, which for stock is nobody.
+
+    A comparison ordered from the administration panel waits for somebody to be judged
+    competent for it, and `store.assign` is the only thing that gives a set an evaluator.
+    Recording stock under whoever pressed the button would let them answer, unassigned,
+    what they had prepared for somebody else.
+    """
     return None if job.params.get("stock") else job.user_id
 
 
 def handle_evaluate(job: Job, control: JobControl) -> dict:
+    """Run one blind comparison and save it, with the run drawer muted throughout."""
     deps.require_inference()
     context = context_for(job)
     params = job.params
@@ -73,9 +79,8 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
         + " — el registro interno queda oculto para no revelar el origen de cada una"
     )
 
-    # Warmed BEFORE the blind section on purpose. Built inside the arm it would land in
-    # that arm's `elapsed_ms` and make the RAG baseline look slow for a one-off cost, and
-    # its step would be swallowed by the filter, leaving the screen silent while it runs.
+    # Warmed BEFORE the blind section: built inside the arm, this one-off cost would land in
+    # the RAG baseline's `elapsed_ms` and its step would be swallowed by the filter.
     rag_arm.index_for(context).ensure()
 
     with control.muted_logs(), progress.emitting(_BlindEmitter(control)):
@@ -104,6 +109,6 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
         f"Sesión {session.id}: {produced}/{len(ARMS)} propuestas con ítem válido"
     )
     # Deliberately WITHOUT the items: `job.result` travels over the WebSocket to every
-    # client and stays in the event buffer. The items are read from
-    # `GET /api/evaluation/{id}`, which knows what it may show and what it may not.
+    # client and stays in the event buffer. They are read from `GET /api/evaluation/{id}`,
+    # which knows what it may show and what it may not.
     return {"session_id": session.id, "arms": len(ARMS), "produced": produced}

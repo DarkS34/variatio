@@ -1,4 +1,8 @@
+"""`import-instance`, `export-instance`, `workspaces` and `create-workspace`."""
+
+
 def _slug_error(*slugs: str | None) -> str | None:
+    """Return the first complaint about these slugs, or None when all of them are usable."""
     from ..settings import slug_error
 
     for slug in slugs:
@@ -11,6 +15,7 @@ def _slug_error(*slugs: str | None) -> str | None:
 
 
 def import_instance(args) -> int:
+    """Load a workspace's directory into the database, and print what arrived."""
     from variatio.core import paths
 
     from ..db import session_scope
@@ -33,6 +38,7 @@ def import_instance(args) -> int:
 
 
 def export_instance(args) -> int:
+    """Write a workspace of the database back out to disk, and print what was written."""
     from variatio.core import paths
 
     from ..db import session_scope
@@ -51,6 +57,7 @@ def export_instance(args) -> int:
 
 
 def list_workspaces(_args) -> int:
+    """Print every workspace of the database with the directory it reads."""
     from ..db import session_scope
     from ..db.repository import list_workspaces as rows_of
     from ..settings import workspace_for
@@ -65,10 +72,14 @@ def list_workspaces(_args) -> int:
     return 0
 
 
-# The web can create workspaces too — any account may, since «tener varios grafos» is
-# «tener varios workspaces» — but the command line is what an operator uses to prepare one
-# before there is anybody to hand it to.
 def create_workspace(args) -> int:
+    """Create an empty workspace, provision its tree, and optionally give it an owner.
+
+    The web can create one too — any account may, since «tener varios grafos» is «tener
+    varios workspaces» — but the command line is what an operator uses to prepare one
+    before there is anybody to hand it to. The prompt language is chosen here and never
+    after: it is baked into the artifacts a build writes.
+    """
     from ..db import session_scope
     from ..db.identity import get_user, grant
     from ..db.models import OWNER
@@ -100,7 +111,7 @@ def create_workspace(args) -> int:
         ws = workspace_for(args.slug)
         provision(ws)
         # The file and not the column is what a build reads: the pipeline runs with no
-        # database at all, so the row beside it is a mirror for the panel to list by.
+        # database at all, and the row beside it is a mirror for the panel to list by.
         locale.set_prompt_language(ws, args.language)
         print(
             f"Workspace '{workspace.slug}' creado en {ws.root}, "

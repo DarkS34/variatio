@@ -4,11 +4,19 @@ A workspace is a whole instance — its corpus, its graph, its exemplars profile
 its caches and its generations — so «tener varios perfiles de ejemplares o varios grafos»
 is exactly «tener varios workspaces». That is why creating one is offered to any account
 rather than reserved to the administrator: a teacher with two subjects needs two, and
-nothing about the second one touches anybody else's data.
+nothing about the second touches anybody else's data.
 
-The active workspace is a preference stored on the account, not a permission. Every route
-that reads instance data resolves membership on its own (`require_member`), so pointing
-this at a workspace you are not a member of costs a 403 and never a read.
+Authorisation is declared per route here rather than on the router, because the routes do
+not share one level: listing, creating and activating resolve the account themselves,
+`remove` demands `auth.MANAGE`, and `leave` acts on the caller's own membership row.
+
+DELETING TAKES THE DIRECTORY TREE WITH IT EXACTLY WHEN NOBODY ELSE IS A MEMBER, and both
+doors — `remove` and `leave` — obey that one condition and report it as `files_removed`.
+With other members still in it their lecture notes are in there and they are losing the
+instance without having asked; with nobody left there is no such person, and the files
+would pile up under a slug the installation records nowhere. Two orderings are part of
+the rule: the roster is read BEFORE the cascade takes the rows away, and the tree goes
+BEFORE the row, so a failure leaves a retryable row rather than an orphan tree.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -28,24 +36,28 @@ router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
 
 
 class CreateBody(BaseModel):
+    """A new instance: its slug, its display name and the language of its prompts."""
+
     slug: str = Field(min_length=3, max_length=64)
     name: str = ""
-    # The language its PROMPTS will be written in, and the only moment it can be decided:
-    # the relation labels a build writes into `knowledge_graph.json` are what the loader
-    # indexes by, so once anything is built the choice is baked into the artifacts.
+    # The only moment the prompt language can be decided: the relation labels a build
+    # writes into `knowledge_graph.json` are what the loader indexes by, so once anything
+    # is built the choice is baked into the artifacts.
     prompt_language: str = languages.DEFAULT
 
 
 def _view(workspace: Workspace, role: str | None, active: bool, as_admin: bool = False) -> dict:
+    """Render one workspace for the switcher, saying when the role is the admin bypass.
+
+    An administrator sees every instance in the switcher, the ones they are not a member
+    of included; `as_admin` is what keeps them from mistaking one for their own.
+    """
     return {
         "slug": workspace.slug,
         "name": workspace.name,
         "role": role,
         "active": active,
         "prompt_language": workspace.prompt_language,
-        # An administrator sees every workspace in the switcher, including the ones they
-        # are not a member of. Saying so is what keeps them from mistaking somebody else's
-        # instance for their own.
         "as_admin": as_admin,
     }
 
@@ -54,6 +66,7 @@ def _view(workspace: Workspace, role: str | None, active: bool, as_admin: bool =
 def listing(
     user: User = Depends(auth.current_user), db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Answer the instances this account can open, and which one it lands in."""
     rows = identity.memberships_for(db, user.id)
     mine = {workspace.id: membership.role for membership, workspace in rows}
     current = auth.current_workspace_for(db, user)
@@ -85,6 +98,7 @@ def create(
     user: User = Depends(auth.current_user),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Create an instance, make the caller its owner, and activate it."""
     slug = body.slug.strip().lower()
     error = settings.slug_error(slug)
     if error:
@@ -103,11 +117,11 @@ def create(
     user.active_workspace_id = workspace.id
 
     # The directory tree before the row is usable: every screen of a brand-new workspace
-    # reads files, and an empty chain with no place to upload into is a dead end.
+    # reads files, and an empty chain with nowhere to upload into is a dead end.
     ws = settings.workspace_for(slug)
     settings.provision(ws)
-    # The file is what a build reads — the pipeline never touches the database — so the row
-    # written above is the mirror and this is the truth.
+    # The file is what a build reads — the pipeline never touches the database — so the
+    # row written above is the mirror and this is the truth.
     locale.set_prompt_language(ws, workspace.prompt_language)
     return {"workspace": _view(workspace, OWNER, active=True)}
 
@@ -118,6 +132,7 @@ def activate(
     user: User = Depends(auth.current_user),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Point the account at another instance it is allowed to open."""
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
@@ -137,45 +152,32 @@ def activate(
     }
 
 
-# THE NAME IS NOT EDITABLE FROM HERE, and there is no route for it in this router
-# (2026-08-28, explicit user request). A workspace is named when it is created, and after
-# that only an administrator renames it, from «Administración». What the name is worth is
-# that everybody reading a screen, a message or an invitation means the same instance by
-# it; an owner renaming theirs under the people working in it is the one way that stops
-# being true, and the panel is where somebody sees every instance at once and can tell
-# whether the new name collides with another. `PATCH /api/admin/workspaces/{slug}` is the
-# only door — the client does not decide this, the server does.
+# THE NAME IS NOT EDITABLE FROM HERE, and there is no route for it in this router. A
+# workspace is named when it is created and renamed only by an administrator, through
+# `PATCH /api/admin/workspaces/{slug}`: what a name is worth is that everybody reading a
+# screen means the same instance by it, and the panel is the one place somebody sees every
+# instance at once and can tell whether a new name collides.
 
 
-# Deleting is a real deletion, not a flag: the row cascades to artifacts, approvals, raw
-# documents, memberships, generations and evaluation sessions.
-#
-# WHETHER THE DIRECTORY TREE GOES DEPENDS ON WHO ELSE HOLDS IT (2026-08-28, explicit user
-# request), and the condition is the same one `leave` applies: nobody left, nothing kept.
-# Deleting an instance that is only yours is disposing of your own documents, and leaving
-# them behind piles up hundreds of megabytes under a slug that is on record nowhere — with
-# only an administrator able to tell afterwards what any of those directories was. Deleting
-# one that OTHER people are still members of is a different act: their lecture notes are in
-# there, they are losing the instance without having asked, and a web request that silently
-# takes those with it is not one anybody expects to be irreversible. So the tree survives
-# exactly then, and an administrator can re-import it or finish the job from «Administración».
-#
-# The tree first, as in `DELETE /api/admin/workspaces/{slug}`: a failure leaves the row
-# standing and the call retryable, where the other order strands files nobody is on record
-# as owning.
 @router.delete("/{slug}", dependencies=[auth.MANAGE])
 def remove(
     slug: str,
     access: auth.Access = auth.MANAGE,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Delete the active instance, taking its files when nobody else is a member.
+
+    A real deletion, not a flag: the row cascades to artifacts, approvals, raw documents,
+    memberships, generations and evaluation sessions. `files_removed` is what the caller
+    needs afterwards, because the confirmation dialog promised one of two things.
+    """
     if slug != access.workspace.slug:
         raise HTTPException(409, "Solo se puede borrar el workspace activo.")
 
     ws = access.ws
     # Read before the cascade takes the rows away. An administrator reaching this through
-    # the bypass holds no membership of their own, so this is «is anybody else in it», not
-    # «does it have members» — and for them the answer is the whole roster.
+    # the bypass holds no membership of their own, so the question is «is anybody else in
+    # it» and not «does it have members».
     others = [
         m
         for m, _ in identity.members_of(db, access.workspace.id)
@@ -183,14 +185,16 @@ def remove(
     ]
     removed = False
     if not others:
+        # Tree before row: this way a failure leaves the row standing and the call
+        # retryable, where the other order strands files nobody is on record as owning.
         try:
             removed = settings.destroy(ws)
         except (ValueError, OSError) as exc:
             raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
-    # Whoever was sitting in it is moved to wherever they land now, before the row goes.
-    # The FK is `SET NULL`, so without this the database strands every one of them at «no
-    # workspace» — including the people who have another one to fall back to.
+    # Whoever was sitting in it is moved before the row goes. The FK is `SET NULL`, so
+    # without this the database strands every one of them at «no workspace» — including
+    # the people who have another one to fall back to.
     rehomed = auth_deps.rehome_accounts(db, access.workspace)
     db.delete(access.workspace)
     db.flush()
@@ -198,55 +202,37 @@ def remove(
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
     runtime.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
-    # WHERE THE CALLER ENDS UP, said in the answer rather than left for the browser to find
-    # out. `rehomed` is keyed by username and is about everybody; this is the one entry the
-    # tab that made the request needs, and having it here is what lets it move straight to
-    # the surviving instance instead of blanking to «ningún workspace» until `me` answers.
     return {
         "deleted": slug,
         "path": str(ws.root),
         "rehomed": rehomed,
+        # The one entry of `rehomed` the calling tab needs, so it can move straight to the
+        # surviving instance instead of blanking to «ningún workspace» until `me` answers.
         "landed": rehomed.get(access.user.username),
-        # What the caller has to be able to say afterwards, because the dialog promised one
-        # of two different things depending on this.
         "files_removed": removed,
     }
 
 
-# LEAVING one, which is a different act from deleting it and only sometimes has the same
-# consequence. `remove` above is the OWNER disposing of a shared instance; this is a person
-# disposing of their own access, and any member may do it whatever their role — it acts on
-# their own membership row and on nothing else.
-#
-# The two collapse into one when the person leaving is the last one linked to it: with the
-# seat empty there is nobody left for the workspace to belong to, so the row goes with them.
-# That holds even when the leaver is not the owner — the case exists (an owner's account was
-# deleted, and `memberships` went with it), and refusing there would strand an instance that
-# nobody but an administrator could ever open again.
-#
-# AND THE DIRECTORY TREE GOES WITH IT (2026-08-28, explicit user request), which is where
-# this parts company with `remove` above. The reason `remove` leaves the files standing does
-# not survive here: there it is one member disposing of an instance OTHERS still hold, so the
-# documents still have an owner to be irreversible for. Here nobody is left — the tree would
-# be hundreds of megabytes under a slug that is on record nowhere, and they would pile up one
-# per abandoned instance with only an administrator able to tell what any of them was.
-#
-# Same order as `DELETE /api/admin/workspaces/{slug}`, and for the same reason: the tree
-# first, so a failure leaves the row and the membership standing and the call can be retried.
-# The other way round strands files whose owner is no longer on record — which is the exact
-# state this is here to stop creating.
-#
-# There is deliberately no «last workspace of the installation» guard here. `remove` has one
-# and it predates the decision that an installation may hold ZERO workspaces and an account
-# may belong to none — both are normal states the app renders on purpose, and refusing to
-# let the last person out of the last instance would make «no workspace» reachable only by
-# an administrator.
 @router.delete("/{slug}/membership")
 def leave(
     slug: str,
     user: User = Depends(auth.current_user),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Give up your own access to an instance, deleting it if you were the last one in it.
+
+    A different act from `remove` above — that is the owner disposing of a shared
+    instance, this is a person disposing of their own access, and any member may do it
+    whatever their role. The two collapse into one when the person leaving is the last
+    one linked to it: with the seat empty there is nobody left for the workspace to belong
+    to, so the row and the tree go with them. That holds even when the leaver is not the
+    owner — the case exists (an owner's account was deleted and `memberships` went with
+    it), and refusing there would strand an instance only an administrator could reopen.
+
+    There is deliberately no «last workspace of the installation» guard: an installation
+    holding zero workspaces and an account belonging to none are both normal states the
+    app renders on purpose.
+    """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe el workspace '{slug}'.")
@@ -273,6 +259,8 @@ def leave(
         logger.info(f"[workspace] «{user.username}» salió de «{slug}»")
         return {"left": slug, "deleted": False, "members_left": len(others)}
 
+    # Tree before row, as in `remove`: a failure leaves the row and the membership
+    # standing and the call retryable.
     try:
         removed = settings.destroy(ws)
     except (ValueError, OSError) as exc:
@@ -293,14 +281,13 @@ def leave(
     }
 
 
-# The chain of a workspace other than the active one, so the switcher can show what state
-# each instance is in without making the browser change workspace to find out.
 @router.get("/{slug}/summary")
 def summary(
     slug: str,
     user: User = Depends(auth.current_user),
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Answer another instance's chain, so the switcher can show its state in place."""
     workspace = auth.resolve_workspace(db, user, slug)
     access = auth.access_for(db, user, workspace, VIEWER)
     stages = runtime.pipeline_snapshot(access.ws)

@@ -1,10 +1,9 @@
 """The one token the build subprocess and its parent share.
 
-It lives apart from both on purpose: importing `server.jobs` pulls in the handlers,
-and through them the parent side of the build. If the marker lived in the worker,
-that chain would import `server.jobs.build_worker` before runpy ran it as
-`__main__`, and every build would start with runpy's "found in sys.modules"
-RuntimeWarning on the event pipe.
+It lives apart from both: importing `server.jobs` reaches the handlers and through them the
+parent side of the build, so a marker kept in the worker would be imported before runpy runs
+that module as `__main__` — and every build would open with runpy's "found in sys.modules"
+warning on the event pipe.
 """
 
 MARKER = "@@EVT@@"

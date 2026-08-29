@@ -1,3 +1,9 @@
+"""The study's own index of settings, resolved on every read.
+
+The annotations below are the readable index, exactly as `variatio.config`'s are; the
+values are declared in `study/settings.py` and derived here.
+"""
+
 import os
 
 from variatio import config as pipeline
@@ -11,6 +17,7 @@ RAG_TOP_K: int
 
 
 def _chain(declared) -> list[str]:
+    """Normalise the declared provider chain: lowercased, deduplicated, `none` dropped."""
     chain: list[str] = []
     for name in declared:
         name = str(name).strip().lower()
@@ -22,6 +29,7 @@ def _chain(declared) -> list[str]:
 def derive(
     values: dict[str, object], environ: dict[str, str], few_shot: int
 ) -> dict[str, object]:
+    """Compute the study's five resolved values from the registry, the environment and `k`."""
     providers = _chain(values["evaluation.providers"])
     models = {
         "gemini": values["evaluation.models.gemini"],
@@ -32,9 +40,8 @@ def derive(
         "groq": values["evaluation.keys.groq"],
     }
 
-    # An environment still exporting the old single-provider pair keeps working. The pair
-    # moves TOGETHER onto whichever provider the chain leads with, because a key and a
-    # model id from different providers is precisely the mix-up this prevents.
+    # The legacy single-provider pair moves TOGETHER onto the head of the chain: a key and
+    # a model id from different providers is precisely the mix-up this prevents.
     legacy = environ.get("EVAL_EXTERNAL_API_KEY", "")
     first = providers[0] if providers else ""
     if legacy and first in keys and not keys[first]:
@@ -52,11 +59,13 @@ def derive(
     }
 
 
-# Resolved on every read rather than written into the module once. `settings.reload()`
-# rewrites `variatio.config`'s globals through the namespace it was handed, and
-# this module is not that namespace: caching here would serve the value the panel just
-# replaced. The annotations above stay the readable index, as in `variatio`.
 def __getattr__(name: str):
+    """Resolve one of the annotated names above, freshly, on every read.
+
+    `settings.reload()` rewrites `variatio.config`'s globals through the namespace it was
+    handed and this module is not that namespace, so caching here would serve the value the
+    panel just replaced.
+    """
     values = derive(settings.values(), dict(os.environ), pipeline.MAX_FEW_SHOT_EXAMPLES)
     if name in values:
         return values[name]

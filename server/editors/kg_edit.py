@@ -21,13 +21,14 @@ ARTIFACT = review.KNOWLEDGE_GRAPH
 
 
 class KGError(ValueError):
-    pass
+    """A graph edit that the caller can be told about, in Spanish."""
 
 
 # READ ---------------------------------------------------------------------------------------
 
 
 def raw(ws: Workspace) -> dict:
+    """Read the graph that wins — curated over draft. Raises KGError when there is none."""
     path = review.current_path(ws, ARTIFACT)
     if path is None:
         raise KGError("Todavía no hay grafo de conocimiento")
@@ -35,33 +36,47 @@ def raw(ws: Workspace) -> dict:
 
 
 def _bank(ws: Workspace) -> dict:
+    """Read the exemplars bank, empty when the workspace has none yet."""
     return storage.read_json(ws.exemplars_bank_path) or {}
 
 
-def summary(ws: Workspace) -> dict:
-    graph_raw = raw(ws)
-    graph = _load(graph_raw)
-    descriptions = stages.load_concept_descriptions(ws)
+def _exemplar_counts(bank: dict) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+    """Count exemplars per concept, and per concept and modality.
 
+    Keyed by the modality the item DECLARES, so this stays a fact about the bank alone: the
+    graph screen has no upstreams and must not start reading the exemplars profile. An item
+    with no `item_type` is counted in the total and in no modality, exactly as
+    `VariantGenerator._is_type` does whenever the profile declares more than one.
+    """
     exemplars: dict[str, int] = {}
-    # Keyed by the modality the item DECLARES, so this stays a fact about the bank alone:
-    # the graph screen has no upstreams and must not start reading the exemplars profile.
-    # An item with no `item_type` is counted in the total and in no modality, which is what
-    # `VariantGenerator._is_type` does whenever the profile declares more than one.
     by_type: dict[str, dict[str, int]] = {}
-    for item in _bank(ws).values():
+    for item in bank.values():
         declared = item.get(ITEM_TYPE_KEY)
         for concept in item.get("concepts") or []:
             exemplars[concept] = exemplars.get(concept, 0) + 1
             if declared:
                 counts = by_type.setdefault(concept, {})
                 counts[declared] = counts.get(declared, 0) + 1
+    return exemplars, by_type
 
+
+def _degrees(graph: KnowledgeGraph) -> dict[str, int]:
+    """Count each concept's edges, summed over every relation."""
     degrees: dict[str, int] = dict.fromkeys(graph.all_concepts, 0)
     for nx_graph in graph.graphs.values():
         for concept in graph.all_concepts:
             if concept in nx_graph:
                 degrees[concept] += nx_graph.degree(concept)
+    return degrees
+
+
+def summary(ws: Workspace) -> dict:
+    """Return the graph as the screen reads it: domains, concepts with counts, relations."""
+    graph_raw = raw(ws)
+    graph = _load(graph_raw)
+    descriptions = stages.load_concept_descriptions(ws)
+    exemplars, by_type = _exemplar_counts(_bank(ws))
+    degrees = _degrees(graph)
 
     concepts = [
         {
@@ -103,11 +118,14 @@ def summary(ws: Workspace) -> dict:
 
 
 def descriptions(ws: Workspace) -> dict:
+    """Return every taggable concept's description, with the passages it was written from.
+
+    The anchoring travels with the descriptions because it is what answers for them: it is
+    what lets a reviewer tell a description of the material from a description of what the
+    model already knew.
+    """
     graph = _load(raw(ws))
     stored = stages.load_concept_descriptions(ws)
-    # The anchoring travels with the descriptions because it is what answers for them: the
-    # piece of syllabus the concept came from, and what lets one judge whether the model
-    # described the material or described what it already knew.
     sources = stages.load_concept_sources(ws)
     anchored = sources["concepts"]
     return {
@@ -120,14 +138,15 @@ def descriptions(ws: Workspace) -> dict:
 
 
 def set_description(ws: Workspace, concept: str, text: str) -> dict:
+    """Overwrite one concept's description by hand. Raises KGError for an unknown concept."""
     graph = _load(raw(ws))
     if concept not in graph.all_concepts:
         raise KGError(f"'{concept}' no existe en el grafo")
     stored = stages.load_concept_descriptions(ws)
     stored[concept] = text
     stages.save_concept_descriptions(stored, ws)
-    # The concepts embedding cache fingerprints the descriptions, so it invalidates
-    # itself; the in-memory context does not, hence the explicit drop.
+    # The embedding cache fingerprints the descriptions and invalidates itself; the
+    # in-memory context does not, hence the explicit drop.
     deps.invalidate(ws.slug, f"descripción de '{concept}' editada")
     return {"concept": concept, "description": text}
 
@@ -136,6 +155,11 @@ def set_description(ws: Workspace, concept: str, text: str) -> dict:
 
 
 def _load(graph_raw: dict) -> KnowledgeGraph:
+    """Load a candidate graph through the pipeline's own class. Raises KGError if it will not.
+
+    The class takes a path, so the candidate goes through a temporary file: validating with
+    anything other than the loader the pipeline uses would validate the wrong thing.
+    """
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tmp:
         json.dump(graph_raw, tmp, ensure_ascii=False)
         probe = Path(tmp.name)
@@ -148,10 +172,12 @@ def _load(graph_raw: dict) -> KnowledgeGraph:
 
 
 def load_graph(ws: Workspace, graph_raw: dict | None = None) -> KnowledgeGraph:
+    """Load the workspace's graph, or a candidate the caller already has in hand."""
     return _load(graph_raw if graph_raw is not None else raw(ws))
 
 
 def _save(ws: Workspace, graph_raw: dict, note: str) -> dict:
+    """Validate, write as the curated graph, reopen its review and drop the cached context."""
     _load(graph_raw)
     target = review.canonical_path(ws, ARTIFACT)
     storage.write_json(target, graph_raw, ws=ws, artifact=ARTIFACT)
@@ -161,10 +187,17 @@ def _save(ws: Workspace, graph_raw: dict, note: str) -> dict:
 
 
 def replace(ws: Workspace, graph_raw: dict) -> dict:
+    """Overwrite the whole graph with the one given."""
     return _save(ws, graph_raw, "grafo de conocimiento reemplazado")
 
 
 def set_non_taggable(ws: Workspace, concepts: list[str]) -> dict:
+    """Record which concepts do not work as labels, and mark the review as done.
+
+    Both the job's verdict and a hand edit come through here, and both set
+    `taggability_reviewed` in the same write, so the file is left in one shape either way.
+    Names the graph does not hold are dropped rather than stored.
+    """
     graph_raw = raw(ws)
     kept = sorted(set(concepts) & _all_concepts(graph_raw))
     graph_raw["generic_non_taggable_concepts"] = kept
@@ -174,10 +207,12 @@ def set_non_taggable(ws: Workspace, concepts: list[str]) -> dict:
 
 
 def _all_concepts(graph_raw: dict) -> set[str]:
+    """Every concept name in the graph, whatever domain it sits in."""
     return {c for names in graph_raw["concepts_by_domains"].values() for c in names}
 
 
 def _bank_references(ws: Workspace, concept: str) -> int:
+    """How many bank items are tagged with this concept."""
     return sum(
         1 for item in _bank(ws).values() if concept in (item.get("concepts") or [])
     )
@@ -187,6 +222,11 @@ def _bank_references(ws: Workspace, concept: str) -> int:
 
 
 def add_domain(ws: Workspace, name: str, after: str | None = None) -> dict:
+    """Add an empty domain, at the end or right after another one.
+
+    The order of the domains is the syllabus's teaching order, so inserting rebuilds the
+    dict rather than appending.
+    """
     graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if name in domains:
@@ -206,6 +246,7 @@ def add_domain(ws: Workspace, name: str, after: str | None = None) -> dict:
 
 
 def reorder_domains(ws: Workspace, order: list[str]) -> dict:
+    """Re-lay the domains in the given order, which must name every one of them exactly once."""
     graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if sorted(order) != sorted(domains):
@@ -218,6 +259,7 @@ def reorder_domains(ws: Workspace, order: list[str]) -> dict:
 
 
 def rename_domain(ws: Workspace, name: str, new_name: str) -> dict:
+    """Rename one domain, keeping its place in the order."""
     graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if name not in domains:
@@ -231,6 +273,10 @@ def rename_domain(ws: Workspace, name: str, new_name: str) -> dict:
 
 
 def delete_domain(ws: Workspace, name: str, move_to: str | None = None) -> dict:
+    """Delete a domain, moving its concepts elsewhere or purging them with it.
+
+    With no `move_to` the concepts go too — edges, descriptions and anchoring included.
+    """
     graph_raw = raw(ws)
     domains = graph_raw["concepts_by_domains"]
     if name not in domains:
@@ -252,6 +298,7 @@ def delete_domain(ws: Workspace, name: str, move_to: str | None = None) -> dict:
 
 
 def add_concept(ws: Workspace, name: str, domain: str, taggable: bool = True) -> dict:
+    """Add a concept to a domain, optionally already marked as no good as a label."""
     graph_raw = raw(ws)
     if name in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' ya existe")
@@ -263,6 +310,30 @@ def add_concept(ws: Workspace, name: str, domain: str, taggable: bool = True) ->
     return _save(ws, graph_raw, f"concepto '{name}' añadido")
 
 
+def _relocate(domains: dict, name: str, target: str, domain: str | None) -> None:
+    """Move a concept out of its domain and into `domain`, or back where it was.
+
+    Raises KGError when the destination does not exist.
+    """
+    current = next(d for d, names in domains.items() if name in names)
+    destination = domain or current
+    if destination not in domains:
+        raise KGError(f"El dominio '{destination}' no existe")
+    domains[current] = [c for c in domains[current] if c != name]
+    if target not in domains[destination]:
+        domains[destination].append(target)
+
+
+def _set_taggable(graph_raw: dict, concept: str, taggable: bool | None) -> None:
+    """Add or remove a concept from the non-taggable list; `None` leaves it as it is."""
+    non_taggable = set(graph_raw.get("generic_non_taggable_concepts", []))
+    if taggable is True:
+        non_taggable.discard(concept)
+    elif taggable is False:
+        non_taggable.add(concept)
+    graph_raw["generic_non_taggable_concepts"] = sorted(non_taggable)
+
+
 def update_concept(
     ws: Workspace,
     name: str,
@@ -270,41 +341,36 @@ def update_concept(
     domain: str | None = None,
     taggable: bool | None = None,
 ) -> dict:
+    """Rename, move or re-mark a concept, carrying everything keyed by its name with it.
+
+    A rename reaches the relations, the description and the corpus anchoring, and the
+    result reports how many bank items still refer to the old name — nothing here retags
+    the bank.
+    """
     graph_raw = raw(ws)
     if name not in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' no existe")
 
     target = new_name or name
-    if new_name and new_name != name and new_name in _all_concepts(graph_raw):
+    renamed = bool(new_name) and new_name != name
+    if renamed and new_name in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{new_name}' ya existe")
 
-    domains = graph_raw["concepts_by_domains"]
-    current_domain = next(d for d, names in domains.items() if name in names)
-    destination = domain or current_domain
-    if destination not in domains:
-        raise KGError(f"El dominio '{destination}' no existe")
+    _relocate(graph_raw["concepts_by_domains"], name, target, domain)
 
-    domains[current_domain] = [c for c in domains[current_domain] if c != name]
-    if target not in domains[destination]:
-        domains[destination].append(target)
-
-    if new_name and new_name != name:
+    if renamed:
         _rename_everywhere(ws, graph_raw, name, new_name)
 
-    non_taggable = set(graph_raw.get("generic_non_taggable_concepts", []))
-    if taggable is True:
-        non_taggable.discard(target)
-    elif taggable is False:
-        non_taggable.add(target)
-    graph_raw["generic_non_taggable_concepts"] = sorted(non_taggable)
+    _set_taggable(graph_raw, target, taggable)
 
-    references = _bank_references(ws, name) if new_name and new_name != name else 0
+    references = _bank_references(ws, name) if renamed else 0
     result = _save(ws, graph_raw, f"concepto '{name}' modificado")
     result["bank_references"] = references
     return result
 
 
 def delete_concept(ws: Workspace, name: str) -> dict:
+    """Remove a concept from the graph, reporting how many bank items still name it."""
     graph_raw = raw(ws)
     if name not in _all_concepts(graph_raw):
         raise KGError(f"El concepto '{name}' no existe")
@@ -316,6 +382,7 @@ def delete_concept(ws: Workspace, name: str) -> dict:
 
 
 def _purge_concept(ws: Workspace, graph_raw: dict, name: str) -> None:
+    """Erase a concept from its domain, the non-taggable list, every relation and the cache."""
     graph_raw["concepts_by_domains"] = {
         domain: [c for c in names if c != name]
         for domain, names in graph_raw["concepts_by_domains"].items()
@@ -332,6 +399,7 @@ def _purge_concept(ws: Workspace, graph_raw: dict, name: str) -> None:
 
 
 def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str) -> None:
+    """Carry a rename through the non-taggable list, both ends of every edge, and the cache."""
     graph_raw["generic_non_taggable_concepts"] = [
         new_name if c == name else c
         for c in graph_raw.get("generic_non_taggable_concepts", [])
@@ -345,12 +413,12 @@ def _rename_everywhere(ws: Workspace, graph_raw: dict, name: str, new_name: str)
     _move_description(ws, name, new_name)
 
 
-# The description cache is keyed by concept name and nothing else invalidates it:
-# a rename would otherwise leave the text stranded under the old key forever. The corpus
-# anchoring moves with it, for the same reason: renaming a concept does not change which
-# paragraph of the syllabus it came from, and leaving it under the old name loses it just
-# as it would lose the text.
 def _move_description(ws: Workspace, name: str, new_name: str) -> None:
+    """Carry a concept's description and corpus anchoring over to its new name.
+
+    Both caches are keyed by concept name and nothing else invalidates them, so a rename
+    without this strands the text and the passages under a key nobody will ask for again.
+    """
     stored = stages.load_concept_descriptions(ws)
     if name in stored:
         stored[new_name] = stored.pop(name)
@@ -359,6 +427,7 @@ def _move_description(ws: Workspace, name: str, new_name: str) -> None:
 
 
 def _forget_description(ws: Workspace, name: str) -> None:
+    """Drop a deleted concept's description and corpus anchoring."""
     stored = stages.load_concept_descriptions(ws)
     if stored.pop(name, None) is not None:
         stages.save_concept_descriptions(stored, ws)
@@ -366,6 +435,7 @@ def _forget_description(ws: Workspace, name: str) -> None:
 
 
 def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
+    """Move a concept's corpus passages to a new name, or drop them when it is `None`."""
     sources = stages.load_concept_sources(ws)
     entries = sources["concepts"].pop(name, None)
     definition = sources.get("definitions", {}).pop(name, None)
@@ -383,6 +453,7 @@ def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
 
 
 def _relation(graph_raw: dict, verb: str) -> dict:
+    """Find a relation by its verbose label, which is how the graph file indexes them."""
     for relation in graph_raw.get("relations", []):
         if (relation.get("details") or {}).get("verbose") == verb:
             return relation
@@ -390,6 +461,7 @@ def _relation(graph_raw: dict, verb: str) -> dict:
 
 
 def add_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
+    """Add one edge. Raises KGError for an unknown concept, a self-loop or a duplicate."""
     graph_raw = raw(ws)
     concepts = _all_concepts(graph_raw)
     for concept in (source, target):
@@ -407,6 +479,11 @@ def add_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
 
 
 def remove_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
+    """Remove one edge, whichever way round it is stored. Raises KGError if there is none.
+
+    Both orientations are tried because an undirected relation is stored under whichever
+    endpoint the builder happened to write first.
+    """
     graph_raw = raw(ws)
     data = _relation(graph_raw, verb).get("relations_data", {})
     changed = False
@@ -420,6 +497,7 @@ def remove_edge(ws: Workspace, verb: str, source: str, target: str) -> dict:
 
 
 def neighbours(ws: Workspace, concept: str) -> dict:
+    """Return one concept's edges per relation, split into `out` and `in` where directed."""
     graph = _load(raw(ws))
     if concept not in graph.all_concepts:
         raise KGError(f"El concepto '{concept}' no existe")

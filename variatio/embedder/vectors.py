@@ -1,9 +1,8 @@
 """Vector arithmetic and the batched embedding calls, shared by everything that embeds.
 
-`embed_normalized` is one function and not three: the KG builder's merge-candidate pass
-had its own copy, and so did the describer's name shortlist — same batching, same L2
-normalisation, same "warn and carry on without the signal" on failure, differing only in
-which model they ask. The model is an argument now.
+`embed_normalized` is one function and not three — the KG builder's merge candidates, the
+describer's name shortlist and its collision check all want the same batching, the same L2
+normalisation and the same "warn and carry on without the signal". The model is an argument.
 """
 
 import numpy as np
@@ -14,21 +13,25 @@ from ..core import inference, progress
 
 
 def l2_normalize(vector: np.ndarray) -> np.ndarray:
+    """Return the unit vector, or the vector itself when its norm is zero."""
     norm = np.linalg.norm(vector)
     return vector / norm if norm > 0 else vector
 
 
-# Vectors are cast to float32 at the point of embedding and stay float32 through the merge
-# and the `.npz`: at 2560 dimensions that halves a tracked cache for no measurable loss.
-# Do not "restore" float64.
 def normalize_rows(vectors: list[list[float]]) -> np.ndarray:
+    """Return a row-normalised float32 matrix.
+
+    Vectors are cast to float32 at the point of embedding and stay float32 through the
+    merge and the `.npz`: at 2560 dimensions that halves a tracked cache for no measurable
+    loss. Do not "restore" float64.
+    """
     matrix = np.array(vectors, dtype=np.float32)
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     return np.divide(matrix, norms, out=np.zeros_like(matrix), where=norms > 0)
 
 
 def embed_normalized(texts: list[str], what: str, model: str | None = None):
-    """A row-normalised matrix, or None when the engine could not answer.
+    """Return a row-normalised matrix, or None when the engine could not answer.
 
     None is not an error: every caller uses these as an optional signal — a merge
     shortlist, a sibling shortlist, a collision check — and degrading to "no signal" is
@@ -54,11 +57,11 @@ def embed_normalized(texts: list[str], what: str, model: str | None = None):
 
 
 def prefix_for(kind: str) -> str:
-    """The task prefix for one side of retrieval.
+    """Return the task prefix for one side of retrieval.
 
-    The asymmetry is qwen3-embedding's prescribed usage, not an omission: the query states
-    the retrieval task, the indexed side stays raw. It also splits the memo, so a statement
-    is embedded once per side rather than once in total.
+    `EMBEDDING_DOCUMENT_PREFIX` is empty while the query one is not: that asymmetry is
+    qwen3-embedding's prescribed usage, not an omission. It also splits the memo, so a
+    statement is embedded once per side rather than once in total.
     """
     if kind == "query":
         return config.EMBEDDING_QUERY_PREFIX

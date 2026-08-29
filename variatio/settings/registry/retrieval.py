@@ -1,3 +1,5 @@
+"""The «Recuperación» settings: the embedder's prefixes, its band and how it describes."""
+
 from ..types import Impact, Setting
 
 SETTINGS: list[Setting] = [

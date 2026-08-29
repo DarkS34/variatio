@@ -1,9 +1,22 @@
+"""The tagger's verification pass: which curriculum concepts an item makes a solver practise."""
+
+
 def tag_concepts_prompt(
     statement: str,
     candidates: str,
     relations: str = "",
     context_block: str = "",
 ) -> str:
+    """Ask which of the candidate concepts an item practises, and which one is its objective.
+
+    The answer is `concepts` plus `primary_concept`, both drawn only from the candidate
+    list, and `{"concepts": [], "primary_concept": null}` when none of them is what the item
+    centrally practises. The two fields answer different questions: the primary is fixed
+    first by the deciding test — could a student who has mastered everything except this
+    concept still solve it? — and widening `concepts` afterwards may not change it. The
+    candidates arrive with their descriptions and the relations among themselves, so the
+    judgement is made on what a concept means here and not on its name.
+    """
     context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
 
     relations_block = ""

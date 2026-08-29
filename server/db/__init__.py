@@ -1,3 +1,9 @@
+"""The database: the tables, and the session factory that reaches them.
+
+All of it lives under the `server` extra — the runtime pipeline imports none of it, and
+`import server` works with no database reachable.
+"""
+
 from .models import (
     CURATED,
     DRAFT,

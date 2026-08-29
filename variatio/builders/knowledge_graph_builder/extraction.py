@@ -1,9 +1,9 @@
 """Phase 1 — corpus to a raw inventory of concepts and relation triples.
 
-Linking is NOT done here: it used to run over the raw inventory, where the same idea is
-still present under several names, and every relation whose endpoint was later merged or
-dropped was thrown away by `apply_node_map`. It runs in `curation` now, once the names are
-canonical and the domains exist to break the question into pieces.
+Linking is NOT done here. Over the raw inventory the same idea is still present under
+several names, and every relation whose endpoint was later merged or dropped was thrown
+away by `apply_node_map`; it runs in `curation`, once the names are canonical and the
+domains exist to break the question into pieces.
 """
 
 import re
@@ -31,6 +31,7 @@ def run(
     prompts,
     recursive: bool = False,
 ) -> dict:
+    """Convert, chunk and read the whole corpus, returning the staging inventory."""
     documents = convert_corpus(
         input_dir,
         recursive=recursive,
@@ -57,14 +58,6 @@ def run(
     return staging
 
 
-# Every document is converted and chunked up front so the extraction bar knows its
-# own total: a per-file bar cannot say how much of the corpus is left, because a
-# 40-chunk lecture and a 3-chunk one weigh the same in it.
-#
-# It goes through the SAME page-transcription route as the two exemplars builders since
-# 2026-08-27, by explicit user request: one engine and one algorithm for both raw slots,
-# because quality weighs more than speed. Docling is left with the `.docx`, which has no
-# page to render, and the converter is still lazy for exactly that reason.
 def convert_corpus(
     input_dir: str | Path,
     *,
@@ -74,6 +67,13 @@ def convert_corpus(
     cache_dir: Path,
     prompts,
 ) -> list[tuple[str, list[str], list[tuple[str, list[str], str]]]]:
+    """Transcribe and chunk every document up front, as `(name, titles, chunks)`.
+
+    Up front and not per file, so the extraction bar knows its own total: a 40-chunk lecture
+    and a 3-chunk one weigh the same in a per-file bar. The corpus takes the same
+    page-transcription route as the two exemplars builders — one engine and one algorithm
+    for both raw slots — so Docling is left with the `.docx`, which has no page to render.
+    """
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
         logger.error(f"No supported document in {input_dir}")
@@ -122,6 +122,7 @@ def convert_corpus(
 
 
 def select_titles(levels_per_doc: list[dict[int, list[str]]]) -> list[list[str]]:
+    """Name each document by its shallowest headings, dropping the ones every file repeats."""
     total = len(levels_per_doc)
     seen = Counter()
     for levels in levels_per_doc:
@@ -151,6 +152,7 @@ def extract_documents(
     max_attempts: int,
     prompts,
 ) -> dict:
+    """Read every chunk of the corpus, gathering concepts, relations and their evidence."""
     total = sum(len(chunks) for _, _, chunks in documents)
     logger.info(f"Extracting from {total} chunk(s) of {len(documents)} document(s)")
     progress.phase("extract", f"0/{total} fragmento(s)")
@@ -240,6 +242,7 @@ def extract_documents(
 def remember_passage(
     stored: list[dict], concept: str, chunk: str, document: str, location: str
 ) -> None:
+    """Record one more corpus passage for a concept, up to the cap and never a duplicate."""
     if len(stored) >= config.KG_MAX_SOURCE_PASSAGES:
         return
     text = excerpt(chunk, concept, config.KG_SOURCE_PASSAGE_CHARS)
@@ -254,12 +257,18 @@ MIN_LEADER_RUNS = 3
 
 
 def is_navigation(paragraph: str) -> bool:
+    """Say whether a paragraph is a table of contents rather than material.
+
+    It keys on DOT-LEADER RUNS and not on punctuation density or line length, which mis-fire
+    on real prose; three runs is what separates an index from a sentence with an ellipsis.
+    """
     if not paragraph.strip():
         return True
     return len(_LEADER.findall(paragraph)) >= MIN_LEADER_RUNS
 
 
 def clip_to_sentence(text: str, max_chars: int) -> str:
+    """Cut `text` at the last sentence end within the budget, or at the last word."""
     if len(text) <= max_chars:
         return text
     window = text[:max_chars]
@@ -270,14 +279,33 @@ def clip_to_sentence(text: str, max_chars: int) -> str:
     return window[:cut].strip() if cut > 0 else ""
 
 
-# It is cut by paragraphs, never by characters: half a sentence quoted as proof that a
-# concept exists in the material proves nothing, and the model reading it has to be able
-# to understand it. It starts at the paragraph where the term genuinely occurs and grows
-# into its neighbours up to the budget. When the name does not occur in any non-navigation
-# paragraph, NO passage is stored: a concept with no anchoring is honest and the interface
-# already reports it, whereas quoting the head of the chunk anchored 43 of 200 concepts to
-# the document's table of contents.
+def _grow_into_neighbours(text: str, paragraphs: list[str], hit: int, max_chars: int) -> str:
+    """Extend the anchor paragraph into the ones around it while the budget allows."""
+    before, after = hit - 1, hit + 1
+    while before >= 0 or after < len(paragraphs):
+        grown = False
+        if after < len(paragraphs) and len(text) + len(paragraphs[after]) + 2 <= max_chars:
+            text = f"{text}\n\n{paragraphs[after]}"
+            after += 1
+            grown = True
+        if before >= 0 and len(text) + len(paragraphs[before]) + 2 <= max_chars:
+            text = f"{paragraphs[before]}\n\n{text}"
+            before -= 1
+            grown = True
+        if not grown:
+            break
+    return text
+
+
 def excerpt(chunk: str, concept: str, max_chars: int) -> str:
+    """The passage of `chunk` that justifies `concept`, cut by paragraphs and not by characters.
+
+    Half a sentence quoted as proof that a concept exists in the material proves nothing,
+    and the model reading it has to be able to understand it. When the name occurs in no
+    non-navigation paragraph, NO passage is stored: a concept with no anchoring is honest
+    and the interface already reports it, whereas quoting the head of the chunk anchored
+    43 of 200 concepts to the table of contents.
+    """
     paragraphs = [
         p
         for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
@@ -294,26 +322,11 @@ def excerpt(chunk: str, concept: str, max_chars: int) -> str:
     if not text:
         return ""
 
-    before, after = hit - 1, hit + 1
-    while before >= 0 or after < len(paragraphs):
-        grown = False
-        if after < len(paragraphs) and len(text) + len(paragraphs[after]) + 2 <= max_chars:
-            text = f"{text}\n\n{paragraphs[after]}"
-            after += 1
-            grown = True
-        if before >= 0 and len(text) + len(paragraphs[before]) + 2 <= max_chars:
-            text = f"{paragraphs[before]}\n\n{text}"
-            before -= 1
-            grown = True
-        if not grown:
-            break
-    return text.strip()
+    return _grow_into_neighbours(text, paragraphs, hit, max_chars).strip()
 
 
 
 
-# The only per-chunk call of the build, so the only one that stays without reasoning:
-# every other model call here happens a handful of times and can afford to think.
 def extract_from_chunk(
     chunk: str,
     log_prefix: str,
@@ -323,15 +336,15 @@ def extract_from_chunk(
     max_attempts: int,
     prompts,
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
+    """Read one chunk for concepts, definitions and relations.
+
+    The only per-chunk call of the build, so the only one that stays without reasoning:
+    every other model call here happens a handful of times and can afford to think.
+    """
     prompt = prompts.extract_typed_graph_prompt(chunk, schema, location)
     return _ask(prompt, log_prefix, schema=schema, max_attempts=max_attempts, prompts=prompts)
 
 
-# A second look at the same chunk, shown what the first one found. It is the cheapest
-# pass of the build — `extract` measured 8 % of it — and the first reading stops early on
-# purpose: a model asked to list everything lists the obvious and closes the JSON. Asked
-# instead «what is missing», with the inventory in front of it, it fills the relations
-# between concepts it already named, which is exactly where the graph was thin.
 def glean_chunk(
     chunk: str,
     log_prefix: str,
@@ -344,6 +357,12 @@ def glean_chunk(
     max_attempts: int,
     prompts,
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
+    """Read the same chunk again, shown what the first pass found, until nothing is added.
+
+    A model asked to list everything lists the obvious and closes the JSON; asked instead
+    «what is missing», with the inventory in front of it, it fills in the relations between
+    concepts it already named, which is where the graph was thin.
+    """
     if not concepts:
         return concepts, relations, definitions
     concepts = list(concepts)
@@ -377,6 +396,7 @@ def glean_chunk(
 def _ask(
     prompt: str, log_prefix: str, *, schema, max_attempts: int, prompts
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
+    """Make one extraction call and read its answer, `([], [], {})` when it is unusable."""
     response = inference.generate(
         model=config.KG_EXTRACT_MODEL,
         prompt=prompt,
@@ -392,15 +412,17 @@ def _ask(
     return concepts, relations, definitions
 
 
-# Concepts and relations are collected into SETS across the whole corpus, so a concept seen
-# in twenty chunks costs one entry and no frequency signal survives. Rarity is not evidence
-# of noise here — `cleaning` is told explicitly not to drop a term for being infrequent.
-# What DOES survive is where each concept was first seen (`positions`, the running chunk
-# count) and the definition written there: the material introduces a concept once, and
-# both the order and the definition are read from that introduction.
 def assemble(
     found: dict, documents: list[tuple[str, list[str], list[tuple[str, list[str], str]]]]
 ) -> dict:
+    """Fold what every chunk found into the staging graph.
+
+    Concepts and relations are collected into SETS across the whole corpus, so a concept
+    seen in twenty chunks costs one entry and no frequency signal survives — rarity is not
+    evidence of noise here, and `cleaning` is told explicitly not to drop a term for being
+    infrequent. What DOES survive is where each concept was first seen and the definition
+    written there: the material introduces a concept once, and both are read from there.
+    """
     origins = found["origins"]
     rels = sorted(list(r) for r in found["relations"])
     names = sorted(origins)

@@ -1,10 +1,14 @@
+"""Every setting the installation declares, indexed by key and by name.
+
+The declarations live one module per family and are assembled here in the order `GROUPS`
+lays the panel out.
+"""
+
 from ..types import Setting
 from . import builders, generation, inference, logging, reasoning, retrieval, tunnel
 
-# The study declares its own block and lives outside this package: `study` imports
-# `variatio` and never the reverse, so the registry reaches it by name rather
-# than by import direction. Without the study installed the panel simply shows one group
-# fewer, and `config.json` round-trips one section fewer.
+# The one place `variatio` names the study, and optional on purpose: `study` imports
+# `variatio` and never the reverse, so the registry reaches it by name, not by import.
 try:
     from study.settings import SETTINGS as STUDY_SETTINGS
 except ImportError:

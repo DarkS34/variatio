@@ -24,17 +24,16 @@ from loguru import logger
 from variatio import config
 from variatio.core import inference, progress
 
-# `cache_path` is required, and that is the point: it used to fall back to the workspace
-# the whole system defaulted to, so every instance that evaluated read and wrote ITS index
-# under that one's `cache/`. Two workspaces with different banks produce different
-# fingerprints, so each run found the other's file stale, rebuilt, and overwrote it — a
-# workspace paying for the other's re-embedding, in a directory it may not even belong to.
-# The fingerprint deliberately does not name the workspace; the PATH is what separates them.
-
 CACHE_VERSION = 1
 
 
 class FlatBankIndex:
+    """The bank as a plain matrix of L2-normalised vectors, cached to one `.npz`.
+
+    `cache_path` is required and never defaulted: the fingerprint deliberately does not
+    name the workspace, so the PATH is the only thing separating two instances' indices.
+    """
+
     def __init__(
         self,
         bank: dict,
@@ -43,6 +42,7 @@ class FlatBankIndex:
         cache_path: str | Path,
         model: str | None = None,
     ):
+        """Hold the bank and where its index lives; nothing is embedded until `ensure`."""
         self.bank = bank
         self.primary_text = primary_text
         self.type_key_of = type_key_of
@@ -54,6 +54,7 @@ class FlatBankIndex:
         self.matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
 
     def ensure(self) -> None:
+        """Load the index from cache or build it, once per process."""
         if self.ids:
             return
         if self._load_cache():
@@ -81,9 +82,11 @@ class FlatBankIndex:
     # BUILD -----------------------------------------------------------------------------------
 
     def _texts(self) -> dict[str, str]:
+        """Return the primary field of every item in the bank, keyed by id."""
         return {item_id: self.primary_text(item) for item_id, item in self.bank.items()}
 
     def _build(self) -> None:
+        """Embed the whole bank and keep the matrix, the ids and the modalities."""
         texts = self._texts()
         self.ids = list(texts)
         self.types = [self.type_key_of(self.bank[item_id]) or "" for item_id in self.ids]
@@ -94,6 +97,7 @@ class FlatBankIndex:
         self.matrix = np.stack(vectors) if vectors else np.zeros((0, 0), dtype=np.float32)
 
     def _embed(self, texts: list[str], reporter=None) -> list[np.ndarray]:
+        """Embed in batches, normalised, checking for cancellation between them."""
         out: list[np.ndarray] = []
         for start in range(0, len(texts), config.EMBEDDING_BATCH_SIZE):
             progress.checkpoint()
@@ -107,6 +111,7 @@ class FlatBankIndex:
     # CACHE -----------------------------------------------------------------------------------
 
     def _fingerprint(self) -> str:
+        """Hash the model and every item's text, which is what invalidates the cache."""
         entries = sorted(
             (item_id, hashlib.md5(text.encode("utf-8")).hexdigest())
             for item_id, text in self._texts().items()
@@ -115,6 +120,7 @@ class FlatBankIndex:
         return hashlib.md5(f"{CACHE_VERSION}::{self.model}::{payload}".encode()).hexdigest()
 
     def _load_cache(self) -> bool:
+        """Read the `.npz` back, answering False for anything stale or unreadable."""
         if not self.cache_path.exists():
             return False
         try:
@@ -129,6 +135,7 @@ class FlatBankIndex:
         return bool(self.ids)
 
     def _save_cache(self) -> None:
+        """Write the matrix, the keys and the fingerprint to the workspace's own `.npz`."""
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez(
             self.cache_path,
@@ -140,5 +147,6 @@ class FlatBankIndex:
 
 
 def _l2_normalize(vector: np.ndarray) -> np.ndarray:
+    """Scale a vector to unit length, leaving a zero vector alone."""
     norm = np.linalg.norm(vector)
     return vector / norm if norm > 0 else vector

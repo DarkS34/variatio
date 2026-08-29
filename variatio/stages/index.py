@@ -1,3 +1,11 @@
+"""The concept descriptions: written against the graph, read from the file alone.
+
+Writing them needs the graph and the subject context; READING them needs neither, which is
+why the four read functions go straight to the file. Routing a read through `_describer`
+tied the graph screen to the exemplars profile — an artifact the graph does not have as an
+upstream — and it failed in exactly the state a new workspace starts in.
+"""
+
 from loguru import logger
 
 from ..core.workspace import Workspace
@@ -8,12 +16,12 @@ from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 
 
-# No profile here, and that is the point of moving the context out of it. Describing a
-# concept needs the graph and what subject this is; it never needed the anatomy of an
-# exercise. Loading the profile for its `content_context` alone is what made
-# `review.UPSTREAM[KNOWLEDGE_GRAPH] == ()` false in practice, and it failed exactly in the
-# state a new workspace starts in: a graph built, nothing else yet.
 def _describer(ws: Workspace) -> ConceptDescriber:
+    """Build a describer from the graph and the subject context — never the profile.
+
+    Describing a concept needs what subject this is, and it never needed the anatomy of an
+    exercise: `review.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and this is what keeps it true.
+    """
     kg_path = _artifacts.knowledge_graph_path(ws)
     if kg_path is None:
         raise _artifacts.MissingArtifactError(_artifacts.KNOWLEDGE_GRAPH)
@@ -44,6 +52,7 @@ def describe_concepts(
 
 
 def restamp_descriptions(ws: Workspace, dry_run: bool = False) -> tuple[int, int]:
+    """Stamp the descriptions against the current graph without rewriting any text."""
     changed, total = _describer(ws).restamp(dry_run=dry_run)
     if dry_run:
         logger.info(
@@ -59,21 +68,16 @@ def restamp_descriptions(ws: Workspace, dry_run: bool = False) -> tuple[int, int
     return changed, total
 
 
-# Writing descriptions requires the graph and the profile, because they have to be
-# composed; READING them requires neither, and routing it through `_describer` tied the
-# graph screen to the exemplars profile — an artifact the graph does not have as an
-# upstream (`review.UPSTREAM`). The symptom was that, with the graph already built,
-# `GET /api/kg` answered 404 saying the profile was missing, and the interface read that
-# as the workspace having no graph.
 def load_concept_descriptions(ws: Workspace) -> dict[str, str]:
+    """Read the descriptions cache — the file alone, no graph and no profile."""
     return load_descriptions(ws.concept_descriptions_path)
 
 
 def save_concept_descriptions(descriptions: dict[str, str], ws: Workspace) -> None:
+    """Write the descriptions cache."""
     save_descriptions(ws.concept_descriptions_path, descriptions)
 
 
-# The corpus anchoring, as the graph build left it. Read for the same reason as the
-# descriptions and under the same rule: only the file, no graph and no profile.
 def load_concept_sources(ws: Workspace) -> dict:
+    """Read the corpus anchoring as the graph build left it, under the same rule."""
     return load_sources(ws.concept_sources_path)

@@ -15,6 +15,8 @@ from .vectors import l2_normalize, prefix_for
 
 
 class Embedder:
+    """The concepts index, the exemplars bank index, and the score that fuses them."""
+
     def __init__(
         self,
         knowledge_graph: KnowledgeGraph,
@@ -28,6 +30,7 @@ class Embedder:
         concepts_cache_path: str | Path,
         exemplars_bank_cache_path: str | Path,
     ):
+        """Write any missing concept description, then load or build both indices."""
         self.knowledge_graph = knowledge_graph
         self.embedding_model = embedding_model
         self.embed_text = embed_text
@@ -69,6 +72,7 @@ class Embedder:
     # SETUP ---------------------------------------------------------------------------------------
 
     def _ensure_concepts_index(self) -> None:
+        """Reuse the concepts cache when it is still valid, else embed and save it."""
         if cache.concept_cache_is_valid(self.concepts_cache_path, self._concept_fingerprint()):
             self.concepts_index = cache.load_concept_cache(self.concepts_cache_path)
             logger.info(
@@ -82,9 +86,12 @@ class Embedder:
             self.concepts_cache_path, self.concepts_index, self._concept_fingerprint()
         )
 
-    # The bank index persisted by the previous run is a warm start for this run's tagging:
-    # enrich_index_with_content re-embeds and re-merges it once the current bank is known.
     def _load_previous_bank_index(self) -> None:
+        """Adopt the bank index the previous run left, as a warm start for this run.
+
+        `enrich_index_with_content` re-embeds and re-merges it once the current bank is
+        known, so tagging already benefits from what the last run learned.
+        """
         if not self.exemplars_bank_cache_path.exists():
             return
         (
@@ -98,6 +105,7 @@ class Embedder:
     # FINGERPRINTS --------------------------------------------------------------------------------
 
     def _embedding_fingerprint(self) -> str:
+        """The fingerprint of the embedding setup: model, indexed fields and prefixes."""
         return cache.embedding_fingerprint(
             self.embedding_model,
             self.embed_signature,
@@ -107,22 +115,27 @@ class Embedder:
 
     @staticmethod
     def _text_fingerprint(text: str) -> str:
+        """The digest of one item's indexed text."""
         return cache.text_fingerprint(text)
 
     def _concept_fingerprint(self) -> str:
+        """The fingerprint of the concepts index as it currently stands."""
         return cache.concept_fingerprint(
             self._embedding_fingerprint(),
             self.knowledge_graph.taggable_concepts,
             self.concept_descriptions,
         )
 
-    # `embed_text` renders every indexed field of an item, so its hash is computed once for
-    # the whole bank and threaded through the fingerprint, the reuse test and the cache file,
-    # which used to run four separate passes over the same items.
     def _text_fingerprints(self, bank: dict) -> dict[str, str]:
+        """Hash every item's indexed text once, for the whole bank.
+
+        `embed_text` renders every indexed field, so the hash is computed here and threaded
+        through the fingerprint, the reuse test and the cache file rather than four times.
+        """
         return {ex_id: self._text_fingerprint(self.embed_text(ex)) for ex_id, ex in bank.items()}
 
     def _exemplars_bank_fingerprint(self, text_fingerprints: dict[str, str]) -> str:
+        """The fingerprint of the bank index as it currently stands."""
         return cache.bank_fingerprint(
             self._embedding_fingerprint(), self.exemplars_bank, text_fingerprints
         )
@@ -130,6 +143,7 @@ class Embedder:
     # INDICES -------------------------------------------------------------------------------
 
     def init_index_with_concepts(self) -> None:
+        """Embed every taggable concept's description into the concepts index."""
         concepts = self.knowledge_graph.taggable_concepts
         with progress.step(
             "index_concepts", "Indexando conceptos", total=len(concepts)
@@ -140,6 +154,7 @@ class Embedder:
         self.concepts_index = dict(zip(concepts, vectors))
 
     def enrich_index_with_content(self, annotated_bank: dict) -> None:
+        """Adopt a bank: embed what changed, reuse the rest, re-merge the centroids."""
         cached_vectors = self.exemplars_bank_index
         cached_texts = self._cached_text_fingerprints
 
@@ -186,12 +201,14 @@ class Embedder:
         self._merge_into_index()
         self._rebuild_matrices()
 
-    # An L2-normalised WEIGHTED centroid: `α·description + (1-α)·centroid(exemplars)`. The
-    # weighting is the point — a plain mean let the description drop to 1/(1+n) as exemplars
-    # accumulated, so a concept's anchor faded with its popularity and mis-tagged exemplars
-    # drifted the centroid with nothing to pull it back. A concept with no exemplars keeps
-    # its description vector untouched.
     def _merge_into_index(self) -> None:
+        """Fuse each concept's description with its exemplars into a weighted centroid.
+
+        `α·description + (1-α)·centroid(exemplars)`, L2-normalised. The weighting is the
+        point: a plain mean let the description drop to 1/(1+n) as exemplars accumulated,
+        so a concept's anchor faded with its popularity and mis-tagged exemplars drifted
+        the centroid with nothing to pull it back. No exemplars keeps the description.
+        """
         alpha = self.description_weight
         for concept in self.knowledge_graph.taggable_concepts:
             description_vec = self.concepts_index[concept]
@@ -212,6 +229,11 @@ class Embedder:
             )
 
     def _rebuild_matrices(self) -> None:
+        """Stack both indices into matrices, so a score is one dot product per side.
+
+        Only items carrying a `primary_concept` enter the exemplar matrix — that is what
+        keeps the kNN leg from propagating an incidental tag.
+        """
         self._concept_keys = list(self.merged_index.keys())
         self._concept_matrix = (
             np.stack([self.merged_index[c] for c in self._concept_keys])
@@ -238,11 +260,14 @@ class Embedder:
 
     @staticmethod
     def _prefix(kind: str) -> str:
+        """The task prefix for one side of retrieval."""
         return prefix_for(kind)
 
-    # Memoised by PREFIXED text, so the same statement embedded for tagging and for the bank
-    # index costs one call.
     def _embed(self, text: str, kind: str) -> np.ndarray:
+        """Embed one text, memoised by PREFIXED text.
+
+        The same statement embedded for tagging and for the bank index costs one call.
+        """
         key = self._prefix(kind) + text
         cached = self._embed_cache.get(key)
         if cached is not None:
@@ -253,12 +278,15 @@ class Embedder:
         return vector
 
     def embed_document(self, text: str) -> np.ndarray:
+        """Embed one text on the indexed side."""
         return self._embed(text, "document")
 
     def _pending_keys(self, keys: list[str]) -> list[str]:
+        """Return the distinct keys not already memoised, in order."""
         return [k for k in dict.fromkeys(keys) if k not in self._embed_cache]
 
     def _embed_many(self, texts: list[str], kind: str, reporter=None) -> list[np.ndarray]:
+        """Embed a list of texts in batches, memoising each and reporting progress."""
         keys = [self._prefix(kind) + t for t in texts]
         pending = self._pending_keys(keys)
 
@@ -278,6 +306,7 @@ class Embedder:
     # RETRIEVAL -----------------------------------------------------------------------------
 
     def prefetch_queries(self, texts: list[str]) -> None:
+        """Embed a batch of statements on the query side, ahead of scoring them."""
         pending = self._pending_keys([self._prefix("query") + t for t in texts])
         if not pending:
             return
@@ -287,9 +316,13 @@ class Embedder:
         ) as reporter:
             self._embed_many(texts, "query", reporter)
 
-    # Ranked against the concept DESCRIPTIONS, never the merged centroids: the centroid
-    # is built from these same exemplars, so ranking them by it would be circular.
     def rank_exemplars(self, concepts: list[str], exemplar_ids: list[str]) -> list[str]:
+        """Order exemplars by how well they match some concepts.
+
+        Ranked against the concept DESCRIPTIONS and never the merged centroids: the
+        centroid is built from these same exemplars, so ranking them by it would be
+        circular.
+        """
         vectors = [self.concepts_index[c] for c in concepts if c in self.concepts_index]
         if not vectors:
             return list(exemplar_ids)
@@ -302,10 +335,13 @@ class Embedder:
         scored.sort(key=lambda pair: -pair[0])
         return [ex_id for _, ex_id in scored]
 
-    # `EMBEDDER_SIMILARITY_THRESHOLD` gates ONLY the top-1 score — it answers "is this item
-    # about anything in the KG at all?". Below it the item matches nothing in the graph and
-    # no candidate is returned at all.
     def top_k_concepts(self, text: str, k: int) -> list[tuple[str, float]]:
+        """Return the k best-scoring concepts for a statement, or nothing at all.
+
+        `EMBEDDER_SIMILARITY_THRESHOLD` gates ONLY the top-1 score — it answers "is this
+        item about anything in the KG at all?". Below it the item matches nothing in the
+        graph and no candidate is returned.
+        """
         scores = self._score_concepts(self._embed(text, "query"))
         if not scores:
             return []
@@ -316,11 +352,14 @@ class Embedder:
 
         return ranked[:k]
 
-    # Retrieval is a two-signal MAX, not just the centroid: concepts are multimodal (the
-    # same concept is practised in dissimilar ways) and a centroid lands between the modes,
-    # which the kNN leg recovers. It is restricted to `primary_concept` on purpose — a max
-    # over every incidental tag would propagate one mis-tag to everything resembling it.
     def _score_concepts(self, vec: np.ndarray) -> dict[str, float]:
+        """Score every concept against a query vector, as a two-signal MAX.
+
+        Concepts are multimodal — the same one is practised in dissimilar ways — so a
+        centroid lands between the modes and the kNN leg recovers those. That leg is
+        restricted to `primary_concept` on purpose: a max over every incidental tag would
+        propagate one mis-tag to everything resembling it.
+        """
         if not self._concept_keys:
             return {}
 

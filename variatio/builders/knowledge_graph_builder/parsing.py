@@ -13,6 +13,7 @@ from ...core.repair import parse_with_repair
 
 
 def parse_json_object(text: str) -> tuple[dict | None, str | None]:
+    """Repair the text into a JSON object, or say why it is not one."""
     raw = repair_json(text, return_objects=True)
     if not isinstance(raw, dict):
         return None, "model did not return a JSON object"
@@ -22,6 +23,7 @@ def parse_json_object(text: str) -> tuple[dict | None, str | None]:
 def parse_object(
     response: str, log_prefix: str, format: dict, max_attempts: int, prompts
 ) -> dict | None:
+    """Read one answer as an object, escalating to the repair model, `None` if unrecoverable."""
     result, error = parse_with_repair(
         response,
         parse_json_object,
@@ -37,26 +39,38 @@ def parse_object(
     return result
 
 
+def _triple(entry) -> list[str] | None:
+    """One well-formed `[source, relation, target]` of stripped strings, or `None`."""
+    if not (isinstance(entry, list) and len(entry) == 3):
+        return None
+    if not all(isinstance(x, str) for x in entry):
+        return None
+    source, relation, target = (x.strip() for x in entry)
+    if not (source and target) or source == target:
+        return None
+    return [source, relation, target]
+
+
 def valid_relations(raw: list, schema, allowed: set[str] | None) -> list[list[str]]:
+    """Keep the triples whose relation is in the vocabulary and whose endpoints are allowed."""
     out = []
-    for triple in raw or []:
-        if not (isinstance(triple, list) and len(triple) == 3):
+    for entry in raw or []:
+        triple = _triple(entry)
+        if triple is None or triple[1] not in schema:
             continue
-        if not all(isinstance(x, str) for x in triple):
+        if allowed is not None and (triple[0] not in allowed or triple[2] not in allowed):
             continue
-        source, relation, target = (x.strip() for x in triple)
-        if not (source and target) or source == target or relation not in schema:
-            continue
-        if allowed is not None and (source not in allowed or target not in allowed):
-            continue
-        out.append([source, relation, target])
+        out.append(triple)
     return out
 
 
-# A concept arrives as `{"name", "definition"}`, but a bare string is still read: the
-# grammar pins the shape for the two passes that run under it, and nothing else should
-# fail on an answer the older prompt would have produced.
 def concepts_with_definitions(raw: list) -> tuple[list[str], dict[str, str]]:
+    """Read the concept list as `(names, definitions)`, deduplicated in order of arrival.
+
+    A concept arrives as `{"name", "definition"}`, but a bare string is still read: the
+    grammar pins the shape for the two passes that run under it, and nothing else should
+    fail on an answer the older prompt would have produced.
+    """
     names: list[str] = []
     definitions: dict[str, str] = {}
     for entry in raw or []:
@@ -77,6 +91,7 @@ def concepts_with_definitions(raw: list) -> tuple[list[str], dict[str, str]]:
 
 
 def clip_definition(text: str) -> str:
+    """Collapse the whitespace of a definition and cut it on a word at the cap."""
     text = " ".join(text.split())
     limit = config.KG_DEFINITION_MAX_CHARS
     if len(text) <= limit:

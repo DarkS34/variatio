@@ -1,8 +1,12 @@
 """The installation's settings, read and rewritten without restarting the process.
 
-Lives under `/api/admin` and not under `/api/workspaces` because the configuration
-belongs to the whole installation: a workspace does not choose the model it is built
-with, since the GPU co-residency arithmetic is one for the whole process.
+Behind `require_admin`, and under `/api/admin` rather than under `/api/workspaces`
+because the configuration belongs to the whole installation: a workspace does not choose
+the model it is built with, the GPU co-residency arithmetic being one for the process.
+
+What a change invalidates is keyed off the setting's `Impact` and off nothing else, in
+`_act`: `ENGINE` resets the inference engine, and `ENGINE`, `CONTEXTS` or `REINDEX`
+invalidate every warm context.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,14 +26,19 @@ router = APIRouter(
 
 
 class Patch(BaseModel):
+    """The settings being written, keyed by registry key."""
+
     values: dict[str, object]
 
 
 class Reset(BaseModel):
+    """The registry keys whose stored value is being dropped."""
+
     keys: list[str]
 
 
 def _payload() -> dict:
+    """Assemble the whole configuration screen: groups, values, pipeline and models."""
     return {
         "groups": list(vg_settings.GROUPS),
         "settings": vg_settings.snapshot(),
@@ -38,10 +47,12 @@ def _payload() -> dict:
     }
 
 
-# What the engine can offer, so the model fields are a choice and not a string to type
-# without a typo. Both readings fail to an empty list: the configuration must remain
-# editable when the engine is down, which is exactly when one may want to change it.
 def _models() -> dict:
+    """List what the engine can offer, so a model field is a choice and not a typed string.
+
+    Both readings fail to an empty list: the configuration must stay editable while the
+    engine is down, which is exactly when one wants to change it.
+    """
     installed: list[dict] = []
     running: list[dict] = []
     if inference.is_available():
@@ -57,6 +68,7 @@ def _models() -> dict:
 
 
 def _refuse_while_busy() -> None:
+    """Raise 409 while a job runs: half a build written under two configurations."""
     job = runtime.runner.current()
     if job is not None:
         raise HTTPException(
@@ -67,6 +79,7 @@ def _refuse_while_busy() -> None:
 
 
 def _act(impacts: set) -> list[str]:
+    """Invalidate what the changed settings' `Impact` says has to go, and say what went."""
     done: list[str] = []
     if Impact.ENGINE in impacts:
         inference.reset_engine()
@@ -81,11 +94,17 @@ def _act(impacts: set) -> list[str]:
 
 @router.get("")
 def read() -> dict:
+    """Answer the whole configuration screen."""
     return _payload()
 
 
 @router.get("/cerebras-models")
 def cerebras_models() -> dict:
+    """Answer Cerebras' catalogue, degrading to the declared models and never to an error.
+
+    Without a key, or with the API unreachable, the panel still has to be able to draw
+    the model field — so the reason travels beside the fallback list.
+    """
     declared = [str(model) for model in vg_config.CEREBRAS_MODELS]
     if not vg_config.CEREBRAS_API_KEY:
         return {
@@ -101,6 +120,7 @@ def cerebras_models() -> dict:
 
 @router.put("")
 def write(body: Patch) -> dict:
+    """Store the given values and answer the screen, with what the change invalidated."""
     _refuse_while_busy()
     try:
         impacts = vg_settings.update(body.values)
@@ -109,10 +129,13 @@ def write(body: Patch) -> dict:
     return {**_payload(), "applied": _act(impacts)}
 
 
-# Back to the registry's default: the key leaves `config.json`, so the panel reports the
-# value as «por defecto» again instead of as a file value that happens to equal it.
 @router.post("/reset")
 def reset(body: Reset) -> dict:
+    """Drop these keys from `config.json`, back to the registry's default.
+
+    The key leaves the file, so the panel reports the value as «por defecto» again
+    instead of as a stored value that happens to equal it.
+    """
     _refuse_while_busy()
     try:
         impacts = vg_settings.reset(body.keys)
@@ -123,6 +146,7 @@ def reset(body: Reset) -> dict:
 
 @router.post("/reload")
 def reload() -> dict:
+    """Re-read `config.json` and the environment, and answer what that invalidated."""
     _refuse_while_busy()
     impacts = vg_settings.reload()
     return {**_payload(), "applied": _act(impacts)}

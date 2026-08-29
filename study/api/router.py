@@ -5,11 +5,10 @@ in the bundle and, worse, the JSON has already reached the client: the only way 
 comparison to actually be blind is for the server never to send the mapping until the
 evaluator has committed to a choice.
 
-What this router deliberately no longer serves, as of phase 3: the study's aggregates and
-its CSV. Both moved to `/api/admin/evaluations`. Handing an evaluator the running score of
-the thing they are judging invites them to even it out, and a per-session export of
-everybody's judgements is research data, not a feature of the screen where you compare
-three cards.
+What this router deliberately does NOT serve is the study's aggregates and its CSV, which
+are `/api/admin/evaluations`': handing an evaluator the running score of the thing they are
+judging invites them to even it out, and a per-session export of everybody's judgements is
+research data rather than a feature of the screen where you compare three cards.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -32,6 +31,8 @@ router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[
 
 
 class EvaluationBody(BaseModel):
+    """A commission to compare. `force` runs it with the chain not yet approved."""
+
     concepts: list[str] = []
     item_type: str | None = None
     fixed: dict = {}
@@ -42,15 +43,21 @@ class EvaluationBody(BaseModel):
 
 
 class ChoiceBody(BaseModel):
+    """Which position won, or null for «ninguna», plus an optional note."""
+
     choice: int | None = None
     comment: str | None = None
 
 
 class DeleteBody(BaseModel):
+    """The sessions to remove."""
+
     ids: list[str]
 
 
 class RatingBody(BaseModel):
+    """The post-reveal rubric over the system's variant. Every field is optional."""
+
     originality: int | None = None
     complexity: int | None = None
     concept_fit: int | None = None
@@ -60,11 +67,15 @@ class RatingBody(BaseModel):
 
 
 class TriageBody(BaseModel):
+    """One blind answer, addressed BY POSITION because that is what the evaluator saw."""
+
     position: int
     value: str
 
 
 class DeclineBody(BaseModel):
+    """An optional note beside «no tengo criterio para juzgar esto»."""
+
     comment: str | None = None
 
 
@@ -73,6 +84,7 @@ class DeclineBody(BaseModel):
 
 @router.post("", dependencies=[auth.EDIT])
 def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
+    """Queue one blind comparison for this workspace."""
     if not body.concepts:
         raise HTTPException(422, "Hay que elegir al menos un concepto objetivo.")
     if not body.force:
@@ -105,9 +117,6 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
 # LISTING ---------------------------------------------------------------------------------------
 
 
-# Your own sessions, so you can reopen one you left undecided. Not the workspace's: a
-# session is a judgement, and reading a colleague's before making your own is the one way
-# a blind comparison stops being blind after the fact.
 @router.get("")
 def listing(
     limit: int = Query(50, ge=1, le=200),
@@ -115,6 +124,11 @@ def listing(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Return YOUR own sessions, your queue, and how this account is asked things.
+
+    Not the workspace's sessions: a session is a judgement, and reading a colleague's
+    before making your own is the one way a blind comparison stops being blind afterwards.
+    """
     sessions, total = evaluation_store.listing(
         db, access.workspace.id, author=access.user.id, limit=limit, offset=offset
     )
@@ -131,8 +145,7 @@ def listing(
         # The queue, which is what the screen opens on: what somebody handed this evaluator,
         # oldest first, pending ones ahead of the ones already judged.
         "queue": _queue(assigned),
-        # How this account is asked things. Served rather than hard-coded in the browser
-        # because it IS the instrument: rewording it changes what was measured.
+        # Served rather than hard-coded in the browser because it IS the instrument.
         "instruments": instruments.for_profile(access.user.evaluator_profile),
         "external": {
             "provider": provider,
@@ -143,9 +156,14 @@ def listing(
     }
 
 
-# Pending first and oldest first inside each half: a queue is worked from the front, and
-# «la siguiente» has to mean the same thing on every reload.
 def _queue(rows: list) -> dict:
+    """Shape what this evaluator was handed: pending first, oldest first inside each half.
+
+    A queue is worked from the front, so «la siguiente» has to mean the same thing on every
+    reload. Who assigned each session is recorded and read by the panel, and deliberately
+    absent here: on the evaluator's own screen it invites reading the judgement as owed to
+    a person rather than to the study.
+    """
     pending = [row for row in rows if row.chosen_at is None and row.declined_at is None]
     done = [row for row in rows if row.chosen_at is not None or row.declined_at is not None]
     return {
@@ -158,9 +176,6 @@ def _queue(rows: list) -> dict:
                 "concepts": list(row.concepts or []),
                 "item_type": row.item_type or "",
                 "instructions": row.instructions or "",
-                # Who assigned it is recorded and the administration panel reads it; it is
-                # deliberately absent here. On the evaluator's own screen it would invite
-                # reading the judgement as owed to a person rather than to the study.
                 "decided": row.chosen_at is not None,
                 "declined": row.declined_at is not None,
                 "rated": bool(row.rating),
@@ -171,12 +186,17 @@ def _queue(rows: list) -> dict:
 
 
 # ONE SESSION -----------------------------------------------------------------------------------
+#
+# Every fixed path stays ABOVE the `/{session_id}` wildcards below. FastAPI matches in
+# declaration order, so one added underneath is swallowed and answers a plausible 404 from
+# a route nobody meant to call. `tests/study/test_route_order.py` pins it.
 
 
 @router.delete("", dependencies=[auth.EDIT])
 def delete_sessions(
     body: DeleteBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Delete sessions of your own, refusing any that is not."""
     ids = list(dict.fromkeys(i for i in body.ids if i))
     if not ids:
         raise HTTPException(422, "No se ha indicado ninguna sesión.")
@@ -189,19 +209,18 @@ def delete_sessions(
 def detail(
     session_id: str, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
 ) -> dict:
+    """Return one session, blind or revealed, and start its clock the first time.
+
+    Time-on-task is measured from `opened_at`, which is written once and never moved: a
+    reload must not restart it. The evaluator never sees it.
+    """
     row = _require(db, session_id, access)
-    # The clock starts when the cards first reach the person who has to judge them. Since
-    # `_require` became an equality this row IS theirs, so the ownership half is a floor
-    # rather than the check it used to be — what is left to decide is only whether the
-    # session is still open.
     if row.user_id == access.user.id and row.chosen_at is None and row.declined_at is None:
         evaluation_store.mark_opened(db, row)
         db.refresh(row)
     return _payload(EvaluationSession.from_dict(row.trace))
 
 
-# One card, one answer, blind. It has to arrive before the choice, which is the entire
-# reason it exists: a score given after the reveal is a score about a name.
 @router.post("/{session_id}/triage", dependencies=[auth.EDIT])
 def triage(
     session_id: str,
@@ -209,6 +228,11 @@ def triage(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Record one blind per-card answer.
+
+    It has to arrive before the choice, which is the entire reason it exists: a score given
+    after the reveal is a score about a name.
+    """
     row = _require(db, session_id, access)
     try:
         session = evaluation_store.record_triage(db, row, body.position, body.value)
@@ -219,9 +243,6 @@ def triage(
     return _payload(session)
 
 
-# «No me veo capacitado para juzgar esto», which with evaluators drawn from different
-# subjects is a real answer and not an escape hatch. It closes the session without ever
-# entering a preference count.
 @router.post("/{session_id}/decline", dependencies=[auth.EDIT])
 def decline(
     session_id: str,
@@ -229,6 +250,11 @@ def decline(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Close the session without a preference.
+
+    With evaluators drawn from different subjects this is a real answer and not an escape
+    hatch. It sets `declined_at` and never `chosen_at`, so it enters no preference count.
+    """
     row = _require(db, session_id, access)
     try:
         session = evaluation_store.record_decline(db, row, body.comment)
@@ -246,12 +272,15 @@ def choose(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Record the forced choice, which is what reveals the session.
+
+    A session is judged once: letting it be re-chosen after the reveal would make the datum
+    something other than blind.
+    """
     row = _require(db, session_id, access)
     try:
         session = evaluation_store.record_choice(db, row, body.choice, body.comment)
     except ValueError as e:
-        # A session is judged once: letting it be re-chosen after the reveal would make
-        # the datum something other than blind.
         if str(e) == "already-chosen":
             raise HTTPException(409, "Esta sesión ya tenía una elección registrada.") from None
         raise HTTPException(422, str(e)) from None
@@ -265,6 +294,7 @@ def rate(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
+    """Record the post-reveal rubric, which is refused until a choice exists."""
     row = _require(db, session_id, access)
     try:
         session = evaluation_store.record_rating(
@@ -282,16 +312,15 @@ def rate(
 # SHAPING ---------------------------------------------------------------------------------------
 
 
-# Two conditions, not one: the session has to belong to this workspace *and* to whoever is
-# asking. The workspace check alone would let a colleague open a comparison they never ran
-# and read its reveal.
-#
-# THE SECOND CONDITION IS AN EQUALITY, AND ITS TWO LOOPHOLES WERE THE SAME BUG. It used to
-# read «not mine AND not an administrator», which let an administrator ANSWER somebody
-# else's session — recorded under that somebody, because no answer rewrites `user_id` — and
-# it let a session with no evaluator through for everyone, which is what stock is. Reading
-# another account's session is the administration panel's own route, and it does not write.
 def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession:
+    """Return the session only when it is this workspace's AND this account's own.
+
+    The ownership half is an EQUALITY and not «not mine and not an administrator»: the
+    looser form let an administrator answer somebody else's session, recorded under that
+    somebody because no answer rewrites `user_id`, and let unassigned stock through for
+    everyone. Reading another account's session is the panel's own route, which never
+    writes.
+    """
     row = queries.get_evaluation(db, session_id)
     if row is None or row.workspace_id != access.workspace.id:
         raise HTTPException(404, f"No existe la sesión '{session_id}'")
@@ -301,6 +330,11 @@ def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession
 
 
 def _summary(header: dict) -> dict:
+    """Shape one row of the listing, withholding the per-arm history until it is judged.
+
+    A pending session that admits «the commercial one was unavailable» hands over the
+    identity of whichever card shows no exercise.
+    """
     decided = bool(header.get("chosen_at"))
     statuses = header.get("arm_status") or {}
     return {
@@ -315,20 +349,18 @@ def _summary(header: dict) -> dict:
         "chosen_at": header.get("chosen_at"),
         "declined_at": header.get("declined_at"),
         "rated": bool(header.get("rating")),
-        # Like `arm_status`: history of a judged session, withheld while it is pending.
         "think": bool(header.get("think", True)) if decided else None,
-        # Per-arm outcomes are history, and history only exists once the session has been
-        # judged: a pending session that admits "the commercial one was unavailable" hands
-        # over the identity of whichever card shows no exercise.
         "arm_status": statuses if decided else {},
         "without_item": sum(1 for status in statuses.values() if status != "ok"),
     }
 
 
 def _payload(session: EvaluationSession) -> dict:
-    # A declined session reveals too: it is over, nobody will judge it, and withholding the
-    # answer from someone who just said they could not judge it would be a punishment for
-    # having said so.
+    """Render one session, revealing the mapping only once it is finished.
+
+    A declined session reveals too: it is over, nobody will judge it, and withholding the
+    answer from someone who just said they could not judge it punishes them for saying so.
+    """
     revealed = session.finished
     return {
         "session": {
@@ -349,10 +381,9 @@ def _payload(session: EvaluationSession) -> dict:
             "declined_at": session.declined_at,
             "evaluator_note": session.evaluator_note,
             "rating": session.rating,
-            # Only after the reveal: the seed is the shuffle, and the reasoning mode is
-            # the same for the three cards, so telling it beforehand identifies none of
-            # them — but it does colour the reading of what is on screen, and the point of
-            # drawing it was to measure it, not to have it judged with that in mind.
+            # The seed IS the shuffle. `think` identifies no card, being the same for the
+            # three, but it colours the reading, and the point of drawing it was to measure
+            # it rather than to have it judged with that in mind.
             "seed": session.seed if revealed else None,
             "think": session.think if revealed else None,
         },
@@ -361,12 +392,15 @@ def _payload(session: EvaluationSession) -> dict:
 
 
 def _position(session: EvaluationSession, position: int, revealed: bool) -> dict:
+    """Render one card: the item alone while blind, the whole trace once revealed.
+
+    `failed` and `unavailable` collapse into one neutral status before the reveal, because
+    saying a proposal is unavailable for a spent quota identifies the commercial arm before
+    a single card has been read.
+    """
     result = session.arms[session.arm_at(position)]
 
     if not revealed:
-        # `failed` and `unavailable` collapse into one neutral status on purpose: telling
-        # the evaluator that a proposal is unavailable because a quota ran out identifies
-        # the commercial arm before a single card has been read.
         return {
             "position": position,
             "status": "ok" if result.status == "ok" else "no_item",

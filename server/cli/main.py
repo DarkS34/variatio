@@ -1,3 +1,9 @@
+"""The parser and the dispatch, and nothing else.
+
+`.env` is loaded before the subcommand modules are imported, because they read settings
+at import time.
+"""
+
 import argparse
 import sys
 
@@ -13,6 +19,11 @@ from .serve import serve
 
 
 def build_parser():
+    """Build the argument parser, returning it with its subparsers.
+
+    Every subcommand but `db-check` and `serve` is wrapped in `guarded()`, which turns an
+    unreachable database into a message instead of a stack trace.
+    """
     parser = argparse.ArgumentParser(
         prog=PROG,
         description="Arranca la API de Variatio y administra su base de datos.",
@@ -57,8 +68,8 @@ def build_parser():
     maker.add_argument("slug", help="identificador en minúsculas, cifras y guiones")
     maker.add_argument("--name", default="", help="nombre legible; por defecto, el slug")
     maker.add_argument("--owner", default=None, metavar="USUARIO", help="cuenta que lo poseerá")
-    # El idioma de sus PROMPTS, no el de quien lo usa. Se elige aquí porque queda cocido en
-    # los artefactos que construya, y después ya no se puede cambiar.
+    # The language of its PROMPTS, not of whoever uses it. Chosen here because it is baked
+    # into the artifacts a build writes, and cannot be changed afterwards.
     maker.add_argument(
         "--language",
         default=languages.DEFAULT,
@@ -95,8 +106,8 @@ def build_parser():
         choices=("teacher", "student"),
         help="perfil de evaluador: decide qué se le pregunta al comparar propuestas",
     )
-    # Aquí hay valor por defecto y en el formulario de registro no: no hay ningún navegador
-    # a quien preguntárselo, y una cuenta sin idioma no puede leer nada.
+    # A default here and none on the registration form: there is no browser to ask, and an
+    # account with no language can read nothing.
     creator.add_argument(
         "--language",
         default=languages.DEFAULT,
@@ -127,10 +138,13 @@ def build_parser():
     return parser, subparsers
 
 
-# Anything that is not one of the subcommands is treated as arguments to `serve`, so the two
-# forms this entry point already supported keep working verbatim: `system` and
-# `system --port 9000 --reload`.
 def _with_default_command(argv: list[str], commands) -> list[str]:
+    """Prefix `serve` unless the first argument already names a subcommand or asks for help.
+
+    Anything that is not a subcommand is treated as arguments to `serve`, so both forms
+    this entry point already supported keep working verbatim: `system` and
+    `system --port 9000 --reload`.
+    """
     if not argv:
         return ["serve"]
     if argv[0] in ("-h", "--help") or argv[0] in commands:
@@ -139,6 +153,7 @@ def _with_default_command(argv: list[str], commands) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse the arguments and run the subcommand, returning its exit code."""
     parser, subparsers = build_parser()
     argv = list(sys.argv[1:] if argv is None else argv)
     args = parser.parse_args(_with_default_command(argv, subparsers.choices))

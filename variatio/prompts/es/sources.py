@@ -1,3 +1,5 @@
+"""Reading the raw documents: a page transcribed, a seam decided, a fragment made items."""
+
 from ..marks import CORRECT_ANSWER_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 
 __all__ = [
@@ -11,6 +13,14 @@ __all__ = [
 
 
 def transcribe_page_prompt(page_number: int, page_count: int) -> str:
+    """Ask for one page image copied into Markdown, character by character.
+
+    The whole route stands on «copy, do not interpret»: a later extractor reads the
+    transcription believing it is the original document, so anything changed becomes false
+    teaching material. The only mark the model may add is `CORRECT_ANSWER_MARK`, on a
+    visually highlighted answer option; a page carrying nothing but logos and page numbers
+    comes back as `EMPTY_PAGE_MARK`, which `pages.py` matches. The answer is bare Markdown.
+    """
     return f"""\
 Transcribe a Markdown la PÁGINA {page_number} de {page_count} de un documento de material docente. La tienes delante como imagen.
 
@@ -50,6 +60,14 @@ Markdown:"""
 
 
 def merge_pages_prompt(tail: str, head: str, page_number: int, page_count: int) -> str:
+    """Ask how two consecutively transcribed pages join, and nothing else.
+
+    The certain seams are decided deterministically before the call; only the ambiguous ones
+    reach here. The answer is `continues`, a `separator` out of `SEAM_SEPARATORS`,
+    `drop_head_lines` (0 when in doubt — dropping a line of content loses teaching material
+    and leaving a repeated header does not) and a short `reason`. The model classifies and
+    never rewrites: one word of its own in the document would be false teaching material.
+    """
     return f"""\
 Dos páginas consecutivas de un documento docente se transcribieron por separado. Decide CÓMO SE UNEN, y nada más.
 
@@ -88,6 +106,14 @@ def format_content_prompt(
     context_block: str = "",
     type_keys: list[str] | None = None,
 ) -> str:
+    """Ask for the learning items of one markdown fragment, each under one modality's schema.
+
+    Classify first, extract afterwards: every object carries `item_type` — one of
+    `type_keys` — plus that modality's own fields and no other's. Values are copied
+    verbatim, a field the source does not carry goes to `null` rather than being invented,
+    and `CORRECT_ANSWER_MARK` is read for the correct option and then stripped out of the
+    value. A fragment that sets no task comes back as `[]`; the answer is a JSON array.
+    """
     context_section = (
         f"\n# CONTEXTO DOCENTE DEL DOCUMENTO\n{context_block}\n" if context_block.strip() else ""
     )

@@ -1,15 +1,21 @@
+"""An advisory lock on a file, so only one `serve` runs at a time."""
+
 import atexit
 import os
 from pathlib import Path
 
 
 class LockHeld(RuntimeError):
+    """Raised when the lock file is already held by another process."""
+
     def __init__(self, path: Path):
+        """Record which lock file was held."""
         super().__init__(str(path))
         self.path = path
 
 
 def _try_lock(handle) -> bool:
+    """Take the lock without blocking; False when somebody else holds it."""
     if os.name == "nt":
         import msvcrt
 
@@ -28,6 +34,7 @@ def _try_lock(handle) -> bool:
 
 
 def _unlock(handle) -> None:
+    """Release the lock and close the handle, tolerating a failure to unlock."""
     try:
         if os.name == "nt":
             import msvcrt
@@ -44,6 +51,7 @@ def _unlock(handle) -> None:
 
 
 def acquire(path: Path):
+    """Open the lock file and take it, or raise `LockHeld`."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = path.open("a+")
@@ -55,12 +63,14 @@ def acquire(path: Path):
 
 
 def release(handle) -> None:
+    """Release a handle from `acquire`, tolerating None and an already-closed one."""
     if handle is None or handle.closed:
         return
     _unlock(handle)
 
 
 def hold(path: Path):
+    """Take the lock and keep it for the life of the process."""
     handle = acquire(path)
     atexit.register(release, handle)
     return handle

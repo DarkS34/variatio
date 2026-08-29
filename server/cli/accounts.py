@@ -1,9 +1,15 @@
-# What the two profiles are called when a command prints one. The web has its own copy in
-# Spanish for the same reason every other label does: this one is read in a terminal.
+"""`create-user`, `users`, `grant` and `invite`."""
+
+# What the two profiles are called when a command prints one. The web keeps its own copy
+# for the same reason every other label does: this one is read in a terminal.
 PROFILE_LABELS = {"teacher": "docente", "student": "alumno"}
 
 
 def _ask_password(args) -> str | None:
+    """Take the password from the flag or the environment, or ask for it twice.
+
+    None when the two do not match, or when the prompt was cancelled.
+    """
     import getpass
     import os
 
@@ -24,10 +30,14 @@ def _ask_password(args) -> str | None:
     return first
 
 
-# The first account is created here and not on the web, so that there is no moment in the
-# system's life when it accepts a registration without credentials. Every later account
-# arrives through a single-use invitation.
 def create_user(args) -> int:
+    """Create one account, with an optional membership.
+
+    The first account is created here and not on the web, so that there is no moment in
+    the system's life when it accepts a registration without credentials; every later one
+    arrives through a single-use invitation. Naming a workspace attaches the account to
+    it, and belonging to none is a normal state.
+    """
     from ..auth import passwords
     from ..db import session_scope
     from ..db.identity import (
@@ -69,9 +79,6 @@ def create_user(args) -> int:
             evaluator_profile=getattr(args, "profile", None),
             ui_language=getattr(args, "language", None),
         )
-        # An account with no workspace is a normal account since 2026-08-26: there is no
-        # instance to attach it to by default, and the first thing the panel offers it is
-        # to create its own. Naming one still attaches it, as it always did.
         membership = "sin workspace"
         if args.workspace:
             workspace = ensure_workspace(session, args.workspace)
@@ -87,6 +94,7 @@ def create_user(args) -> int:
 
 
 def list_users(_args) -> int:
+    """Print every account with its roles, its flags and its evaluator profile."""
     from ..db import session_scope
     from ..db.identity import list_users as rows_of, memberships_for
 
@@ -108,6 +116,7 @@ def list_users(_args) -> int:
 
 
 def grant_role(args) -> int:
+    """Give an account a role in a workspace, or name whichever of the two is missing."""
     from ..db import session_scope
     from ..db.identity import get_user, grant
     from ..db.repository import get_workspace
@@ -127,6 +136,11 @@ def grant_role(args) -> int:
 
 
 def invite(args) -> int:
+    """Mint a single-use invitation and print its link.
+
+    The link *is* the invitation: whoever opens it chooses their own username and says
+    whether they teach or study, so it binds the access and nothing else.
+    """
     from ..auth import tokens
     from ..db import session_scope
     from ..db.identity import create_invite

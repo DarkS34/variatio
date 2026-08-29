@@ -1,4 +1,9 @@
-"""Every artifact write goes through here: atomic, backed up, reversible."""
+"""Every artifact write goes through here: atomic, backed up, reversible.
+
+`write_json` wraps `core.json_io.write_json` to add the history snapshot and the database
+mirror, and it is the only permitted second writer of a persisted artifact — the approval
+hashes in the database are hashes of exactly those bytes.
+"""
 
 import hashlib
 import json
@@ -13,6 +18,7 @@ from .db import mirror
 
 
 def read_json(path: Path) -> dict | list | None:
+    """Read a JSON file, or None when there is none."""
     if not Path(path).is_file():
         return None
     with Path(path).open(encoding="utf-8") as f:
@@ -20,6 +26,7 @@ def read_json(path: Path) -> dict | list | None:
 
 
 def sha256_of(path: Path | None) -> str | None:
+    """Digest a file's bytes, or None when there is no file."""
     if path is None or not Path(path).is_file():
         return None
     digest = hashlib.sha256()
@@ -44,12 +51,17 @@ def backup(ws: Workspace, path: Path, artifact: str) -> Path | None:
 
 
 def _prune(directory: Path, keep: int) -> None:
+    """Keep only the newest `keep` snapshots of one artifact.
+
+    Sorted by name, which is the timestamp the snapshot was written under.
+    """
     snapshots = sorted(directory.iterdir(), reverse=True)
     for stale in snapshots[keep:]:
         stale.unlink(missing_ok=True)
 
 
 def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | None = None) -> Path:
+    """Write a JSON file, snapshotting and mirroring it when it is a named artifact."""
     path = Path(path)
     if artifact and ws is not None:
         backup(ws, path, artifact)
@@ -60,6 +72,7 @@ def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | No
 
 
 def history(ws: Workspace, artifact: str) -> list[dict]:
+    """List an artifact's snapshots, newest first."""
     directory = ws.history_dir / artifact
     if not directory.is_dir():
         return []
@@ -74,6 +87,10 @@ def history(ws: Workspace, artifact: str) -> list[dict]:
 
 
 def restore(ws: Workspace, artifact: str, snapshot_id: str, target: Path) -> Path:
+    """Write one snapshot back over an artifact, snapshotting what it replaces.
+
+    The id must be a bare filename, since it arrives in a request.
+    """
     if snapshot_id != Path(snapshot_id).name:
         raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")
     source = ws.history_dir / artifact / snapshot_id

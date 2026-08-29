@@ -1,3 +1,10 @@
+"""The composition root: the FastAPI app, its middleware stack and the built front-end.
+
+Nothing inside `server` may import this module. It is also the only place the study is
+mounted, because `study.api` imports `server.auth` and `server.routers.jobs` back and
+mounting it from the router package would close a cycle.
+"""
+
 import asyncio
 import contextlib
 
@@ -20,6 +27,12 @@ except ImportError:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Start the bus, tunnel, queue and idle unloader, and let go of the GPU on the way out.
+
+    With `OLLAMA_KEEP_ALIVE=24h` the process that loaded the models is the only one that
+    can release them, so shutdown does it best-effort in a thread — a slow engine must not
+    hold the event loop past uvicorn's own shutdown timeout.
+    """
     runtime.bus.attach_loop(asyncio.get_running_loop())
     _autostart_tunnel()
     runtime.runner.start()
@@ -29,10 +42,6 @@ async def lifespan(app: FastAPI):
     finally:
         runtime.idle_unloader.stop()
         runtime.runner.shutdown()
-        # The process that loaded the models is the one that lets go of them: with
-        # `OLLAMA_KEEP_ALIVE=24h` a stopped API would otherwise leave ~29 GiB resident on a
-        # shared card until tomorrow. Best-effort, in a thread so a slow engine cannot hold
-        # the event loop past uvicorn's own shutdown timeout.
         try:
             await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
         except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
@@ -41,6 +50,7 @@ async def lifespan(app: FastAPI):
 
 
 def _autostart_tunnel() -> None:
+    """Open the SSH tunnel when the installation asks for it; a failure is a panel message."""
     if not (config.OLLAMA_SSH_AUTOSTART and runtime.tunnel.configured()):
         return
     try:
@@ -50,6 +60,7 @@ def _autostart_tunnel() -> None:
 
 
 def create_app() -> FastAPI:
+    """Assemble the whole application: middleware, routers, the study and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -57,20 +68,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ORDER IS LOAD-BEARING, AND IT READS BACKWARDS: `add_middleware` inserts at the front
-    # of the list and the stack is built by wrapping in reverse, so the LAST call is the
-    # OUTERMOST layer. Adding `SecurityHeaders` first left it inside `OriginCheck`, and the
-    # 403 that `_refused()` returns never passed through it — a refused request went out
-    # with no `nosniff` and no CSP, which is exactly the response an attacker gets to look
-    # at. `SecurityHeaders` goes last so every response is covered, refusals included.
+    # `add_middleware` inserts at the front, so the LAST call is the OUTERMOST layer.
+    # `SecurityHeaders` goes last or `OriginCheck`'s own 403 leaves without a CSP.
     app.add_middleware(middleware.OriginCheck)
     app.add_middleware(middleware.SecurityHeaders)
 
-    # Gone from the default configuration: with a session cookie, a permissive CORS policy
-    # is what turns another origin's page into a logged-in client. Vite proxies `/api` and
-    # `/ws`, so development is same-origin too and needs nothing here; VARIATIO_DEV_CORS=1 is for
-    # the rare case of pointing the SPA straight at the API, and never applies in
-    # production.
+    # Off by default: with a session cookie, a permissive CORS policy turns another
+    # origin's page into a logged-in client. Vite proxies `/api` and `/ws` in development.
     origins = settings.dev_cors_origins()
     if origins:
         app.add_middleware(
@@ -84,9 +88,8 @@ def create_app() -> FastAPI:
     for router in ROUTERS:
         app.include_router(router)
 
-    # The study is an installation of this one, not a part of it: it registers its own
-    # routers and its own job handler here, and an installation without it simply serves
-    # one job kind fewer.
+    # The study registers its own routers and job handler here, and only here: importing
+    # it from the router package would close a cycle.
     if study_api is not None:
         study_api.install(app)
 
@@ -94,31 +97,21 @@ def create_app() -> FastAPI:
     return app
 
 
-# THE TWO HALVES OF THE BUNDLE ARE CACHED IN OPPOSITE WAYS, and getting it wrong is not a
-# performance detail — it breaks the app outright.
-#
-# Everything under `/assets` is content-hashed by Vite, so a given URL's bytes can never
-# change: it is cacheable forever, and saying so is what keeps a returning reader from
-# re-downloading React on every visit.
-#
-# `index.html` is the opposite. It is the one file whose URL is stable and whose CONTENT
-# changes on every build, because it names the hashed chunks. It used to go out with no
-# `Cache-Control` at all, which does not mean «do not cache» — it means the browser applies
-# its own heuristic, and it kept an old index.html naming chunks that the next build had
-# already deleted. The symptom is the one nobody can debug from inside the app: a tab that
-# has been open across a deploy fails to render a lazily-loaded screen with «Failed to fetch
-# dynamically imported module», and reloading does not help because the reload is served the
-# same stale document. `no-cache` is revalidate-before-use rather than never-store, so the
-# ETag still answers 304 on the common path and this costs one conditional request.
-#
-# The same applies to the handful of unhashed files beside it — `favicon.svg`, `theme.js` —
-# which change with a release and are addressed by a stable URL.
+# The two halves of the bundle are cached in opposite ways, and getting it wrong breaks the
+# app outright. `/assets` is content-hashed by Vite, so a URL's bytes can never change.
+# `index.html` and the unhashed files beside it have stable URLs whose content changes every
+# build, and a browser heuristic there serves an index naming chunks the deploy deleted —
+# every lazy route then fails with «Failed to fetch dynamically imported module».
+# `no-cache` is revalidate-before-use, so the ETag still answers 304 on the common path.
 IMMUTABLE = "public, max-age=31536000, immutable"
 REVALIDATE = "no-cache"
 
 
 class _Assets(StaticFiles):
+    """Static files served under `/assets`, cacheable for a year because Vite hashes them."""
+
     def file_response(self, *args, **kwargs):
+        """Serve one file, stamping the immutable cache policy on it."""
         response = super().file_response(*args, **kwargs)
         response.headers["cache-control"] = IMMUTABLE
         return response
@@ -139,6 +132,7 @@ def _mount_web(app: FastAPI) -> None:
 
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
+        """Serve a file of the bundle, or `index.html` so the client router owns the URL."""
         candidate = (root / path).resolve()
         if path and candidate.is_relative_to(root) and candidate.is_file():
             return FileResponse(candidate, headers={"cache-control": REVALIDATE})

@@ -1,3 +1,11 @@
+"""The workspace's own language: which prompt set and relation vocabulary it is built with.
+
+`instance/locale.json` is undotted because it travels with `export-instance`; the database
+column beside it is a mirror, so the panel can list without touching disk. A workspace's
+language is chosen at creation and never after — the relation `verbose` labels are written
+into `knowledge_graph.json` and the loader indexes by them.
+"""
+
 import json
 
 from loguru import logger
@@ -11,6 +19,11 @@ PROMPT_LANGUAGE_KEY = "prompt_language"
 
 
 def prompt_language(ws: Workspace) -> str:
+    """Return the language this workspace's prompts are written in.
+
+    Tolerant on the way out: an unreadable or unknown value warns and falls back to the
+    default, because a corrupt config file must never stop the process starting.
+    """
     path = ws.locale_path
     if not path.is_file():
         return languages.DEFAULT
@@ -32,6 +45,7 @@ def prompt_language(ws: Workspace) -> str:
 
 
 def set_prompt_language(ws: Workspace, language: str) -> str:
+    """Write the workspace's prompt language, refusing an unknown one."""
     problem = languages.error(language)
     if problem:
         raise ValueError(problem)
@@ -40,12 +54,15 @@ def set_prompt_language(ws: Workspace, language: str) -> str:
     return resolved
 
 
-# What follows from the language, resolved here so no caller pairs a schema with a prompt
-# set of the other language by hand. The prompts interpolate `catalog_block()`, whose
-# definitions and slot names are prose: the two have to come from the same workspace.
 def relation_schema(ws: Workspace):
+    """Return the relation vocabulary that goes with this workspace's prompts.
+
+    Resolved here so no caller pairs a schema with a prompt set of the other language: the
+    catalogue's definitions and slot names are prose the prompts interpolate.
+    """
     return relations.schema_for(prompt_language(ws))
 
 
 def prerequisite_relation(ws: Workspace) -> str | None:
+    """Return the verbose label of the relation that orders the curriculum."""
     return relation_schema(ws).prerequisite_verbose

@@ -14,6 +14,7 @@ ARTIFACT = review.EXEMPLARS_PROFILE
 
 
 def load(ws: Workspace) -> dict:
+    """Read the profile that wins — curated over draft — saying which of the two it was."""
     path = review.current_path(ws, ARTIFACT)
     if path is None:
         return {"exists": False, "profile": None, "path": None}
@@ -26,6 +27,7 @@ def load(ws: Workspace) -> dict:
 
 
 def validate(raw: dict) -> str | None:
+    """Return why this profile would not load, or `None` when it would."""
     try:
         ExemplarsProfile.validate_raw(raw)
     except (ValueError, KeyError, TypeError) as exc:
@@ -34,6 +36,7 @@ def validate(raw: dict) -> str | None:
 
 
 def save(ws: Workspace, raw: dict) -> dict:
+    """Validate and write the profile, reopening its review. Raises ValueError if invalid."""
     error = validate(raw)
     if error:
         raise ValueError(error)

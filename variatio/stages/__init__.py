@@ -1,3 +1,19 @@
+"""Phase orchestration — the library's public API.
+
+Stages are mechanism, not policy: they return data and raise (`MissingArtifactError`),
+never `print()`, never `SystemExit`, and never trigger a heavier phase on their own —
+deciding to auto-build belongs to the caller. They import components and loaders, and
+`build.py` alone imports `builders/`; nothing under those may import a stage back.
+
+    _artifacts.py  curated-over-draft path choice, and what is missing
+    transcribe.py  phase 0.5: the raw slots as reviewable markdown pages
+    build.py       phase 0: one function per artifact, plus `build_missing`
+    initialize.py  phase 1: load the instance, warm the indices, return a context
+    index.py       the concept descriptions, read and written apart from any build
+    tag.py         assign graph concepts to bank items
+    generate.py    phase 2: generate variants from a context
+"""
+
 from ._artifacts import (
     EXEMPLARS_BANK,
     EXEMPLARS_PROFILE,

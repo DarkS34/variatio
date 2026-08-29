@@ -1,3 +1,11 @@
+"""The exemplars profile: the content schema an instance's items are built against.
+
+This is how a use case is instantiated. The profile declares one or more modalities, each
+with its own fields, guidance and generation rules, and `ItemType` compiles each of them
+into a Pydantic model at runtime — so adding a use case means writing another profile, not
+parameterising anything here.
+"""
+
 import copy
 import json
 import operator
@@ -16,6 +24,7 @@ DRIFT_ASPECTS = ("type", "enum", "decided_by")
 
 
 def _fields_by_type(raw: dict) -> dict[str, dict]:
+    """Return `{item_type: {field: spec}}` from a raw profile, tolerating any shape."""
     item_types = raw.get("item_types") if isinstance(raw, dict) else None
     if not isinstance(item_types, dict):
         return {}
@@ -27,6 +36,7 @@ def _fields_by_type(raw: dict) -> dict[str, dict]:
 
 
 def _field_aspects(spec: dict) -> dict:
+    """Return the three aspects of a field spec that drift is measured on."""
     schema = spec.get("schema") if isinstance(spec, dict) else None
     schema = schema if isinstance(schema, dict) else {}
     decided_by = spec.get("decided_by") if isinstance(spec, dict) else None
@@ -38,6 +48,11 @@ def _field_aspects(spec: dict) -> dict:
 
 
 def profile_drift(curated: dict, draft: dict) -> dict:
+    """Report which fields a fresh draft adds, removes or changes against the curated one.
+
+    The profile builder produces different field sets across runs on the same corpus, and a
+    dropped field silently breaks callers passing `fixed=` for it.
+    """
     before = _fields_by_type(curated)
     after = _fields_by_type(draft)
     added: dict[str, list[str]] = {}
@@ -71,7 +86,10 @@ def profile_drift(curated: dict, draft: dict) -> dict:
 
 
 class ItemType:
+    """One modality of the profile, with the Pydantic model its items validate against."""
+
     def __init__(self, key: str, raw: dict):
+        """Read one modality's declaration and compile its content item."""
         self.key = key
         self.label: str = raw.get("label") or key
         self.description: str = raw.get("description") or ""
@@ -82,6 +100,7 @@ class ItemType:
         self.content_item: type[BaseModel] = self._build_content_item()
 
     def _build_content_item(self) -> type[BaseModel]:
+        """Build the runtime Pydantic model for this modality's fields."""
         fields = {
             name: ExemplarsProfile._spec_to_field(spec) for name, spec in self.field_specs.items()
         }
@@ -91,6 +110,11 @@ class ItemType:
         return model
 
     def stripped_schema(self) -> dict:
+        """Return the JSON schema without the title or the per-field guidance.
+
+        The deep copy comes first because Pydantic caches `model_json_schema()`: stripping
+        in place would strip the live model permanently.
+        """
         schema = copy.deepcopy(self.content_item.model_json_schema())
         schema.pop("title", None)
         for prop in schema.get("properties", {}).values():
@@ -98,9 +122,11 @@ class ItemType:
         return schema
 
     def schema_str(self) -> str:
+        """Return the stripped schema rendered for a prompt."""
         return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
 
     def field_guidance(self, task: str) -> dict[str, str]:
+        """Return the per-field guidance declared for one task."""
         if task not in ExemplarsProfile._GUIDANCE_KEYS:
             raise ValueError(
                 f"Unknown task '{task}'; expected one of {list(ExemplarsProfile._GUIDANCE_KEYS)}"
@@ -113,6 +139,7 @@ class ItemType:
         return out
 
     def primary_text(self, item: dict) -> str:
+        """Return the item's primary field — the one carrying its semantic payload."""
         if self.primary_field not in item:
             raise ValueError(
                 f"Item is missing its primary field '{self.primary_field}' "
@@ -121,6 +148,7 @@ class ItemType:
         return str(item[self.primary_field] or "")
 
     def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
+        """Render the text this modality is indexed by, clipping each extra field."""
         primary = self.primary_text(item)
         if self.embed_fields == [self.primary_field]:
             return primary
@@ -139,6 +167,7 @@ class ItemType:
 
     @staticmethod
     def _render_value(value) -> str:
+        """Render any field value as flat text, recursing into lists and objects."""
         if value is None or isinstance(value, bool):
             return "" if value is None else str(value)
         if isinstance(value, str):
@@ -154,6 +183,8 @@ class ItemType:
 
 
 class ExemplarsProfile:
+    """The whole profile: its modalities, their validation, and what the caches key on."""
+
     _REQUIRED_KEYS: ClassVar[tuple] = ("item_types",)
     _TYPE_REQUIRED_KEYS: ClassVar[tuple] = ("primary_field", "fields")
     _SCALAR_TYPES: ClassVar[dict] = {
@@ -169,6 +200,7 @@ class ExemplarsProfile:
     NAME_RE: ClassVar[re.Pattern] = re.compile(r"^[a-z][a-z0-9_]*$")
 
     def __init__(self, path: str | Path):
+        """Load, validate and compile a profile from disk."""
         self.path = Path(path)
         self._raw = self._load(self.path)
         self._validate(self._raw)
@@ -177,25 +209,29 @@ class ExemplarsProfile:
             for key, spec in self._raw["item_types"].items()
         }
 
-    # What subject this is left the profile on 2026-08-22 and became `content_context.json`,
-    # because the KG build has to be able to write it and a build writes exactly one artifact.
-    # A profile written before that still carries the key; this exposes it so `initialize`
-    # can fall back to it and say so, rather than silently losing the subject. Nothing on
-    # the graph's path reads it -- that dependency is what the move removed.
     @property
     def legacy_content_context(self) -> dict:
+        """The subject context a pre-artifact profile still carries inside itself.
+
+        Exposed so `initialize` — the only reader — can fall back to it and say which file
+        to create. Nothing on the graph's path may read it: that dependency is what moving
+        the context out into its own artifact removed.
+        """
         raw = self._raw.get("content_context")
         return dict(raw) if isinstance(raw, dict) else {}
 
     @property
     def type_keys(self) -> list[str]:
+        """The modality keys, in declaration order."""
         return list(self.item_types)
 
     @property
     def default_type(self) -> str:
+        """The first declared modality, used when an item names none."""
         return next(iter(self.item_types))
 
     def item_type(self, key: str | None = None) -> ItemType:
+        """Return one modality by key, or the default when none is given."""
         if key is None:
             return self.item_types[self.default_type]
         if key not in self.item_types:
@@ -205,6 +241,7 @@ class ExemplarsProfile:
         return self.item_types[key]
 
     def type_key_of(self, item: dict) -> str:
+        """Return the modality an item declares, or the default when there is only one."""
         key = item.get(ITEM_TYPE_KEY)
         if key is None:
             if len(self.item_types) == 1:
@@ -220,44 +257,52 @@ class ExemplarsProfile:
         return str(key)
 
     def type_key_of_safe(self, item: dict) -> str | None:
+        """Return the item's modality, or None when the profile cannot place it."""
         try:
             return self.type_key_of(item)
         except ValueError:
             return None
 
     def item_type_of(self, item: dict) -> ItemType:
+        """Return the `ItemType` an item belongs to."""
         return self.item_types[self.type_key_of(item)]
 
     def primary_text(self, item: dict) -> str:
+        """Return an item's primary field, resolving its modality first."""
         return self.item_type_of(item).primary_text(item)
 
     def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
+        """Render the text an item is indexed by, resolving its modality first."""
         return self.item_type_of(item).embed_text(item, field_max_chars)
 
     def primary_fields(self) -> dict[str, str]:
+        """Return each modality's primary field."""
         return {key: item_type.primary_field for key, item_type in self.item_types.items()}
 
     def embed_fields(self) -> dict[str, list[str]]:
+        """Return each modality's indexed fields, in declaration order."""
         return {key: list(item_type.embed_fields) for key, item_type in self.item_types.items()}
 
-    # Feeds the embedding caches' fingerprint: changing which fields are indexed changes
-    # every vector, and the `.npz` files are keyed by model + prefixes only. Without this
-    # a profile edit would silently reuse vectors built from a different text.
-    #
-    # Empty when every modality indexes its primary field alone, which is the rule that
-    # was in force before `embed_fields` existed and produces byte-identical text. A
-    # profile that declares nothing new must not invalidate caches it still matches.
     @property
     def embed_signature(self) -> str:
+        """What the embedding caches fingerprint the indexed fields by.
+
+        Empty when every modality indexes its primary field alone — the rule in force
+        before `embed_fields` existed, which produces byte-identical text — so a profile
+        that declares nothing new does not invalidate caches it still matches.
+        """
         fields = self.embed_fields()
         if all(names == [self.item_types[key].primary_field] for key, names in fields.items()):
             return ""
         return json.dumps(fields, sort_keys=True, ensure_ascii=False)
 
-    # Everything that iterates the bank (embedding, tagging, few-shot) resolves each item
-    # against its declared type, so one item the profile cannot place would blow up deep
-    # inside a loop. Checking the whole bank at once buys a single actionable error instead.
     def unplaceable_items(self, bank: dict) -> dict[str, str]:
+        """Return every bank item this profile cannot resolve to a modality.
+
+        Everything that iterates the bank resolves each item against its declared type, so
+        checking the whole bank at once buys one actionable error instead of a failure deep
+        inside a loop.
+        """
         problems: dict[str, str] = {}
         for item_id, item in bank.items():
             try:
@@ -266,13 +311,15 @@ class ExemplarsProfile:
                 problems[item_id] = str(exc)
         return problems
 
-    # Reported, never truncated here. Ollama's two embedding endpoints disagree about
-    # oversized input — the batch one silently truncates, the single-text one returns a
-    # 500 — so an item over budget indexes fine and then fails at tagging with an opaque
-    # error. Naming it up front is the difference between a diagnosable warning and that.
     def oversized_embed_items(
         self, bank: dict, max_chars: int, field_max_chars: int = 0
     ) -> dict[str, int]:
+        """Return the bank items whose indexed text exceeds the embedding budget.
+
+        Reported, never truncated here. Ollama's two embedding endpoints disagree about
+        oversized input — the batch one truncates silently, the single-text one returns a
+        500 — so an item over budget indexes fine and then fails opaquely at tagging.
+        """
         sizes: dict[str, int] = {}
         for item_id, item in bank.items():
             size = len(self.embed_text(item, field_max_chars))
@@ -282,13 +329,16 @@ class ExemplarsProfile:
 
     @staticmethod
     def _load(path: Path) -> dict:
+        """Read the raw profile JSON."""
         with path.open(encoding="utf-8") as f:
             return json.load(f)
 
-    # Editors (the CLI's own builder, the web UI) need to know whether a candidate
-    # profile would load *before* writing it. Same rules, same errors, one authority.
     @classmethod
     def validate_raw(cls, raw: dict) -> None:
+        """Raise if a candidate profile would not load, without writing it.
+
+        Same rules and same errors as `__init__`, so an editor can check before saving.
+        """
         cls._validate(raw)
         for key, spec in raw["item_types"].items():
             fields = {
@@ -299,10 +349,12 @@ class ExemplarsProfile:
 
     @property
     def raw(self) -> dict:
+        """A deep copy of the profile as it is stored."""
         return copy.deepcopy(self._raw)
 
     @classmethod
     def _validate(cls, raw: dict) -> None:
+        """Raise unless the profile root declares a non-empty, valid `item_types`."""
         if not isinstance(raw, dict):
             raise TypeError("ExemplarsProfile root must be an object")
 
@@ -318,6 +370,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _validate_item_type(cls, key: str, spec: dict) -> None:
+        """Raise unless one modality declares a usable primary field and field set."""
         if not cls.NAME_RE.match(key):
             raise ValueError(
                 f"Item type '{key}' must match {cls.NAME_RE.pattern} "
@@ -340,12 +393,7 @@ class ExemplarsProfile:
                 f"is not declared in its 'fields'"
             )
         cls._validate_embed_fields(key, spec)
-        rules = spec.get("general_generation_rules")
-        if rules is not None and not isinstance(rules, list):
-            raise ValueError(f"Item type '{key}': 'general_generation_rules' must be a list")
-        for label_key in ("label", "description"):
-            if label_key in spec and not isinstance(spec[label_key], str):
-                raise ValueError(f"Item type '{key}': '{label_key}' must be a string")
+        cls._validate_type_metadata(key, spec)
 
         for name, field_spec in spec["fields"].items():
             cls._validate_field_name(key, name)
@@ -353,11 +401,24 @@ class ExemplarsProfile:
                 name, field_spec, is_primary=name == spec["primary_field"]
             )
 
-    # The primary field is required in the list, not merely allowed: it is the only field
-    # guaranteed to carry the item itself, and a profile that indexed `opciones` alone
-    # would retrieve on the distractors. Order is preserved as declared.
+    @classmethod
+    def _validate_type_metadata(cls, key: str, spec: dict) -> None:
+        """Raise unless a modality's optional prose and rules are of the right type."""
+        rules = spec.get("general_generation_rules")
+        if rules is not None and not isinstance(rules, list):
+            raise ValueError(f"Item type '{key}': 'general_generation_rules' must be a list")
+        for label_key in ("label", "description"):
+            if label_key in spec and not isinstance(spec[label_key], str):
+                raise ValueError(f"Item type '{key}': '{label_key}' must be a string")
+
     @classmethod
     def _validate_embed_fields(cls, key: str, spec: dict) -> None:
+        """Raise unless `embed_fields` names declared, distinct fields.
+
+        The primary field is required in the list, not merely allowed: it is the only field
+        guaranteed to carry the item itself, and a profile indexing `opciones` alone would
+        retrieve on the distractors. Order is preserved as declared.
+        """
         embed_fields = spec.get("embed_fields")
         if embed_fields is None:
             return
@@ -378,6 +439,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _validate_field_name(cls, type_key: str, name: str) -> None:
+        """Raise unless a field name is snake_case ASCII and not reserved."""
         if not cls.NAME_RE.match(name):
             raise ValueError(
                 f"Item type '{type_key}': field '{name}' must match {cls.NAME_RE.pattern} "
@@ -391,6 +453,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _validate_field_spec(cls, name: str, spec: dict, is_primary: bool = False) -> None:
+        """Raise unless one field declares a usable schema, label and guidance."""
         if not isinstance(spec, dict):
             raise TypeError(f"Field '{name}' spec must be an object")
 
@@ -400,24 +463,29 @@ class ExemplarsProfile:
         if "type" not in schema and "enum" not in schema:
             raise ValueError(f"Field '{name}' schema must declare 'type' or 'enum'")
         cls._validate_decided_by(name, spec, schema, is_primary)
-        # What a person reads where the field is shown. Optional, and nothing generates it:
-        # the key is an identifier and cannot become «Solución» on its own — no accent is
-        # recoverable from `solucion` — so it stays a human's to write, exactly like the
-        # modality's own `label` above it.
+        # `label` is optional and nothing generates it: no accent is recoverable from a key
+        # like `solucion`, so what a person reads stays a person's to write.
         if "label" in spec and not isinstance(spec["label"], str):
             raise ValueError(f"Field '{name}': 'label' must be a string")
+        cls._validate_guidance(name, spec)
+
+    @classmethod
+    def _validate_guidance(cls, name: str, spec: dict) -> None:
+        """Raise unless a field's optional `guidance` maps known tasks to prose."""
         guidance = spec.get("guidance")
-        if guidance is not None:
-            if not isinstance(guidance, dict):
-                raise ValueError(f"Field '{name}' 'guidance' must be an object")
-            unknown = set(guidance) - set(cls._GUIDANCE_KEYS)
-            if unknown:
-                raise ValueError(
-                    f"Field '{name}' 'guidance' has unknown keys: {sorted(unknown)} (allowed: {list(cls._GUIDANCE_KEYS)})"
-                )
+        if guidance is None:
+            return
+        if not isinstance(guidance, dict):
+            raise ValueError(f"Field '{name}' 'guidance' must be an object")
+        unknown = set(guidance) - set(cls._GUIDANCE_KEYS)
+        if unknown:
+            raise ValueError(
+                f"Field '{name}' 'guidance' has unknown keys: {sorted(unknown)} (allowed: {list(cls._GUIDANCE_KEYS)})"
+            )
 
     @classmethod
     def _validate_decided_by(cls, name: str, spec: dict, schema: dict, is_primary: bool) -> None:
+        """Raise unless `decided_by: user` names a field with a choice to offer."""
         decided_by = spec.get("decided_by")
         if decided_by is None:
             return
@@ -438,6 +506,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _spec_to_field(cls, spec: dict) -> tuple:
+        """Turn one field spec into the `(type, Field)` pair `create_model` takes."""
         schema = spec["schema"]
         py_type = cls._py_type(schema)
         kwargs: dict = {}
@@ -460,6 +529,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _py_type(cls, schema: dict):
+        """Resolve a field's JSON schema to the Python type its model declares."""
         if "enum" in schema:
             values = schema["enum"]
             if not isinstance(values, list) or not values:
@@ -469,10 +539,8 @@ class ExemplarsProfile:
         if isinstance(t, list):
             if not t:
                 raise ValueError("'type' list must be non-empty")
-            # Recurse instead of assuming every member is scalar: `{"type": ["array",
-            # "null"], "items": …}` is a list of options that may be absent, which is
-            # ordinary once one profile declares several modalities. Rejecting it only
-            # bought a repair round that ended up dropping the nullability.
+            # Recursion, not an assumption that every member is scalar: `{"type": ["array",
+            # "null"], "items": …}` is ordinary once a profile declares several modalities.
             return reduce(
                 operator.or_, (cls._py_type({**schema, "type": s}) for s in t)
             )
@@ -485,6 +553,7 @@ class ExemplarsProfile:
 
     @classmethod
     def _scalar(cls, t: str | None):
+        """Map a scalar JSON type name to its Python type."""
         if t is None:
             t = "null"
         if t not in cls._SCALAR_TYPES:

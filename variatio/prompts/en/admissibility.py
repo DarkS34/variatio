@@ -1,3 +1,6 @@
+"""The judge that reads «Instrucciones adicionales» and says what may be asked there."""
+
+
 def classify_instructions_prompt(
     instructions: str,
     catalog,
@@ -5,6 +8,15 @@ def classify_instructions_prompt(
     targets: list[str],
     context_block: str = "",
 ) -> str:
+    """Ask, per request in the free text, which slot it fills or which control it invades.
+
+    The four slots are fixed and the owners are derived per instance, so no line here may
+    name a control this workspace has not declared. The answer is a `requests` list of
+    `text`/`slot`/`owner`/`term` entries, never both `slot` and `owner` at once, with `term`
+    copied from the owner's own list — `admissibility._accept` discards anything invented.
+    The operative test is the shared one: an item USES many concepts and PRACTISES one or
+    two, and only asking for a concept to be practised invades `concepts`.
+    """
     context_section = ""
     if context_block.strip():
         context_section = f"\n# TEACHING CONTEXT\n{context_block}\n"
@@ -19,8 +31,8 @@ def classify_instructions_prompt(
 
     targets_block = ", ".join(f"«{t}»" for t in targets) or "(none)"
 
-    # The owners are derived per instance, so an example about a control that may not
-    # exist teaches the model to attribute the request to the nearest owner it can see.
+    # An example about a control this instance may not have teaches the model to blame the
+    # nearest owner it can see, so the difficulty example is written from the owners given.
     if any(owner.key.startswith("field:") for owner in owners):
         difficulty_rule = (
             "- «make it very hard» fixes the level of demand, and above there IS a control "

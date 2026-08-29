@@ -1,12 +1,18 @@
+"""What a setting is: its declaration, and the coercion of a raw value into it."""
+
 from dataclasses import dataclass
 from enum import Enum
 
 TRUTHY = ("1", "true", "yes", "on", "sí", "si")
 
 
-# What has to happen for a change to this setting to be real. It is what lets the panel
-# say «esto va a re-embeber el índice» BEFORE saving instead of twenty minutes later.
 class Impact(str, Enum):
+    """What has to be invalidated for a change to this setting to be real.
+
+    It is what lets the panel warn that saving will re-embed the index before the save
+    rather than twenty minutes later.
+    """
+
     NONE = "none"
     ENGINE = "engine"
     CONTEXTS = "contexts"
@@ -20,11 +26,17 @@ SCOPES = ("global", "engine")
 
 
 class SettingError(ValueError):
-    pass
+    """A setting was declared wrongly, or a value does not fit the one it is meant for."""
 
 
 @dataclass(frozen=True)
 class Setting:
+    """One declared setting: its value, its type, its measured documentation and its cost.
+
+    `name` is the `config` attribute it becomes; an empty one is read by `derived` alone.
+    A `scope="engine"` setting resolves from `profiles.<engine>` rather than the top level.
+    """
+
     key: str
     name: str
     kind: str
@@ -43,6 +55,7 @@ class Setting:
     engine_defaults: tuple[tuple[str, object], ...] | None = None
 
     def __post_init__(self) -> None:
+        """Raise SettingError when the declaration itself is malformed."""
         if self.kind not in KINDS:
             raise SettingError(f"'{self.name or self.key}': tipo desconocido '{self.kind}'")
         if self.scope not in SCOPES:
@@ -51,6 +64,7 @@ class Setting:
             raise SettingError(f"'{self.name or self.key}': falta la documentación")
 
     def default_for(self, engine: str | None) -> object:
+        """Return this setting's default under `engine`, which may declare its own."""
         if engine and self.engine_defaults:
             for name, value in self.engine_defaults:
                 if name == engine:
@@ -59,6 +73,7 @@ class Setting:
 
 
 def coerce(setting: Setting, raw: object) -> object:
+    """Convert a raw file or environment value into the setting's type, or raise."""
     if raw is None:
         if setting.nullable:
             return None
@@ -68,10 +83,12 @@ def coerce(setting: Setting, raw: object) -> object:
     return value
 
 
-# A `choices` list is a closed vocabulary, so it is matched without regard to case and the
-# declared spelling is what comes back. This is what keeps `VARIATIO_LOG_LEVEL=debug` working the
-# way `config.LOG_LEVEL`'s `.upper()` used to make it work.
 def _canonical(setting: Setting, value: object) -> object:
+    """Return the declared spelling of a `choices` value, matched without regard to case.
+
+    A closed vocabulary is matched case-insensitively so `VARIATIO_LOG_LEVEL=debug` resolves,
+    and what comes back is the spelling the registry declared.
+    """
     if not setting.choices or not isinstance(value, str):
         return value
     for choice in setting.choices:
@@ -81,8 +98,8 @@ def _canonical(setting: Setting, value: object) -> object:
 
 
 def _convert(setting: Setting, raw: object) -> object:
+    """Cast a raw value to the setting's declared kind, or raise SettingError."""
     kind = setting.kind
-    label = setting.name or setting.key
     if kind == "bool":
         if isinstance(raw, bool):
             return raw
@@ -92,21 +109,35 @@ def _convert(setting: Setting, raw: object) -> object:
     if kind == "float":
         return _number(setting, raw, float)
     if kind == "list[str]":
-        if isinstance(raw, str):
-            return [part.strip() for part in raw.split(",") if part.strip()]
-        if isinstance(raw, (list, tuple)):
-            return [str(part) for part in raw]
-        raise SettingError(f"'{label}' espera una lista, no {type(raw).__name__}")
+        return _string_list(setting, raw)
     if kind == "dict[str,int]":
-        if not isinstance(raw, dict):
-            raise SettingError(f"'{label}' espera un objeto, no {type(raw).__name__}")
-        return {str(key): _number(setting, item, int) for key, item in raw.items()}
+        return _int_map(setting, raw)
     if isinstance(raw, (dict, list, tuple, bool)):
+        label = setting.name or setting.key
         raise SettingError(f"'{label}' espera un texto, no {type(raw).__name__}")
     return str(raw)
 
 
+def _string_list(setting: Setting, raw: object) -> list[str]:
+    """Cast to a list of strings, splitting a comma-separated string and dropping blanks."""
+    if isinstance(raw, str):
+        return [part.strip() for part in raw.split(",") if part.strip()]
+    if isinstance(raw, (list, tuple)):
+        return [str(part) for part in raw]
+    label = setting.name or setting.key
+    raise SettingError(f"'{label}' espera una lista, no {type(raw).__name__}")
+
+
+def _int_map(setting: Setting, raw: object) -> dict[str, int]:
+    """Cast to a mapping of strings to integers."""
+    if not isinstance(raw, dict):
+        label = setting.name or setting.key
+        raise SettingError(f"'{label}' espera un objeto, no {type(raw).__name__}")
+    return {str(key): _number(setting, item, int) for key, item in raw.items()}
+
+
 def _number(setting: Setting, raw: object, cast):
+    """Cast to a number, refusing a bool — which Python would otherwise accept as 0 or 1."""
     if isinstance(raw, bool):
         raise SettingError(f"'{setting.name or setting.key}': «{raw}» no es un número válido")
     try:
@@ -118,6 +149,7 @@ def _number(setting: Setting, raw: object, cast):
 
 
 def _check(setting: Setting, value: object) -> None:
+    """Raise SettingError when the converted value falls outside what was declared."""
     label = setting.name or setting.key
     if setting.choices and value not in setting.choices:
         options = ", ".join(str(choice) for choice in setting.choices)

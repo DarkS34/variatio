@@ -1,3 +1,9 @@
+"""The engine and the session factory, both built on first use.
+
+`import server` must keep working with no database reachable, exactly as importing
+`variatio` works with no Ollama, so nothing here is created at import time.
+"""
+
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -12,12 +18,12 @@ _factory: sessionmaker | None = None
 
 
 def database_url() -> str:
+    """Return `DATABASE_URL`, or the local Postgres this project ships with."""
     return os.environ.get("DATABASE_URL", DEFAULT_URL)
 
 
-# Created on first use, not at import: `import server` must keep working with no database
-# reachable, exactly as importing `variatio` works with no Ollama.
 def engine():
+    """Return this process's engine, creating it on first use."""
     global _engine
     if _engine is None:
         _engine = create_engine(database_url(), pool_pre_ping=True, future=True)
@@ -25,6 +31,7 @@ def engine():
 
 
 def factory() -> sessionmaker:
+    """Return this process's session factory, creating it on first use."""
     global _factory
     if _factory is None:
         _factory = sessionmaker(bind=engine(), expire_on_commit=False, future=True)
@@ -33,6 +40,7 @@ def factory() -> sessionmaker:
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
+    """Yield a session that commits on the way out and rolls back on any exception."""
     session = factory()()
     try:
         yield session
@@ -45,11 +53,13 @@ def session_scope() -> Iterator[Session]:
 
 
 def get_session() -> Iterator[Session]:
+    """Yield a session, as a FastAPI dependency."""
     with session_scope() as session:
         yield session
 
 
 def is_available() -> bool:
+    """Return True when the database answers a connection attempt."""
     try:
         with engine().connect():
             return True
@@ -58,6 +68,7 @@ def is_available() -> bool:
 
 
 def reset() -> None:
+    """Dispose of the engine and forget it, so the next call builds a new one."""
     global _engine, _factory
     if _engine is not None:
         _engine.dispose()

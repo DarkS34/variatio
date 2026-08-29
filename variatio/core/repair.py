@@ -1,3 +1,5 @@
+"""One repair loop for every component that has to parse a model's JSON."""
+
 from collections.abc import Callable
 
 from loguru import logger
@@ -6,17 +8,6 @@ from .. import config
 from . import inference, progress
 
 
-# `format` is required for the same reason `shape` is: a silent default is what let the
-# tagger ask for an array while its parser demanded an object. It is what makes this loop
-# able to fix a SCHEMA error at all — the prompt alone only ever asked for valid JSON, so a
-# reply that parsed but named a field `sol` instead of `solucion` came back byte-identical
-# three times in a row and burned the whole budget. Under the grammar that key cannot be
-# written. Pass the schema when the caller has one, `"json"` when the shape is open-ended.
-#
-# `prompts` is the resolved prompt set of the workspace whose call is being repaired, and it
-# is required for the same reason `shape` is: a repair is one more turn of the same
-# conversation, so asking for the fix in a different language than the call was made in is
-# how a reply comes back in one language and the artifact is written in another.
 def parse_with_repair(
     response: str,
     parse: Callable[[str], tuple[object | None, str | None]],
@@ -27,6 +18,18 @@ def parse_with_repair(
     prompts,
     log_prefix: str = "",
 ) -> tuple[object | None, str | None]:
+    """Parse `response`, asking the repair model to fix it up to `max_attempts` times.
+
+    `format` and `shape` are required rather than defaulted: a silent default is what let
+    the tagger ask for an array while its parser demanded an object. The grammar is also
+    what makes a SCHEMA error fixable at all — under it the model cannot name a field
+    `sol` instead of `solucion`, which the prompt alone never prevented. Pass the schema
+    when the caller has one, `"json"` when the shape is open-ended.
+
+    `prompts` is the resolved prompt set of the workspace whose call is being repaired: a
+    repair is one more turn of the same conversation, so asking in another language is how
+    a reply comes back in one language and the artifact is written in another.
+    """
     result, error = parse(response)
 
     for attempt in range(1, max_attempts + 1):

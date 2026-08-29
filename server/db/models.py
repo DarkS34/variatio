@@ -1,3 +1,10 @@
+"""The tables, as SQLAlchemy models.
+
+`Json` is plain `JSON` with a `JSONB` variant for Postgres, which is the only supported
+deployment target: the plain half exists so import/export can be exercised against SQLite
+without a server, and it changes no line of the Postgres DDL.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -17,9 +24,6 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-# Postgres is the only supported deployment target and gets JSONB; the plain-JSON variant
-# exists so the import/export logic can be exercised against SQLite without a server. It
-# does not change a single line of the Postgres DDL.
 Json = JSON().with_variant(JSONB(), "postgresql")
 
 DRAFT = "draft"
@@ -38,32 +42,33 @@ ROLE_RANK: dict[str, int] = {VIEWER: 0, EDITOR: 1, OWNER: 2}
 ROLES: tuple[str, ...] = (VIEWER, EDITOR, OWNER)
 
 # Who an account is when it judges, which decides the one question it is asked about each
-# proposal. It is NOT an authorisation — a profile grants and withholds nothing, and
-# `require_member` never reads it. Set when the account comes into existence (the CLI, the
-# panel, or pre-assigned on the invitation link) rather than asked for mid-comparison,
-# because a question between the evaluator and the judgement is a question that gets
-# answered at random. NULL means nobody said: the teacher's wording is used and the panel
-# reports it as unset, which is what makes it fixable.
+# proposal. NOT an authorisation: a profile grants and withholds nothing, and
+# `require_member` never reads it. NULL means nobody said — the teacher's wording is used
+# and the panel reports it as unset, which is what makes it fixable.
 TEACHER = "teacher"
 STUDENT = "student"
 EVALUATOR_PROFILES: tuple[str, ...] = (TEACHER, STUDENT)
 
 
 class Base(DeclarativeBase):
-    pass
+    """The declarative base every table hangs from."""
 
 
 class Workspace(Base):
+    """One instance: a slug, and everything that belongs to it.
+
+    `prompt_language` is what this instance's PROMPTS are written in — not what its
+    material is written in, which `content_context.json` carries and the corpus decides.
+    It is a MIRROR of `instance/locale.json` and never the truth: the pipeline runs from
+    the command line with no database, so a build reads the file, and the column is here
+    so the panel can list the instances without touching disk.
+    """
+
     __tablename__ = "workspaces"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(200))
-    # The language this instance's PROMPTS are written in — not the language its material is
-    # written in, which `content_context.json` already carries and which the corpus decides.
-    # A MIRROR of `instance/locale.json` and never the truth: the pipeline runs from the
-    # command line with no database, so a build reads the file. The column is here so the
-    # panel can list the instances without touching disk.
     prompt_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
@@ -88,10 +93,14 @@ class Workspace(Base):
     )
 
 
-# One row per saved version, never an update in place: that is what turns the `.history/`
-# directory into queryable data and makes undo a select rather than a file copy. `stage`
-# keeps the draft/curated split the UI badges — collapsing them was declined explicitly.
 class Artifact(Base):
+    """One saved version of one artifact, keyed `(workspace, kind, stage, version)`.
+
+    A row per saved version and never an update in place: that is what turns the
+    `.history/` directory into queryable data and makes undo a select rather than a file
+    copy. `stage` keeps the draft/curated split the UI badges.
+    """
+
     __tablename__ = "artifacts"
     __table_args__ = (
         UniqueConstraint("workspace_id", "kind", "stage", "version", name="uq_artifact_version"),
@@ -112,10 +121,13 @@ class Artifact(Base):
     workspace: Mapped[Workspace] = relationship(back_populates="artifacts")
 
 
-# The `.review_state.json` translated one-to-one: `upstream_hashes` is what lets an
-# approval go stale when something it was derived from changes, which is the whole
-# point of the gate. One approval per (workspace, kind) — approving again replaces it.
 class Approval(Base):
+    """`.review_state.json` translated one to one: one approval per (workspace, kind).
+
+    `upstream_hashes` is what lets an approval go stale when something it was derived
+    from changes, which is the whole point of the gate. Approving again replaces the row.
+    """
+
     __tablename__ = "approvals"
     __table_args__ = (UniqueConstraint("workspace_id", "kind", name="uq_approval_kind"),)
 
@@ -136,9 +148,13 @@ class Approval(Base):
     workspace: Mapped[Workspace] = relationship(back_populates="approvals")
 
 
-# The bytes stay outside the database — disk today, object storage later — and only the
-# metadata lives here, because that is what the UI lists and what the quotas count.
 class RawDocument(Base):
+    """The metadata of one raw document; its bytes stay outside the database.
+
+    Disk today, object storage later. What lives here is what the UI lists and what the
+    quotas count.
+    """
+
     __tablename__ = "raw_documents"
     __table_args__ = (
         UniqueConstraint("workspace_id", "slot", "filename", name="uq_raw_document_name"),
@@ -161,46 +177,43 @@ class RawDocument(Base):
 # IDENTITY ------------------------------------------------------------------------------
 
 
-# The plan asks for `email citext`; a plain string with a single normalising boundary
-# (`identity.normalise_username`, the only way an identifier enters or is looked up) answers
-# the same question — no duplicates differing in case — without a Postgres extension, which
-# would also be the one line of DDL that SQLite could not run.
 class User(Base):
+    """One account: what it types to enter, and the preferences hanging off it.
+
+    The identity is the `username` and never an address — delivery is by hand here, so an
+    account that never receives mail would otherwise have nothing to be called. `email`
+    is optional and only ever a delivery address for a link; `unique=True` on a nullable
+    column is exactly what is wanted, since Postgres lets many rows be NULL and still
+    refuses two accounts with the same address. A plain string rather than `citext`:
+    `identity.normalise_username` is the one door an identifier enters or is looked up
+    through, which answers the same question without an extension SQLite could not run.
+
+    `evaluator_profile` (`teacher` / `student` / NULL) is a stratification variable for
+    the study and nothing else. `ui_language` is what this person READS — the interface,
+    the guide, the errors — and is deliberately a different axis from a workspace's
+    `prompt_language`; NOT NULL, because there is no such thing as reading no language.
+    `active_workspace_id` is a *preference* and never an authorisation: `require_member`
+    looks up the membership whatever it says, so a stale pointer costs a 403 and not a
+    read of somebody else's instance. It sits on the account rather than on the session
+    so it survives a login, while the `X-Workspace` header keeps two tabs independent.
+    """
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # Who you are here, and what you type to enter. Delivery is by hand in this
-    # installation, so an address is no longer the identity: it cannot be, because an
-    # account that never receives mail would have nothing to be called.
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    # Optional, and only ever a delivery address for a link. `unique=True` on a nullable
-    # column is exactly what is wanted: Postgres lets many rows be NULL and still refuses
-    # two accounts with the same address.
     email: Mapped[str | None] = mapped_column(
         String(320), unique=True, index=True, default=None
     )
     name: Mapped[str] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(Text)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    # `teacher` / `student` / NULL. A stratification variable for the study and nothing
-    # else: it changes the wording of one question and how the panel groups the results.
     evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
-    # What this person READS: the interface, the guide, the errors and the labels of a run.
-    # Deliberately not the same axis as a workspace's `prompt_language` — somebody working in
-    # Spanish may perfectly well prepare an instance whose prompts are English. Asked when the
-    # account comes into existence, like `evaluator_profile`, and changeable afterwards; NOT
-    # NULL because there is no such thing as reading no language, and «es» is what every
-    # account written before today was.
     ui_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    # Which workspace this account lands in when a browser arrives with no preference of
-    # its own. It is a *preference*, never an authorisation: `require_member` looks up the
-    # membership regardless of what this says, so a stale pointer costs a 403 and not a
-    # read of somebody else's instance. On the account rather than on the session row so
-    # it survives a login, while the `X-Workspace` header keeps two tabs independent.
     active_workspace_id: Mapped[int | None] = mapped_column(
         ForeignKey("workspaces.id", ondelete="SET NULL"), default=None
     )
@@ -212,13 +225,17 @@ class User(Base):
 
     @property
     def active(self) -> bool:
+        """True while the account has not been disabled."""
         return self.disabled_at is None
 
 
-# The authorisation question reduced to one row: is there a membership, and what does it
-# say? Nothing else in the request path may answer it — an admin flag is about running the
-# installation, not about reading someone else's workspace.
 class Membership(Base):
+    """The authorisation question as one row: is there a membership, and what does it say?
+
+    Nothing else in the request path may answer it — an admin flag is about running the
+    installation, not about reading someone else's workspace.
+    """
+
     __tablename__ = "memberships"
     __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_membership"),)
 
@@ -234,10 +251,14 @@ class Membership(Base):
     user: Mapped[User] = relationship(back_populates="memberships")
 
 
-# Opaque server-side session, stored as the SHA-256 of the token the browser holds: a
-# database dump yields no usable session. Two expiries, not one — `expires_at` slides with
-# use, `absolute_expires_at` does not, so a stolen cookie cannot be renewed forever.
 class UserSession(Base):
+    """An opaque server-side session, stored as the SHA-256 of the token the browser holds.
+
+    A database dump therefore yields no usable session. Two expiries, not one:
+    `expires_at` slides with use and `absolute_expires_at` does not, so a stolen cookie
+    cannot be renewed for ever.
+    """
+
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -256,9 +277,13 @@ class UserSession(Base):
     user: Mapped[User] = relationship()
 
 
-# There is no open registration: an account exists because someone with a workspace or the
-# installation's administrator issued one of these. Single use, hashed, with an expiry.
 class Invite(Base):
+    """A single-use invitation: hashed, with an expiry.
+
+    There is no open registration — an account exists because the installation's
+    administrator issued one of these, or because it was the first and came from the CLI.
+    """
+
     __tablename__ = "invites"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -281,6 +306,8 @@ class Invite(Base):
 
 
 class PasswordReset(Base):
+    """A single-use password-reset link: hashed, with an expiry."""
+
     __tablename__ = "password_resets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -294,14 +321,17 @@ class PasswordReset(Base):
 # WHAT THE SYSTEM PRODUCED ----------------------------------------------------------------
 
 
-# One row per validated item, not one per job: a run of `n=5` is five things to read back,
-# and the reason to keep them is that generating one costs a minute of GPU nobody wants to
-# pay twice. `item` is `jsonb` rather than columns because its shape is the exemplars
-# profile's, which the user edits — a variant has to survive the schema that made it.
-#
-# `user_id` is `SET NULL` and not `CASCADE`: deleting an account must not silently delete
-# the material a course was built on. The workspace is what cascades.
 class Generation(Base):
+    """One validated item, with the commission that produced it — a row per item, not per job.
+
+    A run of `n=5` is five things to read back, and the reason to keep them is that
+    generating one costs a minute of GPU nobody wants to pay twice. `item` is JSON rather
+    than columns because its shape is the exemplars profile's, which the user edits: a
+    variant has to survive the schema that made it. `user_id` is `SET NULL` and not
+    `CASCADE`, because deleting an account must not silently delete the material a course
+    was built on. The workspace is what cascades.
+    """
+
     __tablename__ = "generations"
     __table_args__ = (
         Index("ix_generation_recent", "workspace_id", "created_at"),
@@ -332,15 +362,37 @@ class Generation(Base):
     user: Mapped[User | None] = relationship()
 
 
-# The blind comparison, which used to live in `instance/.evaluations/*.json` with no idea
-# who ran it. That was tolerable with one user and is the whole question with several:
-# the study's unit is a session, and a session without an evaluator cannot be grouped by
-# account, which is exactly what the analysis needs.
-#
-# The header columns are queried (the aggregates group by them); `trace` holds the full
-# `EvaluationSession.to_dict()` — three prompts, three raw answers, exemplars, timings —
-# and is only read when one session is opened. Same split the two files had, one table.
 class EvalSession(Base):
+    """One blind comparison, with the evaluator it belongs to.
+
+    A session on disk has no evaluator, and the study's unit is a session: without an
+    account to group by, none of the analysis is computable. The header columns are
+    queried, since the aggregates group by them, while `trace` holds the whole
+    `EvaluationSession.to_dict()` — three prompts, three raw answers, exemplars, timings
+    — and is read only when one session is opened.
+
+    `set_id` says which three items these are. A session generated on its own is its own
+    set; one an administrator assigned carries the set of the session it was copied from,
+    and that is what makes agreement between two evaluators computable at all. Each copy
+    keeps its OWN seed and shuffle, because sharing an order would let one position bias
+    act on both evaluators and inflate their agreement — the copies have to agree about
+    the exercises, not about where they were sitting. `assigned_by` NULL means the
+    evaluator commissioned it themselves; set is what the queue lists as «asignada».
+
+    `triage` is one answer per POSITION, given before the reveal, stored by position
+    exactly as `choice` is, so what is kept is what the evaluator actually saw; the arm
+    behind each one is derived from `shuffle`, which keeps the mapping auditable from the
+    seed months later. `opened_at` is when the three cards first reached the evaluator,
+    so «cuánto tardó» is a fact rather than an impression. `declined_at` is «no me veo
+    capacitado para juzgar esto» and deliberately NOT `chosen_at` with a null choice —
+    that already means «none of the three convinces me», which is a judgement, while this
+    is the absence of one: it never enters the preference counts and is a datum about the
+    panel's composition.
+
+    `user_id` is `SET NULL` for the same reason `generations.user_id` is: the study keeps
+    the sessions it counted when an account is deleted.
+    """
+
     __tablename__ = "evaluation_sessions"
     __table_args__ = (Index("ix_evaluation_recent", "workspace_id", "created_at"),)
 
@@ -354,16 +406,7 @@ class EvalSession(Base):
     job_id: Mapped[str | None] = mapped_column(String(32), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    # Which three items these are. A session generated on its own is its own set; a session
-    # an administrator assigned to somebody carries the set of the one it was copied from,
-    # and that is what makes agreement between two evaluators computable at all.
-    #
-    # Each copy keeps its OWN seed and shuffle. Sharing the order would let one position
-    # bias act on both evaluators at once and inflate their agreement — the copies have to
-    # agree about the exercises, not about where they were sitting.
     set_id: Mapped[str | None] = mapped_column(String(32), default=None, index=True)
-    # NULL means the evaluator commissioned it themselves. Set means somebody handed it to
-    # them, which is what the queue lists and what «asignada» means on screen.
     assigned_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
@@ -377,10 +420,7 @@ class EvalSession(Base):
     shuffle: Mapped[list] = mapped_column(Json, default=list)
     think: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    # One answer per POSITION, given before the reveal: `{"1": "as_is", "2": "no", ...}`.
-    # Stored by position and never by arm, exactly as `choice` is, so what the file holds is
-    # what the evaluator actually saw; the arm behind each one is derived from `shuffle`,
-    # which keeps the mapping auditable from the seed months later.
+    # `{"1": "as_is", "2": "no", ...}`, keyed by position.
     triage: Mapped[dict] = mapped_column(Json, default=dict)
 
     choice: Mapped[int | None] = mapped_column(Integer, default=None)
@@ -389,14 +429,7 @@ class EvalSession(Base):
     evaluator_note: Mapped[str | None] = mapped_column(Text, default=None)
     rating: Mapped[dict | None] = mapped_column(Json, default=None)
 
-    # When the three cards first reached the evaluator, so «cuánto tardó» is a fact rather
-    # than an impression. A comparison decided in eight seconds was not read, and being able
-    # to say so — or to exclude it, declaring the rule beforehand — is worth one timestamp.
     opened_at: Mapped[float | None] = mapped_column(Float, default=None)
-    # «No me veo capacitado para juzgar esto»: an evaluator outside the subject of these
-    # items. Deliberately NOT `chosen_at` with a null choice — that already means "none of
-    # the three convinces me", which is a judgement. This one is the absence of one, it
-    # never enters the preference counts, and it is a datum about the panel's composition.
     declined_at: Mapped[float | None] = mapped_column(Float, default=None)
 
     arm_status: Mapped[dict] = mapped_column(Json, default=dict)
@@ -404,7 +437,7 @@ class EvalSession(Base):
     trace: Mapped[dict] = mapped_column(Json, default=dict)
 
     workspace: Mapped[Workspace] = relationship(back_populates="evaluations")
-    # Spelled out because `assigned_by` is a second path to `users` and SQLAlchemy will not
-    # guess between the two: `user` is who judges, `assigner` is who handed it over.
+    # Spelled out because `assigned_by` is a second path to `users` and SQLAlchemy will
+    # not guess: `user` is who judges, `assigner` is who handed it over.
     user: Mapped[User | None] = relationship(foreign_keys=[user_id])
     assigner: Mapped[User | None] = relationship(foreign_keys=[assigned_by])

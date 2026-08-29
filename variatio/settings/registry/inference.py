@@ -1,3 +1,5 @@
+"""The engine settings: the two engines, the phase models, sampling and context windows."""
+
 from ..types import Impact, Setting
 
 _IDLE_DOC = """Cuánto puede estar el servidor sin ejecutar un solo trabajo antes de soltar la GPU
@@ -183,9 +185,8 @@ por costura y solo cuando el detector no tiene certeza (una valla de código abi
 es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 
 
-# What every phase defaults to on a fresh installation — the value the removed
-# `models.main` used to hand out. It is a default and nothing more: nothing resolves
-# through it at run time, and a phase that names another model simply names it.
+# Seed value only: it is read once, when a phase has no stored model. Nothing resolves
+# through it at run time — every phase names its own and refuses an empty value.
 _MAIN = "qwen3.8:27b-q4_K_M"
 _MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
@@ -216,6 +217,7 @@ cargas de ~10 s en mitad de un corpus. Se mueva lo que se mueva, esta debe queda
 mismo modelo que la fase desde cuyo bucle se dispara."""
 
 def _phase_doc(sentence: str) -> str:
+    """Return one phase model's documentation: the shared preamble, then its own sentence."""
     return _PHASE_SHARED_DOC + "\n\n" + sentence
 
 
@@ -310,12 +312,10 @@ sirven para averiguarlo — remedido el 2026-08-29, `remaining-*` también cuent
 cuota del modelo — así que quien lo administra son los CEREBRAS_MAX_* de más abajo, y son
 un tope rígido: nada los sube solo.""",
     ),
-    # Los cuatro techos que de verdad atan, sembrados con los números del nivel gratuito
-    # medidos el 2026-08-26. Ningún header los dice: `limit-*` reporta la cuota del MODELO
-    # (gemma: 500/min y 250.000 tok/min) y `remaining-*`, que el 2026-08-26 contaba contra
-    # la de la cuenta, remedido el 2026-08-29 cuenta contra la del modelo también (719.998
-    # de 720.000 peticiones al día). Así que aquí manda el ajuste y solo el ajuste: lo que
-    # informe la API puede bajar lo que creemos que queda, nunca subir el techo.
+    # The four ceilings that actually bind, seeded with the free tier's figures. They are a
+    # hard cap: no Cerebras header states the account's own quota — `limit-*` and
+    # `remaining-*` both count against the MODEL's — so a header may lower what we believe
+    # is left, never raise the ceiling.
     Setting(
         key="engine.cerebras_max_requests_minute",
         name="CEREBRAS_MAX_REQUESTS_MINUTE",

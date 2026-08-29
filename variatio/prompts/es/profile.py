@@ -1,3 +1,9 @@
+"""Inferring the exemplars profile: what shapes of item a subject sets, and their fields.
+
+The two blocks below are interpolated by more than one of the three calls, so the format is
+described in one place and the repair cannot legislate differently from the call it repairs.
+"""
+
 EXEMPLARS_PROFILE_FIELD_NAMING = """\
 - CLAVES EN ESPAÑOL, SIN TILDES (INNEGOCIABLE): los nombres de campo — las claves del objeto `fields` — van en ESPAÑOL, en snake_case y en ASCII puro; cada uno debe casar con `^[a-z][a-z0-9_]*$`. Español sí, tildes no: se convierten en identificadores de código, así que escribe `solucion` y no «solución», `explicacion` y no «explicación», `disenio` o `diseno` y nunca «diseño». Sin ñ, sin espacios, sin mayúsculas, sin guiones.
 - VOCABULARIO CANÓNICO: los nombres deben ser estables entre asignaturas distintas, para que un ejercicio de programación y uno de física se describan con las mismas claves. Si un campo desempeña uno de estos roles, usa EXACTAMENTE ese nombre en vez de inventar un sinónimo:
@@ -37,6 +43,15 @@ Formas INVÁLIDAS (errores reales ya cometidos; no los repitas):
 
 
 def scan_item_types_prompt(content: str, location: str = "", excerpt_chars: int = 400) -> str:
+    """Ask which exercise modalities appear in ONE fragment of the raw material.
+
+    One call per fragment, whose inventories the consolidation then merges, so this one
+    inventories what it SEES and never guesses at the subject as a whole. The answer is
+    `types`, each entry carrying `key`, `label`, `signals`, `fields` and an `excerpt` of at
+    most `excerpt_chars` verbatim characters — the only evidence the consolidation gets of
+    what an item of that modality looks like. Two modalities are the same when the same
+    pieces would be filled in to write them; when in doubt, group.
+    """
     where = f"\nFragmento procedente de: {location}\n" if location else ""
     return f"""\
 Analiza un FRAGMENTO de material docente en bruto (ejercicios, problemas, actividades, preguntas) e inventaria las MODALIDADES de ejercicio que aparecen en él.
@@ -91,6 +106,15 @@ JSON:"""
 
 
 def consolidate_exemplars_profile_prompt(findings: str, max_types: int) -> str:
+    """Ask for the definitive exemplars profile, merging the inventory the scan produced.
+
+    The answer is `item_types` and no other top-level key: at most `max_types` modalities,
+    each with `label`, `description`, `primary_field`, `embed_fields`, between 3 and 8
+    checkable `general_generation_rules` and its own `fields`. Nothing about the subject
+    itself is declared here — that is the content context's, written in prose elsewhere.
+    `guidance.generation` is deliberately never asked for: the modality's rules carry the
+    generation, and that field is the exception a person writes by hand for one field.
+    """
     return f"""\
 Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo previo encontró, fragmento a fragmento, en todo el material docente en bruto de una asignatura. Consolídalo en el PERFIL DE EJEMPLARES definitivo.
 
@@ -214,6 +238,13 @@ JSON:"""
 
 
 def repair_exemplars_profile_prompt(profile: str, error_msg: str) -> str:
+    """Ask for a profile that parses as JSON but breaks the format to be corrected in place.
+
+    Only what breaks the format may move: the original `label`, `description`, `guidance`
+    and rules survive as they are, and a `content_context` left over from an older profile
+    is preserved untouched for the step that migrates it. The two shared blocks are
+    interpolated because the shape of `schema` is the usual cause of the error.
+    """
     return f"""\
 El siguiente PERFIL DE EJEMPLARES parsea como JSON válido pero no cumple el formato exigido. Corrígelo.
 

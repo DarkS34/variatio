@@ -1,3 +1,5 @@
+"""What a job and an event are, and the three tables that classify a job kind."""
+
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -31,16 +33,14 @@ JOB_LABELS: dict[str, str] = {
     "evaluate": "Evaluación comparativa",
 }
 
-# `build` runs out of process: a multi-hour job needs a cancel button that really
-# stops it, and Python cannot kill a thread. Everything else yields often enough
-# (between items, between stream tokens) for cooperative cancellation to be instant.
+# A build runs out of process: it lasts hours and needs a cancel that really stops it, and
+# Python cannot kill a thread. Everything else yields often enough to cancel cooperatively.
 SUBPROCESS_KINDS: frozenset[str] = frozenset({"build_profile", "build_kg", "build_bank"})
 
-# Artifact each job kind produces, for the "building" state of the chain. A taggability
-# review is deliberately absent: it patches the graph's non-taggable list in place and
-# leaves everything else untouched, so it must not put the knowledge graph into the
-# "building" state — that would hide the whole screen behind rebuild copy that does not
-# apply and would hide the very button that launched it.
+# Artifact each job kind produces, which is what puts a stage into the «building» state.
+# `review_taggability` is absent on purpose: it patches the graph's non-taggable list in
+# place, and marking the graph as building would hide the screen — the button that launched
+# the review included.
 JOB_ARTIFACT: dict[str, str] = {
     "build_profile": "exemplars_profile",
     "build_kg": "knowledge_graph",
@@ -49,17 +49,18 @@ JOB_ARTIFACT: dict[str, str] = {
 }
 
 
-# The queue serialises per backend rather than one job at a time, so several of these can
-# be running side by side and they belong to different instances and different people.
-# `workspace` is what every handler resolves its paths from — a handler that read a
-# process-wide workspace would write one user's build into another's directory — and
-# `user_id` is what attributes the variants a run produces.
-#
-# `backends` and `queue_position` are the runner's, written into the job so that every
-# event carrying `to_dict()` says which lanes this job holds and how many jobs are still
-# in front of it. Both are stamped at submission and restamped whenever the queue moves.
 @dataclass
 class Job:
+    """One unit of work in the queue, with the workspace and the person it belongs to.
+
+    Several jobs run side by side and they belong to different instances and different
+    people, so `workspace` is what every handler resolves its paths from and `user_id` is
+    what attributes the variants a run produces.
+
+    `backends` and `queue_position` are the runner's: stamped at submission, restamped
+    whenever the queue moves, and carried by every event through `to_dict()`.
+    """
+
     kind: str
     params: dict = field(default_factory=dict)
     workspace: str = ""
@@ -77,13 +78,16 @@ class Job:
 
     @property
     def label(self) -> str:
+        """The label this kind of job is known by, falling back to the kind itself."""
         return JOB_LABELS.get(self.kind, self.kind)
 
     @property
     def artifact(self) -> str | None:
+        """The artifact this job rewrites, or `None` when it writes none."""
         return JOB_ARTIFACT.get(self.kind)
 
     def to_dict(self) -> dict:
+        """Serialise for the event stream, with the two derived fields and the elapsed time."""
         data = asdict(self)
         data["label"] = self.label
         data["artifact"] = self.artifact
@@ -95,17 +99,21 @@ class Job:
 
 @dataclass
 class Event:
+    """One line of the run stream, stamped with the workspace the socket filters on.
+
+    The stamp is the bus's, never the subscriber's: it is what a browser cannot choose for
+    itself, and therefore what keeps one instance's tokens out of another's screen.
+    """
+
     seq: int
     ts: float
     job_id: str | None
     kind: str
     payload: dict
-    # Who the event belongs to. One process serves one workspace today, so the bus stamps
-    # it rather than every publisher passing it; what matters is that the socket has
-    # something to filter on that the browser cannot choose for itself.
     workspace: str | None = None
 
     def to_dict(self) -> dict:
+        """Flatten to the shape the socket sends, the payload spread over the envelope."""
         return {
             "seq": self.seq,
             "ts": self.ts,

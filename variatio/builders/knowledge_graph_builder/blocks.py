@@ -10,14 +10,13 @@ from ... import config
 
 
 def outgoing(relations: list[list], node_map: dict) -> dict:
+    """The outgoing edges of each node, remapped to the names that survived."""
     out = defaultdict(list)
     for source, relation, target in relations:
         out[node_map.get(source, source)].append(f"{relation} {node_map.get(target, target)}")
     return out
 
 
-# Each node is listed with its definition, when the extraction wrote one, and its outgoing
-# relations (remapped to survivors), so the model judges an idea and not a bare name.
 def nodes_block(
     nodes: list[str],
     relations: list[list],
@@ -25,6 +24,11 @@ def nodes_block(
     origins: dict[str, list[int]] | None = None,
     definitions: dict[str, str] | None = None,
 ) -> str:
+    """One line per node: its definition, its outgoing relations and its documents.
+
+    A node is shown as an idea and not as a bare name, which is what the model is being
+    asked to judge.
+    """
     edges = outgoing(relations, node_map)
     lines = []
     for n in nodes:
@@ -40,6 +44,7 @@ def nodes_block(
 
 
 def node_line(name: str, definitions: dict[str, str] | None) -> str:
+    """One node as a bullet, with its definition when the extraction wrote one."""
     definition = (definitions or {}).get(name)
     return f"- {name} — {definition}" if definition else f"- {name}"
 
@@ -50,6 +55,7 @@ def groups_block(
     node_map: dict,
     definitions: dict[str, str] | None = None,
 ) -> str:
+    """The candidate merge groups, each under its own heading."""
     edges = outgoing(relations, node_map)
     lines = []
     for idx, group in enumerate(groups, 1):
@@ -60,14 +66,18 @@ def groups_block(
     return "\n".join(lines)
 
 
-# The order the material introduces things in. Unknown positions go last, and ties keep
-# the alphabetical order so the block is stable between two runs of the same corpus.
 def ordered(names: list[str], positions: dict[str, int] | None) -> list[str]:
+    """Sort names by the order the material introduces them in.
+
+    Unknown positions go last, and ties keep the alphabetical order so the block is stable
+    between two runs over the same corpus.
+    """
     positions = positions or {}
     return sorted(names, key=lambda n: (n not in positions, positions.get(n, 0), n))
 
 
 def documents_block(documents: list[dict]) -> str:
+    """The corpus as a numbered list, each document under the `D<n>` the nodes cite."""
     lines = []
     for idx, document in enumerate(documents, 1):
         label = " · ".join(document.get("titles") or []) or document.get("name", "")
@@ -76,6 +86,7 @@ def documents_block(documents: list[dict]) -> str:
 
 
 def outline_block(outline: list[dict], documents: list[dict] | None = None) -> str:
+    """The corpus's headings as a numbered index, naming the document when there are several."""
     names = [d.get("name", "") for d in (documents or [])]
     lines = []
     for index, entry in enumerate(outline, 1):
@@ -87,6 +98,7 @@ def outline_block(outline: list[dict], documents: list[dict] | None = None) -> s
 
 
 def domains_block(concepts_by_domains: dict, definitions: dict[str, str] | None = None) -> str:
+    """The domains as headings, each with its members as bullets."""
     return "\n\n".join(
         f"## {domain}\n" + "\n".join(node_line(c, definitions) for c in members)
         for domain, members in concepts_by_domains.items()
@@ -94,4 +106,5 @@ def domains_block(concepts_by_domains: dict, definitions: dict[str, str] | None 
 
 
 def concepts_block(concepts: list[str]) -> str:
+    """A plain bullet list of concept names."""
     return "\n".join(f"- {c}" for c in concepts)

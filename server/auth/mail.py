@@ -16,11 +16,20 @@ from .. import settings
 
 
 def configured() -> bool:
+    """True when an SMTP host is set.
+
+    `GET /api/auth/me` reports this as `mail_configured`, which is what makes «Mi perfil»
+    hide the address field where nothing could deliver to it.
+    """
     return bool(settings.smtp_host())
 
 
 def send(to: str, subject: str, body: str) -> bool:
-    """True when the message left the process; False when it was only logged."""
+    """Send the message, or log it whole when there is no SMTP.
+
+    False means it was only logged, which is what lets the API hand the link back in its
+    own response instead of promising a mail that never left.
+    """
     if not configured():
         logger.info(f"Correo no enviado (SMTP sin configurar) para {to}: {subject}\n{body}")
         return False
@@ -40,6 +49,7 @@ def send(to: str, subject: str, body: str) -> bool:
 
 
 def _deliver(message: EmailMessage) -> None:
+    """Open the connection the settings describe and hand one message over."""
     host, port = settings.smtp_host(), settings.SMTP_PORT
     context = ssl.create_default_context()
     if settings.SMTP_SSL:
@@ -55,5 +65,6 @@ def _deliver(message: EmailMessage) -> None:
 
 
 def _authenticate(client: smtplib.SMTP) -> None:
+    """Log in, when a user is configured."""
     if settings.SMTP_USER:
         client.login(settings.SMTP_USER, settings.SMTP_PASSWORD)

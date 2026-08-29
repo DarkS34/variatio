@@ -14,12 +14,15 @@ TOKEN_BYTES = 32
 
 
 def new_token() -> str:
+    """Mint the string the holder keeps: 32 random bytes, URL-safe."""
     return secrets.token_urlsafe(TOKEN_BYTES)
 
 
 def digest(token: str) -> str:
+    """Return the SHA-256 the database keeps in place of the token."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def same(left: str, right: str) -> bool:
+    """Compare two digests in constant time."""
     return hmac.compare_digest(left, right)

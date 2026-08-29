@@ -1,25 +1,19 @@
 """What the evaluator is asked, and how the wording changes with who is asking it.
 
-Two instruments, and the order between them is the design:
+Two instruments, and the order between them is the design. The **triage** is one question
+per card, answered BEFORE the reveal, and it is what gives the study a quality signal for
+all three architectures rather than for the one whose name was already known. The
+**rubric** is four scales about the system's variant, answered after the reveal and
+deliberately optional, so a person in a hurry still leaves a complete datum.
 
-1. The **triage** — one question per card, answered BEFORE the reveal. It is what turns
-   the comparison into per-arm data: today the only scored thing in a session is the
-   system's own variant, scored by somebody who already knows it is the system's, which
-   can neither be compared between architectures nor called blind.
-2. The **rubric** — four scales about the system's variant, answered after the reveal and
-   deliberately optional. Everything blind is collected before the reveal, so a person in a
-   hurry still leaves a complete datum and the reveal reads as what it is: the reward for
-   finishing, not a gate in front of more work.
+A teacher and a student are NOT asked the same thing — «¿La pondrías en clase?» is a
+question about teaching, and asking it of somebody who does not teach produces an answer,
+which is worse than producing none. What the two share is the SHAPE, three ordered options
+best first, so the arithmetic downstream stays one function.
 
-A teacher and a student are NOT asked the same thing. «¿La pondrías en clase?» is a
-question about teaching and a student does not teach; asking it anyway produces an answer,
-which is worse than producing none. What the two share is the SHAPE — three ordered
-options, best first — so the arithmetic downstream stays one function and the difference
-lives where it belongs, in the words.
-
-The wording lives here rather than in the browser because it is the instrument and not a
-label: rewording it changes what was measured, and that must be one edit in one file, which
-the API then serves. `ARM_LABELS` set the precedent.
+The wording lives here rather than in the browser because it IS the instrument and not a
+label: rewording it changes what was measured, so it has to be one edit in one file, which
+the API then serves.
 """
 
 from server.db.models import STUDENT, TEACHER
@@ -50,13 +44,12 @@ TRIAGE: dict[str, dict] = {
     },
 }
 
-# The four scales, unchanged as keys since the study started recording them: renaming one
-# would strand every session already judged. What varies per profile is only the prose.
+# The keys never change: renaming one strands every session already judged. What varies per
+# profile is only the prose.
 RATING_SCALES: tuple[str, ...] = ("originality", "complexity", "concept_fit", "soundness")
 
-# `complexity` is the one whose best answer is the middle. It is carried as data rather than
-# hard-coded in the browser because the rule «el objetivo es 3» used to live only in a
-# comment next to the arithmetic, where the person doing the scoring could not read it.
+# `complexity` is the one scale whose best answer is the middle. Carried as data so the
+# person doing the scoring can read the rule, rather than only the arithmetic downstream.
 RATING_TARGET: dict[str, int] = {"complexity": 3}
 
 _TEACHER_RUBRIC = {
@@ -82,10 +75,9 @@ _TEACHER_RUBRIC = {
     },
 }
 
-# Same four scales, asked from the desk instead of the front of the room. Two of them a
-# student judges BETTER than a teacher does — whether the demand is right for where they
-# actually are, and whether the statement holds up once you sit down to solve it, which is
-# the moment an ambiguity stops being hypothetical.
+# The same four scales, asked from the desk instead of the front of the room. Two of them a
+# student judges BETTER: whether the demand is right for where they actually are, and
+# whether the statement holds up once you sit down to solve it.
 _STUDENT_RUBRIC = {
     "originality": {
         "label": "Originalidad",
@@ -111,23 +103,21 @@ _STUDENT_RUBRIC = {
 
 RUBRIC: dict[str, dict] = {TEACHER: _TEACHER_RUBRIC, STUDENT: _STUDENT_RUBRIC}
 
-# Every session ends in one of three ways, and the third is not a judgement. «No me veo
-# capacitado» is the answer of somebody the panel put in front of a subject they do not
-# teach — which, with evaluators drawn from different subjects, is a real state and not an
-# escape hatch. Recording it beats the alternative, which is a shrug entered as a preference.
-#
-# Worded as a statement about the SUBJECT and not about the person: «no me veo capacitado»
-# says something about them (and says it in the masculine, which the installation has no
-# way of knowing), while «no tengo criterio sobre esto» says something about the match
-# between this panel and these three items — which is the fact the study actually wants.
+# The third way a session can end, and the one that is not a judgement. Worded about the
+# SUBJECT and not about the person, which also keeps it gender-neutral: the installation
+# has no way of knowing, and what the study wants is the match between this panel and these
+# three items.
 DECLINE_LABEL = "No tengo criterio para juzgar esto"
 DECLINE_HINT = "Queda registrado que la saltaste; no cuenta como preferencia."
 
 
-# NULL is a teacher's wording. An installation that predates the profile has every account
-# unset, and the study's own panel says so per account so it can be corrected — what it must
-# not do is refuse to draw the screen because a column is empty.
 def resolve(profile: str | None) -> str:
+    """Return the profile whose wording to use, defaulting an unset one to the teacher's.
+
+    Every account of an installation older than the question is NULL, and the study's panel
+    reports that per account so it can be corrected — what it must not do is refuse to draw
+    the screen because a column is empty.
+    """
     return profile if profile in TRIAGE else TEACHER
 
 

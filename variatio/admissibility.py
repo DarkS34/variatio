@@ -1,3 +1,11 @@
+"""The scope judge for the commission's free-text field.
+
+Free text is admitted only where no other control already decides the matter: four
+fixed slots, judged against owners derived per instance. It runs AFTER the guardrail —
+that one reads the text alone with a 4096 window, this one is handed the whole concept
+list — and it fails open, so a judge that cannot answer never blocks a commission.
+"""
+
 import json
 from dataclasses import dataclass
 
@@ -12,6 +20,8 @@ from .core.lexicon import fold
 
 @dataclass(frozen=True)
 class Slot:
+    """One admissible kind of request, with the wording the prompt illustrates it by."""
+
     key: str
     label: str
     example: str
@@ -19,6 +29,8 @@ class Slot:
 
 @dataclass(frozen=True)
 class Owner:
+    """A control that already decides something, the terms it holds and where it lives."""
+
     key: str
     label: str
     where: str
@@ -27,6 +39,8 @@ class Owner:
 
 @dataclass(frozen=True)
 class Request:
+    """One request read out of the free text: admitted into a slot, or owned elsewhere."""
+
     text: str
     slot: str | None
     owner: Owner | None
@@ -35,15 +49,19 @@ class Request:
 
 @dataclass(frozen=True)
 class Ruling:
+    """The verdict over one free-text field; `checked` is false when the judge failed open."""
+
     requests: tuple[Request, ...]
     checked: bool
 
     @property
     def blocked(self) -> tuple[Request, ...]:
+        """The requests that trespass on a control the screen already offers."""
         return tuple(r for r in self.requests if r.owner is not None)
 
     @property
     def ok(self) -> bool:
+        """True when nothing trespasses."""
         return not self.blocked
 
 
@@ -56,6 +74,12 @@ CATALOG: tuple[Slot, ...] = (
 
 
 def owners(knowledge_graph, item_type, profile, content_context, concepts) -> list[Owner]:
+    """Derive the controls that already decide something for this commission.
+
+    The terms belong to the instance, not to the code: the graph's non-target concepts,
+    the `decided_by: "user"` enums, the modalities, and the three context facts. Another
+    workspace gets other owners with no change here.
+    """
     targets = set(concepts)
     found: list[Owner] = []
 
@@ -122,6 +146,7 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
 
 
 def _schema(owners: list[Owner]) -> dict:
+    """The grammar the judge answers under, with this instance's owners as an enum."""
     return {
         "type": "object",
         "properties": {
@@ -144,6 +169,13 @@ def _schema(owners: list[Owner]) -> dict:
 
 
 def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | None:
+    """Return one verified request, or None when the judge's entry does not hold up.
+
+    The answer is checked against the derived catalogue before it is believed: the slot
+    must be in `CATALOG`, the owner in `owners`, and the term must fold-match one that
+    owner actually holds without being a target concept. An invented term is discarded,
+    never reported — a grammar pins the keys, not the values.
+    """
     text = str(entry.get("text") or "").strip()
     if not text:
         return None
@@ -173,6 +205,11 @@ def screen(
     prompts,
     context_block: str = "",
 ) -> Ruling:
+    """Judge one free-text field and return what it is allowed to ask for.
+
+    Fails open three ways, each letting the commission through with `checked=False`: the
+    engine raises, the reply is unreadable, or no entry survives verification.
+    """
     text = (text or "").strip()
     if not text:
         return Ruling(requests=(), checked=True)
@@ -219,6 +256,7 @@ def screen(
 
 
 def _parse(response: str) -> list[dict] | None:
+    """Return the judge's `requests` entries, or None when the reply is unreadable."""
     try:
         data = json.loads(repair_json(response))
     except (ValueError, TypeError):
@@ -232,12 +270,14 @@ def _parse(response: str) -> list[dict] | None:
 
 
 def _unchecked() -> Ruling:
+    """Return the fail-open ruling, telling the UI the check did not run."""
     ruling = Ruling(requests=(), checked=False)
     progress.emit("admissibility", ok=True, checked=False, slots=[], owner=None, term=None)
     return ruling
 
 
 def _report(ruling: Ruling) -> None:
+    """Log the verdict and emit it to the UI."""
     blocked = ruling.blocked
     if blocked:
         first = blocked[0]

@@ -27,6 +27,7 @@ from .models import (
 
 
 def now() -> datetime:
+    """Return the current moment, in UTC."""
     return datetime.now(timezone.utc)
 
 
@@ -34,18 +35,27 @@ USERNAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]$")
 
 
 def normalise_username(username: str) -> str:
+    """Fold a username to the one form stored and looked up: trimmed and lowercase.
+
+    The single boundary an identifier enters through, so a duplicate differing in case
+    cannot get in by a second door.
+    """
     return username.strip().lower()
 
 
 def normalise_email(email: str) -> str:
+    """Fold an address to the one form stored and looked up: trimmed and lowercase."""
     return email.strip().lower()
 
 
-# The one place that says what a username may be, so the web form, the invitation and the
-# command line cannot disagree about it. No spaces and no `@`: the first would make two
-# accounts indistinguishable on screen, the second would let a username be mistaken for
-# an address in every message that prints one.
 def username_error(username: str) -> str | None:
+    """Return why this username is not acceptable, or None.
+
+    The one place that says what a username may be, so the web form, the invitation and
+    the command line cannot disagree about it. No spaces and no `@`: the first would make
+    two accounts indistinguishable on screen, the second would let a username be mistaken
+    for an address in every message that prints one.
+    """
     if not USERNAME_PATTERN.fullmatch(normalise_username(username)):
         return (
             "El usuario tiene entre 3 y 64 caracteres: minúsculas, cifras, punto, guion "
@@ -54,19 +64,22 @@ def username_error(username: str) -> str | None:
     return None
 
 
-# The same single boundary `username_error` is, for the same reason: the command line, the
-# panel and the invitation all set this, and three places deciding what a profile may be is
-# three ways for them to drift. `None` is valid and means nobody said.
 def profile_error(profile: str | None) -> str | None:
+    """Return why this evaluator profile is not acceptable, or None; `None` is valid.
+
+    The same single boundary `username_error` is, and for the same reason: the command
+    line, the panel and the registration form all set this, and three places deciding
+    what a profile may be is three ways for them to drift. `None` means nobody said. The
+    profile is not an authorisation — `require_member` never reads it.
+    """
     if profile is None or profile in EVALUATOR_PROFILES:
         return None
     return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
 
 
-# There is no `language_error` of its own here: the vocabulary is `variatio.core.languages`
-# and the pipeline reads it too, so a second copy on the server side would be exactly the
-# drift the two functions above exist to prevent. Unlike a profile, `None` is NOT valid —
-# nobody reads no language — so the caller resolves it rather than storing it.
+# Not written out here: the vocabulary is `variatio.core.languages` and the pipeline reads
+# it too, so a second copy would be exactly the drift the two functions above prevent.
+# Unlike a profile, `None` is NOT valid — the caller resolves it rather than storing it.
 language_error = languages.error
 
 
@@ -74,22 +87,27 @@ language_error = languages.error
 
 
 def get_user(session: Session, username: str) -> User | None:
+    """Return the account with this username, or None."""
     return session.scalar(select(User).where(User.username == normalise_username(username)))
 
 
 def get_user_by_email(session: Session, email: str) -> User | None:
+    """Return the account with this address, or None."""
     return session.scalar(select(User).where(User.email == normalise_email(email)))
 
 
 def get_user_by_id(session: Session, user_id: int) -> User | None:
+    """Return the account with this id, or None."""
     return session.get(User, user_id)
 
 
 def list_users(session: Session) -> list[User]:
+    """Return every account, by username."""
     return list(session.scalars(select(User).order_by(User.username)))
 
 
 def count_users(session: Session) -> int:
+    """Return how many accounts exist."""
     return session.scalar(select(func.count(User.id))) or 0
 
 
@@ -104,6 +122,7 @@ def create_user(
     evaluator_profile: str | None = None,
     ui_language: str | None = None,
 ) -> User:
+    """Insert an account and return it."""
     username = normalise_username(username)
     user = User(
         username=username,
@@ -121,24 +140,27 @@ def create_user(
 
 
 def set_evaluator_profile(session: Session, user: User, profile: str | None) -> User:
+    """Set the account's evaluator profile, `None` included."""
     user.evaluator_profile = profile
     session.flush()
     return user
 
 
 def set_ui_language(session: Session, user: User, language: str) -> User:
+    """Set what language this account reads the interface in."""
     user.ui_language = languages.resolve(language)
     session.flush()
     return user
 
 
-# Setting a password also retires every reset link the account still has pending: whoever
-# holds one is a click away from the account, so a change made out of a suspicion has to
-# close that door in the same transaction it revokes the sessions. The login's `needs_rehash`
-# comes through here too and that is deliberate — it is the one place every password write
-# passes, the cost of closing early is one «pide otro enlace», and a helper called from the
-# two deliberate paths is a third path away from being forgotten.
 def set_password(session: Session, user: User, password_hash: str) -> None:
+    """Write a new password hash, retiring every reset link still pending.
+
+    Whoever holds one is a click away from the account, so a change made out of a
+    suspicion has to close that door in the same transaction that revokes the sessions.
+    The login's `needs_rehash` comes through here too, deliberately: this is the one place
+    every password write passes, and the cost of closing early is one «pide otro enlace».
+    """
     user.password_hash = password_hash
     moment = now()
     session.execute(
@@ -154,13 +176,16 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
     session.flush()
 
 
-# A real deletion, and the row is the only thing that goes. What the account *did* is not
-# the account: `generations.user_id` and `evaluation_sessions.user_id` are `SET NULL`, so a
-# course built on somebody's variants survives their leaving and the study keeps the
-# sessions it counted. What cascades is what only means anything while the account exists —
-# its memberships, its open sessions and its pending reset links. Disabling stays as the
-# reversible answer; this one is for an account that should not have existed.
 def delete_user(session: Session, user: User) -> None:
+    """Delete the account row, and only the account row.
+
+    What the account *did* is not the account: `generations.user_id` and
+    `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's
+    variants survives their leaving and the study keeps the sessions it counted. What
+    cascades is what only means anything while the account exists — its memberships, its
+    open sessions and its pending reset links. Disabling stays the reversible answer;
+    this one is for an account that should not have existed.
+    """
     session.delete(user)
     session.flush()
 
@@ -169,6 +194,7 @@ def delete_user(session: Session, user: User) -> None:
 
 
 def membership(session: Session, workspace_id: int, user_id: int) -> Membership | None:
+    """Return this account's membership of this workspace, or None."""
     return session.scalar(
         select(Membership).where(
             Membership.workspace_id == workspace_id, Membership.user_id == user_id
@@ -177,6 +203,7 @@ def membership(session: Session, workspace_id: int, user_id: int) -> Membership 
 
 
 def grant(session: Session, workspace_id: int, user_id: int, role: str) -> Membership:
+    """Give the account this role, creating the membership when it has none."""
     existing = membership(session, workspace_id, user_id)
     if existing is None:
         existing = Membership(workspace_id=workspace_id, user_id=user_id)
@@ -187,6 +214,7 @@ def grant(session: Session, workspace_id: int, user_id: int, role: str) -> Membe
 
 
 def revoke_membership(session: Session, workspace_id: int, user_id: int) -> None:
+    """Remove this account's membership of this workspace, if it has one."""
     existing = membership(session, workspace_id, user_id)
     if existing is not None:
         session.delete(existing)
@@ -194,6 +222,7 @@ def revoke_membership(session: Session, workspace_id: int, user_id: int) -> None
 
 
 def memberships_for(session: Session, user_id: int) -> list[tuple[Membership, Workspace]]:
+    """Return every live workspace this account belongs to, with its membership."""
     rows = session.execute(
         select(Membership, Workspace)
         .join(Workspace, Workspace.id == Membership.workspace_id)
@@ -204,6 +233,7 @@ def memberships_for(session: Session, user_id: int) -> list[tuple[Membership, Wo
 
 
 def members_of(session: Session, workspace_id: int) -> list[tuple[Membership, User]]:
+    """Return every account that belongs to this workspace, with its membership."""
     rows = session.execute(
         select(Membership, User)
         .join(User, User.id == Membership.user_id)
@@ -225,6 +255,7 @@ def create_session(
     ip: str | None = None,
     user_agent: str | None = None,
 ) -> UserSession:
+    """Open a session row for this token digest, with both of its expiries."""
     moment = now()
     row = UserSession(
         token_hash=token_hash,
@@ -241,10 +272,13 @@ def create_session(
     return row
 
 
-# Returns the row only when it is usable *right now*: expiry, absolute expiry, revocation
-# and the user's own `disabled_at` are one question, and answering it anywhere else would
-# be a second place to forget one of the four.
 def live_session(session: Session, token_hash: str) -> tuple[UserSession, User] | None:
+    """Return the session row and its account, but only while it is usable right now.
+
+    Expiry, absolute expiry, revocation and the account's own `disabled_at` are one
+    question, and answering it anywhere else would be a second place to forget one of the
+    four.
+    """
     row = session.scalar(select(UserSession).where(UserSession.token_hash == token_hash))
     if row is None or row.revoked_at is not None:
         return None
@@ -257,9 +291,12 @@ def live_session(session: Session, token_hash: str) -> tuple[UserSession, User] 
     return row, user
 
 
-# The sliding half of the expiry. Written at most once per interval so that a page doing
-# twenty requests does not do twenty updates of the same row.
 def touch_session(session: Session, row: UserSession, sliding: timedelta, interval: timedelta) -> None:
+    """Slide the expiry forward, at most once per `interval`.
+
+    A page doing twenty requests must not do twenty updates of the same row, and the
+    slide never passes the absolute expiry.
+    """
     moment = now()
     if moment - row.last_seen_at < interval:
         return
@@ -269,16 +306,13 @@ def touch_session(session: Session, row: UserSession, sliding: timedelta, interv
 
 
 def revoke_session(session: Session, row: UserSession) -> None:
+    """Revoke one session."""
     row.revoked_at = now()
     session.flush()
 
 
-# All of them, with no exception for the caller's own: the `keep=` argument and the
-# `active_sessions` listing next to it both existed for «Sesiones abiertas», the profile
-# card removed on 2026-08-17. Every remaining caller — logging out everywhere, changing the
-# password, disabling an account — means all of them, and the one that keeps working
-# afterwards does so because it is handed a brand-new session, not because it was spared.
 def count_live_sessions(session: Session, user_id: int) -> int:
+    """Return how many of this account's sessions are still usable."""
     moment = now()
     return len(
         list(
@@ -295,6 +329,12 @@ def count_live_sessions(session: Session, user_id: int) -> int:
 
 
 def revoke_all_sessions(session: Session, user_id: int) -> int:
+    """Revoke every session of this account, with no exception for the caller's own.
+
+    Every caller — logging out everywhere, changing the password, disabling an account —
+    means all of them, and the one that keeps working afterwards does so because it is
+    handed a brand-new session, not because it was spared.
+    """
     rows = list(
         session.scalars(
             select(UserSession).where(
@@ -320,6 +360,7 @@ def create_invite(
     role: str = EDITOR,
     created_by: int | None = None,
 ) -> Invite:
+    """Insert an invitation for this token digest."""
     invite = Invite(
         token_hash=token_hash,
         workspace_id=workspace_id,
@@ -333,18 +374,22 @@ def create_invite(
 
 
 def live_invite(session: Session, token_hash: str) -> Invite | None:
+    """Return the invitation only while it is unused and unexpired."""
     invite = session.scalar(select(Invite).where(Invite.token_hash == token_hash))
     if invite is None or invite.used_at is not None or invite.expires_at <= now():
         return None
     return invite
 
 
-# The single use is decided by the database, not by the `live_invite` that read the row a
-# moment ago: hashing a password takes a fifth of a second, and two people redeeming the
-# same link inside that window both passed the read and both got an account. The conditional
-# UPDATE is the whole claim — the second one matches no row, because the first has already
-# written `used_at` — so whoever calls it does everything else only after it returns True.
 def claim_invite(session: Session, invite: Invite) -> bool:
+    """Claim the invitation, True only for the caller that actually got it.
+
+    The single use is decided by the database and not by the `live_invite` that read the
+    row a moment ago: hashing a password takes a fifth of a second, and two people
+    redeeming the same link inside that window both pass the read. The conditional UPDATE
+    is the whole claim — the second matches no row, because the first has already written
+    `used_at` — so the caller does everything else only after this returns True.
+    """
     result = session.execute(
         update(Invite)
         .where(Invite.id == invite.id, Invite.used_at.is_(None))
@@ -355,14 +400,18 @@ def claim_invite(session: Session, invite: Invite) -> bool:
     return result.rowcount == 1
 
 
-# The other half, once there is a user to point at: `used_by` is a foreign key and the row
-# had to be claimed before the account existed.
 def attribute_invite(session: Session, invite: Invite, user_id: int) -> None:
+    """Point a claimed invitation at the account it created.
+
+    The other half of `claim_invite`: `used_by` is a foreign key, and the row had to be
+    claimed before the account existed.
+    """
     invite.used_by = user_id
     session.flush()
 
 
 def pending_invites(session: Session, workspace_id: int | None = None) -> list[Invite]:
+    """Return the unused, unexpired invitations, newest first."""
     query = select(Invite).where(Invite.used_at.is_(None), Invite.expires_at > now())
     if workspace_id is not None:
         query = query.where(Invite.workspace_id == workspace_id)
@@ -370,6 +419,7 @@ def pending_invites(session: Session, workspace_id: int | None = None) -> list[I
 
 
 def revoke_invite(session: Session, invite_id: int) -> bool:
+    """Delete an unused invitation; False when it is missing or already redeemed."""
     invite = session.get(Invite, invite_id)
     if invite is None or invite.used_at is not None:
         return False
@@ -382,6 +432,7 @@ def revoke_invite(session: Session, invite_id: int) -> bool:
 
 
 def create_reset(session: Session, user_id: int, token_hash: str, ttl: timedelta) -> PasswordReset:
+    """Insert a password-reset row for this token digest."""
     reset = PasswordReset(token_hash=token_hash, user_id=user_id, expires_at=now() + ttl)
     session.add(reset)
     session.flush()
@@ -389,6 +440,7 @@ def create_reset(session: Session, user_id: int, token_hash: str, ttl: timedelta
 
 
 def live_reset(session: Session, token_hash: str) -> PasswordReset | None:
+    """Return the reset only while it is unused and unexpired."""
     reset = session.scalar(select(PasswordReset).where(PasswordReset.token_hash == token_hash))
     if reset is None or reset.used_at is not None or reset.expires_at <= now():
         return None
@@ -396,5 +448,6 @@ def live_reset(session: Session, token_hash: str) -> PasswordReset | None:
 
 
 def consume_reset(session: Session, reset: PasswordReset) -> None:
+    """Mark the reset used."""
     reset.used_at = now()
     session.flush()

@@ -1,13 +1,10 @@
 """Phase 2 — a deduplicated, denoised graph. Nothing reaches disk here.
 
-It used to be ONE model call over the whole node universe, asked to emit a complete
-partition in which every one of several hundred nodes appears exactly once — and it had to
-answer two unrelated questions at the same time: which names are the same concept, and
-which nodes are not concepts at all. The merges it missed are still visible downstream, so
-the two questions are now asked separately, and each of them in bites: merges only inside
-groups that name-similarity already flagged as suspicious, drops in batches of nodes.
-Blocking first and escalating only what is ambiguous is the rule the rest of the pipeline
-follows.
+Two unrelated questions are asked separately and each of them in bites, rather than as one
+call over the whole node universe: which names are the same concept — only inside groups
+that name similarity already flagged as suspicious — and which nodes are not concepts at
+all, in batches. Blocking first and escalating only what is ambiguous is the rule the rest
+of the pipeline follows.
 """
 
 import re
@@ -27,6 +24,7 @@ MIN_SINGULARIZE_LENGTH = 3
 
 
 def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
+    """Merge the names that are one concept, drop what is not one, and remap the graph."""
     progress.phase("clean")
     nodes = node_universe(staging)
     logger.info(f"Cleaning the raw graph: {len(nodes)} node(s) in the universe")
@@ -65,9 +63,8 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     return cleaned
 
 
-# The node universe is entities plus every relation endpoint, so phrases that
-# only ever appear inside relations also get judged and can't stay dangling.
 def node_universe(graph: dict) -> list[str]:
+    """Every entity plus every relation endpoint, so nothing stays dangling and unjudged."""
     nodes = set(graph["entities"])
     for source, _, target in graph["relations"]:
         nodes.add(source)
@@ -75,11 +72,13 @@ def node_universe(graph: dict) -> list[str]:
     return sorted(nodes)
 
 
-# Conservative key: casing, accents, an optional configurable qualifier and a
-# trailing plural suffix. No parenthesis stripping, to keep e.g. O(n) vs O(log n) apart,
-# and only the LAST word is singularised, so `Listas anidadas` and `Lista anidadas`
-# do not merge.
 def norm_key(name: str) -> str:
+    """The key two names must share to be merged mechanically.
+
+    Conservative: casing, accents, an optional configurable qualifier and a trailing plural
+    suffix. Parentheses are NOT stripped, to keep `O(n)` and `O(log n)` apart, and only the
+    LAST word is singularised, so `Listas anidadas` and `Lista anidadas` do not merge.
+    """
     s = name.lower().strip()
     if config.KG_BUILDER_MERGE_QUALIFIER_PATTERN:
         s = re.sub(config.KG_BUILDER_MERGE_QUALIFIER_PATTERN, "", s)
@@ -91,9 +90,8 @@ def norm_key(name: str) -> str:
     return s
 
 
-# Merge only mechanical variants deterministically; the survivor is a
-# capitalized, short form when available.
 def deterministic_merge(nodes: list[str]) -> tuple[dict, list[str]]:
+    """Merge the mechanical variants of a name; the survivor is the short capitalised form."""
     groups = defaultdict(list)
     for n in nodes:
         groups[norm_key(n)].append(n)
@@ -119,6 +117,7 @@ def propose_merges(
     max_attempts: int,
     prompts,
 ) -> dict:
+    """Ask which of the suspicious groups are one concept; returns alias → canonical."""
     groups = merge_candidates(nodes)
     if not groups:
         logger.info("No merge candidates; the mechanical merge stands")
@@ -161,11 +160,13 @@ def propose_merges(
     return resolve_chains(alias_map)
 
 
-# Candidate groups come from the names' own embeddings: a suspicion cheap enough to
-# compute for the whole inventory, which is what lets the model be asked about five
-# names instead of six hundred. Note this embeds NAMES, which retrieval deliberately
-# never does — here they are not the answer, only the shortlist the model then judges.
 def merge_candidates(nodes: list[str]) -> list[list[str]]:
+    """Group the names similar enough to be worth asking about.
+
+    A suspicion cheap enough to compute for the whole inventory, which is what lets the model
+    be asked about five names instead of six hundred. It embeds NAMES, which retrieval
+    deliberately never does — here they are the shortlist and not the answer.
+    """
     if len(nodes) < 2:
         return []
     vectors = embed_normalized(
@@ -182,13 +183,16 @@ def merge_candidates(nodes: list[str]) -> list[list[str]]:
     return [sorted(nodes[i] for i in members) for members in groups if len(members) > 1]
 
 
-# Connected components chain (A~B, B~C keeps C even when A and C are unrelated), so a
-# component that grows past the cap is re-cut at a stricter threshold instead of being
-# handed over as one unanswerable group.
 def components(index: list[int], similarity, threshold: float) -> list[list[int]]:
+    """The connected components at `threshold`, re-cut stricter when one grows past the cap.
+
+    Components chain (A~B, B~C keeps C even when A and C are unrelated), so an oversized
+    group is split again rather than handed over as one unanswerable question.
+    """
     parent = {i: i for i in index}
 
     def find(x: int) -> int:
+        """The representative of `x`, path-compressed on the way."""
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
@@ -212,8 +216,8 @@ def components(index: list[int], similarity, threshold: float) -> list[list[int]
     return out
 
 
-# Force every canonical to be an existing node (drops invented names).
 def merge_alias_map(merges: list, valid: set) -> dict:
+    """Read the proposed merges as alias → canonical, forcing every canonical to exist."""
     alias_map = {}
     for merge in merges or []:
         if not isinstance(merge, dict):
@@ -233,9 +237,12 @@ def merge_alias_map(merges: list, valid: set) -> dict:
     return alias_map
 
 
-# A group judged in one call can still come back as A→B and B→C; nothing may end up
-# pointing at a name that is itself an alias.
 def resolve_chains(alias_map: dict) -> dict:
+    """Point every alias at a final name.
+
+    A group judged in one call can still come back as A→B and B→C, and nothing may end up
+    pointing at a name that is itself an alias.
+    """
     resolved = {}
     for name in alias_map:
         target = alias_map[name]
@@ -260,6 +267,7 @@ def propose_drops(
     max_attempts: int,
     prompts,
 ) -> set:
+    """Ask the model, in batches, which nodes do not name a concept at all."""
     size = config.KG_BUILDER_CLEAN_BATCH_SIZE
     batches = [nodes[i : i + size] for i in range(0, len(nodes), size)]
     drop: set[str] = set()
@@ -276,12 +284,9 @@ def propose_drops(
             prompt = prompts.filter_graph_nodes_prompt(
                 blocks.nodes_block(batch, relations, node_map, definitions=definitions)
             )
-            # Reasoning stays ON, and this is measured, not assumed: it looks like a
-            # lexical verdict that could be read off the name, and turning it off is 6.8x
-            # faster — but over the same 180 already-clean nodes it went from 1 drop to
-            # 20, taking `Cohesión`, `El método de la Burbuja`, `Else` and `Error de
-            # compilación` with it. The deliberation is what keeps this pass timid, and a
-            # concept dropped here is gone from the graph for good.
+            # Reasoning stays on, and it is measured: over the same 180 already-clean nodes,
+            # turning it off is 6.8x faster and goes from 1 drop to 20. The deliberation is
+            # what keeps this pass timid, and a concept dropped here is gone for good.
             response = inference.generate(
                 model=config.KG_CLEAN_DROP_MODEL,
                 prompt=prompt,
@@ -309,9 +314,11 @@ def propose_drops(
     return drop
 
 
-# Compose deterministic merge -> semantic merge -> drops into one node->canonical map;
-# a node whose canonical was dropped maps to None.
 def compose_node_map(nodes: list[str], det_map: dict, llm_map: dict, drop: set) -> dict:
+    """Fold mechanical merge, semantic merge and drops into one node → canonical map.
+
+    A node whose canonical was dropped maps to `None`.
+    """
     node_map = {}
     for n in nodes:
         representative = det_map.get(n, n)
@@ -320,27 +327,38 @@ def compose_node_map(nodes: list[str], det_map: dict, llm_map: dict, drop: set) 
     return node_map
 
 
+def remap_relations(relations: list[list], node_map: dict, surviving: set) -> set[tuple]:
+    """The relations under their canonical names, keeping only those whose endpoints survive."""
+    out = set()
+    for source, relation, target in relations:
+        canon_source, canon_target = node_map.get(source), node_map.get(target)
+        if canon_source in surviving and canon_target in surviving:
+            out.add((canon_source, relation, canon_target))
+    return out
+
+
+def merge_origins(origins: dict, node_map: dict, surviving: set) -> dict:
+    """The documents each surviving concept was seen in, united over its aliases."""
+    merged: dict[str, set[int]] = defaultdict(set)
+    for name, sources in (origins or {}).items():
+        canonical = node_map.get(name)
+        if canonical in surviving:
+            merged[canonical].update(sources)
+    return {name: sorted(merged[name]) for name in sorted(merged)}
+
+
 def apply_node_map(graph: dict, node_map: dict) -> dict:
+    """Rewrite the whole staging graph under the canonical names."""
     entities = sorted({c for c in node_map.values() if c})
     ents = set(entities)
-    relations = set()
-    for source, relation, target in graph["relations"]:
-        canon_source, canon_target = node_map.get(source), node_map.get(target)
-        # Keep a relation only when both remapped endpoints survive as entities.
-        if canon_source in ents and canon_target in ents:
-            relations.add((canon_source, relation, canon_target))
-    origins = defaultdict(set)
-    for name, sources in (graph.get("origins") or {}).items():
-        canonical = node_map.get(name)
-        if canonical in ents:
-            origins[canonical].update(sources)
+    relations = remap_relations(graph["relations"], node_map, ents)
     positions = merge_positions(graph.get("positions") or {}, node_map, ents)
     return {
         "entities": entities,
         "edges": sorted({r[1] for r in relations}),
         "relations": sorted(list(r) for r in relations),
         "documents": graph.get("documents") or [],
-        "origins": {name: sorted(origins[name]) for name in sorted(origins)},
+        "origins": merge_origins(graph.get("origins") or {}, node_map, ents),
         "passages": merge_passages(graph.get("passages") or {}, node_map, ents),
         "positions": positions,
         "occurrences": merge_occurrences(graph.get("occurrences") or {}, node_map, ents),
@@ -351,9 +369,8 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
     }
 
 
-# A merged concept was introduced where its EARLIEST alias was: the position is the
-# minimum over the aliases, and the definition is the one written at that introduction.
 def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
+    """Where each surviving concept was introduced: the minimum over its aliases."""
     merged: dict[str, int] = {}
     for name, position in positions.items():
         canonical = node_map.get(name)
@@ -363,6 +380,7 @@ def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
 
 
 def merge_occurrences(occurrences: dict, node_map: dict, surviving: set) -> dict:
+    """Every chunk a surviving concept was seen in, united over its aliases."""
     merged: dict[str, set[int]] = defaultdict(set)
     for name, chunks in occurrences.items():
         canonical = node_map.get(name)
@@ -374,6 +392,7 @@ def merge_occurrences(occurrences: dict, node_map: dict, surviving: set) -> dict
 def merge_definitions(
     definitions: dict, positions: dict, node_map: dict, surviving: set
 ) -> dict:
+    """One definition per surviving concept: the one written at its earliest introduction."""
     best: dict[str, tuple[int, str]] = {}
     for name, definition in definitions.items():
         canonical = node_map.get(name)
@@ -385,10 +404,13 @@ def merge_definitions(
     return {name: best[name][1] for name in sorted(best)}
 
 
-# Merging two names merges their evidence: the passage that justified «Listas anidadas»
-# still justifies «Listas», and throwing it away would leave the survivor with nothing to
-# show. The cap is applied again here, because five aliases bring five lists.
 def merge_passages(passages: dict, node_map: dict, surviving: set) -> dict:
+    """The corpus evidence of every alias, carried onto the survivor and capped again.
+
+    The passage that justified «Listas anidadas» still justifies «Listas», and throwing it
+    away would leave the survivor with nothing to show; five aliases bring five lists, which
+    is why the cap is applied here too.
+    """
     merged: dict[str, list[dict]] = defaultdict(list)
     for name, entries in passages.items():
         canonical = node_map.get(name)

@@ -1,3 +1,10 @@
+"""What a generated variant is put through before it is accepted.
+
+`run` collects every signal and decides. A FLAG is reported to whoever reviews the item;
+only a REASON forces another attempt — which is why the tagger's disagreement is flagged
+and never retried on: it is an opinion about the index, not a defect in the item.
+"""
+
 import numpy as np
 from loguru import logger
 from pydantic import BaseModel
@@ -12,6 +19,10 @@ MIN_PRIMARY_CHARS = 20
 
 
 def content_floor(item: BaseModel, item_type: ItemType) -> str | None:
+    """Return why the item is too empty to be worth keeping, or None.
+
+    A required field explicitly typed as nullable does not count as missing.
+    """
     data = item.model_dump(mode="json")
     primary = data.get(item_type.primary_field)
     if not isinstance(primary, str) or len(primary.strip()) < MIN_PRIMARY_CHARS:
@@ -29,14 +40,17 @@ def content_floor(item: BaseModel, item_type: ItemType) -> str | None:
 
 
 def _nullable(spec: dict) -> bool:
+    """True when the field's schema admits null."""
     return any(option.get("type") == "null" for option in spec.get("anyOf", []))
 
 
 def _texts(item: BaseModel) -> list[str]:
+    """Every string-valued field of the item."""
     return [value for value in item.model_dump(mode="json").values() if isinstance(value, str)]
 
 
 def forbidden_mentions(item: BaseModel, forbidden: list[str]) -> list[str]:
+    """Return the not-yet-taught concepts the item actually mentions."""
     texts = _texts(item)
     return [c for c in forbidden if any(mentions(text, c) for text in texts)]
 
@@ -44,6 +58,7 @@ def forbidden_mentions(item: BaseModel, forbidden: list[str]) -> list[str]:
 def nearest(
     embedder: Embedder, text: str, others: list[tuple[str, str]]
 ) -> tuple[str, float] | None:
+    """Return the label of whichever of `others` is closest to `text`, with its score."""
     if not others:
         return None
     vector = embedder.embed_document(text)
@@ -56,6 +71,7 @@ def nearest(
 
 
 def tagger_roundtrip(tagger: ConceptTagger, text: str, targets: list[str]) -> dict:
+    """Tag the generated item afresh and report whether it lands on the targets."""
     annotation = tagger.tag(text)
     primary = annotation.get("primary_concept")
     tagged = list(annotation.get("concepts") or [])
@@ -79,6 +95,11 @@ def run(
     few_shot: list[tuple[str, dict]],
     batch: list[BaseModel],
 ) -> dict:
+    """Run every check over one variant and return the collected verdict.
+
+    Similarity is measured against the few-shot exemplars AND the batch produced so far,
+    so a run that repeats itself is caught as well as one that copies its examples.
+    """
     text = item_type.embed_text(item.model_dump(mode="json"))
     checks: dict = {}
 
@@ -117,8 +138,10 @@ def run(
 
 
 def needs_retry(checks: dict | None) -> bool:
+    """True when the checks asked for another attempt."""
     return bool(checks) and checks.get("verdict") == "retry"
 
 
 def correction_text(checks: dict | None) -> str:
+    """Render the retry reasons as the correction block the next prompt carries."""
     return "\n".join(f"- {reason}" for reason in (checks or {}).get("reasons") or [])

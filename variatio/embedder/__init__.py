@@ -5,8 +5,7 @@
     cache.py         the two `.npz` and the fingerprints that decide they are still valid
     index.py         `Embedder`: the concept centroids, the bank, and the two-signal score
 
-The public names are unchanged, so `from .embedder import Embedder, ConceptDescriber,
-load_descriptions, save_descriptions` resolves exactly as it did when this was one file.
+Every public name is re-exported here, so splitting the package cost no caller an import.
 """
 
 from . import cache, descriptions, index, vectors

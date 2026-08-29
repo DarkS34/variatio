@@ -4,12 +4,14 @@
 where the study is attached: importing it from `routers/__init__.py` instead would close
 a cycle, since these routers import `server.auth` and `server.routers.jobs` back.
 
-Nothing under `study/` is imported until `install` runs, which is what keeps `import
-study` free of FastAPI and SQLAlchemy for a runtime-only consumer.
+Nothing here is imported until `install` runs, and `study/__init__.py` never reaches this
+package: that is what keeps `import study` free of FastAPI and SQLAlchemy for a
+runtime-only consumer, and `tests/study/test_study_boundary.py` pins it.
 """
 
 
 def install(app) -> None:
+    """Register the `evaluate` handler and mount the study's two routers on the app."""
     from server.jobs.handlers import HANDLERS
 
     from . import admin, jobs, router

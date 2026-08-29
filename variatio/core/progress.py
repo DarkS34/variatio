@@ -1,12 +1,12 @@
 """Structured progress reporting and cooperative cancellation for the pipeline.
 
-The core does not depend on a host: with no emitter installed every call here is
-a no-op, so the CLI behaves exactly as it did before. A host (the FastAPI job
-runner, or the bridge that runs `build` in a subprocess) installs an emitter with
-`set_emitter` and starts receiving events.
+The core does not depend on a host: with no emitter installed every call here is a no-op,
+so the CLI behaves as if none of it existed. A host — the FastAPI job runner, or the
+bridge that runs `build` in a subprocess — installs an emitter with `set_emitter` and
+starts receiving events.
 
-The emitter lives in a ContextVar, so a worker thread that installs one does not
-leak it into the threads serving HTTP requests.
+The emitter lives in a ContextVar, so a worker thread that installs one does not leak it
+into the threads serving HTTP requests.
 """
 
 import contextvars
@@ -39,9 +39,15 @@ class Cancelled(RuntimeError):
 
 
 class Emitter(Protocol):
-    def emit(self, kind: str, payload: dict) -> None: ...
+    """What a host has to provide to receive events and to ask for a stop."""
 
-    def should_cancel(self) -> bool: ...
+    def emit(self, kind: str, payload: dict) -> None:
+        """Deliver one event to the host."""
+        ...
+
+    def should_cancel(self) -> bool:
+        """Whether the host has asked the running work to stop."""
+        ...
 
 
 _emitter: contextvars.ContextVar["Emitter | None"] = contextvars.ContextVar(
@@ -53,6 +59,7 @@ _emitter: contextvars.ContextVar["Emitter | None"] = contextvars.ContextVar(
 
 
 def set_emitter(emitter: "Emitter | None") -> contextvars.Token:
+    """Install an emitter for this context; returns the token that undoes it."""
     return _emitter.set(emitter)
 
 
@@ -62,11 +69,13 @@ def current_emitter() -> "Emitter | None":
 
 
 def reset_emitter(token: contextvars.Token) -> None:
+    """Undo the installation `token` came from."""
     _emitter.reset(token)
 
 
 @contextmanager
 def emitting(emitter: "Emitter | None"):
+    """Install an emitter for the duration of the block."""
     token = set_emitter(emitter)
     try:
         yield
@@ -78,12 +87,14 @@ def emitting(emitter: "Emitter | None"):
 
 
 def emit(kind: str, **payload) -> None:
+    """Send one event; a no-op when nobody is listening."""
     emitter = _emitter.get()
     if emitter is not None:
         emitter.emit(kind, payload)
 
 
 def should_cancel() -> bool:
+    """Whether the host has asked to stop; False when nobody is listening."""
     emitter = _emitter.get()
     return bool(emitter is not None and emitter.should_cancel())
 
@@ -95,14 +106,18 @@ def checkpoint() -> None:
 
 
 class _StepHandle:
+    """The running step, handed to the block so it can report its own progress."""
+
     __slots__ = ("current", "id", "total")
 
     def __init__(self, step_id: str, total: int | None):
+        """Start a step at zero, with the total its caller already knows."""
         self.id = step_id
         self.total = total
         self.current = 0
 
     def tick(self, current: int | None = None, detail: str | None = None) -> None:
+        """Report one more unit done, or jump to `current`."""
         self.current = self.current + 1 if current is None else current
         emit("step.progress", id=self.id, current=self.current, total=self.total, detail=detail)
 
@@ -119,6 +134,7 @@ _step: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 @contextmanager
 def step(step_id: str, label: str, total: int | None = None):
+    """Run a named step, reporting how it ended — ok, cancelled or failed — either way."""
     started = time.perf_counter()
     emit("step.started", id=step_id, label=label, total=total)
     handle = _StepHandle(step_id, total)
@@ -138,6 +154,7 @@ def step(step_id: str, label: str, total: int | None = None):
 
 
 def _finish(step_id: str, status: str, started: float, error: str | None = None) -> None:
+    """Emit the closing event of a step, with how long it took."""
     emit(
         "step.finished",
         id=step_id,
@@ -148,20 +165,25 @@ def _finish(step_id: str, status: str, started: float, error: str | None = None)
 
 
 def tick(step_id: str, current: int, total: int | None = None, detail: str | None = None) -> None:
+    """Report progress of a step by id, for a caller holding no handle."""
     emit("step.progress", id=step_id, current=current, total=total, detail=detail)
 
 
 # OVERALL PROGRESS --------------------------------------------------------------------------------
 
-# Steps say *what* is running; they cannot say how much of the whole is left, because a
-# build's phases cost wildly different amounts of time. A phase plan declares those costs
-# once and turns the run into a single honest 0-100 bar.
-
 
 class _Overall:
+    """A build's phase plan, as one honest 0-100 bar.
+
+    Steps say *what* is running and cannot say how much of the whole is left, because a
+    build's phases cost wildly different amounts of time. The plan declares those costs
+    once, as weights, and every phase's progress is scaled into its own span.
+    """
+
     __slots__ = ("_key", "_labels", "_spans", "_total")
 
     def __init__(self, plan: tuple[tuple[str, str, int], ...]):
+        """Lay the plan's weights out as consecutive spans of the whole bar."""
         self._labels = {key: label for key, label, _ in plan}
         self._spans: dict[str, tuple[int, int]] = {}
         base = 0
@@ -172,17 +194,21 @@ class _Overall:
         self._key: str | None = None
 
     def phase(self, key: str, detail: str | None = None) -> None:
+        """Enter a phase of the plan, at zero."""
         self._key = key
         self.at(0.0, detail)
 
     def at(self, fraction: float, detail: str | None = None) -> None:
+        """Report how far into the current phase the work is, as a fraction of that phase.
+
+        The phase key travels with the percentage: a host drawing the plan as segments has
+        to know which one is running, and reading that back from the percentage guesses
+        wrong exactly at the boundaries.
+        """
         if self._key is None:
             return
         base, weight = self._spans[self._key]
         done = base + weight * min(max(fraction, 0.0), 1.0)
-        # The key travels with the percentage because a host that draws the plan as
-        # segments has to know which one is running, and reading that back from the
-        # percentage guesses wrong exactly at the boundaries.
         emit(
             "build.progress",
             percent=round(done * 100 / self._total),
@@ -192,6 +218,7 @@ class _Overall:
         )
 
     def finish(self) -> None:
+        """Close the bar at 100 %, naming no phase."""
         emit("build.progress", percent=100, key=None, label=None, detail=None)
 
 
@@ -226,12 +253,13 @@ def advance(fraction: float, detail: str | None = None) -> None:
         bar.at(fraction, detail)
 
 
-# Who is spending, in the vocabulary each caller already has: a build's phase key
-# (`kg_extract`, `kg_clean_merge`) while a plan is installed, and the running step's id
-# otherwise — which is what the tagger, the describer and the generator have. Read by the
-# Cerebras ledger to attribute every remote call to a phase; nothing else depends on it, so
-# `None` outside both is an answer and not a failure.
 def current_activity() -> str | None:
+    """What is running, in the vocabulary the caller already has.
+
+    A build's phase key while a plan is installed, the running step's id otherwise — which
+    is what the tagger, the describer and the generator have. The Cerebras ledger reads it
+    to attribute every remote call to a phase; outside both, `None` is an answer.
+    """
     bar = _overall.get()
     if bar is not None and bar._key is not None:
         return bar._key
@@ -248,6 +276,7 @@ def token_sink(stream: str) -> Callable[[str, str], None] | None:
         return None
 
     def sink(text: str, channel: str) -> None:
+        """Forward one token of `stream` to the host."""
         emit("token", stream=stream, text=text, channel=channel)
 
     return sink

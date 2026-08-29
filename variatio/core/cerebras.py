@@ -1,3 +1,10 @@
+"""The Cerebras backend, and the hybrid engine that routes some models to it.
+
+Everything not named in `CEREBRAS_MODELS` — the guardrail and the embedder always included
+— stays on Ollama, so residency, pulls, deletes and the idle release only ever mean the
+local half.
+"""
+
 import hashlib
 import json
 import time
@@ -20,10 +27,9 @@ STRICT_SCHEMA_MAX_CHARS = 5000
 _WRAPPER_NAME = "lista"
 
 _UNSUPPORTED_KEYWORDS = ("pattern", "format", "minItems", "maxItems", "minLength", "maxLength")
-# Pydantic titles every field it writes («material_base» → «Material Base»), which says
-# nothing the property name does not and is pure weight against the 5 000-character cap:
-# it is what put `compiladores`' five-modality extraction schema at 5 001 and cost every
-# call of that build strict mode outright — 4 502 without it. Metadata, never shape.
+# Pydantic titles every field it writes and the decoder never reads them: metadata, never
+# shape, and pure weight against the 5 000-character cap — one real extraction schema
+# measured 5 001 characters with them and 4 502 without.
 _NOISE_KEYWORDS = ("title",)
 _DROPPED_KEYWORDS = _UNSUPPORTED_KEYWORDS + _NOISE_KEYWORDS
 _SUBSCHEMA_KEYS = ("items", "prefixItems", "anyOf", "allOf", "oneOf", "additionalProperties")
@@ -34,25 +40,26 @@ _MAX_ATTEMPTS = 5
 _CATALOG_TTL_SECONDS = 300.0
 
 
-# Cerebras' strict mode refuses the keywords Ollama's grammar simply ignores, refuses
-# `const` outright («Unsupported JSON schema fields: const»), and demands
-# `additionalProperties: false` on every object that does not declare one. `const` is the
-# one refusal with a lossless translation — `enum` of one — so it is rewritten rather than
-# dropped. The rest of the transform is lossy on purpose: what a dropped `pattern` or `maxItems` used to guarantee is exactly what
-# `parse_with_repair` and each component's own parser already re-check.
-#
-# An object that DOES declare an `additionalProperties` schema is an open-ended map — the KG
-# builder's `domains`, `drop` and `non_taggable` — and closing it there is not lossy but
-# wrong: it rewrote the value's type as `false`, leaving an object that can hold no field at
-# all. Cerebras answered 400 «Object fields require at least one of: 'properties' or
-# 'anyOf'», which is what killed a build in `kg_domains`. Measured against the API: the
-# typed map is refused under `strict: true` just the same, so what the map costs is strict
-# mode itself, not its shape.
 def strict_schema(schema: dict) -> dict:
+    """Adapt a JSON Schema to what Cerebras' strict mode accepts.
+
+    Strict mode refuses the keywords Ollama's grammar merely ignores — `pattern`,
+    `format`, the four `min`/`max` bounds — refuses `const` outright, and demands
+    `additionalProperties: false` on every object that does not declare one of its own.
+    `const` is the one refusal with a lossless translation and is rewritten as an `enum` of
+    one; dropping the rest is lossy on purpose, since what a `pattern` guaranteed is what
+    `parse_with_repair` and each component's parser re-check anyway.
+
+    An object that DOES declare an `additionalProperties` schema is an open-ended map and
+    is left alone: closing it rewrites the value's own type as `false`, leaving an object
+    that can hold no field at all, and Cerebras answers 400. Such a map costs strict mode
+    itself — measured, a typed one is refused just the same — not its shape.
+    """
     return _walk(schema)
 
 
 def _walk(node: object) -> object:
+    """Rewrite one schema node and everything nested inside it."""
     if isinstance(node, list):
         return [_walk(part) for part in node]
     if not isinstance(node, dict):
@@ -77,6 +84,10 @@ def _walk(node: object) -> object:
 
 
 def _open_map(node: object) -> bool:
+    """Whether any object in the schema takes keys the schema does not name.
+
+    Strict mode refuses those, so a schema containing one is asked for without it.
+    """
     if isinstance(node, list):
         return any(_open_map(part) for part in node)
     if not isinstance(node, dict):
@@ -92,39 +103,37 @@ def _open_map(node: object) -> bool:
     return False
 
 
-# What the two degradations report is a property of the SCHEMA, not of the call, and the
-# same schema goes out on every call of a phase and again on every repair: a bank build of
-# `cs0-examenes` printed the size warning 29 times, word for word. It is said once per
-# distinct schema and per process, and a build has a process of its own, so no build stays
-# silent about it.
+# A degradation is a property of the SCHEMA and not of the call, and the same schema goes
+# out on every call of a phase and again on every repair: one bank build printed the size
+# warning 29 times. A build has a process of its own, so once per process misses nothing.
 _WARNED: set[str] = set()
 
 
 def _warn_once(digest: str, message: str) -> None:
+    """Log `message` the first time this process sees `digest`."""
     if digest in _WARNED:
         return
     _WARNED.add(digest)
     logger.warning(message)
 
 
-# The root rule was found the day the cap stopped hiding it: with the titles dropped, the
-# bank-extraction schema came back under 5 000, went out with `strict: true` for the first
-# time, and Cerebras answered 400 «Extra top level keys found in JSON schema: {'items'}» to
-# every call of the build — strict mode demands an OBJECT at the root, and that schema is an
-# array. What the parsers own is the ANSWER's shape, not the wire's, so the array is wrapped
-# in a one-key object at this boundary and `generate` unwraps the reply before anyone reads
-# it — the wrapper's `name` is the marker, which is why `_WRAPPER_NAME` must never be the
-# plain «respuesta». Wrapped implies strict: the wrap is only taken when the wrapper clears
-# every other check, so a reply to a wrapped schema is decoder-guaranteed to be the one-key
-# object `_unwrap` expects. When the wrapper cannot clear them (an open map inside, or the
-# cap), the array goes out as itself and degrades like the open map does.
-#
-# Dropping `strict` is the same degradation the character cap already performs, for the same
-# reason: the shape still travels and still guides — measured on the assignment schema, the
-# typed map answered `{"domains": {"Salud": ["Telemedicina"]}}` while the same call with the
-# value left untyped answered strings instead of arrays. What is lost is the decoder's
-# guarantee, which is `parse_with_repair`'s job from there.
 def response_format(format: dict | str | None) -> dict | None:
+    """Build Cerebras' `response_format`, degrading where strict mode cannot hold.
+
+    Strict mode demands an OBJECT at the root — an array root answers 400 «Extra top level
+    keys found in JSON schema: {'items'}» — so an array schema is wrapped in a one-key
+    object and `generate` unwraps the reply before any parser sees it. The wrapper's `name`
+    is the marker, which is why `_WRAPPER_NAME` must never be the plain «respuesta».
+    Wrapped implies strict: the wrap is only taken when the wrapper clears every other
+    check, so a reply to a wrapped schema is decoder-guaranteed to be the object `_unwrap`
+    expects.
+
+    `strict` is dropped in three cases — a non-object root that cannot be wrapped, an
+    open-keyed map, and a schema above `STRICT_SCHEMA_MAX_CHARS`. The shape still travels
+    and still guides: measured, the same call answered arrays with the map typed and bare
+    strings with it untyped. What is lost is the decoder's guarantee, which
+    `parse_with_repair` takes over from there.
+    """
     if format is None:
         return None
     if isinstance(format, str):
@@ -173,6 +182,7 @@ def response_format(format: dict | str | None) -> dict | None:
 
 
 def _unwrap(text: str) -> str:
+    """Return the array inside a one-key wrapper object, or `text` unchanged."""
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -182,17 +192,18 @@ def _unwrap(text: str) -> str:
     return text
 
 
-# The same last-hop translation `OllamaEngine._think_option` does, in Cerebras' dialect:
-# `reasoning_effort` takes "none"/"low"/"medium"/"high", with "none" as gemma-4's default.
-# Cerebras has no "max", so the one level Ollama has above "high" maps down to it. A string
-# is a per-phase effort already resolved by `settings.derived`; `True` comes only from the
-# boolean callers (the study's `Commission`, the UI switch) and maps to the fixed
-# `DEFAULT_THINK_EFFORT`, exactly as in Ollama's dialect.
-#
-# Note this assumes every routed model HAS an off switch. Some families answer 400
-# «Unsupported reasoning effort: none» and would need `False` floored at their minimum;
-# none is routed here today, so the translation is the same for every model.
 def reasoning_effort(think: bool | str | None) -> str | None:
+    """Translate `think` into Cerebras' `reasoning_effort`, at the last hop before the call.
+
+    The same translation `OllamaEngine._think_option` does, in the other dialect: the
+    levels are "none"/"low"/"medium"/"high", Cerebras has no "max", so Ollama's top level
+    maps down to "high". A string is a per-phase effort already resolved by
+    `settings.derived` and travels untouched; `True` becomes `DEFAULT_THINK_EFFORT`.
+
+    It assumes every routed model has an off switch. Some families answer 400 «Unsupported
+    reasoning effort: none» and would need `False` floored at their own minimum; none is
+    routed here today.
+    """
     if think is None:
         return None
     if think is False:
@@ -202,9 +213,12 @@ def reasoning_effort(think: bool | str | None) -> str | None:
 
 
 class CerebrasEngine:
+    """The remote half: Cerebras' OpenAI-compatible API, gated by the spending ledger."""
+
     name = "cerebras"
 
     def __init__(self):
+        """Open the client with the configured base URL and key, and empty the catalogue."""
         self._client = httpx.Client(
             base_url=config.CEREBRAS_BASE_URL,
             headers={"Authorization": f"Bearer {config.CEREBRAS_API_KEY}"},
@@ -213,12 +227,14 @@ class CerebrasEngine:
         self._catalog: tuple[float, list[str]] | None = None
 
     def is_available(self) -> bool:
+        """Whether the API answers at all."""
         try:
             return self._client.get("/models", timeout=5.0).status_code == 200
         except httpx.HTTPError:
             return False
 
     def catalog(self) -> list[str]:
+        """The models Cerebras serves, cached for `_CATALOG_TTL_SECONDS`."""
         cached = self._catalog
         if cached is not None and time.monotonic() - cached[0] < _CATALOG_TTL_SECONDS:
             return cached[1]
@@ -227,8 +243,8 @@ class CerebrasEngine:
         except httpx.HTTPError as e:
             raise InferenceError(f"No se pudo leer el catálogo de Cerebras: {e}") from e
         if response.status_code != 200:
-            # The body stays in the log and out of the message: this one is returned verbatim
-            # to the panel as `{"error": …}`, and a reply from upstream is not ours to reflect.
+            # This message reaches the panel verbatim, and a reply from upstream is not
+            # ours to reflect: the body stays in the log.
             logger.debug(f"[cerebras] Error body while listing models: {response.text[:300]}")
             raise InferenceError(
                 f"Cerebras respondió {response.status_code} al listar sus modelos "
@@ -240,12 +256,15 @@ class CerebrasEngine:
         return models
 
     def supports_thinking(self, model: str) -> bool:
+        """Every model Cerebras serves takes a `reasoning_effort`."""
         return True
 
     def supports_vision(self, model: str) -> bool:
+        """Whether `model` belongs to one of the families that read images."""
         return model.startswith(_VISION_PREFIXES)
 
     def capabilities(self, model: str) -> list[str]:
+        """The same shape Ollama's capability list has, derived rather than asked for."""
         return ["thinking", *(["vision"] if self.supports_vision(model) else [])]
 
     def generate(
@@ -258,6 +277,7 @@ class CerebrasEngine:
         temperature: float | None = None,
         format: dict | str | None = None,
     ) -> GenerationResponse:
+        """Ask `model` for one answer, unwrapping it when the schema had to be wrapped."""
         body = self._body(model, prompt, think, system, images, temperature, format)
         data = self._post(model, body).json()
         message = (data.get("choices") or [{}])[0].get("message") or {}
@@ -276,25 +296,26 @@ class CerebrasEngine:
         on_token: TokenSink | None = None,
         temperature: float | None = None,
     ) -> GenerationResponse:
+        """Stream one answer, feeding each token to `on_token` as it arrives.
+
+        The claim IS the room: it is booked at the estimate before the call goes out, so a
+        second job on the remote lane sees a smaller window rather than the same one.
+        Releasing it at the end is a no-op once the call has been recorded — the room only
+        comes back when the call never happened.
+        """
         if on_token is None:
             return self.generate(model=model, prompt=prompt, think=think, temperature=temperature)
 
         body = self._body(model, prompt, think, None, None, temperature, None)
         body["stream"] = True
         # A streamed answer carries no `usage` unless it is asked for, and without it the
-        # ledger would charge a whole generation zero tokens — the one call of the pipeline
-        # that streams is the variant generator's, which is not the cheap one.
+        # ledger would charge a whole generation zero tokens.
         body["stream_options"] = {"include_usage": True}
 
         ledger = cerebras_budget.shared()
         phase = progress.current_activity()
-        # The claim IS the room: it is spent at the estimate before the call goes out, so a
-        # second job on the remote lane sees a smaller window rather than the same one.
         claim = ledger.wait(model, cerebras_budget.estimate_tokens(prompt), phase)
 
-        answer: list[str] = []
-        thinking: list[str] = []
-        prompt_tokens = completion_tokens = 0
         try:
             with self._client.stream("POST", "/chat/completions", json=body) as response:
                 if response.status_code != 200:
@@ -303,48 +324,30 @@ class CerebrasEngine:
                     raise InferenceError(
                         _remote_error(response.status_code, model, response.text)
                     )
-                for line in response.iter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    payload = line[len("data: ") :].strip()
-                    if not payload or payload == "[DONE]":
-                        continue
-                    chunk = json.loads(payload)
-                    usage = chunk.get("usage")
-                    if usage:
-                        prompt_tokens = int(usage.get("prompt_tokens") or 0)
-                        completion_tokens = int(usage.get("completion_tokens") or 0)
-                    delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
-                    thought = delta.get("reasoning") or delta.get("reasoning_content")
-                    if thought:
-                        thinking.append(thought)
-                        on_token(thought, "thinking")
-                    text = delta.get("content")
-                    if text:
-                        answer.append(text)
-                        on_token(text, "answer")
-                    progress.checkpoint()
+                answer, thinking, prompt_tokens, completion_tokens = _consume_stream(
+                    response, on_token
+                )
                 ledger.record(
                     model, phase, prompt_tokens, completion_tokens, response.headers, claim=claim
                 )
         except httpx.HTTPError as e:
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
         finally:
-            # A no-op once the call has been recorded; the room only comes back when the
-            # call never happened, which is what an exception on the way out means.
             ledger.release(claim)
 
         return GenerationResponse(
-            response="".join(answer).strip(), thinking="".join(thinking).strip() or None
+            response=answer.strip(), thinking=thinking.strip() or None
         )
 
     def embed(self, model: str, text: str) -> list[float]:
+        """Refuse: Cerebras serves no embeddings here."""
         raise InferenceError(
             f"'{model}' está enrutado a Cerebras, que aquí no sirve embeddings: "
             "el modelo de embedding debe quedar fuera de CEREBRAS_MODELS"
         )
 
     def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
+        """Refuse: Cerebras serves no embeddings here."""
         raise InferenceError(
             f"'{model}' está enrutado a Cerebras, que aquí no sirve embeddings: "
             "el modelo de embedding debe quedar fuera de CEREBRAS_MODELS"
@@ -360,6 +363,11 @@ class CerebrasEngine:
         temperature: float | None,
         format: dict | str | None,
     ) -> dict:
+        """Assemble the chat-completions request for one call.
+
+        Images travel as base64 PNG data URLs; a model that cannot read one is refused up
+        front rather than answering emptily.
+        """
         if images and not self.supports_vision(model):
             raise InferenceError(
                 f"Model '{model}' has no vision capability, so it cannot read the "
@@ -393,16 +401,14 @@ class CerebrasEngine:
             body["response_format"] = shaped
         return body
 
-    # 429 is business as usual on Cerebras' free tier (5 requests a minute), so it is
-    # retried with the wait the server asks for; anything else non-200 is an answer, and
-    # the daily token budget in particular comes back as an error worth reading, not
-    # worth retrying.
-    #
-    # The throttle in front of it is what makes the 429 rare rather than routine: the
-    # ledger holds the call until the window has room AND books that room before the call
-    # goes out, so the retry loop stays what it was meant to be — the answer to somebody
-    # ELSE spending the same account's budget, from outside this installation.
     def _post(self, model: str, body: dict) -> httpx.Response:
+        """Send one request, retrying only the statuses that mean «ask again».
+
+        A 429 is retried with the wait the server asks for; anything else non-200 is an
+        answer, and the exhausted daily budget in particular is worth reading rather than
+        repeating. The ledger in front of this makes a 429 the exception: what is left is
+        the answer to somebody ELSE spending the same account's budget.
+        """
         ledger = cerebras_budget.shared()
         phase = progress.current_activity()
         estimate = cerebras_budget.estimate_tokens(_prompt_text(body))
@@ -422,10 +428,13 @@ class CerebrasEngine:
             return response
         raise InferenceError(f"Cerebras agotó los reintentos para '{model}'")
 
-    # Every response is recorded, a 429 included: it spent a request whether or not it
-    # produced an answer, and a ledger that only counted successes would walk straight
-    # back into the limit it just hit.
     def _send(self, ledger, model: str, phase: str | None, estimate: int, body: dict):
+        """Book the room, make one call and charge it whatever it cost.
+
+        Every response is recorded, a 429 included: it spent a request whether or not it
+        produced an answer, and a ledger counting only successes would walk straight back
+        into the limit it just hit.
+        """
         claim = ledger.wait(model, estimate, phase)
         try:
             response = self._client.post("/chat/completions", json=body)
@@ -437,10 +446,45 @@ class CerebrasEngine:
         return response
 
 
-# What the ledger charges the call, taken from the answer rather than guessed: `usage` is
-# exact and immediate, while the server's own `remaining-tokens-*` headers were measured to
-# lag (a 74-token call and a 20-token call each moved the daily counter by 6).
+def _consume_stream(response: httpx.Response, on_token: TokenSink) -> tuple[str, str, int, int]:
+    """Read one SSE stream to its end, returning the answer, the reasoning and the usage.
+
+    Every chunk is a point where a cancellation can take effect.
+    """
+    answer: list[str] = []
+    thinking: list[str] = []
+    prompt_tokens = completion_tokens = 0
+    for line in response.iter_lines():
+        if not line.startswith("data: "):
+            continue
+        payload = line[len("data: ") :].strip()
+        if not payload or payload == "[DONE]":
+            continue
+        chunk = json.loads(payload)
+        usage = chunk.get("usage")
+        if usage:
+            prompt_tokens = int(usage.get("prompt_tokens") or 0)
+            completion_tokens = int(usage.get("completion_tokens") or 0)
+        delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+        thought = delta.get("reasoning") or delta.get("reasoning_content")
+        if thought:
+            thinking.append(thought)
+            on_token(thought, "thinking")
+        text = delta.get("content")
+        if text:
+            answer.append(text)
+            on_token(text, "answer")
+        progress.checkpoint()
+    return "".join(answer), "".join(thinking), prompt_tokens, completion_tokens
+
+
 def _usage(response: httpx.Response) -> tuple[int, int]:
+    """What the ledger charges the call, taken from the answer rather than guessed.
+
+    `usage` is exact and arrives with the reply, while the server's own
+    `remaining-tokens-*` headers were measured to lag: a 74-token call and a 20-token call
+    each moved the daily counter by 6.
+    """
     try:
         usage = response.json().get("usage") or {}
     except (ValueError, AttributeError):
@@ -448,9 +492,12 @@ def _usage(response: httpx.Response) -> tuple[int, int]:
     return int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
 
 
-# Only to size the call BEFORE it goes out; `record` replaces it with the exact figure the
-# moment the answer lands, so an error here never accumulates across calls.
 def _prompt_text(body: dict) -> str:
+    """Flatten a request's messages into text, only to size the call before it goes out.
+
+    `record` replaces the estimate with the exact figure the moment the answer lands, so an
+    error here never accumulates across calls.
+    """
     parts: list[str] = []
     for message in body.get("messages") or []:
         content = message.get("content")
@@ -462,13 +509,16 @@ def _prompt_text(body: dict) -> str:
 
 
 def _endpoint_label(path: str) -> str:
+    """The full URL of `path`, for an error an operator has to act on."""
     return f"{str(config.CEREBRAS_BASE_URL).rstrip('/')}{path}"
 
 
-# Same rule as `inference._upstream_error`, in Cerebras' half: what a remote API answers is
-# its text, not ours, and these messages travel to the panel as the job's failure. The
-# status and the endpoint are what an operator acts on; the body goes to the log at debug.
 def _remote_error(status: int, model: str, body: str) -> str:
+    """Phrase a remote failure for the panel: the status and the endpoint, not the body.
+
+    Same rule as `inference._upstream_error` — what a remote API answers is its text, not
+    ours, and these messages travel to the panel as the job's failure.
+    """
     logger.debug(f"[cerebras] Body of error {status} for '{model}': {body[:300]}")
     return (
         f"Cerebras respondió {status} para '{model}' "
@@ -477,6 +527,7 @@ def _remote_error(status: int, model: str, body: str) -> str:
 
 
 def _retry_wait(response: httpx.Response, attempt: int) -> float:
+    """Seconds to wait before retrying: what `Retry-After` asks for, else a backoff."""
     try:
         wait = float(response.headers.get("retry-after", ""))
     except ValueError:
@@ -489,6 +540,10 @@ _shared_base: str | None = None
 
 
 def catalog() -> list[str]:
+    """Cerebras' catalogue, readable without activating the engine.
+
+    Shared so the TTL survives between requests, and rebuilt when the base URL changes.
+    """
     global _shared, _shared_base
     base = str(config.CEREBRAS_BASE_URL)
     if _shared is None or _shared_base != base:
@@ -497,60 +552,80 @@ def catalog() -> list[str]:
     return _shared.catalog()
 
 
-# One engine, two backends: the models named in `CEREBRAS_MODELS` are served remotely and
-# everything else — the guardrail and the embedder included — stays on Ollama. Residency,
-# pulls, deletes and the idle release only ever mean the Ollama half, because remote
-# weights have nothing to load or free.
 class HybridEngine:
+    """One engine over two backends, routed per model by `CEREBRAS_MODELS`.
+
+    Everything not named there — the guardrail and the embedder included — stays on Ollama,
+    and residency, pulls, deletes and the idle release only ever mean that half, remote
+    weights having nothing to load or free.
+    """
+
     name = "cerebras+ollama"
 
     def __init__(self):
+        """Build both backends; which one serves a call is decided per model."""
         self._ollama = OllamaEngine()
         self._cerebras = CerebrasEngine()
 
     def _remote(self, model: str) -> bool:
+        """Whether `model` is routed to Cerebras."""
         return model in config.CEREBRAS_MODELS
 
     def _backend(self, model: str):
+        """The backend that serves `model`."""
         return self._cerebras if self._remote(model) else self._ollama
 
-    # The health poll asks about the half this process must have to do anything at all;
-    # a Cerebras outage surfaces as a readable error on the first remote call instead of
-    # costing every open tab a transatlantic round trip each 15 s.
     def is_available(self) -> bool:
+        """Whether the LOCAL half answers, which is what this process cannot do without.
+
+        A Cerebras outage surfaces as a readable error on the first remote call, instead of
+        costing every open tab a transatlantic round trip every 15 s.
+        """
         return self._ollama.is_available()
 
     def remote_models(self) -> frozenset[str]:
+        """Which models this engine serves remotely."""
         return frozenset(config.CEREBRAS_MODELS)
 
     def generate(self, model: str, prompt: str, **kwargs) -> GenerationResponse:
+        """Ask the backend that serves `model` for one answer."""
         return self._backend(model).generate(model=model, prompt=prompt, **kwargs)
 
     def generate_stream(self, model: str, prompt: str, **kwargs) -> GenerationResponse:
+        """Stream one answer from the backend that serves `model`."""
         return self._backend(model).generate_stream(model=model, prompt=prompt, **kwargs)
 
     def embed(self, model: str, text: str) -> list[float]:
+        """Embed one text on the backend that serves `model`."""
         return self._backend(model).embed(model, text)
 
     def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
+        """Embed several texts on the backend that serves `model`."""
         return self._backend(model).embed_batch(model, texts)
 
     def capabilities(self, model: str) -> list[str]:
+        """What `model` declares it can do, asked of the backend that serves it."""
         return self._backend(model).capabilities(model)
 
     def supports_thinking(self, model: str) -> bool:
+        """Whether `model` has a reasoning mode to ask for."""
         return self._backend(model).supports_thinking(model)
 
     def supports_vision(self, model: str) -> bool:
+        """Whether `model` can read an image."""
         return self._backend(model).supports_vision(model)
 
     def installed_models(self) -> list[str]:
+        """The names of every model this engine can serve, local and remote."""
         return [info["model"] for info in self.installed_models_detail()]
 
-    # The remote half lists Cerebras' whole catalogue, so the panel can point a phase at
-    # any of it; when the catalogue is unreachable the declared routing list stands in,
-    # which keeps a required remote model from reading as «sin instalar» during a blip.
     def installed_models_detail(self) -> list[dict]:
+        """Every model this engine can serve, marked with which half serves it.
+
+        The remote half lists Cerebras' whole catalogue, so the panel can point a phase at
+        any of it. When the catalogue is unreachable the declared routing list stands in,
+        which keeps a required remote model from reading as «sin instalar» during a blip.
+        """
         local = self._ollama.installed_models_detail()
         try:
             remote = self._cerebras.catalog()
@@ -560,17 +635,21 @@ class HybridEngine:
         return local + [{"model": model, "size": None, "remote": True} for model in remote]
 
     def running_models(self) -> list[dict]:
+        """What is resident on the GPU; a remote model occupies nothing."""
         return self._ollama.running_models()
 
     def unload(self, model: str, is_embedding: bool = False) -> bool:
+        """Free `model` from the GPU; a remote one has nothing to free."""
         if self._remote(model):
             return True
         return self._ollama.unload(model, is_embedding=is_embedding)
 
     def unload_all(self) -> list[str]:
+        """Free every resident model, which can only ever mean the local half."""
         return self._ollama.unload_all()
 
     def ensure_model(self, model: str) -> bool:
+        """Check `model` is available: installed locally, or in Cerebras' catalogue."""
         if not self._remote(model):
             return self._ollama.ensure_model(model)
         try:
@@ -584,11 +663,13 @@ class HybridEngine:
         return True
 
     def pull(self, model: str, on_progress=None) -> None:
+        """Download `model`; a remote one has nothing to download."""
         if self._remote(model):
             raise InferenceError(f"'{model}' se sirve en Cerebras; no hay nada que descargar")
         self._ollama.pull(model, on_progress)
 
     def delete(self, model: str) -> None:
+        """Remove `model` from disk; a remote one is not on ours."""
         if self._remote(model):
             raise InferenceError(f"'{model}' se sirve en Cerebras; no hay nada que borrar")
         self._ollama.delete(model)

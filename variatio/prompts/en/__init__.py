@@ -1,3 +1,9 @@
+"""The English prompt set, mirroring the Spanish one and carrying none of its measurements.
+
+Interchangeable with `es/` by construction: the same names, the same signatures and the
+same JSON keys, which is what lets a caller hold one without knowing which.
+"""
+
 from .repair import (
     json_repair_prompt,
 )

@@ -1,3 +1,9 @@
+"""The command line: argument parsing, the build-if-missing policy, and the reporting.
+
+Every `print()` and every exit code of the library lives here. The stages return data and
+raise; deciding to build what is missing is this layer's call and never theirs.
+"""
+
 import argparse
 import json
 
@@ -8,14 +14,15 @@ from .core import paths
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for every subcommand."""
     parser = argparse.ArgumentParser(
         prog="variatio",
         description="Knowledge graph-guided generation of educational items: exercises grounded in a curriculum graph.",
     )
 
     common = argparse.ArgumentParser(add_help=False)
-    # Required: there is no default instance to fall back to, and a build that guesses
-    # which one it meant is a build that rewrites somebody else's graph.
+    # Required: there is no default workspace, and a build that guesses which instance
+    # it meant is a build that rewrites somebody else's graph.
     common.add_argument(
         "--workspace",
         metavar="SLUG",
@@ -57,6 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _add_generation_args(parser: argparse.ArgumentParser) -> None:
+    """Add the arguments the generating subcommands share."""
     parser.add_argument("-n", type=int, default=2, help="number of items to generate")
     parser.add_argument(
         "--concepts",
@@ -90,6 +98,10 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
 
 
 def _parse_fixed(pairs: list[str]) -> dict[str, object]:
+    """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
+
+    Raises ValueError on a pair with no `=`.
+    """
     fixed: dict[str, object] = {}
     for pair in pairs:
         field, sep, value = pair.partition("=")
@@ -103,6 +115,7 @@ def _parse_fixed(pairs: list[str]) -> dict[str, object]:
 
 
 def _report(results: list) -> None:
+    """Print each generated item, and its reasoning when the model produced any."""
     for i, result in enumerate(results, 1):
         print(f"\n============== ITEM {i} · {result.item_type} ==============")
         print(result.item.model_dump_json(indent=2))
@@ -111,6 +124,7 @@ def _report(results: list) -> None:
 
 
 def _generate_and_report(args: argparse.Namespace, ws) -> None:
+    """Initialize the instance, generate what was asked for, and print the result."""
     context = stages.initialize(tag=True, ws=ws)
     results = stages.generate(
         context,
@@ -125,11 +139,13 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run one subcommand and return its exit code."""
     args = build_parser().parse_args(argv)
 
     ws = paths.workspace(args.workspace)
 
     try:
+        # `restamp-descriptions` calls no model, so it must not demand a live engine.
         if args.command != "restamp-descriptions":
             bootstrap()
         if args.command == "build":

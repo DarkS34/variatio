@@ -1,12 +1,11 @@
-# The context synthesis, shared by BOTH builders: the graph's calls it at the end of its
-# curation with the syllabus blocks, and the profile's at the end of its own with the
-# modalities. Each contributes what its artifact knows about the subject and neither sees
-# what the other knows, so the call is always a MERGE: what was already written goes in
-# and a text that incorporates it comes out.
-#
-# That is why what is legislated hardest here is preservation. The natural failure of a
-# model given a text and new material is to rewrite the text; repeated on every rebuild,
-# that paraphrases what a person wrote until it stops being theirs.
+"""The synthesis of the subject's context, called by BOTH builders at the end of a build.
+
+The graph contributes the names of its syllabus blocks and the profile its modalities, and
+neither sees what the other knows, so the call is always a MERGE: what is already written
+goes in and a text incorporating it comes out. Preservation is what the prompt legislates
+hardest, because a model handed a text and new material rewrites the text, and repeated on
+every rebuild that paraphrases a person's words until they stop being theirs.
+"""
 
 
 def synthesize_content_context_prompt(
@@ -15,6 +14,14 @@ def synthesize_content_context_prompt(
     source_label: str,
     max_chars: int,
 ) -> str:
+    """Ask for the subject in prose, merging in whatever context is already written.
+
+    The answer is `narrative` plus the three facts another part of the system needs
+    separately — `subject`, `educational_level` and `language_of_instruction`, each an empty
+    string when it cannot be inferred safely and each consistent with the prose.
+    `source_label` names whose evidence is being folded in; `max_chars` is a hard ceiling,
+    because this text is paid for on every call the system makes.
+    """
     current_section = (
         "\n# CONTEXT THAT ALREADY EXISTS — A STARTING POINT, NOT A DRAFT TO REWRITE\n"
         f"{current_block}\n"

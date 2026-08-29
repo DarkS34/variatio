@@ -1,3 +1,9 @@
+"""Every read and write of the `evaluation_sessions` table, and nothing else.
+
+The header/trace split of the file era survives as columns beside a `trace` JSONB, so
+listing a hundred sessions still does not load a hundred prompts.
+"""
+
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
@@ -7,9 +13,15 @@ from server.db.models import EvalSession, User
 
 
 def _moment(timestamp: float | None) -> datetime | None:
+    """Turn a POSIX timestamp into an aware UTC datetime, or None."""
     if not timestamp:
         return None
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
+def _per_arm(payload: dict, field: str) -> dict:
+    """Pull one field out of every arm's result, for the columns the listing reads."""
+    return {name: arm.get(field) for name, arm in (payload.get("arms") or {}).items()}
 
 
 def upsert_evaluation(
@@ -19,6 +31,10 @@ def upsert_evaluation(
     user_id: int | None,
     payload: dict,
 ) -> EvalSession:
+    """Create or overwrite the row for one session, copying the trace into its columns.
+
+    `created_at` is written only when the row is new, so a later save never moves it.
+    """
     row = session.get(EvalSession, session_id)
     if row is None:
         row = EvalSession(id=session_id, workspace_id=workspace_id, user_id=user_id)
@@ -46,22 +62,20 @@ def upsert_evaluation(
     row.declined_at = payload.get("declined_at")
     row.evaluator_note = payload.get("evaluator_note")
     row.rating = payload.get("rating")
-    row.arm_status = {
-        name: arm.get("status") for name, arm in (payload.get("arms") or {}).items()
-    }
-    row.arm_elapsed_ms = {
-        name: arm.get("elapsed_ms") for name, arm in (payload.get("arms") or {}).items()
-    }
+    row.arm_status = _per_arm(payload, "status")
+    row.arm_elapsed_ms = _per_arm(payload, "elapsed_ms")
     row.trace = payload
     session.flush()
     return row
 
 
 def get_evaluation(session: Session, session_id: str) -> EvalSession | None:
+    """Return one session's row by id, or None."""
     return session.get(EvalSession, session_id)
 
 
 def delete_evaluations(session: Session, session_ids: list[str]) -> list[str]:
+    """Delete the sessions that exist and return the ids actually removed."""
     if not session_ids:
         return []
     rows = list(session.scalars(select(EvalSession).where(EvalSession.id.in_(session_ids))))
@@ -78,6 +92,7 @@ def list_evaluations(
     limit: int | None = 50,
     offset: int = 0,
 ) -> tuple[list[EvalSession], int]:
+    """Return one page of sessions, newest first, with the total the filters match."""
     conditions = []
     if workspace_id is not None:
         conditions.append(EvalSession.workspace_id == workspace_id)
@@ -96,12 +111,14 @@ def list_evaluations(
     return list(session.scalars(query)), total
 
 
-# The whole population, for the analysis: no pagination, because an aggregate computed
-# over one page is not an aggregate. Loaded with its author so grouping by account does
-# not fire one query per row.
 def all_evaluations(
     session: Session, workspace_id: int | None = None
 ) -> list[tuple[EvalSession, User | None]]:
+    """Return the whole population with its authors, unpaginated.
+
+    An aggregate computed over one page is not an aggregate, and the join is what keeps
+    grouping by account from firing one query per row.
+    """
     query = (
         select(EvalSession, User)
         .outerjoin(User, User.id == EvalSession.user_id)
@@ -112,10 +129,12 @@ def all_evaluations(
     return [(row, user) for row, user in session.execute(query)]
 
 
-# Every session that shares these three items, whoever it belongs to. This is the query the
-# agreement between evaluators is computed from, and the only one that deliberately ignores
-# who is asking — which is why it is never reachable from the evaluator's own router.
 def sessions_in_set(session: Session, set_id: str) -> list[EvalSession]:
+    """Return every session holding these three items, whoever it belongs to.
+
+    The agreement between evaluators is computed from this, and it is the one query that
+    ignores who is asking — which is why the evaluator's own router never reaches it.
+    """
     return list(
         session.scalars(
             select(EvalSession)
@@ -125,11 +144,14 @@ def sessions_in_set(session: Session, set_id: str) -> list[EvalSession]:
     )
 
 
-# What an evaluator has been handed and has not finished. Ordered oldest first: a queue is
-# worked from the front, and «la siguiente» has to mean the same thing on every reload.
 def assigned_to(
     session: Session, workspace_id: int, user_id: int, pending_only: bool = False
 ) -> list[EvalSession]:
+    """Return what this evaluator was handed, oldest first.
+
+    A queue is worked from the front, so «la siguiente» has to mean the same thing on
+    every reload.
+    """
     query = select(EvalSession).where(
         EvalSession.workspace_id == workspace_id,
         EvalSession.user_id == user_id,
@@ -142,10 +164,12 @@ def assigned_to(
     return list(session.scalars(query.order_by(EvalSession.created_at.asc())))
 
 
-# The distinct sets of a workspace with one representative row each, for the panel that
-# hands them out. `created_at` of the earliest row is when those three items came into
-# existence, which is what the administrator is choosing between.
 def sets_in_workspace(session: Session, workspace_id: int) -> list[EvalSession]:
+    """Return one representative row per distinct set, for the panel that hands them out.
+
+    The earliest row of a set is when those three items came into existence, which is what
+    the administrator is choosing between.
+    """
     rows = session.scalars(
         select(EvalSession)
         .where(EvalSession.workspace_id == workspace_id)

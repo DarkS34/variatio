@@ -1,16 +1,10 @@
 """As many jobs at once as each backend has room for, in order.
 
-Not one queue: Ollama serves from a single GPU, so two local jobs would do nothing but swap
-weights, while Cerebras serves over the network. Between the two there is no contention at
-all, and a single queue made every job wait for a machine it was never going to use.
-
-Nor one job per lane. That was the first shape of this, and it was right about the GPU and
-wrong about the quota: two remote jobs contend for a rolling budget, and that budget is
-already administered call by call by `core/cerebras_budget`, which books each call's room
-before it goes out. Serialising the lane on top of that bought nothing and cost the thing
-people actually noticed — two people could not work at the same time. So a lane has a
-CAPACITY (`lanes.capacity`): one locally and always, `CEREBRAS_MAX_CONCURRENT_JOBS`
-remotely.
+Not one queue: Ollama serves from a single GPU while Cerebras serves over the network, and
+between the two there is no contention at all — one queue made every job wait for a machine
+it was never going to use. Nor one job per lane: a lane has a CAPACITY (`lanes.capacity`),
+one locally and always, `CEREBRAS_MAX_CONCURRENT_JOBS` remotely, because what is scarce
+remotely is a rolling budget that `core/cerebras_budget` already books call by call.
 
 A job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs as
 soon as every one of them has a free slot. Within a lane the order of arrival is kept, and
@@ -43,6 +37,7 @@ class JobControl:
     """The emitter the core writes to, and the handle the API cancels through."""
 
     def __init__(self, bus: EventBus, job: Job):
+        """Bind one job to the bus it publishes on."""
         self._bus = bus
         self.job = job
         self.cancel_event = threading.Event()
@@ -52,21 +47,27 @@ class JobControl:
 
     # progress.Emitter protocol
     def emit(self, kind: str, payload: dict) -> None:
+        """Publish one event of this job, stamped with its workspace."""
         self._bus.publish(self.job.workspace, self.job.id, kind, payload)
 
     def should_cancel(self) -> bool:
+        """Whether somebody has asked this job to stop."""
         return self.cancel_event.is_set()
 
-    # The loguru mirror does NOT go through the progress emitter, so a job that filters
-    # its events cannot filter its logs: the blind evaluation would still publish
-    # "few-shot seleccionado" and give away which proposal is the system's. Muted at the
-    # source; stderr and the log file keep everything, so the developer loses nothing.
     @property
     def logs_muted(self) -> bool:
+        """Whether the loguru mirror is currently withheld from the stream."""
         return self._logs_muted
 
     @contextmanager
     def muted_logs(self):
+        """Keep the loguru mirror off the bus for the duration of the block.
+
+        The mirror does not go through the progress emitter, so a job that filters its own
+        events cannot filter its logs: the blind evaluation would still publish «few-shot
+        seleccionado» and give away which proposal is the system's. stderr and the log file
+        keep everything.
+        """
         self._logs_muted = True
         try:
             yield
@@ -74,17 +75,20 @@ class JobControl:
             self._logs_muted = False
 
     def attach_process(self, process: subprocess.Popen) -> None:
+        """Adopt the subprocess a handler spawned, killing it at once if cancel already came."""
         with self._lock:
             self._process = process
             if self.cancel_event.is_set():
                 self._kill()
 
     def request_cancel(self) -> None:
+        """Ask the job to stop: raise the flag and kill any subprocess it holds."""
         self.cancel_event.set()
         with self._lock:
             self._kill()
 
     def _kill(self) -> None:
+        """Terminate the attached subprocess, escalating to a kill after five seconds."""
         process = self._process
         if process is None or process.poll() is not None:
             return
@@ -96,17 +100,20 @@ class JobControl:
 
 
 class JobRunner:
+    """The queue itself: one dispatch thread, one worker thread per running job."""
+
     def __init__(self, bus: EventBus, handlers: dict[str, Handler]):
+        """Build an idle runner; `start()` is what puts the dispatch thread on the road."""
         self.bus = bus
         self.handlers = handlers
-        # What gets enqueued by itself when a job finishes well. The queue stays generic: who
-        # follows whom is decided by `jobs/chain.py`, which `runtime.py` installs.
+        # Enqueued by itself when a job finishes well. The queue stays generic: who follows
+        # whom is `jobs/chain.py`'s, installed by `runtime.py`.
         self.after_success: Callable[["JobRunner", Job], None] | None = None
         self._jobs: dict[str, Job] = {}
         self._controls: dict[str, JobControl] = {}
         self._order: list[str] = []
-        # Which jobs hold each backend right now, oldest first. A lane with an empty list
-        # is free; a running job that reserves nothing appears in neither.
+        # Which jobs hold each backend, oldest first. An empty list is a free lane; a job
+        # that reserves nothing appears in neither.
         self._holders: dict[str, list[str]] = {}
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
@@ -117,12 +124,14 @@ class JobRunner:
     # LIFECYCLE -----------------------------------------------------------------------------
 
     def start(self) -> None:
+        """Start the dispatch thread, once."""
         if self._thread is not None:
             return
         self._thread = threading.Thread(target=self._dispatch, name="job-dispatch", daemon=True)
         self._thread.start()
 
     def shutdown(self, timeout: float = 5.0) -> None:
+        """Cancel everything running and wait for the dispatch thread to leave."""
         self._stopping.set()
         with self._lock:
             controls = [self._controls[j.id] for j in self._running_locked()]
@@ -142,6 +151,7 @@ class JobRunner:
         user_id: int | None = None,
         user_name: str | None = None,
     ) -> Job:
+        """Queue one job and announce it. Raises ValueError for a kind nobody handles."""
         if kind not in self.handlers:
             raise ValueError(f"Unknown job kind '{kind}'")
         job = Job(
@@ -151,8 +161,8 @@ class JobRunner:
             user_id=user_id,
             user_name=user_name,
         )
-        # Resolved here rather than at dispatch: the engine can be switched from the panel
-        # mid-queue, and a job has to wait for the lanes it was accepted against.
+        # Resolved on submit rather than on dispatch: the engine can be switched from the
+        # panel mid-queue, and a job waits for the lanes it was accepted against.
         job.backends = sorted(lanes.backends_for(kind, job.params))
         with self._lock:
             self._jobs[job.id] = job
@@ -165,6 +175,7 @@ class JobRunner:
         return job
 
     def cancel(self, job_id: str) -> bool:
+        """Drop a queued job or ask a running one to stop; False if there is nothing to stop."""
         with self._lock:
             job = self._jobs.get(job_id)
             control = self._controls.get(job_id)
@@ -187,13 +198,17 @@ class JobRunner:
         return True
 
     def get(self, job_id: str) -> Job | None:
+        """Return one job by id, whatever its state, or `None`."""
         with self._lock:
             return self._jobs.get(job_id)
 
-    # Every listing narrows by workspace, and `None` means "the whole queue" — used only
-    # where the caller has already established the right to see it. The machine is shared, so
-    # "something is running" is legitimately global; *what* is running is not.
     def all(self, limit: int = 50, workspace: str | None = None) -> list[Job]:
+        """Return the last `limit` jobs, newest first.
+
+        As in every listing here, `workspace=None` means the whole queue and is for callers
+        that have already established the right to see it. The machine is shared, so «is
+        something running» is legitimately global; *what* is running is not.
+        """
         with self._lock:
             jobs = [self._jobs[i] for i in self._order]
         if workspace is not None:
@@ -201,33 +216,34 @@ class JobRunner:
         return jobs[-limit:][::-1]
 
     def running(self, workspace: str | None = None) -> list[Job]:
+        """Return every job running right now, in order of arrival."""
         with self._lock:
             jobs = self._running_locked()
         if workspace is not None:
             jobs = [j for j in jobs if j.workspace == workspace]
         return jobs
 
-    # The oldest job still running. Kept because a caller that only asks «is the machine
-    # doing something, and what» has one honest answer and does not want a list.
     def current(self) -> Job | None:
+        """Return the oldest job still running — the one honest answer to «what is it doing»."""
         jobs = self.running()
         if not jobs:
             return None
         return min(jobs, key=lambda j: (j.started_at or j.created_at))
 
-    # The oldest job holding this lane. Kept as the one-line answer to «what is this half
-    # of the engine doing», which is what a label needs; `holders_in` is the honest count.
     def current_in(self, backend: str) -> Job | None:
+        """Return the oldest job holding this lane, for a label. `holders_in` is the count."""
         holders = self.holders_in(backend)
         return holders[0] if holders else None
 
     def holders_in(self, backend: str) -> list[Job]:
+        """Return every job holding a slot of this lane, oldest first."""
         with self._lock:
             return [
                 self._jobs[i] for i in self._holders.get(backend, ()) if i in self._jobs
             ]
 
     def pending(self, workspace: str | None = None) -> list[Job]:
+        """Return every job still waiting for a lane, in order of arrival."""
         with self._lock:
             jobs = [self._jobs[i] for i in self._order]
         return [
@@ -236,15 +252,17 @@ class JobRunner:
             if j.status == "queued" and (workspace is None or j.workspace == workspace)
         ]
 
-    # Where in ITS OWN lane a job is, counting from 1, or 0 when it is already running.
-    # What is ahead of a job is only what could be holding a lane it needs, so a remote job
-    # queued behind an hour of local building reports 1 and starts at once.
     def queue_position(self, job_id: str) -> int:
+        """Say where a job stands in ITS OWN lanes, from 1, or 0 once it is running.
+
+        What is ahead of a job is only what could hold a lane it needs, so a remote job
+        queued behind an hour of local building reports 1 and starts at once.
+        """
         with self._lock:
             return self._position(job_id)
 
     def building_artifacts(self, workspace: str | None = None) -> set[str]:
-        """Artifacts a running or queued job is about to (re)write, in this workspace."""
+        """Return the artifacts a running or queued job is about to (re)write here."""
         with self._lock:
             active = [j for j in self._jobs.values() if j.status in ("running", "queued")]
         return {
@@ -254,19 +272,22 @@ class JobRunner:
         }
 
     def is_busy(self) -> bool:
+        """Whether anything is running or waiting, anywhere in the installation."""
         with self._lock:
             return bool(self._running_locked()) or bool(self.pending())
 
-    # Seconds since the last job enqueued or finished, counting EVERY lane. It is the only
-    # measure of idleness that exists here, and it is enough: everything this process asks a
-    # model for goes through the queue, so «nobody has asked for anything» and «the GPU is
-    # not needed» are the same thing. Returns 0 while anything runs or waits.
-    #
-    # Deliberately not narrowed to the local lane. A job that reserves only `remote` still
-    # embeds and still screens with the guardrail, and those two are exactly the models the
-    # lane calculation leaves out — so «no local lane reserved» is not «the GPU is free»,
-    # and releasing it under a remote job would unload the embedder that job is calling.
     def idle_seconds(self) -> float:
+        """Return the seconds since the last job was queued or finished; 0 while any is alive.
+
+        The only measure of idleness there is, and enough: every model call of this process
+        goes through the queue, so «nobody has asked for anything» and «the GPU is not
+        needed» are the same statement.
+
+        It counts EVERY lane and is deliberately not narrowed to the local one. A job
+        reserving only `remote` still embeds and still screens with the guardrail — the two
+        models the lane calculation leaves out — so releasing the GPU under it would unload
+        what it is calling.
+        """
         with self._lock:
             if self._running_locked() or self.pending():
                 return 0.0
@@ -275,9 +296,11 @@ class JobRunner:
     # INTERNAL STATE ------------------------------------------------------------------------
 
     def _running_locked(self) -> list[Job]:
+        """Return every running job, in order of arrival. The caller holds the lock."""
         return [self._jobs[i] for i in self._order if self._jobs[i].status == "running"]
 
     def _position(self, job_id: str) -> int:
+        """Count the queued jobs ahead of this one sharing a lane with it. Lock held."""
         job = self._jobs.get(job_id)
         if job is None or job.status != "queued":
             return 0
@@ -292,6 +315,7 @@ class JobRunner:
         return position
 
     def _restamp(self) -> None:
+        """Re-derive every queued job's position after the queue moved. Lock held."""
         for job_id in self._order:
             job = self._jobs[job_id]
             if job.status == "queued":
@@ -300,6 +324,7 @@ class JobRunner:
     # WORKER --------------------------------------------------------------------------------
 
     def _dispatch(self) -> None:
+        """Wake on every change (and every half second) and start whatever can start."""
         while not self._stopping.is_set():
             self._wake.wait(_DISPATCH_TICK_SECONDS)
             self._wake.clear()
@@ -307,33 +332,40 @@ class JobRunner:
                 return
             self._launch_ready()
 
-    # FIFO over the whole queue, skipping what cannot start. A blocked job TAKES A SLOT of
-    # each of its lanes for the rest of the pass so nothing behind it takes that slot:
-    # without it, a job needing both lanes would be overtaken for ever by single-lane jobs
-    # arriving after it. At capacity 1 this is exactly the old set of claimed lanes.
-    #
-    # Capacity is read once per pass, live from the configuration: the panel changes it
-    # while the process runs, and the job that starts next is the one to honour it.
+    def _next_ready(self, caps: dict[str, int]) -> str | None:
+        """FIFO over the queue, skipping what cannot start. The caller holds the lock.
+
+        A blocked job TAKES A SLOT of each of its lanes for the rest of the pass, so nothing
+        behind it takes that slot: without this a job needing both lanes would be overtaken
+        for ever by single-lane jobs arriving after it.
+        """
+        taken = {b: len(ids) for b, ids in self._holders.items()}
+        for job_id in self._order:
+            job = self._jobs[job_id]
+            if job.status != "queued":
+                continue
+            reserved = set(job.backends)
+            if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
+                for backend in reserved:
+                    taken[backend] = taken.get(backend, 0) + 1
+                continue
+            return job_id
+        return None
+
     def _launch_ready(self) -> None:
+        """Start every job whose lanes have room, one worker thread each.
+
+        Capacity is read once per pass, live from the configuration: the panel changes it
+        while the process runs, and the job that starts next is the one to honour it.
+        """
         while True:
             caps = lanes.capacities()
             with self._lock:
-                taken = {b: len(ids) for b, ids in self._holders.items()}
-                chosen: tuple[Job, JobControl] | None = None
-                for job_id in self._order:
-                    job = self._jobs[job_id]
-                    if job.status != "queued":
-                        continue
-                    reserved = set(job.backends)
-                    if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
-                        for backend in reserved:
-                            taken[backend] = taken.get(backend, 0) + 1
-                        continue
-                    chosen = (job, self._controls[job_id])
-                    break
-                if chosen is None:
+                job_id = self._next_ready(caps)
+                if job_id is None:
                     return
-                job, control = chosen
+                job = self._jobs[job_id]
+                control = self._controls[job_id]
                 job.status = "running"
                 job.started_at = time.time()
                 job.queue_position = 0
@@ -349,6 +381,7 @@ class JobRunner:
             ).start()
 
     def _execute(self, job: Job, control: JobControl) -> None:
+        """Run one job to its end on its own thread, releasing its lanes whatever happens."""
         self.bus.publish(job.workspace, job.id, "job.started", {"job": job.to_dict()})
         sink_id = self._attach_log_sink(control)
         token = progress.set_emitter(control)
@@ -372,6 +405,7 @@ class JobRunner:
             self._release(job)
 
     def _release(self, job: Job) -> None:
+        """Give back every lane slot this job held and wake the dispatcher."""
         with self._lock:
             for backend in job.backends:
                 holders = self._holders.get(backend)
@@ -382,9 +416,12 @@ class JobRunner:
             self._restamp()
         self._wake.set()
 
-    # Chaining is a convenience, not part of the result: if it fails, the job that just
-    # finished is still finished and only the next link is lost.
     def _chain(self, job: Job) -> None:
+        """Queue whatever follows this job, if anything.
+
+        A convenience and not part of the result: when it fails the job that just finished
+        is still finished, and only the next link is lost.
+        """
         if self.after_success is None:
             return
         try:
@@ -393,6 +430,7 @@ class JobRunner:
             logger.warning(f"No se pudo encadenar nada tras «{job.label}»: {exc}")
 
     def _settle(self, job: Job, status: str) -> None:
+        """Close a job in one of the three terminal states and announce it."""
         job.status = status
         job.queue_position = 0
         job.finished_at = time.time()
@@ -405,16 +443,17 @@ class JobRunner:
         }[status]
         self.bus.publish(job.workspace, job.id, kind, {"job": job.to_dict()})
 
-    # The core logs with loguru and knows nothing about us. Mirroring its output into
-    # the stream gives the UI a raw console for free — no changes to the pipeline.
-    #
-    # The filter is what keeps two concurrent jobs from writing into each other's drawer:
-    # each job runs on its own thread, so each sink only ever sees the records of the one
-    # it was attached for.
     def _attach_log_sink(self, control: JobControl) -> int:
+        """Mirror this thread's loguru output into the job's stream, and return the sink id.
+
+        The core logs with loguru and knows nothing about us, so this gives the UI a raw
+        console for no change to the pipeline. Filtering by thread is what keeps two
+        concurrent jobs out of each other's drawer.
+        """
         worker_id = threading.get_ident()
 
         def sink(message) -> None:
+            """Forward one loguru record as a `log` event unless the job muted them."""
             if control.logs_muted:
                 return
             record = message.record
@@ -436,4 +475,5 @@ class JobRunner:
 
 
 def uses_subprocess(kind: str) -> bool:
+    """Whether this kind of job runs out of process."""
     return kind in SUBPROCESS_KINDS

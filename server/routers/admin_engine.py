@@ -1,11 +1,15 @@
 """The machine and the process, as the administration panel sees them.
 
-Everything here is global to the installation — the one GPU, the models on the engine's
-disk, the port forward that reaches it, the registry of warm contexts, the queue's past
-and the database — which is why it lives under `/api/admin` and not under a workspace.
-Reading is free; the writes (releasing the GPU, pulling or deleting a model, invalidating a
-context, opening or closing the tunnel) each change something every workspace feels, and
-that is the reason they are the administrator's.
+Behind `require_admin`, and under `/api/admin` because everything here is global to the
+installation: the one GPU, the models on the engine's disk, the port forward that reaches
+it, the registry of warm contexts, the queue's past and the database. Every write —
+releasing the GPU, pulling or deleting a model, invalidating a context, opening or closing
+the tunnel — changes something every workspace feels, which is why they are all here.
+
+Three rules the routes below enforce and no screen may re-derive: a model the
+configuration names cannot be deleted, a pull runs beside the queue rather than in it (a
+download is network and disk, never the GPU), and releasing the GPU or invalidating a
+context is refused while a job runs.
 """
 
 import csv
@@ -31,26 +35,52 @@ router = APIRouter(
 
 
 class ModelBody(BaseModel):
+    """Which model is being pulled."""
+
     model: str
 
 
 # THE ENGINE ------------------------------------------------------------------------------
 
 
+def _listings() -> tuple[list[dict], list[dict]]:
+    """Read what is on disk and what is resident, each degrading to an empty list."""
+    installed: list[dict] = []
+    running: list[dict] = []
+    try:
+        installed = inference.installed_models_detail()
+    except Exception:  # noqa: BLE001 - no listing, not a broken screen
+        installed = []
+    try:
+        running = inference.running_models()
+    except Exception:  # noqa: BLE001 - idem
+        running = []
+    return installed, running
+
+
+def _model_state(model: str, remote: set, resident: set, on_disk: set) -> str:
+    """Say where one required model is: remote, loaded, on disk, or not installed.
+
+    A remotely served model is never «not installed»: there is no disk for it to be
+    missing from, which is how a screen says «remoto» instead of «sin instalar».
+    """
+    if model in remote:
+        return "remote"
+    if model in resident:
+        return "loaded"
+    if model in on_disk:
+        return "on_disk"
+    return "not_installed"
+
+
 @router.get("/engine")
 def engine() -> dict:
+    """Answer the whole «Motor» tab: the engine, its models, the queue and the tunnel."""
     available = inference.is_available()
     installed: list[dict] = []
     running: list[dict] = []
     if available:
-        try:
-            installed = inference.installed_models_detail()
-        except Exception:  # noqa: BLE001 - no listing, not a broken screen
-            installed = []
-        try:
-            running = inference.running_models()
-        except Exception:  # noqa: BLE001 - idem
-            running = []
+        installed, running = _listings()
 
     required = inference.required_models()
     asked_by: dict[str, list[str]] = {}
@@ -73,13 +103,7 @@ def engine() -> dict:
             {
                 "model": model,
                 "asked_by": names,
-                "state": "remote"
-                if model in remote
-                else "loaded"
-                if model in resident
-                else "on_disk"
-                if model in on_disk
-                else "not_installed",
+                "state": _model_state(model, remote, resident, on_disk),
             }
             for model, names in sorted(asked_by.items())
         ],
@@ -97,21 +121,20 @@ def engine() -> dict:
 
 
 # THE REMOTE HALF -------------------------------------------------------------------------
-#
-# Read from the ledger on disk and from nothing else: this endpoint is polled every 15 s by
-# every open tab, and `HybridEngine.is_available` already refuses to cross to Cerebras on
-# that schedule for the same reason. The catalogue has its own cached route.
-#
-# The ledger is a file because a build runs in `server.jobs.build_worker`, a separate
-# process — the half of the work that actually empties a daily budget. Reading it here is
-# what lets the panel show a build's spending while it happens.
 
 
-# `routed` and `usage` are deliberately two keys: the first is what the configuration sends
-# to Cerebras, the second what has actually been spent. A model can be in one and not the
-# other — routed but never called yet, or called before somebody took it off the list — and
-# collapsing them into one «models» loses exactly that difference.
 def cerebras_state() -> dict:
+    """Report the remote half from the rolling ledger on disk, and from nothing else.
+
+    This endpoint is polled every 15 s by every open tab, so it never calls Cerebras;
+    the catalogue has its own cached route. The ledger is a FILE because a build runs in
+    `server.jobs.build_worker`, a separate process — the half of the work that actually
+    empties a daily budget — and reading it here is what shows a build's spending live.
+
+    `routed` and `usage` are two keys on purpose: the first is what the configuration
+    sends to Cerebras, the second what has actually been spent. A model can be in one and
+    not the other, and collapsing them into one «models» loses exactly that difference.
+    """
     budget = cerebras_budget.shared().snapshot()
     return {
         "active": inference.engine_name() == "cerebras+ollama",
@@ -119,21 +142,22 @@ def cerebras_state() -> dict:
         "routed": sorted(config.CEREBRAS_MODELS),
         "max_wait": config.CEREBRAS_MAX_WAIT_SECONDS,
         "usage": budget["models"],
-        # One call and how many there are: the strip draws the one worth acting on — a call
-        # the throttle is holding back — and the count is what tells a slow phase from
-        # several jobs sharing the quota, which the remote lane now allows.
+        # One call and how many there are: the strip draws the one worth acting on — a
+        # call the throttle is holding back — while the count is what tells a slow phase
+        # from several jobs sharing the quota.
         "inflight": budget["inflight"],
         "inflight_count": budget["inflight_count"],
         "concurrency": config.CEREBRAS_MAX_CONCURRENT_JOBS,
     }
 
 
-# The breakdown is a supporting table on screen and a spreadsheet off it: «qué fase se está
-# comiendo el presupuesto» is a question you answer once and then want beside the memoria's
-# own numbers. Semicolons and a BOM rather than the study's plain commas, because this one
-# is opened in Excel by hand and a Spanish locale puts a comma-separated file in one column.
 @router.get("/engine/cerebras/export.csv")
 def cerebras_export() -> Response:
+    """Export the per-phase Cerebras spending as a spreadsheet.
+
+    Semicolons and a BOM rather than the study's plain commas: this one is opened in Excel
+    by hand, and a Spanish locale puts a comma-separated file in a single column.
+    """
     columns = [
         "modelo",
         "fase",
@@ -173,6 +197,7 @@ def cerebras_export() -> Response:
 
 @router.post("/engine/release")
 def release(admin: User = Depends(auth.require_admin)) -> dict:
+    """Unload the resident models, refusing while any job runs."""
     job = runtime.runner.current()
     if job is not None:
         raise HTTPException(
@@ -188,6 +213,11 @@ def release(admin: User = Depends(auth.require_admin)) -> dict:
 
 @router.post("/engine/models/pull", status_code=202)
 def pull_model(body: ModelBody, admin: User = Depends(auth.require_admin)) -> dict:
+    """Start a download beside the queue, never in it.
+
+    A pull is network and disk and never the GPU, so it must not wait behind a two-hour
+    build; `PullTracker` runs a thread per model and this answers 202 straight away.
+    """
     if body.model in inference.remote_models():
         raise HTTPException(422, f"'{body.model}' se sirve en Cerebras; no hay nada que descargar.")
     if not inference.is_available():
@@ -200,6 +230,11 @@ def pull_model(body: ModelBody, admin: User = Depends(auth.require_admin)) -> di
 
 @router.delete("/engine/models/{model:path}")
 def delete_model(model: str) -> dict:
+    """Remove a model from the engine's disk, unless the configuration names it.
+
+    `required_models()` is the check: deleting a model some phase asks for would turn
+    every build that reaches that phase into a failure forty minutes in.
+    """
     asked_by = [name for name, value in inference.required_models().items() if value == model]
     if asked_by:
         raise HTTPException(
@@ -228,12 +263,14 @@ def delete_model(model: str) -> dict:
 
 @router.delete("/engine/contexts")
 def invalidate_contexts(admin: User = Depends(auth.require_admin)) -> dict:
+    """Drop every warm context, so the next job rebuilds its index."""
     _refuse_while_running()
     return {"invalidated": deps.invalidate_all(f"a petición de «{admin.username}»")}
 
 
 @router.delete("/engine/contexts/{slug}")
 def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> dict:
+    """Drop one workspace's warm context."""
     _refuse_while_running(slug)
     if slug not in deps.warm_slugs():
         raise HTTPException(404, f"«{slug}» no tiene el contexto en memoria.")
@@ -242,6 +279,7 @@ def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> 
 
 
 def _refuse_while_running(slug: str | None = None) -> None:
+    """Raise 409 while a job runs: invalidating under it would pull its index away."""
     for job in runtime.runner.running():
         if slug is None or job.workspace == slug:
             raise HTTPException(
@@ -255,11 +293,13 @@ def _refuse_while_running(slug: str | None = None) -> None:
 
 @router.get("/engine/tunnel")
 def tunnel() -> dict:
+    """Answer the tunnel's state, with the last stderr lines a key problem lands in."""
     return runtime.tunnel.status()
 
 
 @router.post("/engine/tunnel/start")
 def tunnel_start() -> dict:
+    """Open the port forward to the GPU box and let the watchdog keep it open."""
     try:
         return runtime.tunnel.start()
     except TunnelError as exc:
@@ -268,6 +308,7 @@ def tunnel_start() -> dict:
 
 @router.post("/engine/tunnel/stop")
 def tunnel_stop() -> dict:
+    """Close the port forward, and stop the watchdog relaunching it."""
     return runtime.tunnel.stop()
 
 
@@ -276,6 +317,11 @@ def tunnel_stop() -> dict:
 
 @router.get("/jobs/history")
 def job_history(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Answer the jobs that have finished, of every workspace.
+
+    Reads a wider window than it returns, because what it filters out — the running and
+    the queued — is what `admin.job_queue` already reports.
+    """
     settled = [
         job.to_dict()
         for job in runtime.runner.all(limit=400)
@@ -289,6 +335,10 @@ def job_history(limit: int = Query(50, ge=1, le=200)) -> dict:
 
 @router.get("/system")
 def system(db: DbSession = Depends(auth.db)) -> dict:
+    """Answer where the database is, what revision it is at, and how long this has run.
+
+    The location has its credentials stripped before it leaves the process.
+    """
     url = database_url()
     safe = url.split("@")[-1] if "@" in url else url
     try:
@@ -314,6 +364,7 @@ _STARTED_AT = time.time()
 
 
 def _head_revision() -> str | None:
+    """Read Alembic's head from the migration scripts, or nothing if they cannot be read."""
     try:
         from alembic.config import Config
         from alembic.script import ScriptDirectory

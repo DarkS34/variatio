@@ -4,6 +4,10 @@
 deployed version starts empty. `export_instance` is its inverse and the seed of the
 worker's materializer: given a database and an empty directory, it writes back an
 instance the existing pipeline can run against unchanged.
+
+The round trip is byte-identical on all four artifacts, and importing twice adds no
+versions, because `save_artifact` returns the existing row when the content hash has not
+changed. Approval hashes are re-derived rather than trusted across the two backends.
 """
 
 import hashlib
@@ -24,10 +28,12 @@ from .models import SLOT_CORPUS, SLOT_EXEMPLARS
 
 
 def _slots(ws: FsWorkspace) -> dict[str, Path]:
+    """Return the two raw slots of this workspace, by name."""
     return {SLOT_CORPUS: ws.raw_corpus_dir, SLOT_EXEMPLARS: ws.raw_exemplars_dir}
 
 
 def _read_json(path: Path):
+    """Read a JSON file, or warn and return None when it is missing or unreadable."""
     if not path.is_file():
         return None
     try:
@@ -39,6 +45,7 @@ def _read_json(path: Path):
 
 
 def _file_sha256(path: Path) -> str:
+    """Return the SHA-256 of a file's bytes."""
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for block in iter(lambda: f.read(65536), b""):
@@ -47,6 +54,7 @@ def _file_sha256(path: Path) -> str:
 
 
 def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
+    """Return the file the stages would read for this kind, or None."""
     if kind == stages.KNOWLEDGE_GRAPH:
         return stages.knowledge_graph_path(ws)
     if kind == stages.EXEMPLARS_PROFILE:
@@ -56,12 +64,16 @@ def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
     return None
 
 
-# The recorded hashes are of *files*; the database stores hashes of *content*. Rather than
-# assume the two agree, the file hashes are used only for the question they can answer —
-# was this approval still current, for the artifact and for everything it derives from? —
-# and what gets stored is re-derived from the imported rows. A stale approval is simply not
-# imported, which lands the artifact in `draft`: conservative, and never a false "approved".
 def _approval_is_current(ws: FsWorkspace, kind: str, record: dict) -> bool:
+    """Return True when an approval on disk still matches the files it was made against.
+
+    The recorded hashes are of *files* and the database stores hashes of *content*.
+    Rather than assume the two agree, the file hashes answer only the question they can —
+    was this approval still current, for the artifact and for everything it derives from?
+    — and what gets stored is re-derived from the imported rows. A stale approval is
+    simply not imported, which lands the artifact in `draft`: conservative, and never a
+    false «approved».
+    """
     path = _current_file(ws, kind)
     if path is None or _file_sha256(path) != record.get("hash"):
         return False
@@ -78,12 +90,14 @@ def import_instance(
     slug: str,
     name: str | None = None,
 ) -> dict:
-    """Load a filesystem workspace into the database as one workspace row."""
+    """Load a filesystem workspace into the database as one workspace row.
+
+    The file is the truth and the column is the mirror, so the language comes over with
+    the artifacts: otherwise a workspace whose prompts are English arrives as a row that
+    says Spanish, and the panel reports what the next build will contradict.
+    """
     workspace = repo.ensure_workspace(session, slug, name)
 
-    # The file is the truth and the column is the mirror, so importing a directory has to
-    # bring the language over: otherwise a workspace whose prompts are English arrives as a
-    # row that says Spanish, and the panel reports something the next build will contradict.
     workspace.prompt_language = locale.prompt_language(ws)
 
     imported: list[str] = []
@@ -158,14 +172,17 @@ def import_instance(
 
 
 def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
-    """Write a database workspace back out as the directory layout the stages read."""
+    """Write a database workspace back out as the directory layout the stages read.
+
+    `instance/locale.json` is written unconditionally, unlike the artifacts: a directory
+    without it reads as Spanish, which for an English instance is not a missing file but
+    a wrong one.
+    """
     workspace = repo.get_workspace(session, slug)
     if workspace is None:
         raise LookupError(f"No workspace '{slug}' in the database")
 
     ws.instance_dir.mkdir(parents=True, exist_ok=True)
-    # Written unconditionally, unlike the artifacts: a directory without it reads as Spanish,
-    # which for an English instance is not a missing file but a wrong one.
     locale.set_prompt_language(ws, workspace.prompt_language)
 
     written: list[str] = []

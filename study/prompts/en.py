@@ -1,6 +1,8 @@
-# The English half of the two reference-arm prompts. Same shape, same deliberate poverty:
-# see `es.py` for what they carry and why, which is the measurement record and is not
-# repeated here.
+"""The English half of the two reference-arm prompts.
+
+Same shape and the same deliberate poverty; `es.py` says what they carry and why, and the
+measurement record is not repeated here.
+"""
 
 
 def naive_generation_prompt(
@@ -12,6 +14,12 @@ def naive_generation_prompt(
     fixed: dict[str, object] | None = None,
     instructions: str = "",
 ) -> str:
+    """Compose the sentence a person who had never seen this system would type.
+
+    The one prompt that does NOT take the context's rendered block: it reads the three
+    canonical facts by name, and handing it the synthesised narrative instead would change
+    a measured baseline and make recorded sessions incomparable.
+    """
     subject = subject or "the subject"
     level = educational_level
     language = language_of_instruction
@@ -43,6 +51,7 @@ def rag_generation_prompt(
     rules_block: str,
     schema: str,
 ) -> str:
+    """Wrap the naive prompt with the retrieved exemplars, the writing rules and a schema."""
     exemplars_section = ""
     if exemplars_block.strip():
         exemplars_section = (

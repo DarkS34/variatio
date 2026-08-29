@@ -1,3 +1,10 @@
+"""Inferring a DRAFT `exemplars_profile.json` from the raw exemplars documents.
+
+The profile is what instantiates a use case: the modalities of item this instance sets, the
+fields each of them has and the rules the generation follows. Treat the output as unstable —
+it has produced different field sets across runs over the same corpus.
+"""
+
 import json
 import re
 from pathlib import Path
@@ -21,8 +28,7 @@ BUILD_PHASES = (
     ("convert", "Transcribiendo los ejemplares", 40),
     ("scan", "Buscando modalidades de ejercicio", 40),
     ("consolidate", "Consolidando el perfil", 19),
-    # One call at the end, with what the profile knows about the subject that the graph does
-    # not: in what forms it poses its tasks and how they actually sound.
+    # Last, and one call: it needs the modalities the consolidation has just written.
     ("context", "Poniendo por escrito de qué asignatura es esto", 1),
 )
 
@@ -60,6 +66,7 @@ SCAN_SCHEMA = {
 
 
 def build_models() -> list[str]:
+    """Every model a profile build calls."""
     return [
         config.TRANSCRIBE_MODEL,
         config.TRANSCRIBE_SEAM_MODEL,
@@ -70,7 +77,15 @@ def build_models() -> list[str]:
     ]
 
 
+def _remember(values: list[str], value: str) -> None:
+    """Append `value` once, ignoring an empty one."""
+    if value and value not in values:
+        values.append(value)
+
+
 class ExemplarsProfileBuilder:
+    """Scans the exemplars corpus for modalities and consolidates them into a draft profile."""
+
     def __init__(
         self,
         workspace: Workspace,
@@ -79,10 +94,8 @@ class ExemplarsProfileBuilder:
         context_model: str | None = None,
         verbose: bool = True,
     ):
+        """Resolve the workspace's prompt set and the three models of the build."""
         self.workspace = workspace
-        # The workspace's own prompt set, resolved once here. Every model call this
-        # builder makes goes through it, so a Spanish instance and an English one build
-        # from the same code and never share a prompt.
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self.scan_model = scan_model or config.EP_SCAN_MODEL
         self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
@@ -101,6 +114,7 @@ class ExemplarsProfileBuilder:
     # PUBLIC API ----------------------------------------------------------------------------------
 
     def bootstrap(self) -> None:
+        """Check this build's own models are installed, the overridden ones included."""
         ensure_models(
             [
                 config.TRANSCRIBE_MODEL,
@@ -114,6 +128,11 @@ class ExemplarsProfileBuilder:
         )
 
     def build(self, input_dir: str, output_file_path: str) -> dict:
+        """Scan the corpus, consolidate the draft profile, write it and return it.
+
+        A draft that does not load is saved anyway and reported: it is a starting point for
+        somebody to correct by hand, and losing it would cost the whole scan again.
+        """
         self.bootstrap()
 
         files = _source_docs.list_source_files(input_dir)
@@ -153,11 +172,14 @@ class ExemplarsProfileBuilder:
         self.synthesize_context(profile, findings)
         return profile
 
-    # What the profile knows about the subject that the graph does not: the FORMS in which
-    # this subject sets its tasks, and how one of them actually sounds. The excerpt is what
-    # keeps the synthesis from writing about programming in the abstract when the material
-    # is a first-year Python workbook.
     def synthesize_context(self, profile: dict, found: dict[str, dict]) -> None:
+        """Write the subject-context draft from what the profile knows that the graph does not.
+
+        The FORMS in which this subject sets its tasks, plus verbatim excerpts — and those
+        are the half that matters: the modality labels say the shape of a task, only a real
+        statement says the material is a first-year Python workbook rather than programming
+        in the abstract.
+        """
         progress.phase("context")
         item_types = profile.get("item_types") or {}
         if not item_types:
@@ -167,9 +189,6 @@ class ExemplarsProfileBuilder:
             label = spec.get("label") or key
             lines.append(f"- {label}: {spec.get('description') or 'sin descripción'}")
 
-        # The verbatim excerpts, and they are the half that matters. The modality labels
-        # say the shape of a task; only a real statement says that the subject is a
-        # first-year Python workbook rather than programming in the abstract.
         excerpts = [
             excerpt
             for record in found.values()
@@ -190,10 +209,13 @@ class ExemplarsProfileBuilder:
 
     # CONVERSION ----------------------------------------------------------------------------------
 
-    # The whole corpus is chunked and scanned, never sampled. A workbook that opens with
-    # forty coding exercises and closes with a page of multiple-choice questions would
-    # otherwise declare one modality: whatever the head of the document happened to show.
     def _convert(self, files: list[Path]) -> list[tuple[str, str]]:
+        """Transcribe and chunk the WHOLE corpus, never a sample.
+
+        A workbook that opens with forty coding exercises and closes with a page of
+        multiple-choice questions would otherwise declare one modality: whatever the head of
+        the document happened to show.
+        """
         progress.phase("convert", f"0/{len(files)} documento(s)")
         chunks: list[tuple[str, str]] = []
         with progress.step(
@@ -231,6 +253,7 @@ class ExemplarsProfileBuilder:
     # SCANNING ------------------------------------------------------------------------------------
 
     def _scan(self, chunks: list[tuple[str, str]]) -> dict[str, dict]:
+        """Look for exercise modalities in every chunk, gathered by the key the scanner gave."""
         progress.phase("scan", f"0/{len(chunks)} fragmento(s)")
         found: dict[str, dict] = {}
 
@@ -254,6 +277,7 @@ class ExemplarsProfileBuilder:
         return found
 
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
+        """Ask one chunk for its modalities, `[]` when the answer cannot be repaired."""
         prompt = self.prompts.scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
             model=self.scan_model,
@@ -280,6 +304,7 @@ class ExemplarsProfileBuilder:
 
     @staticmethod
     def _parse_scan(response: str) -> tuple[list[dict] | None, str | None]:
+        """Read the scan answer as the list of typed entries that at least carry a key."""
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
             raw = repair_json(cleaned, return_objects=True)
@@ -294,11 +319,14 @@ class ExemplarsProfileBuilder:
             return None, "'types' is not an array"
         return [entry for entry in types if isinstance(entry, dict) and entry.get("key")], None
 
-    # Findings are merged only when the scanner gave them the SAME key: that much is
-    # mechanical. Deciding that `pregunta_test` and `test_opcion_multiple` are one
-    # modality is a judgement, and it belongs to the consolidation call that can see
-    # both anatomies side by side.
     def _merge_finding(self, found: dict[str, dict], entry: dict, location: str) -> None:
+        """Fold one scanned entry into the record of its key.
+
+        Findings are merged only when the scanner gave them the SAME key: that much is
+        mechanical. Deciding that `pregunta_test` and `test_opcion_multiple` are one modality
+        is a judgement, and it belongs to the consolidation call that sees both anatomies
+        side by side.
+        """
         key = str(entry.get("key") or "").strip()
         if not key:
             return
@@ -308,24 +336,17 @@ class ExemplarsProfileBuilder:
         )
         record["seen"] += 1
 
-        label = str(entry.get("label") or "").strip()
-        if label and label not in record["labels"]:
-            record["labels"].append(label)
-
-        signals = str(entry.get("signals") or "").strip()
-        if signals and signals not in record["signals"]:
-            record["signals"].append(signals)
-
+        _remember(record["labels"], str(entry.get("label") or "").strip())
+        _remember(record["signals"], str(entry.get("signals") or "").strip())
         for name in entry.get("fields") or []:
-            name = str(name).strip()
-            if name and name not in record["fields"]:
-                record["fields"].append(name)
+            _remember(record["fields"], str(name).strip())
 
         excerpt = str(entry.get("excerpt") or "").strip()
         if excerpt and len(record["excerpts"]) < MAX_EXCERPTS_PER_TYPE:
             record["excerpts"].append((location, excerpt[: self.excerpt_chars]))
 
     def _findings_block(self, found: dict[str, dict]) -> str:
+        """The scan's findings as the prompt sees them, the most frequent modality first."""
         blocks = []
         for record in sorted(found.values(), key=lambda r: -r["seen"]):
             lines = [
@@ -344,6 +365,7 @@ class ExemplarsProfileBuilder:
     # CONSOLIDATION -------------------------------------------------------------------------------
 
     def _consolidate(self, found: dict[str, dict]) -> dict:
+        """Turn the candidate modalities into one profile, under its own progress step."""
         progress.phase("consolidate", f"{len(found)} modalidad(es) candidata(s)")
         with progress.step("consolidate", "Consolidando el perfil de ejemplares"):
             profile = self._infer(self._findings_block(found))
@@ -351,6 +373,11 @@ class ExemplarsProfileBuilder:
         return profile
 
     def _infer(self, findings: str) -> dict:
+        """Ask for the profile and repair it until it validates, or give up and keep it.
+
+        Two repair routes: unreadable JSON goes to the repair model, while a profile that
+        parses but does not validate goes back to the model that wrote it, with the error.
+        """
         prompt = self.prompts.consolidate_exemplars_profile_prompt(findings, self.max_item_types)
         think = (
             config.THINK_EP_CONSOLIDATE
@@ -404,12 +431,14 @@ class ExemplarsProfileBuilder:
 
     @classmethod
     def _parse(cls, response: str) -> dict | None:
+        """Repair the answer into a non-empty object, or `None`."""
         cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
         raw = repair_json(cleaned, return_objects=True)
         return raw if isinstance(raw, dict) and raw else None
 
     @classmethod
     def _validate(cls, profile: dict | None) -> str | None:
+        """`None` when the profile is loadable, otherwise the reason it is not."""
         if profile is None:
             return "top-level JSON is not an object"
         try:

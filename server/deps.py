@@ -1,24 +1,16 @@
-"""The warm pipeline contexts, built once per workspace and reused.
+"""The warm pipeline contexts, an LRU registry keyed by workspace slug.
 
-Building one embeds ~150 concept descriptions and the whole bank; doing that per request
-would make the app unusable. They are deliberately *only* touched from the job worker —
-REST handlers read artifacts straight off disk, so a slow context never blocks the UI.
-Any write to an artifact invalidates that workspace's context, and the next job rebuilds.
+Building one embeds ~150 concept descriptions and the whole bank, so they are touched only
+from the job worker — REST handlers read artifacts straight off disk and a slow context
+never blocks the UI. Any write to an artifact invalidates that workspace's context and the
+next job rebuilds it. What bounds `MAX_CONTEXTS` is not memory but that rebuilding one
+costs minutes.
 
-Since phase 3 this is a registry keyed by slug rather than one global, because with two
-instances in one process a single slot meant one workspace's concept index answering the
-other's queries. What bounds it is not memory — the two `.npz` of a real instance add up
-to 3.3 MB and the vectors are already float32 — but the fact that rebuilding one costs
-minutes, so keeping a handful warm is free and evicting eagerly is not.
-
-Since the remote lane got a capacity, two jobs of the SAME workspace can run at once, and
-both read this one context. Two things make that safe and both are load-bearing now rather
-than incidentally true: `_lock` is held across `stages.initialize`, so the second job waits
-for the build instead of starting a second one, and the components a context holds
-(`Embedder`, `ConceptTagger`, `VariantGenerator`) assign no instance state after their
-constructor — the only thing a run writes into them is the embedder's in-process memo,
-where a race costs a repeated embedding and nothing else. A component that starts keeping
-per-run state on `self` breaks this, and the lane is where it would show.
+Two jobs of the same workspace can run at once on different lanes and share one context.
+`_lock` is held across `stages.initialize` so the second waits instead of starting a second
+build, and the components a context holds (`Embedder`, `ConceptTagger`,
+`VariantGenerator`) assign no instance state after their constructor. A component that
+starts keeping per-run state on `self` breaks that.
 """
 
 import threading
@@ -39,6 +31,7 @@ _lock = threading.RLock()
 
 
 def require_inference() -> None:
+    """Raise unless the inference engine answers, before a job pays for a build."""
     if not inference.is_available():
         raise RuntimeError(
             f"No hay conexión con el motor de inferencia '{inference.engine_name()}'. "
@@ -47,6 +40,7 @@ def require_inference() -> None:
 
 
 def get_context(ws: Workspace) -> PipelineContext:
+    """Return the workspace's warm context, building it under the lock if there is none."""
     with _lock:
         existing = _contexts.get(ws.slug)
         if existing is not None:
@@ -65,11 +59,13 @@ def get_context(ws: Workspace) -> PipelineContext:
 
 
 def reload_context(ws: Workspace) -> PipelineContext:
+    """Drop the workspace's context and build it again."""
     invalidate(ws.slug, "reindexado solicitado")
     return get_context(ws)
 
 
 def invalidate(slug: str, reason: str) -> None:
+    """Evict one workspace's context, recording why for the next build's log line."""
     with _lock:
         if _contexts.pop(slug, None) is not None:
             logger.info(f"Contexto de «{slug}» invalidado: {reason}")
@@ -77,6 +73,7 @@ def invalidate(slug: str, reason: str) -> None:
 
 
 def invalidate_all(reason: str) -> int:
+    """Evict every warm context and return how many there were."""
     with _lock:
         slugs = list(_contexts)
         for slug in slugs:
@@ -88,22 +85,28 @@ def invalidate_all(reason: str) -> int:
 
 
 def peek(slug: str) -> PipelineContext | None:
+    """Return a workspace's context if it is already warm, without building one."""
     with _lock:
         return _contexts.get(slug)
 
 
 def is_ready(slug: str) -> bool:
+    """Report whether a workspace's context is warm."""
     return peek(slug) is not None
 
 
 def warm_slugs() -> list[str]:
+    """List the workspaces holding a warm context."""
     with _lock:
         return list(_contexts)
 
 
-# Least recently *used*, not least recently built: a workspace somebody is working in
-# keeps its turn on every job it runs.
 def _evict() -> None:
+    """Drop the least recently USED contexts down to `MAX_CONTEXTS`.
+
+    Used and not built, so a workspace somebody is working in keeps its turn on every job
+    it runs.
+    """
     while len(_contexts) > MAX_CONTEXTS:
         slug, _ = _contexts.popitem(last=False)
         logger.info(f"Contexto de «{slug}» descargado: el registro está lleno")

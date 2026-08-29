@@ -22,9 +22,12 @@ from . import external
 
 
 def build_prompt(commission: Commission, context) -> str:
+    """Render the baseline prompt from the context's three canonical facts.
+
+    The narrative block is deliberately not used: handing this arm synthesised prose would
+    change what the baseline measures. The rag arm builds on this same prompt.
+    """
     item_type = context.exemplars_profile.item_type(commission.item_type)
-    # The three canonical facts, not the narrative. This arm composes a sentence a person
-    # would type, and handing it synthesised prose would change what the baseline measures.
     return study_prompts.of(context.language).naive_generation_prompt(
         subject=context.content_context.subject,
         educational_level=context.content_context.educational_level,
@@ -37,19 +40,20 @@ def build_prompt(commission: Commission, context) -> str:
 
 
 def run(commission: Commission, context) -> ArmResult:
+    """Ask the commercial provider for one item and record who actually answered."""
     item_type = context.exemplars_profile.item_type(commission.item_type)
     prompt = build_prompt(commission, context)
     started = time.perf_counter()
 
     def elapsed() -> int:
+        """Return the milliseconds spent so far, the failed attempts included."""
         return round((time.perf_counter() - started) * 1000)
 
     try:
         answer = external.generate(prompt, item_type.stripped_schema())
     except ArmUnavailable as e:
         logger.warning(f"Propuesta externa no disponible: {e}")
-        # Nobody answered, so there is no answering provider to name: the record keeps the
-        # head of the chain, which is who the arm would have asked.
+        # Nobody answered, so the record keeps the head of the chain: who it would have asked.
         provider, model = external.primary()
         return ArmResult(
             arm="naive",
@@ -64,8 +68,8 @@ def run(commission: Commission, context) -> ArmResult:
             error=str(e),
         )
 
-    # Same parser and the same repair budget as the other two arms: this arm must not
-    # lose over a crooked JSON that the system's would have had repaired.
+    # Same parser and the same repair budget as the other two arms: this arm must not lose
+    # over a crooked JSON that the system's would have had repaired.
     item, error = parse_with_repair(
         answer.text,
         lambda text: parse_item(text, commission.fixed, item_type),
@@ -74,12 +78,11 @@ def run(commission: Commission, context) -> ArmResult:
         shape="objeto",
         format=item_type.stripped_schema(),
         # The workspace's set, not this arm's: what is repaired is JSON, not the baseline.
-        # The two prompts that MAKE this arm a baseline are `study/prompts/`'s.
         prompts=context.prompts,
     )
 
-    # From the ANSWER, not from config: the provider chain may have fallen back, and a
-    # session filed under Gemini that Groq actually produced is a corrupted measurement.
+    # Provider and model come from the ANSWER, not from config: the chain may have fallen
+    # back, and a session filed under Gemini that Groq produced is a corrupted measurement.
     return ArmResult(
         arm="naive",
         status=OK if item is not None else FAILED,

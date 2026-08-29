@@ -14,13 +14,17 @@ import numpy as np
 
 
 def text_fingerprint(text: str) -> str:
+    """Return the digest of one item's indexed text."""
     return hashlib.md5((text or "").encode()).hexdigest()
 
 
-# Appended only when non-empty, so a profile that indexes primary fields alone produces the
-# exact string this used to produce and keeps its caches: a separator on its own is enough
-# to invalidate every vector for no change in the text they were built from.
 def embedding_fingerprint(model: str, embed_signature: str, query_prefix: str, document_prefix: str) -> str:
+    """Return the fingerprint of the embedding setup itself.
+
+    The signature is appended only when non-empty, so a profile indexing primary fields
+    alone produces the exact string this used to and keeps its caches: a separator on its
+    own would invalidate every vector for no change in the text they were built from.
+    """
     base = f"{model}::{query_prefix}::{document_prefix}"
     return f"{base}::{embed_signature}" if embed_signature else base
 
@@ -28,6 +32,7 @@ def embedding_fingerprint(model: str, embed_signature: str, query_prefix: str, d
 def concept_fingerprint(
     embedding: str, taggable: list[str], descriptions: dict[str, str]
 ) -> str:
+    """Return the fingerprint of the concepts index: the setup, the names and their prose."""
     payload = json.dumps(
         {
             "concepts": sorted(taggable),
@@ -41,6 +46,7 @@ def concept_fingerprint(
 
 
 def bank_fingerprint(embedding: str, bank: dict, text_fingerprints: dict[str, str]) -> str:
+    """Return the fingerprint of the bank index: the setup, each item's text and its tags."""
     entries = sorted(
         (
             ex_id,
@@ -58,6 +64,11 @@ def bank_fingerprint(embedding: str, bank: dict, text_fingerprints: dict[str, st
 
 
 def concept_cache_is_valid(path: Path, fingerprint: str) -> bool:
+    """Return whether the concepts cache on disk still matches this fingerprint.
+
+    Any failure to read it counts as invalid: a corrupt cache costs one re-embedding, not
+    a broken run.
+    """
     if not path.exists():
         return False
     try:
@@ -68,11 +79,13 @@ def concept_cache_is_valid(path: Path, fingerprint: str) -> bool:
 
 
 def load_concept_cache(path: Path) -> dict[str, np.ndarray]:
+    """Read the concept vectors from their `.npz`."""
     data = np.load(path, allow_pickle=False)
     return dict(zip(data["keys"], data["vectors"]))
 
 
 def save_concept_cache(path: Path, index: dict[str, np.ndarray], fingerprint: str) -> None:
+    """Write the concept vectors and the fingerprint they were built under."""
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(
         path,
@@ -90,6 +103,7 @@ def save_concept_cache(path: Path, index: dict[str, np.ndarray], fingerprint: st
 
 
 def load_bank_cache(path: Path) -> tuple[dict[str, np.ndarray], dict[str, dict], dict[str, str], str]:
+    """Read the bank vectors, their tags, their text hashes and the cache's fingerprint."""
     data = np.load(path, allow_pickle=False)
     index = dict(zip(data["keys"], data["vectors"]))
     assignments = json.loads(str(data["assignments"]))
@@ -111,6 +125,7 @@ def save_bank_cache(
     text_fingerprints: dict[str, str],
     fingerprint: str,
 ) -> None:
+    """Write the bank vectors beside the tags and text hashes that justify reusing them."""
     path.parent.mkdir(parents=True, exist_ok=True)
     assignments = {
         ex_id: {

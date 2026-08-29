@@ -1,3 +1,12 @@
+"""Which concepts of the graph are any use as a LABEL for this instance's items.
+
+Taggability is not a property of the graph: a concept is useless as a label only relative
+to the shapes of item the exemplars profile declares, so the review is made per domain
+against the profile's modalities and real statements from the bank. It imports the KG
+builder's prompt blocks because the review left the build and kept its prompt — a second
+copy of the renderers would desynchronise this block format from the graph's own.
+"""
+
 from loguru import logger
 
 from . import config
@@ -13,6 +22,7 @@ BUILD_PHASES = (("taggable", "Revisando qué conceptos sirven como etiqueta", 10
 
 
 def modalities_block(exemplars_profile) -> str:
+    """Render the profile's modalities for the prompt."""
     lines = []
     for item_type in exemplars_profile.item_types.values():
         line = f"- **{item_type.label}** (`{item_type.key}`)"
@@ -23,6 +33,7 @@ def modalities_block(exemplars_profile) -> str:
 
 
 def samples_block(exemplars_profile, exemplars_bank, domain_concepts: list[str]) -> str:
+    """Render up to `MAX_SAMPLES_PER_DOMAIN` real statements touching this domain."""
     if not exemplars_bank:
         return ""
     wanted = set(domain_concepts)
@@ -49,6 +60,11 @@ def review(
     content_context: ContentContext | None = None,
     max_attempts: int = config.MAX_JSON_REPAIR_TRIES,
 ) -> list[str]:
+    """Return the concepts that are no use as labels, judged one domain at a time.
+
+    Empty when the graph declares no domains. Per domain rather than over the whole
+    inventory because the judgement is a comparison among siblings.
+    """
     content_context = content_context or ContentContext()
     domains = list(knowledge_graph.concepts_by_domains)
     if not domains:
@@ -94,6 +110,7 @@ def review(
 
 
 def _relation_triples(knowledge_graph) -> list[list]:
+    """Flatten every relation of the graph into `[source, verb, target]` triples."""
     triples = []
     for verbose, graph in knowledge_graph.graphs.items():
         for source, target in graph.edges():
@@ -113,6 +130,11 @@ def _judge_domain(
     modalities,
     max_attempts,
 ) -> list[str]:
+    """Ask the model which of one domain's concepts are no use as labels.
+
+    Only names the domain actually holds survive, so an invented one is dropped. A
+    bare list is accepted as well as the documented `{concept: reason}` map.
+    """
     prompt = prompts.review_taggable_concepts_prompt(
         domain,
         blocks.concepts_block(domains),

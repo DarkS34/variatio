@@ -1,3 +1,5 @@
+"""The «Registro» settings: the log level and the third-party loggers that are silenced."""
+
 from ..types import Impact, Setting
 
 SETTINGS: list[Setting] = [

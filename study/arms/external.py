@@ -8,21 +8,12 @@ whole point of the naive arm.
 
 `httpx` straight, no SDK — it is already a runtime dependency, so this adds none.
 
-**Still no retries** — a silent second attempt at the *same* provider falsifies the per-arm
-timing and can double a free quota — but `study.config.EXTERNAL_PROVIDERS` is a CHAIN, and a
-provider that did not answer hands over to the next one. The failure this exists for is
-Gemini's free tier returning 429 in the middle of a data-collection session: recording the
-arm `unavailable` there measures Google's billing, not the commercial baseline.
-
-What keeps the data honest is that `generate()` returns WHO answered. `ArmResult` records
-the provider and model that actually produced the item instead of the one configured first,
-so a session that fell back is visible in the reveal panel and in the CSV rather than being
-filed under Gemini. The arm's `elapsed_ms` does include the failed attempt: it measures what
-the commercial branch cost to answer, which is the honest reading of a fallback.
-
-A spent quota is deliberately NOT remembered across sessions. Every session starts at the
-head of the chain again, so the moment the quota window resets the preferred provider comes
-back on its own — at the price of one fast 4xx while it is still spent.
+There are no retries: a silent second attempt at the SAME provider falsifies the per-arm
+timing and can double a free quota. What there is instead is a CHAIN — a provider that did
+not answer hands over to the next one — and `generate()` returns WHO answered, so a session
+that fell back is filed under the provider that actually produced the item. A spent quota is
+deliberately not remembered across sessions: every session starts at the head of the chain,
+so the preferred provider comes back on its own when its window resets.
 """
 
 from dataclasses import dataclass
@@ -41,16 +32,20 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 @dataclass(frozen=True)
 class ExternalAnswer:
+    """What came back, and from whom — never from whom it was asked for first."""
+
     text: str
     provider: str
     model: str
 
 
 def _model(provider: str) -> str:
+    """Return the model id configured for this provider, or an empty string."""
     return study_config.PROVIDER_MODELS.get(provider, "")
 
 
 def _key(provider: str) -> str:
+    """Return the API key configured for this provider, or an empty string."""
     return study_config.PROVIDER_KEYS.get(provider, "")
 
 
@@ -60,6 +55,7 @@ def configured_providers() -> list[str]:
 
 
 def is_configured() -> bool:
+    """Say whether the commercial arm can be attempted at all."""
     return bool(configured_providers())
 
 
@@ -71,9 +67,12 @@ def primary() -> tuple[str, str]:
     return chain[0], _model(chain[0])
 
 
-# One usable provider is enough, so an unknown name in the chain is only worth a message
-# when it is the reason nothing can be called at all.
 def unavailable_reason() -> str | None:
+    """Say in words why nothing in the chain can be called, or None if something can.
+
+    One usable provider is enough, so an unknown name is only worth reporting when it is
+    the reason nothing at all is callable.
+    """
     declared = study_config.EXTERNAL_PROVIDERS
     if not declared:
         return "El proveedor externo está desactivado (EVAL_EXTERNAL_PROVIDER=none)."
@@ -92,11 +91,12 @@ def unavailable_reason() -> str | None:
     )
 
 
-# Every branch here means the same thing — no item came back — so all three hand over to the
-# next provider, including the 200 with no candidates that a safety filter produces. The
-# distinction that would justify stopping (the provider *answered*, and said no) is not one
-# this arm can act on: it would still have nothing to compare.
 def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
+    """Walk the chain until one provider answers, raising ArmUnavailable if none does.
+
+    Every failure means the same thing — no item came back — so all of them hand over to
+    the next provider, the 200 with no candidates that a safety filter produces included.
+    """
     reason = unavailable_reason()
     if reason:
         raise ArmUnavailable(reason)
@@ -124,20 +124,15 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
     raise ArmUnavailable(" | ".join(failures))
 
 
-# The exemplars profile's own schema goes out UNTRANSLATED. Gemini documents an OpenAPI 3.0
-# subset, so a converter looked necessary, but `gemini-3.6-flash` takes the Pydantic schema
-# as it comes — `title`, `anyOf: [string, null]` and all — and answers with the exact keys.
-# Writing one anyway was actively worse: it dropped `minLength`/`maximum`, which
-# `_spec_to_field` does support, so this arm would have decoded under a WEAKER schema than
-# the local two. Parity of parsing is the one thing the comparison must not lose.
-#
-# The temperature goes out explicitly for the same reason `study.config.RAG_TOP_K` is the pipeline's
-# own few-shot k: what the comparison isolates is the graph, so a knob that is not the graph
-# must not be a loose variable between the arms. It is the SAME NUMBER as the local two and
-# not the same sampler — Gemini and Groq scale temperature to 0-2 where Ollama stops at 1 —
-# but every alternative is worse: each vendor's default is a different unknown, and letting
-# the naive arm run hot would hand the system arm a win it did not earn.
 def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
+    """Call Gemini with the exemplars profile's own schema, untranslated.
+
+    `gemini-3.6-flash` takes the Pydantic schema as it comes — `title`, `anyOf: [string,
+    null]` and all — and a converter written for its OpenAPI subset dropped
+    `minLength`/`maximum`, which would have this arm decode under a WEAKER schema than the
+    local two. The temperature goes out explicitly and is the same number the local arms
+    use, so the sampler is not a loose variable between the three.
+    """
     generation_config = {"temperature": config.TEMPERATURE_GENERATION}
     if schema is not None:
         generation_config["responseMimeType"] = "application/json"
@@ -159,12 +154,12 @@ def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> st
     return "".join(part.get("text", "") for part in parts)
 
 
-# Groq speaks OpenAI's `json_schema`, whose strict mode additionally demands
-# `additionalProperties: false` on every object — the one thing Pydantic does not emit.
-# This path is now the FALLBACK rather than an alternative nobody selects, so a 400 from
-# here no longer waits for someone to switch providers by hand: it shows up appended to
-# Gemini's own failure the first time Gemini's quota runs out. This is where to look.
 def _openai_schema(schema: dict) -> dict:
+    """Close every object of the schema, which OpenAI's strict mode demands.
+
+    `additionalProperties: false` is the one thing Pydantic does not emit, so a 400 from
+    Groq's `json_schema` is what this exists to prevent.
+    """
     out = dict(schema)
     if "properties" in out:
         out["properties"] = {n: _openai_schema(s) for n, s in out["properties"].items()}
@@ -175,6 +170,7 @@ def _openai_schema(schema: dict) -> dict:
 
 
 def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
+    """Call Groq's OpenAI-compatible endpoint, at the same temperature as the local arms."""
     response_format = (
         {}
         if schema is None
@@ -207,9 +203,8 @@ def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
     return choices[0].get("message", {}).get("content") or ""
 
 
-# A spent free quota is the failure this arm will actually hit during a data-collection
-# session, so it gets said in words instead of arriving as a bare 429.
 def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
+    """Turn an HTTP failure into a sentence, naming the spent quota rather than a bare 429."""
     status = error.response.status_code
     if status == 429:
         return f"{provider} ha agotado la cuota gratuita (429). Reintenta más tarde."
@@ -219,6 +214,6 @@ def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
     return f"{provider} respondió {status}: {detail}"
 
 
-# Declared after the callers so the lookup can stay a plain dict. It says which names are
-# callable at all; the ORDER of the attempts is `study_config.EXTERNAL_PROVIDERS`, never this.
+# Which names are callable at all; the ORDER of the attempts is
+# `study_config.EXTERNAL_PROVIDERS`, never this. Declared after the callers it names.
 _CALLERS = {"gemini": _gemini, "groq": _groq}

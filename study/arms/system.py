@@ -23,6 +23,7 @@ class _Capture:
     """A tee on the emitter: records what the run says, forwards it to whoever listens."""
 
     def __init__(self, inner):
+        """Wrap the emitter the run is already publishing to, or nothing."""
         self._inner = inner
         self.prompt = ""
         self.exemplar_ids: list[str] = []
@@ -30,6 +31,7 @@ class _Capture:
         self.thinking: list[str] = []
 
     def emit(self, kind: str, payload: dict) -> None:
+        """Keep the prompt, the exemplars and the token stream, then forward the event."""
         if kind == "prompt":
             self.prompt = payload.get("text") or self.prompt
         elif kind == "few_shot":
@@ -41,14 +43,17 @@ class _Capture:
             self._inner.emit(kind, payload)
 
     def should_cancel(self) -> bool:
+        """Defer the cancellation question to whoever is listening underneath."""
         return bool(self._inner is not None and self._inner.should_cancel())
 
     @property
     def raw(self) -> str:
+        """Return what the model wrote, falling back to the reasoning channel."""
         return "".join(self.answer) or "".join(self.thinking)
 
 
 def run(commission: Commission, context) -> ArmResult:
+    """Generate one item through the pipeline untouched, capturing what it emits."""
     started = time.perf_counter()
     capture = _Capture(progress.current_emitter())
 

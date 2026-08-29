@@ -26,10 +26,9 @@ from .. import prompts as study_prompts
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatBankIndex
 
-# Keyed by workspace, not one global: with two instances in one process a single slot meant
-# one subject's bank answering the other's queries, and its `.npz` landing in whichever
-# workspace was resolved last. The bank identity check stays inside the slot, because a bank
-# also changes while a workspace is alive (tagging, manual edits).
+# Keyed by workspace, not one global: with two instances in one process a single slot means
+# one subject's bank answering the other's queries. The bank identity check stays inside the
+# slot, because a bank also changes while a workspace is alive (tagging, manual edits).
 _indices: dict[str, FlatBankIndex] = {}
 
 
@@ -60,6 +59,7 @@ def build_query(commission: Commission) -> str:
 
 
 def run(commission: Commission, context) -> ArmResult:
+    """Retrieve exemplars by plain cosine and generate one item from them."""
     item_type = context.exemplars_profile.item_type(commission.item_type)
     started = time.perf_counter()
 
@@ -98,7 +98,6 @@ def run(commission: Commission, context) -> ArmResult:
         shape="objeto",
         format=item_type.stripped_schema(),
         # The workspace's set, not this arm's: what is repaired is JSON, not the baseline.
-        # The two prompts that MAKE this arm a baseline are `study/prompts/`'s.
         prompts=context.prompts,
     )
 

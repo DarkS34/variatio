@@ -1,3 +1,5 @@
+"""The «Túnel SSH» settings: where the GPU box is, and whether the API opens the tunnel."""
+
 from ..types import Impact, Setting
 
 _TUNNEL_DOC = """El motor no corre en esta máquina: `OLLAMA_HOST` apunta a un puerto local que un túnel SSH
@@ -23,9 +25,8 @@ disco.
 el panel. Si el proceso de `ssh` muere el vigilante lo relanza con espera creciente (5 s a
 60 s) mientras el túnel siga pedido."""
 
-# The four are `secret`: not because a port is confidential, but because the whole block
-# is installation state — the address of *this* deployment's GPU — and `secret` is what
-# keeps a setting out of the versioned config.json. They live in `.env`, like DATABASE_URL.
+# All four are `secret` to keep this deployment's own GPU address out of the versioned
+# config.json, not because a port is confidential: they live in `.env`, like DATABASE_URL.
 SETTINGS: list[Setting] = [
     Setting(
         key="tunnel.host",

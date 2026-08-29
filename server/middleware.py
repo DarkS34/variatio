@@ -16,21 +16,14 @@ from . import settings
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
-# `frame-ancestors` and `X-Frame-Options` say the same thing to two generations of
-# browser. `unsafe-inline` survives only for styles: React writes element `style`
-# attributes (the graph canvas among them) and CSP has no nonce for those.
-#
-# `connect-src` is `'self'` and NOTHING ELSE. It used to read `'self' ws: wss:`, and those
-# two are scheme sources: they match every host there is, so the directive placed no
-# restriction at all on where an injected script could open a socket. In CSP3 `'self'`
-# already covers a same-origin `ws:`/`wss:`, which is the only socket this app opens —
-# `runStore.connect()` builds the URL from `window.location.host`. Re-adding a bare scheme
-# to make some client work would give back the exfiltration channel, not fix a bug.
-# The socket's own origin is named beside `'self'` when the installation declares one. It
-# grants nothing `'self'` does not already cover — same host, same port — and exists for the
-# browsers that predate CSP3's rule that `'self'` matches a same-origin `wss:` (Safari below
-# 16). Without a `PUBLIC_BASE_URL` there is nothing to name and `'self'` stands alone.
+
 def _socket_origin() -> str:
+    """Name the WebSocket origin for `connect-src`, or nothing when none is declared.
+
+    It grants nothing `'self'` does not already cover and exists for browsers predating
+    CSP3's rule that `'self'` matches a same-origin `wss:` (Safari below 16). A bare `ws:`
+    or `wss:` here would be a scheme source matching every host there is.
+    """
     base = settings.public_base_url()
     if not base:
         return ""
@@ -42,6 +35,11 @@ def _socket_origin() -> str:
 
 
 def csp() -> str:
+    """Build the Content-Security-Policy header.
+
+    `unsafe-inline` survives for styles alone: React writes element `style` attributes, the
+    graph canvas among them, and CSP has no nonce for those.
+    """
     return (
         "default-src 'self'; "
         "script-src 'self'; "
@@ -56,26 +54,25 @@ def csp() -> str:
     )
 
 
+# `X-Frame-Options` says what `frame-ancestors` says, to an older generation of browser.
 HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY",
 }
 
-# Six months, which is the shortest max-age anybody counts as a real commitment, and
-# `includeSubDomains` because the session cookie is not host-only. NO `preload`: that one
-# is an entry in a list compiled into every browser and is not undone by unsetting the
-# header, so it is the user's decision and not this file's.
-#
-# Sent only where TLS actually terminates in front of us — `cookie_secure()` is the
-# existing answer to that question, and it is the same fact: over plain http a browser
-# ignores HSTS anyway, and in development it would pin localhost to https for six months.
-# This header belongs at the proxy; it is here because the deployment's Caddy adds none.
+# Six months, `includeSubDomains` because the session cookie is not host-only, and NO
+# `preload`: that one is compiled into browsers and unsetting the header does not undo it,
+# so it is the user's decision. Sent only where `cookie_secure()` says TLS terminates in
+# front of us, or development would pin localhost to https for six months.
 HSTS = "max-age=15552000; includeSubDomains"
 
 
 class SecurityHeaders(BaseHTTPMiddleware):
+    """Stamp the security headers on every response, refusals included."""
+
     async def dispatch(self, request, call_next):
+        """Add the headers a response does not already carry."""
         response = await call_next(request)
         for header, value in HEADERS.items():
             response.headers.setdefault(header, value)
@@ -85,14 +82,15 @@ class SecurityHeaders(BaseHTTPMiddleware):
         return response
 
 
-# The rule is "reject on positive evidence of cross-site", not "require proof of
-# same-site": a request with neither header is a script or a CLI, which cannot be a CSRF
-# vector — the attack needs a browser, and every browser sends at least one of the two.
 class OriginCheck(BaseHTTPMiddleware):
+    """Refuse a state-changing request that shows positive evidence of being cross-site."""
+
     def __init__(self, app: ASGIApp) -> None:
+        """Wrap the application."""
         super().__init__(app)
 
     async def dispatch(self, request, call_next):
+        """Let a safe method through, and refuse anything `cross_site` recognises."""
         if request.method in SAFE_METHODS:
             return await call_next(request)
         if cross_site(request):
@@ -100,12 +98,15 @@ class OriginCheck(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# The same verdict for an HTTP request and for a WebSocket handshake, which is why it takes
-# an `HTTPConnection` and not a `Request`: `BaseHTTPMiddleware` short-circuits every scope
-# that is not `http`, so `/ws` never reaches `OriginCheck` and had to ask for itself. One
-# reading of "same site" and not two — a second copy is how the socket ends up with a rule
-# the HTTP path has already outgrown.
 def cross_site(connection) -> bool:
+    """Report positive evidence that a connection came from another site.
+
+    Positive evidence, not proof of same-site: a request carrying neither `Sec-Fetch-Site`
+    nor `Origin` is a script or a CLI, and CSRF needs a browser, which sends one of the
+    two. Takes an `HTTPConnection` rather than a `Request` because `BaseHTTPMiddleware`
+    short-circuits every non-`http` scope, so `/ws` never reaches `OriginCheck` and asks
+    for itself — one reading of «same site», not two.
+    """
     fetch_site = connection.headers.get("sec-fetch-site")
     if fetch_site and fetch_site not in ("same-origin", "none"):
         return True
@@ -119,13 +120,12 @@ _PAGE_SCHEME = {"ws": "http", "wss": "https"}
 
 
 def _allowed(connection) -> set[str]:
-    # With `PUBLIC_BASE_URL` set, that IS the origin the app is served under, and nothing
-    # is derived from the request any more. What that removes is `X-Forwarded-Host`:
-    # `trust_proxy()` defaults to on in production, so anyone able to send both
-    # `Origin: https://evil.com` and `X-Forwarded-Host: evil.com` used to have their own
-    # origin added to this set and passed the check. Not browser-driven — neither header is
-    # CORS-safelisted — but the header is only ever evidence when the proxy overwrites it,
-    # and a configured base URL makes the question moot.
+    """The origins that count as this app's own.
+
+    A configured `PUBLIC_BASE_URL` is used verbatim and nothing is derived from the
+    request: with `trust_proxy()` on, an attacker sending both `Origin: https://evil.com`
+    and `X-Forwarded-Host: evil.com` would otherwise have their own origin admitted here.
+    """
     base = settings.public_base_url()
     if base:
         own = {base}
@@ -133,17 +133,16 @@ def _allowed(connection) -> set[str]:
         scheme = _PAGE_SCHEME.get(connection.url.scheme, connection.url.scheme)
         own = {f"{scheme}://{connection.url.netloc}"}
         if settings.trust_proxy():
-            # Behind TLS the app itself is spoken to over plain http, so its own idea of
-            # the scheme is the wrong half of the origin the browser sent. The host is the
+            # Behind TLS the app is spoken to over plain http, so its own idea of the
+            # scheme is the wrong half of the origin the browser sent. The host is the
             # `Host` header either way, which a browser does not let a page choose.
             own.add(f"http://{connection.url.netloc}")
             own.add(f"https://{connection.url.netloc}")
-    # Vite proxies `/api`, so the browser already considers itself same-origin in
-    # development; these are only here for someone who points the SPA at the API directly.
     return own | set(settings.dev_cors_origins())
 
 
 def _refused() -> JSONResponse:
+    """Return the 403 a cross-site request gets."""
     return JSONResponse(
         {"detail": "Petición rechazada: origen distinto al del servidor."}, status_code=403
     )

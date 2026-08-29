@@ -2,7 +2,7 @@
 
 Mechanism, not policy, in the way `variatio.stages` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
-`server/evaluation_store.py`'s job, which is what lets a batch mode reuse this untouched.
+`study/api/store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
 
 import random
@@ -31,17 +31,15 @@ def evaluate(
     seed: int | None = None,
     job_id: str | None = None,
 ) -> EvaluationSession:
+    """Run one commission through the three architectures and return the blind session.
+
+    The order of the cards and the reasoning mode are both DRAWN from `seed`, before
+    anything runs, so a session is reproducible from that number alone. The reasoning mode
+    is the condition being measured and is identical for the three arms within a session,
+    which is what keeps it out of the comparison between them.
+    """
     target_type = context.exemplars_profile.item_type(item_type)
 
-    # Both draws come from the same seed and happen before anything runs, so the session
-    # is reproducible from `seed` alone months later, when the memoria is being written.
-    #
-    # THE REASONING MODE IS DRAWN, NOT CHOSEN. The Generate screen offers it as a switch
-    # because there the user is asking for an item; here it is the thing being measured,
-    # and an evaluator who decides it decides it in correlation with their own mood, the
-    # time they have and what they expect to see. Sorted at random it becomes a condition
-    # whose effect can be read off the sessions afterwards. It is identical for the local
-    # arms within a session, so it never enters the comparison BETWEEN architectures.
     seed = random.randrange(2**31) if seed is None else int(seed)
     draw = random.Random(seed)
     order = list(ARMS)
@@ -59,23 +57,19 @@ def evaluate(
     )
     _validate(context, target_type, commission)
 
-    # Once, before the commission is handed out: it judges the user's text, not the arm.
-    # If it blocks, the session never comes into existence. The ruling travels ON the
-    # commission so the `system` arm does not screen the same text a second time.
+    # The ruling travels ON the commission so the `system` arm does not screen the same
+    # text a second time; `naive` and `rag` receive the free text untyped.
     ruling = _screen(context, target_type, commission)
     commission = replace(commission, ruling=ruling)
 
     results: dict[str, ArmResult] = {}
-    # The external arm is network, not GPU: it overlaps with the local ones for free,
-    # and its 3-8 s disappear from the wall clock.
+    # The external arm is network, not GPU: it overlaps with the local ones for free.
     with ThreadPoolExecutor(max_workers=1) as pool:
         external = pool.submit(_safe_run, "naive", commission, context)
 
-        # One GPU, one job at a time — as `jobs/runner.py` declares. Serialised on purpose.
-        #
-        # The step counts work done and NEVER names a position: emitting "propuesta 2 de 3"
-        # in execution order would tell the evaluator which card was produced by which arm,
-        # which is exactly the leak the shuffling is there to prevent.
+        # The two local arms are serialised: one GPU, one job at a time. The step counts
+        # work done and NEVER names a position — «propuesta 2 de 3» in execution order
+        # would tell the evaluator which card each arm produced.
         with progress.step("eval.arms", "Preparando las tres propuestas", total=3) as reporter:
             for done, arm in enumerate(("rag", "system"), start=1):
                 progress.checkpoint()
@@ -105,9 +99,12 @@ def evaluate(
     )
 
 
-# A crash in one arm is a datum about that arm, never the end of the session: a run
-# that dies because the commercial provider changed its JSON is a run of data lost.
 def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
+    """Run one arm, recording a crash as a failed result rather than losing the session.
+
+    A run that dies because the commercial provider changed its JSON is a run of data lost;
+    a cancellation still propagates.
+    """
     try:
         return run_arm(arm, commission, context)
     except progress.Cancelled:
@@ -129,6 +126,11 @@ def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
 
 
 def _screen(context, item_type, commission: Commission):
+    """Pay the guardrail and the admissibility judge ONCE, and return the ruling.
+
+    Guardrail first, admissibility second, as the pipeline orders them. Either one blocking
+    raises, so the session never comes into existence rather than recording a refusal.
+    """
     if not commission.instructions:
         return admissibility.Ruling(requests=(), checked=True)
 
@@ -163,9 +165,12 @@ def _screen(context, item_type, commission: Commission):
     return ruling
 
 
-# Checked here rather than inside the arms: an invalid commission must fail the whole
-# request, not come back as two happy proposals and one arm that "failed".
 def _validate(context: PipelineContext, item_type, commission: Commission) -> None:
+    """Raise ValueError unless the commission is runnable by all three arms.
+
+    Checked here rather than inside the arms: an invalid commission must fail the whole
+    request, not come back as two happy proposals and one arm that «failed».
+    """
     taggable = set(context.knowledge_graph.taggable_concepts)
 
     if not commission.concepts:

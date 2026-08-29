@@ -1,18 +1,25 @@
+"""`serve`: the API, behind a one-process lock and a database check."""
+
 from .common import PROG, database_hint
 from .lock import LockHeld, hold
 
 
 def serve_lock_path():
+    """Return the lock file that keeps a second `serve` from starting."""
     from variatio.core.paths import WORKSPACES_DIR
 
     return WORKSPACES_DIR / ".serve.lock"
 
 
-# `serve` used to start with no database on purpose, because nothing on the request path
-# read from it. Since phase 2 every request resolves a session and a membership, so
-# starting without Postgres would only produce a 503 per request: it is better to say so
-# once, here, than to look like the app is broken.
 def serve(args) -> int:
+    """Start the API, refusing to run twice or without a database.
+
+    Only one process may serve: the job queue, the rate limiter and the idle release of
+    the GPU all live in the memory of one. Every request resolves a session and a
+    membership, so starting without Postgres would only produce a 503 per request — it is
+    better to say so once, here, than to look like the app is broken. This is one of the
+    two commands `guarded()` does not wrap, because it makes that check itself.
+    """
     import uvicorn
 
     from ..db import is_available, session_scope

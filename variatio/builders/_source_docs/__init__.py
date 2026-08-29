@@ -1,3 +1,11 @@
+"""Reading a source document: files, markdown, chunking and page transcription.
+
+Shared by all three builders — anything about reading a source file belongs here and is
+never duplicated into one of them. `pages` is the only module of the four that talks to a
+model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
+property the split exists to keep checkable.
+"""
+
 from . import chunking, files, markdown, pages
 from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (

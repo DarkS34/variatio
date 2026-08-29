@@ -1,3 +1,10 @@
+"""The package root: logging configuration and the one startup check.
+
+Importing `variatio` is side-effect-free apart from the logging setup below. The
+inference engine is reached only through `bootstrap()`, which every entry point that
+talks to a model must call.
+"""
+
 import logging
 import sys
 import warnings
@@ -30,10 +37,14 @@ logger.add(
     colorize=True,
 )
 
-# Imported here and not at module scope: `core.inference` pulls in the ollama SDK, httpx and
-# tqdm, which is 364 ms of the 510 ms `import variatio` used to cost — paid by every
-# CLI invocation, every test collection and every module that only wanted a loader.
+
 def bootstrap() -> None:
+    """Raise unless the configured inference engine answers.
+
+    Every entry point that talks to a model must call this; the stages never do.
+    """
+    # Do not hoist: `core.inference` pulls the ollama SDK, httpx and tqdm, which is
+    # 364 ms of the 510 ms `import variatio` otherwise costs every caller.
     from .core import inference
 
     if not inference.is_available():

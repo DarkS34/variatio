@@ -1,3 +1,10 @@
+"""Building `exemplars_bank.json`: real items read out of the raw exemplars documents.
+
+The bank is defined in terms of the exemplars profile — every item is validated against the
+modality it declares — and each document is tagged as soon as it comes out, inside the same
+job, so an item reaches the bank with its concepts already on it.
+"""
+
 import json
 import re
 from collections.abc import Callable
@@ -21,13 +28,8 @@ from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from . import _source_docs
 
 
-# Transcribing a PDF is one model call per page plus one short one per seam, so conversion
-# is no longer the rounding error it was when Docling did it in three seconds.
-#
-# `extract` now costs more than before because it does not only extract: each document is
-# tagged as soon as it comes out, inside the same phase, so an item appears with its
-# concepts already instead of waiting for a second job that had to be launched by hand.
-# The weights are still an estimate, as the two before them were.
+# Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
+# plus a short one per seam, and `extract` also tags each document as it comes out.
 BUILD_PHASES = (
     ("convert", "Transcribiendo los documentos", 30),
     ("extract", "Extrayendo y etiquetando los ítems", 70),
@@ -35,6 +37,7 @@ BUILD_PHASES = (
 
 
 def build_models() -> list[str]:
+    """Every model a bank build calls, the tagger's and the embedder's included."""
     return [
         config.TRANSCRIBE_MODEL,
         config.TRANSCRIBE_SEAM_MODEL,
@@ -46,6 +49,8 @@ def build_models() -> list[str]:
 
 
 class ExemplarsBankBuilder:
+    """Reads the raw exemplars documents into the bank, one document at a time."""
+
     ID_RE = re.compile(r"^C(\d+)$")
 
     def __init__(
@@ -55,10 +60,8 @@ class ExemplarsBankBuilder:
         content_context: ContentContext | None = None,
         verbose: bool = True,
     ):
+        """Resolve the workspace's prompt set and precompute the schema and prompt blocks."""
         self.workspace = workspace
-        # The workspace's own prompt set, resolved once here. Every model call this
-        # builder makes goes through it, so a Spanish instance and an English one build
-        # from the same code and never share a prompt.
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self.exemplars_profile = exemplars_profile
         self.content_context = content_context or ContentContext()
@@ -76,14 +79,15 @@ class ExemplarsBankBuilder:
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
         self._id_counter = 0
 
-    # One branch per modality, so the decoder cannot hand back an item wearing the fields of
-    # another one — the failure `_parse_and_validate` exists to catch loudly. `item_type` is
-    # a `const` per branch and is only demanded when there is a choice to make: with a single
-    # modality the parser already fills it in, and requiring it would add a way to fail for
-    # nothing. Extraction is the one pass that legitimately answers with an empty array, and
-    # the schema allows that.
     @staticmethod
     def _build_extraction_schema(exemplars_profile: ExemplarsProfile) -> dict:
+        """One branch per modality, so the decoder cannot mix the fields of two of them.
+
+        `item_type` is a `const` per branch and is only demanded when there is a choice to
+        make: with a single modality the parser fills it in, and requiring it would add a way
+        to fail for nothing. Extraction legitimately answers with an empty array, and the
+        schema allows that.
+        """
         branches = []
         several = len(exemplars_profile.item_types) > 1
         for key, item_type in exemplars_profile.item_types.items():
@@ -98,6 +102,7 @@ class ExemplarsBankBuilder:
 
     @staticmethod
     def _build_types_block(exemplars_profile: ExemplarsProfile) -> str:
+        """The prompt's catalogue of modalities: schema and per-field extraction guidance."""
         blocks = []
         for key, item_type in exemplars_profile.item_types.items():
             lines = [f"### `{key}` — {item_type.label}"]
@@ -114,24 +119,23 @@ class ExemplarsBankBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
-    # The tagger and the embedder come in here because the build uses them: each document is
-    # tagged right after extracting it, inside this same job.
     def bootstrap(self) -> None:
+        """Check every model of the build is installed, the tagger's and embedder's included."""
         ensure_models(build_models(), "del banco de ejemplares")
 
-    # build() persists checkpoints to disk and also returns the bank, so the caller can use it
-    # without re-reading it.
-    #
-    # `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
-    # whole bank right after writing a document's items and returns that same bank annotated.
-    # The builder does not know what it does — it knows neither the graph nor the tagger —;
-    # `stages/build.py` wires it, being the layer whose job is to orchestrate.
     def build(
         self,
         input_dir: str,
         output_file_path: str,
         on_items: Callable[[dict, list[str]], dict] | None = None,
     ) -> dict[str, dict]:
+        """Read every document into the bank, checkpointing after each one, and return it.
+
+        `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
+        whole bank right after a document's items are written and returns that same bank
+        annotated. The builder knows neither the graph nor the tagger — `stages/build.py`
+        wires it, being the layer whose job is to orchestrate.
+        """
         self.bootstrap()
 
         files = _source_docs.list_source_files(input_dir)
@@ -177,8 +181,8 @@ class ExemplarsBankBuilder:
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
                 if on_items is not None:
-                    # Half a phase per document: extracting is the first half and tagging the second, so the
-                    # bar moves within a document and not only when moving on to the next one.
+                    # Half a phase per document — extracting the first half, tagging the
+                    # second — so the bar moves within a document and not only between two.
                     progress.advance(
                         (idx - 0.5) / len(files),
                         f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
@@ -202,10 +206,13 @@ class ExemplarsBankBuilder:
 
     # PIPELINE ------------------------------------------------------------------------------------
 
-    # Pages are the unit of transcription and of the on-disk cache; batching stays a
-    # matter of size, over the whole document, so an exercise that straddles a page break
-    # is not cut in half before the extractor ever sees it.
     def _convert(self, files: list[Path]) -> dict[Path, str]:
+        """Transcribe every document to one markdown string.
+
+        Pages are the unit of transcription and of the on-disk cache; batching stays a matter
+        of size over the whole document, so an exercise straddling a page break is not cut in
+        half before the extractor ever sees it.
+        """
         progress.phase("convert", f"0/{len(files)} documento(s)")
         text_by_file: dict[Path, str] = {}
         with progress.step(
@@ -232,6 +239,7 @@ class ExemplarsBankBuilder:
         return text_by_file
 
     def _process_file(self, file_path: Path, content: str, tag: str) -> dict[str, dict]:
+        """Extract one document's items batch by batch, dropping what the overlap repeats."""
         if not content.strip():
             logger.warning(f"{tag} no usable content after the transcription")
             return {}
@@ -272,11 +280,12 @@ class ExemplarsBankBuilder:
             logger.debug(f"{tag} {repeated} item(s) repeated by the overlap, discarded")
         return items
 
-    # What makes two extractions the same item: the primary field, which is the one the
-    # profile declares as carrying the statement. Compared folded, because the same
-    # exercise read from two overlapping batches comes back with the same words and not
-    # necessarily the same spacing.
     def _identity(self, raw: dict) -> str:
+        """What makes two extractions the same item: its modality and its primary field.
+
+        Compared FOLDED, because the same exercise read from two overlapping batches comes
+        back with the same words and not necessarily the same spacing.
+        """
         key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
         try:
             item_type = self.exemplars_profile.item_type(str(key))
@@ -286,6 +295,7 @@ class ExemplarsBankBuilder:
         return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
+        """Ask for one batch's items, raising when no repair produces usable JSON."""
         prompt = self.prompts.format_content_prompt(
             content=batch,
             types_block=self._types_block,
@@ -315,11 +325,13 @@ class ExemplarsBankBuilder:
             raise ValueError(f"unrecoverable JSON after {self.max_repair_attempts} repairs: {err}")
         return items
 
-    # Each raw object is validated against the schema of the modality it declares, so a
-    # mislabelled item fails loudly here instead of reaching the bank with the fields of
-    # another modality. A single type in the profile makes `item_type` optional: there is
-    # nothing to choose, and demanding it would only add a way for the model to fail.
     def _parse_and_validate(self, response: str) -> tuple[list[dict] | None, str | None]:
+        """Validate each raw object against the schema of the modality it declares.
+
+        A mislabelled item fails loudly here instead of reaching the bank wearing another
+        modality's fields. A single type in the profile makes `item_type` optional: there is
+        nothing to choose, and demanding it would only add a way for the model to fail.
+        """
         try:
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
             raw = repair_json(cleaned, return_objects=True)
@@ -349,10 +361,14 @@ class ExemplarsBankBuilder:
 
     # BATCHING ------------------------------------------------------------------------------------
 
-    # Batches OVERLAP: the last `EB_BATCH_OVERLAP_BLOCKS` blocks of one open the next, so an
-    # exercise that straddles the size cut is seen whole by at least one call instead of
-    # half by each. The price is items extracted twice, and `_identity` is what pays it.
     def _build_batches(self, content: str) -> list[str]:
+        """Pack the document's blocks into batches of at most `chunk_size`, OVERLAPPING them.
+
+        The last `EB_BATCH_OVERLAP_BLOCKS` blocks of a batch open the next one, so an
+        exercise straddling the size cut is seen whole by at least one call instead of half
+        by each; the price is items extracted twice, and `_identity` is what pays it. The
+        ~10-character separator budget is charged to the first block of a batch too.
+        """
         blocks = _source_docs.split_blocks(content)
         if not blocks:
             return []
@@ -379,9 +395,12 @@ class ExemplarsBankBuilder:
             batches.append("\n\n---\n\n".join(current))
         return batches
 
-    # Only what leaves room: carrying a block that fills half the budget would push the very
-    # next cut back into the same block and could stop the batches advancing at all.
     def _carry_over(self, blocks: list[str]) -> list[str]:
+        """The trailing blocks that open the next batch — only what leaves room.
+
+        Carrying a block that fills half the budget would push the very next cut back into
+        the same block and could stop the batches advancing at all.
+        """
         count = min(config.EB_BATCH_OVERLAP_BLOCKS, len(blocks))
         carried: list[str] = []
         for block in reversed(blocks[len(blocks) - count :]):
@@ -393,11 +412,13 @@ class ExemplarsBankBuilder:
     # HELPERS -------------------------------------------------------------------------------------
 
     def _next_id(self) -> str:
+        """Claim the next `C###` identifier."""
         self._id_counter += 1
         return f"C{self._id_counter:03d}"
 
     @classmethod
     def _max_id(cls, bank: dict) -> int:
+        """The highest `C###` number an existing bank holds, `0` when it holds none."""
         return max(
             (int(m.group(1)) for k in bank if (m := cls.ID_RE.match(k))),
             default=0,
@@ -405,6 +426,7 @@ class ExemplarsBankBuilder:
 
     @staticmethod
     def _load_existing(path: str) -> dict:
+        """Read the bank already on disk, starting from scratch when it cannot be read."""
         p = Path(path)
         if not p.exists():
             return {}
@@ -413,4 +435,3 @@ class ExemplarsBankBuilder:
         except Exception as e:
             logger.warning(f"Could not read the existing bank {path} ({e}); starting from scratch")
             return {}
-

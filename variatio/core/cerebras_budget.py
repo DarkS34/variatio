@@ -1,37 +1,30 @@
 """What is left of Cerebras' rate limits, and the throttle that keeps us inside them.
 
-Measured against the real API on 2026-08-26, with `gemma-4-31b` and a second model, and
-re-measured on 2026-08-29 when the throttle turned out not to be throttling:
+Every measurement against the real API shapes the module:
 
-- Every response carries `x-ratelimit-{limit,remaining}-{requests,tokens}-{minute,hour,day}`
-  and **no `reset` header at all**, so the window has to be reconstructed from our own call
-  timestamps. That is what this module is: a rolling ledger.
-- NO header states the ceiling this ledger enforces: the four `CEREBRAS_MAX_*` settings do,
-  and nothing may raise them. `limit-*` reports the MODEL's published quota (gemma: 500
-  req/min, 250 000 uncached tok/min), and `remaining-*` was measured on 2026-08-26 counting
-  down from the ACCOUNT's much smaller one (5 req/min, 2 400 req/day) — but re-measured on
-  2026-08-29 it counts down from the model's too (719 998 of 720 000 requests a day). That
-  reading used to be trusted to RAISE a ceiling, on the argument that more left than the
-  settings claim can only mean a bigger account; what it actually meant was that the first
-  answer of every installation lifted the ceilings to the catalogue's and the throttle never
-  held another call. A header may only ever LOWER what we believe is left.
-- The buckets are **per model**: a call to the second model left `remaining-requests-day` at 2399 and
-  the next call to gemma reported 2399 as well, each against its own 2 400.
-- The request counters are exact; the token counters lag. A 74-token call and a 20-token
-  call each moved `remaining-tokens-day` by exactly 6. So `usage` — which is exact and
-  arrives with the answer — is what this ledger counts, and a header may only ever LOWER
-  what we believe is left, never raise it.
+- Responses carry `x-ratelimit-{limit,remaining}-{requests,tokens}-{minute,hour,day}` and
+  **no `reset` header at all**, so the window has to be reconstructed from our own call
+  timestamps. That is what this is: a rolling ledger.
+- **A header may only ever LOWER what we believe is left, never raise it.** No header
+  states the ceiling this enforces — the four `CEREBRAS_MAX_*` settings do, and nothing may
+  lift them. `limit-*` reports the MODEL's published quota (gemma: 500 req/min, 250 000
+  uncached tok/min) and `remaining-*` counts down from the model's too (719 998 of 720 000
+  requests a day), so trusting either to widen a ceiling hands the throttle a budget the
+  account does not have and no call is ever held again.
+- The buckets are **per model**: a call to one model left `remaining-requests-day` at 2399
+  and the next call to another reported 2399 as well, each against its own 2 400.
+- The request counters are exact; the token counters lag — a 74-token call and a 20-token
+  call each moved `remaining-tokens-day` by exactly 6. So `usage`, which is exact and
+  arrives with the answer, is what this ledger counts.
 
 The ledger is a file because builds run in `server.jobs.build_worker`, a separate process,
-and they are precisely what empties a daily budget. It used to lean on the queue for the
-rest — one job at a time meant two processes never called at once — and that assumption
-went when the remote lane got a capacity, so both halves of it are guarded here now:
+and they are precisely what empties a daily budget. Two things guard it:
 
 - **Every read-modify-write is one transaction**, held against other threads with a lock and
   against other processes with `flock` on a sidecar file. The lock cannot live on the ledger
-  itself: `write_json` replaces it through a `.tmp`, so the inode a waiter is holding is not
-  the inode the writer leaves behind — and two unguarded writers collide on that `.tmp`,
-  which corrupts the file rather than merely losing a count.
+  itself: `write_json` replaces it through a `.tmp`, so the inode a waiter holds is not the
+  one the writer leaves behind — and two unguarded writers collide on that `.tmp`, which
+  corrupts the file rather than merely losing a count.
 - **The gate BOOKS what it lets through.** Checking and then calling is not a throttle when
   two callers can check at once: both read the same room and both spend it. So `wait`
   returns a `Claim` and writes the call into the ledger at its estimate before it goes out,
@@ -59,9 +52,8 @@ from . import progress
 from .inference import InferenceError
 from .json_io import write_json
 
-# The two windows worth enforcing. The hour is deliberately absent: measured, it never binds
-# before the minute and the day do — gemma reported 44 999 994 tokens left of the hour while
-# the day sat at 999 994 of 1 000 000.
+# The hour window is deliberately absent: measured, it never binds before the minute and the
+# day do — gemma reported 44 999 994 tokens left of the hour against 999 994 of the day.
 WINDOWS: tuple[tuple[str, str, float], ...] = (
     ("minute", "por minuto", 60.0),
     ("day", "por día", 86_400.0),
@@ -98,16 +90,20 @@ class Claim:
 
 @dataclass(frozen=True)
 class Limits:
+    """The four ceilings this ledger enforces. Nothing but a setting may change them."""
+
     requests_minute: int
     tokens_minute: int
     requests_day: int
     tokens_day: int
 
     def ceiling(self, window: str, kind: str) -> int:
+        """The ceiling for one window and one kind of consumption."""
         return getattr(self, f"{kind}_{window}")
 
 
 def limits_from_config() -> Limits:
+    """Read the ceilings from the settings, which is where they always come from."""
     return Limits(
         requests_minute=config.CEREBRAS_MAX_REQUESTS_MINUTE,
         tokens_minute=config.CEREBRAS_MAX_TOKENS_MINUTE,
@@ -117,16 +113,20 @@ def limits_from_config() -> Limits:
 
 
 def estimate_tokens(prompt: str) -> int:
+    """Roughly what a prompt will cost, good enough to gate one call ahead."""
     return int(len(prompt) / CHARS_PER_TOKEN) + _REQUEST_OVERHEAD_TOKENS
 
 
 class Budget:
+    """One rolling ledger of what has been spent, on disk and shared between processes."""
+
     def __init__(
         self,
         path: Path,
         limits: Callable[[], Limits] = limits_from_config,
         clock: Callable[[], float] = time.time,
     ):
+        """Open the ledger at `path`; the limits and the clock are injectable for tests."""
         self._path = Path(path)
         # Beside the ledger and never the ledger itself: `write_json` replaces the file
         # through a `.tmp`, so a waiter holding the old inode would be guarding nothing.
@@ -148,6 +148,14 @@ class Budget:
         return self._compute(state, model, estimated_tokens)
 
     def _compute(self, state: dict, model: str, estimated_tokens: int) -> float:
+        """Seconds this call has to wait for both windows; raises when waiting cannot help.
+
+        A call needing more than a window's WHOLE ceiling can never fit, and is refused at
+        once: emptying the window restores a ceiling that is already too small. Reachable
+        in practice — a 131 072-token context against 30 000 tokens a minute — and without
+        the guard `_relief` finds nothing to age out, reports relief «now» and lets the
+        request through to a 429 it repeats for ever.
+        """
         now = self._clock()
         limits = self._limits()
         calls = _calls(state, model)
@@ -155,13 +163,6 @@ class Budget:
 
         for window, label, seconds in WINDOWS:
             for kind, need in (("requests", 1), ("tokens", max(estimated_tokens, 1))):
-                # A call bigger than the WHOLE window can never fit, and waiting for it is
-                # not slow, it is never: emptying the window restores the ceiling and the
-                # ceiling is already too small. Reachable in practice — the model takes a
-                # 131 072-token context while the free tier allows 30 000 tokens a minute,
-                # so one large prompt is simply outside this budget. Without this guard
-                # `_relief` finds no call to age out, reports relief «now», and the request
-                # sails through to a 429 it will repeat for ever.
                 ceiling = limits.ceiling(window, kind)
                 if need > ceiling:
                     raise BudgetExhausted(
@@ -199,8 +200,8 @@ class Budget:
         """
         with self._transaction() as state:
             claim = self._announce(state, model, phase)
-        # Measured from the first attempt and not from each one, so a call cannot be held
-        # for ever in short instalments while others keep taking the room in front of it.
+        # From the first attempt and not from each one, so a call cannot be held for ever in
+        # short instalments while others keep taking the room in front of it.
         deadline = self._clock() + max(0.0, float(config.CEREBRAS_MAX_WAIT_SECONDS))
         announced = False
         try:
@@ -231,6 +232,7 @@ class Budget:
             raise
 
     def _hold(self, seconds: float) -> None:
+        """Sleep in one-second slices, checking for a cancellation between each."""
         deadline = self._clock() + seconds
         while True:
             progress.checkpoint()
@@ -267,10 +269,9 @@ class Budget:
             call["p"] = phase
             call["in"] = max(int(prompt_tokens), 0)
             call["out"] = max(int(completion_tokens), 0)
-            # Against the claim's own sequence number, not the newest: a call answered while
-            # a later one had already landed then subtracts that later one from the reading
-            # too. It errs on the careful side, which is the only direction this file allows
-            # a header to move what we believe is left.
+            # Against the claim's own sequence number and not the newest: a call answered
+            # after a later one landed then subtracts that later one from the reading too,
+            # which errs on the careful side — the only direction a header may move this.
             self._observe(bucket, headers, now, int(call["n"]))
             _land(state, claim)
             _prune(state, now)
@@ -304,10 +305,11 @@ class Budget:
             else:
                 _land(state, claim)
 
-    # Two halves of one booking. `_announce` only says somebody is trying, which is what the
-    # panel draws while the throttle holds a call back; `_book` is what actually spends the
-    # window, and it happens under the same transaction that found the room.
     def _announce(self, state: dict, model: str, phase: str | None) -> Claim:
+        """Say somebody is trying, which is what the panel draws while a call is held back.
+
+        The first half of a booking: it spends nothing, `_book` does.
+        """
         seq = int(state.get("seq", 0)) + 1
         state["seq"] = seq
         now = self._clock()
@@ -323,6 +325,7 @@ class Budget:
         return Claim(id=seq, model=model, phase=phase)
 
     def _book(self, state: dict, claim: Claim, estimated_tokens: int) -> None:
+        """Spend the window at the estimate, under the transaction that found the room."""
         now = self._clock()
         bucket = _bucket(state, claim.model)
         bucket["calls"].append(
@@ -333,7 +336,7 @@ class Budget:
                 "out": 0,
                 "n": claim.id,
                 # When it was booked, so a claim left behind by a process that died stops
-                # charging the budget on the same clock the flight list already uses.
+                # charging the budget on the same clock the flight list uses.
                 "hold": now,
             }
         )
@@ -343,6 +346,12 @@ class Budget:
     # WHAT THE PANEL READS -----------------------------------------------------------------
 
     def snapshot(self) -> dict:
+        """What the panel draws: the meters per model and per window, and what is in flight.
+
+        One flight is reported, and a call being HELD is the one worth drawing —
+        «esperando presupuesto» is the state somebody can act on, and with several jobs on
+        the lane it is not always the oldest. The count says how many more there are.
+        """
         with self._lock, self._flock():
             state = self._load()
         now = self._clock()
@@ -363,9 +372,6 @@ class Budget:
                 }
             )
         flying = _live_flights(state, now)
-        # One entry is what the card draws, and a call being HELD is the one worth drawing:
-        # «esperando presupuesto» is the state somebody can act on, and with several jobs on
-        # the lane the oldest is not necessarily the one waiting. The count says the rest.
         return {
             "models": models,
             "inflight": flying[0] if flying else None,
@@ -373,6 +379,7 @@ class Budget:
         }
 
     def _meter(self, state, model, calls, window, seconds, now, limits) -> dict:
+        """One window's used, limit and remaining figures, plus when it next rolls."""
         inside = [call for call in calls if now - call["t"] < seconds]
         used = {
             "requests": len(inside),
@@ -389,13 +396,15 @@ class Budget:
 
     # THE ARITHMETIC -----------------------------------------------------------------------
 
-    # Two readings of the same budget, and the smaller wins. The local one counts the exact
-    # `usage` of every call still inside the window against the configured ceiling; the
-    # server's says what IT will still answer, against a quota of its own that may be far
-    # larger. Taking the minimum is what lets the second one matter without ever loosening
-    # the first, and it is what makes a lagging token counter safe: a header can only ever
-    # make us more careful.
     def _remaining(self, state, model, calls, window, kind, seconds, now, limits) -> int:
+        """What is left of one window, taking the smaller of two readings.
+
+        The local one counts the exact `usage` of every call still inside the window
+        against the configured ceiling; the server's says what IT will still answer,
+        against a quota of its own that may be far larger. The minimum is what lets the
+        second matter without ever loosening the first, and what makes a lagging token
+        counter safe: a header can only ever make us more careful.
+        """
         ceiling = limits.ceiling(window, kind)
         inside = [call for call in calls if now - call["t"] < seconds]
         used = len(inside) if kind == "requests" else sum(c["in"] + c["out"] for c in inside)
@@ -403,13 +412,14 @@ class Budget:
         reported = _reported(state, model, calls, window, kind, seconds, now)
         return local if reported is None else min(local, reported)
 
-    # What the server said, kept only to LOWER what we believe is left. It used to raise the
-    # ceiling too, on the reading that a `remaining` above the settings could only mean a
-    # bigger account — and that is what silently disabled the whole throttle: re-measured
-    # 2026-08-29, `remaining-*` reports the MODEL's catalogue quota, so the first answer of
-    # every installation ratcheted the ceilings to 499 req/min and 719 999 req/day and no
-    # call was ever held again. The setting is the ceiling; a header never argues with it.
     def _observe(self, bucket: dict, headers, now: float, seq: int) -> None:
+        """Record what the server said was left, kept only to LOWER our own reading.
+
+        It may never raise a ceiling: `remaining-*` reports the MODEL's catalogue quota, so
+        believing a generous one lifts the ceilings to 499 req/min and 719 999 req/day on
+        the first answer of every installation and no call is ever held again. The setting
+        is the ceiling; a header never argues with it.
+        """
         for window, _, _seconds in WINDOWS:
             for kind in ("requests", "tokens"):
                 raw = _header(headers, f"x-ratelimit-remaining-{kind}-{window}")
@@ -419,11 +429,13 @@ class Budget:
 
     # THE FILE -----------------------------------------------------------------------------
 
-    # One read-modify-write, exclusive against every other thread AND every other process.
-    # The body raising means nothing is saved, which is what the gate wants: refusing a call
-    # must not leave half a decision on disk.
     @contextmanager
     def _transaction(self):
+        """One read-modify-write, exclusive against every other thread AND process.
+
+        The body raising means nothing is saved, which is what the gate wants: refusing a
+        call must not leave half a decision on disk.
+        """
         with self._lock, self._flock():
             state = self._load()
             yield state
@@ -431,6 +443,7 @@ class Budget:
 
     @contextmanager
     def _flock(self):
+        """Hold the sidecar lock file for the block, degrading to the process lock alone."""
         if fcntl is None:
             yield
             return
@@ -440,9 +453,8 @@ class Budget:
             handle = open(self._lock_path, "a+")
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         except OSError as e:
-            # A ledger that cannot be locked is still a ledger worth keeping: degrade to the
-            # process lock rather than refuse the call. Losing a race costs one miscounted
-            # request; refusing here would take the engine down over a permissions problem.
+            # Losing a race costs one miscounted request; refusing here would take the
+            # engine down over a permissions problem.
             logger.warning(f"[cerebras] Could not lock the spending ledger: {e}")
             if handle is not None:
                 handle.close()
@@ -457,6 +469,7 @@ class Budget:
                 handle.close()
 
     def _load(self) -> dict:
+        """Read the ledger, answering with an empty one when it is missing or corrupt."""
         try:
             state = json.loads(self._path.read_text(encoding="utf-8"))
         except FileNotFoundError:
@@ -473,6 +486,7 @@ class Budget:
         return state
 
     def _save(self, state: dict) -> None:
+        """Write the ledger back; a failure is a warning, never an exception."""
         try:
             write_json(self._path, state)
         except OSError as e:
@@ -480,10 +494,12 @@ class Budget:
 
 
 def _empty() -> dict:
+    """A ledger that has recorded nothing."""
     return {"models": {}, "inflight": [], "seq": 0}
 
 
 def _flying(state: dict) -> list:
+    """The flight list, created in place when the ledger has none."""
     flights = state.get("inflight")
     if not isinstance(flights, list):
         flights = []
@@ -492,12 +508,14 @@ def _flying(state: dict) -> list:
 
 
 def _land(state: dict, claim: Claim | None) -> None:
+    """Take one call out of the flight list."""
     if claim is None:
         return
     state["inflight"] = [f for f in _flying(state) if f.get("id") != claim.id]
 
 
 def _waiting(state: dict, claim: Claim, until: float | None) -> None:
+    """Mark a flight as held until `until`, or no longer held at all."""
     for flight in _flying(state):
         if flight.get("id") == claim.id:
             flight["waiting_until"] = until
@@ -505,6 +523,7 @@ def _waiting(state: dict, claim: Claim, until: float | None) -> None:
 
 
 def _booked(bucket: dict, claim: Claim | None) -> dict | None:
+    """The call a claim already booked, when there is one."""
     if claim is None:
         return None
     for call in bucket["calls"]:
@@ -514,6 +533,11 @@ def _booked(bucket: dict, claim: Claim | None) -> dict | None:
 
 
 def _bucket(state: dict, model: str) -> dict:
+    """One model's own record, created in place, dropping anything no longer read.
+
+    A ledger written while the server's readings could raise a ceiling still carries one,
+    and it is dropped here rather than left to widen a budget it no longer may.
+    """
     bucket = state.setdefault("models", {}).setdefault(model, {})
     bucket.setdefault("calls", [])
     bucket.setdefault("seen", {})
@@ -522,12 +546,15 @@ def _bucket(state: dict, model: str) -> dict:
 
 
 def _calls(state: dict, model: str) -> list[dict]:
+    """A copy of everything recorded against one model."""
     return list(state.get("models", {}).get(model, {}).get("calls", []))
 
 
-# What the server said was left, brought forward to now by everything we have spent since it
-# said it. Past the width of its own window the reading says nothing at all.
 def _reported(state, model, calls, window, kind, seconds, now) -> int | None:
+    """What the server said was left, brought forward by everything spent since it said it.
+
+    Past the width of its own window the reading says nothing at all.
+    """
     seen = state.get("models", {}).get(model, {}).get("seen", {}).get(f"{kind}-{window}")
     if not seen:
         return None
@@ -539,9 +566,12 @@ def _reported(state, model, calls, window, kind, seconds, now) -> int | None:
     return remaining - spent
 
 
-# When enough capacity comes back: old calls age out of the window one by one, and a server
-# reading stops binding once its own window has rolled. Both have to clear.
 def _relief(state, model, calls, window, kind, seconds, now, deficit: int) -> float:
+    """When enough capacity comes back to cover `deficit`.
+
+    Old calls age out of the window one by one, and a server reading stops binding once its
+    own window has rolled. Both have to clear.
+    """
     times = []
     freed = 0
     for call in sorted((c for c in calls if now - c["t"] < seconds), key=lambda c: c["t"]):
@@ -556,12 +586,14 @@ def _relief(state, model, calls, window, kind, seconds, now, deficit: int) -> fl
 
 
 def _resets_in(inside: list[dict], seconds: float, now: float) -> float:
+    """Seconds until the oldest call in the window ages out of it."""
     if not inside:
         return 0.0
     return max(min(call["t"] for call in inside) + seconds - now, 0.0)
 
 
 def _phases(calls: list[dict], now: float) -> list[dict]:
+    """The day's spending broken down per phase, heaviest first."""
     rows: dict[str, dict] = {}
     for call in calls:
         if now - call["t"] >= 86_400.0:
@@ -578,9 +610,11 @@ def _phases(calls: list[dict], now: float) -> list[dict]:
     return sorted(rows.values(), key=lambda row: (-row["tokens"], row["phase"]))
 
 
-# What is genuinely in flight, held ones first: a call the throttle is holding back is the
-# one a person can do something about, and it is not always the oldest.
 def _live_flights(state: dict, now: float) -> list[dict]:
+    """What is genuinely in flight, the calls being held back first.
+
+    A held call is the one a person can do something about, and it is not always the oldest.
+    """
     live = [
         {**flight, "elapsed": now - float(flight.get("since", now))}
         for flight in _flying(state)
@@ -592,14 +626,14 @@ def _live_flights(state: dict, now: float) -> list[dict]:
 
 
 def _prune(state: dict, now: float) -> None:
+    """Drop everything older than a day, and every booking nobody settled."""
     for bucket in state.get("models", {}).values():
         bucket["calls"] = [
             call
             for call in bucket["calls"]
             if now - call["t"] < 86_400.0
-            # A booking whose process died never gets settled, and charging the day for it
-            # would empty the budget over calls that never went out. Same clock as the
-            # flight list, for the same reason.
+            # A booking whose process died is never settled, and charging the day for it
+            # would empty the budget over calls that never went out.
             and not (call.get("hold") and now - float(call["hold"]) > _INFLIGHT_STALE_SECONDS)
         ]
     state["inflight"] = [
@@ -610,6 +644,7 @@ def _prune(state: dict, now: float) -> None:
 
 
 def _header(headers, name: str) -> int | None:
+    """Read one rate-limit header as an integer, or None when it is not one."""
     try:
         raw = headers.get(name)
     except AttributeError:
@@ -623,6 +658,7 @@ def _header(headers, name: str) -> int | None:
 
 
 def _human(seconds: float) -> str:
+    """A duration in the unit somebody reading an error would use."""
     if seconds < 90:
         return f"{seconds:.0f} s"
     if seconds < 5_400:
@@ -638,6 +674,7 @@ _shared: Budget | None = None
 
 
 def shared() -> Budget:
+    """This installation's own ledger, at the project root."""
     global _shared
     if _shared is None:
         from .paths import PROJECT_ROOT
@@ -646,9 +683,11 @@ def shared() -> Budget:
     return _shared
 
 
-# Point the ledger somewhere else, which the test suite does for every test: the engine
-# tests answer a simulated transport, and without this they charged six phantom requests to
-# the installation's real budget — a panel reporting spending that never happened.
 def use(path: Path | None) -> None:
+    """Point the shared ledger somewhere else, which the test suite does for every test.
+
+    The engine tests answer a simulated transport, and without this they charge the
+    installation's real budget for requests that never went out.
+    """
     global _shared
     _shared = None if path is None else Budget(path)
