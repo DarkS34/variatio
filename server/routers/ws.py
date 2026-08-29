@@ -4,12 +4,15 @@ One socket carries everything, ordered by `seq`. Reconnecting with `?since=N` re
 what was missed first and only then goes live, so a browser reload during a long run
 does not create a hole in the timeline.
 
-Authentication happens **before** `accept()`: the cookie travels in the handshake, and a
-socket that has been accepted has already been told it is welcome. Until phase 2 this
-endpoint took any connection and replayed the whole bus — logs, prompts and the token
-stream included — which with two users meant one person's generated statements appearing
-in the other's browser. The filter is now the server's, by workspace; the client still
-narrows by `job_id`, but only within what it is entitled to see.
+Authentication is decided **before** `accept()` — the cookie travels in the handshake, and
+nothing is subscribed or replayed for a connection that has not earned it. What happens
+after that decision differs by outcome: a welcome is an `accept()`, a refusal is an
+`accept()` followed at once by close 4401, because that is the only way the code reaches
+the browser (see `refuse` below). Until phase 2 this endpoint took any connection and
+replayed the whole bus — logs, prompts and the token stream included — which with two users
+meant one person's generated statements appearing in the other's browser. The filter is now
+the server's, by workspace; the client still narrows by `job_id`, but only within what it
+is entitled to see.
 
 Which workspace a socket subscribes to arrives as `?workspace=`, because a browser cannot
 set a header on a WebSocket handshake. It goes through the same membership check as the
@@ -53,6 +56,19 @@ def trim_cold_replay(events: list[dict]) -> list[dict]:
 UNAUTHORISED = 4401
 
 
+# And a close code only travels on an ESTABLISHED connection. Closing before `accept()`
+# makes uvicorn answer the handshake with HTTP 403 and the browser synthesises a bare 1006:
+# measured in a real browser, `{"code": 1006, "wasClean": false}` where the server believed
+# it had said 4401. The client cannot tell that from a network hiccup, so it reconnected for
+# ever against a cookie already rejected — the exact loop the code exists to prevent.
+#
+# Accepting first is what makes the code arrive. It costs an upgrade for somebody who is
+# then told nothing: no subscription, no replay, not a single event.
+async def refuse(websocket: WebSocket) -> None:
+    await websocket.accept()
+    await websocket.close(code=UNAUTHORISED)
+
+
 @router.websocket("/ws")
 async def stream(websocket: WebSocket) -> None:
     # The origin is asked here and not by `OriginCheck`, which is a `BaseHTTPMiddleware`
@@ -67,12 +83,12 @@ async def stream(websocket: WebSocket) -> None:
     # apart from "no session" for free. Reusing it also means a deployment that misconfigures
     # `PUBLIC_BASE_URL` stops reconnecting instead of looping on an unknown code.
     if middleware.cross_site(websocket):
-        await websocket.close(code=UNAUTHORISED)
+        await refuse(websocket)
         return
 
     access = await asyncio.to_thread(authenticate_socket, websocket)
     if access is None:
-        await websocket.close(code=UNAUTHORISED)
+        await refuse(websocket)
         return
 
     await websocket.accept()

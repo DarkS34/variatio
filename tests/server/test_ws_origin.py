@@ -1,7 +1,6 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 
 from server import settings
 from server.routers import ws as ws_module
@@ -29,11 +28,14 @@ def client(monkeypatch):
     return TestClient(app)
 
 
+# A refusal is an `accept()` followed at once by close 4401, because a close code only
+# travels on an established connection — see `test_ws_refusal.py`. So the handshake itself
+# succeeds and the verdict arrives as the first message.
 def _refusal(client, headers=None) -> int:
-    with pytest.raises(WebSocketDisconnect) as refused:
-        with client.websocket_connect("/ws", headers=headers or {}):
-            pass
-    return refused.value.code
+    with client.websocket_connect("/ws", headers=headers or {}) as socket:
+        message = socket.receive()
+    assert message["type"] == "websocket.close"
+    return message["code"]
 
 
 def test_a_handshake_from_another_origin_is_closed_before_the_cookie_is_read(client, attempts):
