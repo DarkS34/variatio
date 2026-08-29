@@ -14,7 +14,7 @@ def parse_with_repair(
     repair_model: str,
     max_attempts: int,
     shape: str,
-    format: dict | str,
+    format: dict | str | None,
     prompts,
     log_prefix: str = "",
 ) -> tuple[object | None, str | None]:
@@ -24,7 +24,10 @@ def parse_with_repair(
     the tagger ask for an array while its parser demanded an object. The grammar is also
     what makes a SCHEMA error fixable at all — under it the model cannot name a field
     `sol` instead of `solucion`, which the prompt alone never prevented. Pass the schema
-    when the caller has one, `"json"` when the shape is open-ended.
+    when the caller has one, `"json"` when the shape is open-ended, and an explicit `None`
+    when a grammar would cost more than it buys — a repair that re-emits long prose through
+    a remote constrained decoder mangles every non-ASCII character in it, which is the whole
+    reason the caller dropped its own grammar.
 
     `prompts` is the resolved prompt set of the workspace whose call is being repaired: a
     repair is one more turn of the same conversation, so asking in another language is how

@@ -315,6 +315,36 @@ class ExemplarsBankBuilder:
             return ""
         return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
 
+    @staticmethod
+    def _grammar_costs_the_text(model: str) -> bool:
+        r"""Whether a grammar on `model` would mangle the prose it makes it copy.
+
+        Measured against Cerebras' constrained decoding: `gemma-4-31b` stops emitting raw
+        UTF-8 inside a JSON string and takes the grammar's `\uXXXX` branch for every
+        non-ASCII character, then writes the hex wrong. One real batch came back with 107
+        escapes, all of them `\u00` plus two arbitrary digits, so `á`, `é`, `ó`, `ñ` and
+        `→` all reached the bank as a single control character. It worsens with the length
+        of what is generated (107 escapes under the real schema, 17 under a one-field one,
+        0 on a short answer) and `json_object` mode is no cure (31), which is why the whole
+        `response_format` has to go rather than only its schema.
+        """
+        return model in inference.remote_models()
+
+    def _grammar(self) -> dict | None:
+        """The extraction schema, or nothing when a grammar would cost the text itself.
+
+        Reasoning silences a grammar as it does everywhere else. A remotely served model
+        drops it for the heavier reason above: this is the one phase that copies whole
+        paragraphs of the corpus verbatim, and losing the text is worse than losing the
+        decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
+        the phases that reason.
+        """
+        if config.THINK_EB_EXTRACT:
+            return None
+        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
+            return None
+        return self._extraction_schema
+
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
         """Ask for one batch's items, raising when no repair produces usable JSON."""
         prompt = self.prompts.format_content_prompt(
@@ -327,17 +357,22 @@ class ExemplarsBankBuilder:
             model=config.EB_EXTRACT_MODEL,
             think=config.THINK_EB_EXTRACT,
             prompt=prompt,
-            format=None if config.THINK_EB_EXTRACT else self._extraction_schema,
+            format=self._grammar(),
             temperature=inference.judgement_temperature(config.THINK_EB_EXTRACT),
         ).response
 
+        # A repair re-emits the same paragraphs, so a grammar kept here would undo the drop
+        # above on the one path that runs when the reply was already malformed.
+        repair_grammar = (
+            None if self._grammar_costs_the_text(config.REPAIR_LLM) else self._extraction_schema
+        )
         items, err = parse_with_repair(
             response,
             self._parse_and_validate,
             repair_model=config.REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="array",
-            format=self._extraction_schema,
+            format=repair_grammar,
             log_prefix=f"{tag} ",
             prompts=self.prompts,
         )
