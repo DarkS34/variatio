@@ -10,11 +10,11 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config
+from .. import prompts as prompts_pkg
 from ..builders import _source_docs
 from ..core import progress
 from ..core.workspace import Workspace
 from ..instance import locale
-from .. import prompts as prompts_pkg
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"

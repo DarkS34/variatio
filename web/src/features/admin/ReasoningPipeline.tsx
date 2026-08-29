@@ -75,7 +75,7 @@ export function ReasoningPipeline({
  *
  * The lane runs DOWN and not across, and that is the whole of the layout. Across, the mark
  * was a fixed width and the spacing between marks was elastic, so how the drawing looked
- * was a function of how many stops a lane happened to have — and they have 5, 12, 4 and 5.
+ * was a function of how many stops a lane happened to have — and they have 5, 13, 4 and 4.
  * The long one overflowed into a scroller with every label clipped to «TRANSCRIPCI» and
  * every select to «gemm», and the short ones were left with holes. Down the page each stop
  * is the width of its column whatever its neighbours do, a model name fits without being
@@ -114,7 +114,7 @@ function PhaseNode({
   return (
     <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2.5 pb-3">
       {/* The stretch between this stop and the next one. Behind the mark rather than
-          between two of them, so a lane of twelve draws one line and not eleven. */}
+          between two of them, so a lane of thirteen draws one line and not twelve. */}
       {last ? null : (
         <span aria-hidden className="absolute bottom-0 left-[1.0625rem] top-9 w-px bg-border" />
       )}

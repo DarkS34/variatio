@@ -90,7 +90,15 @@ _DESCRIPTION_DOC = """Las descripciones son la superficie de recuperación: lo q
 el canal cerrado un modelo razonador delibera dentro de la respuesta, y el espacio de
 trabajo de referencia guarda ~9 000 caracteres de borrador en inglés como descripción,
 embebidos como prosa. Por eso va con gramática y apagado; encenderlo quita la gramática y
-vuelve a abrir exactamente esa puerta."""
+vuelve a abrir exactamente esa puerta.
+
+Va en el carril del grafo porque es del grafo: una descripción por concepto, cacheada en
+`cache/concept_descriptions.json` y listada en `review.DERIVED[KNOWLEDGE_GRAPH]`. Lo que
+no hace es correr dentro de `build_kg` — la escribe el embebedor al levantarse
+(`Embedder.__init__` → `describer.ensure()`), así que la llamada la pagan `index`, `tag`,
+`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Estuvo dibujada en
+el carril de generación por eso hasta el 2026-08-28, y se movió por petición explícita del
+usuario: el carril dice de qué es la llamada, no qué trabajo la paga."""
 
 _CONCEPT_TAGGER_DOC = """El etiquetador hace una primera pasada con gramática y sin razonar; esto decide si, cuando
 esa pasada no concluye (JSON inválido o rechaza a todos los candidatos), se reintenta una vez
@@ -117,9 +125,9 @@ _DEFAULTS = {
     "kg_domains_leftovers": (False, _KG_DOMAINS_LEFTOVERS_DOC),
     "kg_link_domain": (True, _KG_LINK_DOC),
     "kg_link_cross_domain": (True, _KG_LINK_DOC),
+    "description_generation": (False, _DESCRIPTION_DOC),
     "kg_taggable": (True, _KG_TAGGABLE_DOC),
     "kg_context": (False, _CONTEXT_DOC),
-    "description_generation": (False, _DESCRIPTION_DOC),
     "concept_tagger": (True, _CONCEPT_TAGGER_DOC),
     "admissibility": (False, _ADMISSIBILITY_DOC),
 }
@@ -269,6 +277,12 @@ PIPELINE: tuple[Lane, ...] = (
             _switch("kg_link_domain", "Enlace interno"),
             _switch("kg_link_cross_domain", "Enlace global"),
             _switch("kg_context", "Contexto"),
+            _switch(
+                "description_generation",
+                "Descripciones",
+                "Del grafo, pero la paga el indexado y no la construcción; lo que deliberara "
+                "quedaría embebido como prosa.",
+            ),
             _switch("kg_taggable", "Etiquetabilidad", "Trabajo aparte; necesita el perfil aprobado."),
         ),
     ),
@@ -289,11 +303,6 @@ PIPELINE: tuple[Lane, ...] = (
         "run",
         "Generación",
         (
-            _switch(
-                "description_generation",
-                "Descripciones",
-                "Lo que deliberara quedaría embebido como prosa.",
-            ),
             Phase(
                 "guardrail",
                 "Guardián",

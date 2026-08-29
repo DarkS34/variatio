@@ -49,6 +49,56 @@ def test_strict_schema_keeps_a_property_named_like_a_keyword():
     assert set(adapted["properties"]) == {"format", "pattern"}
 
 
+def test_strict_schema_drops_the_titles_pydantic_writes():
+    schema = {
+        "type": "object",
+        "title": "ContentItem",
+        "properties": {
+            "enunciado": {"type": "string", "title": "Enunciado"},
+            "title": {"type": "string", "title": "Title"},
+        },
+    }
+    adapted = cerebras.strict_schema(schema)
+    assert "title" not in adapted
+    assert set(adapted["properties"]) == {"enunciado", "title"}
+    assert "title" not in adapted["properties"]["enunciado"]
+
+
+def test_strict_schema_rewrites_const_as_a_single_enum():
+    schema = {
+        "type": "object",
+        "properties": {"item_type": {"const": "problema_formal"}},
+        "required": ["item_type"],
+    }
+    adapted = cerebras.strict_schema(schema)
+    assert adapted["properties"]["item_type"] == {"enum": ["problema_formal"]}
+
+
+def test_a_root_array_is_wrapped_and_keeps_strict():
+    schema = {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "string"}}}}
+    shaped = cerebras.response_format(schema)
+    assert shaped["json_schema"]["strict"] is True
+    assert shaped["json_schema"]["name"] == cerebras._WRAPPER_NAME
+    wrapper = shaped["json_schema"]["schema"]
+    assert wrapper["type"] == "object"
+    assert wrapper["required"] == ["items"]
+    assert wrapper["properties"]["items"]["type"] == "array"
+    assert wrapper["properties"]["items"]["items"]["additionalProperties"] is False
+
+
+def test_a_root_array_too_big_to_wrap_loses_strict_but_not_the_shape():
+    campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
+    schema = {"type": "array", "items": {"type": "object", "properties": campos}}
+    cerebras._WARNED.clear()
+    try:
+        shaped = cerebras.response_format(schema)
+    finally:
+        cerebras._WARNED.clear()
+    assert shaped["json_schema"]["strict"] is False
+    assert shaped["json_schema"]["name"] == "respuesta"
+    assert shaped["json_schema"]["schema"]["type"] == "array"
+
+
 def test_response_format_maps_the_three_shapes():
     assert cerebras.response_format(None) is None
     assert cerebras.response_format("json") == {"type": "json_object"}
@@ -87,6 +137,27 @@ def test_an_open_map_loses_strict_but_not_the_shape():
     assert shaped["json_schema"]["schema"]["properties"]["drop"]["additionalProperties"] == {
         "type": "string"
     }
+
+
+def test_an_oversized_schema_is_reported_once_per_schema():
+    from loguru import logger
+
+    said: list[str] = []
+    cerebras._WARNED.clear()
+    sink = logger.add(lambda m: said.append(m.record["message"]), level="WARNING")
+    try:
+        campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
+        otros = {f"otro_{i}": {"type": "string"} for i in range(400)}
+        huge = {"type": "object", "properties": campos}
+        other = {"type": "object", "properties": otros}
+        cerebras.response_format(huge)
+        cerebras.response_format(huge)
+        cerebras.response_format(other)
+    finally:
+        logger.remove(sink)
+        cerebras._WARNED.clear()
+
+    assert len([m for m in said if "El esquema mide" in m]) == 2
 
 
 def test_an_oversized_schema_loses_strict_but_not_the_shape():
@@ -197,6 +268,31 @@ def test_generate_sends_the_translated_call_and_splits_the_reasoning():
     assert seen["messages"][-1] == {"role": "user", "content": "hola"}
     assert resp.response == '{"ok": true}'
     assert resp.thinking == "pensando…"
+
+
+def test_generate_unwraps_the_reply_to_a_wrapped_array_schema():
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent = json.loads(request.content)
+        assert sent["response_format"]["json_schema"]["name"] == cerebras._WRAPPER_NAME
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"items": [{"a": "x"}]}'}}]},
+        )
+
+    engine = _engine_with(handler)
+    schema = {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "string"}}}}
+    resp = engine.generate("gemma-4-31b", "hola", format=schema)
+    assert json.loads(resp.response) == [{"a": "x"}]
+
+
+def test_an_unwrappable_reply_travels_as_it_arrived():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": "[1, 2]"}}]})
+
+    engine = _engine_with(handler)
+    schema = {"type": "array", "items": {"type": "integer"}}
+    resp = engine.generate("gemma-4-31b", "hola", format=schema)
+    assert resp.response == "[1, 2]"
 
 
 def test_think_false_travels_as_none_which_is_gemmas_default_off(monkeypatch):

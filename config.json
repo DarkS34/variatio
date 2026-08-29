@@ -85,7 +85,8 @@
       "groq"
     ],
     "models": {
-      "gemini": "gemini-3.6-flash"
+      "gemini": "gemini-3.6-flash",
+      "groq": "openai/gpt-oss-120b"
     },
     "timeout": 60.0
   },
@@ -110,11 +111,11 @@
         "phases": {
           "transcribe": "qwen3.6:35b-a3b-q8_0",
           "transcribe_seam": "qwen3.6:35b-a3b-q8_0",
-          "ep_scan": "qwen3.8:27b-q4_K_M",
+          "ep_scan": "gemma-4-31b",
           "ep_consolidate": "gemma-4-31b",
           "ep_context": "gemma-4-31b",
           "eb_extract": "gemma-4-31b",
-          "kg_extract": "qwen3.8:27b-q4_K_M",
+          "kg_extract": "gemma-4-31b",
           "kg_clean_merge": "gemma-4-31b",
           "kg_clean_drop": "gemma-4-31b",
           "kg_units": "gemma-4-31b",
@@ -124,10 +125,10 @@
           "kg_link_cross_domain": "gemma-4-31b",
           "kg_taggable": "gemma-4-31b",
           "kg_context": "gemma-4-31b",
-          "description_generation": "qwen3.8:27b-q4_K_M",
+          "description_generation": "gemma-4-31b",
           "concept_tagger": "gemma-4-31b",
           "variant_generation": "gemma-4-31b",
-          "repair": "qwen3.8:27b-q4_K_M",
+          "repair": "gemma-4-31b",
           "admissibility": "gemma-4-31b"
         }
       },
@@ -139,7 +140,11 @@
           "kg_link_domain": "high",
           "kg_link_cross_domain": "high",
           "kg_taggable": "high",
-          "concept_tagger": "medium"
+          "concept_tagger": "medium",
+          "ep_scan": "medium"
+        },
+        "phases": {
+          "ep_scan": true
         }
       }
     },

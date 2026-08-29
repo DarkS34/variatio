@@ -332,6 +332,12 @@ Es el techo que más ata: 5/min es un suelo de 12 segundos entre llamadas, así 
 con cientos de llamadas pasa a durar horas. El limitador espera a que ruede la ventana en
 vez de comerse un 429, y lo dice en «Motor».
 
+Es un TOPE RÍGIDO: manda este número y nada lo sube. Hasta el 2026-08-29 era un suelo que
+la API podía levantar si informaba de que quedaba más, y eso es exactamente lo que rompió
+el limitador — `remaining-*` pasó a contar contra la cuota del MODELO, así que la primera
+respuesta subía el techo a 499 y no se retenía ni una llamada más. Lo que la API informe
+solo puede BAJAR lo que creemos que queda, nunca subirlo.
+
 No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
     ),
     Setting(
@@ -348,7 +354,11 @@ el nivel gratuito (medido 2026-08-26).
 Se cuentan con el `usage` exacto que trae cada respuesta, no con los headers: medido, el
 contador de tokens del servidor va con retraso — una llamada de 74 tokens y otra de 20
 movieron `remaining-tokens-day` exactamente 6 las dos veces. El header solo se usa para
-BAJAR lo que creemos que queda, nunca para subirlo.""",
+BAJAR lo que creemos que queda, nunca para subirlo.
+
+Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
+creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
+lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
     ),
     Setting(
         key="engine.cerebras_max_requests_day",
@@ -364,7 +374,11 @@ mientras el header `limit-` anunciaba 720.000).
 
 La ventana es deslizante de 24 h, no un día natural: la API no manda ningún header de
 `reset`, así que la única ventana reconstruible es la que sale de nuestras propias marcas
-de tiempo. Ser deslizante es lo conservador — nunca gasta de más.""",
+de tiempo. Ser deslizante es lo conservador — nunca gasta de más.
+
+Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
+creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
+lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
     ),
     Setting(
         key="engine.cerebras_max_tokens_day",
@@ -379,7 +393,11 @@ nivel gratuito (medido 2026-08-26).
 
 Es el techo que decide si un build cabe: con prompts de ~8.000 tokens salen unas 125
 llamadas al día. El desglose por fase de «Motor» existe para responder a la pregunta que
-sigue — QUÉ fase se lo está comiendo — y se descarga en CSV.""",
+sigue — QUÉ fase se lo está comiendo — y se descarga en CSV.
+
+Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
+creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
+lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
     ),
     Setting(
         key="engine.cerebras_max_wait_seconds",
@@ -707,19 +725,6 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         ),
     ),
     Setting(
-        key="models.phases.kg_taggable",
-        name="KG_TAGGABLE_MODEL",
-        kind="str",
-        default=_MAIN,
-        group="Modelos",
-        impact=Impact.CONTEXTS,
-        scope="engine",
-        engine_defaults=_MAIN_BY_ENGINE,
-        doc=_phase_doc(
-            "Fase de revisión de etiquetabilidad de los conceptos del grafo de conocimiento."
-        ),
-    ),
-    Setting(
         key="models.phases.kg_context",
         name="KG_CONTEXT_MODEL",
         kind="str",
@@ -742,8 +747,22 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
-            "Fase de generación de descripciones de conceptos, en el pipeline en tiempo de "
-            "ejecución (no en un build)."
+            "Fase de generación de descripciones de conceptos del grafo de conocimiento. "
+            "La llamada no la hace el constructor: la escribe el embebedor al levantarse, "
+            "así que la pagan el indexado, el etiquetado, la generación y la evaluación."
+        ),
+    ),
+    Setting(
+        key="models.phases.kg_taggable",
+        name="KG_TAGGABLE_MODEL",
+        kind="str",
+        default=_MAIN,
+        group="Modelos",
+        impact=Impact.CONTEXTS,
+        scope="engine",
+        engine_defaults=_MAIN_BY_ENGINE,
+        doc=_phase_doc(
+            "Fase de revisión de etiquetabilidad de los conceptos del grafo de conocimiento."
         ),
     ),
     Setting(

@@ -3,7 +3,7 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, config, stages
+from . import bootstrap, stages
 from .core import paths
 
 

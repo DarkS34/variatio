@@ -1,3 +1,4 @@
+import hashlib
 import json
 import time
 
@@ -16,8 +17,15 @@ from .inference import (
 )
 
 STRICT_SCHEMA_MAX_CHARS = 5000
+_WRAPPER_NAME = "lista"
 
 _UNSUPPORTED_KEYWORDS = ("pattern", "format", "minItems", "maxItems", "minLength", "maxLength")
+# Pydantic titles every field it writes («material_base» → «Material Base»), which says
+# nothing the property name does not and is pure weight against the 5 000-character cap:
+# it is what put `compiladores`' five-modality extraction schema at 5 001 and cost every
+# call of that build strict mode outright — 4 502 without it. Metadata, never shape.
+_NOISE_KEYWORDS = ("title",)
+_DROPPED_KEYWORDS = _UNSUPPORTED_KEYWORDS + _NOISE_KEYWORDS
 _SUBSCHEMA_KEYS = ("items", "prefixItems", "anyOf", "allOf", "oneOf", "additionalProperties")
 _SCHEMA_MAPS = ("properties", "$defs", "definitions")
 _VISION_PREFIXES = ("gemma-4",)
@@ -26,9 +34,11 @@ _MAX_ATTEMPTS = 5
 _CATALOG_TTL_SECONDS = 300.0
 
 
-# Cerebras' strict mode refuses the keywords Ollama's grammar simply ignores, and demands
-# `additionalProperties: false` on every object that does not declare one. The transform is
-# lossy on purpose: what a dropped `pattern` or `maxItems` used to guarantee is exactly what
+# Cerebras' strict mode refuses the keywords Ollama's grammar simply ignores, refuses
+# `const` outright («Unsupported JSON schema fields: const»), and demands
+# `additionalProperties: false` on every object that does not declare one. `const` is the
+# one refusal with a lossless translation — `enum` of one — so it is rewritten rather than
+# dropped. The rest of the transform is lossy on purpose: what a dropped `pattern` or `maxItems` used to guarantee is exactly what
 # `parse_with_repair` and each component's own parser already re-check.
 #
 # An object that DOES declare an `additionalProperties` schema is an open-ended map — the KG
@@ -49,12 +59,14 @@ def _walk(node: object) -> object:
         return node
     out: dict = {}
     for key, value in node.items():
-        if key in _UNSUPPORTED_KEYWORDS:
+        if key in _DROPPED_KEYWORDS:
             continue
         if key in _SCHEMA_MAPS and isinstance(value, dict):
             out[key] = {name: _walk(sub) for name, sub in value.items()}
         elif key in _SUBSCHEMA_KEYS:
             out[key] = _walk(value)
+        elif key == "const":
+            out["enum"] = [value]
         else:
             out[key] = value
     if "additionalProperties" in node:
@@ -80,6 +92,33 @@ def _open_map(node: object) -> bool:
     return False
 
 
+# What the two degradations report is a property of the SCHEMA, not of the call, and the
+# same schema goes out on every call of a phase and again on every repair: a bank build of
+# `cs0-examenes` printed the size warning 29 times, word for word. It is said once per
+# distinct schema and per process, and a build has a process of its own, so no build stays
+# silent about it.
+_WARNED: set[str] = set()
+
+
+def _warn_once(digest: str, message: str) -> None:
+    if digest in _WARNED:
+        return
+    _WARNED.add(digest)
+    logger.warning(message)
+
+
+# The root rule was found the day the cap stopped hiding it: with the titles dropped, the
+# bank-extraction schema came back under 5 000, went out with `strict: true` for the first
+# time, and Cerebras answered 400 «Extra top level keys found in JSON schema: {'items'}» to
+# every call of the build — strict mode demands an OBJECT at the root, and that schema is an
+# array. What the parsers own is the ANSWER's shape, not the wire's, so the array is wrapped
+# in a one-key object at this boundary and `generate` unwraps the reply before anyone reads
+# it — the wrapper's `name` is the marker, which is why `_WRAPPER_NAME` must never be the
+# plain «respuesta». Wrapped implies strict: the wrap is only taken when the wrapper clears
+# every other check, so a reply to a wrapped schema is decoder-guaranteed to be the one-key
+# object `_unwrap` expects. When the wrapper cannot clear them (an open map inside, or the
+# cap), the array goes out as itself and degrades like the open map does.
+#
 # Dropping `strict` is the same degradation the character cap already performs, for the same
 # reason: the shape still travels and still guides — measured on the assignment schema, the
 # typed map answered `{"domains": {"Salud": ["Telemedicina"]}}` while the same call with the
@@ -91,24 +130,56 @@ def response_format(format: dict | str | None) -> dict | None:
     if isinstance(format, str):
         return {"type": "json_object"}
     adapted = strict_schema(format)
+    name = "respuesta"
+    if adapted.get("type") != "object" and not _open_map(adapted):
+        candidate = {
+            "type": "object",
+            "properties": {"items": adapted},
+            "required": ["items"],
+            "additionalProperties": False,
+        }
+        packed = json.dumps(candidate, ensure_ascii=False, separators=(",", ":"))
+        if len(packed) <= STRICT_SCHEMA_MAX_CHARS:
+            adapted = candidate
+            name = _WRAPPER_NAME
     compact = json.dumps(adapted, ensure_ascii=False, separators=(",", ":"))
+    digest = hashlib.md5(compact.encode("utf-8")).hexdigest()
     strict = True
+    if adapted.get("type") != "object":
+        _warn_once(
+            f"root:{digest}",
+            "[cerebras] La raíz del esquema no es un objeto, que el modo estricto exige; "
+            "se pide sin 'strict'",
+        )
+        strict = False
     if _open_map(adapted):
-        logger.warning(
+        _warn_once(
+            f"map:{digest}",
             "[cerebras] El esquema declara un objeto de claves abiertas, que el modo "
-            "estricto rechaza; se pide sin 'strict'"
+            "estricto rechaza; se pide sin 'strict'",
         )
         strict = False
     if len(compact) > STRICT_SCHEMA_MAX_CHARS:
-        logger.warning(
+        _warn_once(
+            f"size:{digest}",
             f"[cerebras] El esquema mide {len(compact)} caracteres (límite del modo "
-            f"estricto: {STRICT_SCHEMA_MAX_CHARS}); se pide sin 'strict'"
+            f"estricto: {STRICT_SCHEMA_MAX_CHARS}); se pide sin 'strict'",
         )
         strict = False
     return {
         "type": "json_schema",
-        "json_schema": {"name": "respuesta", "strict": strict, "schema": adapted},
+        "json_schema": {"name": name, "strict": strict, "schema": adapted},
     }
+
+
+def _unwrap(text: str) -> str:
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+    if isinstance(data, dict) and set(data) == {"items"}:
+        return json.dumps(data["items"], ensure_ascii=False)
+    return text
 
 
 # The same last-hop translation `OllamaEngine._think_option` does, in Cerebras' dialect:
@@ -191,7 +262,11 @@ class CerebrasEngine:
         data = self._post(model, body).json()
         message = (data.get("choices") or [{}])[0].get("message") or {}
         reasoning = message.get("reasoning") or message.get("reasoning_content")
-        return split_thinking(message.get("content") or "", reasoning)
+        content = message.get("content") or ""
+        shaped = body.get("response_format") or {}
+        if (shaped.get("json_schema") or {}).get("name") == _WRAPPER_NAME:
+            content = _unwrap(content)
+        return split_thinking(content, reasoning)
 
     def generate_stream(
         self,
