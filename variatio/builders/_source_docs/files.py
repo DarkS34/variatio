@@ -86,8 +86,16 @@ def resolve_converter(converter):
 
 
 def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Path]:
-    """List the supported documents of a directory, in a stable order."""
+    """List the supported documents of a directory, in a stable order.
+
+    A slot that is not there lists nothing rather than raising, whichever way it is walked.
+    Every caller handles the empty case with a message naming the directory, and `rglob`
+    already answered that way while `iterdir` raised — so a renamed or never-created slot
+    surfaced as a traceback out of a build worker instead of the message written for it.
+    """
     root = Path(input_dir)
+    if not root.is_dir():
+        return []
     candidates = root.rglob("*") if recursive else root.iterdir()
     return sorted(p for p in candidates if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS)
 
