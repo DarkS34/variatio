@@ -1,8 +1,9 @@
 import { LayoutGrid, Search, Waypoints, X } from "lucide-react";
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
+import { useModalFocus } from "@/components/ui/focus";
 import { Input } from "@/components/ui/input";
 import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
@@ -78,6 +79,7 @@ export function ConceptSelector({
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("board");
   const [cursor, setCursor] = useState(0);
+  const panel = useRef<HTMLDivElement>(null);
 
   const chosen = useMemo(() => new Set(selected), [selected]);
   const colours = useMemo(() => domainColours(concepts), [concepts]);
@@ -149,14 +151,10 @@ export function ConceptSelector({
     setCursor(0);
   }, [query, view]);
 
-  useEffect(() => {
-    if (!open) return;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, [open]);
+  // The same focus contract as `ui/dialog.tsx`, from the same place: in, trapped, and back
+  // to whatever opened it. Escape is NOT delegated — this one stops the event on its own
+  // container so a selector opened from inside another dialog closes itself and not both.
+  useModalFocus(open, panel);
 
   if (!open) return null;
 
@@ -207,6 +205,7 @@ export function ConceptSelector({
 
   return createPortal(
     <div
+      ref={panel}
       role="dialog"
       aria-modal="true"
       aria-label={title}
