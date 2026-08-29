@@ -16,6 +16,8 @@ export const en: Catalogue = {
   "common.none": "None",
   "common.sending": "Sending…",
   "common.stop": "Stop",
+  "common.stopping": "Stopping…",
+  "common.stoppingHint": "It will stop as soon as the step in flight finishes.",
   "common.clear": "Clear",
   "common.showLess": "Show fewer",
   "common.previous": "Previous",

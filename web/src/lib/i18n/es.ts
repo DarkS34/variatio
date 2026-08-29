@@ -25,6 +25,8 @@ export const es = {
   "common.none": "Ninguno",
   "common.sending": "Enviando…",
   "common.stop": "Detener",
+  "common.stopping": "Deteniendo…",
+  "common.stoppingHint": "Se detendrá en cuanto termine el paso que tiene entre manos.",
   "common.clear": "Limpiar",
   "common.showLess": "Ver menos",
   "common.previous": "Anterior",

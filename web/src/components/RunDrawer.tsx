@@ -1,4 +1,4 @@
-import { Ban, ChevronDown, ChevronsDownUp, ChevronsUpDown, ListTree } from "lucide-react";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, ListTree } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ActivityFeed } from "@/components/ActivityFeed";
@@ -13,10 +13,11 @@ import { JOB_EXPLAIN } from "@/lib/explain";
 import { JOB_STATUS, duration } from "@/lib/format";
 import { isQueued, pickActiveRun, waitOf, waitReason } from "@/lib/queue";
 import { cn } from "@/lib/utils";
-import { useCancelJob, useLanes, useSplitEngine, useStream } from "@/state/queries";
+import { useLanes, useSplitEngine, useStream } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 import { useT } from "@/lib/i18n";
 import { jobName } from "@/lib/names";
+import { CancelButton } from "./CancelButton";
 
 export type DrawerTab = "progress" | "logs";
 
@@ -51,7 +52,6 @@ export function RunDrawer({
   const { t, plural } = useT();
   const run = useActiveRun();
   const stream = useStream();
-  const cancel = useCancelJob();
   const lanes = useLanes();
   const split = useSplitEngine();
   const [tall, setTall] = useState(false);
@@ -118,17 +118,7 @@ export function RunDrawer({
             value={tab}
             onChange={(next) => onTab(next as DrawerTab)}
           />
-          {active && run?.job ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => cancel.mutate(run.job!.id)}
-              disabled={cancel.isPending}
-            >
-              <Ban />
-              {t("common.cancel")}
-            </Button>
-          ) : null}
+          {active && run?.job ? <CancelButton run={run} /> : null}
           <Button
             variant="ghost"
             size="icon-sm"

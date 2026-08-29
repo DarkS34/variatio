@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, Ban, Hourglass, Lock, Pencil, WifiOff } from "lucide-react";
+import { Activity, ArrowRight, Hourglass, Lock, Pencil, WifiOff } from "lucide-react";
 import { useMemo } from "react";
 
 import { BuildButton } from "@/components/BuildButton";
@@ -23,7 +23,6 @@ import { ContextCard } from "./ContextCard";
 import {
   useArtifactRun,
   useBuildPhases,
-  useCancelJob,
   useElapsed,
   usePipeline,
   useRaw,
@@ -31,6 +30,7 @@ import {
 } from "@/state/queries";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName, jobName, phaseName, phasePlan, stepName } from "@/lib/names";
+import { CancelButton } from "@/components/CancelButton";
 
 const SCREEN: Record<string, string> = {
   exemplars_profile: "/prepare/profile",
@@ -148,7 +148,6 @@ function ActivityCard() {
   const run = useActiveRun();
   const stream = useStream();
   const pipeline = usePipeline();
-  const cancel = useCancelJob();
 
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
@@ -273,18 +272,7 @@ function ActivityCard() {
             </p>
           ) : null}
 
-          {active ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => cancel.mutate(run.job!.id)}
-              disabled={cancel.isPending}
-            >
-              <Ban />
-              {t("common.cancel")}
-            </Button>
-          ) : null}
+          {active ? <CancelButton run={run} className="w-full" /> : null}
         </>
       )}
       </CardContent>

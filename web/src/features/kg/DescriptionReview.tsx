@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Ban, Check, FileText, Hourglass, RefreshCw, Sparkles, TriangleAlert } from "lucide-react";
+import { Check, FileText, Hourglass, RefreshCw, Sparkles, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import { duration } from "@/lib/format";
 import type { ConceptSource, KgSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  useCancelJob,
   useDescriptions,
   useElapsed,
   useEngineOffline,
@@ -23,6 +22,7 @@ import {
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 import { jobName, stepName } from "@/lib/names";
+import { CancelButton } from "@/components/CancelButton";
 
 /**
  * What the chain writes on its own, put where it can be read and corrected.
@@ -41,7 +41,6 @@ import { jobName, stepName } from "@/lib/names";
 function WritingProgress() {
   const { t } = useT();
   const run = useJobRun("describe_concepts");
-  const cancel = useCancelJob();
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
   const elapsed = useElapsed(run?.job?.started_at ?? null, active);
@@ -63,16 +62,7 @@ function WritingProgress() {
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-auto"
-            onClick={() => cancel.mutate(run.jobId)}
-            disabled={cancel.isPending}
-          >
-            <Ban />
-            {t("common.cancel")}
-          </Button>
+          <CancelButton run={run} className="ml-auto" />
         </div>
         {/* No bar: the header's is already this job's while it runs. Two stacked bars counting the
             same thing read as two different things. */}

@@ -1,15 +1,15 @@
-import { Ban, ChevronRight, Clock, Hourglass } from "lucide-react";
+import { ChevronRight, Clock, Hourglass } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/misc";
 import { JOB_STATUS, duration } from "@/lib/format";
 import { queuedLabel, type Wait } from "@/lib/queue";
 import { cn } from "@/lib/utils";
-import { useCancelJob, useElapsed } from "@/state/queries";
+import { useElapsed } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 import { useT, type Translate } from "@/lib/i18n";
 import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
+import { CancelButton } from "@/components/CancelButton";
 
 /**
  * THE RUN, AS TWO LINES ABOVE THE THING IT PRODUCES.
@@ -46,7 +46,6 @@ export function RunStrip({
 }) {
   const tr: Translate = useT();
   const { t } = tr;
-  const cancel = useCancelJob();
   const active = running || queued;
   const elapsed = useElapsed(run.job?.started_at ?? null, active);
   const status = run.job?.status;
@@ -106,17 +105,7 @@ export function RunStrip({
           />
         </button>
 
-        {active ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => run.job && cancel.mutate(run.job.id)}
-            disabled={cancel.isPending}
-          >
-            <Ban />
-            {t("common.cancel")}
-          </Button>
-        ) : null}
+        {active ? <CancelButton run={run} /> : null}
       </div>
 
       {running && !queued ? (

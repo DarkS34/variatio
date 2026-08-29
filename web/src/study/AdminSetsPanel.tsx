@@ -531,7 +531,6 @@ export function AdminSetsPanel() {
                     workspace={workspace}
                     launchLabel={plural("sets.launchLabel", comparisons)}
                     onLaunch={launch}
-                    onCancel={() => setComposing(false)}
                   />
                 </div>
               ) : null}

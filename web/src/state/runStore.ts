@@ -100,6 +100,17 @@ export interface RunView {
   tagged: TaggedItem[];
   startedAt: number | null;
   finishedAt: number | null;
+  /**
+   * A stop was asked for and the job has not reacted yet.
+   *
+   * `runner.cancel` publishes `job.cancelling` the moment the request lands, but the job
+   * itself only notices at its next `progress.checkpoint()` — between two pages of a
+   * transcription that is up to a whole model call away. Without this the screen showed
+   * nothing at all in between: same badge, same live bar, and the stop button pressable
+   * again, so the only evidence the click had been heard was a line in the closed log
+   * drawer.
+   */
+  cancelling: boolean;
 }
 
 const MAX_TOKENS = 120_000;
@@ -149,6 +160,7 @@ function emptyRun(jobId: string): RunView {
     tagged: [],
     startedAt: null,
     finishedAt: null,
+    cancelling: false,
   };
 }
 
@@ -425,6 +437,8 @@ class RunStore {
       case "job.queued":
       case "job.started":
         return { ...run, job: event.job ?? run.job, startedAt: event.ts };
+      case "job.cancelling":
+        return { ...run, cancelling: true };
       case "job.finished":
       case "job.failed":
       case "job.cancelled":
@@ -433,6 +447,7 @@ class RunStore {
           job: event.job ?? run.job,
           finishedAt: event.ts,
           phase: "idle",
+          cancelling: false,
           overall: null,
           steps: run.steps.map((s) =>
             s.status === "running"

@@ -41,6 +41,8 @@ import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effor
 import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
+import { CancelButton } from "@/components/CancelButton";
+import type { RunView } from "@/state/runStore";
 
 const MAX_ITEMS = 20;
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
@@ -244,7 +246,7 @@ export function GenerateForm({
   error,
   blockedInstructions,
   onLaunch,
-  onCancel,
+  run = null,
   variant = "generate",
   footnote,
   launchLabel,
@@ -261,7 +263,8 @@ export function GenerateForm({
   error: string | null;
   blockedInstructions: string | null;
   onLaunch: () => void;
-  onCancel: () => void;
+  /** The job this form is watching, so the stop it offers can say it was heard. */
+  run?: RunView | null;
   /** "evaluation" drops the item counter: one item per arm is what makes the session
    *  the statistical unit. Everything else is shared, which is precisely what
    *  guarantees the commission is the same one on both screens. */
@@ -844,12 +847,16 @@ export function GenerateForm({
           {error ? <p className="text-small text-destructive">{error}</p> : null}
 
           {running ? (
-            <Button variant="outline" className="w-full" onClick={onCancel}>
-              <Ban />
-              {variant === "evaluation"
-                ? t("form.cancelComparison")
-                : t("form.cancelGeneration")}
-            </Button>
+            <CancelButton
+              run={run}
+              size="default"
+              className="w-full"
+              label={
+                variant === "evaluation"
+                  ? t("form.cancelComparison")
+                  : t("form.cancelGeneration")
+              }
+            />
           ) : (
             <Button
               className="w-full"

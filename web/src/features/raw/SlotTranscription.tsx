@@ -1,12 +1,13 @@
-import { Ban, Hammer, Hourglass, RefreshCw } from "lucide-react";
+import { Hammer, Hourglass, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CancelButton } from "@/components/CancelButton";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
 import { phaseName, stepName } from "@/lib/names";
 import type { RawSlot } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
-import { useCancelJob, useEngineOffline } from "@/state/queries";
+import { useEngineOffline } from "@/state/queries";
 
 import { documentLoop, innerLoop, loopLabel } from "./progress";
 import {
@@ -61,9 +62,15 @@ function useSlot(slot: RawSlot) {
 export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
   const { t, plural } = useT();
   const { hasFiles, data, running } = useSlot(slot);
+  const run = useTranscribeRun(slot.kind);
 
   if (!hasFiles || !data) return null;
-  if (running) return <Badge mark={<Spinner className="size-3" />}>{t("transcribe.transcribing")}</Badge>;
+  if (running)
+    return (
+      <Badge mark={<Spinner className="size-3" />}>
+        {run?.cancelling ? t("common.stopping") : t("transcribe.transcribing")}
+      </Badge>
+    );
   if (data.stale > 0)
     return <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>;
   if (data.pending > 0)
@@ -84,25 +91,13 @@ export function TranscriptionAction({ slot }: { slot: RawSlot }) {
   const { hasFiles, data, running, todo } = useSlot(slot);
   const run = useTranscribeRun(slot.kind);
   const start = useStartTranscription();
-  const cancel = useCancelJob();
   const offline = useEngineOffline();
   const canEdit = useCanEdit();
 
   if (!hasFiles || !data) return null;
 
   if (running) {
-    return (
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={cancel.isPending || !run?.job}
-        title={t("transcribe.stopHint")}
-        onClick={() => run?.job && cancel.mutate(run.job.id)}
-      >
-        <Ban />
-        {t("common.stop")}
-      </Button>
-    );
+    return <CancelButton run={run} word="stop" hint={t("transcribe.stopHint")} />;
   }
 
   const reason = !canEdit

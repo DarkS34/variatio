@@ -1,4 +1,4 @@
-import { Ban, ScanText } from "lucide-react";
+import { ScanText } from "lucide-react";
 
 import { GuideLink } from "@/components/GuideLink";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,11 @@ import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
 import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
-import { useCancelJob, useEngineOffline, useRaw } from "@/state/queries";
+import { useEngineOffline, useRaw } from "@/state/queries";
 
 import { useStartAllTranscriptions, useTranscribeRun, useTranscriptionSummary } from "./queries";
 import { SlotCard } from "./SlotCard";
+import { CancelButton } from "@/components/CancelButton";
 
 /**
  * THE RAW MATERIAL, AS A DESTINATION OF ITS OWN.
@@ -35,7 +36,6 @@ export function RawScreen() {
   const raw = useRaw();
   const canEdit = useCanEdit();
   const offline = useEngineOffline();
-  const cancel = useCancelJob();
   const startAll = useStartAllTranscriptions();
 
   const slots = raw.data?.slots ?? [];
@@ -92,17 +92,7 @@ export function RawScreen() {
           tone="info"
           title={t("transcribe.runningTitle")}
           action={
-            running?.job ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={cancel.isPending}
-                onClick={() => cancel.mutate(running.job!.id)}
-              >
-                <Ban />
-                {t("common.stop")}
-              </Button>
-            ) : undefined
+            running?.job ? <CancelButton run={running} word="stop" /> : undefined
           }
         >
           <p>{t("transcribe.runningNote")}</p>

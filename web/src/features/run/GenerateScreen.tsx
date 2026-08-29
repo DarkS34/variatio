@@ -13,7 +13,6 @@ import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
-  useCancelJob,
   useEngineOffline,
   useOwnJobRun,
   useKg,
@@ -53,7 +52,6 @@ export function GenerateScreen() {
   const kg = useKg();
   const kgGraph = useKgGraph();
   const submit = useSubmitJob();
-  const cancel = useCancelJob();
   const offline = useEngineOffline();
   // ITS OWN run, by kind, and not «lo que la máquina esté haciendo»: two lanes mean a build
   // can be running beside this generation, and the screen used to take whichever job the
@@ -178,7 +176,7 @@ export function GenerateScreen() {
         error={submit.isError ? (submit.error as Error).message : null}
         blockedInstructions={blocked}
         onLaunch={launch}
-        onCancel={() => run?.job && cancel.mutate(run.job.id)}
+        run={run ?? null}
       />
     </div>
   );

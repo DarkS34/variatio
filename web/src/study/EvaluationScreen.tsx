@@ -1,4 +1,4 @@
-import { Ban, Clock, EyeOff, Lock, Plus, Scale } from "lucide-react";
+import { Clock, EyeOff, Lock, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { isQueued, queuedLabel, waitOf, waitReason } from "@/lib/queue";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
 import {
-  useCancelJob,
   useElapsed,
   useOwnJobRun,
   useKg,
@@ -43,6 +42,7 @@ import {
   useTriageProposal,
 } from "./queries";
 import { useT, type Key } from "@/lib/i18n";
+import { CancelButton } from "@/components/CancelButton";
 
 const GUARDRAIL_ERROR: Key = "generate.notPassed";
 
@@ -70,15 +70,11 @@ function Running({
   queued,
   waiting,
   ahead,
-  onCancel,
-  cancelling,
 }: {
   run: RunView | null;
   queued: boolean;
   waiting: string | null;
   ahead: string;
-  onCancel: () => void;
-  cancelling: boolean;
 }) {
   const { t } = useT();
   const step = useMemo(() => run?.steps.find((s) => s.id === "eval.arms"), [run]);
@@ -103,10 +99,7 @@ function Running({
           </p>
         </div>
         {queued ? null : <Progress value={done} max={3} className="hidden w-40 sm:block" />}
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={cancelling}>
-          <Ban />
-          {t("common.cancel")}
-        </Button>
+        <CancelButton run={run} />
       </div>
 
       <p className="flex items-start gap-1.5 text-small text-muted-foreground">
@@ -164,7 +157,6 @@ export function EvaluationScreen() {
   const triage = useTriageProposal();
   const decline = useDeclineSession();
   const rate = useRateSession();
-  const cancel = useCancelJob();
   const run = useOwnJobRun("evaluate", notStock);
   const lanes = useLanes();
   const split = useSplitEngine();
@@ -334,8 +326,6 @@ export function EvaluationScreen() {
           queued={queued}
           waiting={wait ? waitReason(wait, split, tr) : t("eval.waitingTurn")}
           ahead={queuedLabel(wait, tr)}
-          onCancel={() => run?.job && cancel.mutate(run.job.id)}
-          cancelling={cancel.isPending}
         />
       ) : null}
 
@@ -370,7 +360,7 @@ export function EvaluationScreen() {
                 onSuccess: ({ job }) => announce(job),
               })
             }
-            onCancel={() => run?.job && cancel.mutate(run.job.id)}
+            run={run ?? null}
           />
         </div>
       ) : null}

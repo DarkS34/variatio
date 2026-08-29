@@ -1,7 +1,6 @@
-import { Ban, Hourglass } from "lucide-react";
+import { Hourglass } from "lucide-react";
 
 import { RunTimeline } from "@/components/RunTimeline";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
 import { duration } from "@/lib/format";
@@ -9,9 +8,10 @@ import { isRebuild, stepPercent } from "@/lib/progress";
 import type { ArtifactName, BuildPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
-import { useArtifactRun, useBuildPhases, useCancelJob, useElapsed } from "@/state/queries";
+import { useArtifactRun, useBuildPhases, useElapsed } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
+import { CancelButton } from "./CancelButton";
 
 /**
  * What a build is doing right now, on the screen of the thing being built.
@@ -71,7 +71,6 @@ export function JobProgress({
 }) {
   const { t } = useT();
   const waitingText = waiting ?? t("progress.running");
-  const cancel = useCancelJob();
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
   const elapsed = useElapsed(run?.job?.started_at ?? null, active);
@@ -130,18 +129,7 @@ export function JobProgress({
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
-          {active ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto"
-              onClick={() => cancel.mutate(run.job!.id)}
-              disabled={cancel.isPending}
-            >
-              <Ban />
-              {t("common.cancel")}
-            </Button>
-          ) : null}
+          {active ? <CancelButton run={run} className="ml-auto" /> : null}
         </div>
 
         {/* With no phase plan yet (start-up, or model loading) the bar is indeterminate on
