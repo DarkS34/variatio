@@ -1,6 +1,8 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { TeX } from "@/components/Math";
+import { DISPLAY_OPEN, splitInlineMath, takeDisplayMath } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,12 +16,18 @@ import { cn } from "@/lib/utils";
  *   options arrive as consecutive lines (`a) …` / `b) …`) and joining them is wrong.
  * - an unlabelled fence is plain text, not code. Half of them hold ASCII art the
  *   exercise asks the student to reproduce, so Python colouring would be a lie.
+ *
+ * Maths is the third departure and the one that had to come from a library: `$…$` and a
+ * paragraph of `$$…$$` are cut out BEFORE any markup is looked for, because a formula is
+ * not markdown — `q_{error}` is a subscript and `(0|1)^*` is a closure, and letting the
+ * emphasis rules near either of them corrupts the exercise rather than merely misdrawing it.
  */
 
 type Language = "python" | "json" | "text";
 
 type Block =
   | { kind: "code"; code: string; language: Language }
+  | { kind: "math"; tex: string }
   | { kind: "heading"; level: number; text: string }
   | { kind: "list"; ordered: boolean; start: number; items: string[] }
   | { kind: "quote"; text: string }
@@ -79,6 +87,14 @@ function parseBlocks(source: string): Block[] {
       }
       index += 1;
       blocks.push({ kind: "code", code: body.join("\n"), language: languageOf(fence[2]) });
+      continue;
+    }
+
+    if (DISPLAY_OPEN.test(line)) {
+      const { tex, next } = takeDisplayMath(lines, index);
+      index = next;
+      // `$$$$` is not a formula, and an empty KaTeX block is an empty box on the card.
+      if (tex) blocks.push({ kind: "math", tex });
       continue;
     }
 
@@ -164,7 +180,7 @@ function parseBlocks(source: string): Block[] {
     while (index < lines.length && lines[index].trim()) {
       const next = lines[index];
       if (FENCE.test(next) || HEADING.test(next) || RULE.test(next) || QUOTE.test(next)) break;
-      if (UNORDERED.test(next) || ORDERED.test(next)) break;
+      if (UNORDERED.test(next) || ORDERED.test(next) || DISPLAY_OPEN.test(next)) break;
       paragraph.push(next);
       index += 1;
     }
@@ -200,8 +216,29 @@ export function safeHref(href: string): string | null {
   return SAFE_SCHEMES.has(scheme[1].toLowerCase()) ? cleaned : null;
 }
 
-/** Inline spans, plus the newline-as-break rule the block layer relies on. */
+/**
+ * Inline spans, with the formulas taken out first.
+ *
+ * The order is the whole point: `$q_{error}$` and `$(0|1)^*$` are full of characters the
+ * markdown layer claims — `_`, `*`, `|` — and letting it in first turns a subscript into
+ * emphasis and a Kleene closure into a bullet. Only the text BETWEEN formulas is markdown.
+ */
 function renderInline(text: string, key = "i"): ReactNode[] {
+  const pieces = splitInlineMath(text);
+  if (pieces.length > 1 || pieces.some((piece) => piece.kind === "math")) {
+    return pieces.map((piece, i) =>
+      piece.kind === "math" ? (
+        <TeX key={`${key}-m${i}`} tex={piece.tex} />
+      ) : (
+        <Fragment key={`${key}-m${i}`}>{renderMarkup(piece.value, `${key}-m${i}`)}</Fragment>
+      ),
+    );
+  }
+  return renderMarkup(text, key);
+}
+
+/** The markdown spans proper, plus the newline-as-break rule the block layer relies on. */
+function renderMarkup(text: string, key = "i"): ReactNode[] {
   const out: ReactNode[] = [];
   let rest = text;
   let n = 0;
@@ -372,6 +409,8 @@ export function Markdown({
                 </table>
               </div>
             );
+          case "math":
+            return <TeX key={key} tex={block.tex} display />;
           case "rule":
             return <hr key={key} className="border-border" />;
           case "paragraph":

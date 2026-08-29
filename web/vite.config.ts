@@ -42,6 +42,12 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](\.pnpm[\\/])?(react|react-dom|scheduler)[@\\/]/.test(id))
             return "react";
           if (id.includes("@tanstack")) return "query";
+          // The typesetter is 82 kB gzipped and changes about once a year, while
+          // `ResultCard` — the only thing that reaches it — changes with every pass over
+          // the generate screen. In one chunk each of those passes re-downloaded KaTeX.
+          // It is off the critical path either way: `Markdown` is imported from nowhere
+          // but the item cards, which live behind lazy routes.
+          if (id.includes("katex")) return "katex";
         },
       },
     },
