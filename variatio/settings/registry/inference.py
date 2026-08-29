@@ -304,15 +304,18 @@ por Artificial Analysis, ventana de 131.072, salida máxima 40.000, structured o
 
 LAS CUOTAS SON POR MODELO, y las de la cuenta no son las que anuncia la página del modelo.
 Medido contra la API el 2026-08-26: `gemma-4-31b` declara 500 peticiones/min y 250.000
-tokens uncached/min, pero los `remaining-*` de esta cuenta van contra 5 peticiones/min,
-30.000 tokens/min, 2.400 peticiones/día y 1.000.000 de tokens/día. Un build entero no cabe
-ahí. Quien lo administra son los CEREBRAS_MAX_* de más abajo, no esta lista.""",
+tokens uncached/min, mientras la cuenta admite 5 peticiones/min, 30.000 tokens/min, 2.400
+peticiones/día y 1.000.000 de tokens/día. Un build entero no cabe ahí. Los headers no
+sirven para averiguarlo — remedido el 2026-08-29, `remaining-*` también cuenta contra la
+cuota del modelo — así que quien lo administra son los CEREBRAS_MAX_* de más abajo, y son
+un tope rígido: nada los sube solo.""",
     ),
-    # Los cuatro techos que de verdad atan, con los números del nivel gratuito medidos el
-    # 2026-08-26. No se leen de los headers `limit-*` porque esos reportan la cuota del
-    # MODELO (gemma: 500/min y 250.000 tok/min) y no la de la cuenta, que solo asoma en los
-    # `remaining-*`. El limitador sí los sube solo si alguna vez ve un `remaining` por
-    # encima de ellos: eso solo puede significar que la cuenta es mayor de lo que dicen.
+    # Los cuatro techos que de verdad atan, sembrados con los números del nivel gratuito
+    # medidos el 2026-08-26. Ningún header los dice: `limit-*` reporta la cuota del MODELO
+    # (gemma: 500/min y 250.000 tok/min) y `remaining-*`, que el 2026-08-26 contaba contra
+    # la de la cuenta, remedido el 2026-08-29 cuenta contra la del modelo también (719.998
+    # de 720.000 peticiones al día). Así que aquí manda el ajuste y solo el ajuste: lo que
+    # informe la API puede bajar lo que creemos que queda, nunca subir el techo.
     Setting(
         key="engine.cerebras_max_requests_minute",
         name="CEREBRAS_MAX_REQUESTS_MINUTE",

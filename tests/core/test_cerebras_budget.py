@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from variatio.core.cerebras_budget import (
@@ -162,7 +164,12 @@ def test_a_stale_header_stops_counting_once_its_window_has_rolled(tmp_path):
     assert b.delay("gemma-4-31b", 100) == 0.0
 
 
-def test_a_remaining_above_the_configured_ceiling_raises_the_ceiling(tmp_path):
+# The configured ceiling is a ceiling, and this is the regression that gave the module its
+# reason to exist a second time: `remaining-*` used to be trusted to RAISE it, so the very
+# first answer lifted the account's declared 5 req/min to the catalogue's 499 and the
+# throttle held nothing ever again — one measured installation ran 91 requests in a minute
+# and 2.8 M tokens in a day against settings of 5 and 1 M.
+def test_a_remaining_above_the_configured_ceiling_does_not_raise_the_ceiling(tmp_path):
     clock = Clock()
     b = budget(tmp_path, clock)
     b.record(
@@ -173,7 +180,44 @@ def test_a_remaining_above_the_configured_ceiling_raises_the_ceiling(tmp_path):
         headers={"x-ratelimit-remaining-tokens-day": "8000000"},
     )
 
-    assert b.snapshot()["models"][0]["windows"]["day"]["tokens_limit"] == 8_000_000
+    assert b.snapshot()["models"][0]["windows"]["day"]["tokens_limit"] == LIMITS.tokens_day
+
+
+def test_a_generous_remaining_does_not_stop_the_gate_from_closing(tmp_path):
+    clock = Clock()
+    b = budget(tmp_path, clock)
+    generous = {
+        f"x-ratelimit-remaining-{kind}-{window}": "500000"
+        for kind in ("requests", "tokens")
+        for window in ("minute", "day")
+    }
+    for _ in range(LIMITS.requests_minute):
+        b.record("gemma-4-31b", "kg_extract", prompt_tokens=10, completion_tokens=0, headers=generous)
+
+    assert b.delay("gemma-4-31b", 10) > 0
+
+
+# A ledger written before 2026-08-29 carries the ceilings the ratchet learned. They are dead
+# state, and a reader who finds 499 in the file must not have to wonder which number is in
+# force, so the first write drops them.
+def test_a_ledger_carrying_a_learned_ceiling_forgets_it(tmp_path):
+    clock = Clock()
+    path = tmp_path / "budget.json"
+    path.write_text(
+        json.dumps(
+            {
+                "models": {"gemma-4-31b": {"calls": [], "seen": {}, "ceiling": {"requests-minute": 499}}},
+                "inflight": None,
+                "seq": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    b = Budget(path, limits=lambda: LIMITS, clock=clock)
+    b.record("gemma-4-31b", "kg_extract", prompt_tokens=10, completion_tokens=0, headers={})
+
+    assert "ceiling" not in json.loads(path.read_text(encoding="utf-8"))["models"]["gemma-4-31b"]
+    assert b.snapshot()["models"][0]["windows"]["minute"]["requests_limit"] == LIMITS.requests_minute
 
 
 # THE PER-PHASE BREAKDOWN ------------------------------------------------------------------

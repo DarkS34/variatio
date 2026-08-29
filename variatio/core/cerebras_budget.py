@@ -1,15 +1,20 @@
 """What is left of Cerebras' rate limits, and the throttle that keeps us inside them.
 
-Measured against the real API on 2026-08-26, with `gemma-4-31b` and a second model:
+Measured against the real API on 2026-08-26, with `gemma-4-31b` and a second model, and
+re-measured on 2026-08-29 when the throttle turned out not to be throttling:
 
 - Every response carries `x-ratelimit-{limit,remaining}-{requests,tokens}-{minute,hour,day}`
   and **no `reset` header at all**, so the window has to be reconstructed from our own call
   timestamps. That is what this module is: a rolling ledger.
-- The `limit-*` headers report the MODEL's published quota (gemma: 500 req/min, 250 000
-  uncached tok/min; the second model: 1 000 and 500 000) and not the account's. The account's real
-  ceiling shows up only in `remaining-*`, which on the free tier sits two to three orders of
-  magnitude lower: 5 req/min, 30 000 tok/min, 2 400 req/day, 1 000 000 tok/day. So the
-  ceilings here are settings, seeded with those measured numbers, and `limit-*` is ignored.
+- NO header states the ceiling this ledger enforces: the four `CEREBRAS_MAX_*` settings do,
+  and nothing may raise them. `limit-*` reports the MODEL's published quota (gemma: 500
+  req/min, 250 000 uncached tok/min), and `remaining-*` was measured on 2026-08-26 counting
+  down from the ACCOUNT's much smaller one (5 req/min, 2 400 req/day) — but re-measured on
+  2026-08-29 it counts down from the model's too (719 998 of 720 000 requests a day). That
+  reading used to be trusted to RAISE a ceiling, on the argument that more left than the
+  settings claim can only mean a bigger account; what it actually meant was that the first
+  answer of every installation lifted the ceilings to the catalogue's and the throttle never
+  held another call. A header may only ever LOWER what we believe is left.
 - The buckets are **per model**: a call to the second model left `remaining-requests-day` at 2399 and
   the next call to gemma reported 2399 as well, each against its own 2 400.
 - The request counters are exact; the token counters lag. A 74-token call and a 20-token
@@ -116,7 +121,7 @@ class Budget:
                 # so one large prompt is simply outside this budget. Without this guard
                 # `_relief` finds no call to age out, reports relief «now», and the request
                 # sails through to a 429 it will repeat for ever.
-                ceiling = _ceiling(state, model, window, kind, limits)
+                ceiling = limits.ceiling(window, kind)
                 if need > ceiling:
                     raise BudgetExhausted(
                         f"La llamada necesita {need} {'peticiones' if kind == 'requests' else 'tokens'} "
@@ -239,7 +244,7 @@ class Budget:
         meter: dict = {"resets_in": _resets_in(inside, seconds, now)}
         for kind in ("requests", "tokens"):
             meter[f"{kind}_used"] = used[kind]
-            meter[f"{kind}_limit"] = _ceiling(state, model, window, kind, limits)
+            meter[f"{kind}_limit"] = limits.ceiling(window, kind)
             meter[f"{kind}_remaining"] = max(
                 self._remaining(state, model, calls, window, kind, seconds, now, limits), 0
             )
@@ -248,17 +253,25 @@ class Budget:
     # THE ARITHMETIC -----------------------------------------------------------------------
 
     # Two readings of the same budget, and the smaller wins. The local one counts the exact
-    # `usage` of every call still inside the window; the server's is the truth about an
-    # account whose real ceiling we never see directly. Taking the minimum is what makes a
-    # lagging token counter safe: it can only ever make us more careful.
+    # `usage` of every call still inside the window against the configured ceiling; the
+    # server's says what IT will still answer, against a quota of its own that may be far
+    # larger. Taking the minimum is what lets the second one matter without ever loosening
+    # the first, and it is what makes a lagging token counter safe: a header can only ever
+    # make us more careful.
     def _remaining(self, state, model, calls, window, kind, seconds, now, limits) -> int:
-        ceiling = _ceiling(state, model, window, kind, limits)
+        ceiling = limits.ceiling(window, kind)
         inside = [call for call in calls if now - call["t"] < seconds]
         used = len(inside) if kind == "requests" else sum(c["in"] + c["out"] for c in inside)
         local = ceiling - used
         reported = _reported(state, model, calls, window, kind, seconds, now)
         return local if reported is None else min(local, reported)
 
+    # What the server said, kept only to LOWER what we believe is left. It used to raise the
+    # ceiling too, on the reading that a `remaining` above the settings could only mean a
+    # bigger account — and that is what silently disabled the whole throttle: re-measured
+    # 2026-08-29, `remaining-*` reports the MODEL's catalogue quota, so the first answer of
+    # every installation ratcheted the ceilings to 499 req/min and 719 999 req/day and no
+    # call was ever held again. The setting is the ceiling; a header never argues with it.
     def _observe(self, bucket: dict, headers, now: float, seq: int) -> None:
         for window, _, _seconds in WINDOWS:
             for kind in ("requests", "tokens"):
@@ -266,12 +279,6 @@ class Budget:
                 if raw is None:
                     continue
                 bucket["seen"][f"{kind}-{window}"] = [now, raw, seq]
-                # A remaining above what we think the ceiling is means the account is
-                # bigger than the settings claim — a paid tier, or a raised quota. The
-                # meter's denominator follows it up; the gate never needs to be told.
-                key = f"{kind}-{window}"
-                if raw > int(bucket["ceiling"].get(key, 0)):
-                    bucket["ceiling"][key] = raw
 
     # THE FILE -----------------------------------------------------------------------------
 
@@ -302,17 +309,12 @@ def _bucket(state: dict, model: str) -> dict:
     bucket = state.setdefault("models", {}).setdefault(model, {})
     bucket.setdefault("calls", [])
     bucket.setdefault("seen", {})
-    bucket.setdefault("ceiling", {})
+    bucket.pop("ceiling", None)
     return bucket
 
 
 def _calls(state: dict, model: str) -> list[dict]:
     return list(state.get("models", {}).get(model, {}).get("calls", []))
-
-
-def _ceiling(state, model, window, kind, limits: Limits) -> int:
-    learned = state.get("models", {}).get(model, {}).get("ceiling", {}).get(f"{kind}-{window}", 0)
-    return max(limits.ceiling(window, kind), int(learned))
 
 
 # What the server said was left, brought forward to now by everything we have spent since it
