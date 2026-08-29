@@ -432,11 +432,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         className={cn(
-          // The bottom padding is not symmetric with the top on a phone, and that is the
-          // floating «Ver ejecución» pill: fixed to the corner, it would otherwise cover
-          // the last control of every screen at exactly the width where there is no room
-          // to scroll past it.
-          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-20 pt-4 sm:px-4 sm:pb-6 sm:pt-6",
+          // The bottom padding is not symmetric with the top, and that is the floating
+          // «Ver ejecución» pill: fixed to the corner, it covers whatever the page happens
+          // to end on. It is 36 px tall over a 12/16 px offset, so the reservation has to
+          // clear ~52 px AT EVERY WIDTH — `sm:pb-6` cleared 24 and the pill swallowed the
+          // CSV button of «Administración → Evaluaciones» whole: measured, a real click on
+          // its centre opened the run drawer instead of downloading anything.
+          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-20 pt-4 sm:px-4 sm:pb-16 sm:pt-6",
           // scroll-pb as well as pb: without it a control focused while the drawer is open
           // gets scrolled to a position underneath the drawer.
           drawerOpen && "pb-[56vh] scroll-pb-[56vh]",

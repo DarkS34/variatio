@@ -348,6 +348,7 @@ export const en: Catalogue = {
   "stage.reopened": "Reopened",
   "stage.whatIs": "What {title} is",
   "stage.reopenHint": "Removes the approval and allows editing again",
+  "stage.reopenConfirm": "This withdraws the approval of «{stage}». Nothing can be generated while it is reopened, and it will have to be approved again. Carry on?",
   "stage.reopen": "Reopen",
   "stage.locked": "Locked for editing. Press «Reopen» if you want to change something.",
   "stage.stale": "Stale",

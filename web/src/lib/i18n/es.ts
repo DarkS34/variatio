@@ -368,6 +368,7 @@ export const es = {
   "stage.reopened": "Reabierto",
   "stage.whatIs": "Qué es {title}",
   "stage.reopenHint": "Quita la aprobación y vuelve a permitir editarlo",
+  "stage.reopenConfirm": "Vas a retirar la aprobación de «{stage}». Mientras esté reabierta no se podrá generar, y habrá que volver a aprobarla. ¿Sigues?",
   "stage.reopen": "Reabrir",
   "stage.locked": "Bloqueado para editar. Pulsa «Reabrir» si quieres cambiar algo.",
   "stage.stale": "Obsoleto",

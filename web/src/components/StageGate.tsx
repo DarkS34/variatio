@@ -187,7 +187,15 @@ export function StageGate({
                 locked ? (
                   <Button
                     variant="outline"
-                    onClick={() => reopen.mutate()}
+                    // ASKED FOR, LIKE «Reconstruir» ALREADY IS. This one undoes a human
+                    // decision and deletes the stage's `approvals` row, and it did it on one
+                    // unguarded click while the button that merely replaces an artifact
+                    // confirmed. The label does not help either — «Reabrir» sounds like
+                    // opening something, not like withdrawing an approval.
+                    onClick={() => {
+                      if (window.confirm(t("stage.reopenConfirm", { stage: stage.label })))
+                        reopen.mutate();
+                    }}
                     disabled={reopen.isPending}
                     title={t("stage.reopenHint")}
                   >
