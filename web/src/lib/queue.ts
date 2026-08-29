@@ -149,6 +149,18 @@ export function isQueued(job: Job | null | undefined): boolean {
 }
 
 /**
+ * Is this job still going?
+ *
+ * Waiting counts, for the same reason every screen here reads `isQueued` rather than the
+ * status alone: a queued commission is a made commission. Structural in its argument so
+ * that `pickActiveRun`, which only ever sees a status, and a screen holding a whole `Job`
+ * ask the one question of the one function.
+ */
+export function isLive(job: { status: JobStatus } | null | undefined): boolean {
+  return job?.status === "running" || job?.status === "queued";
+}
+
+/**
  * What a job that has already been submitted is waiting behind, or null when nothing is
  * in front of it — which includes the ordinary case of a job that started at once.
  *
@@ -257,9 +269,7 @@ export function pickActiveRun<
   if (all.length === 0) return null;
   const newest = (list: T[]) =>
     list.slice().sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
-  const alive = all.filter(
-    (run) => run.job?.status === "running" || run.job?.status === "queued",
-  );
+  const alive = all.filter((run) => isLive(run.job));
   const current = currentJobId ? runs[currentJobId] : undefined;
   if (current && alive.includes(current)) return current;
   return alive.length > 0 ? newest(alive) : newest(all);

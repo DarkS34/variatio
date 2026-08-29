@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/toast";
 import { api, getScope } from "@/lib/api";
 import { localeStore, translator, useT, type Key, type Language } from "@/lib/i18n";
 import { phaseName } from "@/lib/names";
-import { isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
+import { isLive, isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
 import type {
   ArtifactName,
   BuildPhase,
@@ -138,8 +138,7 @@ export function useOwnJobRun(
 /** True while a job of this kind is queued or running, whoever launched it. */
 export function useJobRunning(kind: JobKind): boolean {
   const run = useJobRun(kind);
-  const status = run?.job?.status;
-  return status === "running" || status === "queued";
+  return isLive(run?.job);
 }
 
 /** A wall clock that only ticks while something is running. */

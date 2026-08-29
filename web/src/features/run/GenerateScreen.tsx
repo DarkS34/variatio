@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import { isQueued, waitOf, waitReason } from "@/lib/queue";
+import { isLive, isQueued, waitOf, waitReason } from "@/lib/queue";
 import { Link } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -56,7 +56,25 @@ export function GenerateScreen() {
   // ITS OWN run, by kind, and not «lo que la máquina esté haciendo»: two lanes mean a build
   // can be running beside this generation, and the screen used to take whichever job the
   // stream had heard from last and then find no items in it.
-  const run = useOwnJobRun("generate");
+  //
+  // AND ITS OWN VISIT. The stream outlives the screen, and a reload replays it whole, so
+  // «mi última generación» opened this page on a batch finished an hour ago with the form
+  // collapsed behind it: work already collected, in the one place one comes to ask for
+  // more. A finished batch belongs to the visit that ran it, and to «Mis variantes»
+  // afterwards; one still going is adopted whenever it started, because a made commission
+  // has to stay on screen or the form would offer to queue a second copy of it — leaving
+  // and coming back mid-generation must not lose it. Membership only ever grows, so what
+  // is being watched does not vanish at the moment it finishes.
+  const [visit] = useState(() => new Set<string>());
+  const launched = submit.data?.job.id ?? null;
+  const ofThisVisit = useMemo(
+    () => (candidate: RunView) => {
+      if (candidate.jobId === launched || isLive(candidate.job)) visit.add(candidate.jobId);
+      return visit.has(candidate.jobId);
+    },
+    [visit, launched],
+  );
+  const run = useOwnJobRun("generate", ofThisVisit);
   const lanes = useLanes();
   const split = useSplitEngine();
   const client = useQueryClient();

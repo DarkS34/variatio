@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { Job, LaneName, LaneState, Lanes, Pipeline } from "./types";
 import {
   backendsOf,
+  isLive,
   isQueued,
   isSplitEngine,
   ownedBy,
@@ -144,6 +145,21 @@ describe("isQueued", () => {
     expect(isQueued(job({ status: "queued" }))).toBe(true);
     expect(isQueued(job({ status: "running" }))).toBe(false);
     expect(isQueued(null)).toBe(false);
+  });
+});
+
+describe("isLive", () => {
+  it("counts a job that is waiting its turn, not only one that is working", () => {
+    expect(isLive(job({ status: "queued" }))).toBe(true);
+    expect(isLive(job({ status: "running" }))).toBe(true);
+  });
+
+  it("is false for anything that is over, and for no job at all", () => {
+    expect(isLive(job({ status: "succeeded" }))).toBe(false);
+    expect(isLive(job({ status: "failed" }))).toBe(false);
+    expect(isLive(job({ status: "cancelled" }))).toBe(false);
+    expect(isLive(null)).toBe(false);
+    expect(isLive(undefined)).toBe(false);
   });
 });
 

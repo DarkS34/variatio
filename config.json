@@ -5,10 +5,10 @@
     "cerebras_models": [
       "gemma-4-31b"
     ],
-    "cerebras_max_requests_minute": 5,
-    "cerebras_max_tokens_minute": 30000,
-    "cerebras_max_requests_day": 2400,
-    "cerebras_max_tokens_day": 1000000,
+    "cerebras_max_requests_minute": 450,
+    "cerebras_max_tokens_minute": 210000,
+    "cerebras_max_requests_day": 700000,
+    "cerebras_max_tokens_day": 320000000,
     "cerebras_max_wait_seconds": 90,
     "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
@@ -127,7 +127,7 @@
           "kg_context": "gemma-4-31b",
           "description_generation": "gemma-4-31b",
           "concept_tagger": "gemma-4-31b",
-          "variant_generation": "gemma-4-31b",
+          "variant_generation": "qwen3.8:27b-q8_0",
           "repair": "gemma-4-31b",
           "admissibility": "gemma-4-31b"
         }
