@@ -21,7 +21,6 @@ PHASES = {
     "models.phases.description_generation": "DESCRIPTION_GENERATION_LLM",
     "models.phases.kg_taggable": "KG_TAGGABLE_MODEL",
     "models.phases.concept_tagger": "CONCEPT_TAGGER_LLM",
-    "models.phases.variant_generation": "VARIANT_GENERATION_LLM",
     "models.phases.repair": "REPAIR_LLM",
     "models.phases.admissibility": "ADMISSIBILITY_LLM",
 }
@@ -45,6 +44,13 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     for key, name in PHASES.items():
         out[name] = values[key]
 
+    # The writer of a variant is not a phase model any more: the commission picks one of
+    # the offered models, and the FIRST of them is what everything that does not pick uses
+    # — the CLI, the study's three arms, and a request naming none. Indexed without a
+    # guard because `min_items=1` is what refuses an empty list, file and panel included.
+    offered = [str(model) for model in values["generation.models"]]
+    out["VARIANT_GENERATION_LLM"] = offered[0]
+
     for phase in PHASE_KEYS:
         on = values[f"reasoning.phases.{phase}"]
         out[f"THINK_{phase.upper()}"] = values[f"reasoning.effort.{phase}"] if on else False
@@ -55,4 +61,9 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     }
     for name in PHASES.values():
         out["LLM_CONTEXT"].setdefault(out[name], values["context_window.overrides"])
+    # Every offered model and not only the default: choosing the second one would
+    # otherwise run it at whatever context its Modelfile declares, which is the reservation
+    # this map exists to cap.
+    for model in offered:
+        out["LLM_CONTEXT"].setdefault(model, values["context_window.overrides"])
     return out

@@ -128,10 +128,15 @@
           "kg_context": "gemma-4-31b",
           "description_generation": "gemma-4-31b",
           "concept_tagger": "gemma-4-31b",
-          "variant_generation": "gemma-4-31b",
           "repair": "gemma-4-31b",
           "admissibility": "gemma-4-31b"
         }
+      },
+      "generation": {
+        "models": [
+          "gemma-4-31b",
+          "qwen3.8:27b-q8_0"
+        ]
       },
       "reasoning": {
         "effort": {
@@ -172,10 +177,14 @@
           "kg_context": "qwen3.8:27b-q4_K_M",
           "description_generation": "qwen3.8:27b-q4_K_M",
           "concept_tagger": "qwen3.8:27b-q4_K_M",
-          "variant_generation": "qwen3.8:27b-q4_K_M",
           "repair": "qwen3.8:27b-q4_K_M",
           "admissibility": "qwen3.8:27b-q4_K_M"
         }
+      },
+      "generation": {
+        "models": [
+          "qwen3.8:27b-q4_K_M"
+        ]
       },
       "context_window": {
         "guardrail": 4096,

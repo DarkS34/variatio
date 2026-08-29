@@ -39,12 +39,17 @@ import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
 import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effort";
 import { EffortSlider } from "./EffortSlider";
+import { ModelChoice } from "./ModelChoice";
+import { modelLabel } from "./models";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
 import { CancelButton } from "@/components/CancelButton";
 import type { RunView } from "@/state/runStore";
 
 const MAX_ITEMS = 20;
+// One identity for «the payload has not arrived», so the effect below is not re-run by a
+// fresh `[]` on every render.
+const NONE: string[] = [];
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
 const MAX_INSTRUCTIONS = 600;
 
@@ -105,6 +110,7 @@ export function summarize(
   const label = curriculumLabel(state, null, tr);
   parts.push(label.charAt(0).toLowerCase() + label.slice(1));
   if (state.instructions.trim()) parts.push(t("form.summary.withInstructions"));
+  if (state.model) parts.push(modelLabel(state.model));
   if (!state.think) parts.push(t("form.summary.noReasoning"));
   else if (state.effort !== "low")
     parts.push(
@@ -326,13 +332,30 @@ export function GenerateForm({
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
-  // Which model will serve the generation decides which effort levels make sense and what
-  // to warn about; the policy table in `effort.ts` is where a new model gets its entry.
+  // Which model writes the item is the commission's since 2026-08-29, and it decides which
+  // effort levels make sense and what to warn about: `models.ts` is where a model gets its
+  // entry. Read defensively — an API older than this bundle sends no `offered`, and the
+  // screen degrades to «the installation decides» instead of blanking.
   const health = useHealth();
-  const generationModel = health.data?.models.required.VARIANT_GENERATION_LLM;
+  const offered = health.data?.models.offered ?? NONE;
+  const remoteModels = health.data?.models.remote ?? NONE;
+  const missingModels = health.data?.models.missing ?? NONE;
+  // The first offered one is what the server resolves an absent `model` to, so it is what
+  // the screen has to name while nobody has chosen. A stored choice the installation has
+  // stopped offering is not one: the panel edits that list while this form is open.
+  const generationModel =
+    state.model && offered.includes(state.model) ? state.model : offered[0];
   const policy = effortPolicy(generationModel);
   const effort = clampEffort(state.effort, policy);
   const warning = effortWarning(effort, policy);
+
+  // Same reconciliation the curriculum preset gets, and for the same reason: a value the
+  // form can no longer show must not be what the request carries.
+  useEffect(() => {
+    if (state.model && offered.length > 0 && !offered.includes(state.model)) {
+      patch({ model: null });
+    }
+  }, [state.model, offered]);
 
   // The curriculum that will actually be in force, resolved exactly as the server resolves
   // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
@@ -780,6 +803,18 @@ export function GenerateForm({
             </div>
           ) : null}
 
+          {/* Before the effort and not after it: which levels exist, and what is worth
+              warning about at each, are properties of the model that was just chosen. */}
+          {variant === "generate" ? (
+            <ModelChoice
+              offered={offered}
+              remote={remoteModels}
+              missing={missingModels}
+              value={generationModel ?? ""}
+              onChange={(model) => patch({ model })}
+            />
+          ) : null}
+
           {/* In comparison there is no switch on purpose: the reasoning mode is what is measured
               there, so the session draws it. Saying so here keeps the control's absence from reading
               as a missing checkbox. */}
@@ -808,7 +843,10 @@ export function GenerateForm({
                     value={effort}
                     onChange={(level) => patch({ effort: level })}
                   />
-                  {generationModel ? (
+                  {/* Only when the chooser above is not drawn: with two models on offer
+                      the card that is selected already names this one, and the two would
+                      be the same string a centimetre apart. */}
+                  {generationModel && offered.length < 2 ? (
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {generationModel}
                     </span>

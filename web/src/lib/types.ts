@@ -163,6 +163,8 @@ export interface Health {
   available: boolean;
   models: {
     required: Record<string, string>;
+    /** What a commission may choose between, the default first. */
+    offered: string[];
     installed: string[];
     missing: string[];
     /** Required models a remote provider serves: never on this disk, never «sin instalar». */
@@ -258,6 +260,9 @@ export interface GenerateParams {
   /** Whether the model deliberates before writing: `false` is off, a string names the
    *  effort level, and absent means yes at the default level, as it always did. */
   think?: boolean | string;
+  /** Which of the offered models writes it; absent is the first one the installation
+   *  offers, which is what the server resolves and what the row then records. */
+  model?: string;
 }
 
 export interface ProfilePayload {
@@ -513,6 +518,9 @@ export interface GenerationRow {
   fixed: Record<string, unknown>;
   instructions: string;
   think: boolean;
+  /** The model that WROTE it. Null for every row from before the commission could choose,
+   *  where naming today's default would be inventing a fact. */
+  model: string | null;
   author: GenerationAuthor;
   promoted_item_id: string | null;
   item: Record<string, unknown>;

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Brain,
+  Cpu,
   FlaskConical,
   Hammer,
   RefreshCw,
@@ -35,6 +36,10 @@ import type { ConfigPayload, ConfigSetting, ReasoningLane } from "@/lib/types";
 
 const REASONING_GROUP = "Razonamiento";
 const MODELS_GROUP = "Modelos";
+// A group of its own and not a card inside «Modelos», because it answers a different
+// question: those rows say which model serves each phase of the pipeline, this one says
+// between which models the PERSON asking for an item may choose.
+const OFFERED_GROUP = "Modelos ofrecidos"; // i18n-exempt
 const PHASE_MODEL_PREFIX = "models.phases.";
 const OTHERS_KEY = "__otros__";
 export const ENGINE_GROUPS = ["Motor", "Túnel SSH"]; // i18n-exempt
@@ -70,6 +75,14 @@ const SECTIONS: Section[] = [
     icon: Brain,
     descriptionKey: "cfg.section.modelsDesc",
     groups: [MODELS_GROUP, REASONING_GROUP],
+  },
+  {
+    key: "ofrecidos",
+    label: null,
+    labelKey: "cfg.section.offered",
+    icon: Cpu,
+    descriptionKey: "cfg.section.offeredDesc",
+    groups: [OFFERED_GROUP],
   },
   {
     key: "muestreo",

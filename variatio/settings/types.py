@@ -51,6 +51,7 @@ class Setting:
     choices: tuple | None = None
     minimum: float | None = None
     maximum: float | None = None
+    min_items: int | None = None
     scope: str = "global"
     engine_defaults: tuple[tuple[str, object], ...] | None = None
 
@@ -154,6 +155,10 @@ def _check(setting: Setting, value: object) -> None:
     if setting.choices and value not in setting.choices:
         options = ", ".join(str(choice) for choice in setting.choices)
         raise SettingError(f"'{label}': «{value}» no está entre {options}")
+    if setting.min_items is not None and len(value) < setting.min_items:
+        raise SettingError(
+            f"'{label}': hacen falta al menos {setting.min_items}, y llegan {len(value)}"
+        )
     if setting.minimum is not None and value < setting.minimum:
         raise SettingError(f"'{label}': {value} está por debajo de {setting.minimum}")
     if setting.maximum is not None and value > setting.maximum:

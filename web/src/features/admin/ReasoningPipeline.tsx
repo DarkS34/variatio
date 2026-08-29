@@ -104,11 +104,17 @@ function PhaseNode({
   const thinks = setting
     ? Boolean(setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default))
     : false;
-  const residentName = modelSetting
-    ? String(
-        (modelSetting.key in draft ? draft[modelSetting.key] : modelSetting.value ?? modelSetting.default) ?? "",
-      )
-    : "";
+  const modelValue = modelSetting
+    ? (modelSetting.key in draft
+        ? draft[modelSetting.key]
+        : modelSetting.value ?? modelSetting.default)
+    : null;
+  // A node whose model is a LIST is the variant's: what a commission may be written with,
+  // in offer order. Read here and edited in «Modelos ofrecidos», like every other node
+  // that does not own its model.
+  const residentName = Array.isArray(modelValue)
+    ? modelValue.map(String).join(" · ")
+    : String(modelValue ?? "");
   const ownModel = Boolean(modelSetting?.key.startsWith("models.phases."));
 
   return (

@@ -321,6 +321,7 @@ class VariantGenerator:
         curriculum: list[str] | None = None,
         instructions: str | None = None,
         think: bool | str = True,
+        model: str | None = None,
         check: bool = True,
         ruling: object | None = None,
         avoid: list[str] | None = None,
@@ -330,8 +331,12 @@ class VariantGenerator:
 
         A pre-screened `ruling` is honoured as it arrives, which is how the study pays
         the admissibility judge once for the three arms. `on_accepted` fires per item,
-        so a cancelled run keeps whatever had already validated.
+        so a cancelled run keeps whatever had already validated. `model` overrides the
+        installation's default writer for this commission alone — the caller checks it
+        against what the installation offers (`stages.resolve_generation_model`); nothing
+        here does, so the study's arms keep passing none and get the default.
         """
+        writer = model or self.generator_model
         target_type = self.exemplars_profile.item_type(item_type)
         fixed = self._clean_fixed(fixed)
         instructions = (instructions or "").strip()
@@ -390,7 +395,7 @@ class VariantGenerator:
                         correction=correction,
                     )
                     progress.emit("prompt", index=i + 1, text=prompt)
-                    return self._generate_one(prompt, fixed, target_type, think)
+                    return self._generate_one(prompt, fixed, target_type, think, writer)
 
                 def verify(result: GeneratedVariant) -> dict:
                     """Run the checks over one candidate, against the batch so far."""
@@ -840,7 +845,12 @@ class VariantGenerator:
         return "\n".join(lines)
 
     def _generate_one(
-        self, prompt: str, fixed: dict[str, object], item_type: ItemType, think: bool | str = True
+        self,
+        prompt: str,
+        fixed: dict[str, object],
+        item_type: ItemType,
+        think: bool | str = True,
+        model: str | None = None,
     ) -> GeneratedVariant | None:
         """Run one generating call and parse an item out of it, or return None.
 
@@ -850,7 +860,7 @@ class VariantGenerator:
         instead, which only reformats text that already carries the whole item.
         """
         resp = inference.generate_stream(
-            model=self.generator_model,
+            model=model or self.generator_model,
             prompt=prompt,
             think=think,
             on_token=progress.token_sink("item"),

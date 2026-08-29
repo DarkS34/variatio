@@ -328,9 +328,13 @@ PIPELINE: tuple[Lane, ...] = (
             Phase(
                 "variant_generation",
                 "Variante",
-                "models.phases.variant_generation",
+                "generation.models",
                 fixed=COMMISSION,
-                note="Lo decide cada encargo; el estudio lo mide en ambas posiciones.",
+                note=(
+                    "Lo decide cada encargo, el modelo incluido desde el 2026-08-29: aquí "
+                    "se lista lo que se le ofrece, y el primero es el de por defecto. El "
+                    "estudio mide el razonamiento en ambas posiciones."
+                ),
             ),
             Phase(
                 "repair",

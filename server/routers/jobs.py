@@ -10,6 +10,7 @@ for: without that the id is a twelve-hex guess away from another instance's even
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from variatio import stages
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
@@ -86,6 +87,22 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
     return None
 
 
+def _check_params(kind: str, params: dict) -> None:
+    """Refuse a commission naming something the installation does not offer.
+
+    Checked here as well as in the handler, and for the same reason the raw slots check a
+    filename twice: what arrives in a request is checked against what the installation
+    actually holds, never sanitised and used. Here it is a 422 the screen can show; there
+    it is the last word, because the offered list is edited while jobs sit in the queue.
+    """
+    if kind != "generate":
+        return
+    try:
+        stages.resolve_generation_model(params.get("model"))
+    except stages.UnofferedModelError as error:
+        raise HTTPException(422, str(error)) from None
+
+
 def _mine(job_id: str, access: auth.Access):
     """Load a job of this workspace, or 404 — one of another instance does not exist here."""
     job = runtime.runner.get(job_id)
@@ -113,6 +130,8 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
         error = gate_error(access.ws, body.kind)
         if error:
             raise HTTPException(409, error)
+
+    _check_params(body.kind, body.params)
 
     job = runtime.runner.submit(
         body.kind,

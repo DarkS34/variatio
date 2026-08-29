@@ -190,6 +190,40 @@ es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 _MAIN = "qwen3.8:27b-q4_K_M"
 _MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
+OFFERED_GROUP = "Modelos ofrecidos"
+
+_OFFERED_DOC = """QUÉ MODELOS PUEDE ELEGIR QUIEN PIDE UN ÍTEM, y en qué orden se le ofrecen. Sustituye desde
+el 2026-08-29, por petición explícita del usuario, al ajuste `models.phases.variant_generation`:
+la redacción de una variante era la única fase del pipeline cuyo modelo decidía la instalación
+en lugar de decidirlo el encargo, y es también la única en la que la diferencia se nota sin
+medir nada — un modelo servido en remoto contesta en segundos y uno denso en la GPU local
+tarda minutos, y a cambio delibera. Elegir entre esas dos cosas es exactamente la decisión
+que tiene quien pide el ejercicio, no la que tiene quien administra la instalación; lo que
+sigue siendo suya es ACOTAR la lista, que es lo que este ajuste declara.
+
+EL PRIMERO ES EL DE POR DEFECTO. `VARIANT_GENERATION_LLM` ya no es un ajuste: lo deriva
+`settings.derived` del primer elemento de esta lista, así que sigue existiendo para todo lo
+que no elige — la CLI, un encargo que no nombra ninguno y los tres brazos del estudio, que
+comparan arquitecturas y no modelos. La memoria tiene que decir CUÁL era el primero cuando
+se grabaron las sesiones, igual que dice qué motor las produjo.
+
+LOS NOMBRES SON LOS DEL MOTOR, así que el ajuste es de ámbito `engine` como los veintiún
+modelos de fase: `gemma-4-31b` es el nombre de Cerebras y no existe en Ollama, cuyo nombre
+para esa misma familia sería `gemma4:31b-it-q4_K_M`. Cambiar de motor cambia la lista entera,
+y volver recupera la anterior intacta.
+
+OFRECER UN MODELO NO LO DESCARGA. Nada llama aquí a `ensure_models` —solo lo hacen los tres
+constructores, con los suyos—, así que un modelo que no esté en el disco aparecerá como «sin
+instalar» en «Motor» y fallará en la primera llamada. A cambio, lo que sí hace este ajuste es
+PROTEGERLO: `required_models()` cuenta esta lista, de modo que el panel se niega a borrar del
+disco un modelo que la generación ofrece.
+
+La lista está acotada por abajo a uno: vaciarla dejaría a la generación sin modelo y a
+`VARIANT_GENERATION_LLM` sin valor. Por arriba no hay límite, pero dos o tres es lo que cabe
+leerse en la pantalla antes de pedir un ítem; la nota y el enlace de cada familia conocida
+los pone el cliente (`web/src/features/run/models.ts`), y un modelo que no reconozca se
+ofrece igual, con su nombre y sin nota."""
+
 _PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la
 razón de que sobrevivan a una consolidación: apuntar varias al mismo modelo es una decisión,
 no un colapso, y cualquier fase suelta puede moverse sin tocar las otras veinte. Desde el
@@ -803,18 +837,16 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         ),
     ),
     Setting(
-        key="models.phases.variant_generation",
-        name="VARIANT_GENERATION_LLM",
-        kind="str",
-        default=_MAIN,
-        group="Modelos",
+        key="generation.models",
+        name="GENERATION_MODELS",
+        kind="list[str]",
+        default=[_MAIN],
+        group=OFFERED_GROUP,
         impact=Impact.CONTEXTS,
         scope="engine",
-        engine_defaults=_MAIN_BY_ENGINE,
-        doc=_phase_doc(
-            "Fase de generación de variantes de contenido, en el pipeline en tiempo de "
-            "ejecución."
-        ),
+        min_items=1,
+        engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
+        doc=_OFFERED_DOC,
     ),
     Setting(
         key="models.phases.admissibility",

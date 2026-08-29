@@ -11,7 +11,7 @@ exists to show, and caching it would make the panel lie about the GPU.
 
 from fastapi import APIRouter
 
-from variatio import config
+from variatio import config, stages
 from variatio.core import inference
 
 from .. import auth, deps, runtime
@@ -75,6 +75,10 @@ def health(access: auth.Access = auth.VIEW) -> dict:
         "available": available,
         "models": {
             "required": required,
+            # What a commission may choose between, the default first. It is read by the
+            # generate screen, so it travels here rather than on a route of its own: the
+            # form already polls this one to know whether the engine answers at all.
+            "offered": stages.generation_models(),
             "installed": installed,
             "missing": _missing_models(required, installed, remote),
             "remote": sorted(remote & set(required.values())),

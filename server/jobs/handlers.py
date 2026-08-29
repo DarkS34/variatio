@@ -244,12 +244,17 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     # effort. A recognised level travels as itself; anything else collapses to a bool.
     raw_think = params.get("think", True)
     think = raw_think if raw_think in _EFFORT_LEVELS else bool(raw_think)
+    # Resolved here rather than deeper down because three things need the same answer: the
+    # log line, the row saved beside each item, and the call itself. An unoffered name
+    # raises and the job fails with it said in one sentence — the submit route refused it
+    # already, so getting here means the offered list changed under a queued job.
+    model = stages.resolve_generation_model(params.get("model"))
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     detail = _commission_detail(fixed, curriculum, instructions, think)
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
-        f"'{config.VARIANT_GENERATION_LLM}' sobre "
+        f"'{model}' sobre "
         + (", ".join(concepts) if concepts else "los conceptos más frecuentes del banco")
         + " — "
         + "; ".join(detail)
@@ -265,7 +270,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
 
     def remember(result, index: int) -> None:
         """Persist one accepted item and tell the screen which row it became."""
-        row_id = _remember_one(job, result, resolved_type.key, curriculum)
+        row_id = _remember_one(job, result, resolved_type.key, curriculum, model)
         if row_id is None:
             return
         saved_ids[index] = row_id
@@ -280,6 +285,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         curriculum=curriculum,
         instructions=instructions,
         think=think,
+        model=model,
         avoid=avoid,
         on_accepted=remember,
     )
@@ -303,6 +309,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         "requested": n,
         "produced": len(results),
         "item_type": resolved_type.key,
+        "model": model,
         "saved": len(saved_ids),
         "items": items,
     }
@@ -343,7 +350,9 @@ def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[s
     return texts
 
 
-def _remember_one(job: Job, result, item_type: str, curriculum: list[str] | None) -> int | None:
+def _remember_one(
+    job: Job, result, item_type: str, curriculum: list[str] | None, model: str
+) -> int | None:
     """Save one validated item with its commission, and return its row id or `None`.
 
     Its own short session, so a run cancelled after the third item keeps three rows.
@@ -369,6 +378,7 @@ def _remember_one(job: Job, result, item_type: str, curriculum: list[str] | None
                 fixed=params.get("fixed") or {},
                 instructions=params.get("instructions"),
                 think=bool(params.get("think", True)),
+                model=model,
                 thinking=result.thinking,
                 checks=result.checks,
             )

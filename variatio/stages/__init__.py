@@ -34,7 +34,12 @@ from .build import (
     build_models,
     build_phases,
 )
-from .generate import generate
+from .generate import (
+    UnofferedModelError,
+    generate,
+    generation_models,
+    resolve_generation_model,
+)
 from .index import (
     describe_concepts,
     load_concept_descriptions,
@@ -67,6 +72,7 @@ __all__ = [
     "TRANSCRIBE_PHASES",
     "MissingArtifactError",
     "PipelineContext",
+    "UnofferedModelError",
     "build_artifact",
     "build_exemplars_bank",
     "build_exemplars_profile",
@@ -80,6 +86,7 @@ __all__ = [
     "document_pages_listing",
     "exemplars_profile_path",
     "generate",
+    "generation_models",
     "initialize",
     "insert_document_page",
     "knowledge_graph_path",
@@ -87,6 +94,7 @@ __all__ = [
     "load_concept_sources",
     "load_content_context",
     "missing_artifacts",
+    "resolve_generation_model",
     "restamp_descriptions",
     "save_bank",
     "save_concept_descriptions",

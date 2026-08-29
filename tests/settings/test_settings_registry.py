@@ -6,6 +6,10 @@ DERIVED_ONLY = {
     "EMBEDDING_MODELS",
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
+    # Not a setting since 2026-08-29: the commission picks its writer out of
+    # `generation.models`, and this is the first of them — what the CLI, the study's arms
+    # and a request naming none are written with.
+    "VARIANT_GENERATION_LLM",
 }
 
 # An empty document prefix is qwen3-embedding's prescribed usage rather than an omission.
@@ -105,5 +109,9 @@ def test_the_registry_holds_what_this_work_transcribed():
     # to hand out, and its context window went with it (the phases share
     # `context_window.overrides`). 143 before THAT, when `builders.kg_relation_schema` was
     # retired: the relation vocabulary follows a workspace's own `prompt_language` now.
+    # Still 142 and still 114 named on 2026-08-29, and the swap is the point:
+    # `models.phases.variant_generation` left and `generation.models` arrived in its place,
+    # a list of what a commission may choose to be written with. The count moving would
+    # mean one of the two halves of that change did not land.
     assert len(REGISTRY) == 142
     assert len(BY_NAME) == 114

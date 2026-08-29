@@ -673,11 +673,19 @@ def delete_model(model: str) -> None:
 
 
 def required_models() -> dict[str, str]:
-    """The models the registry asks for, keyed by the setting that asks for them."""
+    """The models the registry asks for, keyed by the setting that asks for them.
+
+    The offered generation models are numbered rather than named: they are one setting
+    holding a list, and the key is what the delete guard prints when it refuses to remove
+    a model from the disk. The first of them is `VARIANT_GENERATION_LLM` as well.
+    """
     from ..settings.derived import PHASES
 
     names = ["GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
-    return {name: getattr(config, name) for name in names}
+    required = {name: getattr(config, name) for name in names}
+    for index, model in enumerate(config.GENERATION_MODELS):
+        required[f"GENERATION_MODELS[{index}]"] = str(model)
+    return required
 
 
 def ensure_models(models: list[str], label: str) -> None:

@@ -3,8 +3,9 @@
 Declares `auth.VIEW` for the whole router; promoting and deleting add `auth.EDIT`.
 
 Every validated item is a row carrying the commission that produced it — concepts,
-curriculum, fixed fields, extra instructions and whether the model deliberated — because
-a variant without its parameters can be read but neither judged nor reproduced.
+curriculum, fixed fields, extra instructions, which model wrote it and whether it
+deliberated — because a variant without its parameters can be read but neither judged nor
+reproduced.
 
 Two scopes, and the default is the narrow one: `mine` is what somebody looking for the
 exercise they wrote yesterday means, `workspace` is what a shared instance is for.
@@ -37,6 +38,9 @@ def _view(row: Generation, user, include_item: bool = True) -> dict:
         "fixed": dict(row.fixed or {}),
         "instructions": row.instructions or "",
         "think": bool(row.think),
+        # Null for every row written before a commission could choose its model: the
+        # screen says nothing rather than naming today's default, which did not write it.
+        "model": row.model or None,
         "author": {
             "id": row.user_id,
             "name": user.name if user is not None else None,

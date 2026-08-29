@@ -12,6 +12,7 @@ def base():
         "context_window.guardrail": 4096,
         "context_window.embedding": 4096,
         "context_window.overrides": 32768,
+        "generation.models": ["principal"],
     }
     for key in derived.PHASES:
         values[key] = "principal"
@@ -62,9 +63,28 @@ def test_a_model_no_phase_names_any_more_leaves_the_context():
     values = base()
     for key in derived.PHASES:
         values[key] = "otro-principal"
+    values["generation.models"] = ["otro-principal"]
     out = derived.derive(values)
     assert "otro-principal" in out["LLM_CONTEXT"]
     assert "principal" not in out["LLM_CONTEXT"]
+
+
+# The writer of a variant is the commission's since 2026-08-29, so it is not a phase model
+# any more: what the CLI, the study's arms and a request naming none get is the FIRST of
+# the offered list.
+def test_the_default_writer_is_the_first_model_offered():
+    values = base()
+    values["generation.models"] = ["el-primero", "el-segundo"]
+    assert derived.derive(values)["VARIANT_GENERATION_LLM"] == "el-primero"
+
+
+# Every offered model and not only the default: picking the second one would otherwise run
+# it at whatever context its Modelfile declares, which is the reservation this map caps.
+def test_every_offered_model_gets_the_overrides_window():
+    values = base()
+    values["generation.models"] = ["principal", "el-otro"]
+    out = derived.derive(values)
+    assert out["LLM_CONTEXT"]["el-otro"] == 32768
 
 
 def test_embedding_models_is_a_tuple_of_one():

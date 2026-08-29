@@ -16,7 +16,15 @@ from variatio import config
 from variatio.core import inference
 from variatio.settings import derived
 
-MODEL_SETTINGS = {"LLM_MAIN", "GUARDRAIL_LLM", "EMBEDDING_LLM", *derived.PHASES.values()}
+# `VARIANT_GENERATION_LLM` is derived rather than declared since the commission started
+# choosing its own writer, so it is named here beside the phases it stopped being one of.
+MODEL_SETTINGS = {
+    "LLM_MAIN",
+    "GUARDRAIL_LLM",
+    "EMBEDDING_LLM",
+    "VARIANT_GENERATION_LLM",
+    *derived.PHASES.values(),
+}
 
 BUILD_KINDS = ("build_profile", "build_kg", "build_bank")
 COMPONENT_KINDS = tuple(k for k in JOB_LABELS if k not in BUILD_KINDS)
@@ -98,6 +106,37 @@ def test_every_model_the_table_names_is_one_the_registry_declares():
     named = {name for names in lanes._COMPONENT_MODELS.values() for name in names}
     assert named
     assert named <= MODEL_SETTINGS
+
+
+# The writer of a variant is the commission's since 2026-08-29, and with one offered model
+# served remotely and another on the GPU that is the whole lane calculation of a generate
+# job: reading the installation's default instead would send it to wait behind the wrong
+# queue, or reserve a lane it never touches.
+def test_a_generate_job_reserves_the_lane_of_the_model_its_commission_names(hybrid, monkeypatch):
+    monkeypatch.setattr(config, "GENERATION_MODELS", ["remoto", "local-escritor"])
+    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
+    monkeypatch.setattr(config, "ADMISSIBILITY_LLM", "local-juez")
+    monkeypatch.setattr(config, "CONCEPT_TAGGER_LLM", "local-etiquetador")
+
+    assert lanes.models_for("generate", {"model": "local-escritor"})[0] == "local-escritor"
+    assert lanes.backends_for("generate", {"model": "local-escritor"}) == frozenset(
+        {lanes.LOCAL}
+    )
+    # Naming none is the default, which here is the remote one: both lanes, because the
+    # repair and the tagger stay on the GPU.
+    assert lanes.backends_for("generate", {}) == frozenset({lanes.LOCAL, lanes.REMOTE})
+    assert lanes.models_for("generate", {})[0] == "remoto"
+
+
+# A name the installation stopped offering is the submit route's 422, never a 500 here:
+# a lane calculation that raises turns a queueing problem into a broken button.
+def test_an_unoffered_model_falls_back_instead_of_raising(ollama, monkeypatch):
+    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-que-hay"])
+    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "el-que-hay")
+    assert lanes.models_for("generate", {"model": "el-que-ya-no"})[0] == "el-que-hay"
+    assert lanes.backends_for("generate", {"model": "el-que-ya-no"}) == frozenset(
+        {lanes.LOCAL}
+    )
 
 
 def test_transcribing_reserves_the_lane_of_the_model_that_reads_the_pages(ollama):

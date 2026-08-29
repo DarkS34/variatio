@@ -110,6 +110,62 @@ def test_each_validated_item_is_saved_as_it_arrives(make, stubbed, monkeypatch):
     assert saved == [{"index": 1, "id": rows[0].id}, {"index": 2, "id": rows[1].id}]
 
 
+# A statement without its parameters can be read but neither judged nor reproduced, and
+# since 2026-08-29 the model is one of them: the two on offer differ by minutes and by how
+# much they deliberate, so a row that does not name one cannot be read beside the next.
+def test_the_row_records_the_model_the_commission_chose(make, stubbed, monkeypatch):
+    monkeypatch.setattr(handlers.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
+
+    def fake_generate(context, **kwargs):
+        kwargs["on_accepted"](_variant("uno"), 1)
+        return [_variant("uno")]
+
+    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    job = Job(
+        kind="generate",
+        params={"n": 1, "concepts": ["Bucles"], "model": "el-lento"},
+        workspace="aula",
+    )
+    result, _, error = _run(job)
+
+    assert error is None
+    assert result["model"] == "el-lento"
+    assert [r.model for r in _rows(make)] == ["el-lento"]
+
+
+def test_a_commission_naming_no_model_records_the_default_one(make, stubbed, monkeypatch):
+    monkeypatch.setattr(handlers.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
+
+    def fake_generate(context, **kwargs):
+        kwargs["on_accepted"](_variant("uno"), 1)
+        return [_variant("uno")]
+
+    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    job = Job(kind="generate", params={"n": 1, "concepts": ["Bucles"]}, workspace="aula")
+    result, _, _ = _run(job)
+
+    assert result["model"] == "el-rapido"
+    assert [r.model for r in _rows(make)] == ["el-rapido"]
+
+
+# The submit route refused it already, so getting here means the offered list changed
+# under a job that was waiting: the job fails saying so instead of quietly running on
+# whatever the installation offers today.
+def test_a_model_that_stopped_being_offered_stops_the_job(make, stubbed, monkeypatch):
+    monkeypatch.setattr(handlers.config, "GENERATION_MODELS", ["el-que-hay"])
+    monkeypatch.setattr(handlers.stages, "generate", lambda *a, **k: pytest.fail("no llega"))
+    job = Job(
+        kind="generate",
+        params={"n": 1, "concepts": ["Bucles"], "model": "el-que-ya-no"},
+        workspace="aula",
+    )
+    result, _, error = _run(job)
+
+    assert result is None
+    assert isinstance(error, handlers.stages.UnofferedModelError)
+    assert _rows(make) == []
+
+
 def test_a_cancelled_run_keeps_what_it_validated(make, stubbed, monkeypatch):
     def fake_generate(context, **kwargs):
         kwargs["on_accepted"](_variant("uno"), 1)

@@ -3,6 +3,7 @@ import {
   BookPlus,
   Brain,
   Copy,
+  Cpu,
   Download,
   Library,
   Search,
@@ -20,6 +21,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/run/draft";
+import { modelLabel } from "@/features/run/models";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { fieldText } from "@/lib/fields";
 import { when } from "@/lib/format";
@@ -269,6 +271,15 @@ function GenerationCard({
             <Badge variant="secondary" className="gap-1">
               <Brain className="size-3" />
               {t("generations.reasoned")}
+            </Badge>
+          ) : null}
+          {/* The model that WROTE it, and only when the row records one: a variant from
+              before the commission could choose carries null, and naming today's default
+              would be attributing it to a model that never saw the prompt. */}
+          {row.model ? (
+            <Badge variant="outline" className="gap-1" title={row.model}>
+              <Cpu className="size-3" />
+              {modelLabel(row.model)}
             </Badge>
           ) : null}
           <span className="text-small text-muted-foreground">

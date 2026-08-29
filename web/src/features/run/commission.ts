@@ -30,6 +30,11 @@ export interface FormState {
   think: boolean;
   /** Only counts with `think` on; what the engine receives as reasoning effort. */
   effort: EffortLevel;
+  /** Which offered model writes it. Null is «el de por defecto», which is the first one
+   *  the installation offers — the form does not know that list, so it never resolves it
+   *  here and the server does. Only the "generate" variant sets it: a comparison measures
+   *  architectures, and its three arms are fixed. */
+  model: string | null;
 }
 
 export const EMPTY_FORM: FormState = {
@@ -43,6 +48,7 @@ export const EMPTY_FORM: FormState = {
   instructions: "",
   think: true,
   effort: "low",
+  model: null,
 };
 
 export function toParams(state: FormState): GenerateParams {
@@ -54,6 +60,9 @@ export function toParams(state: FormState): GenerateParams {
     think: state.think ? state.effort : false,
   };
   if (state.itemType) params.item_type = state.itemType;
+  // Absent means the default, exactly as it does for the curriculum: what a run RECORDS is
+  // the model that wrote it, resolved server-side, and never the one the form guessed.
+  if (state.model) params.model = state.model;
   const fixed: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(state.decisions)) {
     if (value === undefined || value === null) continue;
@@ -94,6 +103,7 @@ export function fromParams(params: Record<string, unknown>): FormState {
     decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },
     instructions: (params.instructions as string) ?? "",
     think: params.think !== false,
+    model: typeof params.model === "string" && params.model ? params.model : null,
     effort:
       typeof params.think === "string" && EFFORT_ORDER.includes(params.think as EffortLevel)
         ? (params.think as EffortLevel)

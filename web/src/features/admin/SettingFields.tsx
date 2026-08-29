@@ -10,6 +10,7 @@ import { Alert, Checkbox, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
+import { familyOf } from "@/features/run/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
 import type {
   ConfigImpact,
@@ -302,6 +303,121 @@ export function CerebrasModelsField({
   );
 }
 
+/**
+ * Which models a commission may be written with, and which of them is the default.
+ *
+ * A list and not a single model since 2026-08-29: what a variant is written with stopped
+ * being the installation's decision and became the person's, because the difference
+ * between the two on offer is minutes of waiting against how much the model deliberates —
+ * which is the trade-off of whoever is asking for the exercise, not of whoever administers
+ * the machine. What stays here is the SHORTLIST.
+ *
+ * ORDER IS MEANING: the first one is what everything that does not choose is written with
+ * — the CLI, the study's three arms and any request naming none — so the chosen ones are
+ * listed first, in their stored order, and «Poner primero» is how that is edited. Checking
+ * one appends it; a list of one is legal and simply hides the chooser on the generate
+ * screen.
+ */
+export function GenerationModelsField({
+  id,
+  label,
+  value,
+  disabled,
+  models,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: unknown;
+  disabled: boolean;
+  models: ConfigPayload["models"] | null;
+  onChange: (next: unknown) => void;
+}) {
+  const { t } = useT();
+  const selected = Array.isArray(value) ? value.map(String) : [];
+  const installed = models?.installed ?? [];
+  const residentVram = new Map((models?.running ?? []).map((m) => [m.model, m.size_vram]));
+  // The chosen ones first, in the order they are offered in; then whatever else the engine
+  // can serve. A name in neither is one the engine does not have, and it is kept visible:
+  // dropping it would silently un-offer it on the next save.
+  const rest = installed.map((m) => m.model).filter((m) => !selected.includes(m));
+  const rows = [...selected, ...rest];
+  const known = new Map(installed.map((m) => [m.model, m]));
+
+  const toggle = (model: string, next: boolean) =>
+    onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
+  const promote = (model: string) =>
+    onChange([model, ...selected.filter((name) => name !== model)]);
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-body" id={id}>
+        {label}
+      </span>
+      <ul aria-labelledby={id} className="space-y-1.5">
+        {rows.map((model) => {
+          const info = known.get(model);
+          const chosen = selected.includes(model);
+          const family = familyOf(model);
+          const vram = residentVram.get(model);
+          return (
+            <li
+              key={model}
+              className={cn(
+                "flex flex-wrap items-center gap-x-2 gap-y-1 border p-2",
+                chosen ? "border-primary bg-primary/5" : "border-border",
+              )}
+            >
+              <Checkbox
+                checked={chosen}
+                disabled={disabled}
+                onCheckedChange={(next) => toggle(model, next)}
+                label={t("cfg.offered.offer", { model })}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-body font-medium">{family.label || model}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">{model}</span>
+                </span>
+                {family.blurbKey ? (
+                  <span className="mt-0.5 block text-small text-muted-foreground">
+                    {t(family.blurbKey)}
+                  </span>
+                ) : null}
+              </span>
+              {chosen && model === selected[0] ? (
+                <Badge variant="secondary">{t("cfg.offered.default")}</Badge>
+              ) : null}
+              {info?.remote ? <Badge variant="outline">{t("cfg.offered.remote")}</Badge> : null}
+              {!info ? <Badge variant="outline">{t("cfg.offered.absent")}</Badge> : null}
+              {vram ? (
+                <span className="text-small nums text-muted-foreground">{bytes(vram)}</span>
+              ) : null}
+              {chosen && model !== selected[0] ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => promote(model)}
+                >
+                  {t("cfg.offered.makeDefault")}
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {selected.length === 0 ? (
+        <p className="text-small text-destructive">{t("cfg.offered.none")}</p>
+      ) : null}
+      <p className="text-small text-muted-foreground">
+        {installed.length === 0 ? t("cfg.noEngineList") : t("cfg.offered.hint")}
+      </p>
+    </div>
+  );
+}
+
+
 export function SettingRow({
   setting,
   value,
@@ -346,6 +462,15 @@ export function SettingRow({
                 label={label}
               />
             </div>
+          ) : setting.key === "generation.models" ? (
+            <GenerationModelsField
+              id={id}
+              label={label}
+              value={value}
+              disabled={disabled}
+              models={models}
+              onChange={onChange}
+            />
           ) : setting.key === "engine.cerebras_models" ? (
             <CerebrasModelsField
               id={id}

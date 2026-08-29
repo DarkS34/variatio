@@ -61,8 +61,11 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     "index": ("DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
     "tag": ("CONCEPT_TAGGER_LLM", "DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
     "review_taggability": ("KG_TAGGABLE_MODEL", "REPAIR_LLM"),
+    # The writer is deliberately absent: a generate job runs the model its COMMISSION
+    # chose, which `models_for` puts at the head of this list. Naming the installation's
+    # default here as well would reserve its lane too, and with one offered model served
+    # remotely and another on the GPU that is a lane the job never touches.
     "generate": (
-        "VARIANT_GENERATION_LLM",
         "ADMISSIBILITY_LLM",
         "CONCEPT_TAGGER_LLM",
         "DESCRIPTION_GENERATION_LLM",
@@ -92,8 +95,25 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
     else:
         models = [getattr(config, name, None) for name in _COMPONENT_MODELS.get(kind, ())]
 
+    if kind == "generate":
+        models = [_writer(params), *models]
+
     excluded = _excluded()
     return [m for m in dict.fromkeys(models) if m and m not in excluded]
+
+
+def _writer(params: dict | None) -> str:
+    """Return the model a generate commission will be written with.
+
+    An unoffered name is not this module's error to raise — the submit route already
+    refused it, and a lane calculation that raises turns a queueing problem into a 500.
+    The default is what the job would fall back to anyway.
+    """
+    requested = (params or {}).get("model")
+    try:
+        return stages.resolve_generation_model(requested if isinstance(requested, str) else None)
+    except stages.UnofferedModelError:
+        return config.VARIANT_GENERATION_LLM
 
 
 def _remote_models() -> frozenset[str]:

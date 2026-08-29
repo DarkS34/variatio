@@ -39,6 +39,7 @@ def save_generation(
     instructions: str | None,
     think: bool,
     thinking: str | None,
+    model: str | None = None,
     checks: dict | None = None,
 ) -> Generation:
     """Insert one validated item with the commission that produced it.
@@ -57,6 +58,7 @@ def save_generation(
         fixed=dict(fixed or {}),
         instructions=instructions or None,
         think=bool(think),
+        model=model or None,
         item=item,
         thinking=thinking or None,
         checks=checks or None,

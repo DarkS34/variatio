@@ -327,9 +327,12 @@ class Generation(Base):
     A run of `n=5` is five things to read back, and the reason to keep them is that
     generating one costs a minute of GPU nobody wants to pay twice. `item` is JSON rather
     than columns because its shape is the exemplars profile's, which the user edits: a
-    variant has to survive the schema that made it. `user_id` is `SET NULL` and not
-    `CASCADE`, because deleting an account must not silently delete the material a course
-    was built on. The workspace is what cascades.
+    variant has to survive the schema that made it. `model` is the one that WROTE it, never
+    the one the installation offers today: since 2026-08-29 the commission chooses, and the
+    models on offer differ by minutes and by how much they deliberate, so a row that does
+    not name one cannot be read beside the next — NULL is every row written before that.
+    `user_id` is `SET NULL` and not `CASCADE`, because deleting an account must not
+    silently delete the material a course was built on. The workspace is what cascades.
     """
 
     __tablename__ = "generations"
@@ -352,6 +355,7 @@ class Generation(Base):
     fixed: Mapped[dict] = mapped_column(Json, default=dict)
     instructions: Mapped[str | None] = mapped_column(Text, default=None)
     think: Mapped[bool] = mapped_column(Boolean, default=True)
+    model: Mapped[str | None] = mapped_column(String(128), default=None)
     item: Mapped[dict] = mapped_column(Json, default=dict)
     thinking: Mapped[str | None] = mapped_column(Text, default=None)
     checks: Mapped[dict | None] = mapped_column(Json, default=None)
