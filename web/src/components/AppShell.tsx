@@ -157,13 +157,19 @@ function NavRule() {
 /**
  * The four blocks, once, rendered in one of two places.
  *
- * Above `lg` it sits on the header's centre line, between the two flanks. Below it, the
+ * Above `xl` it sits on the header's centre line, between the two flanks. Below it, the
  * flanks alone fill the row — a workspace name plus an avatar is already most of a phone's
  * width — so the same navigation moves to a line of its own underneath and scrolls
  * sideways there. What it deliberately does NOT do is collapse into a menu: the rail IS
  * the state of the chain, and hiding it behind a button hides the one thing this bar is
  * for. A strip you can push with a thumb keeps it readable at 360 px and identical at
  * 1600.
+ *
+ * `xl` and not `lg`, because at `lg` it does not fit. Measured with the switcher at its
+ * `max-w-44` cap: the row needs 1194 px in Spanish and 1196 in English, so between 1024 and
+ * ~1195 the inline nav either painted over the flanks or — once they stopped collapsing —
+ * had «Generar» clipped mid-word with no scrollbar to say so. 1280 leaves 85 px of slack,
+ * which is what absorbs a language whose labels are longer.
  */
 function MainNav({
   path,
@@ -335,14 +341,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             always the same width and the nav lands on the centre line of the header
             whatever they contain.
             The nav keeps its own scroll for the narrow case, and it is the only item that
-            can shrink: a flank with `basis-0` has a shrink weight of zero, so the squeeze
-            lands where there is a scroller to absorb it. */}
+            may shrink: a flank with `basis-0` absorbs no negative free space, so the
+            squeeze lands where there is a scroller to absorb it.
+            The flanks carry NO `min-w-0`, and that is the load-bearing half. `flex-1`
+            makes them grow into whatever the nav leaves, and with `min-width: 0` they
+            grow to nothing and their contents simply paint OUTSIDE the box — measured
+            between 1024 and 1152 px, «Panel» was drawn on top of the workspace name and
+            «Evaluar» on top of «Mis variantes». Letting `min-width: auto` stand holds each
+            flank at its own min-content, which is bounded: the lockup is fixed, the
+            switcher is `max-w-44` and truncates. */}
         <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
           {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
               Side by side with only a gap between, the workspace name read as part of the
               product's own name. The lockup itself is `ui/logo.tsx`'s, and `compact` is
               what drops the wordmark below `lg`. */}
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-2 sm:gap-3">
+          <div className="flex flex-1 basis-0 items-center gap-2 sm:gap-3">
             <Link
               to="/"
               aria-label="Variatio" // i18n-exempt: es el nombre del producto
@@ -361,10 +374,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             stages={stages}
             locked={locked}
             rawWaiting={rawWaiting}
-            className="hidden lg:flex"
+            className="hidden xl:flex"
           />
 
-          <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
+          <div className="flex flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
             {/* THE LOG GAVE THIS CORNER UP TO «Mis variantes» (2026-08-28, explicit user
                 request), and nothing was lost by it: the log is diagnostics and is already
                 one press away in the floating «Ver ejecución» pill, WITH its unread count,
@@ -402,7 +415,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           stages={stages}
           locked={locked}
           rawWaiting={rawWaiting}
-          className="flex border-t border-border px-3 py-1.5 lg:hidden"
+          className="flex border-t border-border px-3 py-1.5 xl:hidden"
         />
 
         {/* Whoever is seeing this while the door is closed is the account that closed it —
