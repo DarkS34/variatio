@@ -51,8 +51,6 @@ def build_models() -> list[str]:
 class ExemplarsBankBuilder:
     """Reads the raw exemplars documents into the bank, one document at a time."""
 
-    ID_RE = re.compile(r"^C(\d+)$")
-
     def __init__(
         self,
         exemplars_profile: ExemplarsProfile,
@@ -127,9 +125,17 @@ class ExemplarsBankBuilder:
         self,
         input_dir: str,
         output_file_path: str,
+        working_file_path: str | Path,
         on_items: Callable[[dict, list[str]], dict] | None = None,
     ) -> dict[str, dict]:
-        """Read every document into the bank, checkpointing after each one, and return it.
+        """Read every document into a NEW bank and, once it is whole, put it in place.
+
+        Every checkpoint goes to `working_file_path` and the artifact is written once, at the
+        end. A build reads every document again, so anything already in the bank could only
+        come back out of them a second time — checkpointing into the artifact itself is what
+        piled one extraction on top of the previous one — and until this build finishes, what
+        the workspace has is still the bank it had. Cancelling loses the run, tagging
+        included, and keeps that bank.
 
         `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
         whole bank right after a document's items are written and returns that same bank
@@ -143,62 +149,77 @@ class ExemplarsBankBuilder:
             logger.error(f"No supported document in {input_dir}")
             return {}
 
-        bank = self._load_existing(output_file_path)
-        self._id_counter = self._max_id(bank)
-        logger.info(f"{len(files)} document(s); starting at C{self._id_counter + 1:03d}")
+        working = Path(working_file_path)
+        # Whatever a build that died left behind. The worker is killed five seconds after a
+        # cancel, so its own cleanup is the exception and not the rule, and resuming from
+        # half a bank would only extract every document over it again.
+        working.unlink(missing_ok=True)
 
-        text_by_file = self._convert(files)
+        bank: dict[str, dict] = {}
+        self._id_counter = 0
+        logger.info(f"{len(files)} document(s) to read")
 
-        progress.phase("extract", f"0/{len(files)} documento(s)")
-        with progress.step(
-            "extract", "Extrayendo y etiquetando los ítems", len(files)
-        ) as reporter:
-            for idx, file_path in enumerate(files, 1):
-                progress.checkpoint()
-                tag = f"[{idx}/{len(files)} {file_path.name}]"
-                reporter.tick(idx, detail=file_path.name)
-                progress.advance(
-                    (idx - 1) / len(files),
-                    f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
-                )
-                try:
-                    new_items = self._process_file(
-                        file_path, text_by_file.get(file_path, ""), tag=tag
-                    )
-                except progress.Cancelled:
-                    raise
-                except Exception as e:
-                    logger.exception(f"{tag} skipped: {e}")
-                    continue
+        try:
+            text_by_file = self._convert(files)
 
-                if not new_items:
-                    logger.warning(f"{tag} produced no item")
-                    continue
-
-                bank.update(new_items)
-                write_json(output_file_path, bank)
-                logger.success(f"{tag} +{len(new_items)} item(s); {len(bank)} in total")
-                progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
-
-                if on_items is not None:
-                    # Half a phase per document — extracting the first half, tagging the
-                    # second — so the bar moves within a document and not only between two.
+            progress.phase("extract", f"0/{len(files)} documento(s)")
+            with progress.step(
+                "extract", "Extrayendo y etiquetando los ítems", len(files)
+            ) as reporter:
+                for idx, file_path in enumerate(files, 1):
+                    progress.checkpoint()
+                    tag = f"[{idx}/{len(files)} {file_path.name}]"
+                    reporter.tick(idx, detail=file_path.name)
                     progress.advance(
-                        (idx - 0.5) / len(files),
-                        f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
-                        f"{len(new_items)} ítem(s)",
+                        (idx - 1) / len(files),
+                        f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
                     )
                     try:
-                        bank = on_items(bank, list(new_items))
+                        new_items = self._process_file(
+                            file_path, text_by_file.get(file_path, ""), tag=tag
+                        )
                     except progress.Cancelled:
                         raise
                     except Exception as e:
-                        logger.exception(f"{tag} could not be tagged: {e}")
-                    else:
-                        write_json(output_file_path, bank)
-                        progress.emit(
-                            "artifact.progress", name="exemplars_bank", count=len(bank)
+                        logger.exception(f"{tag} skipped: {e}")
+                        continue
+
+                    if not new_items:
+                        logger.warning(f"{tag} produced no item")
+                        continue
+
+                    bank.update(new_items)
+                    write_json(working, bank)
+                    logger.success(f"{tag} +{len(new_items)} item(s); {len(bank)} in total")
+                    progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
+
+                    if on_items is not None:
+                        # Half a phase per document — extracting the first half, tagging the
+                        # second — so the bar moves within a document and not only between two.
+                        progress.advance(
+                            (idx - 0.5) / len(files),
+                            f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
+                            f"{len(new_items)} ítem(s)",
                         )
+                        try:
+                            bank = on_items(bank, list(new_items))
+                        except progress.Cancelled:
+                            raise
+                        except Exception as e:
+                            logger.exception(f"{tag} could not be tagged: {e}")
+                        else:
+                            write_json(working, bank)
+                            progress.emit(
+                                "artifact.progress", name="exemplars_bank", count=len(bank)
+                            )
+
+            # An extraction that produced nothing may not replace what is there: `stages`
+            # turns it into an error, and the bank the workspace already had is what its
+            # screen goes back to.
+            if bank:
+                write_json(output_file_path, bank)
+        finally:
+            working.unlink(missing_ok=True)
 
         progress.advance(1.0, f"{len(bank)} ítem(s)")
         logger.success(f"Bank finished: {len(bank)} item(s) in {Path(output_file_path).name}")
@@ -415,23 +436,3 @@ class ExemplarsBankBuilder:
         """Claim the next `C###` identifier."""
         self._id_counter += 1
         return f"C{self._id_counter:03d}"
-
-    @classmethod
-    def _max_id(cls, bank: dict) -> int:
-        """The highest `C###` number an existing bank holds, `0` when it holds none."""
-        return max(
-            (int(m.group(1)) for k in bank if (m := cls.ID_RE.match(k))),
-            default=0,
-        )
-
-    @staticmethod
-    def _load_existing(path: str) -> dict:
-        """Read the bank already on disk, starting from scratch when it cannot be read."""
-        p = Path(path)
-        if not p.exists():
-            return {}
-        try:
-            return json.loads(p.read_text(encoding="utf-8"))
-        except Exception as e:
-            logger.warning(f"Could not read the existing bank {path} ({e}); starting from scratch")
-            return {}

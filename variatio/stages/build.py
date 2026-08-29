@@ -5,6 +5,8 @@ other import path. A build writes exactly one artifact, and always the `_autogen
 one: curating it is a separate, manual act.
 """
 
+from pathlib import Path
+
 from loguru import logger
 
 from ..builders import (
@@ -68,18 +70,23 @@ def build_exemplars_bank(
     ).build(
         ws.raw_exemplars_dir,
         ws.exemplars_bank_path,
-        on_items=_tagging_hook(ws, exemplars_profile),
+        ws.exemplars_bank_building_path,
+        on_items=_tagging_hook(ws, exemplars_profile, ws.exemplars_bank_building_path),
     )
     if not bank:
         raise RuntimeError(f"Could not build an exemplars bank from {ws.raw_exemplars_dir}")
     return bank
 
 
-def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
+def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile, path: Path):
     """Return the callback that tags each freshly extracted document, or None.
 
     Without a graph there is nothing to tag with, and that is not an error: the bank is
     extracted anyway and stays pending for `stages.tag_bank`.
+
+    `path` is the file the build is writing, which is not the artifact: the tags land where
+    the items they belong to are, and reach `exemplars_bank.json` when the build promotes
+    what it has made.
     """
     kg_path = _artifacts.knowledge_graph_path(ws)
     if kg_path is None:
@@ -113,14 +120,14 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile):
         working = dict(bank)
 
         def checkpoint(item_id: str, item: dict) -> None:
-            """Persist after every item, so cancelling keeps every decision taken."""
+            """Persist after every item, so a document's tags are never half in memory."""
             working[item_id] = item
-            write_json(ws.exemplars_bank_path, working)
+            write_json(path, working)
 
         try:
             return tagger.tag_all(bank, ids=new_ids, on_item=checkpoint)
         except BaseException:
-            write_json(ws.exemplars_bank_path, working)
+            write_json(path, working)
             raise
 
     return annotate

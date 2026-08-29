@@ -42,8 +42,16 @@ class BankError(ValueError):
 
 
 def _load_bank(ws: Workspace) -> dict:
-    """Read the bank. Raises BankError when the workspace has none yet."""
-    bank = storage.read_json(ws.exemplars_bank_path)
+    """Read the bank. Raises BankError when the workspace has none yet.
+
+    While a build runs this is the bank being WRITTEN and not the one it is going to
+    replace: the live panel polls this listing to show what is coming out, and a
+    re-extraction discards everything already on disk. That file exists for exactly as long
+    as the build does, so outside one there is nothing to prefer.
+    """
+    bank = storage.read_json(ws.exemplars_bank_building_path)
+    if bank is None:
+        bank = storage.read_json(ws.exemplars_bank_path)
     if bank is None:
         raise BankError("Todavía no hay banco de ejemplos")
     return bank
@@ -211,7 +219,16 @@ def coverage(ws: Workspace) -> dict:
 
 
 def _persist(ws: Workspace, bank: dict, note: str) -> dict:
-    """Write the bank, reopen its review and drop the cached context."""
+    """Write the bank, reopen its review and drop the cached context.
+
+    Refused while a build is writing one: what `_load_bank` reads then is the bank being
+    made, and saving it here would put half a build in place of the artifact — and would be
+    thrown away by the promotion regardless.
+    """
+    if ws.exemplars_bank_building_path.is_file():
+        raise BankError(
+            "El banco se está reconstruyendo: espera a que termine para editarlo"
+        )
     storage.write_json(ws.exemplars_bank_path, bank, ws=ws, artifact=ARTIFACT)
     review.ReviewState(ws).invalidate(ARTIFACT)
     deps.invalidate(ws.slug, note)

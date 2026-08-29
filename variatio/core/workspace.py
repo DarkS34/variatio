@@ -164,6 +164,18 @@ class Workspace:
         return self.instance_dir / ".review_state.json"
 
     @property
+    def exemplars_bank_building_path(self) -> Path:
+        """The bank a build is writing, until it finishes and replaces the one in use.
+
+        Host state and not an artifact: it exists only while a bank build runs, and it is
+        what keeps that build from touching `exemplars_bank.json` until it has something
+        whole to put there. Checkpointing into the artifact itself is what made a
+        re-extraction pile its items on top of the previous bank and left a cancelled one
+        with half of each.
+        """
+        return self.instance_dir / ".exemplars_bank.building.json"
+
+    @property
     def curriculum_path(self) -> Path:
         """The concepts this instance considers covered.
 
