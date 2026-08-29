@@ -9,6 +9,7 @@ __pycache__
 web/node_modules
 web/dist
 web/tsconfig.tsbuildinfo
+.pytest_cache
 
 /workspaces/
 /.cerebras_budget.json

@@ -10,6 +10,7 @@
     "cerebras_max_requests_day": 700000,
     "cerebras_max_tokens_day": 320000000,
     "cerebras_max_wait_seconds": 90,
+    "cerebras_max_concurrent_jobs": 4,
     "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
     "idle_unload_poll_seconds": 60
@@ -127,7 +128,7 @@
           "kg_context": "gemma-4-31b",
           "description_generation": "gemma-4-31b",
           "concept_tagger": "gemma-4-31b",
-          "variant_generation": "qwen3.8:27b-q8_0",
+          "variant_generation": "gemma-4-31b",
           "repair": "gemma-4-31b",
           "admissibility": "gemma-4-31b"
         }
