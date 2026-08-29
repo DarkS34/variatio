@@ -11,7 +11,7 @@ import { useT } from "@/lib/i18n";
  * The same window, fed by the tagger instead of by the extractor.
  *
  * Here it cannot be the file: re-tagging rewrites labels on items that were already there,
- * so `order=recent` returns the very same eight rows from beginning to end and nothing would
+ * so `order=recent` returns the very same ten rows from beginning to end and nothing would
  * ever slide. What moves is the ORDER THE TAGGER WORKS IN, and only the event stream knows
  * it — one `item.tagged` per decision, newest on top, which is the same reading as the
  * build's feed. The buffer is the run's own, so a browser reloaded mid-run replays it.

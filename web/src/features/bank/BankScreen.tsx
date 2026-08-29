@@ -522,7 +522,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // Re-tagging puts the bank into «building» like a rebuild does, so StageGate hides the
   // whole screen and only the live preview survives. What belongs there is NOT the file
   // — re-tagging rewrites labels on the same items, so `order=recent` returns the
-  // same eight rows from beginning to end — but the order the tagger works in, which
+  // same ten rows from beginning to end — but the order the tagger works in, which
   // only the event stream knows.
   const tagRun = useJobRun("tag");
   const tagStatus = tagRun?.job?.status;

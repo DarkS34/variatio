@@ -20,8 +20,12 @@ import { useT } from "@/lib/i18n";
  * It is asked over REST and not through the event stream on purpose: a long build overruns
  * the event buffer, so a browser reloaded halfway would be left with nothing; the file, on
  * the other hand, is always there. And it comes sorted by id descending, which is the
- * extraction order reversed: the last thing written, on top — which is what makes the
- * window slide as the extractor works.
+ * extraction order reversed: the last thing written, on top.
+ *
+ * What that costs is the movement, and `useSlidingWindow` is what pays it back: a document
+ * is written in ONE go, so every poll that lands one brings a whole burst, and the window
+ * lets it in a row at a time. The feed therefore trails the file by a tick per row while it
+ * catches up; the count in the corner is read from the file itself and does not.
  */
 export function BankLive() {
   const { t } = useT();
