@@ -26,6 +26,33 @@ REMOTE = "remote"
 
 BACKENDS = (LOCAL, REMOTE)
 
+# How many jobs a lane holds at once, and the two answers are not the same kind of answer.
+#
+# Local is one and is not a setting: the GPU is one, and the whole reason this queue exists
+# is that two jobs on it would do nothing but swap weights.
+#
+# Remote is a number, because what is scarce there is not a machine but a rolling quota —
+# and the quota is already administered call by call, in `core/cerebras_budget.py`, where
+# each call books its room in the ledger before it goes out. So two remote jobs do not
+# spend more than the same two run one after the other; they only stop waiting for each
+# other. With 1 the second person to ask for something waits for the first with no machine
+# busy anywhere, which is what this capacity exists to end.
+LOCAL_CAPACITY = 1
+
+
+def capacity(backend: str) -> int:
+    """How many jobs may hold this lane at once. Read live: the panel changes it hot."""
+    if backend != REMOTE:
+        return LOCAL_CAPACITY
+    try:
+        return max(1, int(config.CEREBRAS_MAX_CONCURRENT_JOBS))
+    except (AttributeError, TypeError, ValueError):
+        return 1
+
+
+def capacities() -> dict[str, int]:
+    return {backend: capacity(backend) for backend in BACKENDS}
+
 # A build's models are the builder's own declaration, so the phases and the lane cannot
 # drift apart: `stages.build_models` is the same list the builder checks before it starts.
 _BUILD_ARTIFACT = {

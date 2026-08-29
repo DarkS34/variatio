@@ -4,6 +4,12 @@ The rule the payload has to keep is the old one, now said twice: the machine is 
 globally — a lane is busy, and with what — while everything about *your* work is scoped to
 your workspace. So `busy` and `label` speak about another instance's job and `mine`,
 `queued` and `ahead` never do.
+
+`busy` means the lane is FULL and not that something is running on it: it is what every
+reader turns into «lo tuyo va a esperar», and on a remote lane with room to spare a third
+job waits for nothing. `running` and `capacity` are what report the activity itself. The
+stand pins the remote capacity at 1 unless a test says otherwise, so the two readings
+coincide and every rule below is the one the single-engine installation already had.
 """
 
 import threading
@@ -17,6 +23,7 @@ from server.jobs import lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.routers.pipeline import pipeline_payload
+from variatio import config
 
 LOCAL = lanes.LOCAL
 REMOTE = lanes.REMOTE
@@ -33,6 +40,7 @@ RESERVATIONS = {"local": {LOCAL}, "remoto": {REMOTE}}
 @pytest.fixture
 def stand(monkeypatch):
     monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
+    monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", 1, raising=False)
     monkeypatch.setattr(runtime, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
     monkeypatch.setattr(
         lanes,
@@ -78,9 +86,10 @@ def test_an_idle_installation_reports_both_lanes_free(stand):
         "engine_busy_elsewhere",
         "lanes",
     }
+    free = {"busy": False, "running": 0, "mine": False, "label": None, "queued": 0, "ahead": None}
     assert payload["lanes"] == {
-        LOCAL: {"busy": False, "mine": False, "label": None, "queued": 0, "ahead": None},
-        REMOTE: {"busy": False, "mine": False, "label": None, "queued": 0, "ahead": None},
+        LOCAL: {**free, "capacity": 1},
+        REMOTE: {**free, "capacity": 1},
     }
     assert payload["engine_busy"] is False
     assert payload["queue_length"] == 0
@@ -141,6 +150,36 @@ def test_a_job_on_the_free_lane_is_not_reported_as_waiting(stand):
     # Both lanes are busy and one of them is somebody else's.
     assert payload["engine_busy"] is True
     assert payload["engine_busy_elsewhere"] is True
+
+
+# CAPACITY --------------------------------------------------------------------------------
+
+
+def test_a_lane_with_room_left_is_not_reported_as_busy(stand, monkeypatch):
+    monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", 2, raising=False)
+    stand.runner.submit("remoto", {}, workspace="taller")
+    _wait(stand.started["remoto"])
+
+    payload = pipeline_payload(_access("aula"))
+    lane = payload["lanes"][REMOTE]
+    # Something IS running there, and it is somebody else's — but a job of mine would start
+    # at once, so announcing a wait would be announcing one that is not going to happen.
+    assert lane["running"] == 1
+    assert lane["capacity"] == 2
+    assert lane["label"] == "remoto"
+    assert lane["busy"] is False
+    assert payload["engine_busy"] is False
+    assert payload["engine_busy_elsewhere"] is False
+
+
+def test_what_is_ahead_counts_the_room_the_lane_has(stand, monkeypatch):
+    monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", 2, raising=False)
+    stand.runner.submit("remoto", {}, workspace="taller")
+    _wait(stand.started["remoto"])
+    stand.runner.submit("remoto", {}, workspace="aula")
+
+    # One holder, one of mine queued, two slots: nothing has to finish first.
+    assert pipeline_payload(_access("aula"))["lanes"][REMOTE]["ahead"] == 0
 
 
 def test_the_serialised_job_carries_its_lanes_and_its_place(stand):

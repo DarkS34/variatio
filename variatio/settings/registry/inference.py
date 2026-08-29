@@ -417,6 +417,29 @@ horas no es esperar — es un build colgado sin explicación. La espera es cance
 respondiendo mientras se aguanta.""",
     ),
     Setting(
+        key="engine.cerebras_max_concurrent_jobs",
+        name="CEREBRAS_MAX_CONCURRENT_JOBS",
+        kind="int",
+        default=4,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos trabajos pueden usar Cerebras A LA VEZ. El carril local sigue siendo de uno y no
+es ajustable: la GPU es una, y dos trabajos encima no harían más que intercambiarse pesos.
+
+Aquí lo escaso es otra cosa. Cerebras no es una máquina que haya que repartir, es una cuota
+rodante, y de esa cuota ya se encarga el limitador llamada a llamada: cada llamada reserva
+su hueco en el libro antes de salir, así que dos trabajos en paralelo no gastan más que dos
+trabajos seguidos — solo dejan de esperarse el uno al otro. Con 1 aquí, la segunda persona
+que pide algo espera a que termine la primera sin que ninguna máquina esté ocupada.
+
+Subirlo no aumenta el presupuesto ni acelera un build: los cuatro CEREBRAS_MAX_* siguen
+mandando, y con la cuota llena lo que pasa es que esperan varias llamadas en vez de una. Lo
+que compra es que varias personas trabajen a la vez.
+
+No hace falta reiniciar nada: se lee cada vez que la cola mira si algo puede empezar.""",
+    ),
+    Setting(
         key="engine.ollama_host",
         name="OLLAMA_HOST",
         kind="str",

@@ -1374,10 +1374,14 @@ function Runs() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.runs")}>
         <p>
-          Jobs queue <strong>per engine</strong>: two that need the same one wait for each other,
-          while a local job and a remote one run at the same time because they contend for
-          nothing. You can close the tab: the job runs on the server and you find it where it was
-          when you come back. What is being done is watched from the{" "}
+          Jobs queue <strong>per engine</strong>, and each engine has its own room. The local one
+          holds a single job: the GPU is one, and two jobs on it would do nothing but swap
+          weights. The remote one holds <strong>several at once</strong>, because what is shared
+          there is not a machine but a quota, and the quota is administered call by call by the
+          throttle — so two people can generate against Cerebras at the same time without waiting
+          for each other. A local job and a remote one never wait for each other either. You can
+          close the tab: the job runs on the server and you find it where it was when you come
+          back. What is being done is watched from the{" "}
           <strong>{t("nav.dashboard")}</strong> and from the run drawer.
         </p>
       </SectionHead>

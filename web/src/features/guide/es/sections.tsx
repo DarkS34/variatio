@@ -1350,8 +1350,12 @@ function Runs() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.runs")}>
         <p>
-          Los trabajos hacen cola <strong>por motor</strong>: dos que necesiten el mismo se
-          esperan, y uno local y otro remoto corren a la vez porque no se disputan nada. Puedes
+          Los trabajos hacen cola <strong>por motor</strong>, y cada motor tiene su sitio. En el
+          local cabe uno: la GPU es una, y dos trabajos encima no harían más que intercambiarse
+          pesos. En el remoto caben <strong>varios a la vez</strong>, porque allí lo que se
+          reparte no es una máquina sino una cuota, y de la cuota se encarga el limitador
+          llamada a llamada — así que dos personas pueden generar contra Cerebras al mismo
+          tiempo sin esperarse. Un trabajo local y otro remoto nunca se esperan entre sí. Puedes
           cerrar la pestaña: el trabajo corre en el servidor y al volver lo encuentras donde
           estaba. Lo que se está haciendo se mira desde el <strong>{t("nav.dashboard")}</strong>{" "}
           y desde el cajón de ejecución.

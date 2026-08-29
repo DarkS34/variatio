@@ -21,7 +21,20 @@ import {
 const ES = translator("es");
 
 function lane(partial: Partial<LaneState> = {}): LaneState {
-  return { busy: false, mine: false, label: null, queued: 0, ahead: null, ...partial };
+  // `running` follows `busy` unless a test says otherwise, the way `readLane` derives it:
+  // a lane of capacity 1 cannot be busy with nothing on it, and a helper that produced that
+  // state would be measuring an arrangement the server never sends.
+  const busy = partial.busy ?? false;
+  return {
+    busy,
+    running: busy ? 1 : 0,
+    capacity: 1,
+    mine: false,
+    label: null,
+    queued: 0,
+    ahead: null,
+    ...partial,
+  };
 }
 
 function lanes(local: Partial<LaneState> = {}, remote: Partial<LaneState> = {}): Lanes {
@@ -61,8 +74,10 @@ describe("readLanes", () => {
       lanes: { local: { busy: true }, remote: {} },
     } as unknown as Pipeline);
     expect(read).toEqual({
-      local: { busy: true, mine: false, label: null, queued: 0, ahead: null },
-      remote: { busy: false, mine: false, label: null, queued: 0, ahead: null },
+      // No `running` or `capacity` came in, so they degrade to the shape the payload had
+      // before a lane could hold two: one slot, held or free.
+      local: { busy: true, running: 1, capacity: 1, mine: false, label: null, queued: 0, ahead: null },
+      remote: { busy: false, running: 0, capacity: 1, mine: false, label: null, queued: 0, ahead: null },
     });
   });
 });
@@ -303,5 +318,42 @@ describe("ownedBy", () => {
   it("is false with no job at all", () => {
     expect(ownedBy(null, 3)).toBe(false);
     expect(ownedBy(undefined, null)).toBe(false);
+  });
+});
+
+// A lane that holds more than one job is what lets two people work at once, and the whole
+// job of this module is to stop announcing a wait that is not going to happen.
+describe("a lane with room", () => {
+  it("is not a wait while it has a free slot", () => {
+    const room = lanes({}, { busy: false, running: 2, capacity: 4 });
+    expect(waitFor(room, ["remote"], 1)).toBeNull();
+  });
+
+  it("is a wait once it is full", () => {
+    const full = lanes({}, { busy: true, running: 4, capacity: 4, label: "Generar ítems" });
+    expect(waitFor(full, ["remote"], 1)).toEqual({
+      lane: "remote",
+      ahead: 1,
+      label: "Generar ítems",
+    });
+  });
+
+  it("counts the room when several are queued in front", () => {
+    const full = lanes({}, { busy: true, running: 4, capacity: 4 });
+    // Third in the queue behind four holders and four slots: three have to finish first.
+    expect(waitFor(full, ["remote"], 3)?.ahead).toBe(3);
+  });
+
+  it("prefers the server's own count over the arithmetic", () => {
+    const room = lanes({}, { busy: false, running: 2, capacity: 4, queued: 1, ahead: 0 });
+    expect(waitFor(room, ["remote"], 9)).toBeNull();
+  });
+
+  // Something IS running there and saying otherwise would be false, but it is not a wait
+  // either — so the note reports the machine instead of predicting a queue.
+  it("is reported as having room rather than as busy or free", () => {
+    const note = prospectNote(lanes({}, { busy: false, running: 2, capacity: 4, queued: 1 }), true, 1, ES);
+    expect(note).toContain("hay 2 de 4 en marcha");
+    expect(note).not.toContain("ocupado");
   });
 });

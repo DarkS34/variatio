@@ -103,6 +103,7 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
 
   const held = flying.waiting_until != null ? Math.max(0, flying.waiting_until - Date.now() / 1000) : 0;
   const waiting = flying.waiting_until != null;
+  const others = Math.max(0, (cerebras.inflight_count ?? 1) - 1);
 
   return (
     <div
@@ -124,6 +125,17 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
         <>
           <span className="text-muted-foreground">·</span>
           <span className="text-small text-muted-foreground">{flying.phase}</span>
+        </>
+      ) : null}
+      {/* The strip draws ONE call, and since the remote lane got room there can be several:
+          saying how many are behind this one is the difference between a slow phase and
+          four jobs sharing the quota. Absent from an API older than this bundle. */}
+      {others > 0 ? (
+        <>
+          <span className="text-muted-foreground">·</span>
+          <span className="nums text-small text-muted-foreground">
+            {t("cere.alsoFlying", { n: others })}
+          </span>
         </>
       ) : null}
       <span className="grow" />

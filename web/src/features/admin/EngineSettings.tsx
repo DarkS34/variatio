@@ -37,6 +37,10 @@ export const REMOTE_KEYS = [
   "engine.cerebras_max_requests_day",
   "engine.cerebras_max_tokens_day",
   "engine.cerebras_max_wait_seconds",
+  // Last of the remote half, and the odd one out: the four above bound what the account may
+  // SPEND, this one bounds how many jobs may spend it at once. It belongs here rather than
+  // beside the local GPU because the GPU's own capacity is one and is not a setting.
+  "engine.cerebras_max_concurrent_jobs",
 ];
 
 const TUNNEL_GROUP = "Túnel SSH"; // i18n-exempt: the registry's own group name

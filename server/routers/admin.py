@@ -70,12 +70,17 @@ class MaintenanceBody(BaseModel):
 # WHO AND WHAT ----------------------------------------------------------------------------
 
 
+# A list per lane and not one job: the remote lane holds as many as
+# `CEREBRAS_MAX_CONCURRENT_JOBS` allows, so the oldest of them is not the answer to «what is
+# this half of the engine doing». `capacity` travels with it, because N jobs means nothing
+# without the room they are filling.
 def _lane_jobs() -> dict:
     return {
-        backend: (job.to_dict() if job is not None else None)
-        for backend, job in (
-            (b, runtime.runner.current_in(b)) for b in jobs_lanes.BACKENDS
-        )
+        backend: {
+            "capacity": jobs_lanes.capacity(backend),
+            "jobs": [job.to_dict() for job in runtime.runner.holders_in(backend)],
+        }
+        for backend in jobs_lanes.BACKENDS
     }
 
 

@@ -119,7 +119,12 @@ def cerebras_state() -> dict:
         "routed": sorted(config.CEREBRAS_MODELS),
         "max_wait": config.CEREBRAS_MAX_WAIT_SECONDS,
         "usage": budget["models"],
+        # One call and how many there are: the strip draws the one worth acting on — a call
+        # the throttle is holding back — and the count is what tells a slow phase from
+        # several jobs sharing the quota, which the remote lane now allows.
         "inflight": budget["inflight"],
+        "inflight_count": budget["inflight_count"],
+        "concurrency": config.CEREBRAS_MAX_CONCURRENT_JOBS,
     }
 
 

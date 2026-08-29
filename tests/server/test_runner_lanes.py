@@ -4,6 +4,13 @@ The point of the whole thing is the first test: a local job and a remote one run
 same time. Everything else is the price of that — within a lane the order of arrival still
 holds, a job that needs both lanes is not overtaken for ever by jobs that need one, and two
 jobs running side by side do not write into each other's event stream.
+
+A lane also has a CAPACITY, and the two lanes answer that differently: local is one and
+cannot be raised, because the GPU is one, while remote is a setting, because Cerebras is a
+rolling quota and the quota is administered call by call in the ledger. Every test here
+pins the capacity it means rather than inheriting the installation's — the default is
+whatever `CEREBRAS_MAX_CONCURRENT_JOBS` happens to be set to, and a test that reads it is
+measuring the configuration instead of the queue.
 """
 
 import threading
@@ -15,6 +22,7 @@ from loguru import logger
 from server.jobs import lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
+from variatio import config
 from variatio.core import progress
 
 LOCAL = lanes.LOCAL
@@ -86,7 +94,8 @@ def make(monkeypatch):
     monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     built: list[Fixture] = []
 
-    def factory(reservations: dict[str, set[str]]) -> Fixture:
+    def factory(reservations: dict[str, set[str]], remote: int = 1) -> Fixture:
+        monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", remote, raising=False)
         monkeypatch.setattr(
             lanes,
             "backends_for",
@@ -131,6 +140,48 @@ def test_two_jobs_of_the_same_lane_do_not(make):
 
     f.let_go("uno")
     assert f.wait_started("dos")
+
+
+# CAPACITY --------------------------------------------------------------------------------
+
+# What the whole change is for: two people asking Cerebras for something at the same time
+# get it at the same time. The quota they share is administered in the ledger, call by call.
+def test_two_remote_jobs_run_at_the_same_time_when_the_lane_has_room(make):
+    f = make({"suyo": {REMOTE}, "mio": {REMOTE}}, remote=2)
+    f.submit("suyo", workspace="aula")
+    f.submit("mio", workspace="taller")
+
+    assert f.wait_started("suyo")
+    assert f.wait_started("mio")
+    assert {j.kind for j in f.runner.running()} == {"suyo", "mio"}
+    assert len(f.runner.holders_in(REMOTE)) == 2
+
+
+def test_the_remote_lane_still_stops_at_its_capacity(make):
+    f = make({"a": {REMOTE}, "b": {REMOTE}, "c": {REMOTE}}, remote=2)
+    f.submit("a")
+    f.submit("b")
+    third = f.submit("c")
+
+    assert f.wait_started("a")
+    assert f.wait_started("b")
+    assert not f.started["c"].wait(0.4)
+    assert third.status == "queued"
+
+    f.let_go("a")
+    assert f.wait_started("c")
+
+
+# The GPU is one whatever the setting says: the capacity belongs to the remote lane alone,
+# and raising it must not let two jobs onto the machine that would only swap weights.
+def test_the_local_lane_has_no_capacity_to_raise(make):
+    f = make({"uno": {LOCAL}, "dos": {LOCAL}}, remote=8)
+    f.submit("uno")
+    second = f.submit("dos")
+
+    assert f.wait_started("uno")
+    assert not f.started["dos"].wait(0.4)
+    assert second.status == "queued"
 
 
 def test_a_job_that_reserves_nothing_never_waits(make):
@@ -181,6 +232,23 @@ def test_a_blocked_job_holds_its_lanes_against_what_is_behind_it(make):
     f.let_go("ambos")
     assert f.wait_started("remoto")
     assert both.status == "succeeded"
+
+
+# The same rule with room to spare: what a blocked job holds is ONE SLOT of each of its
+# lanes, not the lane itself. With two remote slots and the two-lane job holding one, a
+# remote job behind it still gets the other — and the two-lane job still gets its own back
+# the moment the GPU frees up, which is the starvation the claim exists to prevent.
+def test_a_blocked_job_holds_a_slot_and_not_the_whole_lane(make):
+    f = make({"local": {LOCAL}, "ambos": {LOCAL, REMOTE}, "remoto": {REMOTE}}, remote=2)
+    f.submit("local")
+    assert f.wait_started("local")
+
+    f.submit("ambos")
+    f.submit("remoto")
+    assert f.wait_started("remoto")
+
+    f.let_go("local")
+    assert f.wait_started("ambos")
 
 
 def test_a_queue_position_counts_only_what_shares_a_lane(make):

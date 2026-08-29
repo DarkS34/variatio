@@ -10,6 +10,12 @@ import type { Key, Translate } from "@/lib/i18n";
  * job that only calls the hosted API. That is the complaint this module exists to answer —
  * a button that announces a wait which is not going to happen.
  *
+ * Nor is a lane one job deep any more. Local still is — the GPU is one — but remote holds
+ * `CEREBRAS_MAX_CONCURRENT_JOBS`, because Cerebras is a rolling quota the server already
+ * administers call by call. So `busy` here means the lane is FULL, and the arithmetic is
+ * «those holding a slot, plus those in front, less the room»: at capacity 1 that is exactly
+ * the rule this module always had, which is what lets an older API degrade into it.
+ *
  * Everything here is a function of the payload, so the notice that appears on launching and
  * the state the button holds afterwards are two views of one truth rather than two rules
  * that drift. Nothing here estimates time: «2 por delante» is a count of jobs, and what a
@@ -41,8 +47,14 @@ function laneName(lane: LaneName | null, split: boolean, tr: Translate): string 
 function readLane(value: unknown): LaneState | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
+  const busy = raw.busy === true;
   return {
-    busy: raw.busy === true,
+    busy,
+    // An API older than this bundle sends neither, and the pair it degrades to is exactly
+    // the shape it used to have: one slot, held or free. So every rule below reduces to
+    // what it computed before lanes had room.
+    running: typeof raw.running === "number" ? raw.running : busy ? 1 : 0,
+    capacity: typeof raw.capacity === "number" && raw.capacity > 0 ? raw.capacity : 1,
     mine: raw.mine === true,
     label: typeof raw.label === "string" && raw.label ? raw.label : null,
     queued: typeof raw.queued === "number" ? raw.queued : 0,
@@ -94,7 +106,10 @@ export interface Wait {
 function aheadIn(lane: LaneState, position: number | null): number {
   if (lane.ahead !== null) return lane.ahead;
   const place = position ?? lane.queued + 1;
-  return (lane.busy ? 1 : 0) + Math.max(0, place - 1);
+  // How many have to finish before mine starts: everything holding a slot, plus everything
+  // in front of it, less the room the lane has. The same arithmetic the server does, and at
+  // capacity 1 the same «one if the lane is held, plus those in front» it always did.
+  return Math.max(0, lane.running + place - lane.capacity);
 }
 
 /**
@@ -217,8 +232,13 @@ export function queuedNotice(
 function busyPhrase(lane: LaneState, name: LaneName, split: boolean, tr: Translate): string {
   const where = laneName(name, split, tr);
   const holder = lane.label ? tr.t("queue.withHolder", { label: lane.label }) : "";
+  // Not full is not «free», it is «there is still room»: on a remote lane holding two of
+  // four, saying it is busy would announce a wait that is not going to happen, and saying
+  // nothing is running there would be false. Only the full case names what holds it.
   if (!lane.busy) {
-    return tr.t("queue.laneFree", { where, ahead: aheadLabel(lane.queued, tr) });
+    return lane.running > 0
+      ? tr.t("queue.laneRoom", { where, n: lane.running, capacity: lane.capacity })
+      : tr.t("queue.laneFree", { where, ahead: aheadLabel(lane.queued, tr) });
   }
   if (lane.queued > 0) {
     return tr.t("queue.laneBusyWithYours", { where, holder, n: lane.queued });

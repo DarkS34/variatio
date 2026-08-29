@@ -1,15 +1,22 @@
-"""One job at a time per backend, in order.
+"""As many jobs at once as each backend has room for, in order.
 
-Not a limitation to be lifted later, and not one queue either: Ollama serves from a single
-GPU, so two local jobs would do nothing but swap weights, and Cerebras serves under one
-rolling quota, so two remote jobs would do nothing but race for the same budget. Between
-the two there is no contention at all, and a single queue made every job wait for a
-machine it was never going to use.
+Not one queue: Ollama serves from a single GPU, so two local jobs would do nothing but swap
+weights, while Cerebras serves over the network. Between the two there is no contention at
+all, and a single queue made every job wait for a machine it was never going to use.
 
-So a job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs
-as soon as all of them are free. Within a lane the order of arrival is kept, and a job
-that cannot start holds its lanes against everything behind it — otherwise a job needing
-both would never get them. A job that calls no model reserves nothing and never waits.
+Nor one job per lane. That was the first shape of this, and it was right about the GPU and
+wrong about the quota: two remote jobs contend for a rolling budget, and that budget is
+already administered call by call by `core/cerebras_budget`, which books each call's room
+before it goes out. Serialising the lane on top of that bought nothing and cost the thing
+people actually noticed — two people could not work at the same time. So a lane has a
+CAPACITY (`lanes.capacity`): one locally and always, `CEREBRAS_MAX_CONCURRENT_JOBS`
+remotely.
+
+A job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs as
+soon as every one of them has a free slot. Within a lane the order of arrival is kept, and
+a job that cannot start holds a slot of each of its lanes against everything behind it —
+otherwise a job needing both would never get them. A job that calls no model reserves
+nothing and never waits.
 """
 
 import subprocess
@@ -98,9 +105,9 @@ class JobRunner:
         self._jobs: dict[str, Job] = {}
         self._controls: dict[str, JobControl] = {}
         self._order: list[str] = []
-        # Which job holds each backend right now. A lane with no entry is free; a running
-        # job that reserves nothing appears in neither.
-        self._holders: dict[str, str] = {}
+        # Which jobs hold each backend right now, oldest first. A lane with an empty list
+        # is free; a running job that reserves nothing appears in neither.
+        self._holders: dict[str, list[str]] = {}
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._stopping = threading.Event()
@@ -208,10 +215,17 @@ class JobRunner:
             return None
         return min(jobs, key=lambda j: (j.started_at or j.created_at))
 
+    # The oldest job holding this lane. Kept as the one-line answer to «what is this half
+    # of the engine doing», which is what a label needs; `holders_in` is the honest count.
     def current_in(self, backend: str) -> Job | None:
+        holders = self.holders_in(backend)
+        return holders[0] if holders else None
+
+    def holders_in(self, backend: str) -> list[Job]:
         with self._lock:
-            job_id = self._holders.get(backend)
-            return self._jobs.get(job_id) if job_id else None
+            return [
+                self._jobs[i] for i in self._holders.get(backend, ()) if i in self._jobs
+            ]
 
     def pending(self, workspace: str | None = None) -> list[Job]:
         with self._lock:
@@ -293,21 +307,27 @@ class JobRunner:
                 return
             self._launch_ready()
 
-    # FIFO over the whole queue, skipping what cannot start. A blocked job CLAIMS its lanes
-    # for the rest of the pass so nothing behind it takes one: without that, a job needing
-    # both lanes would be overtaken for ever by single-lane jobs arriving after it.
+    # FIFO over the whole queue, skipping what cannot start. A blocked job TAKES A SLOT of
+    # each of its lanes for the rest of the pass so nothing behind it takes that slot:
+    # without it, a job needing both lanes would be overtaken for ever by single-lane jobs
+    # arriving after it. At capacity 1 this is exactly the old set of claimed lanes.
+    #
+    # Capacity is read once per pass, live from the configuration: the panel changes it
+    # while the process runs, and the job that starts next is the one to honour it.
     def _launch_ready(self) -> None:
         while True:
+            caps = lanes.capacities()
             with self._lock:
-                claimed = set(self._holders)
+                taken = {b: len(ids) for b, ids in self._holders.items()}
                 chosen: tuple[Job, JobControl] | None = None
                 for job_id in self._order:
                     job = self._jobs[job_id]
                     if job.status != "queued":
                         continue
                     reserved = set(job.backends)
-                    if reserved & claimed:
-                        claimed |= reserved
+                    if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
+                        for backend in reserved:
+                            taken[backend] = taken.get(backend, 0) + 1
                         continue
                     chosen = (job, self._controls[job_id])
                     break
@@ -318,7 +338,7 @@ class JobRunner:
                 job.started_at = time.time()
                 job.queue_position = 0
                 for backend in job.backends:
-                    self._holders[backend] = job.id
+                    self._holders.setdefault(backend, []).append(job.id)
                 self._restamp()
 
             threading.Thread(
@@ -354,7 +374,10 @@ class JobRunner:
     def _release(self, job: Job) -> None:
         with self._lock:
             for backend in job.backends:
-                if self._holders.get(backend) == job.id:
+                holders = self._holders.get(backend)
+                if holders and job.id in holders:
+                    holders.remove(job.id)
+                if holders is not None and not holders:
                     del self._holders[backend]
             self._restamp()
         self._wake.set()

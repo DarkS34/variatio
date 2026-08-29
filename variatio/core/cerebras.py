@@ -288,8 +288,9 @@ class CerebrasEngine:
 
         ledger = cerebras_budget.shared()
         phase = progress.current_activity()
-        ledger.wait(model, cerebras_budget.estimate_tokens(prompt), phase)
-        ledger.begin(model, phase)
+        # The claim IS the room: it is spent at the estimate before the call goes out, so a
+        # second job on the remote lane sees a smaller window rather than the same one.
+        claim = ledger.wait(model, cerebras_budget.estimate_tokens(prompt), phase)
 
         answer: list[str] = []
         thinking: list[str] = []
@@ -298,7 +299,7 @@ class CerebrasEngine:
             with self._client.stream("POST", "/chat/completions", json=body) as response:
                 if response.status_code != 200:
                     response.read()
-                    ledger.record(model, phase, 0, 0, response.headers)
+                    ledger.record(model, phase, 0, 0, response.headers, claim=claim)
                     raise InferenceError(
                         _remote_error(response.status_code, model, response.text)
                     )
@@ -323,11 +324,15 @@ class CerebrasEngine:
                         answer.append(text)
                         on_token(text, "answer")
                     progress.checkpoint()
-                ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers)
+                ledger.record(
+                    model, phase, prompt_tokens, completion_tokens, response.headers, claim=claim
+                )
         except httpx.HTTPError as e:
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
         finally:
-            ledger.finish()
+            # A no-op once the call has been recorded; the room only comes back when the
+            # call never happened, which is what an exception on the way out means.
+            ledger.release(claim)
 
         return GenerationResponse(
             response="".join(answer).strip(), thinking="".join(thinking).strip() or None
@@ -394,8 +399,9 @@ class CerebrasEngine:
     # worth retrying.
     #
     # The throttle in front of it is what makes the 429 rare rather than routine: the
-    # ledger holds the call until the window has room, so the retry loop stays what it was
-    # meant to be — the answer to somebody ELSE spending the same account's budget.
+    # ledger holds the call until the window has room AND books that room before the call
+    # goes out, so the retry loop stays what it was meant to be — the answer to somebody
+    # ELSE spending the same account's budget, from outside this installation.
     def _post(self, model: str, body: dict) -> httpx.Response:
         ledger = cerebras_budget.shared()
         phase = progress.current_activity()
@@ -420,16 +426,14 @@ class CerebrasEngine:
     # produced an answer, and a ledger that only counted successes would walk straight
     # back into the limit it just hit.
     def _send(self, ledger, model: str, phase: str | None, estimate: int, body: dict):
-        ledger.wait(model, estimate, phase)
-        ledger.begin(model, phase)
+        claim = ledger.wait(model, estimate, phase)
         try:
             response = self._client.post("/chat/completions", json=body)
         except httpx.HTTPError as e:
+            ledger.release(claim)
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
-        finally:
-            ledger.finish()
         prompt_tokens, completion_tokens = _usage(response)
-        ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers)
+        ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers, claim=claim)
         return response
 
 

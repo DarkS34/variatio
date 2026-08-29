@@ -10,6 +10,15 @@ instances in one process a single slot meant one workspace's concept index answe
 other's queries. What bounds it is not memory — the two `.npz` of a real instance add up
 to 3.3 MB and the vectors are already float32 — but the fact that rebuilding one costs
 minutes, so keeping a handful warm is free and evicting eagerly is not.
+
+Since the remote lane got a capacity, two jobs of the SAME workspace can run at once, and
+both read this one context. Two things make that safe and both are load-bearing now rather
+than incidentally true: `_lock` is held across `stages.initialize`, so the second job waits
+for the build instead of starting a second one, and the components a context holds
+(`Embedder`, `ConceptTagger`, `VariantGenerator`) assign no instance state after their
+constructor — the only thing a run writes into them is the embedder's in-process memo,
+where a race costs a repeated embedding and nothing else. A component that starts keeping
+per-run state on `self` breaks this, and the lane is where it would show.
 """
 
 import threading

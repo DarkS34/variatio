@@ -97,10 +97,13 @@ def test_every_phase_key_is_declared_in_the_registry():
 # each page the judge is shown. The fifth is the bank builder's batch overlap, which is
 # what makes the same seam survive the extractor's own cut.
 def test_the_registry_holds_what_this_work_transcribed():
-    # 141 since `models.main` and `context_window.main` were retired on 2026-08-28: with
-    # every phase naming its own model there is nothing left for a main one to hand out,
-    # and its context window went with it (the phases share `context_window.overrides`).
-    # 143 before that, when `builders.kg_relation_schema` was retired: the relation
-    # vocabulary follows a workspace's own `prompt_language` now.
-    assert len(REGISTRY) == 141
-    assert len(BY_NAME) == 113
+    # 142 since the remote lane got a capacity on 2026-08-29 (`CEREBRAS_MAX_CONCURRENT_JOBS`):
+    # Cerebras is a rolling quota rather than a machine, and the quota is administered call
+    # by call, so serialising the lane on top of it only stopped two people working at once.
+    # 141 before that, when `models.main` and `context_window.main` were retired on
+    # 2026-08-28: with every phase naming its own model there is nothing left for a main one
+    # to hand out, and its context window went with it (the phases share
+    # `context_window.overrides`). 143 before THAT, when `builders.kg_relation_schema` was
+    # retired: the relation vocabulary follows a workspace's own `prompt_language` now.
+    assert len(REGISTRY) == 142
+    assert len(BY_NAME) == 114

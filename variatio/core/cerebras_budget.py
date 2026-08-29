@@ -23,17 +23,34 @@ re-measured on 2026-08-29 when the throttle turned out not to be throttling:
   what we believe is left, never raise it.
 
 The ledger is a file because builds run in `server.jobs.build_worker`, a separate process,
-and they are precisely what empties a daily budget. Read-modify-write races are not guarded
-against beyond a process-local lock: the job queue is one deep, so two processes never make
-calls at the same time. An entry point that talks to Cerebras outside the queue breaks that.
+and they are precisely what empties a daily budget. It used to lean on the queue for the
+rest — one job at a time meant two processes never called at once — and that assumption
+went when the remote lane got a capacity, so both halves of it are guarded here now:
+
+- **Every read-modify-write is one transaction**, held against other threads with a lock and
+  against other processes with `flock` on a sidecar file. The lock cannot live on the ledger
+  itself: `write_json` replaces it through a `.tmp`, so the inode a waiter is holding is not
+  the inode the writer leaves behind — and two unguarded writers collide on that `.tmp`,
+  which corrupts the file rather than merely losing a count.
+- **The gate BOOKS what it lets through.** Checking and then calling is not a throttle when
+  two callers can check at once: both read the same room and both spend it. So `wait`
+  returns a `Claim` and writes the call into the ledger at its estimate before it goes out,
+  and `record` replaces that estimate with the exact `usage` when the answer lands. A claim
+  nobody settles — a process that died mid-call — ages out with the inflight entries.
 """
 
 import json
 import threading
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+
+try:  # POSIX only, and the only thing that makes the file safe between processes.
+    import fcntl
+except ImportError:  # pragma: no cover - this project runs on Linux
+    fcntl = None
 
 from loguru import logger
 
@@ -63,6 +80,20 @@ _INFLIGHT_STALE_SECONDS = 600.0
 
 class BudgetExhausted(InferenceError):
     """The window will not free up soon enough to be worth waiting for."""
+
+
+@dataclass(frozen=True)
+class Claim:
+    """Room booked in the ledger for one call, before that call goes out.
+
+    It is what makes the throttle hold with several callers at once: the room is spent at
+    the estimate the moment the gate opens, so the next caller sees a window that is
+    already smaller. `record` settles it with the exact figure, `release` gives it back.
+    """
+
+    id: int
+    model: str
+    phase: str | None
 
 
 @dataclass(frozen=True)
@@ -97,6 +128,9 @@ class Budget:
         clock: Callable[[], float] = time.time,
     ):
         self._path = Path(path)
+        # Beside the ledger and never the ledger itself: `write_json` replaces the file
+        # through a `.tmp`, so a waiter holding the old inode would be guarding nothing.
+        self._lock_path = self._path.with_name(self._path.name + ".lock")
         self._limits = limits
         self._clock = clock
         self._lock = threading.Lock()
@@ -104,9 +138,16 @@ class Budget:
     # THE GATE -----------------------------------------------------------------------------
 
     def delay(self, model: str, estimated_tokens: int) -> float:
-        """Seconds to hold before this call may go out; raises when waiting is not the answer."""
-        with self._lock:
+        """Seconds to hold before this call may go out; raises when waiting is not the answer.
+
+        A read, and only a read: it reserves nothing, so two callers asking at once both get
+        an honest answer about a window neither has spent yet. `wait` is what books room.
+        """
+        with self._lock, self._flock():
             state = self._load()
+        return self._compute(state, model, estimated_tokens)
+
+    def _compute(self, state: dict, model: str, estimated_tokens: int) -> float:
         now = self._clock()
         limits = self._limits()
         calls = _calls(state, model)
@@ -145,23 +186,57 @@ class Budget:
 
         return max(waits, default=0.0)
 
-    def wait(self, model: str, estimated_tokens: int, phase: str | None = None) -> float:
-        """Hold until the call fits, staying cancellable and saying so on the panel."""
-        held = self.delay(model, estimated_tokens)
-        if held <= 0:
-            return 0.0
-        logger.info(
-            f"[cerebras] Budget spent for '{model}': waiting {held:.0f} s "
-            "for the window to roll"
-        )
-        self.begin(model, phase, waiting=held)
-        progress.emit("cerebras.waiting", model=model, seconds=round(held))
-        deadline = self._clock() + held
+    def wait(self, model: str, estimated_tokens: int, phase: str | None = None) -> Claim:
+        """Hold until the call fits, then BOOK its room and hand back the claim.
+
+        It is a loop rather than one sleep because the room can be taken while we hold: with
+        several jobs on the remote lane, whoever wakes first spends what came free and the
+        rest go round again. Checking without booking is what would let all of them through
+        at once — the defect this whole module exists to prevent, only with more callers.
+
+        Cancellable throughout (`progress.checkpoint()` between one-second slices), and a
+        cancellation gives the room back rather than leaving a claim nobody will settle.
+        """
+        with self._transaction() as state:
+            claim = self._announce(state, model, phase)
+        # Measured from the first attempt and not from each one, so a call cannot be held
+        # for ever in short instalments while others keep taking the room in front of it.
+        deadline = self._clock() + max(0.0, float(config.CEREBRAS_MAX_WAIT_SECONDS))
+        announced = False
+        try:
+            while True:
+                with self._transaction() as state:
+                    held = self._compute(state, model, estimated_tokens)
+                    if held <= 0:
+                        self._book(state, claim, estimated_tokens)
+                        return claim
+                    if self._clock() + held > deadline:
+                        raise BudgetExhausted(
+                            f"El presupuesto de Cerebras para '{model}' no se libera a tiempo: "
+                            f"harían falta {_human(held)} más y ya se ha agotado la espera "
+                            f"máxima de {_human(float(config.CEREBRAS_MAX_WAIT_SECONDS))}. "
+                            "Cambia de motor, sube el límite en «Configuración» o espera."
+                        )
+                    _waiting(state, claim, self._clock() + held)
+                if not announced:
+                    logger.info(
+                        f"[cerebras] Budget spent for '{model}': waiting {held:.0f} s "
+                        "for the window to roll"
+                    )
+                    progress.emit("cerebras.waiting", model=model, seconds=round(held))
+                    announced = True
+                self._hold(held)
+        except BaseException:
+            self.release(claim)
+            raise
+
+    def _hold(self, seconds: float) -> None:
+        deadline = self._clock() + seconds
         while True:
             progress.checkpoint()
             left = deadline - self._clock()
             if left <= 0:
-                return held
+                return
             time.sleep(min(left, 1.0))
 
     # WHAT HAPPENED ------------------------------------------------------------------------
@@ -173,48 +248,102 @@ class Budget:
         prompt_tokens: int,
         completion_tokens: int,
         headers,
+        claim: Claim | None = None,
     ) -> None:
-        with self._lock:
-            state = self._load()
+        """Charge the call what it actually cost, settling its claim if it had one.
+
+        Without a claim it appends, which is what a call nobody booked looks like.
+        """
+        with self._transaction() as state:
             now = self._clock()
             bucket = _bucket(state, model)
-            seq = int(state.get("seq", 0)) + 1
-            state["seq"] = seq
-            bucket["calls"].append(
-                {
-                    "t": now,
-                    "p": phase,
-                    "in": max(int(prompt_tokens), 0),
-                    "out": max(int(completion_tokens), 0),
-                    "n": seq,
-                }
-            )
-            self._observe(bucket, headers, now, seq)
+            call = _booked(bucket, claim)
+            if call is None:
+                seq = int(state.get("seq", 0)) + 1
+                state["seq"] = seq
+                call = {"t": now, "n": seq}
+                bucket["calls"].append(call)
+            call.pop("hold", None)
+            call["p"] = phase
+            call["in"] = max(int(prompt_tokens), 0)
+            call["out"] = max(int(completion_tokens), 0)
+            # Against the claim's own sequence number, not the newest: a call answered while
+            # a later one had already landed then subtracts that later one from the reading
+            # too. It errs on the careful side, which is the only direction this file allows
+            # a header to move what we believe is left.
+            self._observe(bucket, headers, now, int(call["n"]))
+            _land(state, claim)
             _prune(state, now)
-            self._save(state)
 
-    def begin(self, model: str, phase: str | None, waiting: float | None = None) -> None:
-        with self._lock:
-            state = self._load()
-            now = self._clock()
-            state["inflight"] = {
+    def release(self, claim: Claim | None) -> None:
+        """Give back room that was booked and never spent. A settled claim is untouched."""
+        if claim is None:
+            return
+        with self._transaction() as state:
+            bucket = _bucket(state, claim.model)
+            bucket["calls"] = [
+                call
+                for call in bucket["calls"]
+                if not (call.get("n") == claim.id and call.get("hold"))
+            ]
+            _land(state, claim)
+
+    def begin(self, model: str, phase: str | None, waiting: float | None = None) -> Claim:
+        """Say a call is in flight without booking room for it. Returns its claim."""
+        with self._transaction() as state:
+            claim = self._announce(state, model, phase)
+            if waiting:
+                _waiting(state, claim, self._clock() + waiting)
+            return claim
+
+    def finish(self, claim: Claim | None = None) -> None:
+        """Take a call out of the flight list. With no claim, take them all out."""
+        with self._transaction() as state:
+            if claim is None:
+                state["inflight"] = []
+            else:
+                _land(state, claim)
+
+    # Two halves of one booking. `_announce` only says somebody is trying, which is what the
+    # panel draws while the throttle holds a call back; `_book` is what actually spends the
+    # window, and it happens under the same transaction that found the room.
+    def _announce(self, state: dict, model: str, phase: str | None) -> Claim:
+        seq = int(state.get("seq", 0)) + 1
+        state["seq"] = seq
+        now = self._clock()
+        _flying(state).append(
+            {
+                "id": seq,
                 "model": model,
                 "phase": phase,
                 "since": now,
-                "waiting_until": now + waiting if waiting else None,
+                "waiting_until": None,
             }
-            self._save(state)
+        )
+        return Claim(id=seq, model=model, phase=phase)
 
-    def finish(self) -> None:
-        with self._lock:
-            state = self._load()
-            state["inflight"] = None
-            self._save(state)
+    def _book(self, state: dict, claim: Claim, estimated_tokens: int) -> None:
+        now = self._clock()
+        bucket = _bucket(state, claim.model)
+        bucket["calls"].append(
+            {
+                "t": now,
+                "p": claim.phase,
+                "in": max(int(estimated_tokens), 0),
+                "out": 0,
+                "n": claim.id,
+                # When it was booked, so a claim left behind by a process that died stops
+                # charging the budget on the same clock the flight list already uses.
+                "hold": now,
+            }
+        )
+        _waiting(state, claim, None)
+        _prune(state, now)
 
     # WHAT THE PANEL READS -----------------------------------------------------------------
 
     def snapshot(self) -> dict:
-        with self._lock:
+        with self._lock, self._flock():
             state = self._load()
         now = self._clock()
         limits = self._limits()
@@ -233,7 +362,15 @@ class Budget:
                     "phases": _phases(calls, now),
                 }
             )
-        return {"models": models, "inflight": _inflight(state, now)}
+        flying = _live_flights(state, now)
+        # One entry is what the card draws, and a call being HELD is the one worth drawing:
+        # «esperando presupuesto» is the state somebody can act on, and with several jobs on
+        # the lane the oldest is not necessarily the one waiting. The count says the rest.
+        return {
+            "models": models,
+            "inflight": flying[0] if flying else None,
+            "inflight_count": len(flying),
+        }
 
     def _meter(self, state, model, calls, window, seconds, now, limits) -> dict:
         inside = [call for call in calls if now - call["t"] < seconds]
@@ -282,6 +419,43 @@ class Budget:
 
     # THE FILE -----------------------------------------------------------------------------
 
+    # One read-modify-write, exclusive against every other thread AND every other process.
+    # The body raising means nothing is saved, which is what the gate wants: refusing a call
+    # must not leave half a decision on disk.
+    @contextmanager
+    def _transaction(self):
+        with self._lock, self._flock():
+            state = self._load()
+            yield state
+            self._save(state)
+
+    @contextmanager
+    def _flock(self):
+        if fcntl is None:
+            yield
+            return
+        handle = None
+        try:
+            self._lock_path.parent.mkdir(parents=True, exist_ok=True)
+            handle = open(self._lock_path, "a+")
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        except OSError as e:
+            # A ledger that cannot be locked is still a ledger worth keeping: degrade to the
+            # process lock rather than refuse the call. Losing a race costs one miscounted
+            # request; refusing here would take the engine down over a permissions problem.
+            logger.warning(f"[cerebras] Could not lock the spending ledger: {e}")
+            if handle is not None:
+                handle.close()
+            yield
+            return
+        try:
+            yield
+        finally:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            finally:
+                handle.close()
+
     def _load(self) -> dict:
         try:
             state = json.loads(self._path.read_text(encoding="utf-8"))
@@ -292,6 +466,10 @@ class Budget:
             return _empty()
         if not isinstance(state, dict) or not isinstance(state.get("models"), dict):
             return _empty()
+        # A ledger written before the lane had room for two carries one flight or none.
+        # Flights are transient, so the migration is to drop what does not fit the shape.
+        if not isinstance(state.get("inflight"), list):
+            state["inflight"] = []
         return state
 
     def _save(self, state: dict) -> None:
@@ -302,7 +480,37 @@ class Budget:
 
 
 def _empty() -> dict:
-    return {"models": {}, "inflight": None, "seq": 0}
+    return {"models": {}, "inflight": [], "seq": 0}
+
+
+def _flying(state: dict) -> list:
+    flights = state.get("inflight")
+    if not isinstance(flights, list):
+        flights = []
+        state["inflight"] = flights
+    return flights
+
+
+def _land(state: dict, claim: Claim | None) -> None:
+    if claim is None:
+        return
+    state["inflight"] = [f for f in _flying(state) if f.get("id") != claim.id]
+
+
+def _waiting(state: dict, claim: Claim, until: float | None) -> None:
+    for flight in _flying(state):
+        if flight.get("id") == claim.id:
+            flight["waiting_until"] = until
+            return
+
+
+def _booked(bucket: dict, claim: Claim | None) -> dict | None:
+    if claim is None:
+        return None
+    for call in bucket["calls"]:
+        if call.get("n") == claim.id:
+            return call
+    return None
 
 
 def _bucket(state: dict, model: str) -> dict:
@@ -370,18 +578,35 @@ def _phases(calls: list[dict], now: float) -> list[dict]:
     return sorted(rows.values(), key=lambda row: (-row["tokens"], row["phase"]))
 
 
-def _inflight(state: dict, now: float) -> dict | None:
-    flying = state.get("inflight")
-    if not flying:
-        return None
-    if now - float(flying.get("since", 0)) > _INFLIGHT_STALE_SECONDS:
-        return None
-    return {**flying, "elapsed": now - float(flying.get("since", now))}
+# What is genuinely in flight, held ones first: a call the throttle is holding back is the
+# one a person can do something about, and it is not always the oldest.
+def _live_flights(state: dict, now: float) -> list[dict]:
+    live = [
+        {**flight, "elapsed": now - float(flight.get("since", now))}
+        for flight in _flying(state)
+        if now - float(flight.get("since", 0)) <= _INFLIGHT_STALE_SECONDS
+    ]
+    return sorted(
+        live, key=lambda f: (f.get("waiting_until") is None, float(f.get("since", 0)))
+    )
 
 
 def _prune(state: dict, now: float) -> None:
     for bucket in state.get("models", {}).values():
-        bucket["calls"] = [call for call in bucket["calls"] if now - call["t"] < 86_400.0]
+        bucket["calls"] = [
+            call
+            for call in bucket["calls"]
+            if now - call["t"] < 86_400.0
+            # A booking whose process died never gets settled, and charging the day for it
+            # would empty the budget over calls that never went out. Same clock as the
+            # flight list, for the same reason.
+            and not (call.get("hold") and now - float(call["hold"]) > _INFLIGHT_STALE_SECONDS)
+        ]
+    state["inflight"] = [
+        flight
+        for flight in _flying(state)
+        if now - float(flight.get("since", 0)) <= _INFLIGHT_STALE_SECONDS
+    ]
 
 
 def _header(headers, name: str) -> int | None:

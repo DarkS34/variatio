@@ -20,15 +20,26 @@ export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancell
  * The two queues, one per inference backend: the GPU and the hosted API.
  *
  * A job reserves the lanes of the generative models it calls — the embedder and the
- * guardrail reserve nothing — so two jobs on disjoint lanes run at the same time and two
- * on the same lane serialise. This is why «el motor está ocupado» stopped being one
- * sentence: with a composite engine it is true of one half and false of the other.
+ * guardrail reserve nothing — so two jobs on disjoint lanes run at the same time. This is
+ * why «el motor está ocupado» stopped being one sentence: with a composite engine it is
+ * true of one half and false of the other.
+ *
+ * A lane also has ROOM. Local is one job and cannot be more, because the GPU is one; remote
+ * is `CEREBRAS_MAX_CONCURRENT_JOBS`, because what is shared there is a rolling quota that
+ * the server already administers call by call. So `busy` is «this lane is FULL» and not
+ * «something is running on it»: it is what predicts a wait, and on a lane with room to
+ * spare a second job waits for nothing.
  */
 export type LaneName = "local" | "remote";
 
 export interface LaneState {
+  /** The lane is FULL: a job arriving now would wait. Not «something is running». */
   busy: boolean;
-  /** Whether what occupies the lane belongs to this workspace. */
+  /** How many jobs hold it right now, whoever launched them. */
+  running: number;
+  /** How many fit at once. 1 for the GPU, always. */
+  capacity: number;
+  /** Whether any of what occupies the lane belongs to this workspace. */
   mine: boolean;
   /** What holds it, whoever launched it: the machine is the installation's. */
   label: string | null;
@@ -666,6 +677,8 @@ export interface CerebrasState {
   max_wait: number;
   /** What has actually been spent — empty until the first call, and not the same set. */
   usage: CerebrasModel[];
+  /** One call, and the one worth drawing: a call being HELD before the merely running
+   *  ones, because that is the state somebody can act on. `inflight_count` says the rest. */
   inflight: {
     model: string;
     phase: string | null;
@@ -674,6 +687,10 @@ export interface CerebrasState {
     /** Set only while the throttle is holding the call back. */
     waiting_until: number | null;
   } | null;
+  /** How many calls are in flight at once — more than one since the remote lane got room. */
+  inflight_count?: number;
+  /** How many jobs may use Cerebras at the same time (`CEREBRAS_MAX_CONCURRENT_JOBS`). */
+  concurrency?: number;
 }
 
 export interface AdminEngine {

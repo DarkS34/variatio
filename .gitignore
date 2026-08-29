@@ -12,6 +12,7 @@ web/tsconfig.tsbuildinfo
 
 /workspaces/
 /.cerebras_budget.json
+/.cerebras_budget.json.lock
 /.maintenance.json
 
 *.md

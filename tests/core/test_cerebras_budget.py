@@ -8,6 +8,7 @@ from variatio.core.cerebras_budget import (
     Limits,
     estimate_tokens,
 )
+from variatio.core.paths import PROJECT_ROOT
 
 LIMITS = Limits(requests_minute=5, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
 
@@ -366,3 +367,233 @@ def test_the_message_names_the_window_that_cannot_hold_it(tmp_path):
     limits = Limits(requests_minute=5, tokens_minute=30_000, requests_day=2_400, tokens_day=20_000)
     with pytest.raises(BudgetExhausted, match="por día"):
         budget(tmp_path, clock, limits).delay("gemma-4-31b", 25_000)
+
+
+# BOOKING THE ROOM ---------------------------------------------------------------------------
+
+# The whole reason the remote lane can hold more than one job. Checking and then calling is
+# not a throttle when two callers can check at once: both read the same window and both
+# spend it. `wait` books what it lets through, so the second caller sees a smaller window
+# than the first even though no answer has come back yet.
+def test_the_gate_books_the_room_it_lets_through(tmp_path):
+    clock = Clock()
+    tight = Limits(requests_minute=2, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
+    b = budget(tmp_path, clock, tight)
+
+    b.wait("gemma-4-31b", 100)
+    b.wait("gemma-4-31b", 100)
+
+    # Nothing has been recorded yet: before the booking existed, this was 0.0 and a third
+    # call went straight out on a minute that had already been spent twice over.
+    assert b.delay("gemma-4-31b", 100) > 0
+
+
+def test_a_booking_is_visible_to_another_reader_of_the_same_file(tmp_path):
+    clock = Clock()
+    tight = Limits(requests_minute=1, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
+    budget(tmp_path, clock, tight).wait("gemma-4-31b", 100)
+
+    assert budget(tmp_path, clock, tight).delay("gemma-4-31b", 100) > 0
+
+
+def test_recording_settles_the_booking_rather_than_charging_twice(tmp_path):
+    clock = Clock()
+    b = budget(tmp_path, clock)
+    claim = b.wait("gemma-4-31b", 5_000)
+
+    b.record("gemma-4-31b", "kg_extract", 400, 100, {}, claim=claim)
+
+    minute = b.snapshot()["models"][0]["windows"]["minute"]
+    assert minute["requests_used"] == 1
+    # The estimate was 5 000 and the call cost 500: what stands is the exact figure.
+    assert minute["tokens_used"] == 500
+
+
+def test_releasing_a_booking_gives_the_room_back(tmp_path):
+    clock = Clock()
+    tight = Limits(requests_minute=1, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
+    b = budget(tmp_path, clock, tight)
+    claim = b.wait("gemma-4-31b", 100)
+    assert b.delay("gemma-4-31b", 100) > 0
+
+    b.release(claim)
+
+    assert b.delay("gemma-4-31b", 100) == 0.0
+
+
+def test_releasing_a_settled_booking_does_not_refund_it(tmp_path):
+    clock = Clock()
+    tight = Limits(requests_minute=1, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
+    b = budget(tmp_path, clock, tight)
+    claim = b.wait("gemma-4-31b", 100)
+    b.record("gemma-4-31b", "kg_extract", 90, 10, {}, claim=claim)
+
+    b.release(claim)
+
+    assert b.delay("gemma-4-31b", 100) > 0
+
+
+# A process that dies mid-call never settles its booking, and charging the day for calls
+# that never went out would empty the budget over nothing. Same clock as the flight list.
+def test_a_booking_nobody_settles_stops_charging_once_it_goes_stale(tmp_path):
+    clock = Clock()
+    tight = Limits(requests_minute=1, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
+    b = budget(tmp_path, clock, tight)
+    b.wait("gemma-4-31b", 100)
+    assert b.delay("gemma-4-31b", 100) > 0
+
+    clock.now += 3_600
+
+    assert b.delay("gemma-4-31b", 100) == 0.0
+
+
+def test_a_call_nobody_booked_is_still_recorded(tmp_path):
+    clock = Clock()
+    b = budget(tmp_path, clock)
+    b.record("gemma-4-31b", "kg_extract", 90, 10, {})
+
+    assert b.snapshot()["models"][0]["windows"]["minute"]["requests_used"] == 1
+
+
+# SEVERAL CALLS AT ONCE ----------------------------------------------------------------------
+
+
+def test_several_calls_can_be_in_flight_at_once(tmp_path):
+    clock = Clock()
+    b = budget(tmp_path, clock)
+    first = b.begin("gemma-4-31b", "kg_extract")
+    b.begin("gemma-4-31b", "kg_clean_merge")
+
+    assert budget(tmp_path, clock).snapshot()["inflight_count"] == 2
+
+    b.finish(first)
+    assert budget(tmp_path, clock).snapshot()["inflight_count"] == 1
+
+
+# The card draws one, and the one worth drawing is the call the throttle is holding back:
+# «esperando presupuesto» is the state somebody can act on, and it is not always the oldest.
+def test_the_call_being_held_is_the_one_the_card_is_shown(tmp_path):
+    clock = Clock()
+    b = budget(tmp_path, clock)
+    b.begin("gemma-4-31b", "kg_extract")
+    clock.now += 1
+    b.begin("gemma-4-31b", "kg_clean_merge", waiting=30.0)
+
+    flying = budget(tmp_path, clock).snapshot()["inflight"]
+    assert flying["phase"] == "kg_clean_merge"
+    assert flying["waiting_until"] == clock.now + 30.0
+
+
+def test_a_ledger_written_before_the_lane_had_room_still_reads(tmp_path):
+    path = tmp_path / "budget.json"
+    path.write_text(
+        json.dumps(
+            {
+                "models": {},
+                # The old single-slot shape, from before two jobs could call at once.
+                "inflight": {"model": "gemma-4-31b", "phase": "kg_extract", "since": 1_000.0},
+                "seq": 3,
+            }
+        ),
+        encoding="utf-8",
+    )
+    clock = Clock()
+
+    snapshot = Budget(path, limits=lambda: LIMITS, clock=clock).snapshot()
+
+    assert snapshot["inflight"] is None
+    assert snapshot["inflight_count"] == 0
+
+
+# TWO WRITERS AT ONCE ------------------------------------------------------------------------
+
+# The ledger used to lean on the queue for this — one job at a time meant two processes never
+# called at once — and that assumption went with the remote lane's capacity. Separate `Budget`
+# objects on one file share no process lock, so what has to hold the count is the flock.
+def test_two_ledgers_on_one_file_do_not_lose_each_others_calls(tmp_path):
+    import threading
+
+    path = tmp_path / "budget.json"
+    writers = 4
+    each = 15
+
+    def spend() -> None:
+        ledger = Budget(path, limits=lambda: LIMITS)
+        for _ in range(each):
+            ledger.record("gemma-4-31b", "kg_extract", 10, 5, {})
+
+    threads = [threading.Thread(target=spend) for _ in range(writers)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+
+    calls = json.loads(path.read_text(encoding="utf-8"))["models"]["gemma-4-31b"]["calls"]
+    assert len(calls) == writers * each
+    # Every call carries a sequence number of its own; a lost update would repeat one.
+    assert len({call["n"] for call in calls}) == writers * each
+
+
+def test_two_processes_do_not_lose_each_others_calls(tmp_path):
+    import subprocess
+    import sys
+
+    path = tmp_path / "budget.json"
+    each = 12
+    script = (
+        "from variatio.core.cerebras_budget import Budget, Limits;"
+        f"b = Budget({str(path)!r}, limits=lambda: Limits(5, 30000, 2400, 1000000));"
+        f"[b.record('gemma-4-31b', 'kg_extract', 10, 5, {{}}) for _ in range({each})]"
+    )
+    workers = [
+        subprocess.Popen([sys.executable, "-c", script], cwd=str(PROJECT_ROOT))
+        for _ in range(3)
+    ]
+    for worker in workers:
+        assert worker.wait(timeout=60) == 0
+
+    calls = json.loads(path.read_text(encoding="utf-8"))["models"]["gemma-4-31b"]["calls"]
+    assert len(calls) == 3 * each
+
+
+# The wait is bounded from the FIRST attempt and not from each one. With one caller that is
+# the same thing; with several, the room that comes free can be taken by somebody else every
+# round, and a per-attempt bound would hold a call for ever in ninety-second instalments.
+def test_the_wait_is_bounded_from_the_first_attempt(tmp_path, monkeypatch):
+    import time as real_time
+
+    from variatio.core import cerebras_budget
+
+    monkeypatch.setattr(cerebras_budget.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(cerebras_budget.config, "CEREBRAS_MAX_WAIT_SECONDS", 90, raising=False)
+
+    class Ticking:
+        """A clock that moves 10 s every time anybody reads it, and gives up eventually.
+
+        The ceiling is not decoration: without the deadline `wait` loops for ever here, and
+        a regression that HANGS the suite is worse than one that fails it.
+        """
+
+        def __init__(self) -> None:
+            self.now = 1_000.0
+            self.reads = 0
+
+        def __call__(self) -> float:
+            self.reads += 1
+            assert self.reads < 200, "wait() nunca se rindió: la espera dejó de estar acotada"
+            self.now += 10.0
+            return self.now
+
+    b = budget(tmp_path, Ticking())
+    # Always a minute short, however long we hold: the room keeps going to somebody else.
+    monkeypatch.setattr(b, "_compute", lambda *a, **k: 60.0)
+
+    started = real_time.monotonic()
+    with pytest.raises(BudgetExhausted) as raised:
+        b.wait("gemma-4-31b", 100, "kg_extract")
+
+    assert "no se libera a tiempo" in str(raised.value)
+    # It gave up rather than going round again, and it did not really sleep to do it.
+    assert real_time.monotonic() - started < 5.0
+    # And it left no claim behind: the room it never got is not charged to anybody.
+    assert budget(tmp_path, Clock()).snapshot()["inflight_count"] == 0

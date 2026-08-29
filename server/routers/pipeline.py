@@ -34,18 +34,29 @@ def _check(artifact: str) -> None:
 # queued job of yours that looks stuck has an honest reason, and no per-workspace number
 # can express it. What is scoped is `mine`, `queued` and `ahead`: those are statements
 # about your own work.
+#
+# `busy` is «this lane is FULL», not «something is running on it»: it is what every reader
+# uses to predict a wait, and on a lane of capacity 4 with two jobs on it a third waits for
+# nothing. `running` and `capacity` are what report the activity itself. At capacity 1 the
+# two readings coincide, so the single-engine installation is unchanged.
 def _lane_payload(backend: str, slug: str) -> dict:
-    holder = runtime.runner.current_in(backend)
+    holders = runtime.runner.holders_in(backend)
+    room = jobs_lanes.capacity(backend)
     waiting = [j for j in runtime.runner.pending() if backend in j.backends]
     mine = [j for j in waiting if j.workspace == slug]
     ahead = None
     if mine:
+        # How many jobs have to finish before mine starts: everything already holding a
+        # slot, plus everything queued in front of it, less the room there is. At capacity
+        # 1 this is exactly the old «those in front, plus one if the lane is held».
         first = [j.id for j in waiting].index(mine[0].id)
-        ahead = first + (1 if holder is not None else 0)
+        ahead = max(0, len(holders) + first + 1 - room)
     return {
-        "busy": holder is not None,
-        "mine": holder is not None and holder.workspace == slug,
-        "label": holder.label if holder is not None else None,
+        "busy": len(holders) >= room,
+        "running": len(holders),
+        "capacity": room,
+        "mine": any(j.workspace == slug for j in holders),
+        "label": holders[0].label if holders else None,
         "queued": len(mine),
         "ahead": ahead,
     }
