@@ -304,8 +304,8 @@ def _transcribe_page(
             return page
         except inference.InferenceError as e:
             last_error = e
-            logger.warning(f"{tag}página {index}/{count}: falló la transcripción ({e})")
-    logger.error(f"{tag}página {index}/{count}: se abandona tras los reintentos ({last_error})")
+            logger.warning(f"{tag}page {index}/{count}: transcription failed ({e})")
+    logger.error(f"{tag}page {index}/{count}: giving up after the retries ({last_error})")
     # A lost page is lost exercises. Leave a marker a human will trip over in the cached
     # file rather than a silent gap that looks like a page with nothing on it.
     return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
@@ -326,11 +326,11 @@ def transcribe_pdf(
     resume = read_partial(cache_dir, fingerprint) if fingerprint else []
     count, images = page_images(pdf_path, dpi, first=len(resume) + 1)
     pages: list[str] = list(resume[:count])
-    logger.info(f"{tag}{pdf_path.name}: transcribiendo {count} página(s) con '{model}'")
+    logger.info(f"{tag}{pdf_path.name}: transcribing {count} page(s) with '{model}'")
     if pages:
         logger.info(
-            f"{tag}{pdf_path.name}: {len(pages)} página(s) ya transcritas, "
-            f"se reanuda en la {len(pages) + 1}"
+            f"{tag}{pdf_path.name}: {len(pages)} page(s) already transcribed, "
+            f"resuming at {len(pages) + 1}"
         )
     with progress.step(
         "transcribe", f"{pdf_path.name}: transcribiendo páginas", count
@@ -345,7 +345,7 @@ def transcribe_pdf(
             if fingerprint:
                 save_partial_page(cache_dir, index, page, fingerprint)
     kept = sum(1 for page in pages if page.strip())
-    logger.info(f"{tag}{pdf_path.name}: {kept}/{count} página(s) con contenido")
+    logger.info(f"{tag}{pdf_path.name}: {kept}/{count} page(s) with content")
     return pages
 
 
@@ -404,7 +404,7 @@ def _document(
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
             logger.info(
-                f"{tag}{source.name}: {len(cached[0])} página(s) reutilizadas de la caché"
+                f"{tag}{source.name}: {len(cached[0])} page(s) reused from the cache"
             )
             return cached
 
@@ -424,7 +424,7 @@ def _document(
     if not pages:
         # Caching "nothing" would make the emptiness stick until the source file changes,
         # and an empty document is far more likely to be a transient failure than a fact.
-        logger.warning(f"{tag}{source.name}: no produjo páginas; no se guarda en caché")
+        logger.warning(f"{tag}{source.name}: produced no pages; not cached")
         return pages, seams
     if use_cache:
         write_pages(document_dir, pages, fingerprint, seams)
@@ -703,7 +703,7 @@ def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> l
                 records.append(record)
     merged = sum(1 for record in records if record.get("separator", PARAGRAPH) != PARAGRAPH)
     if records:
-        logger.info(f"{tag}{merged}/{len(boundaries)} costura(s) unidas como continuación")
+        logger.info(f"{tag}{merged}/{len(boundaries)} seam(s) joined as a continuation")
     return records
 
 
@@ -737,12 +737,12 @@ def _review_seam(
             temperature=inference.judgement_temperature(config.THINK_TRANSCRIBE_SEAM),
         ).response
     except inference.InferenceError as e:
-        logger.warning(f"{tag}costura {index - 1}→{index}: sin revisar ({e}); se une por regla")
+        logger.warning(f"{tag}seam {index - 1}→{index}: not reviewed ({e}); joined by rule")
         return {"page": index, "failed": True}
     parsed = _parse_seam(response)
     if parsed is None:
         logger.warning(
-            f"{tag}costura {index - 1}→{index}: respuesta ilegible; se une por regla"
+            f"{tag}seam {index - 1}→{index}: unreadable answer; joined by rule"
         )
         return {"page": index, "failed": True}
     return {"page": index, **parsed}

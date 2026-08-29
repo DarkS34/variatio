@@ -194,14 +194,14 @@ def screen(
             temperature=inference.judgement_temperature(config.THINK_ADMISSIBILITY),
         ).response
     except InferenceError as e:
-        logger.warning(f"[admisibilidad] El juez no pudo responder: {e}; el encargo sigue adelante")
+        logger.warning(f"[admissibility] The judge could not answer: {e}; the commission goes ahead")
         return _unchecked()
 
     entries = _parse(response)
     if entries is None:
         logger.warning(
-            f"[admisibilidad] Respuesta ilegible del juez: {response[:120]!r}; "
-            "el encargo sigue adelante"
+            f"[admissibility] Unreadable answer from the judge: {response[:120]!r}; "
+            "the commission goes ahead"
         )
         return _unchecked()
 
@@ -209,7 +209,7 @@ def screen(
     requests = tuple(r for r in (_accept(e, owners, known) for e in entries) if r is not None)
     if not requests:
         logger.warning(
-            "[admisibilidad] Ninguna entrada del juez resultó válida; el encargo sigue adelante"
+            "[admissibility] No entry from the judge held up; the commission goes ahead"
         )
         return _unchecked()
 
@@ -242,11 +242,11 @@ def _report(ruling: Ruling) -> None:
     if blocked:
         first = blocked[0]
         logger.info(
-            f"[admisibilidad] «{first.text}» invade {first.owner.label} por «{first.term}»"
+            f"[admissibility] «{first.text}» trespasses on {first.owner.label} through «{first.term}»"
         )
     else:
         logger.info(
-            f"[admisibilidad] {len(ruling.requests)} petición(es) admitida(s): "
+            f"[admissibility] {len(ruling.requests)} request(s) admitted: "
             + ", ".join(r.slot for r in ruling.requests)
         )
     progress.emit(

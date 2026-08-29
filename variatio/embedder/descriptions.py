@@ -226,8 +226,8 @@ class ConceptDescriber:
         ]
         if stale:
             logger.info(
-                f"{len(stale)} descripción(es) quedaron obsoletas al cambiar el grafo; "
-                "se reescriben"
+                f"{len(stale)} description(s) went stale when the graph changed; "
+                "rewriting them"
             )
         return missing + stale
 
@@ -246,10 +246,10 @@ class ConceptDescriber:
         current = {c: self._fingerprint(c) for c in targets}
         pending = list(targets) if overwrite else self._pending(targets, descriptions, current)
         if pending:
-            logger.info(f"Escribiendo {len(pending)} descripción(es) de concepto")
+            logger.info(f"Writing {len(pending)} concept description(s)")
             self._write(self._by_domain(pending), descriptions)
         else:
-            logger.info(f"{len(targets)} descripción(es) de concepto reutilizadas de la caché")
+            logger.info(f"{len(targets)} concept description(s) reused from the cache")
 
         # The second pass is NOT run over everything that has siblings. It was, and it
         # doubled the calls to fix a problem most concepts do not have — while the ones that
@@ -265,13 +265,13 @@ class ConceptDescriber:
         if refine:
             collisions = self._collisions(descriptions, list(targets))
             if collisions:
-                logger.info(f"Reescribiendo {len(collisions)} descripción(es) que chocan con otra")
+                logger.info(f"Rewriting {len(collisions)} description(s) that collide with another")
                 self._write(list(collisions), descriptions, against=collisions)
                 written += len(collisions)
 
         self._save_fingerprints(current)
         if written:
-            logger.success(f"{written} descripción(es) escritas; {len(descriptions)} en la caché")
+            logger.success(f"{written} description(s) written; {len(descriptions)} in the cache")
         return descriptions
 
     def _write(
@@ -303,7 +303,7 @@ class ConceptDescriber:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.warning(f"[{domain}] el lote falló, se escribe uno a uno: {e}")
+                    logger.warning(f"[{domain}] the batch failed, writing one by one: {e}")
                     self._write_one_by_one(batch, descriptions, {})
                 done += len(batch)
                 reporter.tick(done, detail=domain)
@@ -322,7 +322,7 @@ class ConceptDescriber:
             except progress.Cancelled:
                 raise
             except Exception as e:
-                logger.warning(f"[{concept}] descripción de reserva, sin modelo: {e}")
+                logger.warning(f"[{concept}] fallback description, no model: {e}")
                 descriptions[concept] = self.simple_describe(concept)
             self.save(descriptions)
 
@@ -441,7 +441,7 @@ class ConceptDescriber:
             if peers:
                 collisions[concept] = peers
                 logger.debug(
-                    f"[{concept}] choca con {', '.join(peers)} (máx {similarity[i].max():.3f})"
+                    f"[{concept}] collides with {', '.join(peers)} (max {similarity[i].max():.3f})"
                 )
         return collisions
 

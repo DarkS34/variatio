@@ -29,10 +29,10 @@ MIN_SINGULARIZE_LENGTH = 3
 def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     progress.phase("clean")
     nodes = node_universe(staging)
-    logger.info(f"Limpiando el grafo en bruto: {len(nodes)} nodo(s) en el universo")
+    logger.info(f"Cleaning the raw graph: {len(nodes)} node(s) in the universe")
 
     det_map, representatives = deterministic_merge(nodes)
-    logger.info(f"Fusión mecánica: {len(nodes)} → {len(representatives)} nodo(s)")
+    logger.info(f"Mechanical merge: {len(nodes)} → {len(representatives)} node(s)")
     progress.advance(0.1, f"{len(nodes)} → {len(representatives)} nodo(s) por fusión mecánica")
 
     definitions = staging.get("definitions") or {}
@@ -45,7 +45,7 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
             prompts=prompts,
     )
     canonicals = sorted({llm_map.get(n, n) for n in representatives})
-    logger.info(f"Fusión semántica: {len(representatives)} → {len(canonicals)} nodo(s)")
+    logger.info(f"Semantic merge: {len(representatives)} → {len(canonicals)} node(s)")
     progress.advance(0.6, f"{len(canonicals)} nodo(s) tras la fusión semántica")
 
     surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
@@ -58,8 +58,8 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     node_map = compose_node_map(nodes, det_map, llm_map, drop)
     cleaned = apply_node_map(staging, node_map)
     logger.success(
-        f"Grafo limpio: {len(staging['entities'])}→{len(cleaned['entities'])} concepto(s), "
-        f"{len(staging['relations'])}→{len(cleaned['relations'])} relación(es)"
+        f"Graph cleaned: {len(staging['entities'])}→{len(cleaned['entities'])} concept(s), "
+        f"{len(staging['relations'])}→{len(cleaned['relations'])} relation(s)"
     )
     progress.advance(1.0)
     return cleaned
@@ -121,14 +121,14 @@ def propose_merges(
 ) -> dict:
     groups = merge_candidates(nodes)
     if not groups:
-        logger.info("Sin candidatos a fusión; se queda la fusión mecánica")
+        logger.info("No merge candidates; the mechanical merge stands")
         return {}
 
     per_call = config.KG_BUILDER_MERGE_GROUPS_PER_CALL
     batches = [groups[i : i + per_call] for i in range(0, len(groups), per_call)]
     logger.info(
-        f"{len(groups)} grupo(s) candidatos a fusión sobre "
-        f"{sum(len(g) for g in groups)} nombre(s), en {len(batches)} llamada(s)"
+        f"{len(groups)} candidate merge group(s) over "
+        f"{sum(len(g) for g in groups)} name(s), in {len(batches)} call(s)"
     )
 
     valid = set(nodes)
@@ -303,9 +303,9 @@ def propose_drops(
             for name, reason in verdicts.items():
                 if name in valid:
                     drop.add(name)
-                    logger.debug(f"[{name}] descartado: {reason}")
+                    logger.debug(f"[{name}] dropped: {reason}")
 
-    logger.info(f"Descartes: {len(drop)} de {len(nodes)} nodo(s)")
+    logger.info(f"Drops: {len(drop)} of {len(nodes)} node(s)")
     return drop
 
 

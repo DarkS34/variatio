@@ -112,7 +112,7 @@ def run(
     checks["reasons"] = reasons
     checks["verdict"] = "retry" if reasons else "accept"
     if flags:
-        logger.warning(f"Variante con señales: {'; '.join(flags)}")
+        logger.warning(f"Variant flagged: {'; '.join(flags)}")
     return checks
 
 

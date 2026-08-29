@@ -126,7 +126,7 @@ def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResp
 # upstream response body, and these messages travel to the panel. What an operator needs is
 # what failed, against which host, and with which status; the body goes to the log at debug.
 def _upstream_error(action: str, e: Exception) -> str:
-    logger.debug(f"[ollama] {action}, contra '{config.OLLAMA_HOST}': {e}")
+    logger.debug(f"[ollama] {action}, against '{config.OLLAMA_HOST}': {e}")
     status = getattr(e, "status_code", None)
     if status:
         return f"{action}: el motor en '{config.OLLAMA_HOST}' respondió {status}"
@@ -173,7 +173,7 @@ class OllamaEngine:
         if think is None:
             return {}
         if not self.supports_thinking(model):
-            logger.debug(f"'{model}' no tiene modo de razonamiento; se ignora think={think}")
+            logger.debug(f"'{model}' has no reasoning mode; ignoring think={think}")
             return {}
         return {"think": DEFAULT_THINK_EFFORT if think is True else think}
 
@@ -302,7 +302,7 @@ class OllamaEngine:
             try:
                 capabilities = list(self._client.show(model).capabilities or [])
             except (ollama.ResponseError, httpx.RequestError) as e:
-                logger.warning(f"No se pudieron leer las capacidades de '{model}': {e}")
+                logger.warning(f"Could not read the capabilities of '{model}': {e}")
                 capabilities = []
             self._capabilities[model] = capabilities
         return self._capabilities[model]
@@ -385,14 +385,14 @@ class OllamaEngine:
                 self._client.generate(model=model, prompt="", keep_alive=0)
             return True
         except (ollama.ResponseError, httpx.RequestError) as e:
-            logger.warning(f"No se pudo descargar '{model}' de la GPU: {e}")
+            logger.warning(f"Could not unload '{model}' from the GPU: {e}")
             return False
 
     def unload_all(self) -> list[str]:
         try:
             resident = [info["model"] for info in self.running_models() if info["model"]]
         except InferenceError as e:
-            logger.warning(f"No se pudo leer qué modelos están cargados: {e}")
+            logger.warning(f"Could not read which models are loaded: {e}")
             return []
         return [
             model
@@ -435,7 +435,7 @@ class OllamaEngine:
         return True
 
     def pull(self, model: str, on_progress: ProgressSink | None = None) -> None:
-        logger.info(f"Descargando el modelo '{model}'")
+        logger.info(f"Pulling model '{model}'")
         try:
             for partial in self._client.pull(model, stream=True):
                 total = int(partial.get("total") or 0)
@@ -446,7 +446,7 @@ class OllamaEngine:
             raise InferenceError(_upstream_error(f"Falló la descarga de '{model}'", e)) from e
         self._capabilities.pop(model, None)
         self._installed = None
-        logger.success(f"Modelo '{model}' descargado")
+        logger.success(f"Model '{model}' pulled")
 
     def delete(self, model: str) -> None:
         try:
@@ -457,7 +457,7 @@ class OllamaEngine:
             ) from e
         self._capabilities.pop(model, None)
         self._installed = None
-        logger.info(f"Modelo '{model}' borrado del disco del motor")
+        logger.info(f"Model '{model}' deleted from the engine's disk")
 
 
 _ENGINE_NAMES = ("ollama", "cerebras+ollama")
@@ -616,7 +616,7 @@ def required_models() -> dict[str, str]:
 # for want of a model dies here instead, before the first phase.
 def ensure_models(models: list[str], label: str) -> None:
     unique = list(dict.fromkeys(models))
-    logger.info(f"Comprobando los modelos {label}: {', '.join(unique)}")
+    logger.info(f"Checking the {label} models: {', '.join(unique)}")
 
     failed = []
     for m in unique:
@@ -626,4 +626,4 @@ def ensure_models(models: list[str], label: str) -> None:
     if failed:
         raise RuntimeError(f"No se pudieron instalar los modelos: {', '.join(failed)}")
 
-    logger.success(f"Modelos {label} disponibles")
+    logger.success(f"{label} models available")

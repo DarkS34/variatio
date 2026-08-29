@@ -49,7 +49,7 @@ def reload() -> set[Impact]:
     if _namespace is not None:
         _write(_namespace)
     changed = {key for key in _values if _values[key] != before.get(key)}
-    logger.info(f"[config] Recargado: {len(changed)} ajuste(s) cambiaron")
+    logger.info(f"[config] Reloaded: {len(changed)} setting(s) changed")
     return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
 
 
@@ -93,7 +93,7 @@ def update(patch: dict[str, object]) -> set[Impact]:
         _write(_namespace)
     changed |= {key for key in _values if _values[key] != before.get(key)}
     for key in sorted(changed):
-        logger.info(f"[config] «{key}» cambiado")
+        logger.info(f"[config] «{key}» changed")
     return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
 
 
@@ -122,7 +122,7 @@ def reset(keys: list[str]) -> set[Impact]:
         _write(_namespace)
     changed = {key for key in keys if _values.get(key) != before.get(key)}
     for key in sorted(changed):
-        logger.info(f"[config] «{key}» devuelto a su valor por defecto")
+        logger.info(f"[config] «{key}» back to its default")
     return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
 
 

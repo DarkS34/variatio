@@ -111,13 +111,13 @@ def to_markdown(
     digest = source_hash(input_path) if cached is not None else ""
     if cached is not None and cached.exists():
         if _is_current(cached, input_path, digest):
-            logger.debug(f"[{input_path.name}] markdown reutilizado de {cached}")
+            logger.debug(f"[{input_path.name}] markdown reused from {cached}")
             _record_source(cached, input_path, digest)
             # Re-tidied on the way out, and rewritten when that changes anything: Docling is
             # the expensive half and its output does not change, so an improvement to the
             # cleanup must not cost a reconversion of the whole corpus to take effect.
             return _refresh(cached, tidy_markdown(cached.read_text(encoding="utf-8")))
-        logger.info(f"[{input_path.name}] el documento ha cambiado; reconvirtiendo")
+        logger.info(f"[{input_path.name}] the document changed; reconverting")
 
     # The one place a converter is ever used, and therefore the only place a lazy one has to
     # be resolved: everything above returns without Docling — plain text, and a cache hit.
@@ -127,14 +127,14 @@ def to_markdown(
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
         _record_source(cached, input_path, digest)
-        logger.debug(f"[{input_path.name}] markdown escrito en {cached}")
+        logger.debug(f"[{input_path.name}] markdown written to {cached}")
     return text
 
 
 def _refresh(path: Path, text: str) -> str:
     if text != path.read_text(encoding="utf-8"):
         path.write_text(text, encoding="utf-8")
-        logger.debug(f"[{path.name}] markdown en caché reformateado")
+        logger.debug(f"[{path.name}] cached markdown reformatted")
     return text
 
 

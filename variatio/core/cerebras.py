@@ -148,22 +148,22 @@ def response_format(format: dict | str | None) -> dict | None:
     if adapted.get("type") != "object":
         _warn_once(
             f"root:{digest}",
-            "[cerebras] La raíz del esquema no es un objeto, que el modo estricto exige; "
-            "se pide sin 'strict'",
+            "[cerebras] The schema root is not an object, which strict mode demands; "
+            "asking without 'strict'",
         )
         strict = False
     if _open_map(adapted):
         _warn_once(
             f"map:{digest}",
-            "[cerebras] El esquema declara un objeto de claves abiertas, que el modo "
-            "estricto rechaza; se pide sin 'strict'",
+            "[cerebras] The schema declares an open-keyed object, which strict mode "
+            "refuses; asking without 'strict'",
         )
         strict = False
     if len(compact) > STRICT_SCHEMA_MAX_CHARS:
         _warn_once(
             f"size:{digest}",
-            f"[cerebras] El esquema mide {len(compact)} caracteres (límite del modo "
-            f"estricto: {STRICT_SCHEMA_MAX_CHARS}); se pide sin 'strict'",
+            f"[cerebras] The schema measures {len(compact)} characters (strict mode's "
+            f"limit: {STRICT_SCHEMA_MAX_CHARS}); asking without 'strict'",
         )
         strict = False
     return {
@@ -229,7 +229,7 @@ class CerebrasEngine:
         if response.status_code != 200:
             # The body stays in the log and out of the message: this one is returned verbatim
             # to the panel as `{"error": …}`, and a reply from upstream is not ours to reflect.
-            logger.debug(f"[cerebras] Cuerpo del error al listar modelos: {response.text[:300]}")
+            logger.debug(f"[cerebras] Error body while listing models: {response.text[:300]}")
             raise InferenceError(
                 f"Cerebras respondió {response.status_code} al listar sus modelos "
                 f"({_endpoint_label('/models')}); el detalle está en el registro"
@@ -405,8 +405,8 @@ class CerebrasEngine:
             if response.status_code in _RETRY_STATUSES and attempt < _MAX_ATTEMPTS:
                 wait = _retry_wait(response, attempt)
                 logger.warning(
-                    f"[cerebras] {response.status_code} para '{model}'; "
-                    f"reintento {attempt}/{_MAX_ATTEMPTS - 1} en {wait:.0f} s"
+                    f"[cerebras] {response.status_code} for '{model}'; "
+                    f"retry {attempt}/{_MAX_ATTEMPTS - 1} in {wait:.0f} s"
                 )
                 progress.checkpoint()
                 time.sleep(wait)
@@ -465,7 +465,7 @@ def _endpoint_label(path: str) -> str:
 # its text, not ours, and these messages travel to the panel as the job's failure. The
 # status and the endpoint are what an operator acts on; the body goes to the log at debug.
 def _remote_error(status: int, model: str, body: str) -> str:
-    logger.debug(f"[cerebras] Cuerpo del error {status} para '{model}': {body[:300]}")
+    logger.debug(f"[cerebras] Body of error {status} for '{model}': {body[:300]}")
     return (
         f"Cerebras respondió {status} para '{model}' "
         f"({_endpoint_label('/chat/completions')}); el detalle está en el registro"
@@ -551,7 +551,7 @@ class HybridEngine:
         try:
             remote = self._cerebras.catalog()
         except InferenceError as e:
-            logger.debug(f"[cerebras] Catálogo no disponible: {e}")
+            logger.debug(f"[cerebras] Catalogue unavailable: {e}")
             remote = sorted(config.CEREBRAS_MODELS)
         return local + [{"model": model, "size": None, "remote": True} for model in remote]
 
@@ -572,10 +572,10 @@ class HybridEngine:
         try:
             catalog = self._cerebras.catalog()
         except InferenceError as e:
-            logger.warning(f"[cerebras] No se pudo comprobar '{model}': {e}")
+            logger.warning(f"[cerebras] Could not check '{model}': {e}")
             return False
         if model not in catalog:
-            logger.warning(f"[cerebras] '{model}' no está en el catálogo de Cerebras")
+            logger.warning(f"[cerebras] '{model}' is not in Cerebras' catalogue")
             return False
         return True
 

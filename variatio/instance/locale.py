@@ -18,14 +18,14 @@ def prompt_language(ws: Workspace) -> str:
         with path.open(encoding="utf-8") as f:
             raw = json.load(f)
     except (json.JSONDecodeError, OSError) as exc:
-        logger.warning(f"[locale] No se pudo leer '{path}': {exc}; se usa «{languages.DEFAULT}»")
+        logger.warning(f"[locale] Could not read '{path}': {exc}; using «{languages.DEFAULT}»")
         return languages.DEFAULT
     stored = raw.get(PROMPT_LANGUAGE_KEY) if isinstance(raw, dict) else None
     resolved = languages.normalise(stored)
     if resolved is None:
         logger.warning(
-            f"[locale] «{stored}» no es un idioma conocido en '{path}'; "
-            f"se usa «{languages.DEFAULT}»"
+            f"[locale] «{stored}» is not a known language in '{path}'; "
+            f"using «{languages.DEFAULT}»"
         )
         return languages.DEFAULT
     return resolved

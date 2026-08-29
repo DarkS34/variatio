@@ -78,7 +78,7 @@ class ConceptTagger:
             return {"concepts": [], "primary_concept": None, **self._trace(candidates, method)}
 
         if not candidates:
-            logger.warning(f"Ningún candidato del índice para: {statement[:60]}…")
+            logger.warning(f"No candidate from the index for: {statement[:60]}…")
             return empty("no_candidates")
 
         if len(candidates) == 1:
@@ -99,18 +99,18 @@ class ConceptTagger:
             wide = self.embedder.top_k_concepts(statement, self.fallback_top_k)
             if len(wide) > len(candidates):
                 logger.debug(
-                    f"Ningún candidato aceptado; se reintenta con {len(wide)}: {statement[:40]}…"
+                    f"No candidate accepted; retrying with {len(wide)}: {statement[:40]}…"
                 )
                 escalated, escalated_method = self._resolve(statement, wide, "llm_wide")
                 if not self._is_inconclusive(escalated):
                     result, method, candidates = escalated, escalated_method, wide
 
         if result is None:
-            logger.error(f"Sin etiquetar tras las reparaciones: {statement[:60]}…")
+            logger.error(f"Left untagged after the repairs: {statement[:60]}…")
             return empty("failed")
 
         if result["primary_concept"] is None:
-            logger.warning(f"El modelo rechazó todos los candidatos: {statement[:60]}…")
+            logger.warning(f"The model rejected every candidate: {statement[:60]}…")
             return empty("rejected")
 
         return {**result, **self._trace(candidates, method)}
@@ -132,7 +132,7 @@ class ConceptTagger:
             and config.THINK_CONCEPT_TAGGER
             and inference.supports_thinking(self.concept_tagger_model)
         ):
-            logger.debug(f"Etiquetado no concluyente; se reintenta razonando: {statement[:40]}…")
+            logger.debug(f"Tagging inconclusive; retrying with reasoning: {statement[:40]}…")
             escalated = self._verify(prompt, candidate_names, think=config.THINK_CONCEPT_TAGGER)
             if not self._is_inconclusive(escalated):
                 return escalated, f"{method}_thinking"

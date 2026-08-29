@@ -34,7 +34,7 @@ def parse_with_repair(
             return result, None
 
         logger.warning(
-            f"{log_prefix}reparación {attempt}/{max_attempts}: "
+            f"{log_prefix}repair {attempt}/{max_attempts}: "
             f"{str(error).replace(chr(10), ' | ')}"
         )
         progress.emit(

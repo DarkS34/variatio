@@ -157,7 +157,7 @@ def test_an_oversized_schema_is_reported_once_per_schema():
         logger.remove(sink)
         cerebras._WARNED.clear()
 
-    assert len([m for m in said if "El esquema mide" in m]) == 2
+    assert len([m for m in said if "The schema measures" in m]) == 2
 
 
 def test_an_oversized_schema_loses_strict_but_not_the_shape():

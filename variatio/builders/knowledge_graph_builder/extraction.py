@@ -46,13 +46,13 @@ def run(
         documents, schema=schema, max_attempts=max_attempts, prompts=prompts
     )
     if not found["origins"]:
-        logger.error("Ningún concepto extraído del corpus")
+        logger.error("No concept extracted from the corpus")
         return {}
 
     staging = assemble(found, documents)
     logger.success(
-        f"Extracción terminada: {len(staging['entities'])} concepto(s), "
-        f"{len(staging['relations'])} relación(es)"
+        f"Extraction finished: {len(staging['entities'])} concept(s), "
+        f"{len(staging['relations'])} relation(s)"
     )
     return staging
 
@@ -76,10 +76,10 @@ def convert_corpus(
 ) -> list[tuple[str, list[str], list[tuple[str, list[str], str]]]]:
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
-        logger.error(f"Ningún documento admitido en {input_dir}")
+        logger.error(f"No supported document in {input_dir}")
         return []
 
-    logger.info(f"{len(files)} documento(s) en el corpus; transcribiendo a markdown")
+    logger.info(f"{len(files)} document(s) in the corpus; transcribing to markdown")
     progress.phase("convert", f"0/{len(files)} documento(s)")
 
     converted: list[tuple[str, dict[int, list[str]], list[tuple[str, list[str], str]]]] = []
@@ -101,12 +101,12 @@ def convert_corpus(
             except progress.Cancelled:
                 raise
             except Exception as e:
-                logger.exception(f"[{file_path.name}] omitido: {e}")
+                logger.exception(f"[{file_path.name}] skipped: {e}")
                 continue
 
             chunks = _source_docs.chunk_sections(text, chunk_size)
             if not chunks:
-                logger.warning(f"[{file_path.name}] no produjo texto")
+                logger.warning(f"[{file_path.name}] produced no text")
                 continue
             converted.append((file_path.name, _source_docs.headings_by_level(text), chunks))
 
@@ -115,7 +115,7 @@ def convert_corpus(
         (name, titles[idx], chunks) for idx, (name, _, chunks) in enumerate(converted)
     ]
     for name, doc_titles, _ in documents:
-        logger.debug(f"[{name}] título(s): {' · '.join(doc_titles) or '—'}")
+        logger.debug(f"[{name}] title(s): {' · '.join(doc_titles) or '—'}")
 
     progress.advance(1.0, f"{len(documents)} documento(s) listos")
     return documents
@@ -152,7 +152,7 @@ def extract_documents(
     prompts,
 ) -> dict:
     total = sum(len(chunks) for _, _, chunks in documents)
-    logger.info(f"Extrayendo de {total} fragmento(s) de {len(documents)} documento(s)")
+    logger.info(f"Extracting from {total} chunk(s) of {len(documents)} document(s)")
     progress.phase("extract", f"0/{total} fragmento(s)")
 
     origins: dict[str, set[int]] = defaultdict(set)
@@ -368,8 +368,8 @@ def glean_chunk(
         for name, definition in more_definitions.items():
             definitions.setdefault(name, definition)
         logger.debug(
-            f"{log_prefix}segunda lectura: +{len(new_concepts)} concepto(s), "
-            f"+{len(new_relations)} relación(es)"
+            f"{log_prefix}second reading: +{len(new_concepts)} concept(s), "
+            f"+{len(new_relations)} relation(s)"
         )
     return concepts, relations, definitions
 

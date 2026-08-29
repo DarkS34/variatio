@@ -136,12 +136,12 @@ class ExemplarsBankBuilder:
 
         files = _source_docs.list_source_files(input_dir)
         if not files:
-            logger.error(f"Ningún documento admitido en {input_dir}")
+            logger.error(f"No supported document in {input_dir}")
             return {}
 
         bank = self._load_existing(output_file_path)
         self._id_counter = self._max_id(bank)
-        logger.info(f"{len(files)} documento(s); se empieza en C{self._id_counter + 1:03d}")
+        logger.info(f"{len(files)} document(s); starting at C{self._id_counter + 1:03d}")
 
         text_by_file = self._convert(files)
 
@@ -164,16 +164,16 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"{tag} omitido: {e}")
+                    logger.exception(f"{tag} skipped: {e}")
                     continue
 
                 if not new_items:
-                    logger.warning(f"{tag} no produjo ningún ítem")
+                    logger.warning(f"{tag} produced no item")
                     continue
 
                 bank.update(new_items)
                 write_json(output_file_path, bank)
-                logger.success(f"{tag} +{len(new_items)} ítem(s); {len(bank)} en total")
+                logger.success(f"{tag} +{len(new_items)} item(s); {len(bank)} in total")
                 progress.emit("artifact.progress", name="exemplars_bank", count=len(bank))
 
                 if on_items is not None:
@@ -189,7 +189,7 @@ class ExemplarsBankBuilder:
                     except progress.Cancelled:
                         raise
                     except Exception as e:
-                        logger.exception(f"{tag} no se pudo etiquetar: {e}")
+                        logger.exception(f"{tag} could not be tagged: {e}")
                     else:
                         write_json(output_file_path, bank)
                         progress.emit(
@@ -197,7 +197,7 @@ class ExemplarsBankBuilder:
                         )
 
         progress.advance(1.0, f"{len(bank)} ítem(s)")
-        logger.success(f"Banco terminado: {len(bank)} ítem(s) en {Path(output_file_path).name}")
+        logger.success(f"Bank finished: {len(bank)} item(s) in {Path(output_file_path).name}")
         return bank
 
     # PIPELINE ------------------------------------------------------------------------------------
@@ -227,13 +227,13 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"[{file_path.name}] conversión omitida: {e}")
+                    logger.exception(f"[{file_path.name}] conversion skipped: {e}")
         progress.advance(1.0, f"{len(text_by_file)} documento(s) transcrito(s)")
         return text_by_file
 
     def _process_file(self, file_path: Path, content: str, tag: str) -> dict[str, dict]:
         if not content.strip():
-            logger.warning(f"{tag} sin contenido aprovechable tras la transcripción")
+            logger.warning(f"{tag} no usable content after the transcription")
             return {}
 
         batches = self._build_batches(content)
@@ -255,7 +255,7 @@ class ExemplarsBankBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.error(f"{b_tag} falló: {e}")
+                    logger.error(f"{b_tag} failed: {e}")
                     continue
                 for raw in extracted:
                     key = self._identity(raw)
@@ -267,9 +267,9 @@ class ExemplarsBankBuilder:
                     if key:
                         seen.add(key)
                     items[self._next_id()] = {**raw, "source": file_path.stem}
-                logger.debug(f"{b_tag} extrajo {len(extracted)} ítem(s)")
+                logger.debug(f"{b_tag} extracted {len(extracted)} item(s)")
         if repeated:
-            logger.debug(f"{tag} {repeated} ítem(s) repetidos por el solape, descartados")
+            logger.debug(f"{tag} {repeated} item(s) repeated by the overlap, discarded")
         return items
 
     # What makes two extractions the same item: the primary field, which is the one the
@@ -411,6 +411,6 @@ class ExemplarsBankBuilder:
         try:
             return json.loads(p.read_text(encoding="utf-8"))
         except Exception as e:
-            logger.warning(f"No se pudo leer el banco existente {path} ({e}); se empieza de cero")
+            logger.warning(f"Could not read the existing bank {path} ({e}); starting from scratch")
             return {}
 

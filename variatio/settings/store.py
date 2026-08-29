@@ -68,10 +68,10 @@ def read_file(path: str | Path) -> dict[str, object]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
-        logger.error(f"[config] No se pudo leer '{path}': {error}")
+        logger.error(f"[config] Could not read '{path}': {error}")
         return {}
     if not isinstance(raw, dict):
-        logger.error(f"[config] '{path}' no contiene un objeto")
+        logger.error(f"[config] '{path}' does not hold an object")
         return {}
     return _rename_legacy(_flatten(raw))
 
@@ -141,7 +141,7 @@ def resolve(
 
     for key in file_values:
         if key not in known:
-            logger.warning(f"[config] Se ignora la clave desconocida «{key}»")
+            logger.warning(f"[config] Ignoring the unknown key «{key}»")
 
     for setting in settings:
         values[setting.key] = setting.default_for(engine)
@@ -157,14 +157,14 @@ def resolve(
                 values[setting.key] = coerce(setting, file_value)
                 sources[setting.key] = "file"
             except SettingError as error:
-                logger.warning(f"[config] En el fichero, {error}; se usa el valor por defecto")
+                logger.warning(f"[config] In the file, {error}; using the default")
 
         if setting.env and environ.get(setting.env, "") != "":
             try:
                 values[setting.key] = coerce(setting, environ[setting.env])
                 sources[setting.key] = "env"
             except SettingError as error:
-                logger.warning(f"[config] En el entorno, {error}; se usa el valor anterior")
+                logger.warning(f"[config] In the environment, {error}; using the previous value")
 
     return values, sources
 

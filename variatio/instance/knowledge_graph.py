@@ -58,11 +58,11 @@ class KnowledgeGraph:
                 continue
             if not graph.is_directed():
                 logger.warning(
-                    f"«{rel_name}» es acíclica pero no dirigida; no se comprueban ciclos"
+                    f"«{rel_name}» is acyclic but not directed; cycles are not checked"
                 )
                 continue
             if not nx.is_directed_acyclic_graph(graph):
-                logger.error(f"Ciclo en «{rel_name}»: {nx.find_cycle(graph)}")
+                logger.error(f"Cycle in «{rel_name}»: {nx.find_cycle(graph)}")
 
     def __getitem__(self, relation: str) -> nx.Graph:
         return self.graphs[relation]
@@ -94,7 +94,7 @@ class KnowledgeGraph:
             return []
         graph = self.graphs[relation]
         if not graph.is_directed():
-            logger.warning(f"«{relation}» no es dirigida; no se puede calcular su cierre")
+            logger.warning(f"«{relation}» is not directed; its closure cannot be computed")
             return []
         reach = nx.descendants if forward else nx.ancestors
         found: set[str] = set()

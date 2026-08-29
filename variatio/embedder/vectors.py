@@ -47,7 +47,7 @@ def embed_normalized(texts: list[str], what: str, model: str | None = None):
     except progress.Cancelled:
         raise
     except Exception as e:
-        logger.warning(f"No se pudo vectorizar {what} ({e}); se sigue sin esa señal")
+        logger.warning(f"Could not embed {what} ({e}); carrying on without that signal")
         return None
 
     return normalize_rows(vectors)

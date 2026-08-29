@@ -118,36 +118,36 @@ class ExemplarsProfileBuilder:
 
         files = _source_docs.list_source_files(input_dir)
         if not files:
-            logger.error(f"Ningún documento admitido en {input_dir}")
+            logger.error(f"No supported document in {input_dir}")
             return {}
 
-        logger.info(f"{len(files)} documento(s); buscando modalidades de ejercicio")
+        logger.info(f"{len(files)} document(s); looking for exercise modalities")
         chunks = self._convert(files)
         if not chunks:
-            logger.error("Ningún documento aportó contenido")
+            logger.error("No document contributed any content")
             return {}
 
         findings = self._scan(chunks)
         if not findings:
-            logger.error("Ninguna modalidad de ejercicio encontrada en el corpus")
+            logger.error("No exercise modality found in the corpus")
             return {}
 
         profile = self._consolidate(findings)
         if not profile:
-            logger.error("No se pudo redactar el borrador del perfil")
+            logger.error("Could not write the profile draft")
             return {}
 
         write_json(output_file_path, profile)
         try:
             loaded = ExemplarsProfile(output_file_path)
             logger.success(
-                f"Borrador del perfil en {Path(output_file_path).name}: carga bien, "
-                f"{len(loaded.item_types)} tipo(s) de ítem ({', '.join(loaded.type_keys)})"
+                f"Profile draft in {Path(output_file_path).name}: loads cleanly, "
+                f"{len(loaded.item_types)} item type(s) ({', '.join(loaded.type_keys)})"
             )
         except Exception as e:
             logger.warning(
-                f"Borrador del perfil en {Path(output_file_path).name}: "
-                f"necesita correcciones a mano antes de cargar ({e})"
+                f"Profile draft in {Path(output_file_path).name}: "
+                f"needs corrections by hand before it will load ({e})"
             )
 
         self.synthesize_context(profile, findings)
@@ -215,17 +215,17 @@ class ExemplarsProfileBuilder:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"[{file_path.name}] omitido: {e}")
+                    logger.exception(f"[{file_path.name}] skipped: {e}")
                     continue
                 if not content.strip():
-                    logger.warning(f"[{file_path.name}] sin contenido tras la transcripción")
+                    logger.warning(f"[{file_path.name}] no content after the transcription")
                     continue
                 for heading, body in _source_docs.chunk_markdown(content, self.chunk_size):
                     location = f"{file_path.stem} > {heading}" if heading else file_path.stem
                     chunks.append((location, body))
 
         progress.advance(1.0, f"{len(chunks)} fragmento(s)")
-        logger.info(f"Corpus partido en {len(chunks)} fragmento(s) de hasta {self.chunk_size:,} caracteres")
+        logger.info(f"Corpus split into {len(chunks)} chunk(s) of up to {self.chunk_size:,} characters")
         return chunks
 
     # SCANNING ------------------------------------------------------------------------------------
@@ -249,7 +249,7 @@ class ExemplarsProfileBuilder:
 
         progress.advance(1.0, f"{len(found)} modalidad(es)")
         logger.success(
-            f"Rastreo terminado: {len(found)} modalidad(es) candidatas ({', '.join(sorted(found))})"
+            f"Scan finished: {len(found)} candidate modality(ies) ({', '.join(sorted(found))})"
         )
         return found
 
@@ -274,7 +274,7 @@ class ExemplarsProfileBuilder:
             prompts=self.prompts,
         )
         if entries is None:
-            logger.warning(f"{tag}{location}: rastreo inservible ({err}); omitido")
+            logger.warning(f"{tag}{location}: unusable scan ({err}); skipped")
             return []
         return entries
 
@@ -358,8 +358,8 @@ class ExemplarsProfileBuilder:
             else False
         )
         logger.info(
-            f"Consolidando con '{self.consolidate_model}' "
-            f"(razonamiento {'activado' if think else 'desactivado'})"
+            f"Consolidating with '{self.consolidate_model}' "
+            f"(reasoning {'on' if think else 'off'})"
         )
         response = inference.generate(
             model=self.consolidate_model,
@@ -373,7 +373,7 @@ class ExemplarsProfileBuilder:
         for attempt in range(1, self.max_repair_attempts + 1):
             if err is None:
                 break
-            logger.warning(f"Reparación {attempt}/{self.max_repair_attempts}: {err}")
+            logger.warning(f"Repair {attempt}/{self.max_repair_attempts}: {err}")
             if profile is None:
                 repair_model = config.REPAIR_LLM
                 repair_prompt = self.prompts.json_repair_prompt(
@@ -399,7 +399,7 @@ class ExemplarsProfileBuilder:
         if profile is None:
             return {}
         if err is not None:
-            logger.warning(f"El perfil sigue sin validar tras las reparaciones; se guarda igual: {err}")
+            logger.warning(f"The profile still does not validate after the repairs; saving it anyway: {err}")
         return profile
 
     @classmethod

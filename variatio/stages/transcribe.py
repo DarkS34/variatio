@@ -160,12 +160,12 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         "failed_pages": 0,
     }
     if not sources:
-        logger.warning(f"Ningún documento admitido en {slot_dir(ws, slot)}")
+        logger.warning(f"No supported document in {slot_dir(ws, slot)}")
         return summary
 
     converter = _slot_converter(slot)
     ocr = _slot_ocr(slot)
-    logger.info(f"Transcribiendo {len(sources)} documento(s) de «{slot}»")
+    logger.info(f"Transcribing {len(sources)} document(s) of «{slot}»")
 
     with progress.overall(TRANSCRIBE_PHASES):
         progress.phase("transcribe", f"0/{len(sources)} documento(s)")
@@ -193,7 +193,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                 except progress.Cancelled:
                     raise
                 except Exception as e:
-                    logger.exception(f"[{source.name}] transcripción omitida: {e}")
+                    logger.exception(f"[{source.name}] transcription skipped: {e}")
                     continue
                 meta = _source_docs.read_meta(_cache_dir_for(ws, source))
                 summary["documents"] += 1
@@ -206,8 +206,8 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         progress.advance(1.0, f"{summary['pages']} página(s)")
 
     logger.success(
-        f"Transcripción de «{slot}»: {summary['documents']} documento(s), "
-        f"{summary['pages']} página(s), {summary['seams_merged']} costura(s) unidas"
+        f"Transcription of «{slot}»: {summary['documents']} document(s), "
+        f"{summary['pages']} page(s), {summary['seams_merged']} seam(s) joined"
     )
     return summary
 

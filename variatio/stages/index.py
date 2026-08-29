@@ -39,7 +39,7 @@ def describe_concepts(
     """
     describer = _describer(ws)
     descriptions = describer.ensure(concepts=concepts, overwrite=overwrite)
-    logger.success(f"{len(descriptions)} descripción(es) de concepto disponibles")
+    logger.success(f"{len(descriptions)} concept description(s) available")
     return descriptions
 
 
@@ -47,15 +47,15 @@ def restamp_descriptions(ws: Workspace, dry_run: bool = False) -> tuple[int, int
     changed, total = _describer(ws).restamp(dry_run=dry_run)
     if dry_run:
         logger.info(
-            f"{changed} de {total} descripción(es) se reescribirían con el grafo actual"
+            f"{changed} of {total} description(s) would be rewritten against the current graph"
         )
     elif changed:
         logger.success(
-            f"{changed} de {total} descripción(es) reselladas contra el grafo actual; "
-            "no se ha reescrito ningún texto"
+            f"{changed} of {total} description(s) re-stamped against the current graph; "
+            "no text was rewritten"
         )
     else:
-        logger.info(f"{total} descripción(es) ya estaban selladas contra el grafo actual")
+        logger.info(f"{total} description(s) were already stamped against the current graph")
     return changed, total
 
 

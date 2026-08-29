@@ -33,7 +33,7 @@ def parse_object(
         prompts=prompts,
     )
     if result is None:
-        logger.warning(f"{log_prefix}JSON irrecuperable: {error}")
+        logger.warning(f"{log_prefix}Unrecoverable JSON: {error}")
     return result
 
 

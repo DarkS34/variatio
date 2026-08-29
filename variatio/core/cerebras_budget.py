@@ -151,8 +151,8 @@ class Budget:
         if held <= 0:
             return 0.0
         logger.info(
-            f"[cerebras] Presupuesto agotado para '{model}': se espera {held:.0f} s "
-            "a que ruede la ventana"
+            f"[cerebras] Budget spent for '{model}': waiting {held:.0f} s "
+            "for the window to roll"
         )
         self.begin(model, phase, waiting=held)
         progress.emit("cerebras.waiting", model=model, seconds=round(held))
@@ -288,7 +288,7 @@ class Budget:
         except FileNotFoundError:
             return _empty()
         except (OSError, ValueError) as e:
-            logger.warning(f"[cerebras] No se pudo leer el registro de consumo: {e}")
+            logger.warning(f"[cerebras] Could not read the spending ledger: {e}")
             return _empty()
         if not isinstance(state, dict) or not isinstance(state.get("models"), dict):
             return _empty()
@@ -298,7 +298,7 @@ class Budget:
         try:
             write_json(self._path, state)
         except OSError as e:
-            logger.warning(f"[cerebras] No se pudo guardar el registro de consumo: {e}")
+            logger.warning(f"[cerebras] Could not save the spending ledger: {e}")
 
 
 def _empty() -> dict:

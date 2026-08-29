@@ -72,11 +72,11 @@ class Embedder:
         if cache.concept_cache_is_valid(self.concepts_cache_path, self._concept_fingerprint()):
             self.concepts_index = cache.load_concept_cache(self.concepts_cache_path)
             logger.info(
-                f"Índice de conceptos reutilizado de la caché "
-                f"({len(self.concepts_index)} concepto(s))"
+                f"Concepts index reused from the cache "
+                f"({len(self.concepts_index)} concept(s))"
             )
             return
-        logger.info("Construyendo el índice de conceptos")
+        logger.info("Building the concepts index")
         self.init_index_with_concepts()
         cache.save_concept_cache(
             self.concepts_cache_path, self.concepts_index, self._concept_fingerprint()
@@ -148,7 +148,7 @@ class Embedder:
         new_fingerprint = self._exemplars_bank_fingerprint(text_fingerprints)
 
         if self._cached_exemplars_bank_fingerprint == new_fingerprint and cached_vectors:
-            logger.info("Índice del banco al día; no hay nada que vectorizar")
+            logger.info("Bank index up to date; there is nothing to embed")
             return
 
         reusable = {
@@ -160,8 +160,8 @@ class Embedder:
 
         if pending:
             logger.info(
-                f"Vectorizando {len(pending)} ítem(s) del banco "
-                f"({len(reusable)} reutilizados de la caché)"
+                f"Embedding {len(pending)} bank item(s) "
+                f"({len(reusable)} reused from the cache)"
             )
             with progress.step(
                 "embed_bank", "Indexando el banco de ejemplos", total=len(pending)
@@ -281,7 +281,7 @@ class Embedder:
         pending = self._pending_keys([self._prefix("query") + t for t in texts])
         if not pending:
             return
-        logger.info(f"Vectorizando {len(pending)} enunciado(s) para la recuperación")
+        logger.info(f"Embedding {len(pending)} statement(s) for retrieval")
         with progress.step(
             "embed_queries", "Vectorizando los enunciados", total=len(pending)
         ) as reporter:

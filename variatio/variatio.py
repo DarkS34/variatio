@@ -81,7 +81,7 @@ def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     }
     dropped = sorted(set(fixed or {}) - set(kept))
     if dropped:
-        logger.warning(f"Campos fijados sin valor, se ignoran: {', '.join(dropped)}")
+        logger.warning(f"Pinned fields with no value, ignored: {', '.join(dropped)}")
     return kept
 
 
@@ -120,7 +120,7 @@ def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> 
             continue
         ignored = [k for k, v in fixed.items() if k in raw and raw[k] != v]
         if ignored:
-            logger.warning(f"El modelo ignoró valor(es) fijo(s), se sobrescriben: {', '.join(ignored)}")
+            logger.warning(f"The model ignored pinned value(s), overwriting them: {', '.join(ignored)}")
         best, best_score = item, score
 
     if best is None:
@@ -240,7 +240,7 @@ def generate_with_retries(
         reasons = list(result.checks.get("reasons") or [])
         progress.emit("item.retried", index=index, attempt=result.retried + 1, reasons=reasons)
         logger.info(
-            f"[generate] Reintento {result.retried + 1}/{max_retries} de la variante {index}: "
+            f"[generate] Retry {result.retried + 1}/{max_retries} of variant {index}: "
             f"{'; '.join(reasons)}"
         )
         again = attempt(checks.correction_text(result.checks))
@@ -307,7 +307,7 @@ class VariantGenerator:
 
         few_shot, origins = self._select_few_shot(target_type, concepts, fixed)
         if not few_shot:
-            logger.warning(f"Sin ejemplos para «{target_type.key}» y {concepts}; se genera sin few-shot")
+            logger.warning(f"No examples for «{target_type.key}» and {concepts}; generating without few-shot")
 
         progress.emit(
             "few_shot",
@@ -386,7 +386,7 @@ class VariantGenerator:
                     index=i + 1,
                 )
                 if result is None:
-                    logger.warning(f"[{i + 1}/{n}] descartado: no valida contra el perfil")
+                    logger.warning(f"[{i + 1}/{n}] discarded: does not validate against the profile")
                     progress.emit("item.rejected", index=i + 1)
                     continue
 

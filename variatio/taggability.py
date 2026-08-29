@@ -57,8 +57,8 @@ def review(
     relations = _relation_triples(knowledge_graph)
     modalities = modalities_block(exemplars_profile)
     logger.info(
-        f"Revisando la etiquetabilidad de {len(domains)} dominio(s) contra "
-        f"{len(exemplars_profile.item_types)} modalidad(es) del perfil"
+        f"Reviewing taggability across {len(domains)} domain(s) against "
+        f"{len(exemplars_profile.item_types)} modality(ies) of the profile"
     )
 
     non_taggable: set[str] = set()
@@ -86,7 +86,7 @@ def review(
             )
 
     logger.success(
-        f"Etiquetabilidad: {len(non_taggable)} concepto(s) excluidos de "
+        f"Taggability: {len(non_taggable)} concept(s) excluded out of "
         f"{sum(len(m) for m in knowledge_graph.concepts_by_domains.values())}"
     )
     progress.advance(1.0, f"{len(non_taggable)} concepto(s) no etiquetables")
@@ -144,5 +144,5 @@ def _judge_domain(
     for concept, reason in verdicts.items():
         if concept in valid:
             excluded.append(concept)
-            logger.debug(f"[{domain}] «{concept}» no sirve como etiqueta: {reason}")
+            logger.debug(f"[{domain}] «{concept}» is no use as a label: {reason}")
     return excluded

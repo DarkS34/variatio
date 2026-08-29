@@ -135,21 +135,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "build":
             built = stages.build_missing(ws)
             if built:
-                logger.success(f"Artefactos construidos: {', '.join(built)}")
+                logger.success(f"Artifacts built: {', '.join(built)}")
             else:
-                logger.info("Todos los artefactos de la instancia ya existen")
+                logger.info("Every artifact of the instance already exists")
         elif args.command == "init":
             stages.initialize(tag=True, ws=ws)
         elif args.command == "restamp-descriptions":
             changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
-            print(f"{changed} de {total} descripción(es) {'se reescribirían' if args.dry_run else 'reselladas'}")
+            print(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
         elif args.command == "generate":
             _generate_and_report(args, ws)
         elif args.command == "all":
             stages.build_missing(ws)
             _generate_and_report(args, ws)
     except stages.MissingArtifactError as e:
-        logger.error(f"{e}; ejecuta antes `variatio build`")
+        logger.error(f"{e}; run `variatio build` first")
         return 1
     except (RuntimeError, ImportError, OSError, ValueError) as e:
         logger.error(str(e))

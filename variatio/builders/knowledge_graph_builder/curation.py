@@ -29,7 +29,7 @@ def run(
 ) -> dict:
     concepts = cleaned["entities"]
     relations = cleaned["relations"]
-    logger.info(f"Curando {len(concepts)} concepto(s) y {len(relations)} relación(es)")
+    logger.info(f"Curating {len(concepts)} concept(s) and {len(relations)} relation(s)")
 
     positions = cleaned.get("positions") or {}
     definitions = cleaned.get("definitions") or {}
@@ -51,7 +51,7 @@ def run(
                 ),
                 positions,
             )
-        logger.info(f"Dominios: {len(concepts_by_domains)}")
+        logger.info(f"Domains: {len(concepts_by_domains)}")
     progress.advance(1.0, f"{len(concepts_by_domains)} dominio(s)")
 
     relations = link_relations(
@@ -70,7 +70,7 @@ def run(
         report_against_order(typed, positions, schema.prerequisite_verbose)
         typed = break_cycles(typed, positions, schema.prerequisite_verbose)
         logger.info(
-            f"Relaciones: {len(typed)} grupo(s) tipados sobre {len(universe)} concepto(s)"
+            f"Relations: {len(typed)} typed group(s) over {len(universe)} concept(s)"
         )
     progress.advance(1.0)
 
@@ -83,8 +83,8 @@ def run(
     write_json(output_path, curated)
     write_sources(sources_path, cleaned, universe, units)
     logger.success(
-        f"Borrador curado en {Path(output_path).name}: {len(universe)} concepto(s), "
-        f"{len(typed)} grupo(s) de relación; falta revisar la etiquetabilidad"
+        f"Draft curated into {Path(output_path).name}: {len(universe)} concept(s), "
+        f"{len(typed)} relation group(s); taggability still has to be reviewed"
     )
     return curated
 
@@ -117,10 +117,10 @@ def write_sources(
 
     orphans = len(universe) - len(anchored)
     if orphans:
-        logger.warning(f"{orphans} concepto(s) sin pasaje del corpus que los respalde")
+        logger.warning(f"{orphans} concept(s) with no corpus passage behind them")
     logger.info(
-        f"Anclaje al corpus: {len(anchored)} de {len(universe)} concepto(s) con cita "
-        f"en {Path(path).name}"
+        f"Corpus anchoring: {len(anchored)} of {len(universe)} concept(s) quoted "
+        f"in {Path(path).name}"
     )
 
 
@@ -135,8 +135,8 @@ def segment_syllabus(
 ) -> list[dict]:
     if not outline:
         logger.info(
-            "El corpus no tiene índice de encabezados; los dominios se nombran sin mirar "
-            "la estructura del material"
+            "The corpus has no heading index; the domains are named without looking at "
+            "the structure of the material"
         )
         return []
     prompt = prompts.segment_syllabus_prompt(blocks.outline_block(outline, documents))
@@ -151,12 +151,12 @@ def segment_syllabus(
     units = accept_units(raw.get("units") or [], outline)
     if not units:
         logger.warning(
-            f"El modelo no segmentó el temario sobre {len(outline)} encabezado(s); "
-            "se nombran los dominios sin mirar la estructura del material"
+            f"The model did not segment the syllabus over {len(outline)} heading(s); "
+            "the domains are named without looking at the structure of the material"
         )
         return []
     logger.success(
-        f"Temario: {len(units)} unidad(es) sobre {len(outline)} encabezado(s) — "
+        f"Syllabus: {len(units)} unit(s) over {len(outline)} heading(s) — "
         + " · ".join(unit["name"] for unit in units)
     )
     return units
@@ -242,8 +242,8 @@ def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, li
     concepts = sorted(cleaned["entities"])
     by_unit, leftovers = assign_to_units(units, concepts, cleaned.get("occurrences") or {})
     logger.info(
-        f"Temario: {len(concepts) - len(leftovers)} de {len(concepts)} concepto(s) "
-        f"colocados por el corpus; {len(leftovers)} para la repesca"
+        f"Syllabus: {len(concepts) - len(leftovers)} of {len(concepts)} concept(s) "
+        f"placed by the corpus; {len(leftovers)} left for the second pass"
     )
     if leftovers:
         by_unit[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(leftovers)
@@ -304,10 +304,10 @@ def curate_domains(
         if name and fold(name) != fold(config.KG_BUILDER_UNCLASSIFIED_DOMAIN) and name not in named:
             named.append(name)
     if not named:
-        logger.warning("El modelo no nombró ningún dominio; todo queda sin clasificar")
+        logger.warning("The model named no domain; everything is left unclassified")
         return {config.KG_BUILDER_UNCLASSIFIED_DOMAIN: sorted(concepts)}
 
-    logger.info(f"{len(named)} dominio(s) nombrados; asignando {len(concepts)} concepto(s) por lotes")
+    logger.info(f"{len(named)} domain(s) named; placing {len(concepts)} concept(s) in batches")
     by_domain = {domain: [] for domain in named}
     remaining = assign_round(
         sorted(concepts), by_domain, relations, definitions, max_attempts=max_attempts,
@@ -345,7 +345,7 @@ def place_leftovers(
     if not placed:
         return by_domain
 
-    logger.info(f"Colocando {len(leftovers)} concepto(s) sueltos en {len(placed)} dominio(s)")
+    logger.info(f"Placing {len(leftovers)} leftover concept(s) into {len(placed)} domain(s)")
     remaining = list(leftovers)
     # Small batches and repeated rounds, because the failure being repaired here is
     # "forgot to answer", not "could not decide": at 60 names a call the model placed 24
@@ -366,8 +366,8 @@ def place_leftovers(
     if remaining:
         placed[unclassified] = sorted(remaining)
     logger.info(
-        f"Sueltos: {len(leftovers) - len(remaining)} colocados, "
-        f"{len(remaining)} sin clasificar"
+        f"Leftovers: {len(leftovers) - len(remaining)} placed, "
+        f"{len(remaining)} unclassified"
     )
     return placed
 
@@ -501,7 +501,7 @@ def link_relations(
             )
         )
 
-    logger.info(f"El enlazado añadió {len(known) - before} relación(es)")
+    logger.info(f"Linking added {len(known) - before} relation(s)")
     progress.advance(1.0, f"{len(known) - before} relación(es) nuevas")
     return sorted(list(r) for r in known)
 
@@ -563,8 +563,8 @@ def link_cross_domain(
     crossing = [r for r in proposed if domain_of[r[0]] != domain_of[r[2]]]
     if len(crossing) < len(proposed):
         logger.debug(
-            f"Entre dominios: descartadas {len(proposed) - len(crossing)} relación(es) "
-            "que no cruzaban ningún dominio"
+            f"Cross-domain: discarded {len(proposed) - len(crossing)} relation(s) "
+            "that crossed no domain"
         )
     return crossing
 
@@ -609,8 +609,8 @@ def report_against_order(typed: list[dict], positions: dict, prerequisite: str |
     judged = [(s, t) for s, t in edges if s in positions and t in positions]
     backwards = [(s, t) for s, t in judged if positions[t] > positions[s]]
     logger.info(
-        f"Orden del material: {len(backwards)} de {len(judged)} arista(s) de "
-        f"«{prerequisite}» apuntan a un concepto que el material introduce más tarde"
+        f"Order of the material: {len(backwards)} of {len(judged)} edge(s) of "
+        f"«{prerequisite}» point at a concept the material introduces later"
     )
 
 
@@ -645,7 +645,7 @@ def break_cycles(
             rebuilt[source].append(target)
         group["relations_data"] = {s: sorted(rebuilt[s]) for s in sorted(rebuilt)}
         logger.warning(
-            f"Rotas {len(removed)} arista(s) de retroceso en «{details['verbose']}»: {removed}"
+            f"Broke {len(removed)} back edge(s) in «{details['verbose']}»: {removed}"
         )
     return typed
 
