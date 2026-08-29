@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
-import { EmptyState, Skeleton } from "@/components/ui/misc";
+import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/run/draft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { fieldText } from "@/lib/fields";
@@ -84,6 +84,14 @@ export function GenerationsPanel() {
   );
 
   if (profileQuery.isLoading) return <Skeleton className="h-96" />;
+  if (profileQuery.isError)
+    return (
+      <LoadError
+        title={t("generations.unreadable")}
+        error={profileQuery.error}
+        onRetry={profileQuery.refetch}
+      />
+    );
 
   return (
     <div className="space-y-5">

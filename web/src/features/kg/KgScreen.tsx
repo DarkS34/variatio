@@ -22,7 +22,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Field } from "@/components/ui/field";
 import { Input, Select } from "@/components/ui/input";
-import { Alert, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
+import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
@@ -464,6 +464,17 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   const selectedConcept = concepts.find((c) => c.name === selected) ?? null;
 
   if (kg.isLoading || graph.isLoading) return <Skeleton className="h-[36rem]" />;
+  if (!kg.data || !graph.data)
+    return (
+      <LoadError
+        title={t("kg.unreadable")}
+        error={kg.error ?? graph.error}
+        onRetry={() => {
+          kg.refetch();
+          graph.refetch();
+        }}
+      />
+    );
 
   if (!kg.data || !graph.data) return null;
 

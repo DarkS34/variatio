@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
-import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { hasExemplars } from "@/lib/concepts";
 import { duration } from "@/lib/format";
@@ -165,6 +165,8 @@ export function DescriptionReview({ kg }: { kg: KgSummary }) {
   }, [kg.concepts, query.data, filter, onlyMissing]);
 
   if (query.isLoading) return <Skeleton className="h-96" />;
+  if (!query.data)
+    return <LoadError title={t("desc.unreadable")} error={query.error} onRetry={query.refetch} />;
 
   const descriptions = query.data?.descriptions ?? {};
   const missing = query.data?.missing ?? [];

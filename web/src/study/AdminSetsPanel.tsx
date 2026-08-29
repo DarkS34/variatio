@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
+import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { EMPTY_FORM, type FormState } from "@/features/run/commission";
 import { Count, GenerateForm } from "@/features/run/GenerateForm";
@@ -410,9 +410,11 @@ export function AdminSetsPanel() {
   // rather than «esto falló», and cost a round of «sigo sin ver la opción».
   if (accounts.isError) {
     return (
-      <p className="text-small text-destructive">
-        {t("sets.accountsFailed", { error: (accounts.error as Error).message })}
-      </p>
+      <LoadError
+        title={t("sets.accountsFailed")}
+        error={accounts.error}
+        onRetry={accounts.refetch}
+      />
     );
   }
   if (!accounts.data) {

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import { truncate } from "@/lib/format";
 import { useCanEdit } from "@/state/auth";
@@ -73,7 +73,8 @@ export function ContextCard() {
   });
 
   if (query.isLoading) return <Skeleton className="h-40" />;
-  if (!data) return null;
+  if (!data)
+    return <LoadError title={t("context.unreadable")} error={query.error} onRetry={query.refetch} />;
 
   const factKeys = Array.from(new Set([...data.canonical_keys, ...Object.keys(facts)]));
 

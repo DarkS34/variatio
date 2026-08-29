@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
-import { EmptyState, Skeleton } from "@/components/ui/misc";
+import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import type { AdminOverview } from "@/lib/types";
 import { useSession } from "@/state/auth";
@@ -62,7 +62,17 @@ export function AdminScreen() {
 
       <MaintenanceSwitch />
 
-      {overview.data ? <Totals overview={overview.data} /> : null}
+      {/* Above the tabs on purpose: three of the five render nothing without this data, and
+          an empty tab with no explanation reads as a feature that does not exist. */}
+      {overview.data ? (
+        <Totals overview={overview.data} />
+      ) : (
+        <LoadError
+          title={t("admin.unreadable")}
+          error={overview.error}
+          onRetry={overview.refetch}
+        />
+      )}
 
       <Tabs
         items={[

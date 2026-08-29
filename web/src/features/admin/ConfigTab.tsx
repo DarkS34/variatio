@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
@@ -171,7 +171,8 @@ export function ConfigTab() {
   });
 
   if (query.isLoading) return <Skeleton className="h-96" />;
-  if (!query.data) return null;
+  if (!query.data)
+    return <LoadError title={t("cfg.unreadable")} error={query.error} onRetry={query.refetch} />;
   const payload: ConfigPayload = query.data;
 
   const stored = new Map(

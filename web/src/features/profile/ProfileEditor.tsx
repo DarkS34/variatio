@@ -18,7 +18,7 @@ import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
@@ -210,6 +210,12 @@ export function ProfileEditor() {
   });
 
   if (query.isLoading) return <Skeleton className="h-96" />;
+
+  // «No hay perfil todavía» and «no se pudo leer» look the same from here and are not the
+  // same thing: the first is the state a new workspace starts in and its screen is the build
+  // button above; the second used to render nothing at all.
+  if (query.isError)
+    return <LoadError title={t("profile.unreadable")} error={query.error} onRetry={query.refetch} />;
 
   if (!query.data?.exists || !draft) return null;
 

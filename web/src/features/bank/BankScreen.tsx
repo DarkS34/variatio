@@ -20,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { Alert, Checkbox, Progress, Skeleton, Spinner } from "@/components/ui/misc";
+import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { fieldText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
@@ -691,9 +691,7 @@ t("bank.stage.description")
         </div>
 
         {bank.isError ? (
-          <Alert tone="danger" title={t("bank.unreadable")}>
-            <p>{(bank.error as Error).message}</p>
-          </Alert>
+          <LoadError title={t("bank.unreadable")} error={bank.error} onRetry={bank.refetch} />
         ) : null}
 
         {listing ? (

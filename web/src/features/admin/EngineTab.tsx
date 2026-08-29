@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
-import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
@@ -59,10 +59,14 @@ import { jobName } from "@/lib/names";
  * «Workspaces» — and why it is gathered here.
  */
 export function EngineTab({ overview }: { overview: AdminOverview }) {
+  const { t } = useT();
   const engine = useAdminEngine();
   const config = useEngineSettings();
   if (engine.isLoading) return <Skeleton className="h-96" />;
-  if (!engine.data) return null;
+  if (!engine.data)
+    return (
+      <LoadError title={t("engine.unreadable")} error={engine.error} onRetry={engine.refetch} />
+    );
   const data = engine.data;
 
   // THE TAB IS ABOUT ONE ENGINE, AND THE ENGINE DECIDES HOW MANY HALVES IT HAS. Until

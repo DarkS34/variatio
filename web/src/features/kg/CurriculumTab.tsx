@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
-import { Alert, Skeleton, Switch } from "@/components/ui/misc";
+import { Alert, LoadError, Skeleton, Switch } from "@/components/ui/misc";
 import { adjacency, priors } from "@/features/run/prerequisites";
 import { getCurriculum, putCurriculum } from "@/lib/api";
 import { when } from "@/lib/format";
@@ -96,6 +96,17 @@ export function CurriculumTab() {
   });
 
   if (curriculum.isLoading || kg.isLoading) return <Skeleton className="h-96" />;
+  if (!curriculum.data || !kg.data)
+    return (
+      <LoadError
+        title={t("curriculum.unreadable")}
+        error={curriculum.error ?? kg.error}
+        onRetry={() => {
+          curriculum.refetch();
+          kg.refetch();
+        }}
+      />
+    );
 
   const concepts = kg.data?.concepts ?? [];
   const units = (kg.data?.domains ?? []).filter(
