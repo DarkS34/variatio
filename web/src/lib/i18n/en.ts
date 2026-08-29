@@ -612,7 +612,7 @@ export const en: Catalogue = {
   "transcribe.queued": "Queued: waiting for the engine to free up",
   "transcribe.preparing": "Preparing the transcription…",
   "transcribe.notAGate": "Transcribing here only gets the work out of the way: build without it and the build does it itself. What you correct by hand wins over what the model said and survives every later build.",
-  "transcribe.runningNote": "Stopping loses nothing: each document is saved as it finishes, and relaunching carries on where it left off.",
+  "transcribe.runningNote": "Stopping loses nothing: every page is saved the moment it comes out, and relaunching carries on where it left off.",
   "transcribe.reviewPages": "See and correct the pages",
   "transcribe.noPagesYet": "No pages to see yet",
   // What changed under a transcription, one key per code `stages/transcribe.py` sends.

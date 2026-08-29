@@ -632,7 +632,7 @@ export const es = {
   "transcribe.queued": "En cola: esperando a que se libere el motor",
   "transcribe.preparing": "Preparando la transcripción…",
   "transcribe.notAGate": "Transcribir aquí solo adelanta trabajo: si construyes sin haberlo hecho, la construcción lo hace por su cuenta. Lo que se corrige a mano gana sobre lo que dijo el modelo y sobrevive a las construcciones siguientes.",
-  "transcribe.runningNote": "Detenerla no pierde nada: cada documento se guarda al terminarlo y al relanzarla sigue por donde iba.",
+  "transcribe.runningNote": "Detenerla no pierde nada: cada página se guarda en cuanto sale y al relanzarla sigue por donde iba.",
   "transcribe.reviewPages": "Ver y corregir las páginas",
   "transcribe.noPagesYet": "Todavía no hay páginas que ver",
   // What changed under a transcription, one key per code `stages/transcribe.py` sends.

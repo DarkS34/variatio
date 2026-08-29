@@ -26,6 +26,10 @@ from .markdown import page_mark, tidy_markdown, to_markdown
 
 PAGE_FILE_RE = re.compile(r"^(\d{3})\.md$")
 META_NAME = "_meta.json"
+# Written after every page, removed when `_meta.json` lands. A directory that has one and
+# not the other is a transcription that was interrupted: the pages in it are real, and
+# nothing reads them as a finished document because `read_pages` asks for the meta.
+PARTIAL_NAME = "_partial.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 
 # What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
@@ -133,6 +137,49 @@ def _read_cached_pages(
     return pages, seams
 
 
+def _partial_path(cache_dir: Path) -> Path:
+    return cache_dir / PARTIAL_NAME
+
+
+def read_partial(cache_dir: str | Path | None, fingerprint: dict) -> list[str]:
+    if cache_dir is None:
+        return []
+    cache_dir = Path(cache_dir)
+    path = _partial_path(cache_dir)
+    if not path.exists():
+        return []
+    try:
+        marker = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(marker, dict):
+        return []
+    stored = marker.get("fingerprint")
+    done = marker.get("pages_done")
+    if not isinstance(stored, dict) or not same_document(stored, fingerprint):
+        return []
+    if not isinstance(done, int) or done < 1:
+        return []
+    pages: list[str] = []
+    for index in range(1, done + 1):
+        page_path = _page_path(cache_dir, index)
+        if not page_path.exists():
+            break
+        pages.append(page_path.read_text(encoding="utf-8"))
+    return pages
+
+
+def save_partial_page(
+    cache_dir: str | Path | None, index: int, page: str, fingerprint: dict
+) -> None:
+    if cache_dir is None:
+        return
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    _page_path(cache_dir, index).write_text(page, encoding="utf-8")
+    write_json(_partial_path(cache_dir), {"fingerprint": fingerprint, "pages_done": index})
+
+
 def write_pages(
     cache_dir: str | Path,
     pages: list[str],
@@ -142,9 +189,12 @@ def write_pages(
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     # Wipe first: a source that lost pages would otherwise leave the previous run's
-    # trailing files behind, and they would be read back as content.
+    # trailing files behind, and they would be read back as content. The partial marker
+    # goes with them — what this function writes is a finished document.
     for stale in cache_dir.iterdir():
-        if stale.is_file() and (PAGE_FILE_RE.match(stale.name) or stale.name == META_NAME):
+        if stale.is_file() and (
+            PAGE_FILE_RE.match(stale.name) or stale.name in (META_NAME, PARTIAL_NAME)
+        ):
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
@@ -199,7 +249,7 @@ def page_count(pdf_path: str | Path) -> int:
         return 0
 
 
-def page_images(pdf_path: Path, dpi: int) -> tuple[int, Iterator[str]]:
+def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator[str]]:
     """`(page_count, generator of base64 PNGs)` — rendered one at a time, not all at once."""
     try:
         import pypdfium2 as pdfium
@@ -213,7 +263,7 @@ def page_images(pdf_path: Path, dpi: int) -> tuple[int, Iterator[str]]:
     count = len(document)
 
     def render():
-        for index in range(count):
+        for index in range(max(first - 1, 0), count):
             # Colour is load-bearing: on these exam PDFs the correct option is marked by
             # nothing but its colour. Never render these greyscale to save bytes.
             bitmap = document[index].render(scale=dpi / 72)
@@ -261,17 +311,39 @@ def _transcribe_page(
     return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
 
 
-def transcribe_pdf(pdf_path: Path, model: str, dpi: int, prompts, tag: str = "") -> list[str]:
-    count, images = page_images(pdf_path, dpi)
+def transcribe_pdf(
+    pdf_path: Path,
+    model: str,
+    dpi: int,
+    prompts,
+    tag: str = "",
+    cache_dir: str | Path | None = None,
+    fingerprint: dict | None = None,
+) -> list[str]:
+    # A page costs one model call, so an interrupted run must not throw away the ones it
+    # already paid for. They are on disk under the partial marker; what is left is the
+    # tail, and `page_images` renders from there rather than re-rasterising the prefix.
+    resume = read_partial(cache_dir, fingerprint) if fingerprint else []
+    count, images = page_images(pdf_path, dpi, first=len(resume) + 1)
+    pages: list[str] = list(resume[:count])
     logger.info(f"{tag}{pdf_path.name}: transcribiendo {count} página(s) con '{model}'")
-    pages: list[str] = []
+    if pages:
+        logger.info(
+            f"{tag}{pdf_path.name}: {len(pages)} página(s) ya transcritas, "
+            f"se reanuda en la {len(pages) + 1}"
+        )
     with progress.step(
         "transcribe", f"{pdf_path.name}: transcribiendo páginas", count
     ) as reporter:
-        for index, image in enumerate(images, 1):
+        if pages:
+            reporter.tick(len(pages), detail=f"página {len(pages)}/{count}")
+        for index, image in enumerate(images, len(pages) + 1):
             progress.checkpoint()
             reporter.tick(index, detail=f"página {index}/{count}")
-            pages.append(_transcribe_page(image, index, count, model, tag, prompts))
+            page = _transcribe_page(image, index, count, model, tag, prompts)
+            pages.append(page)
+            if fingerprint:
+                save_partial_page(cache_dir, index, page, fingerprint)
     kept = sum(1 for page in pages if page.strip())
     logger.info(f"{tag}{pdf_path.name}: {kept}/{count} página(s) con contenido")
     return pages
@@ -286,12 +358,16 @@ def _transcribe(
     dpi: int,
     tag: str,
     prompts,
+    cache_dir: str | Path | None = None,
+    fingerprint: dict | None = None,
 ) -> tuple[list[str], list[dict]]:
     if not is_pdf:
         return [to_markdown(converter, source, use_cache=False)], []
     pages = [
         tidy_markdown(page) if page.strip() else ""
-        for page in transcribe_pdf(source, model, dpi, prompts, tag=tag)
+        for page in transcribe_pdf(
+            source, model, dpi, prompts, tag=tag, cache_dir=cache_dir, fingerprint=fingerprint
+        )
     ]
     return pages, review_seams(pages, prompts, seam_model, tag=tag)
 
@@ -332,7 +408,18 @@ def _document(
             )
             return cached
 
-    pages, seams = _transcribe(source, is_pdf, converter, model, seam_model, dpi, tag, prompts)
+    pages, seams = _transcribe(
+        source,
+        is_pdf,
+        converter,
+        model,
+        seam_model,
+        dpi,
+        tag,
+        prompts,
+        cache_dir=document_dir,
+        fingerprint=fingerprint,
+    )
 
     if not pages:
         # Caching "nothing" would make the emptiness stick until the source file changes,

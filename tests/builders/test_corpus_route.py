@@ -28,7 +28,9 @@ def corpus(tmp_path):
 
 def transcribes(monkeypatch, texts: list[str], seam: str = "space"):
     monkeypatch.setattr(
-        pages, "page_images", lambda path, dpi: (len(texts), iter(range(len(texts))))
+        pages,
+        "page_images",
+        lambda path, dpi, first=1: (len(texts), iter(range(first - 1, len(texts)))),
     )
     seen: list[str] = []
 
