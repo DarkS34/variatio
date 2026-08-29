@@ -203,18 +203,26 @@ export function Count({
   onChange: (next: number) => void;
   max?: number;
 }) {
+  const { t } = useT();
   // A stepper rather than a number box: emptying the box yields NaN, which compares
   // false against every bound and used to travel all the way to the server as null.
   const clamp = (next: number) => onChange(Math.min(max, Math.max(1, next)));
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-      <Button variant="ghost" size="icon-sm" onClick={() => clamp(value - 1)} disabled={value <= 1}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("form.oneFewer")}
+        onClick={() => clamp(value - 1)}
+        disabled={value <= 1}
+      >
         <Minus />
       </Button>
       <span className="w-8 text-center text-body font-medium nums">{value}</span>
       <Button
         variant="ghost"
         size="icon-sm"
+        aria-label={t("form.oneMore")}
         onClick={() => clamp(value + 1)}
         disabled={value >= max}
       >

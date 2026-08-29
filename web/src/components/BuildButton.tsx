@@ -17,6 +17,8 @@ import {
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
+import { InfoHint } from "@/components/ui/hint";
+import { cn } from "@/lib/utils";
 
 /** What the two halves of the action are called on a given screen, when the generic
  *  "Construir / Reconstruir" is not what that artifact's build is actually called. */
@@ -108,25 +110,32 @@ export function BuildButton({
   };
 
   return (
-    <Button
-      size={size}
-      variant={variant ?? (missing ? "default" : "outline")}
-      className={className}
-      disabled={Boolean(reason)}
-      title={
-        reason ??
-        (missing
-          ? t("build.create", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote })
-          : t("build.redo", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote }))
-      }
-      onClick={launch}
-    >
-      {submit.isPending ? <Spinner /> : waiting ? <Clock /> : missing ? <Hammer /> : <RefreshCw />}
-      {waiting
-        ? queuedLabel(wait, tr)
-        : missing
-          ? (labels?.create ?? t("build.createDefault"))
-          : (labels?.redo ?? t("build.redoDefault"))}
-    </Button>
+    // THE REASON NOT TO BUILD, REACHABLE WITHOUT A MOUSE. It lives in `title`, and a
+    // `<button disabled>` is not focusable — so with a keyboard there was no way to land on
+    // it, and on a touch screen a `title` never shows. The (i) beside it carries the same
+    // sentence and answers to focus and to a tap. Only while there IS a reason: an offer
+    // that can be taken needs no footnote.
+    <span className={cn("inline-flex items-center gap-1.5", className)}>
+      <Button
+        size={size}
+        variant={variant ?? (missing ? "default" : "outline")}
+        disabled={Boolean(reason)}
+        title={
+          reason ??
+          (missing
+            ? t("build.create", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote })
+            : t("build.redo", { stage: artifactName(stage.artifact, t, stage.label).toLowerCase(), note: queueNote }))
+        }
+        onClick={launch}
+      >
+        {submit.isPending ? <Spinner /> : waiting ? <Clock /> : missing ? <Hammer /> : <RefreshCw />}
+        {waiting
+          ? queuedLabel(wait, tr)
+          : missing
+            ? (labels?.create ?? t("build.createDefault"))
+            : (labels?.redo ?? t("build.redoDefault"))}
+      </Button>
+      {reason ? <InfoHint label={t("build.whyNot")}>{reason}</InfoHint> : null}
+    </span>
   );
 }
