@@ -33,11 +33,30 @@ export function InfoHint({
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  const show = () => {
+  // OPENED BY A CLICK MEANS IT STAYS OPEN, AND THAT IS WHAT MAKES IT WORK ON A TOUCH SCREEN.
+  // A tap is not just a click: the browser synthesises `mouseover`, `mouseenter`, `focus`
+  // and — once the finger is gone — the matching leave, so `onMouseLeave` closed the panel a
+  // few hundred milliseconds after the tap opened it. Measured on a tablet viewport: the
+  // panel appears at 87 ms and is gone before 800, in every (i) of the app, which is why
+  // `onClick` had been there for touch since the beginning without ever serving it.
+  //
+  // Pinned, only a deliberate dismissal closes it: a pointer press somewhere else, or
+  // leaving the trigger with the keyboard.
+  const pinned = useRef(false);
+
+  const show = (pin = false) => {
+    if (pin) pinned.current = true;
     setRect(ref.current?.getBoundingClientRect() ?? null);
     setOpen(true);
   };
-  const hide = () => setOpen(false);
+  const hide = () => {
+    if (pinned.current) return;
+    setOpen(false);
+  };
+  const dismiss = () => {
+    pinned.current = false;
+    setOpen(false);
+  };
 
   // Fixed coordinates go stale as soon as anything scrolls, and something usually is:
   // these panels sit next to a token stream that scrolls itself. Follow the anchor
@@ -45,9 +64,10 @@ export function InfoHint({
   useEffect(() => {
     if (!open) return;
     const track = () => setRect(ref.current?.getBoundingClientRect() ?? null);
-    // Touch has no hover to leave with, so a tap anywhere else dismisses it.
+    // Touch has no hover to leave with, so a press anywhere else dismisses it — and that is
+    // the one thing that also unpins.
     const away = (event: Event) => {
-      if (!ref.current?.contains(event.target as Node)) hide();
+      if (!ref.current?.contains(event.target as Node)) dismiss();
     };
     window.addEventListener("scroll", track, true);
     window.addEventListener("resize", track);
@@ -70,11 +90,22 @@ export function InfoHint({
         ref={ref}
         type="button"
         aria-label={trigger}
-        onMouseEnter={show}
+        onMouseEnter={() => show()}
         onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        onClick={show}
+        onFocus={() => show()}
+        onBlur={dismiss}
+        // The (i) sits inside rows and cards that are themselves clickable, and a hint that
+        // ALSO does what its surroundings do is worse than no hint: on a touch screen this
+        // click is the only way to read one, so it must not be the thing that navigates.
+        //
+        // It SHOWS and never toggles. Toggling reads well on paper and fails with a mouse:
+        // the pointer has already hovered by the time the click lands, so the second half of
+        // the toggle would put away the very panel the click was asking for. Dismissing is
+        // what `away` is for — leaving with the pointer, or tapping anywhere else.
+        onClick={(event) => {
+          event.stopPropagation();
+          show(true);
+        }}
         className={cn(
           // `pointer-events-auto` because gated screens disable their whole content
           // area, and a section you cannot use yet is exactly when its explanation
