@@ -695,6 +695,10 @@ def ensure_models(models: list[str], label: str) -> None:
     and on an engine whose phases name different models a warm-up pays for a load the next
     phase evicts. What this buys is the fail-fast: a build that would die forty minutes in
     for want of a model dies here, before its first phase.
+
+    `label` is interpolated into an English sentence, so it is an English noun phrase — the
+    three builders used to pass a Spanish genitive and the log read «Checking the del perfil
+    de ejemplares models», which is neither language.
     """
     unique = list(dict.fromkeys(models))
     logger.info(f"Checking the {label} models: {', '.join(unique)}")

@@ -20,24 +20,41 @@ def database_hint() -> None:
     print(DB_HINT)
 
 
-def guarded(func):
-    """Wrap a subcommand so a dead database prints a hint instead of a stack trace.
+def refusal(exc) -> str:
+    """The one readable line inside a SQLAlchemy error, without the SQL and the params.
 
-    Every database subcommand fails the same way when Postgres is not up, and a
-    SQLAlchemy traceback is not an error message. Two are deliberately not wrapped:
-    `db-check`, whose whole job is to report that failure, and `serve`, which checks the
-    connection itself before uvicorn takes over.
+    `str()` of a `DBAPIError` carries the whole statement and every bound parameter, which
+    for an artifact is hundreds of kilobytes. What says what went wrong is the driver's own
+    exception, and its first line is the sentence a person can act on.
+    """
+    original = getattr(exc, "orig", None) or exc
+    return str(original).strip().splitlines()[0]
+
+
+def guarded(func):
+    """Wrap a subcommand so a database failure prints a message instead of a stack trace.
+
+    Two failures reach here and they are not the same: the database cannot be REACHED, and
+    the database rejected what it was asked. Only the first is answered with «arranca la
+    base de datos» — telling somebody to start a Postgres they already have running is how
+    a corrupt artifact spent months looking like a connection problem. Two subcommands are
+    deliberately not wrapped: `db-check`, whose whole job is to report that failure, and
+    `serve`, which checks the connection itself before uvicorn takes over.
     """
 
     def run(args) -> int:
         """Run the subcommand, turning a database or lookup failure into a message."""
-        from sqlalchemy.exc import SQLAlchemyError
+        from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
 
         try:
             return func(args)
-        except SQLAlchemyError as exc:
+        except (OperationalError, InterfaceError) as exc:
             database_hint()
             print(f"\nDetalle: {type(exc).__name__}")
+            return 1
+        except SQLAlchemyError as exc:
+            print(f"La base de datos rechazó la operación ({type(exc).__name__}):")
+            print(f"  {refusal(exc)}")
             return 1
         except LookupError as exc:
             print(str(exc))

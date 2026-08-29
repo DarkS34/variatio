@@ -124,7 +124,7 @@ class ExemplarsProfileBuilder:
                 self.context_model,
                 config.REPAIR_LLM,
             ],
-            "del perfil de ejemplares",
+            "exemplars profile",
         )
 
     def build(self, input_dir: str, output_file_path: str) -> dict:

@@ -111,7 +111,7 @@ class KnowledgeGraphBuilder:
 
     def bootstrap(self) -> None:
         """Check every model of the build is installed, so a failure comes at second zero."""
-        ensure_models(build_models(), "del grafo de conocimiento")
+        ensure_models(build_models(), "knowledge graph")
 
     def build(self, input_dir: str | Path) -> dict:
         """Run the whole build over a corpus directory and return the curated draft."""
