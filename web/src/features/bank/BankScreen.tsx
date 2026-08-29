@@ -432,7 +432,12 @@ function BankMeters({
             {plural("bank.seeUntagged", untagged)}
           </button>
         ) : (
-          <p className="text-small text-muted-foreground">{t("bank.allTagged")}</p>
+          // «Todos los ítems tienen concepto» is true of nothing when there is nothing:
+          // an emptied bank read as a finished one, under a bar that was sweeping as if
+          // it were still filling.
+          <p className="text-small text-muted-foreground">
+            {t(items === 0 ? "bank.emptyBank" : "bank.allTagged")}
+          </p>
         )}
       </div>
 

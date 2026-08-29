@@ -25,3 +25,21 @@ export function stepPercent(
   if (!step?.total || step.total <= 0) return null;
   return Math.min(100, Math.round(((step.current ?? 0) / step.total) * 100));
 }
+
+/**
+ * How full a meter is, or `null` when the total is not known yet.
+ *
+ * «No sé cuánto hay» and «hay cero» are different facts and only the first one may sweep:
+ * a bar that sweeps says work is under way. The two were one condition (`!max`), so an
+ * empty exemplars bank drew `0/0` as the indeterminate sweep and the bank screen animated
+ * for ever over a workspace where nothing at all was happening — read, correctly, as «se
+ * ha quedado cargando». Deleting the last item of a bank is exactly how one gets there.
+ *
+ * A known total of zero is complete, not unmeasurable: the meter reads 0 % and stops.
+ * Unknown is `null` or `undefined`, which is what every caller that means it already passes.
+ */
+export function barFill(value: number, max: number | null | undefined): number | null {
+  if (max === null || max === undefined || Number.isNaN(max)) return null;
+  if (max <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+}

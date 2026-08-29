@@ -783,6 +783,7 @@ export const en: Catalogue = {
   "bank.candidatesPerItem": "Candidates per item",
   "bank.thresholdsLine": "Threshold {similarity} · {k} candidates",
   "bank.allTagged": "Every item has a concept",
+  "bank.emptyBank": "The bank holds no items",
   "bank.search": "Search the statement or by id…",
   "bank.filterByModality": "Filter by modality",
   "bank.allModalities": "All modalities",

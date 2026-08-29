@@ -803,6 +803,7 @@ export const es = {
   "bank.candidatesPerItem": "Candidatos por ítem",
   "bank.thresholdsLine": "Umbral {similarity} · {k} candidatos",
   "bank.allTagged": "Todos los ítems tienen concepto",
+  "bank.emptyBank": "El banco no tiene ningún ítem",
   "bank.search": "Buscar en el enunciado o por id…",
   "bank.filterByModality": "Filtrar por modalidad",
   "bank.allModalities": "Todas las modalidades",

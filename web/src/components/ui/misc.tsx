@@ -2,6 +2,7 @@ import { Check, Loader2, Minus, RefreshCw } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { errorText } from "@/lib/errors";
+import { barFill } from "@/lib/progress";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -29,8 +30,13 @@ export function Progress({
   className?: string;
   tone?: "primary" | "settled" | "attention" | "danger";
 }) {
-  const indeterminate = !max || max <= 0;
-  const pct = indeterminate ? 0 : Math.min(100, Math.round((value / max) * 100));
+  // `null` is «todavía no sé cuánto hay» and it is the only thing that may sweep. A max of
+  // ZERO is a total that is known and happens to be zero — an empty bank, a graph with no
+  // taggable concepts — and drawing it as the sweep made every one of those screens claim
+  // to be loading something for ever. `barFill` is where the two are told apart.
+  const fill = barFill(value, max);
+  const indeterminate = fill === null;
+  const pct = fill ?? 0;
   const colour = {
     primary: "bg-primary",
     settled: "bg-settled",
