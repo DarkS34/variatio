@@ -736,7 +736,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
           that the review has not been done. */}
       {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
         <Alert tone="attention" title={t("kg.unreviewed")}>
-          <p>{t("kg.unreviewed.body", { n: totals.concepts })}</p>
+          <p>{plural("kg.unreviewed.body", totals.concepts)}</p>
         </Alert>
       ) : null}
 

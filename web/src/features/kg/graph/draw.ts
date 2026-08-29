@@ -95,15 +95,19 @@ export function readPalette(): Palette {
   const styles = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) =>
     styles.getPropertyValue(name).trim() || fallback;
+  // The fallbacks are the CURRENT tokens, not older ones. They stood at a violet, a moss
+  // green and a marigold — the primary of the third material and two colours of the second
+  // — so a canvas that painted before the stylesheet landed drew a palette the file had
+  // deliberately retired. `check:color` cannot see a literal outside `index.css`.
   return {
-    foreground: read("--foreground", "#111"),
-    muted: read("--muted-foreground", "#888"),
-    border: read("--border", "#ddd"),
-    background: read("--card", "#fff"),
-    accent: read("--primary", "#6217A3"),
-    settled: read(TONE_VAR.settled, "#1C7760"),
-    attention: read(TONE_VAR.attention, "#9A6100"),
-    ahead: read(TONE_VAR.muted, "#888"),
+    foreground: read("--foreground", "oklch(0.18 0.008 265)"),
+    muted: read("--muted-foreground", "oklch(0.47 0.012 265)"),
+    border: read("--border", "oklch(0.87 0.004 265)"),
+    background: read("--card", "oklch(1 0 265)"),
+    accent: read("--primary", "oklch(0.20 0.010 265)"),
+    settled: read(TONE_VAR.settled, "oklch(0.52 0.012 265)"),
+    attention: read(TONE_VAR.attention, "oklch(0.48 0.19 262)"),
+    ahead: read(TONE_VAR.muted, "oklch(0.47 0.012 265)"),
   };
 }
 

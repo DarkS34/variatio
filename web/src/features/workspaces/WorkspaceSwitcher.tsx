@@ -5,16 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/misc";
-import {
-  LANGUAGES,
-  LANGUAGE_NAMES,
-  useLanguage,
-  useT,
-  type Language,
-} from "@/lib/i18n";
+import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
 import { ROLE_LABEL_KEYS } from "@/state/auth";
 import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";
 import { cn } from "@/lib/utils";
+import { usePromptLanguage } from "./promptLanguage";
 
 /**
  * Which instance you are in, and how to get to another one.
@@ -162,7 +157,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   // What the model will be instructed in throughout this instance's whole construction.
   // It defaults to what the person reads because that is the common case, and it is asked
   // HERE because it cannot be asked later: see `api.createWorkspace`.
-  const [language, setLanguage] = useState<Language>(useLanguage());
+  const [language, setLanguage] = usePromptLanguage();
 
   const effective = touched ? slug : slugify(name);
   const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(effective);

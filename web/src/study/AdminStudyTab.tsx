@@ -730,7 +730,7 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
       (ids.length === 1
         ? t("adminStudy.confirmHeadOne")
         : t("adminStudy.confirmHeadMany", { n: ids.length })) +
-      (decided ? t("sessions.confirmDecided", { n: decided }) : "") +
+      (decided ? plural("sessions.confirmDecided", decided) : "") +
       t("sessions.confirmTail");
     if (!window.confirm(message)) return;
     remove.mutate(ids, {

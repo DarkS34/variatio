@@ -2,12 +2,13 @@ import { FolderPlus } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { LANGUAGES, LANGUAGE_NAMES, useLanguage, useT, type Language } from "@/lib/i18n";
+import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/misc";
 import { useSession } from "@/state/auth";
 import { useCreateWorkspace } from "@/state/queries";
+import { usePromptLanguage } from "./promptLanguage";
 
 /**
  * What the panel says to an account that is in no instance.
@@ -28,7 +29,7 @@ export function NoWorkspace() {
   const [name, setName] = useState("");
   // The first workspace of an installation, so this is the most expensive place to get the
   // prompt language wrong: nothing after the first build can change it.
-  const [language, setLanguage] = useState<Language>(useLanguage());
+  const [language, setLanguage] = usePromptLanguage();
   const slug = slugify(name);
   const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug);
 
