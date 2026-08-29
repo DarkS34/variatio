@@ -10,7 +10,7 @@ for: without that the id is a twelve-hex guess away from another instance's even
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from variatio import stages
+from variatio import config, stages
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
@@ -94,6 +94,13 @@ def _check_params(kind: str, params: dict) -> None:
     filename twice: what arrives in a request is checked against what the installation
     actually holds, never sanitised and used. Here it is a 422 the screen can show; there
     it is the last word, because the offered list is edited while jobs sit in the queue.
+
+    Only what can be answered without a model and without an index is checked here. The
+    concepts, the fixed fields and the curriculum are the generator's, because deciding
+    them needs the knowledge graph and the exemplars profile — a `PipelineContext`, which
+    on a cold workspace is minutes. What must not wait for that is the COUNT: it is the
+    one parameter that decides how much a single request spends, and unbounded it let a
+    commission empty the day's quota before anything could refuse it.
     """
     if kind != "generate":
         return
@@ -101,6 +108,28 @@ def _check_params(kind: str, params: dict) -> None:
         stages.resolve_generation_model(params.get("model"))
     except stages.UnofferedModelError as error:
         raise HTTPException(422, str(error)) from None
+
+    if params.get("n") is not None:
+        try:
+            count = int(params["n"])
+        except (TypeError, ValueError):
+            raise HTTPException(422, "El número de ítems tiene que ser un entero.") from None
+        if count < 1:
+            raise HTTPException(422, f"Hay que pedir al menos un ítem; pediste {count}.")
+        if count > config.GENERATION_MAX_ITEMS:
+            raise HTTPException(
+                422,
+                f"Como mucho se pueden pedir {config.GENERATION_MAX_ITEMS} ítems de una vez; "
+                f"pediste {count}.",
+            )
+
+    instructions = params.get("instructions") or ""
+    if len(instructions) > config.GENERATION_INSTRUCTIONS_MAX_CHARS:
+        raise HTTPException(
+            422,
+            f"Las instrucciones no pueden pasar de "
+            f"{config.GENERATION_INSTRUCTIONS_MAX_CHARS} caracteres; llevan {len(instructions)}.",
+        )
 
 
 def _mine(job_id: str, access: auth.Access):
