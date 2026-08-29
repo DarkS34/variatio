@@ -50,7 +50,7 @@ export function ItemFields({
         if (isEmptyField(value)) return null;
         return (
           <div key={field} className="space-y-1">
-            <Label>{field}</Label>
+            <Label>{spec?.fields?.[field]?.label || field}</Label>
             <FieldValue field={field} value={fieldText(value)} />
           </div>
         );

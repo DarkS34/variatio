@@ -207,6 +207,13 @@ export interface RawUpload {
 
 export interface FieldSpec {
   schema: Record<string, any>;
+  /**
+   * What a person reads where this field is shown. Absent falls back to the key, which is
+   * an identifier: `solucion` renders as SOLUCION, in an interface that spells everything
+   * else properly. Nothing derives it — no accent is recoverable from a key — so it is
+   * written by hand, like the modality's own label.
+   */
+  label?: string;
   description?: string;
   guidance?: { extraction?: string; generation?: string };
   /** Who chooses the value. Absent means "model": only "user" fields are asked for. */

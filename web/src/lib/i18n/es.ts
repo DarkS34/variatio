@@ -1609,6 +1609,8 @@ export const es = {
   "field.items.values": "Valores que puede tomar cada elemento",
   "field.items.placeholder": "Valores que puede tomar cada elemento…",
   "field.object.note": "Se valida como objeto libre: su contenido no se comprueba. Descríbelo bien abajo, es lo único que guía al modelo.",
+  "field.label.label": "Nombre visible",
+  "field.label.hint": "Con lo que aparece este campo en pantalla. Vacío, se muestra la clave.",
   "field.description.label": "Descripción",
   "field.description.hint": "Viaja al modelo dentro del esquema: di qué contiene el campo, no cómo escribirlo.",
   "field.description.placeholder": "Qué contiene este campo",

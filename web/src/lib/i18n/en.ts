@@ -1589,6 +1589,8 @@ export const en: Catalogue = {
   "field.items.values": "Values each element may take",
   "field.items.placeholder": "Values each element may take…",
   "field.object.note": "It is validated as a free object: its content is not checked. Describe it well below, it is the only thing guiding the model.",
+  "field.label.label": "Display name",
+  "field.label.hint": "What this field is called on screen. Empty shows the key instead.",
   "field.description.label": "Description",
   "field.description.hint": "It travels to the model inside the schema: say what the field contains, not how to write it.",
   "field.description.placeholder": "What this field contains",

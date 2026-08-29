@@ -688,6 +688,15 @@ export function FieldEditor({
             </p>
           ) : null}
 
+          <Row label={t("field.label.label")} hint={t("field.label.hint")}>
+            <Input
+              value={spec.label ?? ""}
+              readOnly={locked}
+              onChange={(event) => onChange({ ...spec, label: event.target.value })}
+              placeholder={name}
+            />
+          </Row>
+
           <Row label={t("field.description.label")} hint={t("field.description.hint")}>
             <Textarea
               value={spec.description ?? ""}

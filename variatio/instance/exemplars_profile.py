@@ -400,6 +400,12 @@ class ExemplarsProfile:
         if "type" not in schema and "enum" not in schema:
             raise ValueError(f"Field '{name}' schema must declare 'type' or 'enum'")
         cls._validate_decided_by(name, spec, schema, is_primary)
+        # What a person reads where the field is shown. Optional, and nothing generates it:
+        # the key is an identifier and cannot become «Solución» on its own — no accent is
+        # recoverable from `solucion` — so it stays a human's to write, exactly like the
+        # modality's own `label` above it.
+        if "label" in spec and not isinstance(spec["label"], str):
+            raise ValueError(f"Field '{name}': 'label' must be a string")
         guidance = spec.get("guidance")
         if guidance is not None:
             if not isinstance(guidance, dict):
