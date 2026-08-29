@@ -49,8 +49,8 @@ class ConceptTagger:
         prompts,
         primary_text: Callable[[dict], str] | None = None,
         context: ContentContext | None = None,
-        top_k_candidates: int = config.TAGGER_TOP_K_CANDIDATES,
-        fallback_top_k: int = config.TAGGER_FALLBACK_TOP_K,
+        top_k_candidates: int | None = None,
+        fallback_top_k: int | None = None,
     ):
         """Wire the tagger to an embedder, a model and its workspace's prompt set."""
         self.concept_tagger_model = concept_tagger_model
@@ -62,8 +62,12 @@ class ConceptTagger:
         self.primary_text = primary_text or embed_text
         self.context = context if context is not None else ContentContext()
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
-        self.top_k_candidates = top_k_candidates
-        self.fallback_top_k = fallback_top_k
+        self.top_k_candidates = (
+            config.TAGGER_TOP_K_CANDIDATES if top_k_candidates is None else top_k_candidates
+        )
+        self.fallback_top_k = (
+            config.TAGGER_FALLBACK_TOP_K if fallback_top_k is None else fallback_top_k
+        )
 
     def _trace(self, candidates: list[tuple[str, float]], method: str) -> dict:
         """Record how the annotation was reached: candidates, scores, model and method.

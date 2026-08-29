@@ -139,8 +139,8 @@ class ConceptDescriber:
         prompts,
         path: str | Path,
         sources_path: str | Path,
-        siblings_top_k: int = config.DESCRIPTION_SIBLINGS_TOP_K,
-        collision_similarity: float = config.DESCRIPTION_COLLISION_SIMILARITY,
+        siblings_top_k: int | None = None,
+        collision_similarity: float | None = None,
     ):
         """Bind a graph and its corpus anchoring to the cache they are described into."""
         self.knowledge_graph = knowledge_graph
@@ -148,8 +148,14 @@ class ConceptDescriber:
         self.prompts = prompts
         self.path = Path(path)
         self.sources_path = Path(sources_path)
-        self.siblings_top_k = siblings_top_k
-        self.collision_similarity = collision_similarity
+        self.siblings_top_k = (
+            config.DESCRIPTION_SIBLINGS_TOP_K if siblings_top_k is None else siblings_top_k
+        )
+        self.collision_similarity = (
+            config.DESCRIPTION_COLLISION_SIMILARITY
+            if collision_similarity is None
+            else collision_similarity
+        )
         self._name_vectors: dict[str, np.ndarray] | None = None
 
         sources = load_sources(self.sources_path)

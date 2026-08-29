@@ -73,13 +73,19 @@ class Verdict:
         return _LABELS.get(self.blocked_by, self.blocked_by)
 
 
-def check(text: str, criteria: tuple[str, ...] = config.GUARDRAIL_CRITERIA) -> Verdict:
+def check(text: str, criteria: list[str] | None = None) -> Verdict:
     """Screen one free text and return the verdict.
 
     The injection regex runs first, over the folded text and before any model call: an
     instruction aimed at the system needs no criterion to be recognised. The criteria are
     then evaluated in order and the first to flag stops the loop.
+
+    `criteria` is resolved here and not in the signature: a default binds at import, so the
+    setting could never follow what the panel saves. `None` is «whatever is configured now»
+    and an empty list is an instruction, so the two are told apart with `is None`.
     """
+    if criteria is None:
+        criteria = config.GUARDRAIL_CRITERIA
     if _INJECTION.search(fold(text)):
         verdict = Verdict(blocked_by="instruction_override", checked=True)
         progress.emit("guardrail", ok=False, criteria=verdict.blocked_by, checked=True)

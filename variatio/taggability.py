@@ -58,13 +58,15 @@ def review(
     prompts,
     exemplars_bank: dict | None = None,
     content_context: ContentContext | None = None,
-    max_attempts: int = config.MAX_JSON_REPAIR_TRIES,
+    max_attempts: int | None = None,
 ) -> list[str]:
     """Return the concepts that are no use as labels, judged one domain at a time.
 
     Empty when the graph declares no domains. Per domain rather than over the whole
     inventory because the judgement is a comparison among siblings.
     """
+    if max_attempts is None:
+        max_attempts = config.MAX_JSON_REPAIR_TRIES
     content_context = content_context or ContentContext()
     domains = list(knowledge_graph.concepts_by_domains)
     if not domains:

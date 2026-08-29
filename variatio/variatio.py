@@ -290,7 +290,7 @@ class VariantGenerator:
         prompts,
         prerequisite_relation: str | None,
         content_context: ContentContext | None = None,
-        repair_model: str = config.REPAIR_LLM,
+        repair_model: str | None = None,
         tagger: ConceptTagger | None = None,
     ):
         """Wire the generator to one workspace's graph, bank, profile and prompt set."""
@@ -305,7 +305,7 @@ class VariantGenerator:
         self.prerequisite_relation = prerequisite_relation
         self.content_context = content_context or ContentContext()
         self.generator_model = generator_model
-        self.repair_model = repair_model
+        self.repair_model = config.REPAIR_LLM if repair_model is None else repair_model
         self.tagger = tagger
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
