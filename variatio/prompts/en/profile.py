@@ -42,7 +42,12 @@ INVALID shapes (real mistakes already made; do not repeat them):
 """
 
 
-def scan_item_types_prompt(content: str, location: str = "", excerpt_chars: int = 400) -> str:
+def scan_item_types_prompt(
+    content: str,
+    location: str = "",
+    excerpt_chars: int = 400,
+    context_block: str = "",
+) -> str:
     """Ask which exercise modalities appear in ONE fragment of the raw material.
 
     One call per fragment, whose inventories the consolidation then merges, so this one
@@ -51,15 +56,23 @@ def scan_item_types_prompt(content: str, location: str = "", excerpt_chars: int 
     most `excerpt_chars` verbatim characters — the only evidence the consolidation gets of
     what an item of that modality looks like. Two modalities are the same when the same
     pieces would be filled in to write them; when in doubt, group.
+
+    It receives the subject's context like every other prompt in the system. It did not,
+    and it is the only thing that separated it from the ones that come out right: measured
+    on a workspace whose material and `locale.json` are both English, the graph, the concept
+    descriptions and the bank all came back in English and only the profile's `description`
+    and `guidance` came back in Spanish. Declaring nothing about the subject is not the same
+    as not knowing which language it is taught in.
     """
     where = f"\nFragment taken from: {location}\n" if location else ""
+    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
     return f"""\
 Analyse a FRAGMENT of raw teaching material (exercises, problems, activities, questions) and inventory the exercise MODALITIES that appear in it.
 
 A modality is a WAY of setting the student the task, defined by the exercise's anatomy: which pieces of information make it up. Examples of different modalities: a closed question with alternatives; a numerical problem asking for a result computed from given data; a commission to write a program from scratch; a piece of starting material (code, a text, a schematic) with a mistake to locate and correct; a practical case to analyse and solve with written reasoning.
 
 This fragment is ONLY ONE PART of the material: do not try to describe the whole course and do not guess modalities that are not here. Inventory what you SEE in this fragment, and nothing else. A later step will gather the inventories of all the fragments.
-{where}
+{where}{context_section}
 # WHAT COUNTS AS AN EXERCISE
 Any unit the material SETS THE STUDENT AS A TASK counts. These do not count: theoretical exposition, explanations and definitions, examples that illustrate an explanation without asking anything, tables of contents, unit objectives, rubrics and bibliography. If the fragment sets no task, return `{{"types": []}}`.
 
@@ -105,7 +118,9 @@ A single JSON object:
 JSON:"""
 
 
-def consolidate_exemplars_profile_prompt(findings: str, max_types: int) -> str:
+def consolidate_exemplars_profile_prompt(
+    findings: str, max_types: int, context_block: str = ""
+) -> str:
     """Ask for the definitive exemplars profile, merging the inventory the scan produced.
 
     The answer is `item_types` and no other top-level key: at most `max_types` modalities,
@@ -114,14 +129,22 @@ def consolidate_exemplars_profile_prompt(findings: str, max_types: int) -> str:
     itself is declared here — that is the content context's, written in prose elsewhere.
     `guidance.generation` is deliberately never asked for: the modality's rules carry the
     generation, and that field is the exception a person writes by hand for one field.
+
+    It receives the subject's context like every other prompt in the system. It did not,
+    and it is the only thing that separated it from the ones that come out right: measured
+    on a workspace whose material and `locale.json` are both English, the graph, the concept
+    descriptions and the bank all came back in English and only the profile's `description`
+    and `guidance` came back in Spanish. Declaring nothing about the subject is not the same
+    as not knowing which language it is taught in.
     """
+    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
     return f"""\
 You have received the INVENTORY of exercise modalities that a previous scan found, fragment by fragment, in all the raw teaching material of a course. Consolidate it into the definitive EXEMPLARS PROFILE.
 
 The profile is the ONLY piece that instantiates the system for a particular course: the same engine generates programming exercises, physics problems, multiple-choice questions or case studies, but always learning material. It declares, abstractly, the anatomy of each exercise modality of this course: which fields make it up, what type they are, how they are extracted from a document and how a new one would be written.
 
 The inventory comes from fragments analysed separately, so it BRINGS DUPLICATES: the same modality will appear with different keys, with overlapping field sets and with similar labels. Unifying them is your main job.
-
+{context_section}
 # WHAT YOU MUST PRODUCE
 A single JSON object with EXACTLY these top-level keys:
 

@@ -18,7 +18,7 @@ from ..core.inference import ensure_models
 from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
-from ..instance import locale
+from ..instance import content_context, locale
 from ..instance.exemplars_profile import ExemplarsProfile
 from .. import prompts as prompts_pkg
 from . import _context, _source_docs
@@ -97,6 +97,7 @@ class ExemplarsProfileBuilder:
         """Resolve the workspace's prompt set and the three models of the build."""
         self.workspace = workspace
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._context_cache: str | None = None
         self.scan_model = scan_model or config.EP_SCAN_MODEL
         self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
         self.context_model = context_model or config.EP_CONTEXT_MODEL
@@ -276,9 +277,24 @@ class ExemplarsProfileBuilder:
         )
         return found
 
+    def _context_block(self) -> str:
+        """The subject's context, or an empty block on the build that has none yet.
+
+        Read once per build and cached, because both phases ask for it and the file does
+        not change while a build runs. Empty is the ordinary state of a FIRST build: the
+        context is synthesised in this same builder's last phase, so there is nothing to
+        pass until there has been one build. From the second onwards the two phases know
+        the subject, the level and — the reason this exists — the language it is taught in.
+        """
+        if self._context_cache is None:
+            self._context_cache = content_context.load_for(self.workspace).prompt_block()
+        return self._context_cache
+
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
         """Ask one chunk for its modalities, `[]` when the answer cannot be repaired."""
-        prompt = self.prompts.scan_item_types_prompt(body, location, self.excerpt_chars)
+        prompt = self.prompts.scan_item_types_prompt(
+            body, location, self.excerpt_chars, context_block=self._context_block()
+        )
         response = inference.generate(
             model=self.scan_model,
             think=config.THINK_EP_SCAN,
@@ -378,7 +394,9 @@ class ExemplarsProfileBuilder:
         Two repair routes: unreadable JSON goes to the repair model, while a profile that
         parses but does not validate goes back to the model that wrote it, with the error.
         """
-        prompt = self.prompts.consolidate_exemplars_profile_prompt(findings, self.max_item_types)
+        prompt = self.prompts.consolidate_exemplars_profile_prompt(
+            findings, self.max_item_types, context_block=self._context_block()
+        )
         think = (
             config.THINK_EP_CONSOLIDATE
             if inference.supports_thinking(self.consolidate_model)
