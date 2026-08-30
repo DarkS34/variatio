@@ -5,14 +5,14 @@ import { familyOf, MODEL_FAMILIES, modelLabel } from "./models";
 
 /* What the screen knows about a model it may offer. The claim worth pinning is the
    matching rule: a family is served under several names — `qwen3.8:27b-q8_0` here and
-   `qwen3.8:27b-q4_K_M` on another installation are the same choice with the same
+   `qwen3.8:27b-q5_K_M` on another installation are the same choice with the same
    trade-off — so the table is keyed by the START of the name, and a model it does not
    recognise is still offered, with its bare name and no note. */
 
 describe("familyOf", () => {
   it("matches a family by the start of the name, whatever the tag", () => {
     expect(familyOf("qwen3.8:27b-q8_0").label).toBe("Qwen3.8");
-    expect(familyOf("qwen3.8:27b-q4_K_M").label).toBe("Qwen3.8");
+    expect(familyOf("qwen3.8:27b-q5_K_M").label).toBe("Qwen3.8");
     expect(familyOf("gemma-4-31b").label).toBe("Gemma 4");
   });
 

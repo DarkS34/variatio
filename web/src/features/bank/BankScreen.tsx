@@ -466,7 +466,7 @@ function BankMeters({
               onClick={() => onRetag({})}
             >
               {submitting ? <Spinner /> : <RefreshCw />}
-              {t("bank.retagUntagged", { n: untagged })}
+              {plural("bank.retagUntagged", untagged)}
             </Button>
           ) : null}
           {items > 0 ? (
@@ -474,9 +474,9 @@ function BankMeters({
               size="sm"
               variant="ghost"
               disabled={busy}
-              title={why ?? t("bank.retagAllHint", { n: items })}
+              title={why ?? plural("bank.retagAllHint", items)}
               onClick={() => {
-                if (window.confirm(t("bank.confirmRetagAll", { n: items }))) onRetag({ all: true });
+                if (window.confirm(plural("bank.confirmRetagAll", items))) onRetag({ all: true });
               }}
             >
               {t("bank.retagAll")}
@@ -609,7 +609,7 @@ t("bank.stage.description")
         create: t("bank.extract"),
         redo: t("bank.reextract"),
         confirmRedo: hasItems
-          ? t("bank.confirmReextract", { n: listing?.totals.items ?? 0 })
+          ? plural("bank.confirmReextract", listing?.totals.items ?? 0)
           : undefined,
       }}
     >
@@ -632,6 +632,7 @@ t("bank.stage.description")
           <div className="relative min-w-56 flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
+              aria-label={t("bank.search")}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -660,6 +661,7 @@ t("bank.stage.description")
             </Select>
           ) : null}
           <Select
+            aria-label={t("bank.filterBySource")}
             value={source}
             onChange={(event) => {
               setSource(event.target.value);
@@ -686,6 +688,7 @@ t("bank.stage.description")
             {t("bank.untagged")}
           </Button>
           <Select
+            aria-label={t("bank.orderBy")}
             value={order}
             onChange={(event) => setOrder(event.target.value as "suspicion" | "id")}
             className="max-w-56"

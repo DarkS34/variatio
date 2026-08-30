@@ -201,3 +201,40 @@ def test_a_database_failure_loses_the_record_and_nothing_else(make, stubbed, mon
     assert result["items"][0]["saved_id"] is None
     assert not [k for k, _ in emitter.events if k == "item.saved"]
 
+
+
+# `or 1` was wrong on a falsy zero: a commission of «genera 0 ítems» produced one and then
+# reported `requested: 1`, so the row kept a commission nobody made. An absent `n` still
+# means one; a zero has to reach the generator, which is what refuses it.
+def test_a_count_of_zero_is_not_silently_turned_into_one(make, stubbed, monkeypatch):
+    seen = {}
+
+    def fake_generate(context, **kwargs):
+        seen.update(kwargs)
+        return []
+
+    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    job = Job(kind="generate", params={"n": 0, "concepts": ["Bucles"]}, workspace="aula")
+    result, _, error = _run(job)
+
+    assert error is None
+    assert seen["n"] == 0
+    assert result["requested"] == 0
+    assert not _rows(make)
+
+
+def test_an_absent_count_still_means_one(make, stubbed, monkeypatch):
+    seen = {}
+
+    def fake_generate(context, **kwargs):
+        seen.update(kwargs)
+        kwargs["on_accepted"](_variant("uno"), 1)
+        return [_variant("uno")]
+
+    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    job = Job(kind="generate", params={"concepts": ["Bucles"]}, workspace="aula")
+    result, _, error = _run(job)
+
+    assert error is None
+    assert seen["n"] == 1
+    assert result["requested"] == 1

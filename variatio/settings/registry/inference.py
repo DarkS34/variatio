@@ -66,7 +66,7 @@ la que legisla `review_taggable_concepts_prompt`. `qwen3.8:27b` es denso y razon
 se espera que aquí lo haga mejor — pero eso es una PREDICCIÓN, no una medición, y es lo
 primero que hay que volver a comprobar en una construcción real.
 
-`qwen3.8:27b-q4_K_M` desde el 2026-08-18, en sustitución de `qwen3.6:35b-a3b-q8_0` y
+`qwen3.8:27b` desde el 2026-08-18, en sustitución de `qwen3.6:35b-a3b-q8_0` y
 revirtiendo la vuelta atrás del 2026-08-16, por petición explícita del usuario. Lo que
 reabrió la cuestión es que Ollama ya puede acotar cuánto delibera un modelo de
 razonamiento: `think` acepta un NIVEL DE ESFUERZO y no solo un booleano, y los ajustes por
@@ -92,12 +92,20 @@ Tres cosas que leer en esa tabla antes de tocar nada de esto:
 2. EL COSTE ES LA DECODIFICACIÓN DENSA, y es el precio de esta decisión: 29.1 tok/s frente
    a los 92.0 del MoE, así que una llamada de curación pasa de 128 s a 443 s y una
    construcción se alarga ~3.5x. Aceptado a sabiendas el 2026-08-18.
-3. LA CUANTIZACIÓN NO ES INTERCAMBIABLE AQUÍ. La q4_K_M es un 53 % más rápida que la q8_0
-   (29.1 frente a 19.0 tok/s) y ocupa 16.5 GB contra 27.9, y obedece el nivel de esfuerzo
-   exactamente igual — medido, no supuesto, en la tabla de tokens de `reasoning.effort.*`.
-   A diferencia de `qwen3.6:35b-a3b-q4_K_M`, que está rota en esta máquina por encima de
-   ~4 490 caracteres, esta q4 respondió al prompt de 5 441 caracteres con JSON válido. No
-   la «mejores» a la q8."""
+3. LA CUANTIZACIÓN SE PAGA, Y DESDE EL 2026-08-29 SE PAGA A PROPÓSITO. La q4_K_M es un
+   53 % más rápida que la q8_0 (29.1 frente a 19.0 tok/s) y ocupa 16.5 GB contra 27.9, y
+   obedece el nivel de esfuerzo exactamente igual — medido, no supuesto, en la tabla de
+   tokens de `reasoning.effort.*`. Aun así las fases pasaron a la q8_0 por petición
+   explícita del usuario, revirtiendo el «no la mejores a la q8» que esta nota decía antes.
+   Lo que lo forzó es que la q4_K_M NO ESTÁ INSTALADA en esta máquina: el perfil `ollama`
+   nombraba diecisiete fases contra un modelo que no existe, de modo que cambiar de motor
+   desde el panel disparaba una descarga de ~16 GB o un fallo. Las dos filas de la tabla de
+   arriba siguen midiendo lo que miden, así que el coste está cuantificado: una llamada de
+   curación pasa de 443 s a 649 s, y con ella la construcción entera.
+
+   Lo que NO cambia es la otra mitad de aquella nota, que era sobre otro modelo: la
+   `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
+   por eso el MoE de transcripción es la q8_0 y no la q4."""
 
 _TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no está ahí por el mismo
 motivo y no se movería con ella: reparar es un bucle de REINTENTO, y un reintento a 0 no es
@@ -137,7 +145,7 @@ GiB solo de pesos) es la diferencia entre caber junto al embebedor y no caber. U
 valor y no uno por fase: a 2026-08-23 la única sobrescritura es ese MoE, puesto en las
 fases de construcción que leen documentos (`transcribe`, `ep_scan`, `eb_extract`,
 `kg_extract`, las dos `kg_clean_*` y las dos `kg_link_*`), mientras las fases de juicio y
-generación siguen en `qwen3.8:27b-q4_K_M`. Los dos nunca necesitan estar residentes a la
+generación siguen en `qwen3.8:27b-q8_0`. Los dos nunca necesitan estar residentes a la
 vez — una construcción carga el MoE una vez y el 27b vuelve en la siguiente generación —,
 así que la aritmética de convivencia sigue siendo de tres modelos.
 
@@ -163,7 +171,7 @@ fieles. Debilitar esa instrucción reintroduce en silencio código corrupto en e
 La comparación de fidelidad que hay detrás (acentos y el salto de línea de un docstring
 conservados donde gemma4:31b perdió ambos, 20s frente a 31s por página) se midió sobre
 `qwen3.6:35b-a3b-q8_0`, que ya no ocupa este puesto — pasó a
-`qwen3.8:27b-q4_K_M` el 2026-08-18. El modelo nuevo tiene la capacidad `vision`,
+`qwen3.8:27b` el 2026-08-18. El modelo nuevo tiene la capacidad `vision`,
 comprobado, así que la llamada funciona; si transcribe con la misma fidelidad NO está
 medido todavía. Es lo más barato de volver a comprobar de todo el pipeline (una página) y
 lo más dañino si se falla, porque una transcripción corrupta aterriza en el banco como un
@@ -187,7 +195,7 @@ es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 
 # Seed value only: it is read once, when a phase has no stored model. Nothing resolves
 # through it at run time — every phase names its own and refuses an empty value.
-_MAIN = "qwen3.8:27b-q4_K_M"
+_MAIN = "qwen3.8:27b-q8_0"
 _MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
 OFFERED_GROUP = "Modelos ofrecidos"
@@ -332,7 +340,7 @@ la necesitan.""",
         impact=Impact.ENGINE,
         doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama'; todo lo que no esté aquí va a
 Ollama. La pertenencia a esta lista ES la decisión de enrutado — explícita a propósito, en
-vez de adivinar por la forma del nombre («gemma-4-31b» contra «qwen3.8:27b-q4_K_M»).
+vez de adivinar por la forma del nombre («gemma-4-31b» contra «qwen3.8:27b-q8_0»).
 
 `gemma-4-31b` por defecto: es el id exacto del catálogo de Cerebras (~1.850 tok/s medidos
 por Artificial Analysis, ventana de 131.072, salida máxima 40.000, structured outputs con

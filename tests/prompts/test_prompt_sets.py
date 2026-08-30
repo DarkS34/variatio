@@ -182,3 +182,48 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
     assert set(RELATION_SCHEMA_ES.keys) != set(RELATION_SCHEMA_EN.keys)
     # Same shape, different words: the two schemas declare the same three relations.
     assert len(RELATION_SCHEMA_ES) == len(RELATION_SCHEMA_EN) == 3
+
+
+# CLAUDE.md states it as a property of the whole system: «every prompt receives the
+# context's `prompt_block()` and is told to take register, level and language from it. That
+# is how they stay subject-agnostic while sounding native to the subject.» Two did not, and
+# they were the two whose output came back in the wrong language — measured on a workspace
+# whose material and `locale.json` are both English, where the graph, the concept
+# descriptions and the bank all came out English and only the profile's `description` and
+# `guidance` came out Spanish.
+CONTEXT_AWARE = [
+    "scan_item_types_prompt",
+    "consolidate_exemplars_profile_prompt",
+    "concept_description_prompt",
+    "describe_domain_concepts_prompt",
+]
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+@pytest.mark.parametrize("name", CONTEXT_AWARE)
+def test_the_subject_facing_prompts_take_the_context_block(code, name):
+    function = getattr(prompts.of(code), name)
+    assert "context_block" in inspect.signature(function).parameters, (
+        f"«{name}» does not take the subject's context in «{code}»"
+    )
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_profile_prompts_render_the_context_they_are_given(code):
+    module = prompts.of(code)
+    block = "MATERIA: Física · IDIOMA DE INSTRUCCIÓN: English"
+    scan = module.scan_item_types_prompt("fragmento", context_block=block)
+    consolidate = module.consolidate_exemplars_profile_prompt("hallazgos", 4, context_block=block)
+    assert block in scan and block in consolidate
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_no_context_renders_no_empty_heading(code):
+    """A first build has no context yet, and an empty section is worse than none."""
+    module = prompts.of(code)
+    for rendered in (
+        module.scan_item_types_prompt("fragmento"),
+        module.consolidate_exemplars_profile_prompt("hallazgos", 4),
+    ):
+        assert "CONTEXTO DOCENTE" not in rendered
+        assert "TEACHING CONTEXT" not in rendered

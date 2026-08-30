@@ -479,7 +479,7 @@ function DeleteWorkspaceDialog({
           <li>{t("ws.cachesAccess")}</li>
           <li>
             {workspace.generations > 0
-              ? t("ws.itsVariants", {
+              ? plural("ws.itsVariants", workspace.generations, {
                   n: plural("acc.savedVariants", workspace.generations),
                 })
               : t("ws.itsComparisons")}

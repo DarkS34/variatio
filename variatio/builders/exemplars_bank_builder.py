@@ -119,7 +119,7 @@ class ExemplarsBankBuilder:
 
     def bootstrap(self) -> None:
         """Check every model of the build is installed, the tagger's and embedder's included."""
-        ensure_models(build_models(), "del banco de ejemplares")
+        ensure_models(build_models(), "exemplars bank")
 
     def build(
         self,

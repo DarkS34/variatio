@@ -53,8 +53,8 @@ def test_the_helper_says_it_could_not_reach_the_engine_when_there_is_no_status(m
     [
         lambda e: e.installed_models_detail(),
         lambda e: e.running_models(),
-        lambda e: e.pull("qwen3.8:27b-q4_K_M"),
-        lambda e: e.delete("qwen3.8:27b-q4_K_M"),
+        lambda e: e.pull("qwen3.8:27b-q8_0"),
+        lambda e: e.delete("qwen3.8:27b-q8_0"),
         lambda e: e.embed("qwen3-embedding:4b", "texto"),
         lambda e: e.embed_batch("qwen3-embedding:4b", ["texto"]),
     ],

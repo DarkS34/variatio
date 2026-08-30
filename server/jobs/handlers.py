@@ -232,7 +232,10 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     context = context_for(job)
     params = job.params
-    n = int(params.get("n") or 1)
+    # `or 1` was wrong on a falsy zero: «genera 0» produced one item and then recorded
+    # `requested: 1`, falsifying the very thing the `generations` row exists to keep. An
+    # absent `n` still means one; a zero travels as itself and the generator refuses it.
+    n = 1 if params.get("n") is None else int(params["n"])
     concepts = params.get("concepts") or None
     item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None

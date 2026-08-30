@@ -300,7 +300,7 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
   };
 
   const confirmRevoke = () => {
-    const message = t("acc.revokeConfirm", {
+    const message = plural("acc.revokeConfirm", account.sessions, {
       n: plural("acc.openSessions", account.sessions),
       username: account.username,
     });

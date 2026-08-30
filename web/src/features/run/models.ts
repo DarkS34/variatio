@@ -11,7 +11,7 @@ import type { EffortLevel } from "./effort";
  * the rest, and the effort levels that model actually accepts.
  *
  * Keyed by the START of the model name and not by the whole of it, because a family is
- * served under several names: `qwen3.8:27b-q8_0` locally and `qwen3.8:27b-q4_K_M` on
+ * served under several names: `qwen3.8:27b-q8_0` locally and `qwen3.8:27b-q5_K_M` on
  * another installation are the same choice with the same trade-off. A model no entry
  * matches is offered all the same, with its bare name and no note — a catalogue that
  * refused what it does not recognise would make adding a model a code change.

@@ -164,7 +164,7 @@ la columna `generations.think`, el interruptor de la UI) se traducen al «low» 
 
     modelo                prompt_eval_count con think = true / low / medium / high / max
     qwen3.8:27b-q4_K_M                          15 /  45 /  15 /  57 /   -
-    qwen3.8:27b-q8_0                            14 /  44 /  14 /  56 /  56
+    qwen3.8:27b-q8_0                            14 /  44 /  14 /  56 /  56   <- la de aquí
     qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15 /   -
 
 Léase en cuatro partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
@@ -177,8 +177,10 @@ fase que corre en local es reabrir esa medición, no un ajuste fino.
 `qwen3.8:27b-q8_0` (Ollama 0.32.13, temperatura 0 y semilla fija), los dos rinden el mismo
 prompt de 56 tokens y devuelven una respuesta byte a byte idéntica, mientras que `low` (44)
 y `medium` (14) sí difieren entre sí y de ellos. O sea, este modelo tiene TRES niveles
-efectivos. La columna de la q4_K_M lleva guion porque `max` no se midió allí; sus otras
-cifras son de la medición del 2026-08-24 y difieren en un token de las de hoy porque el
+efectivos. La fila de la q4_K_M se queda porque es una medición y no una
+referencia: esa cuantización dejó de usarse el 2026-08-29 y ni siquiera está instalada, y
+borrar lo medido sobre ella no lo haría menos cierto. Su columna `max` lleva guion porque
+no se midió allí; sus otras cifras son de la medición del 2026-08-24 y difieren en un token de las de hoy porque el
 prompt de prueba no era el mismo — lo que importa de la tabla son las DIFERENCIAS entre
 columnas de una misma fila, no su valor absoluto.
 

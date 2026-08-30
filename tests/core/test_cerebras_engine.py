@@ -210,7 +210,7 @@ def hybrid(monkeypatch):
 
 def test_the_hybrid_routes_by_membership(hybrid):
     assert hybrid._backend("gemma-4-31b") is hybrid._cerebras
-    assert hybrid._backend("qwen3.8:27b-q4_K_M") is hybrid._ollama
+    assert hybrid._backend("qwen3.8:27b-q8_0") is hybrid._ollama
     assert hybrid.remote_models() == frozenset({"gemma-4-31b"})
 
 

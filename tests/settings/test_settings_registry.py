@@ -113,5 +113,8 @@ def test_the_registry_holds_what_this_work_transcribed():
     # `models.phases.variant_generation` left and `generation.models` arrived in its place,
     # a list of what a commission may choose to be written with. The count moving would
     # mean one of the two halves of that change did not land.
-    assert len(REGISTRY) == 142
-    assert len(BY_NAME) == 114
+    # 143 and 115 later the same day, when `generation.max_items` arrived: the item count
+    # was the one commission parameter with no ceiling anywhere, so a single request could
+    # spend the whole day's quota before anything refused it.
+    assert len(REGISTRY) == 143
+    assert len(BY_NAME) == 115
