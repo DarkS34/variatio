@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LanguageFlag } from "@/components/ui/flag";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
@@ -124,6 +125,43 @@ export function AcceptInvite({ token }: { token: string }) {
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {/* First, and that is the field order saying what the form knows: everything under
+            it is read in whatever language this button leaves selected, so asking last
+            means asking somebody to re-read a form they have already filled in. */}
+        <div className="flex flex-col gap-1.5">
+          <Label id="invite-language-label">{t("invite.language")}</Label>
+          <div role="group" aria-labelledby="invite-language-label" className="flex gap-1">
+            {LANGUAGES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setLanguage(option);
+                  // Written through at once: the rest of this form, and the screen behind
+                  // it, are already drawn — a choice that only landed on submit would leave
+                  // somebody finishing a form in a language they have just said they do not
+                  // read.
+                  localeStore.set(option);
+                }}
+                aria-pressed={language === option}
+                className={cn(
+                  "inline-flex h-9 flex-1 items-center justify-center gap-2 border",
+                  "text-small font-medium transition-colors",
+                  language === option
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-accent/60",
+                )}
+              >
+                <LanguageFlag language={option} />
+                {LANGUAGE_NAMES[option]}
+              </button>
+            ))}
+          </div>
+          <p className="text-small text-muted-foreground">
+            {t("invite.languageHint")}
+          </p>
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-username">{t("auth.username")}</Label>
           <Input
@@ -180,38 +218,6 @@ export function AcceptInvite({ token }: { token: string }) {
           </div>
           <p className="text-small text-muted-foreground">
             {t("invite.profileHint")}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label id="invite-language-label">{t("invite.language")}</Label>
-          <div role="group" aria-labelledby="invite-language-label" className="flex gap-1">
-            {LANGUAGES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  setLanguage(option);
-                  // Written through at once: the rest of this form, and the screen behind
-                  // it, are already drawn — a choice that only landed on submit would leave
-                  // somebody finishing a form in a language they have just said they do not
-                  // read.
-                  localeStore.set(option);
-                }}
-                aria-pressed={language === option}
-                className={cn(
-                  "h-9 flex-1 border text-small font-medium transition-colors",
-                  language === option
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card hover:bg-accent/60",
-                )}
-              >
-                {LANGUAGE_NAMES[option]}
-              </button>
-            ))}
-          </div>
-          <p className="text-small text-muted-foreground">
-            {t("invite.languageHint")}
           </p>
         </div>
 
