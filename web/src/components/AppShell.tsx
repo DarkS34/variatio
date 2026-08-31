@@ -7,6 +7,7 @@ import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
+import { STEPS, stepStates, type StepState } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useHasWorkspace } from "@/state/auth";
@@ -22,6 +23,12 @@ import {
 import { runStore } from "@/state/runStore";
 import { useTranscriptionSummary } from "@/features/raw/queries";
 import { useT, type Key } from "@/lib/i18n";
+
+const STATE_KEY: Record<StepState, Key> = {
+  done: "nav.state.done",
+  now: "nav.state.now",
+  later: "nav.state.later",
+};
 
 /**
  * ONE PATH, FOUR NUMBERED STOPS, AND TWO THINGS TO DO WITH WHAT THEY PRODUCE.
@@ -57,39 +64,6 @@ import { useT, type Key } from "@/lib/i18n";
  * `routers/jobs.NEEDS_APPROVED` gates the taggability review on it — so starting at the
  * graph is starting at a stage you cannot finish.
  */
-const STEPS = [
-  { path: "/raw", labelKey: "nav.step.raw", artifact: null },
-  { path: "/prepare/profile", labelKey: "nav.step.profile", artifact: "exemplars_profile" },
-  { path: "/prepare/graph", labelKey: "nav.step.graph", artifact: "knowledge_graph" },
-  { path: "/prepare/bank", labelKey: "nav.step.bank", artifact: "exemplars_bank" },
-] as const;
-
-type StepState = "done" | "now" | "later";
-
-const STATE_KEY: Record<StepState, Key> = {
-  done: "nav.state.done",
-  now: "nav.state.now",
-  later: "nav.state.later",
-};
-
-/**
- * Where each step stands, and which single one is the next move.
- *
- * The current step is the FIRST one not done and never «every one not done»: what makes a
- * path obvious is one next move, not a list of pending chores. Step 1 has no artifact and
- * no approval, so what «done» means there is that both origins hold documents — which is
- * the condition the three builds behind it actually need.
- */
-function stepStates(stages: StageState[], rawStocked: boolean): StepState[] {
-  const done = STEPS.map((step) =>
-    step.artifact
-      ? stages.find((s) => s.artifact === step.artifact)?.status === "approved"
-      : rawStocked,
-  );
-  const now = done.indexOf(false);
-  return done.map((isDone, index) => (isDone ? "done" : index === now ? "now" : "later"));
-}
-
 /**
  * The step's number, or a tick once it is behind you.
  *

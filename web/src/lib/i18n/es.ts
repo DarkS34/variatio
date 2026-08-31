@@ -371,6 +371,107 @@ export const es = {
   "nav.create": "Crear ejercicios",
   "nav.compare": "Comparar",
   "nav.stepNumber": "Paso {n} de 4",
+  // EL TUTORIAL: cinco pantallas, un botón. Lo ve quien acaba de registrarse, antes de
+  // ninguna otra cosa, y se puede volver a ver desde el menú de la cuenta. Es prosa corta
+  // y va en el catálogo como todo lo demás — la guía es la que tiene árbol propio, porque
+  // allí una sección es una página entera y aquí un paso son tres frases.
+  // EL TUTORIAL ES EL MANUAL, no un saludo. Quien acaba de registrarse no ha visto nunca
+  // esto, y al salir de aquí tiene que poder usarlo entero sin preguntarle a nadie: qué
+  // hace, qué necesita de ti, los cuatro pasos, cuánto tardan, cómo termina cada uno, que
+  // lo corregido a mano gana siempre, cómo se pide un ejercicio, cómo se compara, y qué
+  // hacer si algo sale mal. La guía queda como referencia por pantalla; esto es el
+  // recorrido de punta a punta.
+  "tutorial.skip": "Saltar la explicación",
+  "tutorial.of": "{n} de {total}",
+  "tutorial.back": "Atrás",
+  "tutorial.next": "Siguiente",
+  "tutorial.start": "Empezar por el Paso 1",
+  "tutorial.again": "Ver la explicación otra vez",
+
+  "tutorial.s1.title": "Variatio escribe ejercicios de tu asignatura",
+  "tutorial.s1.body":
+    "No los busca en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de los ejercicios que ya pones, imitando tu forma de plantearlos. Le enseñas la asignatura una vez, y a partir de ahí le pides los ejercicios que necesites.",
+
+  "tutorial.s2.title": "Lo único que tienes que buscar son tus archivos",
+  "tutorial.s2.body":
+    "Dos cosas, y las dos las tienes ya. En PDF o en Word, tal y como estén.",
+  "tutorial.s2.b1":
+    "Los apuntes con los que das la asignatura: guiones, transparencias, el libro. De ahí saco los conceptos que enseñas y en qué orden se apoyan unos en otros.",
+  "tutorial.s2.b2":
+    "Los ejercicios que ya pones: boletines, exámenes de otros años, hojas de problemas. De ahí saco qué forma tienen tus ejercicios, y los nuevos se parecerán a estos.",
+  "tutorial.s2.aside":
+    "Cuantos más ejercicios le des, más se parecerán los nuevos a los tuyos. Con tres o cuatro documentos ya funciona.",
+
+  "tutorial.s3.title": "Estos son los cuatro pasos",
+  "tutorial.s3.body":
+    "Los haces en este orden y de una sentada. Después no hay que volver a prepararlos, aunque siempre puedes entrar a cambiar algo.",
+  "tutorial.s3.step1":
+    "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es lo único que hay que preparar.",
+  "tutorial.s3.step2":
+    "Miro tus ejercicios y separo las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
+  "tutorial.s3.step3":
+    "Leo tus apuntes y saco los conceptos que enseñas y en qué orden se apoyan. Va después del 2 porque necesito saber qué ejercicios pones para saber qué conceptos sirven de etiqueta.",
+  "tutorial.s3.step4":
+    "Recojo uno a uno los ejercicios de tus documentos y a cada uno le pongo el tema que practica. De ahí saldrán los ejemplos que imito al escribir uno nuevo.",
+
+  "tutorial.s4.title": "Los pasos 2, 3 y 4 tardan un buen rato",
+  "tutorial.s4.body":
+    "Hay que leer tus documentos enteros, página a página. Puede ser de unos minutos a más de una hora, según lo que hayas subido. No te digo cuánto falta, porque depende de tus documentos y prefiero no inventarme una cifra.",
+  "tutorial.s4.b1":
+    "Puedes cerrar la pestaña. Esto no corre en tu ordenador: sigue por su cuenta y lo encuentras hecho al volver.",
+  "tutorial.s4.b2":
+    "Puedes pararlo. Lo que ya se hizo se guarda, y al volver a lanzarlo sigue por donde iba.",
+  "tutorial.s4.b3":
+    "En el Paso 1 hay un botón para leer todos los documentos de una vez. Es opcional, pero si no lo haces, esa espera se repite en cada paso.",
+
+  "tutorial.s5.title": "Cada paso termina igual: miras, valoras y decides",
+  "tutorial.s5.body":
+    "Te enseño lo que ha salido con el cuestionario al lado: cinco preguntas cortas sobre qué tal. Al guardarlas te propongo seguir al paso siguiente.",
+  "tutorial.s5.b1":
+    "Nada se da por bueno hasta que tú lo dices. Mientras no pulses «Aprobar», el paso sigue abierto y se puede cambiar.",
+  "tutorial.s5.b2":
+    "Puedes volver a cualquier paso cuando quieras. Si cambias algo de un paso anterior, te aviso de qué pasos se han quedado desfasados.",
+  "tutorial.s5.aside":
+    "Las cinco preguntas son lo único que te pedimos a cambio, y son exactamente lo que se está midiendo en el estudio.",
+
+  "tutorial.s6.title": "Lo que corrijas a mano gana siempre",
+  "tutorial.s6.body":
+    "Me voy a equivocar: leyendo una página torcida, metiendo un concepto que no es tuyo, poniéndole a un ejercicio un tema que no era. Corrígelo sin miedo — tu corrección gana sobre lo que yo entendí y sobrevive a todo lo que venga después, incluso si rehaces el paso.",
+  "tutorial.s6.b1": "En el Paso 1 puedes reescribir a mano una página que no supe leer.",
+  "tutorial.s6.b2":
+    "En el Paso 2 puedes renombrar tipos de ejercicio, añadir uno que falte o quitar partes que no uses.",
+  "tutorial.s6.b3":
+    "En el Paso 3 puedes quitar conceptos, renombrarlos, moverlos de bloque o añadir los que falten.",
+  "tutorial.s6.b4":
+    "En el Paso 4 puedes corregir el texto de un ejercicio y el tema que le puse.",
+
+  "tutorial.s7.title": "Pedir un ejercicio nuevo",
+  "tutorial.s7.body":
+    "Le dices de qué tema lo quieres y de qué tipo, y te lo escribe. Puedes pedir varios a la vez y quedarte con el que más te guste.",
+  "tutorial.s7.b1":
+    "Si le dices lo que ya has dado en clase, el ejercicio se apoyará solo en eso y no usará nada que todavía no hayas explicado.",
+  "tutorial.s7.b2":
+    "Cada ejercicio que sale se guarda solo en «Mis variantes», con el encargo que lo produjo. No hace falta que lo copies a ningún sitio.",
+  "tutorial.s7.b3":
+    "Si algo no te convence, «Generar otras» vuelve a pedirlo con el mismo encargo y te da otras distintas.",
+
+  "tutorial.s8.title": "Comparar tres versiones, a ciegas",
+  "tutorial.s8.body":
+    "Te doy tres versiones del mismo ejercicio, escritas de tres maneras distintas, y no te digo cuál es cuál. Las lees, dices de cada una si te serviría, y eliges la mejor. Solo al final te enseño de dónde salía cada una.",
+  "tutorial.s8.b1":
+    "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
+  "tutorial.s8.b2":
+    "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
+  "tutorial.s8.aside":
+    "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
+
+  "tutorial.s9.title": "Nada de esto es irreversible",
+  "tutorial.s9.body":
+    "Puedes rehacer cualquier paso, volver atrás, corregir a mano y empezar de nuevo. Lo único que no se recupera es lo que borres a propósito, y eso siempre se pregunta antes.",
+  "tutorial.s9.b1":
+    "En cada pantalla hay un enlace a la guía, que explica esa pantalla en detalle.",
+  "tutorial.s9.b2":
+    "Esta explicación la puedes volver a ver cuando quieras, desde el menú de tu cuenta.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",

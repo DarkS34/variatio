@@ -1,4 +1,4 @@
-import { Archive, BookOpen, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
+import { Archive, BookOpen, Compass, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,14 @@ export function AccountMenu() {
                 onClick={() => go("/admin")}
               />
             ) : null}
+            {/* La explicación de nueve pantallas que se ve al registrarse. Vive aquí
+                porque no es una reja: quien la saltó demasiado deprisa tiene que poder
+                volver, y quien ya la entendió no debería tropezarse con ella. */}
+            <MenuItem
+              icon={<Compass className="size-4" />}
+              label={t("tutorial.again")}
+              onClick={() => go("/tutorial")}
+            />
             <MenuItem
               icon={<BookOpen className="size-4" />}
               label={t("menu.guide")}

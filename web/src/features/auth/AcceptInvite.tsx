@@ -61,7 +61,9 @@ export function AcceptInvite({ token }: { token: string }) {
   useStripTokenFromUrl();
 
   useEffect(() => {
-    if (accept.isSuccess) navigate("/", { replace: true });
+    // Al tutorial y no a «/»: quien acaba de canjear una invitación no ha visto nunca
+    // esto, y la primera pantalla no puede ser un paso que no sabe para qué sirve.
+    if (accept.isSuccess) navigate("/tutorial", { replace: true });
   }, [accept.isSuccess, navigate]);
 
   if (accept.isSuccess) {

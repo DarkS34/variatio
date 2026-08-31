@@ -3,10 +3,10 @@ import { lazy, Suspense, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
-import { Dashboard } from "@/features/pipeline/Dashboard";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { useHasWorkspace } from "@/state/auth";
-import { usePipeline } from "@/state/queries";
+import { currentStepPath } from "@/lib/steps";
+import { usePipeline, useRaw } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
@@ -38,6 +38,9 @@ const GenerateScreen = lazy(() =>
 );
 const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
+);
+const TutorialScreen = lazy(() =>
+  import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),
 );
 
 // Which destinations need an instance to mean anything. Everything not listed here is
@@ -72,8 +75,13 @@ export function App() {
     if (!hasWorkspace && NEEDS_WORKSPACE.includes(path)) return <NoWorkspace />;
 
     switch (path) {
+      // «/» YA NO ES UNA PANTALLA, ES UNA RESPUESTA. El panel era la vista de la cadena
+      // desde fuera, y desde que la barra ES la cadena no queda nada que mirar desde
+      // fuera; lo que sí queda es la única pregunta que tiene quien entra — «¿y ahora
+      // qué?» —, que esto contesta llevándote allí. Con la cadena entera aprobada lleva
+      // a «Crear ejercicios», que es para lo que servía todo lo anterior.
       case "/":
-        return <Dashboard />;
+        return <Landing />;
       // The raw material is not a stage — it writes no artifact and nobody approves it —
       // so it is a destination of its own rather than a fourth `/prepare/…`.
       case "/raw":
@@ -120,6 +128,24 @@ export function App() {
     }
   };
 
+  // EL TUTORIAL VA FUERA DEL SHELL, como las pantallas de entrada. Lleva su propia
+  // cabecera — la marca y «saltar» — y dentro del shell salían dos: la barra del recorrido
+  // encima de una explicación de qué es el recorrido. Tampoco necesita instancia: explica,
+  // entre otras cosas, cómo llegar a tener una.
+  if (path === "/tutorial") {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        }
+      >
+        <TutorialScreen />
+      </Suspense>
+    );
+  }
+
   return (
     <AppShell>
       <Suspense
@@ -139,4 +165,33 @@ function Redirect({ to }: { to: string }) {
   const { navigate } = useRouter();
   useEffect(() => navigate(to, { replace: true }), [navigate, to]);
   return null;
+}
+
+
+/**
+ * Where a session lands: the step that is next.
+ *
+ * It waits for both readings before deciding — `currentStepPath` over an empty pipeline
+ * answers «step 1» for every workspace in existence, and redirecting there and then
+ * bouncing away is worse than a second of nothing.
+ */
+function Landing() {
+  const { navigate } = useRouter();
+  const pipeline = usePipeline();
+  const raw = useRaw();
+  const slots = raw.data?.slots ?? [];
+  const ready = pipeline.data !== undefined && raw.data !== undefined;
+
+  useEffect(() => {
+    if (!ready) return;
+    const stocked = slots.length > 0 && slots.every((slot) => slot.files.length > 0);
+    navigate(currentStepPath(pipeline.data!.stages, stocked), { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  return (
+    <div className="flex justify-center py-16">
+      <Spinner className="size-5 text-muted-foreground" />
+    </div>
+  );
 }
