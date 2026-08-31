@@ -12,6 +12,7 @@ import { duration, when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { AdminSetsPanel } from "./AdminSetsPanel";
+import { CROSS_EVALUATION } from "./config";
 import { ARM_META } from "./arms";
 import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
 import { studyApi } from "./api";
@@ -64,15 +65,21 @@ export function StudyTab({
           filter that now sits BELOW it does not reach it — the two used to run together
           in one column, with the reading filter on top, where it read as if it governed
           the reparto as well. */}
-      <Section
-        eyebrow={t("adminStudy.handOut.eyebrow")}
-        title={t("adminStudy.handOut.title")}
-        description={t("adminStudy.handOut.description")}
-      >
-        <Card>
-          <AdminSetsPanel />
-        </Card>
-      </Section>
+      {/* Repartir comparaciones entre evaluadores es la mitad CRUZADA del estudio, apagada
+          en esta rama (`study/config.ts`). Se va la sección entera y no solo su contenido:
+          un encabezado sobre una tarjeta vacía dice que la función está rota, que es
+          justo lo contrario de que no esté. */}
+      {CROSS_EVALUATION ? (
+        <Section
+          eyebrow={t("adminStudy.handOut.eyebrow")}
+          title={t("adminStudy.handOut.title")}
+          description={t("adminStudy.handOut.description")}
+        >
+          <Card>
+            <AdminSetsPanel />
+          </Card>
+        </Section>
+      ) : null}
 
       <Section
         eyebrow={t("adminStudy.results.eyebrow")}

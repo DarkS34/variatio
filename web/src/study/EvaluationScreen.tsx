@@ -27,6 +27,7 @@ import {
 import { toEvaluationParams } from "./commission";
 import { ComparisonGrid } from "./ComparisonGrid";
 import { FairnessTable } from "./FairnessTable";
+import { CROSS_EVALUATION } from "./config";
 import { QueueTab } from "./QueueTab";
 import { RevealPanel } from "./RevealPanel";
 import { RubricForm } from "./RubricForm";
@@ -135,12 +136,13 @@ function Running({
 }
 
 /**
- * The three sub-tabs, in the order the work happens in.
+ * The sub-tabs, in the order the work happens in.
  *
- * The queue comes first because that is what somebody handed this evaluator; asking for an
- * exercise yourself is the second thing, and a student never sees it — the form speaks the
- * system's vocabulary (concepts of the graph, modalities, a curriculum), which is not
- * theirs to know.
+ * With cross evaluation off (`study/config.ts`) there are two: ask for a comparison, and
+ * read the ones you have already judged. The queue — what an administrator handed this
+ * evaluator — comes first when it is on, because that is somebody else's work waiting;
+ * with nobody handing anything over there is nothing to wait for, and a tab that is always
+ * empty reads as a broken feature rather than an absent one.
  */
 type Tab = "queue" | "compose" | "history";
 
@@ -166,7 +168,7 @@ export function EvaluationScreen() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("queue");
+  const [tab, setTab] = useState<Tab>(CROSS_EVALUATION ? "queue" : "compose");
   const detail = useEvaluation(sessionId);
 
   const profile = profileQuery.data?.profile ?? null;
@@ -231,13 +233,22 @@ export function EvaluationScreen() {
       (item) => !item.decided && !item.declined && item.id !== sessionId,
     );
     setSessionId(next ? next.id : null);
-    if (!next) setTab("queue");
+    if (!next) setTab(CROSS_EVALUATION ? "queue" : "history");
   };
 
   const typeLabel = (key: string) => profile?.item_types?.[key]?.label || key;
 
   const TABS: { id: Tab; label: string; count?: number; attention?: boolean }[] = [
-    { id: "queue", label: t("eval.tab.queue"), count: queue?.pending ?? 0, attention: true },
+    ...(CROSS_EVALUATION
+      ? [
+          {
+            id: "queue" as Tab,
+            label: t("eval.tab.queue"),
+            count: queue?.pending ?? 0,
+            attention: true,
+          },
+        ]
+      : []),
     ...(canCompose ? [{ id: "compose" as Tab, label: t("eval.tab.compose") }] : []),
     { id: "history", label: t("eval.tab.history"), count: listing.data?.total ?? 0 },
   ];
