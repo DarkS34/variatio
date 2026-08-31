@@ -17,6 +17,7 @@ import { isQueued, waitOf, waitReason } from "@/lib/queue";
 import { slotLabelOf } from "@/lib/raw";
 import { Link } from "@/lib/router";
 import type { StageState } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { isRebuild } from "@/lib/progress";
 import {
   useArtifactRun,
@@ -26,6 +27,7 @@ import {
   useSplitEngine,
 } from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
+import { StageReview } from "@/study/StageReview";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
@@ -46,6 +48,14 @@ const WHAT: Record<string, Key> = {
   exemplars_profile: "stage.what.profile",
   knowledge_graph: "stage.what.graph",
   exemplars_bank: "stage.what.bank",
+};
+
+// Where «continuar» leads once the verdict is in. The bank has no next STEP — what
+// follows it is asking for an exercise, which is the point of the whole path.
+const NEXT_STEP: Record<string, number | null> = {
+  exemplars_profile: 3,
+  knowledge_graph: 4,
+  exemplars_bank: null,
 };
 
 // Which page of the guide explains each stage. One map rather than a prop, because all
@@ -347,8 +357,31 @@ export function StageGate({
             {livePreview}
           </>
         ) : missing ? null : (
-          <div className={blocked ? "pointer-events-none select-none opacity-45" : undefined}>
-            {children}
+          /* REVISAR A LA IZQUIERDA, VALORAR A LA DERECHA. Una sola tarea partida en dos
+             mitades que se miran: el cuestionario pregunta por lo que está al lado, y
+             cobrarlo en otra pantalla sería preguntar por un recuerdo.
+
+             Una sola columna por debajo de `xl`, y no de `lg`: a 1024 las dos mitades
+             quedan en 560 y 400, y el listado de conceptos del temario no cabe en 560 sin
+             partir cada fila. Debajo de ese ancho el formulario baja entero, que es lo que
+             ya hace la barra con su propia franja.
+
+             Bloqueada no: con la etapa bloqueada por sus upstreams no hay nada construido
+             que juzgar, y el formulario lo diría él mismo — pero atenuado junto al resto
+             sería un control apagado sin explicación, que es justo lo que esta pantalla
+             existe para no hacer. */
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <div
+              className={cn(
+                "min-w-0 space-y-5",
+                blocked && "pointer-events-none select-none opacity-45",
+              )}
+            >
+              {children}
+            </div>
+            {blocked ? null : (
+              <StageReview artifact={stage.artifact} nextStep={NEXT_STEP[stage.artifact] ?? null} />
+            )}
           </div>
         )}
       </div>

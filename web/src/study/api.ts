@@ -9,6 +9,7 @@ import type {
   EvaluationListing,
   EvaluationParams,
   EvaluationRating,
+  StageReview,
   TriageValue,
 } from "./types";
 
@@ -27,6 +28,21 @@ const filterQuery = (filters: { workspace?: string | null; account?: number | nu
 };
 
 export const studyApi = {
+  // WHAT A TEACHER ANSWERED ABOUT EACH ARTIFACT. The hash of the build being judged is
+  // never sent: the server resolves it from the file on disk, so a verdict cannot be
+  // stamped onto whatever the browser happened to believe was built.
+  stageReview: (artifact: string) => request<StageReview>(`/api/stage-evaluations/${artifact}`),
+  /** The form reached somebody. Recorded once; a reload never restarts the clock. */
+  openStageReview: (artifact: string) =>
+    post<{ opened_at: number | null }>(`/api/stage-evaluations/${artifact}/opened`, {}),
+  saveStageReview: (
+    artifact: string,
+    body: { answers: Record<string, string>; overall: number | null; note: string | null },
+  ) =>
+    request<StageReview>(`/api/stage-evaluations/${artifact}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   // No `n` anywhere in here: one item per arm per session is what makes the session the
   // statistical unit of the study.
   launchEvaluation: (params: EvaluationParams) =>

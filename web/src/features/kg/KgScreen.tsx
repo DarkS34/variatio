@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronRight,
   FolderPlus,
   Link2,
   ListChecks,
@@ -541,7 +542,13 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
           width of the longest concept name and scrolled the whole page sideways. `grid-cols-1`
           is `minmax(0, 1fr)`, which is the cap, and `min-w-0` on the card is what then lets
           it take it. */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]">
+      {/* UNA SOLA COLUMNA, desde que el cuestionario de la etapa ocupa la mitad derecha de
+          la pantalla. Tres columnas a 1440 px dejaban el listado en 442 px, y cada fila de
+          este listado trunca: el temario se volvía ilegible justo en la pantalla que existe
+          para leerlo. El mapa baja y se pliega — nunca se quita, que es la regla de la
+          casa: lo que estaba plegado sigue estando, y la leyenda de la frontera no vive en
+          ningún otro sitio. */}
+      <div className="space-y-4">
         {/* `min-w-0` is load-bearing, not tidiness: a grid item defaults to `min-width: auto`,
             and every row in here truncates — which means `white-space: nowrap`, which means a
             min-content width of the longest concept name in the graph. Without it the card
@@ -623,14 +630,23 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               {detail(selectedConcept)}
             </CardContent>
           </Card>
-        ) : (
-          /* ONE CARD, NOT THREE. The map, the curriculum and the frontier key were three
+        ) : null}
+
+        {/* Plegado por defecto: lo primero que se ve del temario es el temario, no su
+            dibujo. El detalle de un concepto queda arriba y siempre visible, porque es la
+            respuesta a un clic y una respuesta plegada no es una respuesta. */}
+        <details className="group border border-border bg-card open:pb-1">
+          <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-small font-medium hover:bg-accent">
+            <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" />
+            {t("kg.mapFold")}
+          </summary>
+          {/* ONE CARD, NOT THREE. The map, the curriculum and the frontier key were three
              stacked boxes down the right-hand side, each with its own border and its own
              micro heading — and the second and third are three lines and a legend that only
              mean anything ABOUT the map beside them. They are its footer now, so the column
              reads as one object: here is the graph, here is how far the course has got
-             through it, here is what the colours on it mean. */
-          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 flex-col overflow-hidden">
+             through it, here is what the colours on it mean. */}
+          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 flex-col overflow-hidden border-0">
             <div className="flex items-center justify-between gap-2 p-3 pb-2">
               <span className="text-micro font-condensed uppercase text-muted-foreground">
                 {t("kg.map")}
@@ -723,7 +739,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               </div>
             ) : null}
           </Card>
-        )}
+        </details>
       </div>
 
       {/* The flag is absent from every graph written before it existed, so it reads `false`

@@ -139,3 +139,41 @@ export function useAssignSet() {
     },
   });
 }
+
+// WHAT A TEACHER ANSWERED ABOUT EACH ARTIFACT ---------------------------------------------
+
+/** Keyed by artifact AND by workspace: the same stage of two subjects is two forms. */
+export const stageReviewKey = (artifact: string) => ["stage-review", artifact] as const;
+
+export function useStageReview(artifact: string | undefined) {
+  return useQuery({
+    queryKey: stageReviewKey(artifact ?? "none"),
+    queryFn: () => studyApi.stageReview(artifact!),
+    enabled: Boolean(artifact),
+  });
+}
+
+/**
+ * Save this person's verdict, and put the answer straight into the cache.
+ *
+ * The response IS the new state of the form, so there is nothing to refetch: a second
+ * round trip would only make the badge flicker between «guardada» and «sin contestar».
+ */
+export function useSaveStageReview(artifact: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      answers: Record<string, string>;
+      overall: number | null;
+      note: string | null;
+    }) => studyApi.saveStageReview(artifact, body),
+    onSuccess: (review) => client.setQueryData(stageReviewKey(artifact), review),
+  });
+}
+
+/** Tell the server the form was drawn. Fire and forget: it is a measurement, not a gate. */
+export function useOpenStageReview() {
+  return useMutation({
+    mutationFn: (artifact: string) => studyApi.openStageReview(artifact),
+  });
+}

@@ -376,3 +376,51 @@ export interface AssignableWorkspace {
   ready?: boolean;
   pending?: string[];
 }
+
+// WHAT A TEACHER ANSWERED ABOUT ONE ARTIFACT ---------------------------------------------
+// The shapes `study/api/stage_instruments.py` serves. The wording never lives here: it IS
+// the instrument, so it travels from the server and the browser only draws it.
+
+export interface StageQuestionOption {
+  value: string;
+  label: string;
+}
+
+export interface StageQuestion {
+  key: string;
+  question: string;
+  hint?: string;
+  options?: StageQuestionOption[];
+}
+
+export interface StageInstrument {
+  artifact: string;
+  version: string;
+  preamble: string;
+  questions: StageQuestion[];
+  overall: {
+    key: string;
+    question: string;
+    scale: { min: number; max: number; ends: string[] };
+  };
+  note: { key: string; question: string; hint: string };
+}
+
+export interface StageAnswers {
+  answers: Record<string, string>;
+  overall: number | null;
+  note: string | null;
+  /** `overall` is set, which is the last question: the person reached the end. */
+  answered: boolean;
+  instrument: string;
+  updated_at: string | null;
+}
+
+export interface StageReview {
+  artifact: string;
+  /** Nothing to judge until something is built, and the form has to be able to say so. */
+  built: boolean;
+  hash: string | null;
+  instrument: StageInstrument;
+  mine: StageAnswers | null;
+}

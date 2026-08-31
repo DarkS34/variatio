@@ -348,6 +348,24 @@ export const en: Catalogue = {
   "shell.viewRun": "View run",
   "shell.viewFullLog": "View the session's full log",
   "stage.lockedHint": "Approved: press «Reopen» to be able to edit it",
+  "stageReview.title": "Your verdict",
+  "stageReview.saved": "Saved",
+  "stageReview.unanswered": "Unanswered",
+  "stageReview.save": "Save verdict",
+  "stageReview.saveAgain": "Save the changes",
+  "stageReview.optional": "Optional",
+  "stageReview.remaining": {
+    one: "1 question left",
+    other: "{n} questions left",
+  },
+  "stageReview.notBuilt":
+    "Once it is built I will ask you here how it came out. Five short questions.",
+  "stageReview.failed": "It could not be saved. Try again.",
+  "stageReview.done.title": "Verdict saved. Thank you.",
+  "stageReview.done.body":
+    "Carry on correcting the thing on the left as much as you like: this stays saved and the next step does not touch it.",
+  "stageReview.done.next": "Continue to step {n}",
+  "stageReview.done.generate": "That is it: create my first exercise",
   "stage.what.profile":
     "I have read the exercises you uploaded and separated the different shapes they take: what parts each one carries and which are compulsory. It is the template I will write new exercises from, so it is worth recognising.",
   "stage.what.graph":
@@ -1396,6 +1414,7 @@ export const en: Catalogue = {
   "kg.unitButton": "Unit",
   "kg.conceptButton": "Concept",
   "kg.backToMap": "Back to the map",
+  "kg.mapFold": "Syllabus map, curriculum and key",
   "kg.map": "Map",
   "kg.enlarge": "Enlarge",
   "kg.showRelation": "Show this relation",

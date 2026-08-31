@@ -377,6 +377,27 @@ export const es = {
   "shell.viewRun": "Ver ejecución",
   "shell.viewFullLog": "Ver el registro completo de la sesión",
   "stage.lockedHint": "Aprobado: pulsa «Reabrir» para poder editarlo",
+  // EL CUESTIONARIO DE CADA PASO. Lo que se PREGUNTA viaja del servidor
+  // (`study/api/stage_instruments.py`), porque es el instrumento y no una etiqueta: aquí
+  // solo está el armazón — el título, el estado y el botón.
+  "stageReview.title": "Tu valoración",
+  "stageReview.saved": "Guardada",
+  "stageReview.unanswered": "Sin contestar",
+  "stageReview.save": "Guardar valoración",
+  "stageReview.saveAgain": "Guardar los cambios",
+  "stageReview.optional": "Opcional",
+  "stageReview.remaining": {
+    one: "Falta 1 pregunta",
+    other: "Faltan {n} preguntas",
+  },
+  "stageReview.notBuilt":
+    "Cuando esté construido te preguntaré aquí qué tal ha salido. Son cinco preguntas cortas.",
+  "stageReview.failed": "No se ha podido guardar. Vuelve a intentarlo.",
+  "stageReview.done.title": "Valoración guardada. Gracias.",
+  "stageReview.done.body":
+    "Puedes seguir corrigiendo lo de la izquierda todo lo que quieras: esto se queda guardado y el paso siguiente no lo toca.",
+  "stageReview.done.next": "Continuar al Paso {n}",
+  "stageReview.done.generate": "Ya está: crear mi primer ejercicio",
   // QUÉ ES ESTE PASO, en dos frases y sin nombrar una sola pieza del sistema. Va visible,
   // bajo el título, y no detrás de una (i): lo que explica de qué va la pantalla no puede
   // estar escondido en la pantalla que explica.
@@ -1428,6 +1449,7 @@ export const es = {
   "kg.unitButton": "Unidad",
   "kg.conceptButton": "Concepto",
   "kg.backToMap": "Volver al mapa",
+  "kg.mapFold": "Mapa del temario, currículo y leyenda",
   "kg.map": "Mapa",
   "kg.enlarge": "Ampliar",
   "kg.showRelation": "Mostrar esta relación",
