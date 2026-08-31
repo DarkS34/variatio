@@ -12,7 +12,6 @@ import {
   ToggleLeft,
   Trash2,
   Type,
-  Wand2,
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
@@ -236,32 +235,6 @@ function Segmented({
   );
 }
 
-function NumberBox({
-  value,
-  onChange,
-  placeholder,
-  disabled = false,
-}: {
-  value: number | undefined;
-  onChange: (next: number | undefined) => void;
-  placeholder: string;
-  disabled?: boolean;
-}) {
-  return (
-    <Input
-      type="number"
-      aria-label={placeholder}
-      readOnly={disabled}
-      value={value ?? ""}
-      placeholder={placeholder}
-      onChange={(event) =>
-        onChange(event.target.value === "" ? undefined : Number(event.target.value))
-      }
-      className="h-8 w-24"
-    />
-  );
-}
-
 /**
  * The local label wrapper, and every control in this editor already goes through it — so
  * delegating to `Field` is what binds all nine at once instead of nine by hand.
@@ -352,11 +325,6 @@ export function FieldEditor({
   const Icon = META[type].icon;
   const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, tr, name);
   const canBePrimary = type === "string";
-  // Mirrors ExemplarsProfile._validate_decided_by: the primary field IS the item, and a
-  // list or a free object has no choice to put in front of whoever asks for the item.
-  const undecidable =
-    isPrimary || ((type === "array" || type === "object") && !Array.isArray(schema.enum));
-  const decidedBy = spec.decided_by ?? "model";
 
   const setSchema = (patch: Record<string, any>) =>
     onChange({ ...spec, schema: { ...schema, ...patch } });
@@ -540,71 +508,14 @@ export function FieldEditor({
               />
             </Row>
 
-            <Row
-              label={t("field.decidedBy.label")}
-              hint={t("field.decidedBy.hint")}
-            >
-              <Segmented
-                value={decidedBy}
-                disabled={undecidable || locked}
-                title={
-                  isPrimary
-                    ? t("field.decidedBy.primary")
-                    : undecidable
-                      ? t("field.decidedBy.undecidable")
-                      : locked
-                        ? t(LOCKED_HINT)
-                        : undefined
-                }
-                onChange={(next) =>
-                  onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
-                }
-                options={[
-                  { value: "model", label: t("field.decidedBy.model") },
-                  { value: "user", label: t("field.decidedBy.user") },
-                ]}
-              />
-            </Row>
-
-            {type === "string" ? (
-              <Row label={t("field.length.label")} hint={t("field.length.hint")}>
-                <div className="flex items-center gap-2">
-                  <NumberBox
-                    value={schema.minLength}
-                    disabled={locked}
-                    placeholder={t("field.min")}
-                    onChange={(next) => setSchema({ minLength: next })}
-                  />
-                  <span className="text-small text-muted-foreground">—</span>
-                  <NumberBox
-                    value={schema.maxLength}
-                    disabled={locked}
-                    placeholder={t("field.max")}
-                    onChange={(next) => setSchema({ maxLength: next })}
-                  />
-                </div>
-              </Row>
-            ) : null}
-
-            {type === "integer" || type === "number" ? (
-              <Row label={t("field.range.label")} hint={t("field.range.hint")}>
-                <div className="flex items-center gap-2">
-                  <NumberBox
-                    value={schema.minimum}
-                    disabled={locked}
-                    placeholder={t("field.min")}
-                    onChange={(next) => setSchema({ minimum: next })}
-                  />
-                  <span className="text-small text-muted-foreground">—</span>
-                  <NumberBox
-                    value={schema.maximum}
-                    disabled={locked}
-                    placeholder={t("field.max")}
-                    onChange={(next) => setSchema({ maximum: next })}
-                  />
-                </div>
-              </Row>
-            ) : null}
+            {/* NI «LONGITUD» NI «RANGO» NI «QUIÉN LO DECIDE» (2026-09-01, explicit user
+                request). Los tres son la forma del esquema, no la de la asignatura: un
+                mínimo y un máximo de caracteres son una restricción que nadie sabe fijar
+                sin medir, y quién decide un campo es una decisión sobre el formulario de
+                generación, no sobre el ejercicio. Lo que el perfil traiga se conserva —
+                nada de esto se borra del artefacto, sólo deja de preguntarse — y los dos
+                avisos de abajo siguen, porque un perfil importado puede traer un rango
+                imposible y hay que poder verlo. */}
           </div>
 
           {lengthInvalid ? (
@@ -699,6 +610,7 @@ export function FieldEditor({
 
           <Row label={t("field.description.label")} hint={t("field.description.hint")}>
             <Textarea
+              autoGrow
               value={spec.description ?? ""}
               readOnly={locked}
               onChange={(event) => onChange({ ...spec, description: event.target.value })}
@@ -720,6 +632,7 @@ export function FieldEditor({
               }
             >
               <Textarea
+                autoGrow
                 value={spec.guidance?.extraction ?? ""}
                 readOnly={locked}
                 onChange={(event) =>
@@ -732,31 +645,11 @@ export function FieldEditor({
                 className="min-h-24 text-small"
               />
             </Field>
-            <Field
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <Wand2 className="size-3.5" />
-                  {t("field.generation.label")}
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-condensed text-muted-foreground">
-                    {t("field.generation.byHand")}
-                  </span>
-                </span>
-              }
-              description={t("field.generation.description")}
-            >
-              <Textarea
-                value={spec.guidance?.generation ?? ""}
-                readOnly={locked}
-                onChange={(event) =>
-                  onChange({
-                    ...spec,
-                    guidance: { ...spec.guidance, generation: event.target.value || undefined },
-                  })
-                }
-                placeholder={t("field.generation.placeholder")}
-                className="min-h-24 text-small"
-              />
-            </Field>
+            {/* «Cómo generarlo» tampoco se pregunta. Era la excepción escrita a mano
+                para un campo suelto, y las reglas de redacción de la modalidad son el
+                instrumento que lleva de verdad la generación — tener las dos en la misma
+                pantalla obliga a decidir cuál manda. El campo sigue en el artefacto y
+                `generate_content_prompt` lo sigue leyendo si está. */}
           </div>
 
           <div className="space-y-2 border-t border-border pt-3">

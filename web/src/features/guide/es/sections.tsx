@@ -385,11 +385,6 @@ function Raw() {
               head: <>«{t("transcribe.startAll")}»</>,
               body: "En el aviso de arriba de la pantalla. Lanza de una vez los orígenes que tengan algo que hacer, y es el camino normal.",
             },
-            {
-              key: "origen",
-              head: <>«{t("transcribe.start")}»</>,
-              body: "Uno por origen, en la cabecera de su tarjeta, para hacerlos por separado. La etiqueta cambia con lo que quede: lo pendiente, lo caducado, o las dos cosas. Sin nada que hacer no aparece, porque el distintivo de al lado ya dice «al día».",
-            },
           ]}
         />
       </Block>
@@ -654,25 +649,12 @@ function Profile() {
               body: t("field.extraction.hint"),
             },
             {
-              key: "generacion",
-              head: t("field.generation.label"),
-              body: t("field.generation.description"),
-            },
-            {
-              key: "decidido",
-              head: t("field.decidedBy.label"),
-              body: t("field.decidedBy.hint"),
-            },
-            {
               key: "primario",
               head: t("field.primary.badge"),
               body: "El que lleva el enunciado. Es el que se convierte en vector para emparejar con conceptos, y solo puede serlo un campo de texto.",
             },
           ]}
         />
-        <Detail title={`Y aparte del primario: «${t("modality.indexed")}»`}>
-          <p>{t("modality.indexed.hint")}</p>
-        </Detail>
       </Block>
 
       <Alert tone="danger" title="Tocarlo después de extraer el banco lo invalida">

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import type { InputHTMLAttributes, LabelHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
@@ -16,10 +17,45 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return <input className={cn(field, "h-9 py-1", className)} {...props} />;
 }
 
-export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+/**
+ * `autoGrow` makes the box the height of its own text, with no inner scrollbar.
+ *
+ * Opt-in and not the default, which is the whole design: a textarea holding a whole
+ * transcribed page would grow to several thousand pixels and take the screen's scrollbar
+ * with it. Where it IS right is a box being READ as much as written — the profile's field
+ * descriptions and its writing rules, four to six lines each, which arrived clipped at two
+ * with a scrollbar of their own, so reviewing what the builder wrote meant scrolling
+ * inside every one of a dozen little windows (2026-09-01, explicit user request).
+ *
+ * `resize-none` goes with it: a handle that fights an effect resetting the height on every
+ * keystroke is a control that does not work.
+ */
+export function Textarea({
+  className,
+  autoGrow = false,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { autoGrow?: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  // Measured from `scrollHeight`, which needs the box collapsed first or it only ever
+  // grows. It runs on `value` so a draft loaded from the server sizes itself on arrival,
+  // not only once somebody types.
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!autoGrow || !node) return;
+    node.style.height = "auto";
+    node.style.height = `${node.scrollHeight}px`;
+  }, [autoGrow, props.value]);
+
   return (
     <textarea
-      className={cn(field, "min-h-20 resize-y py-2 leading-relaxed", className)}
+      ref={ref}
+      className={cn(
+        field,
+        "min-h-20 py-2 leading-relaxed",
+        autoGrow ? "resize-none overflow-hidden" : "resize-y",
+        className,
+      )}
       {...props}
     />
   );

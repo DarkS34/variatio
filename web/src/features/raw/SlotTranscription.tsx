@@ -1,32 +1,32 @@
-import { Hammer, Hourglass, RefreshCw } from "lucide-react";
+import { Hourglass } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CancelButton } from "@/components/CancelButton";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
 import { phaseName, stepName } from "@/lib/names";
 import type { RawSlot } from "@/lib/types";
-import { useCanEdit } from "@/state/auth";
-import { useEngineOffline } from "@/state/queries";
 
 import { documentLoop, innerLoop, loopLabel } from "./progress";
 import {
   TRANSCRIBE_JOB,
-  useStartTranscription,
   useTranscribePhases,
   useTranscribeRun,
   useTranscribing,
   useTranscription,
 } from "./queries";
-import { useT, type Translate } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 
 /**
- * THE TRANSCRIPTION OF ONE RAW SLOT, IN THE THREE PIECES ITS CARD ARRANGES.
+ * THE TRANSCRIPTION OF ONE RAW SLOT, IN THE TWO PIECES ITS CARD ARRANGES.
  *
- * Each answers one question about the slot — what state is it in, what is there to press,
- * and what is happening right now — and they each read the same query, which react-query
- * dedupes, so `SlotCard` can place them where it needs them without threading state
- * through props.
+ * Each answers one question about the slot — what state is it in, and what is happening
+ * right now — and they read the same query, which react-query dedupes, so `SlotCard` can
+ * place them where it needs them without threading state through props.
+ *
+ * There is no per-origin BUTTON any more (2026-09-01, explicit user request). Reading the
+ * documents is one press for the whole screen, in the alert at the top, and two buttons
+ * doing the same work on two halves of one action is exactly the kind of choice this
+ * branch exists to remove. Nothing is lost with it: the global one appears under the same
+ * condition the two used to, and it fans out per slot.
  *
  * Two more pieces used to live here and are gone rather than moved. `TranscriptionNote`
  * deduplicated the staleness reasons across the whole slot because the panel had one row
@@ -36,13 +36,6 @@ import { useT, type Translate } from "@/lib/i18n";
  * know about.
  */
 
-
-function launchLabel(pending: number, stale: number, done: number, t: Translate["t"]): string {
-  if (stale > 0 && pending > 0) return t("transcribe.pendingAndStale");
-  if (stale > 0) return t("transcribe.staleOnly");
-  if (done > 0) return t("transcribe.pendingOnly");
-  return t("transcribe.start");
-}
 
 function useSlot(slot: RawSlot) {
   const hasFiles = slot.files.length > 0;
@@ -76,59 +69,6 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
   if (data.pending > 0)
     return <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>;
   return <Badge variant="settled">{t("transcribe.upToDate")}</Badge>;
-}
-
-/**
- * The one button: start what is missing, or stop what is running.
- *
- * Nothing to do and nothing running renders NOTHING — the badge already says «al día», and
- * a disabled button beside it is a second drawing of the same fact. Every other reason it
- * cannot be pressed (read-only, engine down, already queued) keeps the button, disabled,
- * with the reason in its tooltip: that is the case the explanation exists for.
- */
-export function TranscriptionAction({ slot }: { slot: RawSlot }) {
-  const { t } = useT();
-  const { hasFiles, data, running, todo } = useSlot(slot);
-  const run = useTranscribeRun(slot.kind);
-  const start = useStartTranscription();
-  const offline = useEngineOffline();
-  const canEdit = useCanEdit();
-
-  if (!hasFiles || !data) return null;
-
-  if (running) {
-    return <CancelButton run={run} word="stop" hint={t("transcribe.stopHint")} />;
-  }
-
-  const reason = !canEdit
-    ? t("build.readOnly")
-    : offline
-      ? offline
-      : start.isPending
-        ? t("common.sending")
-        : null;
-
-  if (todo === 0 && !reason) return null;
-
-  return (
-    <Button
-      size="sm"
-      variant={data.stale > 0 && data.pending === 0 ? "outline" : "default"}
-      disabled={Boolean(reason) || todo === 0}
-      title={
-        reason ??
-        (todo === 0
-          ? t("transcribe.allDone")
-          : data.done > 0
-            ? t("transcribe.startHintSome")
-            : t("transcribe.startHintNone"))
-      }
-      onClick={() => start.mutate(slot.kind)}
-    >
-      {start.isPending ? <Spinner /> : data.stale > 0 ? <RefreshCw /> : <Hammer />}
-      {launchLabel(data.pending, data.stale, data.done, t)}
-    </Button>
-  );
 }
 
 export function RunningBlock({ slot }: { slot: RawSlot }) {

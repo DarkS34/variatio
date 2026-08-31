@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import { bytes } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import { slotLabel, slotPurpose, staleReasons } from "@/lib/raw";
 import type { RawSlot } from "@/lib/types";
@@ -16,16 +15,8 @@ import { DocumentDialog } from "./DocumentDialog";
 import { busyDocument } from "./progress";
 import { useTranscribeRun, useTranscribing, useTranscription } from "./queries";
 import { SlotDropzone, useSlotIntake } from "./SlotIntake";
-import { RunningBlock, TranscriptionAction, TranscriptionBadge } from "./SlotTranscription";
+import { RunningBlock, TranscriptionBadge } from "./SlotTranscription";
 import type { DocumentState } from "./types";
-
-// The stage each origin feeds, said with the navbar's own short names so the row points at
-// something the reader can find rather than at an artifact's wire name.
-const FEEDS: Record<string, Key> = {
-  exemplars_profile: "nav.step.profile",
-  knowledge_graph: "nav.step.graph",
-  exemplars_bank: "nav.step.bank",
-};
 
 const STATE: Record<DocumentState, { labelKey: Key; variant: "settled" | "outline" | "attention" }> = {
   done: { labelKey: "transcribe.state.done", variant: "settled" },
@@ -41,16 +32,14 @@ const VISIBLE = 6;
  * The panel used to draw two lists of the same filenames: `SlotFiles`' (name and size) and
  * `DocumentList`'s (pages and transcription state), in two components that were never on
  * screen at the same time, so nobody could see they were the same six names. A document is
- * one thing and it gets one line: what it is called, what it weighs, how many pages came
- * out of it, what state that transcription is in, and the two operations that act on it.
+ * one thing and it gets one line: what it is called, whether it has been read, and the two
+ * operations that act on it.
  *
  * The CAUSE of a «caducado» goes under its own row and not in an aggregate badge: the
  * register's rule is that staleness is a state with a reason or it is not a state.
  */
 function DocumentRow({
   name,
-  size,
-  pages,
   state,
   reasons,
   failedPages,
@@ -60,8 +49,6 @@ function DocumentRow({
   onRemove,
 }: {
   name: string;
-  size: number | null;
-  pages: number;
   state: DocumentState;
   reasons: string[];
   failedPages: number;
@@ -85,15 +72,10 @@ function DocumentRow({
         <span className="min-w-0 flex-1 truncate" title={name}>
           {name}
         </span>
-        {/* Fixed columns, right-aligned, because this list IS a table now: sized by their
-            content the numbers make every badge and every action land at a different x,
-            and «—» against «41 pág.» moves a row's controls by some thirty pixels. */}
-        <span className="w-16 shrink-0 text-right nums text-muted-foreground">
-          {size !== null ? bytes(size) : ""}
-        </span>
-        <span className="w-14 shrink-0 text-right nums text-muted-foreground">
-          {pages > 0 ? t("transcribe.pageAbbrev", { n: pages }) : "—"}
-        </span>
+        {/* NEITHER THE SIZE NOR THE PAGE COUNT (2026-09-01, explicit user request).
+            «928 KB · 45 pág.» is a fact about a file, and nobody uploading their own
+            lecture notes is deciding anything with it. What the row has to answer is
+            whether that document has been read, which the badge says on its own. */}
         {/* A document can be transcribed AND have pages the model could not read: «al día»
             is true of the transcription and says nothing about them. Two badges rather
             than one, because the red sentence below used to be the only sign of it and the
@@ -189,8 +171,6 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
       const entry = read.get(file.name);
       return {
         name: file.name,
-        size: file.bytes,
-        pages: entry?.pages ?? 0,
         state: entry?.state ?? ("pending" as DocumentState),
         reasons: entry?.reasons ?? [],
         failedPages: entry?.failed_pages ?? 0,
@@ -202,6 +182,12 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
 
   return (
     <Card className="flex flex-col">
+      {/* THE HEADER IS THE NAME AND ONE STATE (2026-09-01, explicit user request).
+          What left it: the «hace falta para» chips, which name two artifacts a teacher has
+          no reason to reason about while uploading a PDF; the aggregate «1 archivo · 928
+          KB · 45 páginas»; and the per-origin button, because reading the documents is now
+          ONE press for the whole screen. What stays is the sentence saying what belongs in
+          this box, which is the only thing the person is actually deciding here. */}
       <div className="flex flex-col gap-1.5 border-b border-border p-4">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <h2 className="min-w-0 flex-1 truncate text-heading">{slotLabel(slot, t)}</h2>
@@ -210,29 +196,9 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
           ) : (
             <TranscriptionBadge slot={slot} />
           )}
-          <TranscriptionAction slot={slot} />
         </div>
 
         <p className="max-w-[60ch] text-small text-muted-foreground">{slotPurpose(slot, t)}</p>
-
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-0.5">
-          <span className="text-micro font-condensed uppercase text-muted-foreground">
-            {t("raw.feedsLabel")}
-          </span>
-          {slot.feeds.map((artifact) => (
-            <Badge key={artifact} variant="outline">
-              {FEEDS[artifact] ? t(FEEDS[artifact]) : artifact}
-            </Badge>
-          ))}
-          {empty ? null : (
-            <span className="ml-auto text-small nums text-muted-foreground">
-              {plural("dash.fileCount", slot.files.length)} · {bytes(slot.bytes)}
-              {state.data && state.data.total_pages > 0
-                ? ` · ${plural("transcribe.pageCount", state.data.total_pages)}`
-                : ""}
-            </span>
-          )}
-        </div>
       </div>
 
       <div className={cn("flex min-h-0 flex-1 flex-col gap-3 p-4")}>
@@ -272,14 +238,6 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
           </ul>
         )}
 
-        {/* Last line of the card, and it is the one thing a person has to know before
-            pressing anything: stopping loses nothing. A stop button that might be throwing
-            work away is one nobody presses. */}
-        {empty ? null : (
-          <p className="mt-auto text-small text-muted-foreground">
-            {running ? t("transcribe.runningNote") : t("transcribe.perPageNote")}
-          </p>
-        )}
       </div>
 
       {opened ? (

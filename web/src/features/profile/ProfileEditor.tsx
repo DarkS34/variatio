@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import {
   ChevronsDownUp,
   ChevronsUpDown,
-  CircleCheck,
   Plus,
   Save,
   Star,
@@ -92,7 +91,6 @@ function TypeStrip({
   keys,
   active,
   labels,
-  counts,
   onSelect,
   onAdd,
   onRemove,
@@ -101,7 +99,6 @@ function TypeStrip({
   keys: string[];
   active: string;
   labels: Record<string, string>;
-  counts: Record<string, number>;
   onSelect: (key: string) => void;
   onAdd: (key: string) => void;
   onRemove: (key: string) => void;
@@ -114,7 +111,6 @@ function TypeStrip({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-body font-semibold tracking-tight">{t("modality.title")}</h2>
-        <Badge variant="outline">{keys.length}</Badge>
         <InfoHint label={t("modality.whatAre")}>{t("modality.whatAre.body")}</InfoHint>
       </div>
 
@@ -130,7 +126,6 @@ function TypeStrip({
             )}
           >
             <span className="text-body font-medium">{labels[key] || key}</span>
-            <Badge variant="outline">{counts[key]}</Badge>
             {keys.length > 1 && !disabled ? (
               <span
                 role="button"
@@ -229,17 +224,6 @@ export function ProfileEditor() {
   const rules = spec.general_generation_rules ?? [];
   const indexed = embedFields(spec);
 
-  // Kept in declared order rather than click order, and the primary is never removable:
-  // it is what guarantees the text carries the item at all.
-  const toggleIndexed = (name: string) => {
-    if (name === spec.primary_field) return;
-    const next = indexed.includes(name)
-      ? indexed.filter((entry) => entry !== name)
-      : [...indexed, name];
-    const ordered = names.filter((field) => next.includes(field));
-    updateType({ embed_fields: ordered });
-  };
-
   const addType = (key: string) => {
     update({
       item_types: {
@@ -314,20 +298,18 @@ export function ProfileEditor() {
             offered — pasting a whole profile in and applying it — is the one edit that can
             put a shape on screen the form cannot express, and the validator's own sentence
             is what this bar carries instead. */}
-        {validation ? (
-          validation.valid ? (
-            <span className="flex items-center gap-1.5 text-small text-settled">
-              <CircleCheck className="size-3.5" />
-              {t("profileEditor.loadsFine")}
+        {/* SÓLO SE HABLA CUANDO ALGO VA MAL (2026-09-01, explicit user request). El
+            «carga correctamente» era una confirmación permanente de que nada pasa, en la
+            barra que sólo debería llevar el guardado; lo que sí tiene que estar es la
+            frase del validador cuando el perfil NO carga, porque es la razón por la que
+            el botón de guardar se niega. */}
+        {validation && !validation.valid ? (
+          <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
+            <TriangleAlert className="size-3.5 shrink-0" />
+            <span className="truncate" title={validation.error ?? undefined}>
+              {validation.error}
             </span>
-          ) : (
-            <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
-              <TriangleAlert className="size-3.5 shrink-0" />
-              <span className="truncate" title={validation.error ?? undefined}>
-                {validation.error}
-              </span>
-            </span>
-          )
+          </span>
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
@@ -355,9 +337,6 @@ export function ProfileEditor() {
           active={activeKey}
           labels={Object.fromEntries(
             typeKeys.map((key) => [key, draft.item_types[key].label || key]),
-          )}
-          counts={Object.fromEntries(
-            typeKeys.map((key) => [key, Object.keys(draft.item_types[key].fields).length]),
           )}
           onSelect={(key) => {
             setActiveType(key);
@@ -392,6 +371,7 @@ export function ProfileEditor() {
               </Field>
               <Field label={t("modality.description")}>
                 <Textarea
+                  autoGrow
                   value={spec.description ?? ""}
                   placeholder={t("modality.description.placeholder")}
                   className="min-h-20"
@@ -404,12 +384,7 @@ export function ProfileEditor() {
 
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle>{t("modality.rules")}</CardTitle>
-                <Badge variant="outline" className="ml-auto">
-                  {rules.length}
-                </Badge>
-              </div>
+              <CardTitle>{t("modality.rules")}</CardTitle>
               {/* Visible, not behind an (i): this is the one thing on the screen that
                   decides how a generated item reads, and it is the only instrument the
                   profile carries for it — the per-field generation guidance is a manual
@@ -423,6 +398,7 @@ export function ProfileEditor() {
                     {index + 1}
                   </span>
                   <Textarea
+                    autoGrow
                     aria-label={t("modality.rule.n", { n: index + 1 })}
                     value={rule}
                     className="min-h-16"
@@ -473,7 +449,6 @@ export function ProfileEditor() {
           <h2 className="text-body font-semibold tracking-tight">
             {t("modality.fieldsOf", { name: spec.label || activeKey })}
           </h2>
-          <Badge variant="outline">{names.length}</Badge>
           <InfoHint label={t("modality.fields.hintLabel")}>
             {t("modality.fields.hintA")}{" "}
             <Star className="inline size-3" /> {t("modality.fields.hintB")}
@@ -489,48 +464,12 @@ export function ProfileEditor() {
           </Button>
         </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex flex-wrap items-center gap-2 text-body">
-              {t("modality.indexed")}
-              <InfoHint label={t("modality.indexed.hintLabel")}>
-                {t("modality.indexed.hint")}
-              </InfoHint>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-1.5">
-            {names.map((name) => {
-              const on = indexed.includes(name);
-              const locked = name === spec.primary_field;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  disabled={locked || stageLocked}
-                  onClick={() => toggleIndexed(name)}
-                  title={
-                    locked
-                      ? t("modality.indexed.primaryAlways")
-                      : stageLocked
-                        ? t(LOCKED_HINT)
-                        : undefined
-                  }
-                  className={cn(
-                    "rounded-md border px-2 py-1 font-mono text-small transition-colors",
-                    on
-                      ? "border-primary/40 bg-primary/10 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted",
-                    locked && "cursor-default opacity-90",
-                  )}
-                >
-                  {locked ? <Star className="mr-1 inline size-3" /> : null}
-                  {name}
-                </button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
+        {/* LA TARJETA «CAMPOS QUE SE INDEXAN» YA NO ESTÁ (2026-09-01, explicit user
+            request). Qué campos entran en el índice es una decisión sobre la recuperación,
+            no sobre la asignatura, y quien prepara una instancia no tiene con qué
+            decidirla: se queda lo que el perfil traiga, que es lo que el constructor
+            dedujo. `embed_fields` sigue en el artefacto y `toggleIndexed` sigue existiendo
+            para cuando haya que volver a ofrecerlo. */}
         {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
           <Alert tone="attention" title={t("modality.primaryNotText")}>
             <p>

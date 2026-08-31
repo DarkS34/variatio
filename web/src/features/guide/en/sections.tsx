@@ -396,11 +396,6 @@ function Raw() {
               head: <>"{t("transcribe.startAll")}"</>,
               body: "In the notice at the top of the screen. It launches in one go whichever origins have something to do, and it is the normal route.",
             },
-            {
-              key: "origen",
-              head: <>"{t("transcribe.start")}"</>,
-              body: "One per origin, in its card's header, for doing them separately. The label changes with what is left: what is pending, what has expired, or both. With nothing to do it does not appear at all, because the badge beside it already says everything is up to date.",
-            },
           ]}
         />
       </Block>
@@ -666,25 +661,12 @@ function Profile() {
               body: t("field.extraction.hint"),
             },
             {
-              key: "generacion",
-              head: t("field.generation.label"),
-              body: t("field.generation.description"),
-            },
-            {
-              key: "decidido",
-              head: t("field.decidedBy.label"),
-              body: t("field.decidedBy.hint"),
-            },
-            {
               key: "primario",
               head: t("field.primary.badge"),
               body: "The one carrying the statement. It is the one turned into a vector to match against concepts, and only a text field can be it.",
             },
           ]}
         />
-        <Detail title={`And beside the primary one: "${t("modality.indexed")}"`}>
-          <p>{t("modality.indexed.hint")}</p>
-        </Detail>
       </Block>
 
       <Alert tone="danger" title="Touching it after extracting the bank invalidates the bank">
