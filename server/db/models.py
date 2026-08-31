@@ -91,6 +91,9 @@ class Workspace(Base):
     evaluations: Mapped[list["EvalSession"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
+    stage_evaluations: Mapped[list["StageEvaluation"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
 
 
 class Artifact(Base):
@@ -445,3 +448,69 @@ class EvalSession(Base):
     # not guess: `user` is who judges, `assigner` is who handed it over.
     user: Mapped[User | None] = relationship(foreign_keys=[user_id])
     assigner: Mapped[User | None] = relationship(foreign_keys=[assigned_by])
+
+
+class StageEvaluation(Base):
+    """What one person answered about one BUILD of one artifact, right after reviewing it.
+
+    The blind comparison measures the variants; this measures the chain that produces them,
+    which nothing did before: a workspace could be prepared end to end and leave no record
+    of whether its profile, its graph or its bank were any good. The questions are asked on
+    the stage's own screen, next to the thing they are about, because a judgement about an
+    artifact collected anywhere else is a judgement about a memory of it.
+
+    `artifact_hash` is what makes the row a measurement rather than an opinion: it names the
+    build that was on screen. A rebuild produces a different hash and therefore a different
+    row, so «esto salió mal» and «lo rehíce y salió bien» are two data and not an edit of
+    one — which is the same reason `approvals` records hashes instead of trusting that the
+    file has not moved. The unique constraint is over the four together, so re-answering the
+    SAME build replaces your answer while a rebuild starts a new one.
+
+    `instrument` is the version of the question set. Rewording a question changes what was
+    measured, so rows answered under different wordings must not be pooled by accident:
+    `study.api.stage_instruments.VERSION` is what is stored here, and the analysis groups by
+    it. `overall` is a column and the rest of the answers are JSON for the reason
+    `EvalSession` splits the same way — the aggregates group by the single ordinal scale,
+    and everything else is read one row at a time.
+
+    `user_id` is `SET NULL` like the other two tables that record what a person produced:
+    deleting an account must not delete the measurements the study counted.
+    """
+
+    __tablename__ = "stage_evaluations"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "user_id",
+            "artifact",
+            "artifact_hash",
+            name="uq_stage_evaluation_build",
+        ),
+        Index("ix_stage_evaluation_recent", "workspace_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
+    )
+
+    artifact: Mapped[str] = mapped_column(String(32), index=True)
+    artifact_hash: Mapped[str | None] = mapped_column(String(64), default=None)
+    job_id: Mapped[str | None] = mapped_column(String(32), default=None)
+    instrument: Mapped[str] = mapped_column(String(16), default="")
+
+    answers: Mapped[dict] = mapped_column(Json, default=dict)
+    overall: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
+    note: Mapped[str | None] = mapped_column(Text, default=None)
+
+    # When the questions first reached whoever had to answer them, so «cuánto tardó en
+    # contestar» is a fact rather than an impression. Written once, never on a reload.
+    opened_at: Mapped[float | None] = mapped_column(Float, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    workspace: Mapped[Workspace] = relationship(back_populates="stage_evaluations")
+    user: Mapped[User | None] = relationship()

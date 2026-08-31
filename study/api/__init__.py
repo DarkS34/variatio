@@ -11,11 +11,14 @@ runtime-only consumer, and `tests/study/test_study_boundary.py` pins it.
 
 
 def install(app) -> None:
-    """Register the `evaluate` handler and mount the study's two routers on the app."""
+    """Register the `evaluate` handler and mount the study's three routers on the app."""
     from server.jobs.handlers import HANDLERS
 
-    from . import admin, jobs, router
+    from . import admin, jobs, router, stages
 
     HANDLERS["evaluate"] = jobs.handle_evaluate
     app.include_router(router.router)
     app.include_router(admin.router)
+    # What a teacher answered about each artifact of the chain. A stage screen draws it,
+    # but what it collects is the study's, so it is mounted here with the rest.
+    app.include_router(stages.router)
