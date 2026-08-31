@@ -834,22 +834,17 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "Cuántos ejercicios del banco llevan al menos un concepto. Es el trabajo de corrección que queda por delante, y lleva al lado los dos controles que actúan sobre ese mismo número.",
+              body: "Cuántos ejercicios del banco llevan al menos un concepto. Es el trabajo de corrección que queda por delante, y lleva al lado los dos controles que actúan sobre ese mismo número. Sólo aparece mientras falte alguno: con el banco entero etiquetado no hay nada que mirar ahí.",
             },
             {
               key: "cobertura",
-              head: t("bank.coverage"),
+              head: t("bank.conceptsWithExample"),
               body: t("bank.coverageBody"),
-            },
-            {
-              key: "umbrales",
-              head: t("bank.thresholds"),
-              body: t("bank.thresholdsBody"),
             },
           ]}
         />
         <Paragraph>
-          Los dos primeros miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
+          Los dos miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
           <em>ejercicios sin concepto</em>, el otro <em>conceptos sin ejercicio</em>. Se puede tener el
           banco entero etiquetado y media asignatura sin un solo ejemplo que imitar.
         </Paragraph>

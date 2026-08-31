@@ -400,6 +400,60 @@ function ItemRow({
  * where it is on purpose: it is contextual, it appears only when there is a selection, and
  * it belongs to the rows it acts on rather than to the totals.
  */
+/**
+ * WHICH PAGE OF THE BANK, AND THE TWO STEPS EITHER SIDE OF IT.
+ *
+ * Drawn TWICE — over the table and under it (2026-09-01, explicit user request) — because
+ * a page here is forty rows tall and the only way to reach the next one was to scroll to
+ * the bottom of the one you had just read. That is not a duplicated control in the sense
+ * the house rule forbids: it is one control at both ends of a long list, which is what a
+ * pager is for, and both ends read the same `page`.
+ */
+function Pager({
+  page,
+  pages,
+  total,
+  onPage,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  onPage: (next: number) => void;
+}) {
+  const { t, plural } = useT();
+  return (
+    <>
+      <span className="text-small nums text-muted-foreground">
+        {plural("bank.pageOf", total, { page, pages })}
+      </span>
+      {pages > 1 ? (
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("common.previous")}
+            title={t("common.previous")}
+            disabled={page <= 1}
+            onClick={() => onPage(page - 1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("common.next")}
+            title={t("common.next")}
+            disabled={page >= pages}
+            onClick={() => onPage(page + 1)}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function BankMeters({
   listing,
   coverage,
@@ -428,43 +482,45 @@ function BankMeters({
 
   return (
     <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
-      <div className="flex-[1.2] space-y-2 p-4">
-        <div className="flex items-baseline justify-between gap-2 text-body">
-          <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
-          <span className="nums font-medium">
-            {tagged}/{items}
-          </span>
+      {/* SÓLO MIENTRAS FALTE ALGUNO (2026-09-01, explicit user request). Un medidor a
+          120/120 informa de que no hay nada que hacer, que es la definición de ruido; lo
+          que hay que ver es el resto, y para eso está. Con el banco vacío sí se dibuja,
+          porque ahí «0 de 0» no es «terminado» sino «no hay banco». */}
+      {untagged > 0 || items === 0 ? (
+        <div className="flex-[1.2] space-y-2 p-4">
+          <div className="flex items-baseline justify-between gap-2 text-body">
+            <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
+            <span className="nums font-medium">
+              {tagged}/{items}
+            </span>
+          </div>
+          <Progress value={tagged} max={items} tone={untagged === 0 ? "settled" : "attention"} />
+          {untagged > 0 ? (
+            <button
+              onClick={onShowUntagged}
+              className="text-small text-attention transition-opacity hover:opacity-80"
+            >
+              {plural("bank.seeUntagged", untagged)}
+            </button>
+          ) : (
+            <p className="text-small text-muted-foreground">{t("bank.emptyBank")}</p>
+          )}
         </div>
-        <Progress value={tagged} max={items} tone={untagged === 0 ? "settled" : "attention"} />
-        {untagged > 0 ? (
-          <button
-            onClick={onShowUntagged}
-            className="text-small text-attention transition-opacity hover:opacity-80"
-          >
-            {plural("bank.seeUntagged", untagged)}
-          </button>
-        ) : (
-          // «Todos los ítems tienen concepto» is true of nothing when there is nothing:
-          // an emptied bank read as a finished one, under a bar that was sweeping as if
-          // it were still filling.
-          <p className="text-small text-muted-foreground">
-            {t(items === 0 ? "bank.emptyBank" : "bank.allTagged")}
-          </p>
-        )}
-      </div>
+      ) : null}
 
       <div className="flex-[1.2] space-y-2 p-4">
         <div className="flex items-baseline justify-between gap-2 text-body">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            {t("bank.coverage")}
+            {t("bank.conceptsWithExample")}
             <InfoHint label={t("bank.coverageHint")}>{t("bank.coverageBody")}</InfoHint>
           </span>
           <span className="nums font-medium">
             {coverage ? `${coverage.covered}/${coverage.total}` : "—"}
           </span>
         </div>
+        {/* El rótulo ERA la línea de debajo: «Cobertura del currículo» arriba y «Conceptos
+            con ejemplo» debajo decían lo mismo dos veces, y la de abajo lo decía mejor. */}
         <Progress value={coverage?.covered ?? 0} max={coverage?.total ?? null} tone="settled" />
-        <p className="text-small text-muted-foreground">{t("bank.conceptsWithExample")}</p>
       </div>
 
       <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
@@ -496,14 +552,11 @@ function BankMeters({
             </Button>
           ) : null}
         </div>
-        {/* Read here, changed in «Configuración»: small print, not a card. */}
-        <p className="mt-auto flex items-center gap-1.5 text-small nums text-muted-foreground">
-          {t("bank.thresholdsLine", {
-            similarity: listing.thresholds.similarity,
-            k: listing.thresholds.top_k,
-          })}
-          <InfoHint label={t("bank.thresholdsHint")}>{t("bank.thresholdsBody")}</InfoHint>
-        </p>
+        {/* «Umbral 0.4 · 10 candidatos» ya no se dibuja (2026-09-01, explicit user
+            request). Son dos ajustes de recuperación que se leían aquí y se cambian en
+            «Configuración»: quien prepara una asignatura no decide nada con ellos, y en la
+            franja que responde «¿sirve ya este banco?» eran la única línea que no lo
+            respondía. Siguen en el payload del listado. */}
       </div>
     </Card>
   );
@@ -712,6 +765,17 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <option value="id">{t("bank.orderById")}</option>
             <option value="suspicion">{t("bank.orderBySuspicion")}</option>
           </Select>
+
+          {listing && listing.items.length > 0 ? (
+            <div className="ml-auto flex items-center gap-3">
+              <Pager
+                page={listing.page}
+                pages={pages}
+                total={listing.total}
+                onPage={setPage}
+              />
+            </div>
+          ) : null}
         </div>
 
         {bank.isError ? (
@@ -780,33 +844,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 over items chosen by hand, whatever their state. */}
             {listing.items.length > 0 ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3 py-2.5 text-body">
-                <span className="text-small nums text-muted-foreground">
-                  {plural("bank.pageOf", listing.total, { page: listing.page, pages })}
-                </span>
-                {pages > 1 ? (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={t("common.previous")}
-                      title={t("common.previous")}
-                      disabled={page <= 1}
-                      onClick={() => setPage((value) => value - 1)}
-                    >
-                      <ChevronLeft />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={t("common.next")}
-                      title={t("common.next")}
-                      disabled={page >= pages}
-                      onClick={() => setPage((value) => value + 1)}
-                    >
-                      <ChevronRight />
-                    </Button>
-                  </div>
-                ) : null}
+                <Pager
+                  page={listing.page}
+                  pages={pages}
+                  total={listing.total}
+                  onPage={setPage}
+                />
 
                 <span className="flex-1" />
 

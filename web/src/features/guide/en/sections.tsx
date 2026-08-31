@@ -851,22 +851,17 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "How many exercises of the bank carry at least one concept. It is the correcting still ahead of you, and it has beside it the two controls that act on that very number.",
+              body: "How many exercises of the bank carry at least one concept. It is the correcting still ahead of you, and it has beside it the two controls that act on that very number. It is only drawn while some are missing: with the whole bank tagged there is nothing to look at there.",
             },
             {
               key: "cobertura",
-              head: t("bank.coverage"),
+              head: t("bank.conceptsWithExample"),
               body: t("bank.coverageBody"),
-            },
-            {
-              key: "umbrales",
-              head: t("bank.thresholds"),
-              body: t("bank.thresholdsBody"),
             },
           ]}
         />
         <Paragraph>
-          The first two look in opposite directions and are worth keeping apart: one counts{" "}
+          The two look in opposite directions and are worth keeping apart: one counts{" "}
           <em>exercises with no concept</em>, the other <em>concepts with no exercise</em>. The whole
           bank can be tagged while half the syllabus has not a single example to imitate.
         </Paragraph>
