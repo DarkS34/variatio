@@ -274,33 +274,21 @@ function Workspace() {
         </Alert>
       </Block>
 
-      <Block title="El currículo">
+      <Block title="Lo que ya has dado en clase">
         <Paragraph>
-          Los conceptos que el curso <em>ya ha impartido</em>. Se edita en la pestaña «
-          {t("kg.tab.curriculum")}» del temario y es lo que acota el andamiaje de cada generación: de un concepto impartido
-          el ejercicio puede apoyarse; de uno que aún no se ha dado, no puede depender.
+          Al pedir un ejercicio puedes decir qué conceptos ha visto ya la clase. Es lo que acota
+          el andamiaje: de un concepto impartido el ejercicio puede apoyarse; de uno que aún no
+          se ha dado, no puede depender. Se elige <em>en el encargo</em>, en «Ajustes», y vale
+          para esa tanda — no se guarda en la asignatura.
         </Paragraph>
-        <Alert tone="info" title="Vacío no significa «nada impartido»: significa «sin restricción»">
+        <Alert tone="info" title="Sin marcar nada no significa «nada impartido»">
           <p>
-            Leerlo al pie de la letra prohibiría el temario entero, que es justo el estado en el
-            que arranca una instancia nueva. Vaciarlo a propósito sí se guarda como una decisión,
-            con su fecha.
+            Significa «sin restricción». Leerlo al pie de la letra prohibiría el temario entero,
+            que es justo el estado en el que arranca una instancia nueva.
           </p>
         </Alert>
       </Block>
 
-      <Detail title="«Cerrar prerrequisitos al guardar»">
-        <p>
-          Al guardar el currículo puedes pedir que se añadan también los prerrequisitos de lo que
-          has marcado. Se aplica <em>al guardar</em> y queda escrito en el fichero: no es una
-          regla que se aplique al leerlo, así que el currículo siempre significa exactamente lo
-          que pone.
-        </p>
-        <p>
-          Si el temario cambia y algún concepto guardado desaparece, la pantalla te lo dice por su
-          nombre en vez de dejarlo caer en silencio.
-        </p>
-      </Detail>
     </div>
   );
 }
@@ -703,39 +691,19 @@ function Graph() {
         ]}
       />
 
-      <Block title="Las tres vistas">
-        <Rows
-          items={[
-            {
-              key: "temario",
-              head: t("kg.tab.graph"),
-              body: "Los dominios y sus conceptos, con el lienzo del temario al lado. Las unidades vienen plegadas: ábrelas, o busca y se abren solas las que tengan resultados. Al pulsar un nodo se selecciona también en la tabla, abriendo su unidad.",
-            },
-            {
-              key: "descripciones",
-              head: t("kg.tab.descriptions"),
-              body: "La prosa de cada concepto, para leerla y corregirla. Si quedan conceptos sin describir, la propia pestaña lleva el número al lado; sin nada pendiente, no lleva nada.",
-            },
-            {
-              key: "curriculo",
-              head: t("kg.tab.curriculum"),
-              body: "Qué se ha impartido ya. Aquí se marca, y desde aquí se guarda con o sin cierre de prerrequisitos.",
-            },
-          ]}
-        />
+      <Block title="Una lista, y un mapa debajo">
         <Paragraph>
-          El botón de <strong>«{t("kg.review.button")}»</strong> está a la derecha de las
-          pestañas y no en la cabecera: cambiar de vista y cambiar el artefacto son dos cosas
-          distintas y no comparten línea. La revisión existe en los dos estados —la primera
-          vez y cuando la repites—, y por eso vive ahí y no en el aviso de abajo.
+          Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
+          Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el tema
+          y si <strong>sirve de etiqueta</strong>; al pulsarla se abre su ficha sobre la
+          página, que es donde se corrige el nombre, la unidad, la descripción y las
+          relaciones.
         </Paragraph>
         <Paragraph>
-          En «{t("kg.tab.graph")}», la lista es el trabajo y el mapa es la referencia, así que la
-          lista se lleva el ancho. El mapa ocupa una sola tarjeta a la derecha y lleva de pie de
-          página el avance del currículo y la leyenda de la <strong>frontera</strong>: lo
-          asentado, lo que toca ahora y lo que aún no. {t("kg.mapDescription")} Y con el botón de
-          ampliar se abre a pantalla completa <em>con el inspector al lado</em>, para poder
-          cambiar lo que elijas sin volver atrás.
+          El mapa va plegado bajo la lista, porque lo primero que se ve del temario tiene que
+          ser el temario y no su dibujo. {t("kg.mapDescription")} Con el botón de ampliar se abre
+          a pantalla completa <em>con la ficha al lado</em>, para poder cambiar lo que elijas sin
+          volver atrás.
         </Paragraph>
         <Paragraph>
           El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que
@@ -748,7 +716,7 @@ function Graph() {
         </Paragraph>
       </Block>
 
-      <Block title="Después de construir, tres revisiones">
+      <Block title="Después de construir, tres cosas que mirar">
         <Steps
           items={[
             <>
@@ -769,8 +737,8 @@ function Graph() {
               <p className="text-small text-muted-foreground">
                 La prosa que describe cada concepto, escrita contra los párrafos del corpus de
                 los que salió. <strong>Es el texto contra el que se compara, no el nombre.</strong>{" "}
-                Se escriben solas al indexar; la pestaña es para leerlas y corregir las que no
-                digan lo que tú dirías.
+                Se escriben solas después de construir; se corrigen en la ficha del concepto,
+                que es donde se están leyendo.
               </p>
             </>,
             <>

@@ -18,17 +18,16 @@ import { JobProgress } from "@/components/BuildProgress";
 import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog, PromptDialog } from "@/components/ui/prompt";
 import { InfoHint } from "@/components/ui/hint";
 import { Field } from "@/components/ui/field";
-import { Input, Select } from "@/components/ui/input";
+import { Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
-import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
-import { relationColour, when } from "@/lib/format";
+import { relationColour } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -43,11 +42,8 @@ import {
   usePipeline,
   useSubmitJob,
 } from "@/state/queries";
-import { ConceptOutline, FrontierKey, type CurriculumPlace } from "./ConceptOutline";
-import { CurriculumTab } from "./CurriculumTab";
-import { DescriptionReview } from "./DescriptionReview";
+import { ConceptOutline } from "./ConceptOutline";
 import { GraphCanvas } from "./GraphCanvas";
-import { buildModel, frontierOf } from "./graph/model";
 import { useT } from "@/lib/i18n";
 
 function ConceptDetail({
@@ -69,6 +65,7 @@ function ConceptDetail({
   const [domain, setDomain] = useState(concept.domain);
   const [relation, setRelation] = useState(relations[0] ?? "");
   const [target, setTarget] = useState("");
+  const [description, setDescription] = useState(concept.description ?? "");
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -98,6 +95,17 @@ function ConceptDetail({
   const update = useMutation({
     mutationFn: (body: Parameters<typeof api.updateConcept>[0]) => api.updateConcept(body),
   });
+  const saveDescription = useMutation({
+    mutationFn: (body: { concept: string; description: string }) =>
+      api.saveDescription(body.concept, body.description),
+  });
+
+  // The outgoing half of every relation, flattened out of the per-verb map the API sends.
+  // Order is the API's — its relation list is the schema's — so two concepts read their
+  // relations in the same order.
+  const outgoing = Object.entries(neighbours.data?.relations ?? {}).flatMap(([verb, data]) =>
+    data.out.map((target) => ({ verb, target })),
+  );
 
   const dirty = name !== concept.name || domain !== concept.domain;
 
@@ -160,23 +168,57 @@ function ConceptDetail({
         ) : null}
       </div>
 
-      {concept.description ? (
-        <div className="space-y-1">
+      {/* LA DESCRIPCIÓN SE CORRIGE AQUÍ (2026-09-01, explicit user request), que es donde
+          se está leyendo. Antes vivía en una pestaña propia que revisaba las 162 en fila,
+          lo cual es una tarea distinta de la única que se hace de verdad: leer un concepto,
+          ver que su descripción no lo describe y arreglarla.
+
+          Es un fichero aparte del artefacto, así que editarla NO caduca la aprobación de la
+          etapa — por eso el campo sigue vivo con el temario aprobado, a diferencia del
+          nombre y la unidad. */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
           <h4 className="text-micro font-condensed uppercase text-muted-foreground">
             {t("kg.description")}
           </h4>
-          <p className="rounded-md border border-border bg-muted/40 p-2 text-body leading-relaxed">
-            {concept.description}
-          </p>
+          {!concept.description ? (
+            <Badge variant="attention">{t("kg.noDescriptionBadge")}</Badge>
+          ) : null}
         </div>
-      ) : (
-        <Alert tone="attention">
-          <p className="text-small">{t("kg.noDescription")}</p>
-        </Alert>
-      )}
-
-      <div className="flex gap-4 text-small text-muted-foreground">
-        <span>{t("kg.degree", { n: concept.degree })}</span>
+        <Textarea
+          autoGrow
+          aria-label={t("kg.description")}
+          value={description}
+          placeholder={t("kg.descriptionPlaceholder")}
+          onChange={(event) => setDescription(event.target.value)}
+          className="min-h-20 text-small"
+        />
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-small text-muted-foreground">
+            {t("kg.descriptionNote")}
+          </p>
+          {description !== (concept.description ?? "") ? (
+            <Button
+              size="sm"
+              disabled={saveDescription.isPending}
+              onClick={() =>
+                saveDescription.mutate(
+                  { concept: concept.name, description },
+                  {
+                    onSuccess: () => {
+                      onChanged();
+                      toast({ title: t("kg.descriptionSaved") });
+                    },
+                    onError: (e: Error) => setError(e.message),
+                  },
+                )
+              }
+            >
+              {saveDescription.isPending ? <Spinner /> : null}
+              {t("common.save")}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <Separator />
@@ -185,45 +227,46 @@ function ConceptDetail({
         <h4 className="text-micro font-condensed uppercase text-muted-foreground">
           {t("kg.relations")}
         </h4>
+        {/* UNA FRASE POR RELACIÓN, Y SÓLO LAS QUE SALEN DE ESTE CONCEPTO (2026-09-01,
+            explicit user request). Antes era una rejilla de distintivos con «→» y «←»
+            delante de cada vecino, agrupados por verbo: para leer «Algoritmo tiene como
+            prerrequisito Pensamiento computacional» había que componer la frase uno mismo a
+            partir de un título, una flecha y un nombre.
+
+            Las entrantes se van con las flechas. Son las mismas aristas vistas del otro
+            lado — si «Algoritmo de búsqueda se engloba en Algoritmo», eso es algo que dice
+            «Algoritmo de búsqueda» — y listarlas aquí duplicaba cada arista en las dos
+            fichas, que es exactamente de donde venía la necesidad de la flecha. */}
         {neighbours.isLoading ? (
           <Spinner />
+        ) : outgoing.length === 0 ? (
+          <p className="text-small text-muted-foreground">{t("kg.noRelations")}</p>
         ) : (
-          Object.entries(neighbours.data?.relations ?? {}).map(([verb, data]) => (
-            <div key={verb} className="space-y-1">
-              <p className="text-small font-medium">{verb}</p>
-              <div className="flex flex-wrap gap-1">
-                {[...data.out.map((n) => ({ n, dir: "→" })), ...data.in.map((n) => ({ n, dir: "←" }))].map(
-                  ({ n, dir }) => (
-                    <Badge key={`${verb}-${dir}-${n}`} variant="secondary" className="pr-1">
-                      <span className="text-muted-foreground">{dir}</span>
-                      {n}
-                      {locked ? null : (
-                        <button
-                          type="button"
-                          aria-label={t("kg.removeEdge", { name: n })}
-                          onClick={() =>
-                            run(() =>
-                              api.removeEdge(
-                                verb,
-                                dir === "→" ? concept.name : n,
-                                dir === "→" ? n : concept.name,
-                              ),
-                            )
-                          }
-                          className="rounded-full p-0.5 hover:bg-background/60"
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  ),
+          <ul className="space-y-0.5">
+            {outgoing.map(({ verb, target }) => (
+              <li
+                key={`${verb}-${target}`}
+                className="group flex items-baseline gap-1.5 rounded-md px-1.5 py-1 hover:bg-accent/50"
+              >
+                <span className="min-w-0 flex-1 text-body leading-relaxed">
+                  <span className="font-medium">{concept.name}</span>{" "}
+                  <span className="text-muted-foreground">{verb}</span>{" "}
+                  <span className="font-medium">{target}</span>
+                </span>
+                {locked ? null : (
+                  <button
+                    type="button"
+                    aria-label={t("kg.removeEdge", { name: target })}
+                    title={t("kg.removeEdge", { name: target })}
+                    onClick={() => run(() => api.removeEdge(verb, concept.name, target))}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 )}
-                {data.out.length === 0 && data.in.length === 0 ? (
-                  <span className="text-small text-muted-foreground">—</span>
-                ) : null}
-              </div>
-            </div>
-          ))
+              </li>
+            ))}
+          </ul>
         )}
 
         <div className="flex gap-1 pt-1">
@@ -382,7 +425,7 @@ function AddConceptDialog({
  * of them: it answers "what is near what", which is a question you ask once. So the outline
  * is the screen and the drawing is the reference, one click from filling the window.
  */
-function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
+function GraphExplorer() {
   const { plural, t } = useT();
   const locked = useStageLocked();
   const kg = useKg();
@@ -421,42 +464,24 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   const domains = (kg.data?.domains ?? []).map((d) => d.name);
   const relations = (kg.data?.relations ?? []).map((r) => r.name);
 
-  const model = useMemo(() => (graph.data ? buildModel(graph.data) : null), [graph.data]);
-
-  // Where each concept falls relative to the frontier — the same three sets the generator
-  // derives when it writes a prompt. Computed over indices because that is what the graph
-  // model speaks, and handed back by name because that is what a row has.
-  const frontierNames = useMemo(() => {
-    if (!graph.data || !model || !curriculumSet) return null;
-    const indices = new Set<number>();
-    for (const name of curriculumSet) {
-      const index = model.nameIndex.get(name);
-      if (index !== undefined) indices.add(index);
-    }
-    return new Set(
-      [...frontierOf(graph.data, model, indices)].map((index) => graph.data!.nodes[index][0]),
-    );
-  }, [graph.data, model, curriculumSet]);
-
-  const place = (name: string): CurriculumPlace | null => {
-    if (!curriculumSet) return null;
-    if (curriculumSet.has(name)) return "covered";
-    return frontierNames?.has(name) ? "frontier" : "ahead";
-  };
+  // Where a concept falls relative to the frontier is no longer DRAWN here (2026-09-01,
+  // explicit user request) — neither as a column nor as a key under the map. The canvas
+  // still receives `curriculumSet` and still tints its own curriculum layout with it,
+  // which is the one place the three sets are visible; what left is the reporting of them
+  // row by row, along with the editor that used to set the list.
 
   // Built from the whole graph, never from the filtered list: what a unit contains does not
   // change because a search is narrowing what is drawn, and «eliminar la unidad y sus N»
   // has to name the number that will actually be deleted.
   const unitStats = useMemo(() => {
-    const stats = new Map<string, { total: number; covered: number }>();
+    const stats = new Map<string, { total: number }>();
     for (const concept of concepts) {
-      const entry = stats.get(concept.domain) ?? { total: 0, covered: 0 };
+      const entry = stats.get(concept.domain) ?? { total: 0 };
       entry.total += 1;
-      if (curriculumSet?.has(concept.name)) entry.covered += 1;
       stats.set(concept.domain, entry);
     }
     return stats;
-  }, [concepts, curriculumSet]);
+  }, [concepts]);
 
   const moveDomain = (name: string, delta: number) => {
     const from = domains.indexOf(name);
@@ -500,9 +525,6 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
-  const covered = curriculumSet
-    ? concepts.filter((concept) => curriculumSet.has(concept.name)).length
-    : 0;
 
   const canvas = (compact: boolean) => (
     <GraphCanvas
@@ -599,9 +621,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               concepts={filtered}
               units={domains}
               groups={graph.data.groups.map((group) => group.name)}
-              place={place}
-              unitStats={(unit) => unitStats.get(unit) ?? { total: 0, covered: 0 }}
-              hasCurriculum={Boolean(curriculumSet)}
+              unitStats={(unit) => unitStats.get(unit) ?? { total: 0 }}
               filtering={Boolean(query.trim())}
               selected={selected}
               onSelect={setSelected}
@@ -613,28 +633,8 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
           </div>
         </Card>
 
-        {selectedConcept ? (
-          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
-            <CardHeader className="flex-row items-center gap-1.5 space-y-0 pb-2">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setSelected(null)}
-                aria-label={t("kg.backToMap")}
-              >
-                <ArrowLeft />
-              </Button>
-              <CardTitle className="min-w-0 truncate">{selectedConcept.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-              {detail(selectedConcept)}
-            </CardContent>
-          </Card>
-        ) : null}
-
         {/* Plegado por defecto: lo primero que se ve del temario es el temario, no su
-            dibujo. El detalle de un concepto queda arriba y siempre visible, porque es la
-            respuesta a un clic y una respuesta plegada no es una respuesta. */}
+            dibujo. */}
         <details className="group border border-border bg-card open:pb-1">
           <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-small font-medium hover:bg-accent">
             <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" />
@@ -708,39 +708,36 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               </div>
             </div>
 
-            {curriculumSet ? (
-              <div className="shrink-0 space-y-2 border-t border-border p-3">
-                <FrontierKey />
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 text-small text-muted-foreground">
-                    {covered === 0
-                      ? t("kg.noCurriculum")
-                      : t("kg.curriculumSaved", {
-                          when: when(curriculum.data?.updated_at ?? null),
-                          frontier: plural("kg.frontierCount", frontierNames?.size ?? 0),
-                        })}
-                  </span>
-                  <span className="shrink-0 nums text-small text-muted-foreground">
-                    {covered}/{totals.concepts}
-                  </span>
-                </div>
-                <span className="block h-1 w-full bg-muted">
-                  <span
-                    className="block h-full bg-settled"
-                    style={{
-                      width: `${Math.round((covered / Math.max(1, totals.concepts)) * 100)}%`,
-                    }}
-                  />
-                </span>
-                <Button size="sm" variant="ghost" onClick={onGoToCurriculum}>
-                  <Waypoints />
-                  {t("kg.editCurriculum")}
-                </Button>
-              </div>
-            ) : null}
           </Card>
         </details>
       </div>
+
+      {/* THE CONCEPT'S CARD IS A DIALOG (2026-09-01, explicit user request).
+          It was a card in the flow under the list, which worked only while the list had the
+          whole window: with the questionnaire back on the right the syllabus lives in 7/12
+          of the screen, and a card stacked under a hundred-odd rows put the answer to a
+          click 800 px below the row that was clicked. A column beside the list is not the
+          answer either — two columns inside that 7/12 leave the syllabus at ~440 px and
+          every row truncates, which is the one thing this screen exists to avoid.
+
+          So it opens over the page, like the enlarged map and like a raw document's pages:
+          the list keeps its width, and the card gets a comfortable one for a description
+          that is read as prose and for relations written as sentences. `key` remounts it
+          per concept, which is what resets the description draft when you move to the next
+          one. */}
+      <Dialog
+        open={Boolean(selectedConcept)}
+        onClose={() => setSelected(null)}
+        title={selectedConcept?.name ?? ""}
+        description={t("kg.conceptDialogHint")}
+        className="sm:max-w-3xl"
+      >
+        {selectedConcept ? (
+          <div className="thin-scroll max-h-[72vh] overflow-y-auto pr-1">
+            {detail(selectedConcept)}
+          </div>
+        ) : null}
+      </Dialog>
 
       {/* The flag is absent from every graph written before it existed, so it reads `false`
           even on one whose exclusion list proves the old in-build pass ran. The second half
@@ -865,7 +862,6 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
 
 export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
-  const [tab, setTab] = useState("graph");
   const kg = useKg();
   const pipeline = usePipeline();
   const submitReview = useSubmitJob();
@@ -873,6 +869,17 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const reviewRun = useJobRun("review_taggability");
   const reviewing = useJobRunning("review_taggability");
   const reviewPhases = useJobPhases("review_taggability");
+  // THE BUILD DOES NOT END WITH THE GRAPH, AND THE SCREEN HAS TO SAY SO (2026-09-01,
+  // explicit user request). `jobs/chain.py` already queues `describe_concepts`, then the
+  // taggability review, then the index behind every `build_kg`; what was missing is that
+  // only the middle one had anywhere to report itself, and the description job lost its
+  // last home when the «Descripciones» tab went. So the two that a person waits for are
+  // one block with one sentence: the graph is there, this is what is still being finished,
+  // and nothing below is blocked by it.
+  const describeRun = useJobRun("describe_concepts");
+  const describing = useJobRunning("describe_concepts");
+  const describePhases = useJobPhases("describe_concepts");
+  const finishing = describing || reviewing;
   const { navigate } = useRouter();
   const missing = (kg.data?.totals.taggable ?? 0) - (kg.data?.totals.described ?? 0);
 
@@ -900,37 +907,19 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
                 : null;
 
   return (
-    <StageGate
-      stage={stage}
-    >
-      {/* THE TABS COME OUT OF THE HEADER. They were in `StageGate`'s `actions` slot, which
-          put a three-way view switch on the same line as «Construir de nuevo», «Aprobar»
-          and the taggability review: six controls in a row, of which three change what you
-          are looking at and three change the artifact. They are different kinds of thing
-          and they now sit on different lines.
+    <StageGate stage={stage}>
+      {/* ONE VIEW, AND ONE THING TO DO TO IT (2026-09-01, explicit user request).
+          The three-way tab strip is gone. «Descripciones» was a screen-wide review of a
+          derived file the build already writes on its own — a description is corrected on
+          the concept it belongs to, in the panel beside the list — and «Currículo» went
+          with the saved taught-concepts list, which is chosen per commission on the
+          generate and comparison screens instead. With one view left there is nothing to
+          switch between, exactly as when the profile's raw-JSON tab went.
 
-          The review stays beside the tabs rather than in the header for the same reason it
-          is not in the notice below: it is something you do TO the graph, it exists in both
-          states — a first review and a re-run — and the notice only exists in one of them. */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Tabs
-          items={[
-            { value: "graph", label: t("kg.tab.graph") },
-            {
-              value: "descriptions",
-              label: t("kg.tab.descriptions"),
-              badge:
-                missing > 0 ? (
-                  <Badge variant="attention" className="ml-1">
-                    {missing}
-                  </Badge>
-                ) : undefined,
-            },
-            { value: "curriculum", label: t("kg.tab.curriculum") },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
+          The review button stays where the tabs were: it is something done TO the graph, it
+          exists in both states (a first pass and a re-run), and the notice below exists in
+          only one of them. */}
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
         <Button
           size="sm"
           variant={reviewed ? "ghost" : "attention"}
@@ -943,6 +932,16 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
         </Button>
       </div>
 
+      {finishing ? (
+        <Alert tone="info" className="mb-4" title={t("kg.finishing")}>
+          <p>{t(describing ? "kg.finishing.describing" : "kg.finishing.taggable")}</p>
+        </Alert>
+      ) : null}
+
+      {describing || describeRun?.job?.status === "failed" ? (
+        <JobProgress run={describeRun} phases={describePhases} className="mb-4" />
+      ) : null}
+
       {reviewing || reviewRun?.job?.status === "failed" ? (
         <JobProgress
           run={reviewRun}
@@ -952,15 +951,7 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
         />
       ) : null}
 
-      {tab === "graph" ? (
-        <GraphExplorer onGoToCurriculum={() => setTab("curriculum")} />
-      ) : tab === "curriculum" ? (
-        <CurriculumTab />
-      ) : kg.data ? (
-        <DescriptionReview kg={kg.data} />
-      ) : (
-        <Skeleton className="h-96" />
-      )}
+      <GraphExplorer />
 
       {stage?.status === "approved" && missing === 0 ? (
         <Alert

@@ -284,35 +284,21 @@ function Workspace() {
         </Alert>
       </Block>
 
-      <Block title="The curriculum">
+      <Block title="What the class has already covered">
         <Paragraph>
-          The concepts the course <em>has already covered</em>. It is edited on the graph's
-          "{t("kg.tab.curriculum")}" tab and it is what bounds the scaffolding of every generation: an exercise may
-          lean on a covered concept; it may not depend on one that has not been taught yet.
+          When asking for an exercise you can say which concepts the class has already seen.
+          That is what bounds the scaffolding: an exercise may lean on a covered concept; it may
+          not depend on one that has not been taught yet. It is chosen <em>in the commission</em>,
+          under "Settings", and holds for that batch — it is not stored on the subject.
         </Paragraph>
-        <Alert
-          tone="info"
-          title="&quot;Empty&quot; does not mean nothing covered: it means no restriction"
-        >
+        <Alert tone="info" title="Marking nothing does not mean nothing covered">
           <p>
-            Reading it literally would forbid the whole syllabus, which is exactly the state a
-            new instance starts in. Emptying it deliberately is saved as a decision, with its
-            date.
+            It means no restriction. Reading it literally would forbid the whole syllabus, which
+            is exactly the state a new instance starts in.
           </p>
         </Alert>
       </Block>
 
-      <Detail title="&quot;Close prerequisites on save&quot;">
-        <p>
-          When saving the curriculum you can ask for the prerequisites of what you marked to be
-          added too. It is applied <em>on save</em> and written into the file: it is not a rule
-          applied at read time, so the curriculum always means exactly what it says.
-        </p>
-        <p>
-          If the graph changes and a saved concept disappears, the screen tells you by name
-          instead of dropping it in silence.
-        </p>
-      </Detail>
     </div>
   );
 }
@@ -718,52 +704,31 @@ function Graph() {
         ]}
       />
 
-      <Block title="The three views">
-        <Rows
-          items={[
-            {
-              key: "temario",
-              head: t("kg.tab.graph"),
-              body: "The domains and their concepts, with the graph canvas beside them. Units start closed: open one, or search and the ones with matches open by themselves. Clicking a node selects it in the table too, opening its unit.",
-            },
-            {
-              key: "descripciones",
-              head: t("kg.tab.descriptions"),
-              body: "Each concept's prose, to read and to correct. If any concepts are still undescribed, the tab itself carries the count beside its name; with nothing outstanding, it carries nothing.",
-            },
-            {
-              key: "curriculo",
-              head: t("kg.tab.curriculum"),
-              body: "What has been covered already. This is where it is marked, and where it is saved with or without closing prerequisites.",
-            },
-          ]}
-        />
+      <Block title="A list, with a map under it">
         <Paragraph>
-          The <strong>"{t("kg.review.button")}"</strong> button sits to the right of the tabs
-          rather than in the header: switching view and changing the artifact are two different
-          kinds of thing and do not share a line. The review exists in both states — a first pass
-          and a re-run — which is why it lives there and not in the notice below.
+          What you see first is the syllabus: the units in teaching order, folded. Open them, or
+          search and the ones with results open on their own. Every row carries the topic and
+          whether it <strong>works as a label</strong>; clicking it opens its card over the page,
+          which is where the name, the unit, the description and the relations are corrected.
         </Paragraph>
         <Paragraph>
-          On "{t("kg.tab.graph")}" the list is the work and the map is the reference, so the list
-          takes the width. The map is a single card on the right, footed by the curriculum's
-          progress and the key to the <strong>frontier</strong>: what is settled, what you are on
-          now, and what is not reachable yet. {t("kg.mapDescription")} The expand button opens it
-          full-screen <em>with the inspector beside it</em>, so whatever you pick there can be
-          changed without going back.
+          The map is folded under the list, because the first thing you see of a syllabus has to
+          be the syllabus and not its drawing. {t("kg.mapDescription")} The enlarge button opens
+          it full screen <em>with the card beside it</em>, so you can change what you pick
+          without going back.
         </Paragraph>
         <Paragraph>
-          The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which groups
-          each concept next to the ones it is related to, and{" "}
-          <strong>"{t("canvas.layout.curriculum")}"</strong>, which orders by prerequisite
-          levels. Switching from one to the other rebuilds nothing: the nodes ease across to
-          their new positions. A level is a <em>band</em> and not a row, because a real graph
-          spreads its prerequisites very unevenly; below three levels the canvas says so itself,
-          because that is a fact about the graph and not a broken view.
+          The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which puts
+          each concept next to the ones it relates to, and{" "}
+          <strong>"{t("canvas.layout.curriculum")}"</strong>, which orders by prerequisite level.
+          Switching rebuilds nothing: the nodes ease to their new positions. A level is a{" "}
+          <em>band</em> and not a row, because a real syllabus spreads prerequisites very
+          unevenly; with fewer than three levels the canvas says so, because that is a fact
+          about the syllabus and not a broken view.
         </Paragraph>
       </Block>
 
-      <Block title="After building, three reviews">
+      <Block title="After building, three things to look at">
         <Steps
           items={[
             <>

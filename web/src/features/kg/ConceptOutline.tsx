@@ -8,7 +8,6 @@ import {
   Pencil,
   Plus,
   Trash2,
-  TriangleAlert,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -16,7 +15,7 @@ import { useStageLocked } from "@/components/StageGate";
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useT, type Key } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 
 /**
  * The graph as the syllabus it is: one section per unit, one row per concept.
@@ -44,78 +43,30 @@ export type CurriculumPlace = "covered" | "frontier" | "ahead";
 // switch — because a column you cannot press is worth less on a phone than one you can.
 // The cells themselves carry `hidden md:…`, so a hidden cell occupies no track and the
 // four that remain land on the four the narrow template declares.
-// The taggable column is gone and its track with it. It was a `Switch` on every row —
-// 36 px of chrome, 131 times — reporting exactly what the dot at the start of the same row
-// already reports: filled is a taggable target, hollow is structure. Two drawings of one
-// fact, and the more expensive of the two was also a control, so a list you read scrolled
-// under a column you could change by accident. It is set where the concept is edited, in
-// the detail panel, which had it all along.
+// THREE COLUMNS LEFT ON 2026-09-01, by explicit user request, and one arrived. «Currículo»
+// went with the curriculum editor itself; «Descr.» reported whether a description exists,
+// which is now written by the build and edited on the concept; and «Grado» is a number out
+// of graph theory that decides nothing for a teacher. What replaces them is the one thing a
+// person actually judges row by row — whether the concept works as a label — said in words
+// and a tick rather than only by the shape of a dot.
+//
+// It is still NOT a control. A switch on every one of 131 rows is 36 px of chrome under a
+// list you scroll, and it is set where the concept is edited. This column reports.
 const COLUMNS =
   "grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-x-2 px-2 " +
-  "md:grid-cols-[1.5rem_minmax(0,1fr)_7rem_5.5rem_3rem_1.25rem] md:px-3";
+  "md:grid-cols-[1.5rem_minmax(0,1fr)_9rem_1.25rem] md:px-3";
 
-// `hint` is what a row says on hover, `means` what the key says under the map. They are
-// deliberately two fields and not one split in half: the row explains the state, the key
-// explains the consequence, and deriving one from the other is how a legend ends up
-// wording itself by accident.
-const PLACE: Record<CurriculumPlace, { labelKey: Key; hintKey: Key; meansKey: Key }> = {
-  covered: {
-    labelKey: "place.covered",
-    hintKey: "place.covered.hint",
-    meansKey: "place.covered.means",
-  },
-  frontier: {
-    labelKey: "place.frontier",
-    hintKey: "place.frontier.hint",
-    meansKey: "place.frontier.means",
-  },
-  ahead: {
-    labelKey: "place.ahead",
-    hintKey: "place.ahead.hint",
-    meansKey: "place.ahead.means",
-  },
-};
-
-function PlaceMark({ place }: { place: CurriculumPlace }) {
-  if (place === "covered") return <Check className="size-3.5 shrink-0 text-settled" />;
-  return (
-    <span
-      className={cn(
-        "size-2.5 shrink-0 rounded-full",
-        place === "frontier" ? "bg-attention" : "border-[1.5px] border-muted-foreground",
-      )}
-    />
-  );
-}
-
-/** What the three marks mean, beside the list that uses them. Colour is never the only
- *  channel — each state also has its own shape — but neither says what it is FOR. */
-export function FrontierKey() {
-  const { t } = useT();
-  return (
-    <div className="space-y-1.5">
-      {(["covered", "frontier", "ahead"] as const).map((place) => (
-        <p key={place} className="flex items-start gap-2 text-small">
-          <span className="mt-1 flex w-3.5 shrink-0 justify-center">
-            <PlaceMark place={place} />
-          </span>
-          <span>
-            <span
-              className={cn(
-                "font-medium",
-                place === "covered" && "text-settled",
-                place === "frontier" && "text-attention",
-              )}
-            >
-              {t(PLACE[place].labelKey)}
-            </span>
-            <span className="text-muted-foreground"> — {t(PLACE[place].meansKey)}</span>
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
+/**
+ * WHERE A CONCEPT FALLS RELATIVE TO WHAT THE COURSE HAS COVERED — no longer drawn.
+ *
+ * The three places (covered / frontier / ahead) are still exactly what the generator
+ * computes on every prompt, and `CurriculumPlace` survives as the name of that calculation
+ * because the canvas's curriculum layout reads it. What went (2026-09-01, explicit user
+ * request) is the COLUMN reporting it row by row and the key under the map explaining what
+ * the three marks mean. It is derived from the taught-concepts list, and that list stopped
+ * being edited here at the same time — a legend for a state nothing on the screen sets is a
+ * paragraph explaining a colour that never appears.
+ */
 
 function UnitMenu({
   unit,
@@ -231,13 +182,11 @@ function UnitMenu({
 function ConceptRow({
   concept,
   colour,
-  place,
   selected,
   onSelect,
 }: {
   concept: KgConcept;
   colour: string;
-  place: CurriculumPlace | null;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -285,34 +234,15 @@ function ConceptRow({
         {concept.name}
       </span>
 
-      {place ? (
-        <span className="hidden items-center gap-1.5 md:flex" title={t(PLACE[place].hintKey)}>
-          <PlaceMark place={place} />
-          <span
-            className={cn(
-              "truncate text-small",
-              place === "covered" && "text-settled",
-              place === "frontier" && "font-medium text-attention",
-              place === "ahead" && "text-muted-foreground",
-            )}
-          >
-            {t(PLACE[place].labelKey)}
-          </span>
-        </span>
-      ) : (
-        <span className="hidden md:block" />
-      )}
-
+      {/* A tick when it serves as a label and nothing at all when it does not. An empty
+          cell rather than a cross: what is being reported is a subset, and marking the
+          complement puts a symbol on the two thirds of the rows nobody has to look at. */}
       <span className="hidden md:block">
-        {concept.description ? (
-          <Check className="size-3.5 text-settled" aria-label={t("outline.withDescription")} />
+        {concept.taggable ? (
+          <Check className="size-3.5 text-settled" aria-label={t("kg.taggable")} />
         ) : (
-          <TriangleAlert className="size-3.5 text-attention" aria-label={t("outline.withoutDescription")} />
+          <span className="sr-only">{t("canvas.notTaggable")}</span>
         )}
-      </span>
-
-      <span className="nums hidden text-right text-small text-muted-foreground md:block">
-        {concept.degree}
       </span>
 
       <ChevronRight className="size-3.5 text-muted-foreground" />
@@ -324,9 +254,7 @@ export function ConceptOutline({
   concepts,
   units,
   groups,
-  place,
   unitStats,
-  hasCurriculum,
   filtering,
   selected,
   onSelect,
@@ -340,12 +268,10 @@ export function ConceptOutline({
   units: string[];
   /** The canvas's own domain order, so a row's dot is the colour of its node. */
   groups: string[];
-  place: (name: string) => CurriculumPlace | null;
   /** The unit as it stands in the graph, NOT as the filter left it. A search narrows what is
-   *  drawn and changes nothing about what a unit contains, so coverage and — above all — the
-   *  count in «eliminar la unidad y sus N» have to come from the whole thing. */
-  unitStats: (unit: string) => { total: number; covered: number };
-  hasCurriculum: boolean;
+   *  drawn and changes nothing about what a unit contains, so the count in «eliminar la
+   *  unidad y sus N» has to come from the whole thing. */
+  unitStats: (unit: string) => { total: number };
   /** Whether `concepts` is a NARROWED list. It is what makes a search work against units
    *  that are shut by default: a query that draws six headers and no rows reads as «no hay
    *  nada», which is the opposite of what it found. */
@@ -420,9 +346,7 @@ export function ConceptOutline({
       <div className={cn(COLUMNS, "h-8 text-micro font-condensed uppercase text-muted-foreground")}>
         <span />
         <span>{t("outline.column.concept")}</span>
-        <span className="hidden md:block">{hasCurriculum ? t("outline.column.curriculum") : ""}</span>
-        <span className="hidden md:block">{t("outline.column.description")}</span>
-        <span className="hidden text-right md:block">{t("outline.column.degree")}</span>
+        <span className="hidden md:block">{t("outline.column.taggable")}</span>
         <span />
       </div>
 
@@ -431,7 +355,7 @@ export function ConceptOutline({
         const colour = domainColour(Math.max(0, groups.indexOf(unit)), Math.max(1, groups.length));
         const open = overrides.get(unit) ?? (filtering || unit === selectedUnit);
         const undescribed = items.filter((concept) => !concept.description).length;
-        const { total, covered } = unitStats(unit);
+        const { total } = unitStats(unit);
         const partial = items.length !== total;
 
         return (
@@ -466,26 +390,6 @@ export function ConceptOutline({
 
               <span className="flex-1" />
 
-              {hasCurriculum ? (
-                <span
-                  className="flex shrink-0 items-center gap-2"
-                  title={t("outline.coverageTitle", {
-                    covered: plural("outline.conceptCount", covered),
-                    total,
-                  })}
-                >
-                  <span className="h-1 w-20 bg-muted">
-                    <span
-                      className="block h-full bg-settled"
-                      style={{ width: `${Math.round((covered / Math.max(1, total)) * 100)}%` }}
-                    />
-                  </span>
-                  <span className="nums text-micro font-condensed uppercase text-settled">
-                    {t("outline.covered", { covered, total })}
-                  </span>
-                </span>
-              ) : null}
-
               {locked ? null : (
                 <UnitMenu
                   unit={unit}
@@ -506,7 +410,6 @@ export function ConceptOutline({
                     key={concept.name}
                     concept={concept}
                     colour={colour}
-                    place={place(concept.name)}
                     selected={selected === concept.name}
                     onSelect={() => onSelect(concept.name)}
                   />
