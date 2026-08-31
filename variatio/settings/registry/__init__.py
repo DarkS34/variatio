@@ -5,23 +5,14 @@ lays the panel out.
 """
 
 from ..types import Setting
-from . import builders, generation, inference, logging, reasoning, retrieval, tunnel
-
-# The one place `variatio` names the study, and optional on purpose: `study` imports
-# `variatio` and never the reverse, so the registry reaches it by name, not by import.
-try:
-    from study.settings import SETTINGS as STUDY_SETTINGS
-except ImportError:
-    STUDY_SETTINGS: list[Setting] = []
+from . import builders, generation, inference, logging, reasoning, retrieval
 
 REGISTRY: tuple[Setting, ...] = tuple(
     inference.SETTINGS
-    + tunnel.SETTINGS
     + reasoning.SETTINGS
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
-    + STUDY_SETTINGS
     + logging.SETTINGS
 )
 
@@ -31,7 +22,6 @@ BY_NAME = {setting.name: setting for setting in REGISTRY if setting.name}
 # The order the panel lays its blocks out in.
 GROUPS = (
     "Motor",
-    "Túnel SSH",
     "Modelos",
     "Modelos ofrecidos",
     "Razonamiento",
@@ -40,7 +30,6 @@ GROUPS = (
     "Constructores",
     "Recuperación",
     "Etiquetado y generación",
-    "Evaluación",
     "Registro",
 )
 

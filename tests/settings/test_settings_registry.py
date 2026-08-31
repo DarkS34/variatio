@@ -101,20 +101,14 @@ def test_every_phase_key_is_declared_in_the_registry():
 # each page the judge is shown. The fifth is the bank builder's batch overlap, which is
 # what makes the same seam survive the extractor's own cut.
 def test_the_registry_holds_what_this_work_transcribed():
-    # 142 since the remote lane got a capacity on 2026-08-29 (`CEREBRAS_MAX_CONCURRENT_JOBS`):
-    # Cerebras is a rolling quota rather than a machine, and the quota is administered call
-    # by call, so serialising the lane on top of it only stopped two people working at once.
-    # 141 before that, when `models.main` and `context_window.main` were retired on
-    # 2026-08-28: with every phase naming its own model there is nothing left for a main one
-    # to hand out, and its context window went with it (the phases share
-    # `context_window.overrides`). 143 before THAT, when `builders.kg_relation_schema` was
-    # retired: the relation vocabulary follows a workspace's own `prompt_language` now.
-    # Still 142 and still 114 named on 2026-08-29, and the swap is the point:
-    # `models.phases.variant_generation` left and `generation.models` arrived in its place,
-    # a list of what a commission may choose to be written with. The count moving would
-    # mean one of the two halves of that change did not land.
-    # 143 and 115 later the same day, when `generation.max_items` arrived: the item count
-    # was the one commission parameter with no ceiling anywhere, so a single request could
-    # spend the whole day's quota before anything refused it.
-    assert len(REGISTRY) == 143
-    assert len(BY_NAME) == 115
+    # 128 since `main` became the library alone: the whole web half left, and with it the
+    # fifteen settings that configured nothing else. Six were the study's, declared in
+    # `study/settings.py` and picked up here by an optional import that no longer has
+    # anything to reach. Four were the SSH tunnel the API opened as a subprocess, and three
+    # more belonged to the job queue — how long the server may sit idle before letting go of
+    # the GPU, how often it looks, and how many jobs may hold the remote lane at once. The
+    # last two were the commission's own: a cap on the item count that `POST /api/jobs`
+    # enforced, and the recently saved variants a handler read out of the database to feed
+    # the prompt as already-used scenarios. 143 before that, with all of them.
+    assert len(REGISTRY) == 128
+    assert len(BY_NAME) == 106

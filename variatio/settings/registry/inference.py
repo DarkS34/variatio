@@ -2,20 +2,6 @@
 
 from ..types import Impact, Setting
 
-_IDLE_DOC = """Cuánto puede estar el servidor sin ejecutar un solo trabajo antes de soltar la GPU
-(`inference.unload_all()`, que es `ollama stop` de cada modelo residente).
-
-`OLLAMA_KEEP_ALIVE=24h` es lo que mantiene los tres modelos calientes durante una sesión
-de trabajo, y eso es lo que se quiere mientras se está trabajando: los 29 GiB residentes
-no se pagan dos veces. Lo que no tiene sentido es que sigan ahí toda la noche porque
-alguien dejó la pestaña abierta, en una tarjeta que es de todos.
-
-30 minutos porque es la escala de la pausa que NO es una pausa de trabajo: entre dos
-etapas de la cadena pasan minutos, no media hora, así que a este umbral no se llega
-revisando un grafo — se llega habiéndose ido. Recargar los tres modelos cuesta ~30 s, que
-es ruido al lado de cualquier construcción y de sobra tolerable en una generación suelta.
-0 lo desactiva."""
-
 _TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8, y unos
 cuantos Modelfiles declaran 1.0 — una temperatura de REDACCIÓN, aplicada sin distinción a
 llamadas que no redactan nada: leer los conceptos de un fragmento, decidir si dos nombres
@@ -310,10 +296,10 @@ pudiera reescribirla desde el panel recibiría en su propio host la clave que
 salga de la API. Cambiar la dirección es cambiar a quién se le entrega la credencial, y eso
 no es una preferencia de configuración.
 
-No es un secreto —la raíz pública de Cerebras no lo es—, así que se sigue viendo en el panel
-y guardando en `config.json`; lo que no puede es ser reescribible en caliente. Apuntar a un
-proxy o a un mock en pruebas sigue funcionando: se hace por la variable de entorno
-`CEREBRAS_BASE_URL` (o el `.env` ignorado por git), como el bloque `tunnel.*`.""",
+No es un secreto —la raíz pública de Cerebras no lo es—, así que se sigue guardando en
+`config.json`; lo que no puede es ser reescribible en caliente. Apuntar a un proxy o a un
+mock en pruebas sigue funcionando: se hace por la variable de entorno `CEREBRAS_BASE_URL`
+(o el `.env` ignorado por git).""",
     ),
     Setting(
         key="engine.cerebras_api_key",
@@ -459,29 +445,6 @@ horas no es esperar — es un build colgado sin explicación. La espera es cance
 respondiendo mientras se aguanta.""",
     ),
     Setting(
-        key="engine.cerebras_max_concurrent_jobs",
-        name="CEREBRAS_MAX_CONCURRENT_JOBS",
-        kind="int",
-        default=4,
-        minimum=1,
-        group="Motor",
-        impact=Impact.NONE,
-        doc="""Cuántos trabajos pueden usar Cerebras A LA VEZ. El carril local sigue siendo de uno y no
-es ajustable: la GPU es una, y dos trabajos encima no harían más que intercambiarse pesos.
-
-Aquí lo escaso es otra cosa. Cerebras no es una máquina que haya que repartir, es una cuota
-rodante, y de esa cuota ya se encarga el limitador llamada a llamada: cada llamada reserva
-su hueco en el libro antes de salir, así que dos trabajos en paralelo no gastan más que dos
-trabajos seguidos — solo dejan de esperarse el uno al otro. Con 1 aquí, la segunda persona
-que pide algo espera a que termine la primera sin que ninguna máquina esté ocupada.
-
-Subirlo no aumenta el presupuesto ni acelera un build: los cuatro CEREBRAS_MAX_* siguen
-mandando, y con la cuota llena lo que pasa es que esperan varias llamadas en vez de una. Lo
-que compra es que varias personas trabajen a la vez.
-
-No hace falta reiniciar nada: se lee cada vez que la cola mira si algo puede empezar.""",
-    ),
-    Setting(
         key="engine.ollama_host",
         name="OLLAMA_HOST",
         kind="str",
@@ -496,35 +459,12 @@ anteponiéndole `http://`; el registro guarda el valor desnudo y ese prefijo se 
 otro sitio, no aquí.
 
 SOLO DEL ENTORNO: no se puede cambiar en caliente. Es la dirección a la que este proceso
-manda TODAS sus llamadas al motor, así que reescribirla desde el panel es pedirle al
-servidor que llame a donde diga quien la reescribe —cualquier dirección de la red interna a
-la que la máquina llegue— y devolver por pantalla lo que conteste. Es la misma razón por la
-que el bloque `tunnel.*`, que describe el resto de la dirección de esta instalación, tampoco
-se toca desde el panel.
+manda TODAS sus llamadas al motor, así que dejarla reescribible sería dejar que la
+configuración decida a qué máquina de la red interna se llama y qué se devuelve como si
+fuera del modelo.
 
-Apuntarlo a otra máquina, o al puerto local que abre el túnel, se hace por la variable de
-entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
-    ),
-    Setting(
-        key="engine.idle_unload_seconds",
-        name="IDLE_UNLOAD_SECONDS",
-        kind="int",
-        default=1800,
-        group="Motor",
-        impact=Impact.NONE,
-        env="VARIATIO_IDLE_UNLOAD_SECONDS",
-        minimum=0,
-        doc=_IDLE_DOC,
-    ),
-    Setting(
-        key="engine.idle_unload_poll_seconds",
-        name="IDLE_UNLOAD_POLL_SECONDS",
-        kind="int",
-        default=60,
-        group="Motor",
-        impact=Impact.NONE,
-        minimum=1,
-        doc=_IDLE_DOC,
+Apuntarlo a otra máquina, o al puerto local que abra un túnel SSH, se hace por la variable
+de entorno `OLLAMA_HOST` (o el `.env`).""",
     ),
     Setting(
         key="models.guardrail",

@@ -10,10 +10,7 @@
     "cerebras_max_requests_day": 700000,
     "cerebras_max_tokens_day": 320000000,
     "cerebras_max_wait_seconds": 90,
-    "cerebras_max_concurrent_jobs": 4,
-    "ollama_host": "localhost:13434",
-    "idle_unload_seconds": 1800,
-    "idle_unload_poll_seconds": 60
+    "ollama_host": "localhost:13434"
   },
   "sampling": {
     "temperature_deterministic": 0.0,
@@ -72,24 +69,12 @@
     "max_json_repair_tries": 3,
     "check_similarity_threshold": 0.85,
     "check_max_retries": 1,
-    "avoid_recent": 12,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
       "harm",
       "jailbreak"
     ]
-  },
-  "evaluation": {
-    "providers": [
-      "gemini",
-      "groq"
-    ],
-    "models": {
-      "gemini": "gemini-3.6-flash",
-      "groq": "openai/gpt-oss-120b"
-    },
-    "timeout": 60.0
   },
   "logging": {
     "level": "INFO",

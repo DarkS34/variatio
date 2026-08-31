@@ -149,21 +149,6 @@ class Workspace:
     # HOST STATE --------------------------------------------------------------------------
 
     @property
-    def history_dir(self) -> Path:
-        """The snapshots that make emptying a stage undoable."""
-        return self.instance_dir / ".history"
-
-    @property
-    def runs_dir(self) -> Path:
-        """The event log of each job run against this instance."""
-        return self.instance_dir / ".runs"
-
-    @property
-    def review_state_path(self) -> Path:
-        """Which artifacts are approved, and the hashes that decide whether they are stale."""
-        return self.instance_dir / ".review_state.json"
-
-    @property
     def exemplars_bank_building_path(self) -> Path:
         """The bank a build is writing, until it finishes and replaces the one in use.
 
@@ -174,13 +159,3 @@ class Workspace:
         with half of each.
         """
         return self.instance_dir / ".exemplars_bank.building.json"
-
-    @property
-    def curriculum_path(self) -> Path:
-        """The concepts this instance considers covered.
-
-        Host state, not an artifact: no builder produces it, it does not come from `raw/`,
-        and it is not part of the instance definition. It is a teaching decision about the
-        workspace, like `.review_state.json`.
-        """
-        return self.instance_dir / ".curriculum.json"

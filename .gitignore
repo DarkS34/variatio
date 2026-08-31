@@ -6,17 +6,18 @@ __pycache__
 /raw*
 /logs/
 
-web/node_modules
-web/dist
-web/tsconfig.tsbuildinfo
 .pytest_cache
 
 /workspaces/
 /.cerebras_budget.json
 /.cerebras_budget.json.lock
-/.maintenance.json
 
 *.md
 !README.md
-# Auditoría UX (capturas de trabajo, no forman parte del producto)
+
+# Not this branch's, but this working tree is shared with `advanced-web`: `git switch` leaves
+# its build output, its node_modules and its UX-audit captures behind, and untracked noise on
+# every status is how a real leftover stops being noticed.
+/web/
 /auditoria-ux/
+/.maintenance.json

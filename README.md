@@ -6,12 +6,15 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
+> **This branch is the core system alone**: the library and its command line, with no web
+> interface, no API, no database and no evaluation harness. The complete system — FastAPI +
+> PostgreSQL, the React front end and the study's blind comparison — lives on `advanced-web`.
+
 ## What it does
 
-- **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.md`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model, with caching, review and hand correction from inside the application.
-- **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is forbidden because it has not been taught yet) and on the course curriculum — the list of concepts already covered, editable per workspace. A guardrail and an admissibility judge screen the free-text instructions, and every item is validated against the profile's schema before it is saved.
-- **Serves several subjects at once.** Each *workspace* is a complete instance (artifacts, cache, raw documents, curriculum, history) with its own members and roles. Artifacts are versioned in the database and every stage goes through explicit review and approval.
-- **Evaluates itself blind.** The `study/` package compares three architectures (*naive*, *RAG*, full system) in blind sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
+- **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.md`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model, cached, and a hand-corrected page beats the model and survives every later build.
+- **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is forbidden because it has not been taught yet) and on the course curriculum — the list of concepts already covered. A guardrail and an admissibility judge screen the free-text instructions, and every item is validated against the profile's schema before it is returned.
+- **Serves several subjects at once.** Each *workspace* is a complete instance: artifacts, cache, raw documents and curriculum under `workspaces/<slug>/`. There is no default instance — `--workspace` is required everywhere.
 
 ## How it works
 
@@ -40,83 +43,56 @@ The retrieval index embeds **LLM-written concept descriptions grounded in the co
 
 ### Inference engines
 
-- **`ollama`** (default): a 100 % local, open-weights stack at `OLLAMA_HOST` — directly or through an SSH tunnel the API itself manages and watches.
+- **`ollama`** (default): a 100 % local, open-weights stack at `OLLAMA_HOST` — directly or through an SSH tunnel opened outside the process.
 - **`cerebras+ollama`** (optional): routes the declared models to the Cerebras API while the guardrail and the embedder stay local. It includes a quota limiter measured against the real API (rolling per-minute and per-day windows, per-phase accounting, cancellable waits or a readable refusal).
 
-Every pipeline phase declares its own model, context window and reasoning level, all hot-editable from the panel; `config.json` holds one complete profile per engine.
-
-### The server and the interface
-
-A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** frontend (Vite, pnpm):
-
-- **Its own accounts, by invitation**: no public sign-up, no OAuth, no JWT. Argon2id, opaque server-side sessions with dual expiry, enumeration defences and rate limiting. Authorisation is a membership row checked on every route (`VIEW` / `EDIT` / `MANAGE`).
-- **Staged preparation**: profile → graph → bank, each with build, review, approval and a restorable history. The graph viewer is a hand-rolled `<canvas>` with a force layout and a curriculum view by prerequisite level.
-- **Raw data** as a destination of its own: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor where a hand correction beats the model and survives every later build.
-- **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or quota. Weighted phase-plan progress, an authenticated WebSocket, safe cancellation.
-- **Generate and evaluate**: commissions with concepts, modality, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with its full commission, reproducible from «My variants».
-- **Administration**: engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, and the study's panel.
-- **Two languages on two axes**: the interface language (es/en) belongs to the account; the prompt language belongs to the workspace and is fixed at creation. A built-in user guide lives at `/guide`.
+Every pipeline phase declares its own model, context window and reasoning level; `config.json` holds one complete profile per engine.
 
 ## Getting started
 
-Requirements: Python 3.10, [`uv`](https://docs.astral.sh/uv/), Docker (for Postgres), a reachable Ollama server and, for the frontend, `pnpm`.
+Requirements: Python 3.10, [`uv`](https://docs.astral.sh/uv/) and a reachable Ollama server.
 
 ```bash
-uv sync                            # runtime; add --extra builders to build from documents
-docker compose up -d postgres      # Postgres 16 on :5432, credentials in .env
-uv run alembic upgrade head        # create the schema
-uv run system import-instance --slug default   # load the reference instance
-uv run system create-user --username yourname --admin --workspace default
-uv run system                      # the API on :8000
-```
-
-Frontend in development:
-
-```bash
-cd web && pnpm install && pnpm dev
+uv sync                       # the runtime; add --extra builders to build from documents
+uv run variatio all --workspace <slug>
 ```
 
 ### CLI
 
 ```bash
-uv run variatio all --workspace <slug>      # build missing + init + generate
+uv run variatio build    --workspace <slug>   # create the missing artifacts from raw/
+uv run variatio init     --workspace <slug>   # load the instance, tag the bank, warm the indices
 uv run variatio generate --workspace <slug> -n 3 --concepts "Recursividad" --item-type <modality>
-uv run system [serve|import-instance|export-instance|workspaces|create-workspace|db-check|create-user|users|grant|invite]
+uv run variatio all      --workspace <slug>   # build missing + init + generate
 ```
 
-`--workspace` is required everywhere: there is no default instance.
+`generate` also takes `--fixed FIELD=VALUE`, `--curriculum` and `--instructions`.
 
 ## Tests
 
 ```bash
 uv run pytest              # the suite (corpus/model tests are deselected)
-uv run pytest tests/server # each subsystem runs on its own
+uv run pytest tests/core   # each subsystem runs on its own
 uv run pytest -m corpus    # statistical quality of a real graph build
 uv run pytest -m model     # the admissibility judge against a live Ollama
 ```
 
-In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit`, `pnpm build`, plus three gates of its own — `pnpm check:color` (palette contrasts and ΔE, re-derived rather than picked), `pnpm check:ui` (structural rules) and `pnpm check:i18n` (catalogue and guide coverage).
-
 ## Repository layout
 
 ```
-variatio/     the pipeline: core (inference, progress), instance (loaders),
+variatio/     core (inference, progress, paths), instance (the artifact loaders),
               builders (raw → artifacts), stages (orchestration), embedder,
-              prompts (es/en), settings (the settings registry)
-server/       API, database, identity, job queue, the «system» CLI
-study/        the TFM's evaluation: arms, sessions, statistics, its API
-web/          the React frontend
+              prompts (es/en), settings (the settings registry), cli
 tests/        one directory per subsystem
-workspaces/   the instances; «default» ships as the reference
-migrations/   Alembic
+workspaces/   the instances, one directory per slug
 ```
 
-The boundary is strict and pinned by tests: `study` imports `variatio`, never the reverse; importing `variatio` pulls in neither Docling nor the server; secrets live only in `.env` and never enter `config.json`.
+Two boundaries are pinned by tests: importing `variatio` pulls in neither Docling nor torch — the authoring dependencies are lazy behind the `builders` extra — and secrets live only in `.env`, never in `config.json`.
 
 ## Configuration
 
-Every setting is declared in `variatio/settings/registry/`, each with its measured documentation and its cost of change (`Impact`), and resolves with precedence *default < `config.json` < environment*. The administration panel edits the file hot; deleting it is safe — everything falls back to the registry defaults.
+Every setting is declared in `variatio/settings/registry/`, each with its measured documentation and its cost of change (`Impact`), and resolves with precedence *default < `config.json` < environment*. Deleting `config.json` is safe — everything falls back to the registry defaults.
 
 ## Internal documentation
 
-`CLAUDE.md` (in the working tree) records the design decisions, the closed-decisions register and the measurements behind them; the user guide lives inside the application itself, at `/guide`.
+`CLAUDE.md` (in the working tree) records the design decisions, the closed-decisions register and the measurements behind them.

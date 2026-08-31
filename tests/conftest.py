@@ -40,9 +40,9 @@ CHAIN_GRAPH = {
 PREREQUISITE = "tiene como prerrequisito"
 
 
-# THREE AUTOUSE FIXTURES, and all three are here for the same reason: the suite runs inside
-# the installation itself — its `.env`, its database, its `workspaces/` — so whatever
-# resolves a default resolves PRODUCTION.
+# TWO AUTOUSE FIXTURES, and both are here for the same reason: the suite runs inside the
+# installation itself — its `.env`, its `workspaces/` — so whatever resolves a default
+# resolves PRODUCTION.
 #
 # The first stops a test spending real money's worth of budget. `CerebrasEngine` records
 # every call in a ledger at the project root, so the engine tests — which answer a simulated
@@ -55,27 +55,7 @@ def _isolated_cerebras_ledger(tmp_path):
     cerebras_budget.use(None)
 
 
-# The second stops a test writing to the production database. `session.database_url()` reads
-# `DATABASE_URL`, `.env` supplies a real one, and nothing under `tests/` overrode it — so a
-# test reaching `session_scope()` without meaning to opened a transaction against the live
-# Postgres. One did, on 2026-08-28, and left an orphan row in `workspaces`.
-#
-# A throwaway SQLite file rather than a refusal: a test that genuinely wants a database gets
-# a working empty one, and a test that never meant to touch it fails on the missing schema
-# instead of quietly succeeding against real data. Tests that build their own engine are
-# unaffected, and the import is inside the function so a runtime-only checkout without the
-# `server` extra can still collect this file.
-@pytest.fixture(autouse=True)
-def _isolated_database(tmp_path, monkeypatch):
-    from server.db import session
-
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'test.db'}")
-    session.reset()
-    yield
-    session.reset()
-
-
-# The third stops a test writing into the installation's own instances. `paths.WORKSPACES_DIR`
+# The second stops a test writing into the installation's own instances. `paths.WORKSPACES_DIR`
 # is the checkout's `workspaces/`, and every slug a test invents resolves under it: a `Job`
 # carrying `workspace="aula"` had the bus mkdir `workspaces/aula/instance/.runs/` and append
 # its event log there, so a full run left two invented instances sitting beside the real ones.
@@ -88,7 +68,7 @@ def _isolated_database(tmp_path, monkeypatch):
 # time, so patching it is enough. The `corpus` tests are unaffected — they open
 # `workspaces/default/` by relative path, deliberately measuring the shipped instance.
 #
-# SESSION-scoped, unlike the other two, and that is the whole reason it works: a `JobRunner`
+# SESSION-scoped, unlike the other one, and that is the whole reason it works: a `JobRunner`
 # publishes from a worker thread, and with a per-test redirect the last events of a job
 # outlived the fixture that had moved the tree — six files still landed in the real
 # `workspaces/` on a full run. The environment variable travels beside the attribute so a

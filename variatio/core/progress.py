@@ -1,12 +1,12 @@
 """Structured progress reporting and cooperative cancellation for the pipeline.
 
 The core does not depend on a host: with no emitter installed every call here is a no-op,
-so the CLI behaves as if none of it existed. A host — the FastAPI job runner, or the
-bridge that runs `build` in a subprocess — installs an emitter with `set_emitter` and
-starts receiving events.
+so the CLI behaves as if none of it existed. A host that wants to watch a run — a job
+runner, a bridge running `build` in a subprocess — installs an emitter with `set_emitter`
+and starts receiving events.
 
 The emitter lives in a ContextVar, so a worker thread that installs one does not leak it
-into the threads serving HTTP requests.
+into the threads around it.
 """
 
 import contextvars

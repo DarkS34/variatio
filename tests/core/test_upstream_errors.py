@@ -67,25 +67,6 @@ def test_no_ollama_call_reflects_the_engines_own_body(engine, call):
     assert "500" in str(error.value)
 
 
-def test_a_failed_pull_reaches_the_panel_without_the_body(engine):
-    from server.model_pulls import PullTracker
-
-    engine._client = _Client(ollama.ResponseError(BODY, 500))
-    tracker = PullTracker()
-    tracker._pulls["m"] = {
-        "model": "m",
-        "status": "running",
-        "completed": 0,
-        "total": 0,
-        "started_at": 0.0,
-        "finished_at": None,
-        "error": None,
-        "user": None,
-    }
-    tracker._run("m")
-    entry = tracker._pulls["m"]
-    assert entry["status"] == "failed"
-    assert BODY not in (entry["error"] or "")
 
 
 # La mitad remota tiene la misma regla, y la ruta que transmite es la que menos se prueba:

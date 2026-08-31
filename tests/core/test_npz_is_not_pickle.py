@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from study.arms.vector_store import FlatBankIndex
 from variatio.embedder import cache
 
 FINGERPRINT = "0123456789abcdef0123456789abcdef"
@@ -84,21 +83,6 @@ def test_a_hostile_bank_cache_is_refused_instead_of_executed(tmp_path, marker):
     assert not marker.exists()
 
 
-def test_a_hostile_rag_index_is_refused_instead_of_executed(tmp_path, marker):
-    path = _hostile(
-        tmp_path / "eval_rag_bank",
-        marker,
-        "fingerprint",
-        keys=["C001"],
-        types=["escritura_codigo"],
-        vectors=np.zeros((1, 4), dtype=np.float32),
-    )
-    store = FlatBankIndex({}, lambda item: "", lambda item: None, cache_path=path, model="m")
-
-    assert store._load_cache() is False
-    assert not marker.exists()
-
-
 # The refusal has to leave the legitimate round trip alone: what this installation writes
 # is `<U…` and `float32`, never an object array.
 def test_a_real_concept_cache_still_round_trips(tmp_path):
@@ -123,30 +107,3 @@ def test_a_real_bank_cache_still_round_trips(tmp_path):
     assert stored["C001"]["primary_concept"] == "Variable"
     assert texts == {"C001": "hash"}
     assert fingerprint == FINGERPRINT
-
-
-def test_a_real_rag_index_still_round_trips(tmp_path):
-    path = tmp_path / "eval_rag_bank.npz"
-    bank = {"C001": {"enunciado": "Escribe una función"}}
-    store = FlatBankIndex(
-        bank,
-        lambda item: item["enunciado"],
-        lambda item: "escritura_codigo",
-        cache_path=path,
-        model="m",
-    )
-    store.ids = ["C001"]
-    store.types = ["escritura_codigo"]
-    store.matrix = np.zeros((1, 4), dtype=np.float32)
-    store._save_cache()
-
-    reader = FlatBankIndex(
-        bank,
-        lambda item: item["enunciado"],
-        lambda item: "escritura_codigo",
-        cache_path=path,
-        model="m",
-    )
-    assert reader._load_cache() is True
-    assert reader.ids == ["C001"]
-    assert reader.types == ["escritura_codigo"]
