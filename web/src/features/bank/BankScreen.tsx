@@ -620,7 +620,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   return (
     <StageGate
       stage={stage}
-      title={t("bank.title")}
       livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
       buildLabels={{
         create: t("bank.extract"),

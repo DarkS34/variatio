@@ -29,6 +29,25 @@ import { useMutation } from "@tanstack/react-query";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
+// WHERE THIS STAGE SITS ON THE PATH. The raw material is step 1, so the three artifacts
+// are 2, 3 and 4 — the same numbering the bar draws and the tutorial promises, and the
+// order is `review.ARTIFACTS`. It is one map here rather than a prop on three screens,
+// which is what stops the two numberings from ever disagreeing again.
+const STEP_OF: Record<string, number> = {
+  exemplars_profile: 2,
+  knowledge_graph: 3,
+  exemplars_bank: 4,
+};
+
+// What the stage IS, in two sentences and without naming a single piece of the system.
+// Visible under the title and not behind a glyph: the sentence that says what a screen is
+// about cannot be the one thing hidden on it.
+const WHAT: Record<string, Key> = {
+  exemplars_profile: "stage.what.profile",
+  knowledge_graph: "stage.what.graph",
+  exemplars_bank: "stage.what.bank",
+};
+
 // Which page of the guide explains each stage. One map rather than a prop, because all
 // three stage screens render through this header and none of them should have to remember.
 const GUIDE: Record<string, GuideSlug> = {
@@ -79,14 +98,12 @@ export function StageBadge({ stage }: { stage: StageState }) {
  */
 export function StageGate({
   stage,
-  title,
   actions,
   buildLabels,
   livePreview,
   children,
 }: {
   stage: StageState | undefined;
-  title: string;
   actions?: ReactNode;
   buildLabels?: BuildLabels;
   /**
@@ -161,10 +178,20 @@ export function StageGate({
               nothing a person acts on, and it sat in the row that reports whether the stage
               is built, approved or stale — which is what that row is for. */}
           <div className="min-w-0 space-y-1.5">
+            {STEP_OF[stage.artifact] ? (
+              <p className="text-micro text-muted-foreground">
+                {t("nav.stepNumber", { n: STEP_OF[stage.artifact] })}
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title">{title}</h1>
+              <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
               <StageBadge stage={stage} />
             </div>
+            {WHAT[stage.artifact] ? (
+              <p className="max-w-[74ch] text-body text-muted-foreground">
+                {t(WHAT[stage.artifact])}
+              </p>
+            ) : null}
             {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}
           </div>
 

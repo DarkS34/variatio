@@ -1,4 +1,4 @@
-import { BookOpen, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
+import { Archive, BookOpen, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +99,15 @@ export function AccountMenu() {
               icon={<UserRound className="size-4" />}
               label={t("menu.profile")}
               onClick={() => go("/account")}
+            />
+            {/* Los ejercicios guardados dejaron el flanco derecho de la barra cuando la
+                barra pasó a ser el recorrido: son un archivo personal y no un paso, así
+                que viven aquí, junto a lo demás que es de la persona y no de la
+                asignatura. Siguen siendo una pestaña de «Mi perfil»; esto es el atajo. */}
+            <MenuItem
+              icon={<Archive className="size-4" />}
+              label={t("nav.myVariants")}
+              onClick={() => go("/account/variants")}
             />
             {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
                 and not in the bar because it appears for an installation-wide account and the bar is the

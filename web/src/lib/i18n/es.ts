@@ -271,9 +271,13 @@ export const es = {
   "run.working": "Trabajo en curso.",
   "run.whatItDoes": "Qué hace: {step}",
   "activity.empty": "Nada que contar todavía.",
-  "artifact.profile": "Perfil de ejemplares",
-  "artifact.graph": "Grafo de conocimiento",
-  "artifact.bank": "Banco de ejemplares",
+  // EL NOMBRE QUE LEE UN PROFESOR, no el del artefacto. Un «perfil de ejemplares» es una
+  // pieza de la arquitectura y no dice nada a quien abre esto por primera vez; lo que sí
+  // dice algo es que ahí están los tipos de ejercicio que pone. La tabla es una sola, así
+  // que el vocabulario es el mismo en la barra, en los avisos y en cada pantalla.
+  "artifact.profile": "Tipos de ejercicio",
+  "artifact.graph": "El temario",
+  "artifact.bank": "Tus ejercicios",
   "job.build_profile.label": "Construir el perfil de ejemplares",
   "job.build_kg.label": "Construir el grafo de conocimiento",
   "job.build_bank.label": "Extraer el banco de ejemplos",
@@ -352,12 +356,36 @@ export const es = {
   },
   "nav.myVariants": "Mis variantes",
   "nav.needsApproved": "Requiere las tres etapas aprobadas",
+  // EL RECORRIDO, con las palabras de quien da clase. Ninguna nombra un artefacto: el
+  // profesor que abre esto por primera vez no sabe qué es un «perfil de ejemplares», y
+  // sabe perfectamente qué son los tipos de ejercicio que pone.
+  "nav.step.raw": "Apuntes y ejercicios",
+  "nav.step.profile": "Tipos de ejercicio",
+  "nav.step.graph": "El temario",
+  "nav.step.bank": "Tus ejercicios",
+  // Debajo del nombre, en una línea: dónde estás. Es lo que convierte cuatro destinos en
+  // un camino con un solo paso obvio.
+  "nav.state.done": "Hecho",
+  "nav.state.now": "Te toca ahora",
+  "nav.state.later": "Después",
+  "nav.create": "Crear ejercicios",
+  "nav.compare": "Comparar",
+  "nav.stepNumber": "Paso {n} de 4",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
   "shell.viewRun": "Ver ejecución",
   "shell.viewFullLog": "Ver el registro completo de la sesión",
   "stage.lockedHint": "Aprobado: pulsa «Reabrir» para poder editarlo",
+  // QUÉ ES ESTE PASO, en dos frases y sin nombrar una sola pieza del sistema. Va visible,
+  // bajo el título, y no detrás de una (i): lo que explica de qué va la pantalla no puede
+  // estar escondido en la pantalla que explica.
+  "stage.what.profile":
+    "He leído los ejercicios que subiste y he separado las formas distintas que tienen: qué partes lleva cada una y cuáles son obligatorias. Es la plantilla con la que escribiré los ejercicios nuevos, así que conviene que te suene.",
+  "stage.what.graph":
+    "Estos son los conceptos que he sacado de tus apuntes, agrupados en bloques y ordenados por lo que hace falta antes de cada cosa. Es lo que me dice qué puedo dar por sabido en un ejercicio y qué todavía no.",
+  "stage.what.bank":
+    "He recogido uno a uno los ejercicios de tus documentos y a cada uno le he puesto el tema que practica. Son los que miraré para escribir uno nuevo, así que si están bien copiados, lo nuevo se parecerá a lo tuyo.",
   "stage.approved": "Aprobado",
   "stage.reopened": "Reabierto",
   "stage.whatIs": "Qué es {title}",
@@ -1999,10 +2027,12 @@ export const es = {
   "guide.group.daily": "Día a día",
   "guide.sec.start": "Qué es y cómo se recorre",
   "guide.sec.workspace": "El workspace y la asignatura",
-  "guide.sec.raw": "Datos en bruto",
-  "guide.sec.profile": "Perfil de ejemplares",
-  "guide.sec.graph": "Grafo de conocimiento",
-  "guide.sec.bank": "Banco de ejemplares",
+  // El índice de la guía nombra los pasos como los nombra la barra: una guía que llama a
+  // las cosas de otra manera que la pantalla es una guía sobre otro programa.
+  "guide.sec.raw": "Paso 1 · Apuntes y ejercicios",
+  "guide.sec.profile": "Paso 2 · Tipos de ejercicio",
+  "guide.sec.graph": "Paso 3 · El temario",
+  "guide.sec.bank": "Paso 4 · Tus ejercicios",
   "guide.sec.generate": "Generar variantes",
   "guide.sec.evaluate": "Evaluar propuestas",
   "guide.sec.runs": "Seguir una ejecución",

@@ -587,12 +587,8 @@ export function ProfileEditor() {
 }
 
 export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
-  const { t } = useT();
   return (
-    <StageGate
-      stage={stage}
-      title={t("profileStage.title")}
-    >
+    <StageGate stage={stage}>
       <ProfileEditor />
     </StageGate>
   );
