@@ -207,7 +207,10 @@ function Segmented({
     <div
       title={title}
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg bg-muted p-1",
+        // `flex w-full` y no `inline-flex`: el fondo ya ocupaba el ancho del contenedor
+        // mientras los botones se apelotonaban a la izquierda, así que la mitad derecha
+        // era gris y no era nada. Con `flex-1` cada opción se lleva su parte exacta.
+        "flex w-full items-center gap-1 rounded-lg bg-muted p-1",
         disabled && "opacity-60",
       )}
     >
@@ -219,7 +222,7 @@ function Segmented({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-md px-3 py-1 text-small font-medium transition-colors",
+            "flex-1 rounded-md px-3 py-1 text-small font-medium transition-colors",
             value === option.value
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
