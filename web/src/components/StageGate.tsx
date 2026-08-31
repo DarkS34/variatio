@@ -9,6 +9,7 @@ import { GuideLink } from "@/components/GuideLink";
 import type { GuideSlug } from "@/features/guide/sections";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS } from "@/lib/format";
@@ -103,6 +104,7 @@ export function StageGate({
   const lanes = useLanes();
   const split = useSplitEngine();
   const toast = useToast();
+  const confirm = useConfirm();
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
   // changed the state of the whole chain and said nothing, and invalidating a query does
   // not always change anything visible on the screen you pressed the button from.
@@ -192,8 +194,13 @@ export function StageGate({
                     // unguarded click while the button that merely replaces an artifact
                     // confirmed. The label does not help either — «Reabrir» sounds like
                     // opening something, not like withdrawing an approval.
-                    onClick={() => {
-                      if (window.confirm(t("stage.reopenConfirm", { stage: stage.label })))
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: t("stage.reopenConfirm", { stage: stage.label }),
+                          confirmLabel: t("stage.reopen"),
+                        })
+                      )
                         reopen.mutate();
                     }}
                     disabled={reopen.isPending}

@@ -287,8 +287,9 @@ function MainNav({
         <Rail stops={stageStops(stages, path, t)} size="sm" className="min-w-[12.5rem] sm:min-w-[15rem]" />
       </div>
 
-      <NavRule />
-
+      {/* No rule before these two. The block is already separated from the rail by the
+          rail's own surface, and «Evaluar» carries `--study` — three devices saying one
+          boundary. Two rules are left, and they bound the one thing that needed bounding. */}
       <NavPill
         to="/generate"
         label={t("nav.generate")}

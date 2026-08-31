@@ -17,6 +17,7 @@ import {
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
+import { useConfirm } from "@/components/ui/confirm";
 import { InfoHint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ export function BuildButton({
   const offline = useEngineOffline();
   const rawMissing = useRawMissingFor(stage.artifact);
   const canEdit = useCanEdit();
+  const confirm = useConfirm();
   // This artifact's own build, if one is already in the queue. Once it exists the server
   // has assigned its lanes, so from here on the wait is a measurement and not a guess.
   const own = useJobRun(stage.build_job);
@@ -111,8 +113,17 @@ export function BuildButton({
     return null;
   })();
 
-  const launch = () => {
-    if (!missing && labels?.confirmRedo && !window.confirm(labels.confirmRedo)) return;
+  const launch = async () => {
+    if (
+      !missing &&
+      labels?.confirmRedo &&
+      !(await confirm({
+        title: labels.confirmRedo,
+        confirmLabel: labels.redo,
+        tone: "danger",
+      }))
+    )
+      return;
     submit.mutate({ kind: stage.build_job });
   };
 

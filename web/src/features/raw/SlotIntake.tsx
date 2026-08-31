@@ -4,6 +4,7 @@ import { useRef, useState, type DragEvent } from "react";
 
 import { Progress } from "@/components/ui/misc";
 import { api } from "@/lib/api";
+import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 import { slotLabel } from "@/lib/raw";
 import type { RawSlot } from "@/lib/types";
@@ -45,6 +46,7 @@ export interface SlotIntake {
 /** The two writes a slot accepts, shared by the dropzone and by every document row. */
 export function useSlotIntake(slot: RawSlot, extensions: string[]): SlotIntake {
   const { t, plural } = useT();
+  const confirm = useConfirm();
   const client = useQueryClient();
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,12 @@ export function useSlotIntake(slot: RawSlot, extensions: string[]): SlotIntake {
   };
 
   const remove = async (name: string) => {
-    if (!window.confirm(t("raw.confirmDelete", { name, slot: slotLabel(slot, t).toLowerCase() })))
+    if (
+      !(await confirm({
+        title: t("raw.confirmDelete", { name, slot: slotLabel(slot, t).toLowerCase() }),
+        tone: "danger",
+      }))
+    )
       return;
     setError(null);
     try {

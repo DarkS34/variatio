@@ -26,6 +26,7 @@ import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
 import { FieldEditor, baseType, fieldNameError, nameError } from "./FieldEditor";
+import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
 function AddInline({
@@ -107,6 +108,7 @@ function TypeStrip({
   disabled?: boolean;
 }) {
   const tr = useT();
+  const confirm = useConfirm();
   const { t } = tr;
   return (
     <div className="space-y-2">
@@ -135,9 +137,9 @@ function TypeStrip({
                 tabIndex={-1}
                 title={t("modality.remove", { key })}
                 className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                onClick={(event) => {
+                onClick={async (event) => {
                   event.stopPropagation();
-                  if (window.confirm(t("modality.removeConfirm", { key })))
+                  if (await confirm({ title: t("modality.removeConfirm", { key }), tone: "danger" }))
                     onRemove(key);
                 }}
               >

@@ -16,6 +16,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 
 import { App } from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ConfirmProvider } from "./components/ui/confirm";
 import { ToastProvider } from "./components/ui/toast";
 import { AuthGate } from "./features/auth/AuthGate";
 import { ApiError } from "./lib/api";
@@ -47,14 +48,19 @@ const tree = (
           so the login and invitation screens can acknowledge an action too. */}
       <RouterProvider>
         <ToastProvider>
-          {/* The last floor: any render error below becomes a sentence and a reload
-              button instead of a white page. It fixes nothing — it makes the next crash
-              reportable. */}
-          <ErrorBoundary>
-            <AuthGate>
-              <App />
-            </AuthGate>
-          </ErrorBoundary>
+          {/* Beside the toasts and for the same reason: asking before an irreversible
+              action is not a screen's own business, and eighteen `window.confirm` calls
+              were the alternative. */}
+          <ConfirmProvider>
+            {/* The last floor: any render error below becomes a sentence and a reload
+                button instead of a white page. It fixes nothing — it makes the next crash
+                reportable. */}
+            <ErrorBoundary>
+              <AuthGate>
+                <App />
+              </AuthGate>
+            </ErrorBoundary>
+          </ConfirmProvider>
         </ToastProvider>
       </RouterProvider>
     </QueryClientProvider>

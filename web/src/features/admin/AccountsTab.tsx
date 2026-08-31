@@ -20,6 +20,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Label, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { PROFILE_LABEL_KEYS, PROFILES, profileLabel } from "@/lib/evaluator";
@@ -60,6 +61,7 @@ export function AccountsTab({
   onInspect: (id: number) => void;
 }) {
   const { plural, t } = useT();
+  const confirm = useConfirm();
   const toggle = useSetAccountEnabled();
   const remove = useDeleteAccount();
   const session = useSession();
@@ -68,7 +70,7 @@ export function AccountsTab({
 
   // Irreversible, so it is spelled out before it happens — and what it spells out is the
   // half people get wrong: the account goes, the material it produced does not.
-  const confirmDelete = (account: AdminAccount) => {
+  const confirmDelete = async (account: AdminAccount) => {
     const kept = [
       account.generations ? plural("acc.savedVariants", account.generations) : "",
       account.evaluations ? plural("acc.comparisons", account.evaluations) : "",
@@ -77,7 +79,7 @@ export function AccountsTab({
       t("acc.deleteConfirm", { username: account.username }) +
       (kept.length ? t("acc.deleteKept", { kept: kept.join(t("acc.and")) }) : "") +
       t("acc.deleteTail");
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     // The dialog is the confirmation BEFORE; this is the one after. Everything on this
     // screen that destroys something says so once it is done, because the row simply
     // disappearing is indistinguishable from a list that reloaded.
@@ -274,16 +276,17 @@ function AccountRows({
  */
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
   const { plural, t } = useT();
+  const confirm = useConfirm();
   const { setAdmin, setProfile, resetLink, revokeSessions, unlock } = useAccountActions();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
 
-  const confirmAdmin = () => {
+  const confirmAdmin = async () => {
     const message = t(
       account.is_admin ? "acc.confirmRemoveAdmin" : "acc.confirmMakeAdmin",
       { username: account.username },
     );
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     setAdmin.mutate(
       { id: account.id, isAdmin: !account.is_admin },
       {
@@ -299,12 +302,12 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
     );
   };
 
-  const confirmRevoke = () => {
+  const confirmRevoke = async () => {
     const message = plural("acc.revokeConfirm", account.sessions, {
       n: plural("acc.openSessions", account.sessions),
       username: account.username,
     });
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     revokeSessions.mutate(account.id, {
       onSuccess: ({ revoked }) =>
         toast({

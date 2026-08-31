@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, PromptDialog } from "@/components/ui/prompt";
 import { InfoHint } from "@/components/ui/hint";
 import { Field } from "@/components/ui/field";
 import { Input, Select } from "@/components/ui/input";
@@ -68,6 +69,7 @@ function ConceptDetail({
   const [relation, setRelation] = useState(relations[0] ?? "");
   const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const toast = useToast();
   const neighbours = useQuery({
@@ -275,14 +277,25 @@ function ConceptDetail({
         disabled={locked}
         title={locked ? t(LOCKED_HINT) : undefined}
         className="w-full text-destructive hover:bg-destructive/10"
-        onClick={() => {
-          if (!window.confirm(t("kg.deleteConceptConfirm", { name: concept.name }))) return;
-          run(() => api.deleteConcept(concept.name), t("kg.conceptDeleted"));
-        }}
+        onClick={() => setConfirmDelete(true)}
       >
         <Trash2 />
         {t("kg.deleteConcept")}
       </Button>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        tone="danger"
+        title={t("kg.deleteConceptTitle", { name: concept.name })}
+        confirmLabel={t("common.delete")}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          run(() => api.deleteConcept(concept.name), t("kg.conceptDeleted"));
+        }}
+      >
+        <p>{t("kg.deleteConceptBody")}</p>
+      </ConfirmDialog>
     </div>
   );
 }
@@ -387,6 +400,13 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
   const [query, setQuery] = useState("");
   const [hiddenRelations, setHiddenRelations] = useState<Set<number>>(new Set());
   const [addingIn, setAddingIn] = useState<string | null>(null);
+  // The three unit operations, as dialogs of this application rather than the browser's.
+  // `window.prompt` cannot validate — it does not know which names are taken — and
+  // `window.confirm` guarded «eliminar la unidad y sus 28 conceptos» with one click while
+  // deleting an empty workspace asks you to type its slug.
+  const [newUnit, setNewUnit] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [deletingUnit, setDeletingUnit] = useState<{ name: string; count: number } | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -550,11 +570,7 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               variant="outline"
               disabled={locked}
               title={locked ? t(LOCKED_HINT) : undefined}
-              onClick={() => {
-                const name = window.prompt(t("kg.newUnitPrompt"));
-                if (name?.trim())
-                  api.addDomain(name.trim()).then(refresh).catch((e) => setError(e.message));
-              }}
+              onClick={() => setNewUnit(true)}
             >
               <FolderPlus />
               {t("kg.unitButton")}
@@ -582,27 +598,9 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
               filtering={Boolean(query.trim())}
               selected={selected}
               onSelect={setSelected}
-              onRenameUnit={(name) => {
-                const next = window.prompt(t("kg.renameUnitPrompt"), name);
-                if (next?.trim() && next !== name)
-                  api
-                    .renameDomain(name, next.trim())
-                    .then(refresh)
-                    .catch((e) => setError(e.message));
-              }}
+              onRenameUnit={setRenaming}
               onMoveUnit={moveDomain}
-              onDeleteUnit={(name, count) => {
-                if (
-                  !window.confirm(
-                    t("kg.deleteUnitConfirm", {
-                      name,
-                      concepts: plural("outline.conceptCount", count),
-                    }),
-                  )
-                )
-                  return;
-                api.deleteDomain(name).then(refresh).catch((e) => setError(e.message));
-              }}
+              onDeleteUnit={(name, count) => setDeletingUnit({ name, count })}
               onAddConcept={setAddingIn}
             />
           </div>
@@ -781,6 +779,61 @@ function GraphExplorer({ onGoToCurriculum }: { onGoToCurriculum: () => void }) {
           </div>
         </div>
       </Dialog>
+
+      <PromptDialog
+        open={newUnit}
+        title={t("kg.newUnitTitle")}
+        label={t("kg.unitName")}
+        confirmLabel={t("kg.unitButton")}
+        validate={(value) =>
+          domains.some((d) => d.toLowerCase() === value.toLowerCase())
+            ? t("kg.unitTaken")
+            : null
+        }
+        onCancel={() => setNewUnit(false)}
+        onConfirm={(value) => {
+          setNewUnit(false);
+          api.addDomain(value).then(refresh).catch((e) => setError(e.message));
+        }}
+      />
+
+      <PromptDialog
+        open={renaming !== null}
+        title={t("kg.renameUnitTitle")}
+        label={t("kg.unitName")}
+        initial={renaming ?? ""}
+        validate={(value) =>
+          value !== renaming && domains.some((d) => d.toLowerCase() === value.toLowerCase())
+            ? t("kg.unitTaken")
+            : null
+        }
+        onCancel={() => setRenaming(null)}
+        onConfirm={(value) => {
+          const from = renaming!;
+          setRenaming(null);
+          if (value !== from)
+            api.renameDomain(from, value).then(refresh).catch((e) => setError(e.message));
+        }}
+      />
+
+      <ConfirmDialog
+        open={deletingUnit !== null}
+        tone="danger"
+        title={t("kg.deleteUnitTitle", { name: deletingUnit?.name ?? "" })}
+        confirmLabel={t("common.delete")}
+        onCancel={() => setDeletingUnit(null)}
+        onConfirm={() => {
+          const name = deletingUnit!.name;
+          setDeletingUnit(null);
+          api.deleteDomain(name).then(refresh).catch((e) => setError(e.message));
+        }}
+      >
+        <p>
+          {t("kg.deleteUnitBody", {
+            concepts: plural("outline.conceptCount", deletingUnit?.count ?? 0),
+          })}
+        </p>
+      </ConfirmDialog>
 
       <AddConceptDialog
         open={addingIn !== null}

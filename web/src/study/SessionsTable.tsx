@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, EmptyState } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { when } from "@/lib/format";
 
@@ -37,13 +38,14 @@ export function SessionsTable({
   onDeleted?: (ids: string[]) => void;
 }) {
   const { plural } = useT();
+  const confirm = useConfirm();
   const { t } = useT();
   const toast = useToast();
   const remove = useDeleteOwnEvaluations();
   const ids = useMemo(() => sessions.map((session) => session.id), [sessions]);
   const selection = useSelection(ids);
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const chosen = [...selection.selected];
     const decided = sessions.filter(
       (session) => selection.selected.has(session.id) && session.chosen_at !== null,
@@ -52,7 +54,7 @@ export function SessionsTable({
       plural("sessions.confirmHead", chosen.length) +
       (decided ? t("sessions.confirmDecided", { n: decided }) : "") +
       t("sessions.confirmTail");
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     remove.mutate(chosen, {
       onSuccess: ({ deleted }) => {
         selection.clear();

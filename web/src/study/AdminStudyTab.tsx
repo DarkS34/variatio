@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
 import { Checkbox, Skeleton } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { BarRows, DayColumns, ShareMeter, type BarRow } from "@/features/admin/charts";
 import { duration, when } from "@/lib/format";
@@ -717,13 +718,14 @@ type SessionRow = NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["s
 
 function SessionsTable({ rows }: { rows: SessionRow[] }) {
   const { plural, t } = useT();
+  const confirm = useConfirm();
   const toast = useToast();
   const remove = useDeleteEvaluations();
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const { selected, all: allSelected, some: someSelected, toggle, toggleAll, clear } =
     useSelection(ids);
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const ids = [...selected];
     const decided = rows.filter((row) => selected.has(row.id) && row.chosen_at !== null).length;
     const message =
@@ -732,7 +734,7 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
         : t("adminStudy.confirmHeadMany", { n: ids.length })) +
       (decided ? plural("sessions.confirmDecided", decided) : "") +
       t("sessions.confirmTail");
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     remove.mutate(ids, {
       onSuccess: ({ deleted }) => {
         clear();

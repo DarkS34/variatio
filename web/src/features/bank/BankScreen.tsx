@@ -43,6 +43,7 @@ import {
   useKg,
   useSubmitJob,
 } from "@/state/queries";
+import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
 function ItemEditor({
@@ -417,6 +418,7 @@ function BankMeters({
   onShowUntagged: () => void;
 }) {
   const { t, plural } = useT();
+  const confirm = useConfirm();
 
   if (!listing) return <Skeleton className="h-24" />;
 
@@ -485,8 +487,9 @@ function BankMeters({
               variant="ghost"
               disabled={busy}
               title={why ?? plural("bank.retagAllHint", items)}
-              onClick={() => {
-                if (window.confirm(plural("bank.confirmRetagAll", items))) onRetag({ all: true });
+              onClick={async () => {
+                if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
+                  onRetag({ all: true });
               }}
             >
               {t("bank.retagAll")}
@@ -508,6 +511,7 @@ function BankMeters({
 
 export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const { t, plural } = useT();
+  const confirm = useConfirm();
   const kg = useKg();
   const coverage = useCoverage();
   const submit = useSubmitJob();
@@ -565,7 +569,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // Which field carries an item's text is a property of its modality, not of the bank:
   // two modalities can name their primary differently, so every row resolves its own.
   const itemTypes: BankItemType[] = listing?.item_types ?? [];
-  const manyTypes = itemTypes.length > 1;
+  // WHETHER THE MODALITY COLUMN CARRIES INFORMATION. With one modality declared it never
+  // did; with several it stops doing so the moment the filter above pins one, and then it
+  // is the same two-line badge repeated down all forty rows — 135 px of width saying what
+  // the filter already says. The column is about variation, so it is drawn only where
+  // there is any.
+  const manyTypes = itemTypes.length > 1 && !itemType;
+  const severalDeclared = itemTypes.length > 1;
   const typeOf = (item: BankItem | null): BankItemType | undefined => {
     if (!item) return undefined;
     if (item.item_type) return itemTypes.find((t) => t.key === item.item_type);
@@ -574,7 +584,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const primaryFieldFor = (item: BankItem | null) => typeOf(item)?.primary_field ?? "";
   const fieldsFor = (item: BankItem | null) => typeOf(item)?.fields ?? [];
   const labelFor = (item: BankItem | null) => typeOf(item)?.label ?? item?.item_type ?? "—";
-  const primaryHeader = manyTypes
+  const primaryHeader = severalDeclared
     ? [...new Set(itemTypes.map((t) => t.primary_field))].join(" / ")
     : (itemTypes[0]?.primary_field ?? "contenido");
 
@@ -649,7 +659,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               className="pl-8"
             />
           </div>
-          {manyTypes ? (
+          {severalDeclared ? (
             <Select
               aria-label={t("bank.filterByModality")}
               value={itemType}
@@ -743,8 +753,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     selected={selected.has(item.id)}
                     onToggle={() => toggle(item.id)}
                     onEdit={() => setEditing(item)}
-                    onDelete={() => {
-                      if (window.confirm(t("bank.confirmDelete", { id: item.id }))) remove.mutate(item.id);
+                    onDelete={async () => {
+                      if (await confirm({ title: t("bank.confirmDelete", { id: item.id }), tone: "danger" }))
+                        remove.mutate(item.id);
                     }}
                   />
                 ))}

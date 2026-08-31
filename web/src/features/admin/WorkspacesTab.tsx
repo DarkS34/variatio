@@ -8,6 +8,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
@@ -264,10 +265,10 @@ function ClearCacheButton({ workspace }: { workspace: AdminWorkspace }) {
   const { plural, t } = useT();
   const clear = useClearCache();
   const toast = useToast();
-  const confirm = () => {
-    const message =
-      t("ws.clearConfirm", { slug: workspace.slug });
-    if (!window.confirm(message)) return;
+  const confirm = useConfirm();
+  const askAndClear = async () => {
+    const message = t("ws.clearConfirm", { slug: workspace.slug });
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     clear.mutate(workspace.slug, {
       onSuccess: ({ files_removed, bytes_freed }) =>
         toast({
@@ -291,7 +292,7 @@ function ClearCacheButton({ workspace }: { workspace: AdminWorkspace }) {
           ? t("ws.cacheEmpty")
           : t("ws.clearHint")
       }
-      onClick={confirm}
+      onClick={askAndClear}
     >
       {clear.isPending ? <Spinner /> : <Eraser />}
     </Button>
@@ -361,10 +362,10 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
   const discard = useDeleteArtifact();
   const toast = useToast();
 
-  const confirm = (artifact: AdminWorkspace["stages"][number]) => {
-    const message =
-      t("ws.discardConfirm", { label: artifact.label, slug: workspace.slug });
-    if (!window.confirm(message)) return;
+  const confirm = useConfirm();
+  const askAndDiscard = async (artifact: AdminWorkspace["stages"][number]) => {
+    const message = t("ws.discardConfirm", { label: artifact.label, slug: workspace.slug });
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     discard.mutate(
       { slug: workspace.slug, artifact: artifact.artifact },
       {
@@ -398,7 +399,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
                 ? t("ws.stageMissing", { label: artifactName(stage.artifact, t, stage.label) })
                 : t("ws.clearStage", { label: artifactName(stage.artifact, t, stage.label), slug: workspace.slug })
             }
-            onClick={() => confirm(stage)}
+            onClick={() => askAndDiscard(stage)}
             className={cn(
               "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               empty ? "cursor-default" : "hover:opacity-75",

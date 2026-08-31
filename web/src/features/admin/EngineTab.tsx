@@ -20,6 +20,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
 import {
@@ -426,14 +427,16 @@ function Vram({ running, total }: { running: RunningModel[]; total: number }) {
 
 function ModelsCard({ engine }: { engine: AdminEngine }) {
   const { t, plural } = useT();
+  const confirm = useConfirm();
   const { pull, remove } = useEngineActions();
   const toast = useToast();
   const [name, setName] = useState("");
   const resident = new Set(engine.running.map((m) => m.model));
   const missing = engine.required.filter((r) => r.state === "not_installed");
 
-  const confirmDelete = (model: string) => {
-    if (!window.confirm(t("eng.models.confirmDelete", { model }))) return;
+  const confirmDelete = async (model: string) => {
+    if (!(await confirm({ title: t("eng.models.confirmDelete", { model }), tone: "danger" })))
+      return;
     remove.mutate(model, {
       onSuccess: () =>
         toast({ title: t("eng.models.deleted"), description: model, tone: "attention" }),
@@ -751,6 +754,7 @@ function SystemCard() {
  */
 function QueueSection() {
   const { t } = useT();
+  const confirm = useConfirm();
   const jobs = useAdminJobs();
   const cancel = useAdminCancelJob();
   const toast = useToast();
@@ -759,7 +763,7 @@ function QueueSection() {
   const queued = jobs.data?.queued ?? [];
   const rows = [...(running ? [running] : []), ...queued];
 
-  const confirmCancel = (job: Job) => {
+  const confirmCancel = async (job: Job) => {
     const verb = job.status === "running" ? t("eng.queue.stop") : t("eng.queue.remove");
     const message =
       t("eng.queue.confirm", {
@@ -768,7 +772,7 @@ function QueueSection() {
         workspace: job.workspace,
         by: job.user_name ? t("eng.queue.confirmBy", { name: job.user_name }) : "",
       }) + (job.status === "running" ? t("eng.queue.confirmRunning") : "");
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
     cancel.mutate(job.id, {
       onSuccess: () =>
         toast({

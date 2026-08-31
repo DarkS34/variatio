@@ -125,8 +125,11 @@ export function FormStep({
             ) : null}
           </span>
 
+          {/* `focus-within` as well as `hover`: the repo already settled this for the bank's
+              row actions and the raw document rows — a control that exists only under a
+              pointer does not exist for a keyboard, and on a touch screen never at all. */}
           {!open ? (
-            <Pencil className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            <Pencil className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
           ) : null}
         </div>
       </div>

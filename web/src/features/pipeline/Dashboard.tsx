@@ -28,7 +28,7 @@ import {
   useRaw,
   useStream,
 } from "@/state/queries";
-import { useT, type Key } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { artifactName, jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 import { CancelButton } from "@/components/CancelButton";
 
@@ -36,12 +36,6 @@ const SCREEN: Record<string, string> = {
   exemplars_profile: "/prepare/profile",
   knowledge_graph: "/prepare/graph",
   exemplars_bank: "/prepare/bank",
-};
-
-const EXPLAIN: Record<string, Key> = {
-  exemplars_profile: "dash.explain.profile",
-  knowledge_graph: "dash.explain.graph",
-  exemplars_bank: "dash.explain.bank",
 };
 
 function StageCard({ stage }: { stage: StageState }) {
@@ -71,11 +65,11 @@ function StageCard({ stage }: { stage: StageState }) {
             state the stage is in is `StageBadge`'s job, in a shape and a word; the numbered
             circle also turned green, so it was a third drawing of the same fact. */}
         <div className="flex items-center gap-2">
+          {/* No (i) per card. The three of them (`dash.explain.*`) are variants of one
+              question — «qué son estas tres etapas» — and the panel's own heading answers
+              it once, at the top. Six (i) on one screen is an explanation nobody opens. */}
           <div className="flex flex-1 items-center gap-1.5">
             <CardTitle>{artifactName(stage.artifact, t, stage.label)}</CardTitle>
-            <InfoHint label={t("stage.whatIs", { title: artifactName(stage.artifact, t, stage.label) })}>
-              {t(EXPLAIN[stage.artifact])}
-            </InfoHint>
           </div>
           <StageBadge stage={stage} />
         </div>
@@ -126,6 +120,45 @@ function StageCard({ stage }: { stage: StageState }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * AN APPROVED STAGE IS A ROW, NOT A CARD.
+ *
+ * With the chain finished the panel drew three cards of ~200 px each holding a title, a
+ * badge, a date and two buttons — and left the bottom 60 % of the window empty. Measured
+ * on the reference workspace: 19 controls in `main`, of which 15 repeated a state the
+ * rail in the header already carries permanently.
+ *
+ * So a settled stage says the four things that are still true of it — what it is, that it
+ * is approved, when, and the way back in — on one line. Nothing is lost: the card comes
+ * back the moment the stage stops being approved, which is exactly when it has something
+ * more to say (a cause, a block, a bar).
+ *
+ * The ORDER is untouched. `review.ARTIFACTS` decides it, the rail is a second copy of the
+ * same decision, and neither numbers the steps.
+ */
+function SettledRow({ stage }: { stage: StageState }) {
+  const { t } = useT();
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5">
+      <span className="min-w-0 flex-1 truncate text-body font-medium">
+        {artifactName(stage.artifact, t, stage.label)}
+      </span>
+      {stage.approved_at ? (
+        <span className="shrink-0 text-small text-muted-foreground">
+          {t("dash.approvedOn", { when: when(stage.approved_at) })}
+        </span>
+      ) : null}
+      <StageBadge stage={stage} />
+      <Link to={SCREEN[stage.artifact]} className="shrink-0">
+        <Button size="sm" variant="ghost">
+          <Pencil />
+          {t("dash.reviewAgain")}
+        </Button>
+      </Link>
+    </li>
   );
 }
 
@@ -301,6 +334,9 @@ export function Dashboard() {
 
   const stages = pipeline.data?.stages ?? [];
   const next = stages.find((s) => s.status !== "approved");
+  // Every stage approved and nothing running on any of them: there is no card's worth of
+  // anything left to say about them.
+  const settled = stages.length > 0 && !next;
 
   return (
     <div className="space-y-6">
@@ -383,11 +419,23 @@ export function Dashboard() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-4">
-        <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
-          {stages.map((stage) => (
-            <StageCard key={stage.artifact} stage={stage} />
-          ))}
-        </div>
+        {/* Three cards while there is anything to do, one list once there is not. The
+            switch is the whole chain and not each stage on its own: a mixed row of cards
+            and lines reads as two kinds of thing, and the cards carry what a stage still
+            has to say — a stale cause, a block, a running bar. */}
+        {settled ? (
+          <ul className="divide-y divide-border self-start rounded-xl border border-border bg-card lg:col-span-3">
+            {stages.map((stage) => (
+              <SettledRow key={stage.artifact} stage={stage} />
+            ))}
+          </ul>
+        ) : (
+          <div className="grid content-start gap-4 lg:col-span-3 xl:grid-cols-3">
+            {stages.map((stage) => (
+              <StageCard key={stage.artifact} stage={stage} />
+            ))}
+          </div>
+        )}
         {/* What is happening, and what it is about. «Sistema» used to open this column
             and it has left the panel entirely — see `ActivityCard`. The raw material left
             too, for a destination of its own: it is the one part of an instance that is

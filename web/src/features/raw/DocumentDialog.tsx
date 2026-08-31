@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { useDocumentPages, usePageActions } from "./queries";
 import type { DocumentPage } from "./types";
+import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
 const FAILED_MARK = "> [TRANSCRIPCIÓN FALLIDA"; // i18n-exempt: lo escribe `pages.py`
@@ -58,6 +59,7 @@ export function DocumentDialog({
   onClose: () => void;
 }) {
   const { t } = useT();
+  const confirm = useConfirm();
   const listing = useDocumentPages(kind, name);
   const { save, insert, remove } = usePageActions(kind, name);
 
@@ -74,27 +76,17 @@ export function DocumentDialog({
 
   const attention = pages.filter((page) => pageMark(page) !== "ok").length;
 
-  const goTo = (index: number) => {
+  const goTo = async (index: number) => {
     if (index === shown) return;
-    if (
-      dirty &&
-      !window.confirm(
-        t("doc.unsavedSwitch", { page: shown }),
-      )
-    ) {
+    if (dirty && !(await confirm({ title: t("doc.unsavedSwitch", { page: shown }) }))) {
       return;
     }
     setDraft(null);
     setSelected(index);
   };
 
-  const attemptClose = () => {
-    if (
-      dirty &&
-      !window.confirm(
-        t("doc.unsavedClose", { page: shown }),
-      )
-    ) {
+  const attemptClose = async () => {
+    if (dirty && !(await confirm({ title: t("doc.unsavedClose", { page: shown }) }))) {
       return;
     }
     setDraft(null);
@@ -115,12 +107,8 @@ export function DocumentDialog({
       },
     );
 
-  const onDelete = () => {
-    if (
-      !window.confirm(
-        t("doc.confirmDelete", { page: shown, name }),
-      )
-    ) {
+  const onDelete = async () => {
+    if (!(await confirm({ title: t("doc.confirmDelete", { page: shown, name }), tone: "danger" }))) {
       return;
     }
     remove.mutate(shown, {
