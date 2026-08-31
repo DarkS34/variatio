@@ -64,7 +64,7 @@ function Start() {
         <p>
           <strong>Variatio</strong> genera <strong>ejercicios de aprendizaje</strong> —ejercicios,
           problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
-          en abstracto: parte de tres artefactos que describen tu asignatura y produce variantes
+          en abstracto: parte de los tres pasos con los que describes tu asignatura y produce variantes
           que respetan lo que el alumno ya ha visto y lo que todavía no.
         </p>
       </SectionHead>
@@ -129,7 +129,7 @@ function Start() {
             </>,
             <>
               Desde <strong>«{t("dash.rawData")}»</strong>, en la navegación, sube el material:
-              los documentos con ejercicios de ejemplo y el corpus de teoría.
+              los documentos con ejercicios de ejemplo y los apuntes de la asignatura.
             </>,
             <>
               En esa misma pantalla, lanza la <strong>transcripción</strong> de cada origen. No
@@ -342,7 +342,7 @@ function Raw() {
         />
         <Paragraph>
           Cada tarjeta lleva bajo el título la etapa a la que alimenta, con los nombres cortos de
-          la barra de arriba: «{t("nav.graph")}» para el corpus, «{t("nav.profile")}» y «
+          la barra de arriba: «{t("nav.graph")}» para los apuntes, «{t("nav.profile")}» y «
           {t("nav.bank")}» para los ejemplares. Un origen vacío no dibuja una lista vacía: la
           tarjeta entera se convierte en la zona donde soltar los ficheros, que es lo único que
           hay que hacer ahí.
@@ -494,7 +494,7 @@ function Raw() {
         </p>
         <p>
           La consecuencia se ve en la barra por fases que se explica en «
-          {t("guide.sec.runs")}»: la conversión del corpus es hoy el tramo más ancho de la
+          {t("guide.sec.runs")}»: la lectura de los apuntes es hoy el tramo más ancho de la
           construcción del temario. Sacarla de ahí, y poder mirarla mientras tanto, es exactamente
           para lo que existe esta pantalla.
         </p>
@@ -567,7 +567,7 @@ function Profile() {
             label: "Qué produce",
             value: <code className="font-mono text-small">exemplars_profile.json</code>,
           },
-          { label: "Qué cuesta", value: "Una pasada larga sobre una muestra del corpus, no sobre todo." },
+          { label: "Qué cuesta", value: "Una pasada larga sobre una muestra de tus ejercicios, no sobre todos." },
           {
             label: "Qué desbloquea",
             value: "Recoger los ejercicios y decidir qué conceptos del temario sirven de etiqueta.",
@@ -654,7 +654,7 @@ function Profile() {
 
       <Detail title="El borrador no es estable, y conviene saberlo">
         <p>
-          El constructor infiere el perfil de una muestra del corpus y ha producido conjuntos de
+          El perfil se infiere de una muestra de tus ejercicios, y ha producido conjuntos de
           campos <em>distintos</em> en dos pasadas sobre el mismo material. Trátalo como un punto
           de partida: la versión que apruebas es tuya, no suya.
         </p>
@@ -685,7 +685,7 @@ function Graph() {
           {
             label: "Qué cuesta",
             value:
-              "Es el trabajo más caro de la cadena: una llamada por página del corpus y unas cuantas que razonan sobre el inventario entero.",
+              "Es el trabajo más caro de la cadena: una llamada por página de tus apuntes y unas cuantas que razonan sobre el inventario entero.",
           },
           { label: "Qué desbloquea", value: "El etiquetado del banco, el currículo y la generación." },
         ]}
@@ -729,13 +729,13 @@ function Graph() {
                 —«codificación», «diseño»— se marcan como que NO sirven de etiqueta: siguen existiendo y
                 siguen funcionando a través de sus relaciones, simplemente dejan de poder ser el
                 tema de un ejercicio. Ante la duda se excluye: una etiqueta vaga contamina el
-                corpus entero.
+                banco entero.
               </p>
             </>,
             <>
               <p className="font-medium">Descripciones</p>
               <p className="text-small text-muted-foreground">
-                La prosa que describe cada concepto, escrita contra los párrafos del corpus de
+                La prosa que describe cada concepto, escrita contra los párrafos de tus apuntes de
                 los que salió. <strong>Es el texto contra el que se compara, no el nombre.</strong>{" "}
                 Se escriben solas después de construir; se corrigen en la ficha del concepto,
                 que es donde se están leyendo.
@@ -745,7 +745,7 @@ function Graph() {
               <p className="font-medium">Curación a mano</p>
               <p className="text-small text-muted-foreground">
                 Renombrar lo que quedó torcido, borrar lo que no es un concepto de la materia y
-                arreglar relaciones. Renombrar arrastra consigo el anclaje al corpus; borrar lo
+                arreglar relaciones. Renombrar arrastra consigo el anclaje a tus apuntes; borrar lo
                 suelta.
               </p>
             </>,
@@ -1010,7 +1010,7 @@ function Generate() {
           currículo de esta pregunta, y se ven <em>antes</em> de gastar nada.
         </Paragraph>
         <Paragraph>
-          Ahí mismo se avisa del <strong>zero-shot</strong>: si algún concepto elegido no tiene
+          Ahí mismo se avisa de <strong>los temas sin ejemplo</strong>: si algún concepto elegido no tiene
           ningún ejemplar en el banco —o ninguno de la tipo de ejercicio pedida—, el lote se genera sin
           ejemplo que imitar y la calidad suele bajar. Hay un interruptor para ocultar de la
           lista los conceptos sin ejemplares; apagarlo es lo que permite pedirlos a sabiendas.
@@ -1370,7 +1370,7 @@ function Runs() {
           <Paragraph>
             Es el plan real del constructor del temario, leído de la API y no copiado aquí. Cada
             tramo es una fase y su anchura es el <em>peso medido</em> de esa fase: por eso la
-            transcripción del corpus se lleva ella sola un tercio de la barra, el enlazado y la
+            lectura de los apuntes se lleva ella sola un tercio de la barra, el enlazado y la
             limpieza casi la mitad entre los dos, y la curación final es una raya. La que se
             mueve es la que está corriendo. No hay estimación de tiempo en ninguna parte, y es
             deliberado: cambiar de modelo cambia el coste de cada llamada por múltiplos, y una
@@ -1506,7 +1506,7 @@ function Account() {
               {
                 key: "material",
                 head: "El del material generado",
-                body: "En el que se ESCRIBEN los ejercicios. No lo elige nadie: sale del contexto de la asignatura, que a su vez sale del corpus.",
+                body: "En el que se ESCRIBEN los ejercicios. No lo elige nadie: sale del contexto de la asignatura, que a su vez sale de tus apuntes.",
               },
             ]}
           />
@@ -1704,7 +1704,7 @@ function Admin() {
             {
               key: "cache",
               head: "Vaciar la caché",
-              body: "Borra solo los vectores y el markdown convertido, que el próximo trabajo vuelve a calcular. Las descripciones de conceptos y el anclaje al corpus se quedan: los escribió el modelo contra el corpus y cuestan una pasada larga.",
+              body: "Borra solo los vectores y el markdown convertido, que el próximo trabajo vuelve a calcular. Las descripciones de conceptos y su anclaje a tus apuntes se quedan: los escribió el modelo leyéndolos y cuestan una pasada larga.",
             },
             {
               key: "export",

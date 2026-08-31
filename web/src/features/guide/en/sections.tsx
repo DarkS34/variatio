@@ -65,7 +65,7 @@ function Start() {
         <p>
           <strong>Variatio</strong> generates <strong>learning exercises</strong> — exercises,
           problems, assessment tasks — anchored to a course's syllabus. It does not write about a
-          topic in the abstract: it starts from three artifacts that describe your subject and
+          topic in the abstract: it starts from the three steps you describe your subject with, and
           produces variants that respect what the student has already seen and what they have
           not.
         </p>
@@ -130,7 +130,7 @@ function Start() {
             </>,
             <>
               From <strong>"{t("dash.rawData")}"</strong>, in the navigation, upload the
-              material: the documents with example exercises, and the theory corpus.
+              material: the documents with example exercises, and the subject's notes.
             </>,
             <>
               On that same screen, launch the <strong>transcription</strong> of each origin. It
@@ -352,7 +352,7 @@ function Raw() {
         />
         <Paragraph>
           Each card carries under its title the stage it feeds, with the short names from the bar
-          at the top: "{t("nav.graph")}" for the corpus, "{t("nav.profile")}" and "
+          at the top: "{t("nav.graph")}" for the notes, "{t("nav.profile")}" and "
           {t("nav.bank")}" for the exemplars. An empty origin does not draw an empty list: the
           whole card becomes the area to drop files into, which is the only thing worth doing
           there.
@@ -502,7 +502,7 @@ function Raw() {
         </p>
         <p>
           The consequence shows in the phase bar explained in "{t("guide.sec.runs")}": the
-          corpus conversion is now the widest section of the graph build. Taking it out of there,
+          reading the notes is now the widest section of the graph build. Taking it out of there,
           and being able to watch it while it happens, is exactly what this screen exists for.
         </p>
       </Detail>
@@ -576,7 +576,7 @@ function Profile() {
           },
           {
             label: "What it costs",
-            value: "One long pass over a sample of the corpus, not over all of it.",
+            value: "One long pass over a sample of your exercises, not over all of them.",
           },
           {
             label: "What it unlocks",
@@ -664,7 +664,7 @@ function Profile() {
 
       <Detail title="The draft is not stable, and it is worth knowing">
         <p>
-          The builder infers the profile from a sample of the corpus, and it has produced{" "}
+          The profile is inferred from a sample of your exercises, and it has produced{" "}
           <em>different</em> field sets across two passes over the same material. Treat it as a
           starting point: the version you approve is yours, not its.
         </p>
@@ -695,7 +695,7 @@ function Graph() {
           {
             label: "What it costs",
             value:
-              "It is the most expensive job in the chain: one call per page of the corpus, and several that reason over the whole inventory.",
+              "It is the most expensive job in the chain: one call per page of your notes, and several that reason over the whole inventory.",
           },
           {
             label: "What it unlocks",
@@ -740,13 +740,13 @@ function Graph() {
                 Which concepts work as a <em>label</em>. The ones that would fit any exercise at all
                 — "coding", "design" — are marked as NOT working as a label: they still exist and still
                 work through their relations, they simply stop being able to be what an exercise
-                is about. When in doubt, exclude: a vague label pollutes the whole corpus.
+                is about. When in doubt, exclude: a vague label pollutes the whole bank.
               </p>
             </>,
             <>
               <p className="font-medium">Descriptions</p>
               <p className="text-small text-muted-foreground">
-                The prose describing each concept, written against the paragraphs of the corpus
+                The prose describing each concept, written against the paragraphs of your notes
                 it came from. <strong>It is the text matched against, not the name.</strong> They
                 are written on their own when indexing; the tab is for reading them and
                 correcting the ones that do not say what you would say.
@@ -756,7 +756,7 @@ function Graph() {
               <p className="font-medium">Curation by hand</p>
               <p className="text-small text-muted-foreground">
                 Renaming what came out crooked, deleting what is not a concept of the subject,
-                and fixing relations. Renaming carries the corpus anchoring with it; deleting
+                and fixing relations. Renaming carries the anchoring to your notes with it; deleting
                 lets it go.
               </p>
             </>,
@@ -1027,7 +1027,7 @@ function Generate() {
           anything is spent.
         </Paragraph>
         <Paragraph>
-          The same box warns about <strong>zero-shot</strong>: if a chosen concept has no
+          The same box warns about <strong>topics with no example</strong>: if a chosen concept has no
           exemplar in the bank — or none of the exercise type asked for — the batch is generated with
           no example to imitate and quality usually drops. A switch hides the concepts with no
           exemplars from the list; turning it off is what lets you ask for them knowingly.
@@ -1386,7 +1386,7 @@ function Runs() {
           <Paragraph>
             This is the graph builder's real plan, read from the API and not copied out here.
             Each section is a phase and its width is that phase's <em>measured weight</em>: which
-            is why transcribing the corpus takes up a third of the bar on its own, linking and
+            is why reading the notes takes up a third of the bar on its own, linking and
             cleaning almost half of it between them, and the final curation is a hairline. The
             one that moves is the one running. There is no time estimate anywhere, and that is
             deliberate: changing model changes the cost of each call by multiples, and a false
@@ -1522,7 +1522,7 @@ function Account() {
               {
                 key: "material",
                 head: "The generated material's",
-                body: "The one the exercises are WRITTEN in. Nobody chooses it: it comes from the subject's context, which in turn comes from the corpus.",
+                body: "The one the exercises are WRITTEN in. Nobody chooses it: it comes from the subject's context, which in turn comes from your notes.",
               },
             ]}
           />
@@ -1722,7 +1722,7 @@ function Admin() {
             {
               key: "cache",
               head: "Empty the cache",
-              body: "It deletes only the vectors and the converted markdown, which the next job recomputes. The concept descriptions and the corpus anchoring stay: the model wrote them against the corpus and they cost a long pass.",
+              body: "It deletes only the vectors and the converted markdown, which the next job recomputes. The concept descriptions and their anchoring to your notes stay: the model wrote them by reading those, and they cost a long pass.",
             },
             {
               key: "export",

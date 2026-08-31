@@ -16,7 +16,7 @@ import { keys, useContentContext } from "@/state/queries";
 import { useT, type Key } from "@/lib/i18n";
 
 // The paragraph is paid for in every call the system makes and may reach 900 characters
-// (`CONTENT_CONTEXT_MAX_CHARS`). On the panel it is read to RECOGNISE it — «yes, this is
+// (`CONTENT_CONTEXT_MAX_CHARS`). Here it is read to RECOGNISE it — «yes, this is
 // the right subject» — not to review it, and the `line-clamp-2` beside this is the half
 // that holds whatever the character count lets through. It is shown whole when editing.
 const PREVIEW_CHARS = 160;
@@ -30,11 +30,19 @@ const FACT_LABEL: Record<string, Key> = {
 /**
  * What subject this instance is about, in prose.
  *
- * It lives on the panel and not in a stage because it is not one: it has no raw data of its
- * own, no builder of its own, and it is not in `review.ARTIFACTS`. The graph and profile
- * builds synthesise it, each with what its artifact knows about the subject, and each
- * writes the DRAFT. What is edited here is the curated one, which wins on read — that pair
- * is what keeps a rebuild from rewriting what a person wrote.
+ * It is not a stage: it has no raw data of its own, no builder of its own, and it is not in
+ * `review.ARTIFACTS`. The graph and profile builds synthesise it, each with what its
+ * artifact knows about the subject, and each writes the DRAFT. What is edited here is the
+ * curated one, which wins on read — that pair is what keeps a rebuild from rewriting what
+ * a person wrote.
+ *
+ * IT LIVES ON THE RAW SCREEN SINCE 2026-09-01, and that is a repair rather than a design:
+ * its home was the panel, and when the panel went (the bar became the chain, so there was
+ * nothing left to watch from outside it) this card went with it and the subject's context
+ * quietly stopped being editable at all. `/raw` is the right home for the same reasons it
+ * is the raw material's: it is not a stage, nobody approves it, and it is upstream of more
+ * than one thing at once. It sits last on that screen because it does not exist until a
+ * build has written it, and it says so itself in that state.
  *
  * The three loose facts are neither decoration nor a leftover of the old format: the
  * evaluation's naive arm composes a sentence from them and cannot read the paragraph.
