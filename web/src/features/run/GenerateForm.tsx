@@ -3,11 +3,13 @@ import {
   Ban,
   Brain,
   Check,
+  ChevronRight,
   ListChecks,
   Minus,
   Play,
   Plus,
   Scale,
+  Sliders,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -52,6 +54,8 @@ const MAX_ITEMS = 20;
 const NONE: string[] = [];
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
 const MAX_INSTRUCTIONS = 600;
+/** Un problema que bloquea el lanzamiento y se explica en otro sitio. Ver `problems`. */
+const SILENT_OUTSIDE = "\u0000outside";
 
 /** The modality actually in force: what the form shows and what the run will produce. */
 export function activeTypeKey(
@@ -430,12 +434,16 @@ export function GenerateForm({
   // ask first, and the last two only appear once something has been chosen. It is also the
   // one place that order is written down — before this, the step after the concepts was
   // hardcoded in two more.
+  // THE NUMBERED STEPS ARE THE COMMISSION, AND NOTHING OPTIONAL IS ONE OF THEM.
+  // «¿Qué se ha visto ya?» used to be the second of five — optional, three levels deep —
+  // in front of «¿Qué hay que practicar?», which is the only required answer and the whole
+  // reason for the screen. Both optional questions live in «Ajustes» now, folded, and the
+  // numbers describe the commission: modality if there is a choice, concepts, and the
+  // fields the profile leaves to whoever asks.
   const steps = [
     types.length > 1 ? "itemType" : null,
-    "curriculum",
     "concepts",
     chosen && decided.length > 0 ? "decisions" : null,
-    chosen ? "instructions" : null,
   ].filter((id): id is string => id !== null);
 
   const openStep = open === undefined ? steps[0] : open;
@@ -465,27 +473,45 @@ export function GenerateForm({
     advance("itemType");
   };
 
+  // Concepts that the curriculum, once chosen, leaves out. With the curriculum asked
+  // BEFORE the concepts this could not happen — the selector restricted what was on offer
+  // — and asking it after is what makes it possible. It is a correction and not a wall:
+  // the launch button still refuses, and the offer to drop them is one click.
+  const outsideCurriculum = useMemo(() => {
+    if (!activeCurriculum) return [];
+    const inside = new Set(activeCurriculum);
+    return state.concepts.filter((c) => !inside.has(c));
+  }, [activeCurriculum, state.concepts]);
+
   // Same rules the generator enforces server-side; failing here is just faster.
   const problems = useMemo(() => {
     const found: string[] = [];
     if (types.length > 1 && !typeKey) found.push(t("form.problem.itemType"));
     if (state.concepts.length === 0) found.push(t("form.problem.concepts"));
-    if (activeCurriculum) {
-      const inside = new Set(activeCurriculum);
-      const outside = state.concepts.filter((c) => !inside.has(c));
-      if (outside.length > 0)
-        found.push(t("form.problem.outside", { names: outside.join(", ") }));
-    }
+    // Este entra en la lista para que el botón se niegue, pero NO se imprime: el aviso
+    // de «Ajustes» dice lo mismo y además ofrece las dos formas de arreglarlo, así que
+    // repetirlo junto al botón es el mismo error dos veces en la misma pantalla.
+    if (outsideCurriculum.length > 0) found.push(SILENT_OUTSIDE);
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
       found.push(t("form.problem.tooLong", { max: MAX_INSTRUCTIONS }));
     return found;
-  }, [types.length, typeKey, state.concepts, activeCurriculum, state.instructions, t]);
+  }, [types.length, typeKey, state.concepts, outsideCurriculum, state.instructions, t]);
 
   const decisionSummary = decided
     .map((field) => describeDecision(field, state.decisions[field], t))
     .join(" · ");
 
   const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null, tr);
+
+  // What «Ajustes» says while it is shut: nothing set reads as «nada»; anything set is
+  // named, because a disclosure that hides a decision without saying so is where a
+  // curriculum goes to be forgotten.
+  const settingsSummary = (() => {
+    const parts: string[] = [];
+    if (state.useCurriculum && activeCurriculum) parts.push(curriculumSummary);
+    if (state.instructions.trim()) parts.push(t("form.settings.withInstructions"));
+    return parts.length > 0 ? parts.join(" · ") : t("form.settings.none");
+  })();
 
   const filterLabel = exemplarType
     ? t("form.filter.ofType", { type: typeLabel })
@@ -538,59 +564,6 @@ export function GenerateForm({
           </div>
         </FormStep>
       ) : null}
-
-      <FormStep
-        index={++index}
-        title={t("form.taught.title")}
-        hint={t("form.taught.hint")}
-        optional
-        answered={state.useCurriculum && Boolean(activeCurriculum)}
-        summary={curriculumSummary}
-        {...step("curriculum")}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <Switch
-            checked={state.useCurriculum}
-            onCheckedChange={(useCurriculum) => {
-              patch({ useCurriculum });
-              // Only switching it OFF closes the question. On, it opens the two below.
-              if (!useCurriculum) advance("curriculum");
-            }}
-          >
-            <span className="text-body font-medium">{t("form.taught.restrict")}</span>
-          </Switch>
-        </div>
-
-        {state.useCurriculum ? (
-          <div className="ml-6 space-y-2">
-            {preset && preset.concepts.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Switch
-                  checked={state.usePresetCurriculum}
-                  onCheckedChange={(usePresetCurriculum) => {
-                    patch({ usePresetCurriculum });
-                    // Taking the preset decides the whole curriculum; refusing it uncovers
-                    // the button that picks one by hand, so only the first way is an answer.
-                    if (usePresetCurriculum) advance("curriculum");
-                  }}
-                >
-                  <span className="text-body">
-                    {t("form.taught.usePreset", { n: preset.concepts.length })}
-                  </span>
-                </Switch>
-              </div>
-            ) : (
-              <p className="text-small text-muted-foreground">{t("form.taught.noPreset")}</p>
-            )}
-            {!state.usePresetCurriculum || !preset?.concepts.length ? (
-              <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
-                <ListChecks />
-                {t("form.taught.pick", { n: state.curriculum.length })}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </FormStep>
 
       <FormStep
         index={++index}
@@ -721,73 +694,154 @@ export function GenerateForm({
       ) : null}
 
 
+      {/* AJUSTES: LO OPCIONAL, PLEGADO Y DESPUÉS DE LO OBLIGATORIO.
+
+          El currículo era el paso 2 de 5 — opcional, con tres niveles anidados — y
+          estaba delante de «¿Qué hay que practicar?», que es el único obligatorio y el
+          motivo de la pantalla. Quien solo quiere dos ejercicios de recursividad tenía
+          que leer y descartar una pregunta de tres niveles antes de llegar a la suya.
+
+          No desaparece nada: los dos siguen aquí, con las mismas preguntas y el mismo
+          estado, detrás de una divulgación que dice cuántos hay puestos. Y el currículo
+          aplicado DESPUÉS ya no puede restringir el selector, así que `problems` avisa
+          de los conceptos que quedan fuera y ofrece quitarlos de un clic. */}
       {chosen ? (
-        <FormStep
-          index={++index}
-          title={t("form.instructions.title")}
-          hint={t("form.instructions.hint")}
-          optional
-          answered={state.instructions.trim().length > 0}
-          summary={state.instructions.trim() || t("form.instructions.none")}
-          {...step("instructions")}
-        >
-          <Textarea
-            aria-label={t("form.instructions.title")}
-            value={state.instructions}
-            maxLength={MAX_INSTRUCTIONS}
-            placeholder={t("form.instructions.placeholder")}
-            onChange={(event) => patch({ instructions: event.target.value })}
-            className={cn("min-h-20", blockedInstructions && "border-destructive")}
-          />
-          <div className="flex items-center gap-2">
-            <span className="ml-auto text-small nums text-muted-foreground">
-              {state.instructions.length}/{MAX_INSTRUCTIONS}
+        <details className="group rounded-xl border border-transparent open:border-border open:bg-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Sliders className="size-3.5" />
             </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-body font-medium">{t("form.settings.title")}</span>
+              <span className="mt-0.5 block truncate text-small text-muted-foreground">
+                {settingsSummary}
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+          </summary>
+          <div className="space-y-4 px-3 pb-3">
+          <div className="space-y-2">
+            <p className="text-body font-medium">{t("form.taught.title")}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Switch
+              checked={state.useCurriculum}
+              onCheckedChange={(useCurriculum) => {
+                patch({ useCurriculum });
+              }}
+            >
+              <span className="text-body font-medium">{t("form.taught.restrict")}</span>
+            </Switch>
           </div>
 
-          {scope.data ? (
-            <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-small">
-              <div>
-                <span className="font-medium">{t("form.scope.canAsk")}</span>
-                <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                  {scope.data.slots.map((slot) => (
-                    <li key={slot.key}>
-                      {slot.label} — <span className="italic">«{slot.example}»</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {scope.data.owners.length > 0 ? (
+          {state.useCurriculum ? (
+            <div className="ml-6 space-y-2">
+              {preset && preset.concepts.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Switch
+                    checked={state.usePresetCurriculum}
+                    onCheckedChange={(usePresetCurriculum) => {
+                      patch({ usePresetCurriculum });
+                    }}
+                  >
+                    <span className="text-body">
+                      {t("form.taught.usePreset", { n: preset.concepts.length })}
+                    </span>
+                  </Switch>
+                </div>
+              ) : (
+                <p className="text-small text-muted-foreground">{t("form.taught.noPreset")}</p>
+              )}
+              {!state.usePresetCurriculum || !preset?.concepts.length ? (
+                <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
+                  <ListChecks />
+                  {t("form.taught.pick", { n: state.curriculum.length })}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          </div>
+          <div className="space-y-2">
+            <p className="text-body font-medium">{t("form.instructions.title")}</p>
+            <Textarea
+              aria-label={t("form.instructions.title")}
+              value={state.instructions}
+              maxLength={MAX_INSTRUCTIONS}
+              placeholder={t("form.instructions.placeholder")}
+              onChange={(event) => patch({ instructions: event.target.value })}
+              className={cn("min-h-20", blockedInstructions && "border-destructive")}
+            />
+            <div className="flex items-center gap-2">
+              <span className="ml-auto text-small nums text-muted-foreground">
+                {state.instructions.length}/{MAX_INSTRUCTIONS}
+              </span>
+            </div>
+
+            {scope.data ? (
+              <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-small">
                 <div>
-                  <span className="font-medium">{t("form.scope.decidedAbove")}</span>
+                  <span className="font-medium">{t("form.scope.canAsk")}</span>
                   <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                    {scope.data.owners.map((owner) => (
-                      <li key={owner.key}>
-                        {owner.label} — {owner.where}
+                    {scope.data.slots.map((slot) => (
+                      <li key={slot.key}>
+                        {slot.label} — <span className="italic">«{slot.example}»</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-              ) : null}
-              {scope.data.facts.length > 0 ? (
-                <div>
-                  <span className="font-medium">{t("form.scope.subjectFixes")}</span>
-                  <p className="mt-1 text-muted-foreground">
-                    {scope.data.facts.map((fact) => fact.value).join(" · ")}
-                  </p>
+                {scope.data.owners.length > 0 ? (
+                  <div>
+                    <span className="font-medium">{t("form.scope.decidedAbove")}</span>
+                    <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                      {scope.data.owners.map((owner) => (
+                        <li key={owner.key}>
+                          {owner.label} — {owner.where}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {scope.data.facts.length > 0 ? (
+                  <div>
+                    <span className="font-medium">{t("form.scope.subjectFixes")}</span>
+                    <p className="mt-1 text-muted-foreground">
+                      {scope.data.facts.map((fact) => fact.value).join(" · ")}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {blockedInstructions ? (
+              <Alert tone="danger" title={t("form.instructions.blocked")}>
+                <p>{blockedInstructions}</p>
+              </Alert>
+            ) : null}
+          </div>
+            {/* La corrección, no el muro: el botón de lanzar ya se niega, y aquí está la
+                forma de arreglarlo sin volver al selector. */}
+            {outsideCurriculum.length > 0 ? (
+              <Alert tone="attention" title={t("form.outside.title")}>
+                <p>{t("form.outside.body", { names: outsideCurriculum.join(", ") })}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const drop = new Set(outsideCurriculum);
+                      patch({ concepts: state.concepts.filter((c) => !drop.has(c)) });
+                    }}
+                  >
+                    {plural("form.outside.drop", outsideCurriculum.length)}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => patch({ useCurriculum: false })}>
+                    {t("form.outside.lift")}
+                  </Button>
                 </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {blockedInstructions ? (
-            <Alert tone="danger" title={t("form.instructions.blocked")}>
-              <p>{blockedInstructions}</p>
-            </Alert>
-          ) : null}
-        </FormStep>
+              </Alert>
+            ) : null}
+          </div>
+        </details>
       ) : null}
-
       {chosen ? (
         <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
           {variant === "generate" ? (
@@ -874,11 +928,13 @@ export function GenerateForm({
 
           {footnote}
 
-          {problems.length > 0 ? (
+          {problems.some((p) => p !== SILENT_OUTSIDE) ? (
             <ul className="space-y-1 text-small text-destructive">
-              {problems.map((problem) => (
-                <li key={problem}>· {problem}</li>
-              ))}
+              {problems
+                .filter((problem) => problem !== SILENT_OUTSIDE)
+                .map((problem) => (
+                  <li key={problem}>· {problem}</li>
+                ))}
             </ul>
           ) : null}
 
@@ -947,10 +1003,7 @@ export function GenerateForm({
         showExemplarCount={false}
         open={picking === "curriculum"}
         onClose={() => setPicking(null)}
-        onConfirm={() => {
-          setPicking(null);
-          advance("curriculum");
-        }}
+        onConfirm={() => setPicking(null)}
         confirmLabel={t("form.confirmContinue")}
       />
     </div>
