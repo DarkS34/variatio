@@ -247,8 +247,18 @@ def remove_edge(body: EdgeBody, access: auth.Access = auth.VIEW) -> dict:
 
 @router.get("/curriculum")
 def read_curriculum(access: auth.Access = auth.VIEW) -> dict:
-    """Answer what the course has covered, partitioned against the current graph."""
-    graph = kg_edit.load_graph(access.ws)
+    """Answer what the course has covered, partitioned against the current graph.
+
+    404 and not 500 when there is no graph yet, which is the same answer its two sibling
+    reads give: `load_graph` raises `KGError` there, and this route was the only one of the
+    three not catching it. Measured on a workspace whose graph has not been built — the
+    generate form reads this endpoint on every visit, so the state a new workspace starts
+    in put an ASGI traceback in the log on each one.
+    """
+    try:
+        graph = kg_edit.load_graph(access.ws)
+    except KGError as exc:
+        raise HTTPException(404, str(exc)) from exc
     return curriculum.load(access.ws, graph)
 
 

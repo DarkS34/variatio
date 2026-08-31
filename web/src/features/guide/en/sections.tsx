@@ -1118,24 +1118,16 @@ function Generate() {
 
       <Block title="Which model writes it">
         <Paragraph>
-          Right above the reasoning sits «{t("form.model.title")}», holding the models this
-          installation offers. They are not interchangeable and each card says how: one writes
-          an exercise in seconds and the other takes minutes, in exchange for possibly coming out
-          better. Every card links to that model's own page if you want to read the rest.
+          You do not choose it, and that is deliberate: the installation does. Whoever
+          administers it sets the list in «Configuration → Offered models», and the first of
+          that list is what writes everything asked for here.
         </Paragraph>
         <Paragraph>
-          It is chosen <em>before</em> the effort because the effort depends on it: how many
-          levels there are, and which one is worth avoiding, is the model's business. Whichever
-          is selected is stored with the variant and shown later in «{t("menu.savedVariants")}»,
-          which is what lets two statements be compared knowing what wrote them.
+          Its name still appears, beside the effort bar, because that is what the effort
+          applies to: how many levels there are, and which one is worth avoiding, is the
+          model's business. And it is stored with every variant, so in
+          «{t("menu.savedVariants")}» you can compare two statements knowing what wrote each.
         </Paragraph>
-        <Alert tone="settled" title="With only one, there is nothing to choose">
-          <p>
-            Whoever administers the installation decides the list in «Configuration → Offered
-            models». With a single model offered the choice is not drawn at all, and the name of
-            the one about to write appears beside the effort bar.
-          </p>
-        </Alert>
       </Block>
 
       <Block title="Reasoning and effort">

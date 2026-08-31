@@ -1,7 +1,8 @@
-import { Clock, EyeOff, Lock, Plus, Scale } from "lucide-react";
+import { Clock, EyeOff, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
@@ -305,17 +306,7 @@ export function EvaluationScreen() {
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="attention" title={t("eval.blocked")}>
-          <p className="flex items-center gap-1.5">
-            <Lock className="size-3.5" />
-            {t("eval.notApproved", {
-              stages: (pipeline.data?.stages ?? [])
-                .filter((s) => s.status !== "approved")
-                .map((s) => s.label)
-                .join(", "),
-            })}
-          </p>
-        </Alert>
+        <ChainGate title={t("eval.blocked")} stages={pipeline.data?.stages ?? []} />
       ) : null}
 
       {status === "failed" && !blocked ? (

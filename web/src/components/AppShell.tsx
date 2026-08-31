@@ -65,18 +65,25 @@ const STATE_KEY: Record<StepState, Key> = {
  * graph is starting at a stage you cannot finish.
  */
 /**
- * The step's number, or a tick once it is behind you.
+ * The step's number, or a bare tick once it is behind you.
  *
  * A square and not a circle, because `--radius` is 0 and the corner is where this grid
- * either holds or does not. The three fills are the palette's own frontier and not a
- * traffic light: settled, attention, and an outline for what is not reachable yet.
+ * either holds or does not. The fills are the palette's own frontier and not a traffic
+ * light: attention for where you act, an outline for what is not reachable yet.
+ *
+ * A DONE STEP CARRIES NO BOX AT ALL (2026-09-01, explicit user request). It used to be a
+ * filled `--settled` square with a white tick, which drew the eye to the three stops
+ * there is nothing left to do on — the loudest mark on the bar sat on the finished work.
+ * The tick alone says the same thing and recedes, which is what «behind you, resolved» is
+ * supposed to look like. The 22 px box stays as empty space so the four names still line
+ * up on one column.
  */
 function StepCounter({ state, n }: { state: StepState; n: number }) {
   const box = "flex size-[22px] shrink-0 items-center justify-center";
   if (state === "done") {
     return (
-      <span className={cn(box, "bg-settled text-card")}>
-        <Check className="size-3" strokeWidth={3} />
+      <span className={cn(box, "text-settled")}>
+        <Check className="size-4" strokeWidth={3} />
       </span>
     );
   }

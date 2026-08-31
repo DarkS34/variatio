@@ -1098,25 +1098,16 @@ function Generate() {
 
       <Block title="Qué modelo lo escribe">
         <Paragraph>
-          Justo encima del razonamiento aparece «{t("form.model.title")}», con los modelos que
-          la instalación ofrece. No son intercambiables y la tarjeta de cada uno dice en qué:
-          uno escribe un ejercicio en segundos y el otro tarda minutos, a cambio de que sea posible
-          que salga mejor. Cada tarjeta enlaza a la ficha del modelo por si quieres leer el
-          resto.
+          No lo eliges tú, y es a propósito: lo decide la instalación. Quien la administra lo
+          fija en «Configuración → Modelos ofrecidos», y el primero de esa lista es el que
+          escribe todo lo que se pide desde aquí.
         </Paragraph>
         <Paragraph>
-          Se elige <em>antes</em> que el esfuerzo porque el esfuerzo depende de él: cuántos
-          niveles hay, y cuál conviene evitar, es cosa del modelo. El que quede marcado se
-          guarda con la variante y se ve luego en «{t("menu.savedVariants")}», que es lo que
-          permite comparar dos enunciados sabiendo qué los escribió.
+          El nombre aparece igualmente, junto a la barra de esfuerzo, porque es a lo que se
+          aplica ese esfuerzo: cuántos niveles hay, y cuál conviene evitar, es cosa del modelo.
+          Y queda guardado con cada variante, así que en «{t("menu.savedVariants")}» puedes
+          comparar dos enunciados sabiendo qué escribió cada uno.
         </Paragraph>
-        <Alert tone="settled" title="Si solo hay uno, no hay nada que elegir">
-          <p>
-            Quién administra la instalación decide la lista en «Configuración → Modelos
-            ofrecidos». Con un solo modelo ofrecido la elección no se dibuja y el nombre del
-            que va a escribir aparece junto a la barra de esfuerzo.
-          </p>
-        </Alert>
       </Block>
 
       <Block title="Razonamiento y esfuerzo">

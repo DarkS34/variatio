@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
+import { InfoHint } from "@/components/ui/hint";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
@@ -41,8 +42,6 @@ import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
 import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effort";
 import { EffortSlider } from "./EffortSlider";
-import { ModelChoice } from "./ModelChoice";
-import { modelLabel } from "./models";
 import { FormStep } from "./FormStep";
 import { adjacency, posteriors, priors } from "./prerequisites";
 import { CancelButton } from "@/components/CancelButton";
@@ -114,7 +113,6 @@ export function summarize(
   const label = curriculumLabel(state, null, tr);
   parts.push(label.charAt(0).toLowerCase() + label.slice(1));
   if (state.instructions.trim()) parts.push(t("form.summary.withInstructions"));
-  if (state.model) parts.push(modelLabel(state.model));
   if (!state.think) parts.push(t("form.summary.noReasoning"));
   else if (state.effort !== "low")
     parts.push(
@@ -336,30 +334,18 @@ export function GenerateForm({
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
-  // Which model writes the item is the commission's since 2026-08-29, and it decides which
-  // effort levels make sense and what to warn about: `models.ts` is where a model gets its
-  // entry. Read defensively — an API older than this bundle sends no `offered`, and the
-  // screen degrades to «the installation decides» instead of blanking.
+  // WHICH MODEL WRITES IT IS NOT ASKED HERE ANY MORE (2026-09-01, explicit user request),
+  // but it is still READ: which effort levels a family implements, and which of them is
+  // worth a warning, are properties of the model, so the slider has to know what it is
+  // sizing itself against. It is the first of `generation.models`, which is exactly what
+  // the server resolves an absent `model` to. Read defensively — an API older than this
+  // bundle sends no `offered`, and the slider degrades to the full scale.
   const health = useHealth();
   const offered = health.data?.models.offered ?? NONE;
-  const remoteModels = health.data?.models.remote ?? NONE;
-  const missingModels = health.data?.models.missing ?? NONE;
-  // The first offered one is what the server resolves an absent `model` to, so it is what
-  // the screen has to name while nobody has chosen. A stored choice the installation has
-  // stopped offering is not one: the panel edits that list while this form is open.
-  const generationModel =
-    state.model && offered.includes(state.model) ? state.model : offered[0];
+  const generationModel = offered[0];
   const policy = effortPolicy(generationModel);
   const effort = clampEffort(state.effort, policy);
   const warning = effortWarning(effort, policy);
-
-  // Same reconciliation the curriculum preset gets, and for the same reason: a value the
-  // form can no longer show must not be what the request carries.
-  useEffect(() => {
-    if (state.model && offered.length > 0 && !offered.includes(state.model)) {
-      patch({ model: null });
-    }
-  }, [state.model, offered]);
 
   // The curriculum that will actually be in force, resolved exactly as the server resolves
   // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
@@ -519,8 +505,25 @@ export function GenerateForm({
 
   let index = 0;
 
+  // THE FORM IS A SURFACE OF ITS OWN, AND NARROWER THAN THE PAGE (2026-09-01, explicit
+  // user request). It used to be a bare `space-y-1` on the page's own ground, so the only
+  // thing separating «the questions you answer» from «the header, the alerts and the
+  // results» was vertical space. One step of tint plus a border says it in both themes —
+  // `--muted` is BELOW `--background` in light and ABOVE it in dark — and it costs
+  // nothing, because the open step is `bg-card` and now reads as a card ON something
+  // rather than a card on the page.
+  //
+  // The width is here and NOT on the screens' own column: `max-w-4xl` there is the
+  // reading width of a generated statement with a block of code in it, which is a
+  // different measurement from the reading width of a question with three options. Both
+  // screens that draw this form get the narrowing from one place.
   return (
-    <div className={cn("space-y-1", disabled && "pointer-events-none opacity-50")}>
+    <div
+      className={cn(
+        "mx-auto w-full max-w-3xl space-y-1 border border-border bg-muted/60 p-3",
+        disabled && "pointer-events-none opacity-50",
+      )}
+    >
       {types.length > 1 ? (
         <FormStep
           index={++index}
@@ -761,7 +764,52 @@ export function GenerateForm({
           ) : null}
           </div>
           <div className="space-y-2">
-            <p className="text-body font-medium">{t("form.instructions.title")}</p>
+            {/* THE CATALOGUE IS BEHIND THE (i) (2026-09-01, explicit user request).
+                What the free text may legitimately ask for — the four slots, the controls
+                that already decide the rest, and the three facts the subject fixes — is a
+                dozen lines of derived prose, and it sat UNDER the box as a permanent block
+                twice the height of the field it explains. It is read once, which is what
+                the hint is for; and it belongs beside the label rather than under the box,
+                because it answers «what do I write here», not «what did I write». */}
+            <div className="flex items-center gap-1.5">
+              <p className="text-body font-medium">{t("form.instructions.title")}</p>
+              {scope.data ? (
+                <InfoHint label={t("form.instructions.title")}>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium">{t("form.scope.canAsk")}</span>
+                      <ul className="mt-1 space-y-0.5">
+                        {scope.data.slots.map((slot) => (
+                          <li key={slot.key}>
+                            {slot.label} — <span className="italic">«{slot.example}»</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {scope.data.owners.length > 0 ? (
+                      <div>
+                        <span className="font-medium">{t("form.scope.decidedAbove")}</span>
+                        <ul className="mt-1 space-y-0.5">
+                          {scope.data.owners.map((owner) => (
+                            <li key={owner.key}>
+                              {owner.label} — {owner.where}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {scope.data.facts.length > 0 ? (
+                      <div>
+                        <span className="font-medium">{t("form.scope.subjectFixes")}</span>
+                        <p className="mt-1">
+                          {scope.data.facts.map((fact) => fact.value).join(" · ")}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                </InfoHint>
+              ) : null}
+            </div>
             <Textarea
               aria-label={t("form.instructions.title")}
               value={state.instructions}
@@ -775,41 +823,6 @@ export function GenerateForm({
                 {state.instructions.length}/{MAX_INSTRUCTIONS}
               </span>
             </div>
-
-            {scope.data ? (
-              <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-small">
-                <div>
-                  <span className="font-medium">{t("form.scope.canAsk")}</span>
-                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                    {scope.data.slots.map((slot) => (
-                      <li key={slot.key}>
-                        {slot.label} — <span className="italic">«{slot.example}»</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {scope.data.owners.length > 0 ? (
-                  <div>
-                    <span className="font-medium">{t("form.scope.decidedAbove")}</span>
-                    <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                      {scope.data.owners.map((owner) => (
-                        <li key={owner.key}>
-                          {owner.label} — {owner.where}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {scope.data.facts.length > 0 ? (
-                  <div>
-                    <span className="font-medium">{t("form.scope.subjectFixes")}</span>
-                    <p className="mt-1 text-muted-foreground">
-                      {scope.data.facts.map((fact) => fact.value).join(" · ")}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
 
             {blockedInstructions ? (
               <Alert tone="danger" title={t("form.instructions.blocked")}>
@@ -854,18 +867,6 @@ export function GenerateForm({
             </div>
           ) : null}
 
-          {/* Before the effort and not after it: which levels exist, and what is worth
-              warning about at each, are properties of the model that was just chosen. */}
-          {variant === "generate" ? (
-            <ModelChoice
-              offered={offered}
-              remote={remoteModels}
-              missing={missingModels}
-              value={generationModel ?? ""}
-              onChange={(model) => patch({ model })}
-            />
-          ) : null}
-
           {/* In comparison there is no switch on purpose: the reasoning mode is what is measured
               there, so the session draws it. Saying so here keeps the control's absence from reading
               as a missing checkbox. */}
@@ -897,10 +898,9 @@ export function GenerateForm({
                     value={effort}
                     onChange={(level) => patch({ effort: level })}
                   />
-                  {/* Only when the chooser above is not drawn: with two models on offer
-                      the card that is selected already names this one, and the two would
-                      be the same string a centimetre apart. */}
-                  {generationModel && offered.length < 2 ? (
+                  {/* The one place the writer is named at all, now that nobody picks it.
+                      It is not a control: it is what the effort beside it applies to. */}
+                  {generationModel ? (
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {generationModel}
                     </span>

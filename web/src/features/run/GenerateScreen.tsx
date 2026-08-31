@@ -1,9 +1,10 @@
-import { Copy, Download, Eraser, Lock, Pencil, Sparkles } from "lucide-react";
+import { Copy, Download, Eraser, Pencil, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
@@ -244,16 +245,7 @@ export function GenerateScreen() {
       ) : null}
 
       {!unlocked ? (
-        <Alert tone="attention" title={t("generate.blocked")}>
-          <p className="flex items-center gap-1.5">
-            <Lock className="size-3.5" />
-            {t("generate.notApproved")}{" "}
-            {(pipeline.data?.stages ?? [])
-              .filter((s) => s.status !== "approved")
-              .map((s) => s.label)
-              .join(", ")}
-          </p>
-        </Alert>
+        <ChainGate title={t("generate.blocked")} stages={pipeline.data?.stages ?? []} />
       ) : null}
 
       {status === "failed" && !blocked ? (
