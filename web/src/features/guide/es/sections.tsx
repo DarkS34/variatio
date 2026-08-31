@@ -1,21 +1,15 @@
-import { Activity, Files, Play, Scale, type LucideIcon } from "lucide-react";
+import { Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
-import { Rail, type RailStop } from "@/components/ui/rail";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
+import { STEPS } from "@/lib/steps";
 import { useT, type Translate } from "@/lib/i18n";
 import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
-
-const chain = (tr: Translate): RailStop[] => [
-  { key: "perfil", label: tr.t("nav.profile"), status: "approved" },
-  { key: "grafo", label: tr.t("nav.graph"), status: "approved" },
-  { key: "banco", label: tr.t("nav.bank"), status: "approved" },
-];
 
 const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "missing", "blocked"];
 
@@ -33,7 +27,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
 const ARM_ORDER = ["naive", "rag", "system"] as const;
 
 /**
- * El plan real del constructor del grafo, leído de la API como lo lee el panel.
+ * El plan real del constructor del temario, leído de la API como lo lee el panel.
  *
  * Estuvo copiado a mano en este fichero y se quedó atrás: dibujaba la conversión al 10 %
  * cuando pesa un tercio, y no dibujaba la fase de contexto en absoluto. La guía lee las
@@ -68,7 +62,7 @@ function Start() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.start")}>
         <p>
-          <strong>Variatio</strong> genera <strong>ítems de aprendizaje</strong> —ejercicios,
+          <strong>Variatio</strong> genera <strong>ejercicios de aprendizaje</strong> —ejercicios,
           problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
           en abstracto: parte de tres artefactos que describen tu asignatura y produce variantes
           que respetan lo que el alumno ya ha visto y lo que todavía no.
@@ -76,44 +70,24 @@ function Start() {
       </SectionHead>
 
       <Block title="El recorrido, de un vistazo">
-        <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4 sm:gap-6 sm:p-6">
-          <div className="flex flex-col items-center gap-2">
-            <Pill icon={Activity} label={t("nav.dashboard")} />
-            <span className="text-small text-muted-foreground">observar</span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex flex-col items-center gap-2">
-            <Pill icon={Files} label={t("nav.rawData")} />
-            <span className="text-small text-muted-foreground">de qué está hecha</span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-2 sm:w-auto sm:min-w-[20rem]">
-            <Rail stops={chain(tr)} className="max-w-[26rem]" />
-            <span className="text-small text-muted-foreground">
-              preparar la instancia, en este orden
-            </span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex gap-1.5">
-              <Pill icon={Play} label={t("nav.generate")} />
-              <Pill icon={Scale} label={t("nav.evaluate")} tone="study" />
+        {/* Es la barra de arriba, dibujada aquí: cuatro pasos numerados y las dos cosas que
+            se hacen con lo que producen. El raíl que había antes se fue con el panel — lo
+            que codificaba, la dependencia entre etapas, lo dicen ahora los números. */}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+          {STEPS.map((step, index) => (
+            <div key={step.path} className="flex items-center gap-2">
+              <span className="nums flex size-6 shrink-0 items-center justify-center bg-primary font-condensed text-small font-semibold text-primary-foreground">
+                {index + 1}
+              </span>
+              <span className="text-body font-medium">{t(step.labelKey)}</span>
             </div>
-            <span className="text-small text-muted-foreground">usar lo preparado</span>
-          </div>
+          ))}
+          <span aria-hidden className="mx-1 h-6 w-px bg-border" />
+          <Pill icon={Play} label={t("nav.create")} />
+          <Pill icon={Scale} label={t("nav.compare")} tone="study" />
         </div>
         <Paragraph>
-          Es exactamente la barra de arriba, con sus cuatro bloques. La línea entre las tres
-          etapas del centro no es adorno: significa dependencia, y se dibuja punteada mientras
-          lo de detrás no esté resuelto. Los otros tres bloques no son etapas y por eso son
-          píldoras sueltas —el panel mira la cadena desde fuera, los datos en bruto la
-          alimentan sin ser un paso de ella, y las dos últimas consumen lo que produce.
+          Es exactamente la barra de arriba. Los cuatro pasos se hacen en ese orden y cada uno lleva debajo una palabra diciendo dónde estás: <em>hecho</em>, <em>te toca ahora</em> o <em>después</em>. Las dos píldoras de la derecha no son pasos: son lo que se hace con lo que los pasos producen, y se abren cuando los cuatro están dados.
         </Paragraph>
       </Block>
 
@@ -122,25 +96,25 @@ function Start() {
           {
             key: "perfil",
             head: t("artifact.profile"),
-            body: "Qué es un ítem aquí: sus campos, sus tipos y las guías que el modelo sigue.",
+            body: "Qué es un ejercicio aquí: sus campos, sus tipos y las guías que el modelo sigue.",
           },
           {
-            key: "grafo",
+            key: "temario",
             head: t("artifact.graph"),
             body: "El vocabulario: conceptos, dominios y las relaciones entre ellos.",
           },
           {
             key: "banco",
             head: t("artifact.bank"),
-            body: "Ítems reales de tu asignatura, ya etiquetados con conceptos del grafo.",
+            body: "Ejercicios reales de tu asignatura, ya etiquetados con conceptos del temario.",
           },
         ]}
       />
 
-      <Alert tone="info" title="Se empieza por el perfil, no por el grafo">
+      <Alert tone="info" title="Se empieza por el perfil, no por el temario">
         <p>
-          Un grafo se puede construir sin nada más, pero su revisión de etiquetabilidad necesita
-          el perfil <em>aprobado</em>. Empezar por el grafo es empezar por una etapa que no
+          Un temario se puede construir sin nada más, pero su revisión de qué conceptos sirven de etiqueta necesita
+          el perfil <em>aprobado</em>. Empezar por el temario es empezar por una etapa que no
           puedes terminar.
         </p>
       </Alert>
@@ -168,15 +142,15 @@ function Start() {
               Construye el <strong>perfil</strong>, revísalo campo a campo y apruébalo.
             </>,
             <>
-              Lanza el <strong>grafo</strong>. Es el trabajo más caro de la cadena: puedes
+              Lanza el <strong>temario</strong>. Es el trabajo más caro de la cadena: puedes
               cerrar la pestaña, el servidor sigue.
             </>,
             <>
-              Revisa la <strong>etiquetabilidad</strong> y las <strong>descripciones</strong> del
-              grafo, y apruébalo.
+              Marca <strong>qué conceptos sirven de etiqueta</strong>, repasa las
+              <strong> descripciones</strong> y apruébalo.
             </>,
             <>
-              Extrae el <strong>banco</strong>, repasa los ítems que se quedaron sin concepto y
+              Extrae el <strong>banco</strong>, repasa los ejercicios que se quedaron sin concepto y
               apruébalo.
             </>,
             <>
@@ -257,7 +231,7 @@ function Workspace() {
           Al crear un workspace eliges en qué idioma se le habla al modelo durante toda la
           construcción de esa instancia. <strong>No se puede cambiar después</strong>, y no es
           una restricción caprichosa: las etiquetas de las relaciones se escriben dentro del
-          propio grafo y el cargador indexa por ellas, así que el idioma queda cocido en los
+          propio temario y el cargador indexa por ellas, así que el idioma queda cocido en los
           artefactos desde la primera construcción. El formulario de creación lo dice ahí
           mismo.
         </Paragraph>
@@ -303,7 +277,7 @@ function Workspace() {
       <Block title="El currículo">
         <Paragraph>
           Los conceptos que el curso <em>ya ha impartido</em>. Se edita en la pestaña «
-          {t("kg.tab.curriculum")}» del grafo y es lo que acota el andamiaje de cada generación: de un concepto impartido
+          {t("kg.tab.curriculum")}» del temario y es lo que acota el andamiaje de cada generación: de un concepto impartido
           el ejercicio puede apoyarse; de uno que aún no se ha dado, no puede depender.
         </Paragraph>
         <Alert tone="info" title="Vacío no significa «nada impartido»: significa «sin restricción»">
@@ -323,7 +297,7 @@ function Workspace() {
           que pone.
         </p>
         <p>
-          Si el grafo cambia y algún concepto guardado desaparece, la pantalla te lo dice por su
+          Si el temario cambia y algún concepto guardado desaparece, la pantalla te lo dice por su
           nombre en vez de dejarlo caer en silencio.
         </p>
       </Detail>
@@ -538,11 +512,57 @@ function Raw() {
         <p>
           La consecuencia se ve en la barra por fases que se explica en «
           {t("guide.sec.runs")}»: la conversión del corpus es hoy el tramo más ancho de la
-          construcción del grafo. Sacarla de ahí, y poder mirarla mientras tanto, es exactamente
+          construcción del temario. Sacarla de ahí, y poder mirarla mientras tanto, es exactamente
           para lo que existe esta pantalla.
         </p>
       </Detail>
     </div>
+  );
+}
+
+/**
+ * Cómo termina cada uno de los tres pasos. Es el mismo bloque en las tres secciones porque
+ * es la misma tarea: la única diferencia son las preguntas, que las escribe el servidor.
+ */
+function Verdict() {
+  return (
+    <Block title="Cómo se cierra este paso">
+      <Paragraph>
+        A la derecha de lo que has construido hay un cuestionario corto sobre qué tal ha
+        salido. Las preguntas cambian según el paso, pero dos son siempre las mismas —cuánto
+        tendrías que corregir para poder usarlo, y del 1 al 5 en conjunto—, y son las que
+        permiten comparar un paso con otro.
+      </Paragraph>
+      <Steps
+        items={[
+          <>
+            Mira lo que hay a la izquierda. No hace falta leerlo entero: lo que se pregunta
+            es si te suena a tu asignatura.
+          </>,
+          <>
+            Contesta las preguntas y guarda. Puedes dejarlas a medias y volver: media
+            respuesta también es un dato.
+          </>,
+          <>
+            Al guardarlas aparece el paso siguiente. Corregir a mano lo de la izquierda
+            sigue disponible todo el tiempo, antes y después.
+          </>,
+        ]}
+      />
+      <Detail title="Qué se guarda exactamente">
+        <p>
+          Tus respuestas, con la <em>versión concreta</em> que juzgaste. Si vuelves a
+          construir el paso y lo valoras otra vez, no se sobrescribe: son dos datos, porque
+          «salió mal» y «lo rehíce y salió bien» son dos cosas distintas. Volver a contestar
+          sobre lo mismo sí corrige tu respuesta anterior.
+        </p>
+        <p>
+          Es lo único que te pedimos a cambio de usar esto, y es lo que se está midiendo:
+          sin ello no hay forma de saber si el sistema prepara bien una asignatura o solo lo
+          parece.
+        </p>
+      </Detail>
+    </Block>
   );
 }
 
@@ -552,7 +572,7 @@ function Profile() {
     <div className="space-y-6">
       <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 1`} title={t("guide.sec.profile")}>
         <p>
-          Define qué es un ítem: sus campos, sus tipos y las guías que el modelo sigue al
+          Define qué es un ejercicio: sus campos, sus tipos y las guías que el modelo sigue al
           extraerlos y al generarlos. Es la pieza que instancia el caso de uso — cambiar de
           perfil es cambiar de tipo de material, no de asignatura.
         </p>
@@ -567,7 +587,7 @@ function Profile() {
           { label: "Qué cuesta", value: "Una pasada larga sobre una muestra del corpus, no sobre todo." },
           {
             label: "Qué desbloquea",
-            value: "La extracción del banco y la revisión de etiquetabilidad del grafo.",
+            value: "Recoger los ejercicios y decidir qué conceptos del temario sirven de etiqueta.",
           },
         ]}
       />
@@ -583,11 +603,11 @@ function Profile() {
               Pulsa «Construir». Sale un <strong>borrador</strong>, no un resultado final.
             </>,
             <>
-              Repasa cada <strong>modalidad</strong> y, dentro de ella, cada campo: su nombre, su
+              Repasa cada <strong>tipo de ejercicio</strong> y, dentro de ella, cada campo: su nombre, su
               tipo, la descripción, la guía de extracción y quién decide su valor.
             </>,
             <>
-              Repasa las <strong>«{t("modality.rules")}»</strong> de cada modalidad: son lo único
+              Repasa las <strong>«{t("modality.rules")}»</strong> de cada tipo de ejercicio: son lo único
               que el perfil le dice al generador sobre la <em>forma</em> del ejercicio.
             </>,
             <>Aprueba. La etapa se cierra y la pantalla deja de ofrecer nada que la reescriba.</>,
@@ -601,11 +621,11 @@ function Profile() {
         </Paragraph>
       </Block>
 
-      <Block title="Las modalidades, y por qué se notan en todas partes">
+      <Block title="Las tipos de ejercicio, y por qué se notan en todas partes">
         <Paragraph>{t("modality.whatAre.body")}</Paragraph>
         <Paragraph>
-          Por eso la modalidad reaparece luego como columna y como filtro en el banco, y como
-          primera pregunta del formulario de generación. Un perfil con una sola modalidad no
+          Por eso la tipo de ejercicio reaparece luego como columna y como filtro en el banco, y como
+          primera pregunta del formulario de generación. Un perfil con una sola tipo de ejercicio no
           dibuja ninguno de los dos: un desplegable de una única opción no elige nada.
         </Paragraph>
       </Block>
@@ -657,7 +677,7 @@ function Profile() {
 
       <Alert tone="danger" title="Tocarlo después de extraer el banco lo invalida">
         <p>
-          Los ítems del banco se extrajeron contra el esquema anterior. Si cambias los campos, el
+          Los ejercicios del banco se extrajeron contra el esquema anterior. Si cambias los campos, el
           banco pasa a «Obsoleto» y hay que volver a extraerlo.
         </p>
       </Alert>
@@ -670,6 +690,7 @@ function Profile() {
         </p>
         <p>Si vuelves a construirlo, compáralo antes de sustituir el que ya tenías.</p>
       </Detail>
+      <Verdict />
     </div>
   );
 }
@@ -681,7 +702,7 @@ function Graph() {
       <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 2`} title={t("guide.sec.graph")}>
         <p>
           El vocabulario del sistema. Todo lo que se etiquete y se genere después sale de aquí:
-          ni el modelo ni tú podéis usar un concepto que no esté en el grafo.
+          ni el modelo ni tú podéis usar un concepto que no esté en el temario.
         </p>
       </SectionHead>
 
@@ -706,7 +727,7 @@ function Graph() {
             {
               key: "temario",
               head: t("kg.tab.graph"),
-              body: "Los dominios y sus conceptos, con el lienzo del grafo al lado. Las unidades vienen plegadas: ábrelas, o busca y se abren solas las que tengan resultados. Al pulsar un nodo se selecciona también en la tabla, abriendo su unidad.",
+              body: "Los dominios y sus conceptos, con el lienzo del temario al lado. Las unidades vienen plegadas: ábrelas, o busca y se abren solas las que tengan resultados. Al pulsar un nodo se selecciona también en la tabla, abriendo su unidad.",
             },
             {
               key: "descripciones",
@@ -739,9 +760,9 @@ function Graph() {
           agrupa cada concepto junto a aquellos con los que se relaciona, y{" "}
           <strong>«{t("canvas.layout.curriculum")}»</strong>, que ordena por niveles de
           prerrequisito. Cambiar de una a otra no reconstruye nada: los nodos se desplazan hasta
-          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un grafo
+          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario
           real reparte los prerrequisitos de forma muy desigual; si hay menos de tres niveles el
-          propio lienzo lo dice, porque eso es un dato sobre el grafo y no una vista rota.
+          propio lienzo lo dice, porque eso es un dato sobre el temario y no una vista rota.
         </Paragraph>
       </Block>
 
@@ -754,8 +775,8 @@ function Graph() {
                 <Badge variant="attention">necesita el perfil aprobado</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                Qué conceptos sirven de <em>etiqueta</em>. Los que valdrían para cualquier ítem
-                —«codificación», «diseño»— se marcan como no etiquetables: siguen existiendo y
+                Qué conceptos sirven de <em>etiqueta</em>. Los que valdrían para cualquier ejercicio
+                —«codificación», «diseño»— se marcan como que NO sirven de etiqueta: siguen existiendo y
                 siguen funcionando a través de sus relaciones, simplemente dejan de poder ser el
                 tema de un ejercicio. Ante la duda se excluye: una etiqueta vaga contamina el
                 corpus entero.
@@ -787,7 +808,7 @@ function Graph() {
           <p>
             Un nombre es una etiqueta de dos palabras y no dice nada de qué se practica al
             usarlo. Lo que se convierte en vector es la <em>descripción</em>, fundida con el
-            centro de los ítems del banco que ya llevan ese concepto.
+            centro de los ejercicios del banco que ya llevan ese concepto.
           </p>
           <p>
             Por eso una descripción mal escrita se paga en cada etiquetado y en cada generación,
@@ -797,7 +818,7 @@ function Graph() {
 
         <Detail title="Prerrequisitos: lo que se da por sabido y lo que se prohíbe">
           <p>
-            Alrededor de los conceptos que pides, el sistema deriva dos listas del grafo y las
+            Alrededor de los conceptos que pides, el sistema deriva dos listas del temario y las
             mete en el prompt:
           </p>
           <Rows
@@ -815,12 +836,13 @@ function Graph() {
             ]}
           />
           <p>
-            Las dos listas recorren el grafo entero, no un salto: son cierres transitivos
+            Las dos listas recorren el temario entero, no un salto: son cierres transitivos
             acotados por el currículo. En la pantalla de generación se dibujan antes de lanzar,
             para que veas exactamente con qué va a contar el modelo.
           </p>
         </Detail>
       </div>
+      <Verdict />
     </div>
   );
 }
@@ -831,7 +853,7 @@ function Bank() {
     <div className="space-y-6">
       <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 3`} title={t("guide.sec.bank")}>
         <p>
-          Los ítems extraídos de tus documentos y etiquetados con conceptos del grafo. Son los
+          Los ejercicios extraídos de tus documentos y etiquetados con conceptos del temario. Son los
           ejemplos que acompañan a cada generación: de aquí sale el «así se escriben los
           ejercicios en esta asignatura» que el modelo imita.
         </p>
@@ -862,7 +884,7 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "Cuántos ítems del banco llevan al menos un concepto. Es el trabajo de corrección que queda por delante, y lleva al lado los dos controles que actúan sobre ese mismo número.",
+              body: "Cuántos ejercicios del banco llevan al menos un concepto. Es el trabajo de corrección que queda por delante, y lleva al lado los dos controles que actúan sobre ese mismo número.",
             },
             {
               key: "cobertura",
@@ -878,7 +900,7 @@ function Bank() {
         />
         <Paragraph>
           Los dos primeros miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
-          <em>ítems sin concepto</em>, el otro <em>conceptos sin ítem</em>. Se puede tener el
+          <em>ejercicios sin concepto</em>, el otro <em>conceptos sin ejercicio</em>. Se puede tener el
           banco entero etiquetado y media asignatura sin un solo ejemplo que imitar.
         </Paragraph>
       </Block>
@@ -898,7 +920,7 @@ function Bank() {
             </>,
             <>
               Corrige el <strong>concepto primario</strong> a mano donde haga falta: es el que
-              decide con qué se compara ese ítem después.
+              decide con qué se compara ese ejercicio después.
             </>,
           ]}
         />
@@ -910,7 +932,7 @@ function Bank() {
             {
               key: "pendientes",
               head: <>«{t("bank.retagUntagged", { n: "N" })}»</>,
-              body: "Sin selección: se lanza sobre exactamente los ítems que se quedaron sin concepto, nunca sobre el banco entero. Está en la tira de medidores, al lado del número sobre el que actúa.",
+              body: "Sin selección: se lanza sobre exactamente los ejercicios que se quedaron sin concepto, nunca sobre el banco entero. Está en la tira de medidores, al lado del número sobre el que actúa.",
             },
             {
               key: "todo",
@@ -920,19 +942,19 @@ function Bank() {
             {
               key: "seleccion",
               head: <>«{t("bank.retagSelected")}»</>,
-              body: "Solo los ítems marcados a mano, aunque ya tuvieran concepto. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
+              body: "Solo los ejercicios marcados a mano, aunque ya tuvieran concepto. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
             },
           ]}
         />
       </Block>
 
-      <Block title="Encontrar un ítem concreto">
+      <Block title="Encontrar un ejercicio concreto">
         <Paragraph>
           Sobre la tabla hay cuatro filtros que se combinan: una <strong>búsqueda</strong> por
-          texto del enunciado o por id, la <strong>modalidad</strong> —las que declara tu
-          perfil, cada una con cuántos ítems tiene en todo el banco—, el{" "}
+          texto del enunciado o por id, la <strong>tipo de ejercicio</strong> —las que declara tu
+          perfil, cada una con cuántos ejercicios tiene en todo el banco—, el{" "}
           <strong>documento de origen</strong> y un interruptor de{" "}
-          <strong>«{t("bank.untagged")}»</strong>. Si tu perfil declara una sola modalidad, ese
+          <strong>«{t("bank.untagged")}»</strong>. Si tu perfil declara una sola tipo de ejercicio, ese
           desplegable no aparece: un menú con una única opción no filtra nada.
         </Paragraph>
         <Paragraph>
@@ -941,7 +963,7 @@ function Bank() {
           {t("bank.orderBySuspicion")}».
         </Paragraph>
         <Paragraph>
-          Filtrar por modalidad no ha movido nada del etiquetado por conceptos, que es el
+          Filtrar por tipo de ejercicio no ha movido nada del etiquetado por conceptos, que es el
           corazón del banco: los medidores, «{t("bank.seeUntagged", { n: "N" })}», los tres
           botones de re-etiquetar, la columna de conceptos y el selector de concepto principal
           del editor siguen exactamente donde estaban.
@@ -950,8 +972,8 @@ function Bank() {
 
       <Detail title="Reintentar tiene sentido: el índice mejora entre pasadas">
         <p>
-          Cada ítem bien etiquetado empuja el centro de su concepto hacia donde de verdad está,
-          así que el índice de una pasada lo consume la siguiente. Un ítem que hoy no encuentra
+          Cada ejercicio bien etiquetado empuja el centro de su concepto hacia donde de verdad está,
+          así que el índice de una pasada lo consume la siguiente. Un ejercicio que hoy no encuentra
           concepto puede encontrarlo mañana sin que hayas tocado nada.
         </p>
         <p>
@@ -959,6 +981,7 @@ function Bank() {
           como imposibles.
         </p>
       </Detail>
+      <Verdict />
     </div>
   );
 }
@@ -985,7 +1008,7 @@ function Generate() {
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.type.title")}
-                <Badge variant="outline">solo con varias modalidades</Badge>
+                <Badge variant="outline">solo con varias tipos de ejercicio</Badge>
               </p>
               <p className="text-small text-muted-foreground">
                 {t("form.type.hint")} Si tu perfil declara una sola, esta pregunta no se hace.
@@ -1007,7 +1030,7 @@ function Generate() {
               <p className="font-medium">{t("form.practise.title")}</p>
               <p className="text-small text-muted-foreground">
                 {t("form.practise.hint")} Solo se ofrecen los conceptos{" "}
-                <strong>etiquetables</strong>: aquí se elige de qué va el ejercicio, y para eso un
+                <strong>que sirven de etiqueta</strong>: aquí se elige de qué va el ejercicio, y para eso un
                 concepto genérico no vale.
               </p>
             </>,
@@ -1035,15 +1058,15 @@ function Generate() {
         />
       </Block>
 
-      <Block title="Antes de lanzar, lo que el grafo va a decirle al modelo">
+      <Block title="Antes de lanzar, lo que el temario va a decirle al modelo">
         <Paragraph>
           Bajo los conceptos elegidos aparece «{t("form.graphSays")}» con las dos listas que el
-          prompt va a llevar: «{t("form.given")}» y «{t("form.forbidden")}». Salen del grafo y del
+          prompt va a llevar: «{t("form.given")}» y «{t("form.forbidden")}». Salen del temario y del
           currículo de esta pregunta, y se ven <em>antes</em> de gastar nada.
         </Paragraph>
         <Paragraph>
           Ahí mismo se avisa del <strong>zero-shot</strong>: si algún concepto elegido no tiene
-          ningún ejemplar en el banco —o ninguno de la modalidad pedida—, el lote se genera sin
+          ningún ejemplar en el banco —o ninguno de la tipo de ejercicio pedida—, el lote se genera sin
           ejemplo que imitar y la calidad suele bajar. Hay un interruptor para ocultar de la
           lista los conceptos sin ejemplares; apagarlo es lo que permite pedirlos a sabiendas.
         </Paragraph>
@@ -1060,7 +1083,7 @@ function Generate() {
             {
               key: "admisibilidad",
               head: "2 · Admisibilidad",
-              body: "Decide si lo que pides es de este campo o de algo que ya has decidido más arriba: los conceptos, la modalidad, los campos del ítem o la propia asignatura. Si lo es, te dice qué control lo decide.",
+              body: "Decide si lo que pides es de este campo o de algo que ya has decidido más arriba: los conceptos, la tipo de ejercicio, los campos del ejercicio o la propia asignatura. Si lo es, te dice qué control lo decide.",
             },
           ]}
         />
@@ -1077,7 +1100,7 @@ function Generate() {
         <Paragraph>
           Justo encima del razonamiento aparece «{t("form.model.title")}», con los modelos que
           la instalación ofrece. No son intercambiables y la tarjeta de cada uno dice en qué:
-          uno escribe un ítem en segundos y el otro tarda minutos, a cambio de que sea posible
+          uno escribe un ejercicio en segundos y el otro tarda minutos, a cambio de que sea posible
           que salga mejor. Cada tarjeta enlaza a la ficha del modelo por si quieres leer el
           resto.
         </Paragraph>
@@ -1141,7 +1164,7 @@ function Generate() {
                   Lo que el sistema puede comprobar sin juzgar el ejercicio: si nombra algo no
                   impartido, si se parece demasiado a un ejemplo o a otra del lote, y si el
                   etiquetador la reconoce como el concepto que pediste. Las dos primeras hacen
-                  que el generador <em>vuelva a intentarlo</em> antes de darte el ítem; lo que
+                  que el generador <em>vuelva a intentarlo</em> antes de darte el ejercicio; lo que
                   llega marcado es lo que siguió sin salir limpio, y entonces{" "}
                   <strong>es una señal para quien lee, no un rechazo</strong>.
                 </>
@@ -1170,7 +1193,7 @@ function Generate() {
             {
               key: "otras",
               head: <>«{t("generate.anotherN", { n: "N" })}»</>,
-              body: "Repite el mismo encargo, lote nuevo. Con un solo ítem la etiqueta es «Generar otra».",
+              body: "Repite el mismo encargo, lote nuevo. Con un solo ejercicio la etiqueta es «Generar otra».",
             },
             {
               key: "exportar",
@@ -1200,8 +1223,8 @@ function Evaluate() {
           sistema que sirve para medirlo, no para producir material.
         </p>
         <p>
-          Normalmente no tendrás que preparar nada: la pantalla abre en{" "}
-          <strong>lo que alguien te haya asignado</strong> y solo tienes que leer y decidir.
+          Tú pides la comparación y tú la juzgas: eliges de qué tema quieres el ejercicio,
+          se preparan las tres versiones y las lees cuando estén.
         </p>
       </SectionHead>
 
@@ -1215,22 +1238,20 @@ function Evaluate() {
             label: "Qué produce",
             value: "Una sesión guardada con las tres propuestas y tu juicio.",
           },
-          { label: "Qué necesitas", value: "Nada: las comparaciones ya vienen preparadas." },
+          {
+            label: "Qué necesitas",
+            value: "Los cuatro pasos dados: las tres versiones se escriben con tu asignatura.",
+          },
         ]}
       />
 
-      <Block title="Las tres pestañas">
+      <Block title="Las dos pestañas">
         <Rows
           items={[
             {
-              key: "asignadas",
-              head: t("eval.tab.queue"),
-              body: "Lo que alguien ha preparado para ti. Es donde abre la pantalla y donde estará casi siempre tu trabajo. Arriba, la siguiente sin juzgar; debajo, las que quedan y las que ya cerraste.",
-            },
-            {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Por si quieres pedir tú un ejercicio concreto. Es el mismo formulario de «Generar», sin dos controles: cuántos ítems y si el modelo razona. Si tu cuenta es de alumno, esta pestaña no aparece.",
+              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Crear ejercicios», sin dos controles —cuántos ejercicios y si el modelo razona—, porque una comparación es siempre uno por versión. Si tu cuenta es de alumno, esta pestaña no aparece.",
             },
             {
               key: "sesiones",
@@ -1352,7 +1373,7 @@ function Evaluate() {
 
       <Detail title="Lo que no eliges tú">
         <p>
-          <strong>Cuántos ítems se generan</strong>: siempre uno por arquitectura. Es lo que
+          <strong>Cuántos ejercicios se generan</strong>: siempre uno por arquitectura. Es lo que
           hace de la sesión la unidad de análisis.
         </p>
         <p>
@@ -1411,7 +1432,7 @@ function Runs() {
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <BuildPlanBar />
           <Paragraph>
-            Es el plan real del constructor del grafo, leído de la API y no copiado aquí. Cada
+            Es el plan real del constructor del temario, leído de la API y no copiado aquí. Cada
             tramo es una fase y su anchura es el <em>peso medido</em> de esa fase: por eso la
             transcripción del corpus se lleva ella sola un tercio de la barra, el enlazado y la
             limpieza casi la mitad entre los dos, y la curación final es una raya. La que se
@@ -1544,7 +1565,7 @@ function Account() {
               {
                 key: "prompts",
                 head: "El de los prompts",
-                body: "En el que se le HABLA AL MODELO. Vive en el workspace, se elige al crearlo y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del grafo y el cargador indexa por ellas.",
+                body: "En el que se le HABLA AL MODELO. Vive en el workspace, se elige al crearlo y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
               },
               {
                 key: "material",
@@ -1655,8 +1676,9 @@ function Admin() {
           <strong>«{t("admin.title")}»</strong>, y solo la ve quien administra la instalación.
         </p>
         <p>
-          Son cinco pestañas. «{t("admin.tab.study")}» tiene sección propia —«
-          {t("guide.sec.assign")}», aquí al lado—; esta cubre las otras cuatro.
+          Son cinco pestañas, y esta sección las cubre todas. La de «
+          {t("admin.tab.study")}» reúne lo que ha contestado la gente: las comparaciones que
+          han hecho y las valoraciones que dejaron al terminar cada paso.
         </p>
       </SectionHead>
 
@@ -2003,12 +2025,12 @@ const problems = (
   },
   {
     key: "sin-concepto",
-    question: "Hay ítems del banco sin ningún concepto",
+    question: "Hay ejercicios del banco sin ningún concepto",
     answer: (
       <p>
         Es normal en la primera pasada. Usa «{t("bank.retagUntagged", { n: "N" })}»: se lanza
         solo sobre esos, nunca sobre el banco entero. Y tiene sentido repetir, porque el índice
-        mejora con cada ítem bien etiquetado. Si uno sigue resistiéndose, ponle el concepto a
+        mejora con cada ejercicio bien etiquetado. Si uno sigue resistiéndose, ponle el concepto a
         mano.
       </p>
     ),
@@ -2029,145 +2051,13 @@ const problems = (
     question: "Llevo horas y no sé si está avanzando",
     answer: (
       <p>
-        La construcción del grafo es el trabajo más caro de la cadena. La barra por fases dice en
+        La construcción del temario es el trabajo más caro de la cadena. La barra por fases dice en
         cuál está y el tramo que se mueve es el que corre; el cajón de ejecución enseña el paso
         concreto. Puedes cerrar la pestaña y volver más tarde.
       </p>
     ),
   },
 ];
-
-function Assign() {
-  const { t } = useT();
-  return (
-    <div className="space-y-6">
-      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.assign")}>
-        <p>
-          Cómo se prepara el trabajo que los evaluadores encuentran hecho. Vive en{" "}
-          <strong>Administración → Evaluaciones</strong> y solo lo ve quien administra la
-          instalación.
-        </p>
-        <p>
-          La idea de fondo: <strong>quien reparte decide quién es capaz de juzgar qué</strong>.
-          Con evaluadores de asignaturas y cursos distintos no hay ninguna regla automática que
-          pueda repartir bien, porque la información que hace falta —quién da qué— no está en
-          ninguna tabla.
-        </p>
-      </SectionHead>
-
-      <Block title="Los tres pasos, en ese orden">
-        <Steps
-          items={[
-            <>
-              <strong>{t("sets.step1")}</strong> Eliges la persona primero, no la comparación.
-              Así «¿puede juzgar esto?» es la primera pregunta y no una que se hace al final. Hay
-              un buscador —«{t("sets.searchAccounts")}»— que ignora tildes y mayúsculas, y cada
-              candidato viene con su perfil de evaluador y en cuántos workspaces está.
-            </>,
-            <>
-              <strong>{t("sets.step2")}</strong> Solo salen los que esa persona puede abrir de
-              verdad. Asignarle algo de una asignatura a la que no tiene acceso le pondría en la
-              cola una entrada que da error al pulsarla. Los que todavía no tienen la cadena
-              aprobada salen a la vista pero no se pueden elegir, y debajo dicen exactamente qué
-              les falta por aprobar. Si esa cuenta no está en ningún workspace, el paso lo dice y
-              te manda a dárselo antes.
-            </>,
-            <>
-              <strong>{t("sets.step3")}</strong> Marcas las comparaciones que le tocan y las
-              asignas. Las que no repartas <strong>se quedan guardadas</strong> para otra
-              persona.
-            </>,
-          ]}
-        />
-      </Block>
-
-      <Block title="Preparar comparaciones por adelantado">
-        <Paragraph>
-          En el tercer paso, «Encargar más comparaciones» abre el mismo formulario de
-          «Generar» y prepara varias de una tanda. Se van haciendo una detrás de otra en la
-          cola, y aparecen en la lista según terminan.
-        </Paragraph>
-        <Paragraph>
-          Prepararlas antes es lo que hace que un profesor entre y no tenga que configurar
-          nada ni esperar a la GPU. Es también lo que permite{" "}
-          <strong>repartir los encargos por dominios y tipos de ejercicio a propósito</strong>{" "}
-          en vez de dejar que cada evaluador pida sus dos conceptos favoritos.
-        </Paragraph>
-        <Alert tone="info" title="Se encarga en el workspace del paso 2, no en el que tengas abierto">
-          <p>
-            El formulario lee el grafo, el perfil y los conceptos de la asignatura que
-            elegiste ahí, coincida o no con la que tengas abierta arriba del todo. Lo único
-            que hace falta es que esa asignatura tenga la cadena aprobada; a las que les
-            falta algún paso no se las puede elegir en el paso 2, y ahí mismo dicen qué queda
-            por aprobar.
-          </p>
-        </Alert>
-      </Block>
-
-      <Block title="Dar la misma comparación a dos personas">
-        <Paragraph>
-          Es deliberado y es la única forma de saber si el instrumento es fiable: si dos
-          personas que leen los mismos tres ejercicios coinciden, la medida se sostiene; si
-          no, hay que decirlo. En la lista se ve quién tiene ya cada comparación, para poder
-          construir ese solapamiento a propósito.
-        </Paragraph>
-        <Paragraph>
-          Cada persona recibe los <strong>mismos ejercicios con un orden propio</strong> —el
-          panel lo recuerda ahí mismo al marcar—, para que lo que compartan sea el juicio y no la
-          posición de las tarjetas.
-        </Paragraph>
-        <Paragraph>
-          Lo que <em>no</em> se puede hacer desde aquí es devolverle a alguien una comparación
-          que ya tiene: esa fila sale atenuada y marcada «{t("sets.alreadyHas")}», y su casilla no
-          se deja pulsar. Repartir de más al mismo evaluador sería duplicar una medida sin
-          quererlo, y el panel prefiere no ofrecerlo.
-        </Paragraph>
-      </Block>
-
-      <Block title="Docente o alumno">
-        <Paragraph>
-          Cada cuenta lleva un perfil de evaluador que decide{" "}
-          <strong>qué pregunta se le hace</strong> sobre cada tarjeta: a un docente, si pondría
-          el ejercicio en clase; a un alumno, si le serviría para practicar. Un alumno no da
-          clase, así que preguntarle lo primero solo sacaría una respuesta de compromiso.
-        </Paragraph>
-        <Paragraph>
-          Lo dice cada persona al crear su cuenta desde la invitación: el enlace no lo trae,
-          porque quien invita no tiene por qué saberlo y una pregunta a mitad de una
-          comparación se contesta de cualquier manera. Se corrige después desde «Cuentas y
-          accesos», y ahí también se le pone perfil a una cuenta creada desde la línea de
-          órdenes. Las cuentas sin perfil salen marcadas para que no se queden así: mientras
-          tanto se les hacen las preguntas de docente.
-        </Paragraph>
-      </Block>
-
-      <Detail title="Qué mira el panel para saber si el estudio se sostiene">
-        <p>
-          <strong>Si la preferencia se distingue del azar</strong>. Con tres propuestas, elegir
-          a ciegas daría un 33 %. El panel acompaña cada porcentaje de su intervalo y de la
-          probabilidad de haberlo visto por casualidad.
-        </p>
-        <p>
-          <strong>Si la posición decidió algo</strong>. Cruza la letra elegida contra el orden
-          que se sorteó. Si la primera tarjeta ganase demasiadas veces, el problema sería la
-          colocación y no los ejercicios.
-        </p>
-        <p>
-          <strong>Si dos evaluadores coinciden</strong>, sobre las comparaciones repartidas a
-          más de una persona.
-        </p>
-        <p>
-          <strong>Cuánto se tarda en juzgar</strong>. Una sesión cerrada en ocho segundos no da
-          para leer tres enunciados, y conviene poder decirlo.
-        </p>
-        <p>
-          <strong>Cuántas se saltaron por falta de criterio</strong>. Es un dato sobre la
-          composición del panel, no un fallo de nadie.
-        </p>
-      </Detail>
-    </div>
-  );
-}
 
 function Troubleshooting() {
   const { t } = useT();
@@ -2213,6 +2103,5 @@ export const BODIES: Record<string, () => ReactNode> = {
   runs: Runs,
   account: Account,
   admin: Admin,
-  assign: Assign,
   troubleshooting: Troubleshooting,
 };

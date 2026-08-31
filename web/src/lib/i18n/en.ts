@@ -134,7 +134,7 @@ export const en: Catalogue = {
   "tagging.failed": "parse failure",
   "tagging.no_candidates": "no candidate above the threshold",
   "tagging.manual": "assigned by hand",
-  "profile.noModality": "no modality",
+  "profile.noModality": "no type",
   "evaluator.noProfile": "No profile",
   "api.unreachable": "The server could not be reached",
   "run.noRuns": "No runs in this session",
@@ -325,7 +325,7 @@ export const en: Catalogue = {
   "nav.bank": "Bank",
   "nav.generate": "Generate",
   "nav.evaluate": "Evaluate",
-  "nav.rawData": "Raw data",
+  "nav.rawData": "Notes and exercises",
   "nav.rawWaiting": {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
@@ -662,7 +662,7 @@ export const en: Catalogue = {
   "reset.singleUse": "The link works only once.",
   "auth.password": "Password",
   "dash.transcribing": "transcribing",
-  "dash.rawData": "Raw data",
+  "dash.rawData": "Notes and exercises",
   "dash.review": "Review",
   "dash.reviewAgain": "Review again",
   "dash.approvedOn": "Approved on {when}",
@@ -2111,6 +2111,5 @@ export const en: Catalogue = {
   "guide.sec.runs": "Following a run",
   "guide.sec.account": "Your account and the installation",
   "guide.sec.admin": "Administering the installation",
-  "guide.sec.assign": "Handing out evaluations",
   "guide.sec.troubleshooting": "When something goes wrong",
 };

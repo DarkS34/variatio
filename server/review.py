@@ -49,15 +49,23 @@ UPSTREAM: dict[str, tuple[str, ...]] = {
     EXEMPLARS_BANK: (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH),
 }
 
+# What a stage is CALLED, and it is display copy rather than an identifier: these strings
+# reach a person inside sentences the server composes («Para generar hay que aprobar antes:
+# …»), where the client has no key to translate by. They are the names the bar uses, so the
+# one place the server names a stage says what every screen says.
 LABELS = {
-    EXEMPLARS_PROFILE: "Perfil de ejemplares",
-    KNOWLEDGE_GRAPH: "Grafo de conocimiento",
-    EXEMPLARS_BANK: "Banco de ejemplares",
+    EXEMPLARS_PROFILE: "Tipos de ejercicio",
+    KNOWLEDGE_GRAPH: "El temario",
+    EXEMPLARS_BANK: "Tus ejercicios",
 }
 
 STALE_ACTION = {
-    (EXEMPLARS_BANK, EXEMPLARS_PROFILE): "El esquema cambió: los ítems se extrajeron con el anterior.",
-    (EXEMPLARS_BANK, KNOWLEDGE_GRAPH): "El grafo cambió: las etiquetas apuntan a conceptos anteriores.",
+    (EXEMPLARS_BANK, EXEMPLARS_PROFILE): (
+        "Los tipos de ejercicio cambiaron: estos se recogieron con los anteriores."
+    ),
+    (EXEMPLARS_BANK, KNOWLEDGE_GRAPH): (
+        "El temario cambió: los temas puestos apuntan a conceptos anteriores."
+    ),
 }
 
 

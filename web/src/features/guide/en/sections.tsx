@@ -1,27 +1,15 @@
-import {
-  Activity,
-  Files,
-  Play,
-  Scale,
-  type LucideIcon,
-} from "lucide-react";
+import { Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
-import { Rail, type RailStop } from "@/components/ui/rail";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
+import { STEPS } from "@/lib/steps";
 import { useT, type Translate } from "@/lib/i18n";
 import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
-
-const chain = (tr: Translate): RailStop[] => [
-  { key: "perfil", label: tr.t("nav.profile"), status: "approved" },
-  { key: "grafo", label: tr.t("nav.graph"), status: "approved" },
-  { key: "banco", label: tr.t("nav.bank"), status: "approved" },
-];
 
 const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "missing", "blocked"];
 
@@ -58,8 +46,8 @@ function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; to
     <span
       className={
         tone === "study"
-          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
-          : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
+          ? "flex exercises-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
+          : "flex exercises-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
       <Icon className="size-4" />
@@ -75,7 +63,7 @@ function Start() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.start")}>
         <p>
-          <strong>Variatio</strong> generates <strong>learning items</strong> — exercises,
+          <strong>Variatio</strong> generates <strong>learning exercises</strong> — exercises,
           problems, assessment tasks — anchored to a course's syllabus. It does not write about a
           topic in the abstract: it starts from three artifacts that describe your subject and
           produces variants that respect what the student has already seen and what they have
@@ -84,42 +72,24 @@ function Start() {
       </SectionHead>
 
       <Block title="The route, at a glance">
-        <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4 sm:gap-6 sm:p-6">
-          <div className="flex flex-col items-center gap-2">
-            <Pill icon={Activity} label={t("nav.dashboard")} />
-            <span className="text-small text-muted-foreground">watch</span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex flex-col items-center gap-2">
-            <Pill icon={Files} label={t("nav.rawData")} />
-            <span className="text-small text-muted-foreground">what it is made of</span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-2 sm:w-auto sm:min-w-[20rem]">
-            <Rail stops={chain(tr)} className="max-w-[26rem]" />
-            <span className="text-small text-muted-foreground">
-              prepare the instance, in this order
-            </span>
-          </div>
-
-          <span aria-hidden className="w-px self-stretch bg-border" />
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex gap-1.5">
-              <Pill icon={Play} label={t("nav.generate")} />
-              <Pill icon={Scale} label={t("nav.evaluate")} tone="study" />
+        {/* Es la barra de arriba, dibujada aquí: cuatro pasos numerados y las dos cosas que
+            se hacen con lo que producen. El raíl que había antes se fue con el panel — lo
+            que codificaba, la dependencia entre etapas, lo dicen ahora los números. */}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+          {STEPS.map((step, index) => (
+            <div key={step.path} className="flex items-center gap-2">
+              <span className="nums flex size-6 shrink-0 items-center justify-center bg-primary font-condensed text-small font-semibold text-primary-foreground">
+                {index + 1}
+              </span>
+              <span className="text-body font-medium">{t(step.labelKey)}</span>
             </div>
-            <span className="text-small text-muted-foreground">use what was prepared</span>
-          </div>
+          ))}
+          <span aria-hidden className="mx-1 h-6 w-px bg-border" />
+          <Pill icon={Play} label={t("nav.create")} />
+          <Pill icon={Scale} label={t("nav.compare")} tone="study" />
         </div>
         <Paragraph>
-          It is exactly the bar at the top. The line between the three middle stages is not
-          decoration: it means dependency, and it is drawn dotted while what sits behind it is
-          unresolved.
+          It is exactly the bar above. The four steps are done in that order and each carries a word underneath saying where you are: <em>done</em>, <em>your turn</em> or <em>later</em>. The two pills on the right are not steps: they are what you do with what the steps produce, and they open once all four are behind you.
         </Paragraph>
       </Block>
 
@@ -128,7 +98,7 @@ function Start() {
           {
             key: "perfil",
             head: "Exemplars profile",
-            body: "What an item is here: its fields, their types, and the guidance the model follows.",
+            body: "What an exercise is here: its fields, their types, and the guidance the model follows.",
           },
           {
             key: "grafo",
@@ -138,14 +108,14 @@ function Start() {
           {
             key: "banco",
             head: "Exemplars bank",
-            body: "Real items from your subject, already tagged with concepts from the graph.",
+            body: "Real exercises from your subject, already tagged with concepts from the graph.",
           },
         ]}
       />
 
       <Alert tone="info" title="You start at the profile, not at the graph">
         <p>
-          A graph can be built with nothing else, but its taggability review needs the profile{" "}
+          A graph can be built with nothing else, but its which concepts work as a label review needs the profile{" "}
           <em>approved</em>. Starting at the graph is starting at a stage you cannot finish.
         </p>
       </Alert>
@@ -177,11 +147,11 @@ function Start() {
               can close the tab, the server carries on.
             </>,
             <>
-              Review the graph's <strong>taggability</strong> and its{" "}
+              Review the graph's <strong>which concepts work as a label</strong> and its{" "}
               <strong>descriptions</strong>, and approve it.
             </>,
             <>
-              Extract the <strong>bank</strong>, go over the items left with no concept, and
+              Extract the <strong>bank</strong>, go over the exercises left with no concept, and
               approve it.
             </>,
             <>
@@ -317,7 +287,7 @@ function Workspace() {
       <Block title="The curriculum">
         <Paragraph>
           The concepts the course <em>has already covered</em>. It is edited on the graph's
-          "{t("kg.tab.curriculum")}" tab and it is what bounds the scaffolding of every generation: an item may
+          "{t("kg.tab.curriculum")}" tab and it is what bounds the scaffolding of every generation: an exercise may
           lean on a covered concept; it may not depend on one that has not been taught yet.
         </Paragraph>
         <Alert
@@ -559,13 +529,59 @@ function Raw() {
   );
 }
 
+/**
+ * How each of the three steps ends. The same block in all three sections because it is the
+ * same task: the only difference is the questions, which the server writes.
+ */
+function Verdict() {
+  return (
+    <Block title="How this step is closed">
+      <Paragraph>
+        To the right of what you have built there is a short questionnaire on how it came
+        out. The questions change with the step, but two are always the same — how much you
+        would have to correct before you could use it, and 1 to 5 overall — and those are the
+        ones that let one step be compared with another.
+      </Paragraph>
+      <Steps
+        items={[
+          <>
+            Look at what is on the left. You do not have to read all of it: what is being
+            asked is whether it sounds like your subject.
+          </>,
+          <>
+            Answer and save. You can leave it half done and come back: half an answer is a
+            datum too.
+          </>,
+          <>
+            Saving brings up the next step. Correcting the thing on the left by hand stays
+            available throughout, before and after.
+          </>,
+        ]}
+      />
+      <Detail title="What exactly is kept">
+        <p>
+          Your answers, with the <em>particular version</em> you judged. If you build the
+          step again and judge it again, nothing is overwritten: they are two data, because
+          "it came out badly" and "I redid it and it came out well" are two different things.
+          Answering again about the same one does correct your earlier answer.
+        </p>
+        <p>
+          It is the only thing we ask in return for using this, and it is what is being
+          measured: without it there is no way to know whether the system prepares a subject
+          well or only looks as if it does.
+        </p>
+      </Detail>
+    </Block>
+  );
+}
+
 function Profile() {
   const { t } = useT();
   return (
     <div className="space-y-6">
       <SectionHead eyebrow={`${t("guide.group.prepare")} · stage 1`} title={t("guide.sec.profile")}>
         <p>
-          It defines what an item is: its fields, their types, and the guidance the model follows
+          It defines what an exercise is: its fields, their types, and the guidance the model follows
           when extracting and when generating them. It is the piece that instantiates the use
           case — changing profile is changing the kind of material, not the subject.
         </p>
@@ -583,7 +599,7 @@ function Profile() {
           },
           {
             label: "What it unlocks",
-            value: "The bank's extraction and the graph's taggability review.",
+            value: "The bank's extraction and the graph's which concepts work as a label review.",
           },
         ]}
       />
@@ -599,11 +615,11 @@ function Profile() {
               Press "Build". What comes out is a <strong>draft</strong>, not a final result.
             </>,
             <>
-              Go over each <strong>modality</strong> and, inside it, each field: its name, its
+              Go over each <strong>exercise type</strong> and, inside it, each field: its name, its
               type, the description, the extraction guidance and who decides its value.
             </>,
             <>
-              Go over each modality's <strong>"{t("modality.rules")}"</strong>: they are the only
+              Go over each exercise type's <strong>"{t("modality.rules")}"</strong>: they are the only
               thing the profile tells the generator about the <em>shape</em> of an exercise.
             </>,
             <>Approve. The stage closes and the screen stops offering anything that rewrites it.</>,
@@ -620,8 +636,8 @@ function Profile() {
       <Block title="Modalities, and why they show up everywhere else">
         <Paragraph>{t("modality.whatAre.body")}</Paragraph>
         <Paragraph>
-          Which is why the modality comes back later as a column and a filter in the bank, and as
-          the first question on the generation form. A profile with a single modality draws
+          Which is why the exercise type comes back later as a column and a filter in the bank, and as
+          the first question on the generation form. A profile with a single exercise type draws
           neither: a dropdown with one option chooses nothing.
         </Paragraph>
       </Block>
@@ -673,7 +689,7 @@ function Profile() {
 
       <Alert tone="danger" title="Touching it after extracting the bank invalidates the bank">
         <p>
-          The bank's items were extracted against the previous schema. If you change the fields,
+          The bank's exercises were extracted against the previous schema. If you change the fields,
           the bank goes to "Stale" and has to be extracted again.
         </p>
       </Alert>
@@ -686,6 +702,7 @@ function Profile() {
         </p>
         <p>If you rebuild it, compare before replacing the one you already had.</p>
       </Detail>
+      <Verdict />
     </div>
   );
 }
@@ -768,13 +785,13 @@ function Graph() {
         <Steps
           items={[
             <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
+              <p className="flex flex-wrap exercises-center gap-2 font-medium">
                 Taggability
                 <Badge variant="attention">needs the profile approved</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                Which concepts work as a <em>label</em>. The ones that would fit any item at all
-                — "coding", "design" — are marked as non-taggable: they still exist and still
+                Which concepts work as a <em>label</em>. The ones that would fit any exercise at all
+                — "coding", "design" — are marked as NOT working as a label: they still exist and still
                 work through their relations, they simply stop being able to be what an exercise
                 is about. When in doubt, exclude: a vague label pollutes the whole corpus.
               </p>
@@ -805,7 +822,7 @@ function Graph() {
           <p>
             A name is a two-word label and says nothing about what is practised by using it. What
             is turned into a vector is the <em>description</em>, fused with the centre of the
-            bank items already carrying that concept.
+            bank exercises already carrying that concept.
           </p>
           <p>
             That is why a badly written description is paid for on every tagging and every
@@ -839,6 +856,7 @@ function Graph() {
           </p>
         </Detail>
       </div>
+      <Verdict />
     </div>
   );
 }
@@ -849,7 +867,7 @@ function Bank() {
     <div className="space-y-6">
       <SectionHead eyebrow={`${t("guide.group.prepare")} · stage 3`} title={t("guide.sec.bank")}>
         <p>
-          The items extracted from your documents and tagged with concepts from the graph. They
+          The exercises extracted from your documents and tagged with concepts from the graph. They
           are the examples that accompany every generation: this is where "here is how exercises
           are written in this subject" comes from, for the model to imitate.
         </p>
@@ -886,7 +904,7 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "How many items of the bank carry at least one concept. It is the correcting still ahead of you, and it has beside it the two controls that act on that very number.",
+              body: "How many exercises of the bank carry at least one concept. It is the correcting still ahead of you, and it has beside it the two controls that act on that very number.",
             },
             {
               key: "cobertura",
@@ -902,7 +920,7 @@ function Bank() {
         />
         <Paragraph>
           The first two look in opposite directions and are worth keeping apart: one counts{" "}
-          <em>items with no concept</em>, the other <em>concepts with no item</em>. The whole
+          <em>exercises with no concept</em>, the other <em>concepts with no exercise</em>. The whole
           bank can be tagged while half the syllabus has not a single example to imitate.
         </Paragraph>
       </Block>
@@ -922,7 +940,7 @@ function Bank() {
             </>,
             <>
               Correct the <strong>primary concept</strong> by hand where needed: it is the one
-              that decides what that item is compared against afterwards.
+              that decides what that exercise is compared against afterwards.
             </>,
           ]}
         />
@@ -934,7 +952,7 @@ function Bank() {
             {
               key: "pendientes",
               head: <>"{t("bank.retagUntagged", { n: "N" })}"</>,
-              body: "With no selection: it runs over exactly the items left with no concept, never over the whole bank. It sits in the strip of meters, next to the number it acts on.",
+              body: "With no selection: it runs over exactly the exercises left with no concept, never over the whole bank. It sits in the strip of meters, next to the number it acts on.",
             },
             {
               key: "todo",
@@ -944,19 +962,19 @@ function Bank() {
             {
               key: "seleccion",
               head: <>"{t("bank.retagSelected")}"</>,
-              body: "Only the items ticked by hand, even if they already had a concept. It lives at the foot of the table, because it is contextual: it belongs to the rows and not to the totals.",
+              body: "Only the exercises ticked by hand, even if they already had a concept. It lives at the foot of the table, because it is contextual: it belongs to the rows and not to the totals.",
             },
           ]}
         />
       </Block>
 
-      <Block title="Finding one particular item">
+      <Block title="Finding one particular exercise">
         <Paragraph>
           Above the table there are four filters that combine: a <strong>search</strong> over the
-          statement's text or by id, the <strong>modality</strong> — the ones your profile
-          declares, each with how many items it has across the whole bank — the{" "}
+          statement's text or by id, the <strong>exercise type</strong> — the ones your profile
+          declares, each with how many exercises it has across the whole bank — the{" "}
           <strong>source document</strong>, and a <strong>"{t("bank.untagged")}"</strong> toggle.
-          If your profile declares a single modality, that dropdown does not appear: a menu with
+          If your profile declares a single exercise type, that dropdown does not appear: a menu with
           one option filters nothing.
         </Paragraph>
         <Paragraph>
@@ -965,7 +983,7 @@ function Bank() {
           or "{t("bank.orderBySuspicion")}".
         </Paragraph>
         <Paragraph>
-          Filtering by modality moved nothing about tagging by concept, which is the heart of the
+          Filtering by exercise type moved nothing about tagging by concept, which is the heart of the
           bank: the meters, "{t("bank.seeUntagged", { n: "N" })}", the three re-tag buttons, the
           concepts column and the editor's primary-concept picker are all exactly where they
           were.
@@ -974,8 +992,8 @@ function Bank() {
 
       <Detail title="Retrying makes sense: the index improves between passes">
         <p>
-          Every well-tagged item pushes its concept's centre towards where it really is, so one
-          pass's index is consumed by the next. An item that finds no concept today may find one
+          Every well-tagged exercise pushes its concept's centre towards where it really is, so one
+          pass's index is consumed by the next. An exercise that finds no concept today may find one
           tomorrow without your having touched anything.
         </p>
         <p>
@@ -983,6 +1001,7 @@ function Bank() {
           impossible.
         </p>
       </Detail>
+      <Verdict />
     </div>
   );
 }
@@ -1007,9 +1026,9 @@ function Generate() {
         <Steps
           items={[
             <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
+              <p className="flex flex-wrap exercises-center gap-2 font-medium">
                 {t("form.type.title")}
-                <Badge variant="outline">only with several modalities</Badge>
+                <Badge variant="outline">only with several exercise types</Badge>
               </p>
               <p className="text-small text-muted-foreground">
                 {t("form.type.hint")} If your profile declares a single one, this question is not
@@ -1017,7 +1036,7 @@ function Generate() {
               </p>
             </>,
             <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
+              <p className="flex flex-wrap exercises-center gap-2 font-medium">
                 {t("form.taught.title")}
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
@@ -1031,20 +1050,20 @@ function Generate() {
             <>
               <p className="font-medium">{t("form.practise.title")}</p>
               <p className="text-small text-muted-foreground">
-                {t("form.practise.hint")} Only the <strong>taggable</strong> concepts are
+                {t("form.practise.hint")} Only concepts that <strong>work as a label</strong> are
                 offered: this is where you choose what the exercise is about, and a generic
                 concept is no use for that.
               </p>
             </>,
             <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
+              <p className="flex flex-wrap exercises-center gap-2 font-medium">
                 {t("form.decisions.titleMany")}
                 <Badge variant="outline">only if the profile leaves something to you</Badge>
               </p>
               <p className="text-small text-muted-foreground">{t("form.decisions.hint")}</p>
             </>,
             <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
+              <p className="flex flex-wrap exercises-center gap-2 font-medium">
                 {t("form.instructions.title")}
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
@@ -1067,7 +1086,7 @@ function Generate() {
         </Paragraph>
         <Paragraph>
           The same box warns about <strong>zero-shot</strong>: if a chosen concept has no
-          exemplar in the bank — or none of the modality asked for — the batch is generated with
+          exemplar in the bank — or none of the exercise type asked for — the batch is generated with
           no example to imitate and quality usually drops. A switch hides the concepts with no
           exemplars from the list; turning it off is what lets you ask for them knowingly.
         </Paragraph>
@@ -1084,7 +1103,7 @@ function Generate() {
             {
               key: "admisibilidad",
               head: "2 · Admissibility",
-              body: "It decides whether what you are asking for belongs to this field or to something you already decided above: the concepts, the modality, the item's fields, or the subject itself. If it does, it tells you which control decides it.",
+              body: "It decides whether what you are asking for belongs to this field or to something you already decided above: the concepts, the exercise type, the exercise's fields, or the subject itself. If it does, it tells you which control decides it.",
             },
           ]}
         />
@@ -1101,7 +1120,7 @@ function Generate() {
         <Paragraph>
           Right above the reasoning sits «{t("form.model.title")}», holding the models this
           installation offers. They are not interchangeable and each card says how: one writes
-          an item in seconds and the other takes minutes, in exchange for possibly coming out
+          an exercise in seconds and the other takes minutes, in exchange for possibly coming out
           better. Every card links to that model's own page if you want to read the rest.
         </Paragraph>
         <Paragraph>
@@ -1166,7 +1185,7 @@ function Generate() {
                   something not yet taught, whether it looks too much like an example or another
                   one in the batch, and whether the tagger recognises it as the concept you asked
                   for. The first two make the generator <em>try again</em> before handing you the
-                  item; what arrives flagged is what still did not come out clean, and at that
+                  exercise; what arrives flagged is what still did not come out clean, and at that
                   point <strong>it is a signal for whoever reads, not a rejection</strong>.
                 </>
               ),
@@ -1194,7 +1213,7 @@ function Generate() {
             {
               key: "otras",
               head: <>"{t("generate.anotherN", { n: "N" })}"</>,
-              body: 'Repeats the same commission, new batch. With a single item the label reads "Generate another".',
+              body: 'Repeats the same commission, new batch. With a single exercise the label reads "Generate another".',
             },
             {
               key: "exportar",
@@ -1224,9 +1243,8 @@ function Evaluate() {
           part of the system that exists to measure it, not to produce material.
         </p>
         <p>
-          Normally you will not have to prepare anything: the screen opens on{" "}
-          <strong>whatever somebody has assigned you</strong> and all you have to do is read and
-          decide.
+          You ask for the comparison and you judge it: you pick the topic you want the
+          exercise on, the three versions are prepared, and you read them when they are ready.
         </p>
       </SectionHead>
 
@@ -1240,22 +1258,20 @@ function Evaluate() {
             label: "What it produces",
             value: "A saved session with the three proposals and your judgement.",
           },
-          { label: "What you need", value: "Nothing: the comparisons come ready." },
+          {
+            label: "What you need",
+            value: "The four steps behind you: the three versions are written from your subject.",
+          },
         ]}
       />
 
-      <Block title="The three tabs">
+      <Block title="The two tabs">
         <Rows
           items={[
             {
-              key: "asignadas",
-              head: t("eval.tab.queue"),
-              body: "What somebody has prepared for you. It is where the screen opens and where almost all your work will be. At the top, the next one not yet judged; below, the ones left and the ones you already closed.",
-            },
-            {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'In case you want to ask for a particular exercise yourself. It is the same "Generate" form, without two controls: how many items, and whether the model reasons. If your account is a student\'s, this tab does not appear.',
+              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Create exercises" form, without two controls — how many exercises, and whether the model reasons — because a comparison is always one per version. If your account is a student\'s, this tab does not appear.',
             },
             {
               key: "sesiones",
@@ -1375,7 +1391,7 @@ function Evaluate() {
 
       <Detail title="What you do not choose">
         <p>
-          <strong>How many items are generated</strong>: always one per architecture. It is what
+          <strong>How many exercises are generated</strong>: always one per architecture. It is what
           makes the session the unit of analysis.
         </p>
         <p>
@@ -1416,7 +1432,7 @@ function Runs() {
           items={STATE_ORDER.map((key) => ({
             key,
             head: (
-              <span className="flex items-center gap-3">
+              <span className="flex exercises-center gap-3">
                 <StatusMark
                   status={key === "blocked" ? "missing" : key}
                   blocked={key === "blocked"}
@@ -1680,8 +1696,9 @@ function Admin() {
           sees it.
         </p>
         <p>
-          There are five tabs. "{t("admin.tab.study")}" has a section of its own — "
-          {t("guide.sec.assign")}", right beside this one — and this covers the other four.
+          Five tabs, and this section covers all of them. "{t("admin.tab.study")}" gathers
+          what people answered: the comparisons they judged and the verdicts they left at the
+          end of each step.
         </p>
       </SectionHead>
 
@@ -2030,12 +2047,12 @@ const problems = (
   },
   {
     key: "sin-concepto",
-    question: "There are bank items with no concept at all",
+    question: "There are bank exercises with no concept at all",
     answer: (
       <p>
         That is normal on the first pass. Use "{t("bank.retagUntagged", { n: "N" })}": it runs
         only over those, never over the whole bank. And repeating makes sense, because the index
-        improves with every well-tagged item. If one keeps resisting, set its concept by hand.
+        improves with every well-tagged exercise. If one keeps resisting, set its concept by hand.
       </p>
     ),
   },
@@ -2062,139 +2079,6 @@ const problems = (
     ),
   },
 ];
-
-function Assign() {
-  const { t } = useT();
-  return (
-    <div className="space-y-6">
-      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.assign")}>
-        <p>
-          How the work evaluators find already done gets prepared. It lives in{" "}
-          <strong>Administration → Evaluations</strong> and only whoever administers the
-          installation sees it.
-        </p>
-        <p>
-          The idea behind it: <strong>whoever hands out decides who is able to judge what</strong>
-          . With evaluators from different subjects and different years there is no automatic
-          rule that can hand out well, because the information needed — who teaches what — is in
-          no table.
-        </p>
-      </SectionHead>
-
-      <Block title="The three steps, in that order">
-        <Steps
-          items={[
-            <>
-              <strong>{t("sets.step1")}</strong> You choose the person first, not the comparison.
-              That way "can they judge this?" is the first question and not one asked at the end.
-              There is a search box — "{t("sets.searchAccounts")}" — that ignores accents and
-              case, and each candidate comes with their evaluator profile and how many workspaces
-              they are in.
-            </>,
-            <>
-              <strong>{t("sets.step2")}</strong> Only the ones that person can really open show
-              up. Assigning them something from a subject they have no access to would put an
-              entry in their queue that errors when pressed. The ones whose chain is not approved
-              yet are shown but cannot be chosen, and say underneath exactly what is left to
-              approve. If that account is in no workspace at all, the step says so and sends you
-              to grant one first.
-            </>,
-            <>
-              <strong>{t("sets.step3")}</strong> You tick the comparisons that are theirs and
-              assign them. The ones you do not hand out <strong>stay stored</strong> for somebody
-              else.
-            </>,
-          ]}
-        />
-      </Block>
-
-      <Block title="Preparing comparisons in advance">
-        <Paragraph>
-          On the third step, "Commission more comparisons" opens the same "Generate" form and
-          prepares several in one go. They are done one after another in the queue, and appear in
-          the list as they finish.
-        </Paragraph>
-        <Paragraph>
-          Preparing them beforehand is what lets a teacher come in and have nothing to configure
-          and no GPU to wait for. It is also what makes it possible to{" "}
-          <strong>spread the commissions across domains and exercise types deliberately</strong>{" "}
-          instead of letting each evaluator ask for their two favourite concepts.
-        </Paragraph>
-        <Alert tone="info" title="It commissions in the step 2 workspace, not in the one you have open">
-          <p>
-            The form reads the graph, the profile and the concepts of the subject you chose there,
-            whether or not it is the one you have open at the very top. All it needs is that
-            subject to have its chain approved; the ones still missing a step cannot be chosen in
-            step 2, and say right there what is left to approve.
-          </p>
-        </Alert>
-      </Block>
-
-      <Block title="Giving the same comparison to two people">
-        <Paragraph>
-          It is deliberate and it is the only way to know whether the instrument is reliable: if
-          two people reading the same three exercises agree, the measure holds up; if not, that
-          has to be said. The list shows who already has each comparison, so that the overlap can
-          be built on purpose.
-        </Paragraph>
-        <Paragraph>
-          Each person gets the <strong>same exercises in an order of their own</strong> — the
-          panel says so on the spot as you tick — so that what they share is the judgement and
-          not the position of the cards.
-        </Paragraph>
-        <Paragraph>
-          What you <em>cannot</em> do from here is hand somebody back a comparison they already
-          have: that row is dimmed and stamped "{t("sets.alreadyHas")}", and its tick-box will
-          not take a click. Handing the same evaluator more of the same would duplicate a measure
-          without meaning to, and the panel would rather not offer it.
-        </Paragraph>
-      </Block>
-
-      <Block title="Teacher or student">
-        <Paragraph>
-          Every account carries an evaluator profile that decides{" "}
-          <strong>which question is asked</strong> about each card: a teacher, whether they would
-          set the exercise in class; a student, whether it would be useful to practise with. A
-          student does not teach, so asking them the first would only produce an answer given out
-          of politeness.
-        </Paragraph>
-        <Paragraph>
-          Each person says so when creating their account from the invitation: the link does not
-          carry it, because whoever invites has no reason to know and a question in the middle of
-          a comparison gets answered any old way. It is corrected afterwards from "Accounts and
-          access", and that is also where an account created from the command line is given a
-          profile. Accounts with no profile are flagged so they do not stay that way: meanwhile
-          they get the teacher's questions.
-        </Paragraph>
-      </Block>
-
-      <Detail title="What the panel looks at to know whether the study holds up">
-        <p>
-          <strong>Whether the preference is distinguishable from chance</strong>. With three
-          proposals, choosing blind would give 33 %. The panel gives every percentage its
-          interval and the probability of having seen it by coincidence.
-        </p>
-        <p>
-          <strong>Whether position decided anything</strong>. It crosses the chosen letter
-          against the order that was drawn. If the first card won too often, the problem would be
-          the placement and not the exercises.
-        </p>
-        <p>
-          <strong>Whether two evaluators agree</strong>, over the comparisons handed to more than
-          one person.
-        </p>
-        <p>
-          <strong>How long judging takes</strong>. A session closed in eight seconds does not
-          leave room to read three statements, and it is worth being able to say so.
-        </p>
-        <p>
-          <strong>How many were skipped for lack of basis</strong>. It is a fact about the panel's
-          composition, not a failing of anybody's.
-        </p>
-      </Detail>
-    </div>
-  );
-}
 
 function Troubleshooting() {
   const { t } = useT();
@@ -2240,6 +2124,5 @@ export const BODIES: Record<string, () => ReactNode> = {
   runs: Runs,
   account: Account,
   admin: Admin,
-  assign: Assign,
   troubleshooting: Troubleshooting,
 };

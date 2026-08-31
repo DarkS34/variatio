@@ -9,7 +9,6 @@ import {
   Network,
   Play,
   Scale,
-  Send,
   ShieldCheck,
   UserRound,
   type LucideIcon,
@@ -135,12 +134,6 @@ export const GUIDE_SECTIONS = [
     labelKey: "guide.sec.admin",
     groupKey: "guide.group.daily",
     icon: ShieldCheck,
-  },
-  {
-    slug: "assign",
-    labelKey: "guide.sec.assign",
-    groupKey: "guide.group.daily",
-    icon: Send,
   },
   {
     slug: "troubleshooting",
