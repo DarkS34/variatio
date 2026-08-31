@@ -19,12 +19,12 @@ MAX_LOG_CHARS = 500
 # every member of the workspace, `worker.result` included.
 #
 # The list is what the worker ACTUALLY emits: `core/progress.py`'s four step events and its
-# percentage, the `log` of its loguru sink, the builders' `artifact.progress`, the
-# `retrieval` / `item.tagged` / `repair` the bank's tagging hook reaches, and the Cerebras
-# budget's wait. Generation's own events are emitted by no build, so they stay out.
+# percentage, the builders' `artifact.progress`, the `retrieval` / `item.tagged` / `repair`
+# the bank's tagging hook reaches, and the Cerebras budget's wait. Generation's own events
+# are emitted by no build, so they stay out. `log` left on 2026-08-31: the child writes its
+# loguru output into `logs/<slug>/jobs.log` itself and nothing of it travels this pipe.
 EVENT_KINDS = frozenset(
     {
-        "log",
         "step.started",
         "step.progress",
         "step.total",
@@ -78,7 +78,10 @@ def run_build(artifact: str, control: JobControl) -> dict:
         if line.startswith(MARKER):
             failure = _dispatch(line[len(MARKER) :], control, result, settled) or failure
         elif line.strip():
-            control.emit("log", {"level": "INFO", "module": "build", "message": _tidy(line)})
+            # Somebody else's output — docling, tqdm, a traceback the child never reached
+            # loguru with. It is logged HERE, on the job's own thread, which is what puts it
+            # in this workspace's file beside everything else the build said.
+            logger.info(_tidy(line))
 
     code = process.wait()
 

@@ -19,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
-import { Tabs } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -169,16 +168,12 @@ export function ProfileEditor() {
 
   const [draft, setDraft] = useState<ExemplarsProfile | null>(null);
   const [activeType, setActiveType] = useState<string | null>(null);
-  const [tab, setTab] = useState("form");
   const [open, setOpen] = useState<string[]>([]);
-  const [rawText, setRawText] = useState("");
-  const [rawError, setRawError] = useState<string | null>(null);
   const [validation, setValidation] = useState<{ valid: boolean; error: string | null } | null>(null);
 
   useEffect(() => {
     if (query.data?.profile && draft === null) {
       setDraft(query.data.profile);
-      setRawText(JSON.stringify(query.data.profile, null, 2));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.data]);
@@ -307,34 +302,16 @@ export function ProfileEditor() {
     setOpen((current) => current.filter((entry) => entry !== name));
   };
 
-  const applyRaw = () => {
-    try {
-      const parsed = JSON.parse(rawText);
-      setRawError(null);
-      setDraft(parsed);
-      setActiveType(null);
-    } catch (error) {
-      setRawError((error as Error).message);
-    }
-  };
-
   const allOpen = open.length === names.length && names.length > 0;
 
   return (
     <div className="space-y-4">
       <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
-        <Tabs
-          items={[
-            { value: "form", label: t("profileEditor.tab.form") },
-            { value: "raw", label: t("profileEditor.tab.raw") },
-          ]}
-          value={tab}
-          onChange={(next) => {
-            if (next === "raw") setRawText(JSON.stringify(draft, null, 2));
-            setTab(next);
-          }}
-        />
-
+        {/* NO RAW-JSON TAB, and therefore no «Formulario» tab either (2026-08-31, explicit
+            user request): with one view left there is nothing to switch between. What it
+            offered — pasting a whole profile in and applying it — is the one edit that can
+            put a shape on screen the form cannot express, and the validator's own sentence
+            is what this bar carries instead. */}
         {validation ? (
           validation.valid ? (
             <span className="flex items-center gap-1.5 text-small text-settled">
@@ -370,260 +347,239 @@ export function ProfileEditor() {
         </Alert>
       ) : null}
 
-      {tab === "raw" ? (
-        <div className="space-y-2">
-          <Textarea
-            value={rawText}
-            onChange={(event) => setRawText(event.target.value)}
-            readOnly={stageLocked}
-            className="min-h-[32rem] font-mono text-small"
-            spellCheck={false}
-          />
-          {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
-          <Button
-            size="sm"
-            onClick={applyRaw}
-            disabled={stageLocked}
-            title={stageLocked ? t(LOCKED_HINT) : undefined}
-          >
-            {t("profileEditor.applyToForm")}
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <TypeStrip
-            keys={typeKeys}
-            active={activeKey}
-            labels={Object.fromEntries(
-              typeKeys.map((key) => [key, draft.item_types[key].label || key]),
-            )}
-            counts={Object.fromEntries(
-              typeKeys.map((key) => [key, Object.keys(draft.item_types[key].fields).length]),
-            )}
-            onSelect={(key) => {
-              setActiveType(key);
-              setOpen([]);
-            }}
-            onAdd={addType}
-            onRemove={removeType}
-            disabled={stageLocked}
-          />
+      <div className="space-y-4">
+        <TypeStrip
+          keys={typeKeys}
+          active={activeKey}
+          labels={Object.fromEntries(
+            typeKeys.map((key) => [key, draft.item_types[key].label || key]),
+          )}
+          counts={Object.fromEntries(
+            typeKeys.map((key) => [key, Object.keys(draft.item_types[key].fields).length]),
+          )}
+          onSelect={(key) => {
+            setActiveType(key);
+            setOpen([]);
+          }}
+          onAdd={addType}
+          onRemove={removeType}
+          disabled={stageLocked}
+        />
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <CardTitle>{t("modality.identity")}</CardTitle>
-                  <InfoHint label={t("modality.identity.hintLabel")}>
-                    {t("modality.identity.hint")}
-                  </InfoHint>
-                  <code className="ml-auto font-mono text-small text-muted-foreground">
-                    {activeKey}
-                  </code>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Field label={t("modality.readableName")}>
-                  <Input
-                    value={spec.label ?? ""}
-                    placeholder={t("modality.readableName.placeholder")}
-                    readOnly={stageLocked}
-                    onChange={(event) => updateType({ label: event.target.value })}
-                  />
-                </Field>
-                <Field label={t("modality.description")}>
-                  <Textarea
-                    value={spec.description ?? ""}
-                    placeholder={t("modality.description.placeholder")}
-                    className="min-h-20"
-                    readOnly={stageLocked}
-                    onChange={(event) => updateType({ description: event.target.value })}
-                  />
-                </Field>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <CardTitle>{t("modality.rules")}</CardTitle>
-                  <Badge variant="outline" className="ml-auto">
-                    {rules.length}
-                  </Badge>
-                </div>
-                {/* Visible, not behind an (i): this is the one thing on the screen that
-                    decides how a generated item reads, and it is the only instrument the
-                    profile carries for it — the per-field generation guidance is a manual
-                    exception now, not the other half of a pair. */}
-                <p className="text-small text-muted-foreground">{t("modality.rules.body")}</p>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {rules.map((rule, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground">
-                      {index + 1}
-                    </span>
-                    <Textarea
-                      aria-label={t("modality.rule.n", { n: index + 1 })}
-                      value={rule}
-                      className="min-h-16"
-                      readOnly={stageLocked}
-                      placeholder={t("modality.rule.placeholder")}
-                      onChange={(event) => {
-                        const next = [...rules];
-                        next[index] = event.target.value;
-                        updateType({ general_generation_rules: next });
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={stageLocked}
-                      title={stageLocked ? t(LOCKED_HINT) : t("modality.rule.remove")}
-                      className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() =>
-                        updateType({
-                          general_generation_rules: rules.filter((_, i) => i !== index),
-                        })
-                      }
-                    >
-                      <X />
-                    </Button>
-                  </div>
-                ))}
-
-                {rules.length === 0 ? (
-                  <p className="text-small text-attention">{t("modality.rules.none")}</p>
-                ) : null}
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={stageLocked}
-                  title={stageLocked ? t(LOCKED_HINT) : undefined}
-                  onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
-                >
-                  <Plus />
-                  {t("modality.rule.add")}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <h2 className="text-body font-semibold tracking-tight">
-              {t("modality.fieldsOf", { name: spec.label || activeKey })}
-            </h2>
-            <Badge variant="outline">{names.length}</Badge>
-            <InfoHint label={t("modality.fields.hintLabel")}>
-              {t("modality.fields.hintA")}{" "}
-              <Star className="inline size-3" /> {t("modality.fields.hintB")}
-            </InfoHint>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="ml-auto"
-              onClick={() => setOpen(allOpen ? [] : names)}
-            >
-              {allOpen ? <ChevronsDownUp /> : <ChevronsUpDown />}
-              {allOpen ? t("modality.collapseAll") : t("modality.expandAll")}
-            </Button>
-          </div>
-
+        <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex flex-wrap items-center gap-2 text-body">
-                {t("modality.indexed")}
-                <InfoHint label={t("modality.indexed.hintLabel")}>
-                  {t("modality.indexed.hint")}
+              <div className="flex items-center gap-2">
+                <CardTitle>{t("modality.identity")}</CardTitle>
+                <InfoHint label={t("modality.identity.hintLabel")}>
+                  {t("modality.identity.hint")}
                 </InfoHint>
-              </CardTitle>
+                <code className="ml-auto font-mono text-small text-muted-foreground">
+                  {activeKey}
+                </code>
+              </div>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-1.5">
-              {names.map((name) => {
-                const on = indexed.includes(name);
-                const locked = name === spec.primary_field;
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    disabled={locked || stageLocked}
-                    onClick={() => toggleIndexed(name)}
-                    title={
-                      locked
-                        ? t("modality.indexed.primaryAlways")
-                        : stageLocked
-                          ? t(LOCKED_HINT)
-                          : undefined
-                    }
-                    className={cn(
-                      "rounded-md border px-2 py-1 font-mono text-small transition-colors",
-                      on
-                        ? "border-primary/40 bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted",
-                      locked && "cursor-default opacity-90",
-                    )}
-                  >
-                    {locked ? <Star className="mr-1 inline size-3" /> : null}
-                    {name}
-                  </button>
-                );
-              })}
+            <CardContent className="space-y-2">
+              <Field label={t("modality.readableName")}>
+                <Input
+                  value={spec.label ?? ""}
+                  placeholder={t("modality.readableName.placeholder")}
+                  readOnly={stageLocked}
+                  onChange={(event) => updateType({ label: event.target.value })}
+                />
+              </Field>
+              <Field label={t("modality.description")}>
+                <Textarea
+                  value={spec.description ?? ""}
+                  placeholder={t("modality.description.placeholder")}
+                  className="min-h-20"
+                  readOnly={stageLocked}
+                  onChange={(event) => updateType({ description: event.target.value })}
+                />
+              </Field>
             </CardContent>
           </Card>
 
-          {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
-            <Alert tone="attention" title={t("modality.primaryNotText")}>
-              <p>
-                <code className="font-mono">{spec.primary_field}</code>{" "}
-                {t("modality.primaryNotTextBody")}
-              </p>
-            </Alert>
-          ) : null}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle>{t("modality.rules")}</CardTitle>
+                <Badge variant="outline" className="ml-auto">
+                  {rules.length}
+                </Badge>
+              </div>
+              {/* Visible, not behind an (i): this is the one thing on the screen that
+                  decides how a generated item reads, and it is the only instrument the
+                  profile carries for it — the per-field generation guidance is a manual
+                  exception now, not the other half of a pair. */}
+              <p className="text-small text-muted-foreground">{t("modality.rules.body")}</p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {rules.map((rule, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  <Textarea
+                    aria-label={t("modality.rule.n", { n: index + 1 })}
+                    value={rule}
+                    className="min-h-16"
+                    readOnly={stageLocked}
+                    placeholder={t("modality.rule.placeholder")}
+                    onChange={(event) => {
+                      const next = [...rules];
+                      next[index] = event.target.value;
+                      updateType({ general_generation_rules: next });
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={stageLocked}
+                    title={stageLocked ? t(LOCKED_HINT) : t("modality.rule.remove")}
+                    className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() =>
+                      updateType({
+                        general_generation_rules: rules.filter((_, i) => i !== index),
+                      })
+                    }
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
 
-          <div className="space-y-2">
-            {Object.entries(spec.fields).map(([name, field], index) => (
-              <FieldEditor
-                key={name}
-                name={name}
-                spec={field}
-                isPrimary={name === spec.primary_field}
-                open={open.includes(name)}
-                first={index === 0}
-                last={index === names.length - 1}
-                taken={names}
-                onToggleOpen={() =>
-                  setOpen((current) =>
-                    current.includes(name)
-                      ? current.filter((entry) => entry !== name)
-                      : [...current, name],
-                  )
-                }
-                onChange={(next) => updateType({ fields: { ...spec.fields, [name]: next } })}
-                onRename={(next) => renameField(name, next)}
-                onRemove={() => removeField(name)}
-                onMakePrimary={() =>
-                  updateType({
-                    primary_field: name,
-                    embed_fields: names.filter(
-                      (field) => field === name || indexed.includes(field),
-                    ),
-                  })
-                }
-                onMove={(direction) => moveField(name, direction)}
-              />
-            ))}
-          </div>
+              {rules.length === 0 ? (
+                <p className="text-small text-attention">{t("modality.rules.none")}</p>
+              ) : null}
 
-          <AddInline
-            placeholder={t("modality.newFieldPlaceholder")}
-            cta={t("modality.addField")}
-            onAdd={addField}
-            validate={(name) => fieldNameError(name, names, tr)}
-            disabled={stageLocked}
-          />
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={stageLocked}
+                title={stageLocked ? t(LOCKED_HINT) : undefined}
+                onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
+              >
+                <Plus />
+                {t("modality.rule.add")}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      )}
+
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <h2 className="text-body font-semibold tracking-tight">
+            {t("modality.fieldsOf", { name: spec.label || activeKey })}
+          </h2>
+          <Badge variant="outline">{names.length}</Badge>
+          <InfoHint label={t("modality.fields.hintLabel")}>
+            {t("modality.fields.hintA")}{" "}
+            <Star className="inline size-3" /> {t("modality.fields.hintB")}
+          </InfoHint>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => setOpen(allOpen ? [] : names)}
+          >
+            {allOpen ? <ChevronsDownUp /> : <ChevronsUpDown />}
+            {allOpen ? t("modality.collapseAll") : t("modality.expandAll")}
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-body">
+              {t("modality.indexed")}
+              <InfoHint label={t("modality.indexed.hintLabel")}>
+                {t("modality.indexed.hint")}
+              </InfoHint>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-1.5">
+            {names.map((name) => {
+              const on = indexed.includes(name);
+              const locked = name === spec.primary_field;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  disabled={locked || stageLocked}
+                  onClick={() => toggleIndexed(name)}
+                  title={
+                    locked
+                      ? t("modality.indexed.primaryAlways")
+                      : stageLocked
+                        ? t(LOCKED_HINT)
+                        : undefined
+                  }
+                  className={cn(
+                    "rounded-md border px-2 py-1 font-mono text-small transition-colors",
+                    on
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted",
+                    locked && "cursor-default opacity-90",
+                  )}
+                >
+                  {locked ? <Star className="mr-1 inline size-3" /> : null}
+                  {name}
+                </button>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
+          <Alert tone="attention" title={t("modality.primaryNotText")}>
+            <p>
+              <code className="font-mono">{spec.primary_field}</code>{" "}
+              {t("modality.primaryNotTextBody")}
+            </p>
+          </Alert>
+        ) : null}
+
+        <div className="space-y-2">
+          {Object.entries(spec.fields).map(([name, field], index) => (
+            <FieldEditor
+              key={name}
+              name={name}
+              spec={field}
+              isPrimary={name === spec.primary_field}
+              open={open.includes(name)}
+              first={index === 0}
+              last={index === names.length - 1}
+              taken={names}
+              onToggleOpen={() =>
+                setOpen((current) =>
+                  current.includes(name)
+                    ? current.filter((entry) => entry !== name)
+                    : [...current, name],
+                )
+              }
+              onChange={(next) => updateType({ fields: { ...spec.fields, [name]: next } })}
+              onRename={(next) => renameField(name, next)}
+              onRemove={() => removeField(name)}
+              onMakePrimary={() =>
+                updateType({
+                  primary_field: name,
+                  embed_fields: names.filter(
+                    (field) => field === name || indexed.includes(field),
+                  ),
+                })
+              }
+              onMove={(direction) => moveField(name, direction)}
+            />
+          ))}
+        </div>
+
+        <AddInline
+          placeholder={t("modality.newFieldPlaceholder")}
+          cta={t("modality.addField")}
+          onAdd={addField}
+          validate={(name) => fieldNameError(name, names, tr)}
+          disabled={stageLocked}
+        />
+      </div>
     </div>
   );
 }
@@ -634,7 +590,6 @@ export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
     <StageGate
       stage={stage}
       title={t("profileStage.title")}
-      description={t("profileStage.description")}
     >
       <ProfileEditor />
     </StageGate>

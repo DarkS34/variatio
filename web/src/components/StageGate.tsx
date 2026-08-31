@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GuideLink } from "@/components/GuideLink";
 import type { GuideSlug } from "@/features/guide/sections";
-import { InfoHint } from "@/components/ui/hint";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
@@ -72,13 +71,14 @@ export function StageBadge({ stage }: { stage: StageState }) {
  * A stage is visible before it is available, and says exactly why it is not.
  * A disabled control with no explanation is the thing this screen exists to avoid.
  *
- * What the stage *is* goes behind the (i) next to the title; what is wrong with it
- * right now stays on the page, because that is the part you have to act on.
+ * What the stage *is* is the guide's (`GuideLink`, under the title): the (i) that used to
+ * hold a paragraph beside the heading is gone (2026-08-31, explicit user request), and with
+ * it the `description` the three screens passed in. What is wrong with the stage right now
+ * stays on the page, because that is the part you have to act on.
  */
 export function StageGate({
   stage,
   title,
-  description,
   actions,
   buildLabels,
   livePreview,
@@ -86,7 +86,6 @@ export function StageGate({
 }: {
   stage: StageState | undefined;
   title: string;
-  description: ReactNode;
   actions?: ReactNode;
   buildLabels?: BuildLabels;
   /**
@@ -150,7 +149,9 @@ export function StageGate({
         <header className="flex flex-wrap items-start justify-between gap-4">
           {/* The guide link goes UNDER the title, on a line of its own. Beside it, it was one
               more chip in a row of chips — badge, (i), link — and the one thing there that
-              is not about this stage's state read as though it were. Under the title it is
+              is not about this stage's state read as though it were. The (i) itself left on
+              2026-08-31: a link to the guide says the same thing where the whole answer is,
+              instead of a paragraph nobody can search hidden behind a glyph. Under the title it is
               plainly what it is: where to go and read about this screen.
 
               The «autogenerado» badge is gone from all three stages. Where the file being
@@ -160,7 +161,6 @@ export function StageGate({
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-title">{title}</h1>
-              <InfoHint label={t("stage.whatIs", { title })}>{description}</InfoHint>
               <StageBadge stage={stage} />
             </div>
             {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}

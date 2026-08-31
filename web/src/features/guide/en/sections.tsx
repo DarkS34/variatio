@@ -283,8 +283,8 @@ function Workspace() {
           The active workspace is kept on your account and survives signing out; the one you are{" "}
           <em>looking at</em> is kept by the tab. You can have two subjects open in two tabs of
           the same browser without them treading on each other. Switching workspace empties the
-          screen of what you were watching: the jobs, the log and the progress belong to the
-          instance you are leaving.
+          screen of what you were watching: the jobs and the progress belong to the instance
+          you are leaving.
         </Paragraph>
       </Block>
 
@@ -610,11 +610,10 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          At the very top there are two tabs: "{t("profileEditor.tab.form")}", where the work
-          happens, and "{t("profileEditor.tab.raw")}", the file as it stands, for when pasting a
-          block by hand is quicker. Beside them, always visible, the notice saying whether the
-          profile <em>loads</em> — and while it does not, saving is disabled, which is what keeps
-          the instance from being left with a broken schema.
+          The profile is edited through the form alone: there is no raw-JSON tab. At the very
+          top, always visible, is the notice saying whether the profile <em>loads</em> — and
+          while it does not, saving is disabled, which is what keeps the instance from being
+          left with a broken schema.
         </Paragraph>
       </Block>
 
@@ -1266,9 +1265,9 @@ function Evaluate() {
           ]}
         />
         <Paragraph>
-          While a comparison is open the tabs disappear, and so do the log and the technical
-          detail: they would say which architecture each proposal comes from before you have read
-          it. The button in the header takes you back to the list.
+          While a comparison is open the tabs disappear, and so does the technical detail: it
+          would say which architecture each proposal comes from before you have read it. The
+          button in the header takes you back to the list.
         </Paragraph>
       </Block>
 
@@ -1457,15 +1456,16 @@ function Runs() {
             {
               key: "ejecucion",
               head: <>"{t("shell.viewRun")}"</>,
-              body: "The pill at the bottom right, always present. It opens the drawer on the progress tab: the steps, the phase and what is being written.",
-            },
-            {
-              key: "registro",
-              head: <>"{t("shell.log")}"</>,
-              body: "The second button of that same pill, with the session's line count. It is the same drawer, on the other tab.",
+              body: "The pill at the bottom right, always present. It opens the run drawer: the steps, the phase and what is being written.",
             },
           ]}
         />
+        <Paragraph>
+          The <strong>technical log is not shown in the application</strong>: every line the
+          pipeline writes is kept on the server, under <code>logs/</code> and inside it the
+          workspace's own folder. It is material to read next to a traceback, not something to
+          watch while you work, and it is what to ask for when something fails.
+        </Paragraph>
         <Paragraph>
           With the engine split in two halves there can be <strong>two jobs running at once</strong>,
           one on each. Every screen finds its own by the kind of job it launched, not by "the last

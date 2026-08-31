@@ -834,7 +834,6 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
     <StageGate
       stage={stage}
       title={t("kg.stage.title")}
-      description={t("kg.stage.description")}
     >
       {/* THE TABS COME OUT OF THE HEADER. They were in `StageGate`'s `actions` slot, which
           put a three-way view switch on the same line as «Construir de nuevo», «Aprobar»

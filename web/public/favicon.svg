@@ -1,13 +1,11 @@
 <!-- The mark's single-tone version, in the ink of the LIGHT palette: `primary`,
-     oklch(0.20 0.010 265). Its twin `favicon-dark.svg` is the same five shapes in the
+     oklch(0.20 0.010 265). Its twin `favicon-dark.svg` is the same three squares in the
      dark one, and `theme.js` decides which of the two the tab carries. Edit them
      together, and keep the geometry the same as `ui/logo.tsx` — only the colour
-     collapses to one tone here: fill against outline and the dotted stretch carry
-     the frontier. -->
+     collapses to one tone here: fill against outline carries the frontier. The third
+     square is inset by half its stroke, so it paints the same 4.6 box as the other two. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <path d="M6.6 12H9.7" stroke="#14161B" stroke-width="1.6"/>
-  <path d="M14.7 12H16.2" stroke="#14161B" stroke-width="1.6" stroke-dasharray="0.5 0.5"/>
   <rect x="2" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
   <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
-  <rect x="17.4" y="9.7" width="4.6" height="4.6" stroke="#14161B" stroke-width="1.6"/>
+  <rect x="18.2" y="10.5" width="3" height="3" stroke="#14161B" stroke-width="1.6"/>
 </svg>

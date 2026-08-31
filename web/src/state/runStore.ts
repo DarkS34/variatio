@@ -26,15 +26,6 @@ export interface StepView {
   error?: string | null;
 }
 
-export interface LogLine {
-  seq: number;
-  ts: number;
-  level: string;
-  module: string;
-  message: string;
-  jobId: string | null;
-}
-
 export interface ProducedItem {
   index: number;
   item: Record<string, unknown>;
@@ -87,7 +78,6 @@ export interface RunView {
   answer: string;
   thinking: string;
   phase: StreamPhase;
-  logs: LogLine[];
   activity: ActivityLine[];
   items: ProducedItem[];
   repairs: { attempt: number; max_attempts: number; error: string; where: string }[];
@@ -107,15 +97,13 @@ export interface RunView {
    * itself only notices at its next `progress.checkpoint()` — between two pages of a
    * transcription that is up to a whole model call away. Without this the screen showed
    * nothing at all in between: same badge, same live bar, and the stop button pressable
-   * again, so the only evidence the click had been heard was a line in the closed log
-   * drawer.
+   * again, so the only evidence the click had been heard was a line in a log drawer that
+   * no longer exists.
    */
   cancelling: boolean;
 }
 
 const MAX_TOKENS = 120_000;
-const MAX_LOGS = 3_000;
-const MAX_SESSION_LOGS = 8_000;
 // Whether an event deserves a line does not depend on the language, so the reducer asks
 // with a translator that answers nothing: what it needs is the null, never the words.
 const SILENT: Translate = { t: () => "", plural: () => "" };
@@ -134,8 +122,6 @@ export interface StreamState {
   lastSeq: number;
   currentJobId: string | null;
   runs: Record<string, RunView>;
-  /** Every log line of the session, whatever job produced it: the "ver logs" view. */
-  logs: LogLine[];
   gap: boolean;
 }
 
@@ -148,7 +134,6 @@ function emptyRun(jobId: string): RunView {
     answer: "",
     thinking: "",
     phase: "idle",
-    logs: [],
     activity: [],
     items: [],
     repairs: [],
@@ -168,17 +153,6 @@ function tail(text: string, limit: number) {
   return text.length > limit ? text.slice(text.length - limit) : text;
 }
 
-function toLogLine(event: VgEvent): LogLine {
-  return {
-    seq: event.seq,
-    ts: event.ts,
-    level: event.level,
-    module: event.module,
-    message: event.message,
-    jobId: event.job_id,
-  };
-}
-
 class RunStore {
   private state: StreamState = {
     connected: false,
@@ -186,7 +160,6 @@ class RunStore {
     lastSeq: 0,
     currentJobId: null,
     runs: {},
-    logs: [],
     gap: false,
   };
   private listeners = new Set<() => void>();
@@ -312,7 +285,7 @@ class RunStore {
   /**
    * Forget everything the previous workspace put here and resubscribe.
    *
-   * Not a nicety: `runs`, `logs` and `currentJobId` are all that workspace's, and leaving
+   * Not a nicety: `runs` and `currentJobId` are both that workspace's, and leaving
    * them on screen after a switch would show one instance's generated statements under
    * another instance's header. `lastSeq` goes back to 0 because the sequence is the bus's
    * and replaying from it would only ask for events this workspace is not entitled to.
@@ -332,7 +305,6 @@ class RunStore {
       lastSeq: 0,
       currentJobId: null,
       runs: {},
-      logs: [],
       gap: false,
     };
     this.commit({});
@@ -397,14 +369,8 @@ class RunStore {
     this.commit({
       runs: this.prune(runs),
       currentJobId,
-      logs: event.kind === "log" ? this.appendSessionLog(event) : this.state.logs,
       lastSeq: Math.max(this.state.lastSeq, event.seq ?? 0),
     });
-  }
-
-  private appendSessionLog(event: VgEvent): LogLine[] {
-    const logs = [...this.state.logs, toLogLine(event)];
-    return logs.length > MAX_SESSION_LOGS ? logs.slice(-MAX_SESSION_LOGS) : logs;
   }
 
   private prune(runs: Record<string, RunView>) {
@@ -600,11 +566,6 @@ class RunStore {
             ...run.tagged,
           ].slice(0, MAX_TAGGED),
         };
-
-      case "log": {
-        const logs = [...run.logs, toLogLine(event)];
-        return { ...run, logs: logs.length > MAX_LOGS ? logs.slice(-MAX_LOGS) : logs };
-      }
 
       default:
         return run;

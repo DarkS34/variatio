@@ -76,14 +76,18 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     logger.info(
         f"Comparación ciega de {len(ARMS)} propuestas de tipo «{resolved_type.label}» sobre "
         + (", ".join(concepts) if concepts else "ningún concepto")
-        + " — el registro interno queda oculto para no revelar el origen de cada una"
     )
 
     # Warmed BEFORE the blind section: built inside the arm, this one-off cost would land in
     # the RAG baseline's `elapsed_ms` and its step would be swallowed by the filter.
     rag_arm.index_for(context).ensure()
 
-    with control.muted_logs(), progress.emitting(_BlindEmitter(control)):
+    # `_BlindEmitter` is the whole of the blinding now. The loguru mirror it also had to
+    # silence published «few-shot seleccionado» on the bus, which gave away which proposal
+    # was the system's; since 2026-08-31 that mirror writes to `logs/<slug>/jobs.log` and
+    # reaches no screen, so there is nothing left to mute — and the file keeps everything,
+    # which is what one wants when a session has to be explained afterwards.
+    with progress.emitting(_BlindEmitter(control)):
         session = study_run.evaluate(
             context,
             concepts=concepts,

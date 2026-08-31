@@ -1,8 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Archive, Files, Play, Scale, ScrollText, Wrench } from "lucide-react";
+import { Activity, Archive, Files, Play, Scale, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { RunDrawer, type DrawerTab } from "@/components/RunDrawer";
+import { RunDrawer } from "@/components/RunDrawer";
 import { buttonVariants } from "@/components/ui/button";
 import { Lockup } from "@/components/ui/logo";
 import { Rail, type RailStop } from "@/components/ui/rail";
@@ -278,7 +278,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useT();
   const { path } = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTab, setDrawerTab] = useState<DrawerTab>("progress");
   const pipeline = usePipeline();
   const health = useHealth();
   const maintenance = useMaintenance();
@@ -287,11 +286,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
-
-  const openDrawer = (tab: DrawerTab) => {
-    setDrawerTab(tab);
-    setDrawerOpen(true);
-  };
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
   // like every route does, so it would only be refused — and a refusal reads as «la
@@ -460,33 +454,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <RunDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        tab={drawerTab}
-        onTab={setDrawerTab}
-      />
+      <RunDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
+      {/* ONE BUTTON, because there is one thing behind it. The pill used to be two: the
+          run, and the raw log with its unread count. The log went to
+          `logs/<slug>/jobs.log` on 2026-08-31 (explicit user request) and no screen shows
+          it any more, so the counter had nothing to count and the second half nothing to
+          open. */}
       {!drawerOpen ? (
         <div className="fixed bottom-3 right-3 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised sm:bottom-4 sm:right-4">
           <button
-            onClick={() => openDrawer("progress")}
+            onClick={() => setDrawerOpen(true)}
             className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"
           >
             <Activity className="size-4" />
             {t("shell.viewRun")}
-          </button>
-          <span className="h-5 w-px bg-border" />
-          <button
-            onClick={() => openDrawer("logs")}
-            title={t("shell.viewLog")}
-            aria-label={t("shell.viewLog")}
-            className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <ScrollText className="size-4" />
-            {stream.logs.length > 0 ? (
-              <span className="nums">{stream.logs.length}</span>
-            ) : null}
           </button>
         </div>
       ) : null}

@@ -2,13 +2,10 @@ import { ChevronDown, ChevronsDownUp, ChevronsUpDown, ListTree } from "lucide-re
 import { useMemo, useState } from "react";
 
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { LogViewer } from "@/components/LogViewer";
 import { RunTimeline } from "@/components/RunTimeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Switch } from "@/components/ui/misc";
-import { Tabs } from "@/components/ui/tabs";
 import { JOB_EXPLAIN } from "@/lib/explain";
 import { JOB_STATUS, duration } from "@/lib/format";
 import { isQueued, pickActiveRun, waitOf, waitReason } from "@/lib/queue";
@@ -18,8 +15,6 @@ import type { RunView } from "@/state/runStore";
 import { useT } from "@/lib/i18n";
 import { jobName } from "@/lib/names";
 import { CancelButton } from "./CancelButton";
-
-export type DrawerTab = "progress" | "logs";
 
 /**
  * The run the drawer is about, for a screen that has no job of its own.
@@ -37,25 +32,28 @@ export function useActiveRun(): RunView | null {
   );
 }
 
+/**
+ * The run in progress, at the foot of every screen: its steps and its running commentary.
+ *
+ * It carried a second tab, «Registro» — the pipeline's loguru output mirrored onto the bus
+ * line by line — and that tab is gone (2026-08-31, explicit user request). Those lines are
+ * written to `logs/<slug>/jobs.log` on the server now: they are diagnostics, they are read
+ * next to a traceback, and half of them are in English since the pipeline's own log is. With
+ * one view left there is no tab strip either.
+ */
 export function RunDrawer({
   open,
   onClose,
-  tab,
-  onTab,
 }: {
   open: boolean;
   onClose: () => void;
-  tab: DrawerTab;
-  onTab: (next: DrawerTab) => void;
 }) {
   const tr = useT();
   const { t, plural } = useT();
   const run = useActiveRun();
-  const stream = useStream();
   const lanes = useLanes();
   const split = useSplitEngine();
   const [tall, setTall] = useState(false);
-  const [onlyThisJob, setOnlyThisJob] = useState(false);
 
   if (!open) return null;
 
@@ -66,7 +64,6 @@ export function RunDrawer({
   // drops a queued job outright — and it is the state one most wants to get out of.
   const active = status === "running" || waiting;
   const explain = run?.job ? JOB_EXPLAIN[run.job.kind] : undefined;
-  const logs = onlyThisJob && run ? run.logs : stream.logs;
 
   return (
     <aside className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-border bg-card shadow-overlay">
@@ -102,22 +99,6 @@ export function RunDrawer({
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
-          <Tabs
-            items={[
-              { value: "progress", label: t("run.tab.progress") },
-              {
-                value: "logs",
-                label: t("run.tab.log"),
-                badge: stream.logs.length ? (
-                  <Badge variant="outline" className="ml-1">
-                    {stream.logs.length}
-                  </Badge>
-                ) : undefined,
-              },
-            ]}
-            value={tab}
-            onChange={(next) => onTab(next as DrawerTab)}
-          />
           {active && run?.job ? <CancelButton run={run} /> : null}
           <Button
             variant="ghost"
@@ -140,20 +121,7 @@ export function RunDrawer({
           tall ? "max-h-[78vh]" : "max-h-[52vh]",
         )}
       >
-        {tab === "logs" ? (
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-small text-muted-foreground">
-              <Switch
-                checked={onlyThisJob}
-                onCheckedChange={setOnlyThisJob}
-                disabled={!run}
-                label={t("run.onlyThisJob")}
-              />
-              {t("run.onlyThisJobLabel")}
-            </label>
-            <LogViewer logs={logs} height={tall ? "62vh" : "38vh"} />
-          </div>
-        ) : !run ? (
+        {!run ? (
           <p className="p-6 text-center text-body text-muted-foreground">
             {t("run.nothingRun")}
           </p>

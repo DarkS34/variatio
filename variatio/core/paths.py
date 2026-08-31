@@ -16,6 +16,27 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
 
+# The installation's logs, one directory per workspace inside it. It is the same `logs/`
+# the access log already writes into, and it is deliberately NOT under `workspaces/<slug>/`:
+# a log is the installation's own record of what happened, it is not part of an instance,
+# and `export-instance` must not carry it.
+LOGS_DIR = Path(os.environ.get("VARIATIO_LOGS_DIR", PROJECT_ROOT / "logs"))
+
+
+def workspace_logs_dir(slug: str) -> Path:
+    """Return the log directory of the workspace called `slug`, creating it if needed.
+
+    A slug is required here for the same reason it is required everywhere else: there is
+    no default instance whose directory a nameless caller could land in.
+    """
+    slug = (slug or "").strip()
+    if not slug:
+        raise ValueError("Un workspace se nombra: no hay instancia por defecto.")
+    target = LOGS_DIR / slug
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
 def workspace(slug: str) -> Workspace:
     """Return the workspace called `slug`; raises ValueError when no slug was given.
 

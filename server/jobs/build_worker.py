@@ -8,8 +8,8 @@ The consequence for the builders is that they call `inference.generate()` and ne
 `generate_stream()` — every token would become a JSON line on this pipe for hours — and that
 cancellation is per chunk, through `progress.checkpoint()`.
 
-Anything printed without the MARKER prefix is somebody else's output (docling, tqdm) and is
-forwarded as a log line, so the protocol survives noisy dependencies.
+Anything printed without the MARKER prefix is somebody else's output (docling, tqdm) and the
+parent logs it as its own line, so the protocol survives noisy dependencies.
 
 Nothing else in the package may import this module: it runs as `__main__`, and an earlier
 import would make runpy warn on every build. That is why MARKER lives in `protocol`.
@@ -60,26 +60,22 @@ def main(argv: list[str] | None = None) -> int:
     from loguru import logger
 
     import variatio
-    from variatio import config, stages
+    from variatio import stages
     from variatio.core import paths, progress
+
+    from . import joblog
 
     emitter = StdoutEmitter()
     signal.signal(signal.SIGTERM, emitter.request_cancel)
     signal.signal(signal.SIGINT, emitter.request_cancel)
 
-    # The package installs a colourised stdout sink on import; replace it so every log line
-    # reaches the parent as structured data instead of ANSI noise.
+    # The package installs a colourised stdout sink on import, and stdout here is the
+    # protocol pipe: anything it prints becomes an unmarked line for the parent to forward.
+    # So the child writes to ONE place, the same file its parent writes — no `log` events
+    # travel the pipe any more (2026-08-31), and nothing of a build reaches a screen as a
+    # raw console line.
     logger.remove()
-    logger.add(
-        lambda message: send(
-            "log",
-            level=message.record["level"].name,
-            module=message.record["module"],
-            message=message.record["message"],
-        ),
-        level=config.LOG_LEVEL,
-        format="{message}",
-    )
+    joblog.attach(args.workspace)
 
     progress.set_emitter(emitter)
     try:

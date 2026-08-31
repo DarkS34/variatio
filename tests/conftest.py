@@ -79,6 +79,8 @@ def _isolated_database(tmp_path, monkeypatch):
 # is the checkout's `workspaces/`, and every slug a test invents resolves under it: a `Job`
 # carrying `workspace="aula"` had the bus mkdir `workspaces/aula/instance/.runs/` and append
 # its event log there, so a full run left two invented instances sitting beside the real ones.
+# `paths.LOGS_DIR` travels with it for exactly the same reason: since 2026-08-31 a job also
+# opens `logs/<slug>/jobs.log`, and an invented slug would leave a directory of its own there.
 #
 # Redirected rather than cleaned up afterwards: deleting directories under `workspaces/` is
 # the one operation this project already treats as unforgiving, and a suite that never
@@ -96,15 +98,21 @@ def _isolated_workspaces(tmp_path_factory):
     from variatio.core import paths
 
     root = tmp_path_factory.mktemp("workspaces")
+    logs = tmp_path_factory.mktemp("logs")
     previous, previous_env = paths.WORKSPACES_DIR, os.environ.get("WORKSPACES_DIR")
+    previous_logs, previous_logs_env = paths.LOGS_DIR, os.environ.get("VARIATIO_LOGS_DIR")
     paths.WORKSPACES_DIR = root
+    paths.LOGS_DIR = logs
     os.environ["WORKSPACES_DIR"] = str(root)
+    os.environ["VARIATIO_LOGS_DIR"] = str(logs)
     yield
     paths.WORKSPACES_DIR = previous
-    if previous_env is None:
-        os.environ.pop("WORKSPACES_DIR", None)
-    else:
-        os.environ["WORKSPACES_DIR"] = previous_env
+    paths.LOGS_DIR = previous_logs
+    for name, value in (("WORKSPACES_DIR", previous_env), ("VARIATIO_LOGS_DIR", previous_logs_env)):
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
 
 
 @pytest.fixture

@@ -60,7 +60,6 @@ const RULES = [
     exempt: [
       "components/ConceptPicker.tsx",
       "components/ConceptSelector/index.tsx",
-      "components/LogViewer.tsx",
     ],
   },
   {

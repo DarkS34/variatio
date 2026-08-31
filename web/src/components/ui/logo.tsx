@@ -1,51 +1,50 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The mark: the knowledge frontier, on one rule.
+ * The mark: the knowledge frontier, in three squares.
  *
  * Three concepts in a row — what is behind you, solid in `--settled`; where you act,
  * solid in the one ultramarine the palette spends on «act here»; what lies ahead, an
- * outline reached through a dotted stretch. It draws the calculation the generator
- * performs on every prompt (assumed known / target / not yet taught), which is the same
- * thing the palette encodes everywhere else — so the mark introduces no colour of its own.
+ * outline. It draws the calculation the generator performs on every prompt (assumed
+ * known / target / not yet taught), which is the same thing the palette encodes
+ * everywhere else — so the mark introduces no colour of its own.
+ *
+ * The three squares are the same size and the same distance apart (2026-08-31, explicit
+ * user request), which took two changes rather than one: the connectors between them are
+ * gone, and the third square is INSET BY HALF ITS STROKE. A stroke is centred on the
+ * path, so a 4.6 rect stroked at 1.6 paints 6.2 across — the outline square was visibly
+ * larger than its two solid neighbours and overhung the band above and below. Drawn as a
+ * 3.0 rect at 18.2/10.5 it paints exactly the 4.6 box the other two fill, and every gap
+ * is 3.1.
  *
  * The two coloured stops read their tokens directly (`var(--settled)`, `var(--attention)`)
- * and therefore move with the theme; the ink parts — the dotted stretch and the outline —
- * paint in `currentColor`, so the caller's `text-primary` still owns them. Everything is
- * orthogonal and every corner is square, so the mark cannot drift away from `--radius: 0`.
+ * and therefore move with the theme; the outline paints in `currentColor`, so the caller's
+ * `text-primary` still owns it. Everything is orthogonal and every corner is square, so
+ * the mark cannot drift away from `--radius: 0`.
  *
- * The favicons carry the single-tone version: fill against outline and the dotted stretch
- * keep the frontier legible without colour.
+ * The favicons carry the single-tone version: fill against outline keeps the frontier
+ * legible without colour.
  */
 export function Logo({ className, tight = false }: { className?: string; tight?: boolean }) {
   return (
     // `tight` crops the box to the drawing instead of the 24-square the favicons need. The
-    // mark is a horizontal band three and a half times wider than it is tall, so in a
-    // square box most of what a caller sizes is empty: a lockup that stacks the wordmark
-    // under the mark has to be able to make the MARK bigger, not the padding around it.
+    // mark is a horizontal band more than four times wider than it is tall, so in a square
+    // box most of what a caller sizes is empty: a lockup that stacks the wordmark under
+    // the mark has to be able to make the MARK bigger, not the padding around it.
     //
-    // The crop is to the drawing's bounds STROKES INCLUDED, which is the part that bites.
-    // The outline square is stroked at 1.6, so it paints 0.8 outside its own rect and
-    // reaches x 22.8 / y 15.1; a box ending exactly there loses half that edge, and it is
-    // the square carrying «what lies ahead» — the one the whole mark is about.
+    // With the outline square inset, the crop is exactly the band — 2 to 22 across, 9.7 to
+    // 14.3 down — strokes included, because no stroke paints outside it any more. That is
+    // flatter than the box this replaced (which had to clear the outline's overhang), so
+    // `Lockup` sizes the mark by its width and lets the height follow the ratio.
     <svg
-      viewBox={tight ? "1.5 8.7 22 6.6" : "0 0 24 24"}
+      viewBox={tight ? "2 9.7 20 4.6" : "0 0 24 24"}
       fill="none"
       aria-hidden
       className={className}
     >
-      <path d="M6.6 12H9.7" stroke="var(--settled)" strokeWidth={1.6} />
-      {/* THE STRETCH RUNS IN THE CLEAR GAP, WHICH IS NOT THE GAP BETWEEN THE RECTS.
-          The third square is STROKED at 1.6, and a stroke is centred on the path, so it
-          paints from 16.6 rather than from its own x of 17.4. A connector drawn to 17.4
-          therefore ends 0.8 underneath that edge, and whichever dash landed there fused
-          with the square and stuck out to its left. Between 14.3 and 16.6 there are 2.3
-          units of actual paper; two marks and their gap take 1.5 of it, centred, so the
-          stretch touches neither square — which is the whole point of it being dotted. */}
-      <path d="M14.7 12H16.2" stroke="currentColor" strokeWidth={1.6} strokeDasharray="0.5 0.5" />
       <rect x="2" y="9.7" width="4.6" height="4.6" fill="var(--settled)" />
       <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="var(--attention)" />
-      <rect x="17.4" y="9.7" width="4.6" height="4.6" stroke="currentColor" strokeWidth={1.6} />
+      <rect x="18.2" y="10.5" width="3" height="3" stroke="currentColor" strokeWidth={1.6} />
     </svg>
   );
 }
@@ -66,7 +65,13 @@ export function Logo({ className, tight = false }: { className?: string; tight?:
 export function Lockup({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
     <span className={cn("flex flex-col items-center gap-1 leading-none", className)}>
-      <Logo tight className="h-3.5 w-[2.9rem] text-primary" />
+      {/* SIZED BY WIDTH, and the height is the band's own ratio (20 : 4.6). The mark
+          keeps the 2.9rem it always had in the header — nothing moves sideways — and
+          the squares come out slightly taller than before, because the box no longer
+          has to reserve the overhang of a stroke. A height that does not match the
+          ratio only letterboxes: `meet` would centre the band and leave dead space
+          between it and the wordmark. */}
+      <Logo tight className="h-[0.67rem] w-[2.9rem] text-primary" />
       <span className={cn("text-micro font-condensed uppercase", compact && "hidden lg:inline")}>
         Variatio
       </span>

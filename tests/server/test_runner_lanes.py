@@ -19,7 +19,7 @@ import time
 import pytest
 from loguru import logger
 
-from server.jobs import lanes
+from server.jobs import joblog, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from variatio import config
@@ -308,7 +308,13 @@ def test_two_concurrent_jobs_do_not_share_an_emitter(make):
     }
 
 
-def test_two_concurrent_jobs_do_not_share_a_log_drawer(make):
+def test_two_concurrent_jobs_write_to_their_own_workspace_log(make):
+    """The loguru mirror is a FILE per workspace since 2026-08-31, not a tab on a drawer.
+
+    What it has to keep apart is the same thing it always did — two jobs running side by
+    side — only the destination changed: filtering by thread is still what decides whose
+    line it is.
+    """
     f = make({"aqui": {LOCAL}, "alla": {REMOTE}})
     barrier = threading.Barrier(2, timeout=WAIT)
 
@@ -319,13 +325,20 @@ def test_two_concurrent_jobs_do_not_share_a_log_drawer(make):
         return {}
 
     f.runner.handlers = {"aqui": handler, "alla": handler}
-    first = f.submit("aqui")
-    second = f.submit("alla")
+    f.submit("aqui", workspace="aula")
+    f.submit("alla", workspace="taller")
     assert f.wait_started("aqui")
     assert f.wait_started("alla")
 
-    logs = _await_events(f.bus, "log", 2, match=lambda e: "linea de" in e["message"])
-    assert {e["job_id"]: e["message"] for e in logs} == {
-        first.id: "linea de aqui",
-        second.id: "linea de alla",
-    }
+    aula, taller = joblog.path_for("aula"), joblog.path_for("taller")
+
+    def _read(path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+
+    assert _await(lambda: "linea de aqui" in _read(aula) and "linea de alla" in _read(taller))
+    assert "linea de alla" not in _read(aula)
+    assert "linea de aqui" not in _read(taller)
+
+    # No `log` event reaches the bus any more: the drawer that read them is gone.
+    events, _ = f.bus.replay(0)
+    assert not [e for e in events if e["kind"] == "log"]

@@ -273,8 +273,8 @@ function Workspace() {
           El workspace activo se guarda en tu cuenta y sobrevive a cerrar sesión; el que estás{" "}
           <em>mirando</em> lo guarda la pestaña. Puedes tener dos asignaturas abiertas en dos
           pestañas del mismo navegador sin que se pisen. Al cambiar de workspace la pantalla se
-          vacía de lo que estabas viendo: los trabajos, el registro y el progreso pertenecen a la
-          instancia que dejas.
+          vacía de lo que estabas viendo: los trabajos y el progreso pertenecen a la instancia
+          que dejas.
         </Paragraph>
       </Block>
 
@@ -594,11 +594,10 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          Arriba del todo hay dos pestañas: «{t("profileEditor.tab.form")}», que es donde se
-          trabaja, y «{t("profileEditor.tab.raw")}», el fichero tal cual, por si es más rápido
-          pegar un bloque a mano. A su lado, siempre visible, el aviso de si el perfil{" "}
-          <em>carga</em> — y mientras no cargue, guardar está desactivado, que es lo que impide
-          dejar la instancia con un esquema roto.
+          El perfil se edita solo por el formulario: no hay una pestaña con el JSON en crudo.
+          Arriba del todo, siempre visible, está el aviso de si el perfil <em>carga</em> — y
+          mientras no cargue, guardar está desactivado, que es lo que impide dejar la instancia
+          con un esquema roto.
         </Paragraph>
       </Block>
 
@@ -1241,9 +1240,9 @@ function Evaluate() {
           ]}
         />
         <Paragraph>
-          Mientras una comparación está abierta las pestañas desaparecen, y con ellas el registro
-          y el detalle técnico: dirían de qué arquitectura sale cada propuesta antes de que la
-          leas. Se vuelve a la lista con el botón de la cabecera.
+          Mientras una comparación está abierta las pestañas desaparecen, y con ellas el detalle
+          técnico: diría de qué arquitectura sale cada propuesta antes de que la leas. Se vuelve a
+          la lista con el botón de la cabecera.
         </Paragraph>
       </Block>
 
@@ -1434,15 +1433,16 @@ function Runs() {
             {
               key: "ejecucion",
               head: <>«{t("shell.viewRun")}»</>,
-              body: "La píldora de abajo a la derecha, siempre presente. Abre el cajón por la pestaña de progreso: los pasos, la fase y lo que se está escribiendo.",
-            },
-            {
-              key: "registro",
-              head: <>«{t("shell.log")}»</>,
-              body: "El segundo botón de esa misma píldora, con el número de líneas de la sesión. Es el mismo cajón, por la otra pestaña.",
+              body: "La píldora de abajo a la derecha, siempre presente. Abre el cajón de ejecución: los pasos, la fase y lo que se está escribiendo.",
             },
           ]}
         />
+        <Paragraph>
+          El <strong>registro técnico no se ve en la aplicación</strong>: cada línea que escribe
+          la tubería se guarda en el servidor, en <code>logs/</code> y dentro en la carpeta del
+          workspace. Es material para leer junto a una traza, no para mirar mientras trabajas, y
+          es lo que se pide cuando algo falla.
+        </Paragraph>
         <Paragraph>
           Con el motor partido en dos mitades pueden estar corriendo <strong>dos trabajos a la
           vez</strong>, uno en cada una. Cada pantalla busca el suyo por el tipo de trabajo que

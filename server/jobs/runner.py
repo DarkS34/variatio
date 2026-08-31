@@ -17,14 +17,12 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
-from contextlib import contextmanager
 
 from loguru import logger
 
-from variatio import config
 from variatio.core import progress
 
-from . import lanes
+from . import joblog, lanes
 from .bus import EventBus
 from .models import SUBPROCESS_KINDS, Job
 
@@ -43,7 +41,6 @@ class JobControl:
         self.cancel_event = threading.Event()
         self._process: subprocess.Popen | None = None
         self._lock = threading.Lock()
-        self._logs_muted = False
 
     # progress.Emitter protocol
     def emit(self, kind: str, payload: dict) -> None:
@@ -53,26 +50,6 @@ class JobControl:
     def should_cancel(self) -> bool:
         """Whether somebody has asked this job to stop."""
         return self.cancel_event.is_set()
-
-    @property
-    def logs_muted(self) -> bool:
-        """Whether the loguru mirror is currently withheld from the stream."""
-        return self._logs_muted
-
-    @contextmanager
-    def muted_logs(self):
-        """Keep the loguru mirror off the bus for the duration of the block.
-
-        The mirror does not go through the progress emitter, so a job that filters its own
-        events cannot filter its logs: the blind evaluation would still publish «few-shot
-        seleccionado» and give away which proposal is the system's. stderr and the log file
-        keep everything.
-        """
-        self._logs_muted = True
-        try:
-            yield
-        finally:
-            self._logs_muted = False
 
     def attach_process(self, process: subprocess.Popen) -> None:
         """Adopt the subprocess a handler spawned, killing it at once if cancel already came."""
@@ -383,7 +360,7 @@ class JobRunner:
     def _execute(self, job: Job, control: JobControl) -> None:
         """Run one job to its end on its own thread, releasing its lanes whatever happens."""
         self.bus.publish(job.workspace, job.id, "job.started", {"job": job.to_dict()})
-        sink_id = self._attach_log_sink(control)
+        joblog.attach(job.workspace)
         token = progress.set_emitter(control)
         try:
             result = self.handlers[job.kind](job, control)
@@ -401,7 +378,7 @@ class JobRunner:
             self._settle(job, "failed")
         finally:
             progress.reset_emitter(token)
-            logger.remove(sink_id)
+            joblog.detach(job.workspace)
             self._release(job)
 
     def _release(self, job: Job) -> None:
@@ -442,37 +419,6 @@ class JobRunner:
             "cancelled": "job.cancelled",
         }[status]
         self.bus.publish(job.workspace, job.id, kind, {"job": job.to_dict()})
-
-    def _attach_log_sink(self, control: JobControl) -> int:
-        """Mirror this thread's loguru output into the job's stream, and return the sink id.
-
-        The core logs with loguru and knows nothing about us, so this gives the UI a raw
-        console for no change to the pipeline. Filtering by thread is what keeps two
-        concurrent jobs out of each other's drawer.
-        """
-        worker_id = threading.get_ident()
-
-        def sink(message) -> None:
-            """Forward one loguru record as a `log` event unless the job muted them."""
-            if control.logs_muted:
-                return
-            record = message.record
-            control.emit(
-                "log",
-                {
-                    "level": record["level"].name,
-                    "module": record["module"],
-                    "message": record["message"],
-                },
-            )
-
-        return logger.add(
-            sink,
-            level=config.LOG_LEVEL,
-            format="{message}",
-            filter=lambda r: r["thread"].id == worker_id,
-        )
-
 
 def uses_subprocess(kind: str) -> bool:
     """Whether this kind of job runs out of process."""
