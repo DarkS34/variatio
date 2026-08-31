@@ -4,7 +4,6 @@ import {
   Braces,
   Calculator,
   ChevronDown,
-  FileSearch,
   Hash,
   List,
   ListChecks,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
-import { CodeBlock } from "@/components/CodeBlock";
 import { LOCKED_HINT, useStageLocked } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -312,10 +310,6 @@ export function FieldEditor({
   const { t } = tr;
   const locked = useStageLocked();
   const [nameDraft, setNameDraft] = useState(name);
-  const [showRaw, setShowRaw] = useState(false);
-  const [editingRaw, setEditingRaw] = useState(false);
-  const [rawText, setRawText] = useState("");
-  const [rawError, setRawError] = useState<string | null>(null);
 
   useEffect(() => setNameDraft(name), [name]);
 
@@ -335,29 +329,6 @@ export function FieldEditor({
     const next = nameDraft.trim();
     if (next === name || fieldNameError(next, taken, tr, name)) return;
     onRename(next);
-  };
-
-  const applyRaw = () => {
-    try {
-      const parsed = JSON.parse(rawText);
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        setRawError(t("field.raw.notObject"));
-        return;
-      }
-      if (
-        typeof parsed.schema !== "object" ||
-        parsed.schema === null ||
-        Array.isArray(parsed.schema)
-      ) {
-        setRawError(t("field.raw.noSchema"));
-        return;
-      }
-      setRawError(null);
-      onChange(parsed as FieldSpec);
-      setEditingRaw(false);
-    } catch (error) {
-      setRawError((error as Error).message);
-    }
   };
 
   const lengthInvalid =
@@ -467,55 +438,59 @@ export function FieldEditor({
 
       {open ? (
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
+          {/* QUÉ SE LLAMA Y QUÉ ES, en dos columnas y en ese orden. «Obligatoriedad» pasa
+              a la columna izquierda, bajo el nombre (2026-09-01, explicit user request):
+              el selector de tipo son siete botones en dos filas más su explicación, así
+              que la columna de al lado se quedaba con un campo de texto y un palmo de
+              hueco debajo mientras la obligatoriedad ocupaba una fila entera para sí
+              sola. Ahora las dos columnas acaban a la misma altura y las tres preguntas
+              sobre la FORMA del campo están juntas.
+
+              NI «LONGITUD» NI «RANGO» NI «QUIÉN LO DECIDE» (2026-09-01, explicit user
+              request). Los tres son la forma del esquema, no la de la asignatura: un
+              mínimo y un máximo de caracteres son una restricción que nadie sabe fijar
+              sin medir, y quién decide un campo es una decisión sobre el formulario de
+              generación, no sobre el ejercicio. Lo que el perfil traiga se conserva —
+              nada de esto se borra del artefacto, sólo deja de preguntarse — y los dos
+              avisos de abajo siguen, porque un perfil importado puede traer un rango
+              imposible y hay que poder verlo. */}
           <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
-            <Row
-              label={t("field.name.label")}
-              hint={t("field.name.hint")}
-              error={nameError}
-            >
-              <Input
-                value={nameDraft}
-                readOnly={locked}
-                onChange={(event) => setNameDraft(event.target.value)}
-                onBlur={commitName}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") event.currentTarget.blur();
-                  if (event.key === "Escape") setNameDraft(name);
-                }}
-                className={cn("font-mono", nameError && "border-destructive")}
-              />
-            </Row>
+            <div className="space-y-4">
+              <Row
+                label={t("field.name.label")}
+                hint={t("field.name.hint")}
+                error={nameError}
+              >
+                <Input
+                  value={nameDraft}
+                  readOnly={locked}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  onBlur={commitName}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") setNameDraft(name);
+                  }}
+                  className={cn("font-mono", nameError && "border-destructive")}
+                />
+              </Row>
+
+              <Row label={t("field.required.label")} hint={t("field.required.hint")}>
+                <Segmented
+                  value={nullable ? "optional" : "required"}
+                  disabled={locked}
+                  title={locked ? t(LOCKED_HINT) : undefined}
+                  onChange={(next) => setNullable(next === "optional")}
+                  options={[
+                    { value: "required", label: t("field.required.required") },
+                    { value: "optional", label: t("field.required.optional") },
+                  ]}
+                />
+              </Row>
+            </div>
 
             <Row label={t("field.type.label")} description={t(META[type].captionKey)}>
               <TypePicker value={type} onChange={setType} disabled={locked} />
             </Row>
-          </div>
-
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-            <Row
-              label={t("field.required.label")}
-              hint={t("field.required.hint")}
-            >
-              <Segmented
-                value={nullable ? "optional" : "required"}
-                disabled={locked}
-                title={locked ? t(LOCKED_HINT) : undefined}
-                onChange={(next) => setNullable(next === "optional")}
-                options={[
-                  { value: "required", label: t("field.required.required") },
-                  { value: "optional", label: t("field.required.optional") },
-                ]}
-              />
-            </Row>
-
-            {/* NI «LONGITUD» NI «RANGO» NI «QUIÉN LO DECIDE» (2026-09-01, explicit user
-                request). Los tres son la forma del esquema, no la de la asignatura: un
-                mínimo y un máximo de caracteres son una restricción que nadie sabe fijar
-                sin medir, y quién decide un campo es una decisión sobre el formulario de
-                generación, no sobre el ejercicio. Lo que el perfil traiga se conserva —
-                nada de esto se borra del artefacto, sólo deja de preguntarse — y los dos
-                avisos de abajo siguen, porque un perfil importado puede traer un rango
-                imposible y hay que poder verlo. */}
           </div>
 
           {lengthInvalid ? (
@@ -599,15 +574,6 @@ export function FieldEditor({
             </p>
           ) : null}
 
-          <Row label={t("field.label.label")} hint={t("field.label.hint")}>
-            <Input
-              value={spec.label ?? ""}
-              readOnly={locked}
-              onChange={(event) => onChange({ ...spec, label: event.target.value })}
-              placeholder={name}
-            />
-          </Row>
-
           <Row label={t("field.description.label")} hint={t("field.description.hint")}>
             <Textarea
               autoGrow
@@ -619,99 +585,6 @@ export function FieldEditor({
             />
           </Row>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <FileSearch className="size-3.5" />
-                  {t("field.extraction.label")}
-                  <InfoHint label={t("field.extraction.hintLabel")}>
-                    {t("field.extraction.hint")}
-                  </InfoHint>
-                </span>
-              }
-            >
-              <Textarea
-                autoGrow
-                value={spec.guidance?.extraction ?? ""}
-                readOnly={locked}
-                onChange={(event) =>
-                  onChange({
-                    ...spec,
-                    guidance: { ...spec.guidance, extraction: event.target.value || undefined },
-                  })
-                }
-                placeholder={t("field.extraction.placeholder")}
-                className="min-h-24 text-small"
-              />
-            </Field>
-            {/* «Cómo generarlo» tampoco se pregunta. Era la excepción escrita a mano
-                para un campo suelto, y las reglas de redacción de la modalidad son el
-                instrumento que lleva de verdad la generación — tener las dos en la misma
-                pantalla obliga a decidir cuál manda. El campo sigue en el artefacto y
-                `generate_content_prompt` lo sigue leyendo si está. */}
-          </div>
-
-          <div className="space-y-2 border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={() => {
-                setEditingRaw(false);
-                setRawError(null);
-                setShowRaw(!showRaw);
-              }}
-              className="flex items-center gap-1.5 text-small text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Braces className="size-3.5" />
-              {showRaw ? t("field.raw.hide") : t("field.raw.show")}
-            </button>
-
-            {showRaw ? (
-              <div className="animate-fade-in space-y-2">
-                {editingRaw ? (
-                  <>
-                    <Textarea
-                      aria-label={t("field.raw.label")}
-                      value={rawText}
-                      onChange={(event) => setRawText(event.target.value)}
-                      className="min-h-48 font-mono text-small"
-                      spellCheck={false}
-                    />
-                    {rawError ? <p className="text-small text-destructive">{rawError}</p> : null}
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={applyRaw}>
-                        {t("field.raw.apply")}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingRaw(false)}>
-                        {t("common.cancel")}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <CodeBlock
-                      code={JSON.stringify(spec, null, 2)}
-                      language="json"
-                      maxHeight="16rem"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={locked}
-                      title={locked ? t(LOCKED_HINT) : undefined}
-                      onClick={() => {
-                        setRawText(JSON.stringify(spec, null, 2));
-                        setRawError(null);
-                        setEditingRaw(true);
-                      }}
-                    >
-                      {t("field.raw.edit")}
-                    </Button>
-                  </>
-                )}
-              </div>
-            ) : null}
-          </div>
         </div>
       ) : null}
     </div>

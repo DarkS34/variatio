@@ -6,7 +6,7 @@
       "gemma-4-31b"
     ],
     "cerebras_max_requests_minute": 450,
-    "cerebras_max_tokens_minute": 210000,
+    "cerebras_max_tokens_minute": 220000,
     "cerebras_max_requests_day": 700000,
     "cerebras_max_tokens_day": 320000000,
     "cerebras_max_wait_seconds": 90,
@@ -73,6 +73,7 @@
     "check_similarity_threshold": 0.85,
     "check_max_retries": 1,
     "avoid_recent": 12,
+    "max_items": 20,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
@@ -140,14 +141,14 @@
       },
       "reasoning": {
         "effort": {
-          "ep_consolidate": "high",
+          "ep_consolidate": "max",
           "kg_clean_merge": "high",
           "kg_clean_drop": "medium",
           "kg_link_domain": "high",
           "kg_link_cross_domain": "high",
           "kg_taggable": "high",
           "concept_tagger": "medium",
-          "ep_scan": "medium"
+          "ep_scan": "high"
         },
         "phases": {
           "ep_scan": true

@@ -629,7 +629,7 @@ function Profile() {
             {
               key: "tipo",
               head: t("field.type.label"),
-              body: "Text, number, list, or a closed enumeration of values. Depending on which, the length, the range or the list of permitted values appears underneath.",
+              body: "Text, number, list, or a closed enumeration of values. Pick an enumeration and the list of permitted values appears underneath.",
             },
             {
               key: "obligatorio",
@@ -640,11 +640,6 @@ function Profile() {
               key: "descripcion",
               head: t("field.description.label"),
               body: t("field.description.hint"),
-            },
-            {
-              key: "extraccion",
-              head: t("field.extraction.label"),
-              body: t("field.extraction.hint"),
             },
             {
               key: "primario",

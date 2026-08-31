@@ -30,7 +30,39 @@ import type { StageInstrument, StageQuestion } from "./types";
  * `--attention` is spent once and on the last thing: the button while there is something
  * to save, and then the step that follows. A form whose every row shouts is a form nobody
  * reads to the end.
+ *
+ * THE BLOCK CARRIES ITS OWN GROUND, and the colour is `--study` (2026-09-01, explicit user
+ * request). It was a plain `Card` beside the stage's other plain cards, so the one thing
+ * on the screen that is not about the artifact looked exactly like the things that are.
+ * `--study` is not a colour picked for contrast: it is already the evaluation's own token
+ * — the «Comparar» pill in the navbar is drawn in it, with a ring at this same 30-35 % —
+ * so this spends no colour the application had not already spent on this exact meaning,
+ * which is the whole rule about colour being evidence rather than decoration.
+ *
+ * The tint is MIXED INTO `--card` rather than laid over it as a translucent film: the
+ * block has to stay an opaque surface, or the controls inside it (which keep `bg-card`)
+ * would stop reading as raised against it. Measured at 8 %: the text keeps 16.6:1 in light
+ * and 14.5:1 in dark, and the ground sits 1.15:1 from a plain card — a step you can see
+ * and not one that shouts. The border at 35 % is what actually draws the frame: 1.83:1
+ * against the paper in light and 2.37:1 in dark, where the ordinary `--border` gives 1.42.
+ *
+ * THE GROUND MIXES IN `oklab` AND THE BORDER IN `oklch`, and that is not an inconsistency
+ * to tidy up. `oklch` interpolates the HUE as an angle, and `--card` is `oklch(1 0 265)` —
+ * chroma zero, so its hue means nothing and still counts: measured in the browser, the
+ * ground came out `oklch(0.952 0.0104 255)`, a pale BLUE, because 8 % of 140° against
+ * 92 % of 265° is 255°. `oklab` is rectangular and has no hue to average, so the same mix
+ * lands on 140° — the green this is supposed to be. The border mixes with `transparent`,
+ * which takes its hue from the other colour whatever the space, so it keeps the `oklch`
+ * every other border in the application is written in.
+ *
+ * Note `check:color` does NOT see any of this — it reads `index.css` alone, so a colour
+ * literal here is invisible to it, which is why the numbers were measured by hand and then
+ * read back out of the browser. That gap is the file's own known one, not a new one.
  */
+const SURFACE = cn(
+  "border-[color-mix(in_oklch,var(--study)_35%,transparent)]",
+  "bg-[color-mix(in_oklab,var(--study)_8%,var(--card))]",
+);
 export function StageReview({ artifact, nextStep }: { artifact: string; nextStep: number | null }) {
   const { t, plural } = useT();
   const review = useStageReview(artifact);
@@ -71,7 +103,7 @@ export function StageReview({ artifact, nextStep }: { artifact: string; nextStep
 
   if (review.isLoading) {
     return (
-      <Card>
+      <Card className={SURFACE}>
         <CardContent className="space-y-3 p-4">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-24 w-full" />
@@ -86,9 +118,9 @@ export function StageReview({ artifact, nextStep }: { artifact: string; nextStep
 
   if (!review.data?.built) {
     return (
-      <Card>
+      <Card className={SURFACE}>
         <CardHeader className="pb-2">
-          <CardTitle>{t("stageReview.title")}</CardTitle>
+          <CardTitle className="text-study">{t("stageReview.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-small text-muted-foreground">{t("stageReview.notBuilt")}</p>
@@ -111,10 +143,10 @@ export function StageReview({ artifact, nextStep }: { artifact: string; nextStep
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className={SURFACE}>
         <CardHeader className="gap-1 pb-3">
           <div className="flex items-center gap-2">
-            <CardTitle className="flex-1">{t("stageReview.title")}</CardTitle>
+            <CardTitle className="flex-1 text-study">{t("stageReview.title")}</CardTitle>
             <Badge variant={answered ? "settled" : "attention"}>
               {t(answered ? "stageReview.saved" : "stageReview.unanswered")}
             </Badge>
