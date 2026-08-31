@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.42.0"
+version = "1.42.1"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [

@@ -19,10 +19,15 @@ def serve(args) -> int:
     membership, so starting without Postgres would only produce a 503 per request — it is
     better to say so once, here, than to look like the app is broken. This is one of the
     two commands `guarded()` does not wrap, because it makes that check itself.
+
+    A database that ANSWERS is checked once more, against the migrations: a schema behind
+    the code does not fail at startup, it fails on whichever request first touches the
+    column that is missing, and what the person sees there is a 500 on a button that has
+    nothing to do with it.
     """
     import uvicorn
 
-    from ..db import is_available, session_scope
+    from ..db import is_available, schema, session_scope
     from ..db.identity import count_users
     from .access_log import access_log_config, access_log_path
 
@@ -40,6 +45,11 @@ def serve(args) -> int:
         database_hint()
         return 1
 
+    stale = schema.mismatch()
+    if stale is not None:
+        print(stale)
+        return 1
+
     try:
         with session_scope() as session:
             if count_users(session) == 0:
@@ -47,8 +57,8 @@ def serve(args) -> int:
                 print(
                     f"Crea la primera con `{PROG} create-user --username NOMBRE --admin`.\n"
                 )
-    except Exception:  # noqa: BLE001 - an un-migrated database is reported by the request path
-        print("La base de datos responde pero no tiene el esquema. Aplica `uv run alembic upgrade head`.\n")
+    except Exception:  # noqa: BLE001 - a schema at head that still refuses is not this check's
+        print(f"La base de datos responde pero rechaza la consulta. Prueba `{schema.MIGRATE}`.\n")
 
     uvicorn.run(
         "server.app:app",
