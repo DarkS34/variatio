@@ -81,9 +81,16 @@ export function RawScreen() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="font-display font-expanded text-display">{t("nav.rawData")}</h1>
+        {/* LA MISMA CABECERA QUE LAS OTRAS TRES: ordinal, título, explicación, enlace a
+            la guía. Esta pantalla no pasa por `StageGate` — no escribe artefacto y nadie
+            la aprueba — así que la repite a mano, y el ordinal es lo que la mete en el
+            recorrido: es el Paso 1 aunque no sea una etapa. El título deja de ser
+            `text-display`: cuatro pasos con la misma pinta, y este era el único que
+            gritaba. */}
+        <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: 1 })}</p>
+        <h1 className="text-title">{t("nav.step.raw")}</h1>
+        <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
         <GuideLink slug="raw" />
-        <p className="max-w-[78ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
       </header>
 
       {/* THE ONE BLUE THING ON THE SCREEN, and only when there is something to press. */}

@@ -73,14 +73,14 @@ describe("translate", () => {
 
 describe("pluralise", () => {
   it("picks the singular only at one", () => {
-    expect(pluralise("en", "count.items", 1)).toBe("1 item");
-    expect(pluralise("en", "count.items", 2)).toBe("2 items");
-    expect(pluralise("en", "count.items", 0)).toBe("0 items");
+    expect(pluralise("en", "count.items", 1)).toBe("1 exercise");
+    expect(pluralise("en", "count.items", 2)).toBe("2 exercises");
+    expect(pluralise("en", "count.items", 0)).toBe("0 exercises");
   });
 
   it("does the same in Spanish, where the app used to write «N ítem(s)»", () => {
-    expect(pluralise("es", "count.items", 1)).toBe("1 ítem");
-    expect(pluralise("es", "count.items", 3)).toBe("3 ítems");
+    expect(pluralise("es", "count.items", 1)).toBe("1 ejercicio");
+    expect(pluralise("es", "count.items", 3)).toBe("3 ejercicios");
   });
 });
 

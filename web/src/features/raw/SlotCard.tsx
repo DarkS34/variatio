@@ -22,9 +22,9 @@ import type { DocumentState } from "./types";
 // The stage each origin feeds, said with the navbar's own short names so the row points at
 // something the reader can find rather than at an artifact's wire name.
 const FEEDS: Record<string, Key> = {
-  exemplars_profile: "nav.profile",
-  knowledge_graph: "nav.graph",
-  exemplars_bank: "nav.bank",
+  exemplars_profile: "nav.step.profile",
+  knowledge_graph: "nav.step.graph",
+  exemplars_bank: "nav.step.bank",
 };
 
 const STATE: Record<DocumentState, { labelKey: Key; variant: "settled" | "outline" | "attention" }> = {
