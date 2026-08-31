@@ -14,8 +14,15 @@ import { cn } from "@/lib/utils";
  * gone, and the third square is INSET BY HALF ITS STROKE. A stroke is centred on the
  * path, so a 4.6 rect stroked at 1.6 paints 6.2 across — the outline square was visibly
  * larger than its two solid neighbours and overhung the band above and below. Drawn as a
- * 3.0 rect at 18.2/10.5 it paints exactly the 4.6 box the other two fill, and every gap
+ * 3.4 rect at 18.0/10.3 it paints exactly the 4.6 box the other two fill, and every gap
  * is 3.1.
+ *
+ * The stroke is 1.2 and NOT 1.6 (2026-08-31, explicit user request: the hole is bigger).
+ * The outer box is fixed at 4.6 by the two squares beside it, so the only way to open the
+ * counter is to thin the rule: the hole goes from 1.4 to 2.2 units, and the rect grows to
+ * absorb it. That is a property of the whole mark and not of one file — the two favicons
+ * carry the same three numbers, and getting one of them wrong is a square of a different
+ * size in the tab strip.
  *
  * The two coloured stops read their tokens directly (`var(--settled)`, `var(--attention)`)
  * and therefore move with the theme; the outline paints in `currentColor`, so the caller's
@@ -44,7 +51,7 @@ export function Logo({ className, tight = false }: { className?: string; tight?:
     >
       <rect x="2" y="9.7" width="4.6" height="4.6" fill="var(--settled)" />
       <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="var(--attention)" />
-      <rect x="18.2" y="10.5" width="3" height="3" stroke="currentColor" strokeWidth={1.6} />
+      <rect x="18" y="10.3" width="3.4" height="3.4" stroke="currentColor" strokeWidth={1.2} />
     </svg>
   );
 }

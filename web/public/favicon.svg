@@ -3,9 +3,10 @@
      dark one, and `theme.js` decides which of the two the tab carries. Edit them
      together, and keep the geometry the same as `ui/logo.tsx` — only the colour
      collapses to one tone here: fill against outline carries the frontier. The third
-     square is inset by half its stroke, so it paints the same 4.6 box as the other two. -->
+     square is inset by half its stroke, so it paints the same 4.6 box as the other two;
+     the stroke is thin (1.2) because that is what opens its hole to 2.2 units. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <rect x="2" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
   <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="#14161B"/>
-  <rect x="18.2" y="10.5" width="3" height="3" stroke="#14161B" stroke-width="1.6"/>
+  <rect x="18" y="10.3" width="3.4" height="3.4" stroke="#14161B" stroke-width="1.2"/>
 </svg>
