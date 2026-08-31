@@ -71,11 +71,12 @@ export function RawScreen() {
     .filter((slot) => slot.files.length > 0)
     .map((slot) => slot.kind);
 
-  const running = corpusRun?.job?.status === "running" || corpusRun?.job?.status === "queued"
-    ? corpusRun
-    : exemplarsRun?.job?.status === "running" || exemplarsRun?.job?.status === "queued"
-      ? exemplarsRun
-      : null;
+  // BOTH of them, not the first that is alive: «Transcribir todo» starts one job per
+  // origin, so a stop that reached one of the two left the other running and the person
+  // pressed «Detener» twice for one press of «Transcribir todo».
+  const live = [corpusRun, exemplarsRun].filter(
+    (run) => run?.job?.status === "running" || run?.job?.status === "queued",
+  );
 
   const blocked = !canEdit ? t("build.readOnly") : offline ? offline : null;
 
@@ -99,9 +100,7 @@ export function RawScreen() {
         <Alert
           tone="info"
           title={t("transcribe.runningTitle")}
-          action={
-            running?.job ? <CancelButton run={running} word="stop" /> : undefined
-          }
+          action={live.length > 0 ? <CancelButton run={live} word="stop" /> : undefined}
         >
           <p>{t("transcribe.runningNote")}</p>
         </Alert>

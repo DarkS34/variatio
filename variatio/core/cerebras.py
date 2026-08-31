@@ -420,8 +420,7 @@ class CerebrasEngine:
                     f"[cerebras] {response.status_code} for '{model}'; "
                     f"retry {attempt}/{_MAX_ATTEMPTS - 1} in {wait:.0f} s"
                 )
-                progress.checkpoint()
-                time.sleep(wait)
+                _sleep(wait)
                 continue
             if response.status_code != 200:
                 raise InferenceError(_remote_error(response.status_code, model, response.text))
@@ -524,6 +523,22 @@ def _remote_error(status: int, model: str, body: str) -> str:
         f"Cerebras respondió {status} para '{model}' "
         f"({_endpoint_label('/chat/completions')}); el detalle está en el registro"
     )
+
+
+def _sleep(seconds: float) -> None:
+    """Wait in one-second slices, checking for a cancellation between each.
+
+    `Retry-After` reaches 60 s here, and a single `time.sleep` of that is a minute in which
+    a stop cannot land — the same defect, on a smaller scale, as an uninterruptible model
+    call. Same idiom as the budget ledger's own hold.
+    """
+    deadline = time.monotonic() + seconds
+    while True:
+        progress.checkpoint()
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return
+        time.sleep(min(left, 1.0))
 
 
 def _retry_wait(response: httpx.Response, attempt: int) -> float:

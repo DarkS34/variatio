@@ -130,6 +130,31 @@ def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResp
     )
 
 
+def _drain(stream) -> tuple[str, str]:
+    """Read a streamed answer whole, checking between chunks whether to stop.
+
+    The counterpart of `progress.checkpoint()` inside every per-item loop: without it the
+    smallest interruptible unit is a whole model call, and a call is minutes. The stream is
+    closed on the way out so the engine learns its client has gone — that is what turns a
+    cancellation into a GPU that is free rather than one still writing an answer nobody
+    asked for any more.
+    """
+    answer: list[str] = []
+    thinking: list[str] = []
+    try:
+        for chunk in stream:
+            thought = getattr(chunk, "thinking", None)
+            if thought:
+                thinking.append(thought)
+            answer.append(chunk.response or "")
+            progress.checkpoint()
+    finally:
+        close = getattr(stream, "close", None)
+        if close is not None:
+            close()
+    return "".join(answer), "".join(thinking)
+
+
 def _upstream_error(action: str, e: Exception) -> str:
     """Phrase an engine failure for the panel: what failed, against which host, and how.
 
@@ -247,6 +272,21 @@ class OllamaEngine:
 
         Images are base64 PNGs. A text-only model handed a picture answers empty rather
         than failing, so it is refused up front instead.
+
+        THE ANSWER IS STREAMED EVEN THOUGH NOBODY IS WATCHING IT, and that is the whole
+        difference between a stop that lands and one that does not. Cancellation here is
+        cooperative — a loop checks `progress.checkpoint()` between its units of work — so
+        with the answer arriving in one blocking read, the smallest unit is a whole model
+        call and «detener» costs whatever that call costs. Measured on 2026-09-01 with the
+        A40 shared with somebody else's training run: a transcribed page took 165 s, so two
+        cancelled transcriptions took 164 s and 166 s to stop, all of it one page each.
+
+        Streaming makes the unit a token. Nothing is emitted — this is not
+        `generate_stream`, which exists to feed a live sink and is why a build must not use
+        it — so no event travels and the reassembled answer is what the plain request would
+        have returned, the transport being the only thing that changed. Abandoning the
+        iterator closes the connection, and Ollama stops generating when its client goes
+        away: the stop gives the GPU back instead of paying for an answer nobody will read.
         """
         system_option = {} if system is None else {"system": system}
         image_option: dict = {}
@@ -258,18 +298,20 @@ class OllamaEngine:
                 )
             image_option = {"images": list(images)}
         try:
-            resp = self._client.generate(
+            stream = self._client.generate(
                 model=model,
                 prompt=prompt,
+                stream=True,
                 **system_option,
                 **image_option,
                 **self._think_option(model, think),
                 **self._format_option(format),
                 **self._context_option(model, self._temperature(temperature)),
             )
+            answer, thinking = _drain(stream)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
-        return split_thinking(resp.response, getattr(resp, "thinking", None))
+        return split_thinking(answer, thinking or None)
 
     def generate_stream(
         self,

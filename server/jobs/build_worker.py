@@ -5,8 +5,11 @@ genuinely cancellable (a Python thread cannot be killed), docling drags ~540 MB 
 API should never import, and a crash on one bad PDF must not take the server down.
 
 The consequence for the builders is that they call `inference.generate()` and never
-`generate_stream()` — every token would become a JSON line on this pipe for hours — and that
-cancellation is per chunk, through `progress.checkpoint()`.
+`generate_stream()` — every token would become a JSON line on this pipe for hours. That is
+about the EVENTS and not about the transport: `generate` streams internally and emits
+nothing, which is what lets `progress.checkpoint()` land on a token rather than waiting for
+the whole answer. Cancellation is therefore per chunk inside a call and per item between
+them, and this process's SIGTERM handler only raises the flag those checkpoints read.
 
 Anything printed without the MARKER prefix is somebody else's output (docling, tqdm) and the
 parent logs it as its own line, so the protocol survives noisy dependencies.

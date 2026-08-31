@@ -30,6 +30,10 @@ Handler = Callable[[Job, "JobControl"], "dict | None"]
 
 _DISPATCH_TICK_SECONDS = 0.5
 
+# What a terminated child is given to leave on its own before the choice is taken away.
+# It is spent on another thread, never inside the request that asked for the stop.
+_TERMINATE_GRACE_SECONDS = 5.0
+
 
 class JobControl:
     """The emitter the core writes to, and the handle the API cancels through."""
@@ -59,19 +63,34 @@ class JobControl:
                 self._kill()
 
     def request_cancel(self) -> None:
-        """Ask the job to stop: raise the flag and kill any subprocess it holds."""
+        """Ask the job to stop: raise the flag and kill any subprocess it holds.
+
+        It RETURNS AT ONCE, and that is the point: this runs on the thread serving
+        `DELETE /api/jobs/{id}`, and the escalation below waits five seconds for a child
+        that is never going to answer in one — the worker's SIGTERM handler only raises its
+        own cancel flag, so it leaves at its next checkpoint or not at all. Waiting for it
+        here spent those five seconds inside the request, so the screen could not even say
+        the stop had been heard until they were over.
+        """
         self.cancel_event.set()
         with self._lock:
             self._kill()
 
     def _kill(self) -> None:
-        """Terminate the attached subprocess, escalating to a kill after five seconds."""
+        """Terminate the attached subprocess, escalating to a kill on another thread."""
         process = self._process
         if process is None or process.poll() is not None:
             return
         process.terminate()
+        threading.Thread(
+            target=self._escalate, args=(process,), name="job-kill", daemon=True
+        ).start()
+
+    @staticmethod
+    def _escalate(process: subprocess.Popen) -> None:
+        """Give a terminated child its grace period, then take the choice away."""
         try:
-            process.wait(timeout=5)
+            process.wait(timeout=_TERMINATE_GRACE_SECONDS)
         except subprocess.TimeoutExpired:
             process.kill()
 
