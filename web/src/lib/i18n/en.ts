@@ -1771,8 +1771,6 @@ export const en: Catalogue = {
   "form.taught.title": "What has been covered?",
   "form.taught.hint": "It bounds what the model may take as known: the exercise cannot demand anything outside this list, and only concepts inside it are offered as targets.",
   "form.taught.restrict": "Restrict to a curriculum",
-  "form.taught.usePreset": "Use the preset curriculum ({n} concepts)",
-  "form.taught.noPreset": "This workspace has no preset curriculum. You can define one in the syllabus's Curriculum tab, or choose the concepts for this batch here.",
   "form.taught.pick": "Choose the concepts covered ({n})",
   "form.practise.title": "What has to be practised?",
   "form.practise.hint": "What the exercise must make the student practise, not what it mentions. It comes from the syllabus, and the few-shot examples are chosen among the bank's exercises tagged with these concepts.",

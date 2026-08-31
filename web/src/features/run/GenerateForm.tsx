@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   Ban,
   Brain,
@@ -13,7 +12,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
@@ -21,13 +20,11 @@ import { InfoHint } from "@/components/ui/hint";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Spinner, Switch } from "@/components/ui/misc";
-import { getCurriculum } from "@/lib/api";
 import { hasExemplars } from "@/lib/concepts";
 import { assumedKnown, notYetTaught } from "@/lib/curriculum";
 import { domainColours } from "@/lib/domains";
 import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
 import type {
-  CurriculumState,
   ExemplarsProfile,
   GraphView,
   ItemTypeSpec,
@@ -296,29 +293,6 @@ export function GenerateForm({
   const [picking, setPicking] = useState<"concepts" | "curriculum" | null>(null);
   const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
 
-  // The workspace's preset curriculum. `undefined` while it loads, and its absence is what
-  // decides whether the second switch is offered at all.
-  const { data: preset } = useQuery<CurriculumState>({
-    queryKey: workspace ? ["kg", "curriculum", workspace] : ["kg", "curriculum"],
-    queryFn: () => getCurriculum(workspace),
-  });
-
-  // The restriction starts OFF whatever the workspace holds (2026-08-23, explicit user
-  // request: every step starts unanswered): a preset curriculum is offered, never applied.
-  // This reconciliation is deliberately NOT latched: with no preset
-  // the second switch is not rendered, so leaving it on is a state nobody chose and nobody
-  // can see, and it would send a request with no curriculum field — the server then resolves
-  // the workspace's own, which is empty, i.e. no restriction — while the concepts picked by
-  // hand right below it are silently dropped. The preset can be empty later as well as
-  // sooner: the form is interactive before the query answers, and the graph's Currículo tab
-  // writes this very cache entry when it saves, so emptying it there and coming back here
-  // remounts this form and refetches past `staleTime` onto a preset that is now empty.
-  useEffect(() => {
-    if (preset && preset.concepts.length === 0 && state.usePresetCurriculum) {
-      patch({ usePresetCurriculum: false });
-    }
-  }, [preset, state.usePresetCurriculum]);
-
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
   const typeSpec = activeTypeSpec(state, profile);
@@ -352,9 +326,9 @@ export function GenerateForm({
   // so it is collapsed to null now rather than at each of the three places that read it.
   const activeCurriculum = useMemo(() => {
     if (!state.useCurriculum) return null;
-    const list = state.usePresetCurriculum ? (preset?.concepts ?? []) : state.curriculum;
+    const list = state.usePresetCurriculum ? [] : state.curriculum;
     return list.length > 0 ? list : null;
-  }, [state.useCurriculum, state.usePresetCurriculum, state.curriculum, preset]);
+  }, [state.useCurriculum, state.usePresetCurriculum, state.curriculum]);
 
   const priorClosure = useMemo(
     () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
@@ -487,7 +461,7 @@ export function GenerateForm({
     .map((field) => describeDecision(field, state.decisions[field], t))
     .join(" · ");
 
-  const curriculumSummary = curriculumLabel(state, preset ? preset.concepts.length : null, tr);
+  const curriculumSummary = curriculumLabel(state, null, tr);
 
   // What «Ajustes» says while it is shut: nothing set reads as «nada»; anything set is
   // named, because a disclosure that hides a decision without saying so is where a
@@ -736,30 +710,24 @@ export function GenerateForm({
             </Switch>
           </div>
 
+          {/* WHAT THE CLASS HAS COVERED IS CHOSEN HERE AND NOWHERE ELSE (2026-09-01,
+              explicit user request). There used to be a second switch offering the
+              workspace's STORED list, edited on a tab of the syllabus screen; that tab is
+              gone, so the stored list can no longer be set, and offering it would be
+              offering a saved answer nobody can save. What is left is the list for THIS
+              commission, which holds for this batch and is not written anywhere.
+
+              `usePresetCurriculum` survives in the form state and is never set true by
+              this screen: `fromParams` still reads it, so a row recorded before the change
+              — whose request carried no `curriculum` at all and therefore ran against the
+              workspace's own — is still described faithfully in the collapsed bar and
+              re-runs exactly as it ran. */}
           {state.useCurriculum ? (
             <div className="ml-6 space-y-2">
-              {preset && preset.concepts.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Switch
-                    checked={state.usePresetCurriculum}
-                    onCheckedChange={(usePresetCurriculum) => {
-                      patch({ usePresetCurriculum });
-                    }}
-                  >
-                    <span className="text-body">
-                      {t("form.taught.usePreset", { n: preset.concepts.length })}
-                    </span>
-                  </Switch>
-                </div>
-              ) : (
-                <p className="text-small text-muted-foreground">{t("form.taught.noPreset")}</p>
-              )}
-              {!state.usePresetCurriculum || !preset?.concepts.length ? (
-                <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
-                  <ListChecks />
-                  {t("form.taught.pick", { n: state.curriculum.length })}
-                </Button>
-              ) : null}
+              <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
+                <ListChecks />
+                {t("form.taught.pick", { n: state.curriculum.length })}
+              </Button>
             </div>
           ) : null}
           </div>

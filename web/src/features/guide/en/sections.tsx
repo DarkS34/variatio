@@ -983,10 +983,10 @@ function Generate() {
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                The curriculum for <em>this</em> commission, and it arrives <strong>off</strong>:
-                no restriction. Turning it on offers the workspace's own, already ticked — "
-                {t("form.taught.usePreset", { n: "N" })}" — and you can refuse it and pick the
-                covered concepts by hand for this run alone. {t("form.taught.hint")}
+                What the class has already covered, for <em>this</em> commission, and it
+                arrives <strong>off</strong>: no restriction. Turning it on lets you pick the
+                covered concepts by hand, and they hold for this run alone — nothing is
+                stored on the subject. {t("form.taught.hint")}
               </p>
             </>,
             <>

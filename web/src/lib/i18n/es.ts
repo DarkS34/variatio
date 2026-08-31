@@ -1820,8 +1820,6 @@ export const es = {
   "form.taught.title": "¿Qué se ha visto ya?",
   "form.taught.hint": "Restringe lo que el modelo puede dar por sabido: el ejercicio no podrá exigir nada fuera de esta lista, y solo se ofrecerán como objetivo los conceptos que estén dentro.",
   "form.taught.restrict": "Restringir a un currículo",
-  "form.taught.usePreset": "Usar el currículo preestablecido ({n} conceptos)",
-  "form.taught.noPreset": "Este workspace no tiene currículo preestablecido. Puedes definir uno en la pestaña Currículo del temario, o elegir aquí los conceptos para este lote.",
   "form.taught.pick": "Elegir los conceptos cubiertos ({n})",
   "form.practise.title": "¿Qué hay que practicar?",
   "form.practise.hint": "Lo que el ejercicio debe hacer practicar, no lo que menciona. Sale del temario, y los ejemplos few-shot se eligen entre los ejercicios del banco etiquetados con estos conceptos.",

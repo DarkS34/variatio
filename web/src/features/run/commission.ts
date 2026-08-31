@@ -20,7 +20,8 @@ export interface FormState {
   itemType: string | null;
   /** Off = no restriction. */
   useCurriculum: boolean;
-  /** Only counts with `useCurriculum`. On = the workspace's own. */
+  /** Only counts with `useCurriculum`. On = the workspace's own stored list, which no
+   *  screen sets any more: it is only ever read back off an older run. */
   usePresetCurriculum: boolean;
   /** The ad-hoc one; only counts with `useCurriculum` on and `usePresetCurriculum` off. */
   curriculum: string[];
@@ -51,7 +52,12 @@ export const EMPTY_FORM: FormState = {
   concepts: [],
   itemType: null,
   useCurriculum: false,
-  usePresetCurriculum: true,
+  // FALSE, since 2026-09-01: the workspace's stored list can no longer be edited, so
+  // nothing may resolve to it by default. It stays in the shape because `fromParams` reads
+  // it — a run recorded before the change carried no `curriculum` field at all and did run
+  // against the workspace's own, and describing that faithfully is what lets it be re-run
+  // exactly as it ran.
+  usePresetCurriculum: false,
   curriculum: [],
   decisions: {},
   instructions: "",

@@ -965,10 +965,10 @@ function Generate() {
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                El currículo para <em>este</em> encargo, y llega <strong>apagado</strong>: sin
-                restricción. Al encenderlo se ofrece el del workspace ya marcado —«
-                {t("form.taught.usePreset", { n: "N" })}»— y puedes rechazarlo y elegir a mano los
-                conceptos cubiertos solo para esta tirada. {t("form.taught.hint")}
+                Lo que la clase ya ha dado, para <em>este</em> encargo, y llega{" "}
+                <strong>apagado</strong>: sin restricción. Al encenderlo eliges a mano los
+                conceptos cubiertos, y valen solo para esta tirada — no se guardan en la
+                asignatura. {t("form.taught.hint")}
               </p>
             </>,
             <>
