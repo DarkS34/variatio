@@ -110,7 +110,15 @@ export function InfoHint({
           // `pointer-events-auto` because gated screens disable their whole content
           // area, and a section you cannot use yet is exactly when its explanation
           // is worth reading.
-          "pointer-events-auto inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "pointer-events-auto relative inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          // THE TARGET IS 24 px; THE DRAWING STAYS AT 16. WCAG 2.2 AA (2.5.8) asks for
+          // 24×24 and none of its exceptions apply here — an (i) is not inline in a
+          // sentence and has no larger equivalent elsewhere. Growing the box instead
+          // would move every row this sits in: there are 33 of them, in headers, table
+          // rows and form steps that are already tuned. A pseudo-element inherits the
+          // button's own hit testing, so `-inset-1` buys the missing 4 px on each side
+          // and changes nothing that is painted.
+          "before:absolute before:-inset-1 before:content-['']",
           className,
         )}
       >

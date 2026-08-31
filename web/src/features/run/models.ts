@@ -33,6 +33,16 @@ export interface ModelFamily {
   warningKey?: Key;
   /** Always-visible nuance about this model's effort levels, warning or not. */
   noteKey?: Key;
+  /**
+   * Whether moving the slider changes the answer at all.
+   *
+   * `false` means the family accepts the levels and ignores them, and the SLIDER IS NOT
+   * DRAWN. `gemma-4` is the case that made it necessary: its own note said «en la práctica
+   * los tres se comportan casi igual», so the screen offered a control and explained in
+   * the same box that it does nothing. `levels` still lists what the engine accepts,
+   * because that is what `clampEffort` needs in order to send a valid value.
+   */
+  effortMatters?: boolean;
 }
 
 // To offer another model, add its family here and put its name in «Modelos ofrecidos».
@@ -49,6 +59,7 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     // byte-identical answer, where `low` is 44 and `medium` is 14, the model's own default.
     // A fourth stop that cannot change anything is a stop that lies.
     levels: ["low", "medium", "high"],
+    effortMatters: true,
     warnAbove: "medium",
     warningKey: "effort.warn.qwen38",
   },
@@ -59,6 +70,10 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     blurbKey: "model.blurb.gemma4",
     speed: "fast",
     levels: ["low", "medium", "high"],
+    // Measured, and said out loud in the note the card already carried: on this family the
+    // three levels answer the same. So the switch stays — reasoning on or off is a real
+    // choice, and it is what the run records — and the slider goes.
+    effortMatters: false,
     noteKey: "effort.note.gemma4",
   },
 ];
@@ -70,6 +85,9 @@ const UNKNOWN: ModelFamily = {
   blurbKey: null,
   speed: null,
   levels: ["low", "medium", "high", "max"],
+  // An unrecognised model is offered whole, slider included: refusing a control because
+  // nobody has measured the model yet would make adding one a code change.
+  effortMatters: true,
 };
 
 /** The family a model belongs to; an unrecognised one keeps its own name and no note. */

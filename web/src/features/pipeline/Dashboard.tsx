@@ -105,7 +105,9 @@ function StageCard({ stage }: { stage: StageState }) {
           </p>
         ) : null}
 
-        {building && !queued ? <BuildProgress artifact={stage.artifact} /> : null}
+        {/* Compact: the panel already draws this run whole in `ActivityCard`, with its
+            own stop button, and the drawer holds the step timeline. */}
+        {building && !queued ? <BuildProgress artifact={stage.artifact} compact /> : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
           {/* While building there is nothing to review: the artifact's screen hides the existing one

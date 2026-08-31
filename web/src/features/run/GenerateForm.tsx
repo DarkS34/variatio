@@ -556,9 +556,9 @@ export function GenerateForm({
               // Only switching it OFF closes the question. On, it opens the two below.
               if (!useCurriculum) advance("curriculum");
             }}
-            label={t("form.taught.restrict")}
-          />
-          <span className="text-body font-medium">{t("form.taught.restrict")}</span>
+          >
+            <span className="text-body font-medium">{t("form.taught.restrict")}</span>
+          </Switch>
         </div>
 
         {state.useCurriculum ? (
@@ -573,11 +573,11 @@ export function GenerateForm({
                     // the button that picks one by hand, so only the first way is an answer.
                     if (usePresetCurriculum) advance("curriculum");
                   }}
-                  label={t("form.taught.usePreset", { n: preset.concepts.length })}
-                />
-                <span className="text-body">
-                  {t("form.taught.usePreset", { n: preset.concepts.length })}
-                </span>
+                >
+                  <span className="text-body">
+                    {t("form.taught.usePreset", { n: preset.concepts.length })}
+                  </span>
+                </Switch>
               </div>
             ) : (
               <p className="text-small text-muted-foreground">{t("form.taught.noPreset")}</p>
@@ -602,12 +602,9 @@ export function GenerateForm({
       >
         {withoutExemplars > 0 ? (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-            <Switch
-              checked={onlyWithExemplars}
-              onCheckedChange={applyFilter}
-              label={filterLabel}
-            />
-            <span className="text-small font-medium">{filterLabel}</span>
+            <Switch checked={onlyWithExemplars} onCheckedChange={applyFilter}>
+              <span className="text-small font-medium">{filterLabel}</span>
+            </Switch>
             <span className="ml-auto text-[11px] nums text-muted-foreground">
               {onlyWithExemplars
                 ? plural("form.hiddenNoExemplars", hidden)
@@ -821,22 +818,25 @@ export function GenerateForm({
           {variant === "generate" ? (
             <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Switch
-                  checked={state.think}
-                  onCheckedChange={(think) => patch({ think })}
-                  label={t("form.think.label")}
-                />
-                <span className="flex items-center gap-1.5 text-body font-medium">
-                  <Brain className="size-3.5" />
-                  {t("form.think.short")}
-                </span>
+                <Switch checked={state.think} onCheckedChange={(think) => patch({ think })}>
+                  <span className="flex items-center gap-1.5 text-body font-medium">
+                    <Brain className="size-3.5" />
+                    {t("form.think.short")}
+                  </span>
+                </Switch>
                 <span className="ml-auto text-[11px] nums text-muted-foreground">
                   {state.think
-                    ? t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
+                    ? policy.effortMatters === false
+                      ? t("form.think.onPlain")
+                      : t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
                     : t("form.think.off")}
                 </span>
               </div>
-              {state.think ? (
+              {/* The slider only where it changes the answer. On a family whose own note
+                  says the three levels behave alike, drawing it offers a decision and
+                  explains underneath that it makes no difference. `effort` is still sent
+                  — clamped to a level the engine accepts — it just stops being asked. */}
+              {state.think && policy.effortMatters !== false ? (
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                   <EffortSlider
                     levels={policy.levels}
@@ -920,6 +920,7 @@ export function GenerateForm({
         implied={implied}
         restrictTo={activeCurriculum}
         onlyWithExemplars={onlyWithExemplars}
+        onShowWithoutExemplars={() => applyFilter(false)}
         exemplarType={exemplarType}
         open={picking === "concepts"}
         onClose={() => setPicking(null)}

@@ -13,10 +13,16 @@ export function SelectionTray({
   onClear,
   onConfirm,
   confirmLabel,
+  hidden = 0,
+  onShowHidden,
 }: {
   selected: string[];
   implied: string[];
   total: number;
+  /** How many concepts the exemplar filter is keeping out of the board. */
+  hidden?: number;
+  /** Lifts that filter, when the caller has one to lift. */
+  onShowHidden?: () => void;
   colourFor: (concept: string) => string | undefined;
   onRemove: (concept: string) => void;
   onClear: () => void;
@@ -39,6 +45,22 @@ export function SelectionTray({
             {plural("tray.chosenOf", offered)}
             {implied.length > 0 ? (
               <span className="text-primary">{t("tray.byPrerequisite", { n: implied.length })}</span>
+            ) : null}
+            {/* WHAT IS NOT ON THE BOARD, SAID ON THE BOARD. The exemplar filter is on by
+                default and its switch lives in the step BEHIND this overlay, so «0 de 42»
+                was the whole truth a person had: the graph has 162 concepts and nothing
+                here said the other 120 existed. */}
+            {hidden > 0 ? (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={onShowHidden}
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  {plural("tray.hiddenNoExemplars", hidden)}
+                </button>
+              </>
             ) : null}
           </p>
           <div className="ml-auto flex items-center gap-2">

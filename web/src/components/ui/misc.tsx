@@ -149,23 +149,44 @@ export function PhaseBar({
   );
 }
 
+/**
+ * A switch, and the text beside it is part of it.
+ *
+ * THE LABEL IS A CHILD, NOT A STRING PROPERTY, and that is what the callers were missing.
+ * This used to be a bare `<button aria-label={label}>` with no children, so every screen
+ * wrote the words a second time in a `<span>` next to it — and that span was not a
+ * `<label>`, so it did nothing. Measured before the fix: clicking «Restringir a un
+ * currículo» left `aria-checked` at `false`, and the accessible name was announced twice
+ * because the visible text repeated the `aria-label` verbatim.
+ *
+ * With `children` the whole row is the target — 36×20 px becomes the width of the
+ * sentence — and the name comes from the text itself, so nothing is said twice. `label`
+ * survives for the switches that genuinely have no visible text beside them (a table
+ * row's own control), and is ignored when children are given.
+ */
 export function Switch({
   checked,
   onCheckedChange,
   disabled,
   label,
+  children,
+  className,
 }: {
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
   disabled?: boolean;
   label?: string;
+  children?: ReactNode;
+  className?: string;
 }) {
-  return (
+  const control = (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={label}
+      // Only when there is no visible text: with children the `<label>` names it, and a
+      // second name here is what the screen reader read twice.
+      aria-label={children ? undefined : label}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
@@ -180,6 +201,21 @@ export function Switch({
         )}
       />
     </button>
+  );
+
+  if (!children) return control;
+
+  return (
+    <label
+      className={cn(
+        "inline-flex cursor-pointer items-center gap-2",
+        disabled && "cursor-not-allowed opacity-50",
+        className,
+      )}
+    >
+      {control}
+      <span className="min-w-0">{children}</span>
+    </label>
   );
 }
 
@@ -223,7 +259,11 @@ export function Checkbox({
         onCheckedChange(!checked);
       }}
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-40",
+        "relative inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-40",
+        // The same 24 px target the (i) gets, and for the same reason: the bank draws 41
+        // of these in a column sized to the box, so growing the box would re-space every
+        // row of a forty-row table. The pseudo-element is only hit testing.
+        "before:absolute before:-inset-1 before:content-['']",
         marked
           ? "border-primary bg-primary text-primary-foreground"
           : "border-input bg-background hover:border-primary/70 hover:bg-accent",

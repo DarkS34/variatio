@@ -122,19 +122,20 @@ function ConceptDetail({
             ))}
           </Select>
         </Field>
-        <div className="flex items-center justify-between rounded-md border border-border p-2">
-          <div className="flex items-center gap-1.5">
-            <p className="text-body">{t("kg.taggable")}</p>
-            <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
-          </div>
+        {/* The switch leads and the (i) closes the row: the hint is a button of its own, so
+            nesting it inside the label would make reading the explanation toggle the
+            control. Everywhere else in the app a switch sits to the left of its text. */}
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
           <Switch
             checked={concept.taggable}
             disabled={locked}
             onCheckedChange={(next) =>
               run(() => api.updateConcept({ name: concept.name, taggable: next }))
             }
-            label="etiquetable"
-          />
+          >
+            <span className="text-body">{t("kg.taggable")}</span>
+          </Switch>
+          <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
         </div>
         {dirty && !locked ? (
           <Button
@@ -151,7 +152,7 @@ function ConceptDetail({
               )
             }
           >
-            Guardar cambios
+            {t("kg.saveChanges")}
           </Button>
         ) : null}
       </div>
@@ -350,10 +351,9 @@ function AddConceptDialog({
             ))}
           </Select>
         </Field>
-        <div className="flex items-center gap-2">
-          <Switch checked={taggable} onCheckedChange={setTaggable} label={t("kg.taggableSwitch")} />
+        <Switch checked={taggable} onCheckedChange={setTaggable}>
           <span className="text-body">{t("kg.taggable")}</span>
-        </div>
+        </Switch>
         {error ? <p className="text-small text-destructive">{error}</p> : null}
       </div>
     </Dialog>

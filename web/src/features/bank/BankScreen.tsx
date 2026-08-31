@@ -23,7 +23,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { fieldText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
+import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
 import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
 import type {
   BankItem,
@@ -242,6 +242,10 @@ function ItemRow({
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
   const text = fieldText(item[primaryField]);
+  // Extracted before the grammar was dropped from remote bank extraction: the statement
+  // holds control characters where its accents used to be. Nothing here can repair it —
+  // only a re-extraction can — but until this the row looked exactly like a sound one.
+  const broken = hasBrokenText(item);
 
   return (
     <>
@@ -325,6 +329,12 @@ function ItemRow({
         ) : null}
         <TD className="py-2 pr-3">
           <div className="flex max-w-64 flex-wrap gap-1">
+            {broken ? (
+              <Badge variant="danger" title={t("bank.brokenTextHint")}>
+                <TriangleAlert />
+                {t("bank.brokenText")}
+              </Badge>
+            ) : null}
             {untagged ? (
               <Badge variant="attention">
                 <TriangleAlert />

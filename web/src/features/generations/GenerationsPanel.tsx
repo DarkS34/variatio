@@ -98,7 +98,7 @@ export function GenerationsPanel() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-heading">Variantes guardadas</h2>
+        <h2 className="text-heading">{t("generations.title")}</h2>
         <InfoHint label={t("generations.whatIsHere")}>
           {t("generations.whatIsHere.body")}
         </InfoHint>

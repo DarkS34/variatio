@@ -70,9 +70,18 @@ export function FormStep({
         />
 
         <div className="pointer-events-none relative flex w-full items-center gap-2.5 px-3 py-2.5 text-left">
+          {/* THE ORDINAL STAYS, AND THE CHECK GOES BESIDE IT (2026-08-31).
+              The mark used to REPLACE the number once a step was answered and closed, so
+              a half-filled form read «✓ · 2 · ✓ · 4 · 5»: two of the five steps had no
+              number at all, and the ones that did no longer described a sequence. Measured
+              on the real form — choose a modality and two concepts and that is exactly what
+              is on screen.
+              A number that disappears is not an ordinal. The step keeps it for as long as
+              it exists, and «answered» is said by the tint plus a small check on the
+              corner, which is additive rather than substitutive. */}
           <span
             className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full text-small font-semibold nums transition-colors",
+              "relative flex size-6 shrink-0 items-center justify-center rounded-full text-small font-semibold nums transition-colors",
               answered
                 ? "bg-primary/12 text-primary"
                 : open
@@ -80,7 +89,12 @@ export function FormStep({
                   : "bg-muted text-muted-foreground",
             )}
           >
-            {answered && !open ? <Check className="size-3.5" /> : index}
+            {index}
+            {answered && !open ? (
+              <span className="absolute -bottom-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Check className="size-2 stroke-[4]" />
+              </span>
+            ) : null}
           </span>
 
           <span className="min-w-0 flex-1">

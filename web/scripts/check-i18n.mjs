@@ -49,6 +49,25 @@ const SPANISH_WORDS =
 // a sentence: two or more words with a space between them.
 const SENTENCE = /\S+\s+\S+/;
 
+// A phrase that LOOKS like prose whatever language it is in: it opens with a capital and
+// every word is alphabetic. It is the third test `JSX_BLOCK` applies, and it exists
+// because a Spanish phrase of two content words — «Guardar cambios» — carries neither an
+// accent nor a function word, so the two tests above are both blind to it.
+//
+// The capital is doing the work: identifiers, routes and wire values are lower-case or
+// SCREAMING_CASE, and a sentence a person reads starts with a capital in both languages.
+// Requiring every word to be alphabetic keeps out anything with a number, a dot or a
+// bracket in it, which is where rendered data lives.
+const PROSE_SHAPE = /^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)+$/;
+
+// What `PROSE_SHAPE` would otherwise flag: product and technology names that read the
+// same in both catalogues, so translating them would be wrong rather than missing.
+const TECHNICAL_PHRASES = new Set([
+  "Claude Code",
+  "Hugging Face",
+  "Think Python",
+]);
+
 // A Tailwind class list is a space-separated sentence made of words, and `divide-y` ends
 // in a `y` that the word test reads as the Spanish conjunction. Rather than teach the word
 // test about hyphens — which would lose «Sin construir» — a candidate whose every token
@@ -200,8 +219,20 @@ for (const full of walk(SRC)) {
     // Two words, not four: «Solo sin descripción» is three and shipped in Spanish through a
     // green gate. One word is LONE_WORD's job, and it has an allow-list this rule cannot use.
     if (value.split(/\s+/).length < 2) continue;
-    if (!SPANISH.test(value) && !SPANISH_WORDS.test(value)) continue;
+    // THE THIRD BLIND SPOT, AND THE ONE THAT SHIPPED FOUR STRINGS (found 2026-08-31 with a
+    // browser open on the built bundle). The two tests above are orthography OR a function
+    // word from a closed list — and a Spanish phrase made of two CONTENT words carries
+    // neither. «Guardar cambios», «Variantes guardadas» and «Volver a entrar» all passed a
+    // green gate, the last one on the password-recovery screen.
+    //
+    // So a sentence that opens with a capitalised word is copy whatever it is made of. The
+    // capital is what keeps identifiers and wire values out — those are lower-case or
+    // SCREAMING — and `PROSE_SHAPE` additionally demands that every word be alphabetic,
+    // which excludes «C001 Escribe…» style renderings of data.
+    const prose = SPANISH.test(value) || SPANISH_WORDS.test(value) || PROSE_SHAPE.test(value);
+    if (!prose) continue;
     if (looksLikeClasses(value)) continue;
+    if (TECHNICAL_PHRASES.has(value)) continue;
     const line = code.slice(0, match.index).split("\n").length;
     findings.push(`${path}:${line}  ${value.slice(0, 90)}`);
   }

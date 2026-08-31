@@ -32,6 +32,14 @@ export interface ConceptSelectorProps {
   restrictTo?: string[] | null;
   onlyWithExemplars?: boolean;
   /**
+   * Lifts the exemplar filter from inside the overlay.
+   *
+   * Its switch lives in the step behind this panel, so with the filter on the board
+   * simply showed fewer concepts and said nothing about it. Given, the tray offers the
+   * count and the way back.
+   */
+  onShowWithoutExemplars?: () => void;
+  /**
    * The modality being generated. Given, every exemplar count on screen is the count of
    * THAT modality, because it is the only one the few-shot block may draw from. Null when
    * the profile declares a single one, where the total already says it.
@@ -66,6 +74,7 @@ export function ConceptSelector({
   implied,
   restrictTo,
   onlyWithExemplars = false,
+  onShowWithoutExemplars,
   exemplarType = null,
   allowNonTaggable = false,
   showExemplarCount = true,
@@ -123,6 +132,19 @@ export function ConceptSelector({
     chosen,
     implied,
   ]);
+
+  // Concepts the EXEMPLAR filter alone is keeping out — not the curriculum and not
+  // taggability, which are the caller's own restrictions and have their own wording.
+  const hiddenByExemplars = useMemo(() => {
+    if (!onlyWithExemplars) return 0;
+    const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
+    return concepts.filter((concept) => {
+      if (chosen.has(concept.name) || implied?.has(concept.name)) return false;
+      if (allowed && !allowed.has(concept.name)) return false;
+      if (!concept.taggable && !allowNonTaggable) return false;
+      return !hasExemplars(concept, exemplarType);
+    }).length;
+  }, [concepts, onlyWithExemplars, restrictTo, allowNonTaggable, exemplarType, chosen, implied]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -317,6 +339,8 @@ export function ConceptSelector({
         onClear={() => onChange([])}
         onConfirm={onConfirm ?? onClose}
         confirmLabel={confirmLabel ?? t("concept.done")}
+        hidden={onShowWithoutExemplars ? hiddenByExemplars : 0}
+        onShowHidden={onShowWithoutExemplars}
       />
     </div>,
     document.body,

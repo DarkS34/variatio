@@ -34,3 +34,23 @@ export function inputToField(raw: string, wasList: boolean): unknown {
     .map((line) => line.trim())
     .filter((line) => line !== "");
 }
+
+/**
+ * Whether a value carries C0 control characters, which in this corpus means damage.
+ *
+ * Banks extracted before 2026-08-29 hold text mangled by Cerebras' constrained decoding:
+ * every non-ASCII character came back as `\u00` plus two wrong hex digits, so «¿Qué»
+ * reached the file as `\x1fQu\x10\x10`. It is not recoverable in place — the information
+ * is gone and only a re-extraction restores it — but until this, the screen painted those
+ * items exactly like the sound ones and a person had to read every statement to find them.
+ *
+ * Tab, newline and carriage return are legitimate in a statement and are not damage.
+ */
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/;
+
+export function hasBrokenText(value: unknown): boolean {
+  if (typeof value === "string") return CONTROL.test(value);
+  if (Array.isArray(value)) return value.some(hasBrokenText);
+  if (value && typeof value === "object") return Object.values(value).some(hasBrokenText);
+  return false;
+}

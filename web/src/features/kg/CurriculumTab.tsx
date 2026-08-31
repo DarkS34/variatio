@@ -224,17 +224,12 @@ export function CurriculumTab() {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3">
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={closePrerequisites}
-            onCheckedChange={setClosePrerequisites}
-            label={t("curric.closeSwitch")}
-          />
-          <div>
-            <p className="text-body">{t("curric.closeTitle")}</p>
-            <p className="text-small text-muted-foreground">{t("curric.closeBody")}</p>
-          </div>
-        </div>
+        <Switch checked={closePrerequisites} onCheckedChange={setClosePrerequisites}>
+          <span className="block">
+            <span className="block text-body">{t("curric.closeTitle")}</span>
+            <span className="block text-small text-muted-foreground">{t("curric.closeBody")}</span>
+          </span>
+        </Switch>
         <Button disabled={!canSave || save.isPending} onClick={() => save.mutate()}>
           <Save />
           {t("curric.save")}

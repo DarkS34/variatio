@@ -18,3 +18,5 @@ web/tsconfig.tsbuildinfo
 
 *.md
 !README.md
+# Auditoría UX (capturas de trabajo, no forman parte del producto)
+/auditoria-ux/

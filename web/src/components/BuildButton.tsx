@@ -85,24 +85,31 @@ export function BuildButton({
 
   // The permission goes first: a viewer being told that a raw slot is empty would be
   // reading advice about a button they could not press even after fixing it.
-  const reason = !canEdit
-    ? t("build.readOnly")
-    : stage.blocked_reason
-      ? stage.blocked_reason
-      : rawMissing
-        ? t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! })
-        : offline
-          ? offline
-          : submit.isPending
-            ? t("build.sending")
-            : waiting
-              ? // Already launched and waiting its turn: pressing again would only queue a
-                // second copy of the same build behind the first.
-                t("build.alreadyQueued", {
-                  label: waiting.label,
-                  reason: wait ? ` ${waitReason(wait, split, tr)}` : "",
-                })
-              : null;
+  //
+  // APPROVED CLOSES THE STAGE, AND THAT INCLUDES REBUILDING IT (2026-08-31, explicit user
+  // request). The rule was already written — «while approved, the screen offers no control
+  // that rewrites the artifact, and the only way back to it is Reabrir» — and the screen
+  // says it out loud in the notice under this row, but the button that discards the whole
+  // artifact stayed live two centimetres to its left. Measured on all three stages: banco
+  // «Volver a extraer», grafo and perfil «Reconstruir», every one of them enabled beside
+  // its own «Bloqueado para editar». The two cannot both be true, so the control goes and
+  // the sentence stands.
+  const reason = ((): string | null => {
+    if (!canEdit) return t("build.readOnly");
+    if (stage.status === "approved") return t("build.approved");
+    if (stage.blocked_reason) return stage.blocked_reason;
+    if (rawMissing) return t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! });
+    if (offline) return offline;
+    if (submit.isPending) return t("build.sending");
+    // Already launched and waiting its turn: pressing again would only queue a second
+    // copy of the same build behind the first.
+    if (waiting)
+      return t("build.alreadyQueued", {
+        label: waiting.label,
+        reason: wait ? ` ${waitReason(wait, split, tr)}` : "",
+      });
+    return null;
+  })();
 
   const launch = () => {
     if (!missing && labels?.confirmRedo && !window.confirm(labels.confirmRedo)) return;

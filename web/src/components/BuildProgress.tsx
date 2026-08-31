@@ -29,9 +29,23 @@ import { CancelButton } from "./CancelButton";
 export function BuildProgress({
   artifact,
   className,
+  compact = false,
 }: {
   artifact: ArtifactName;
   className?: string;
+  /**
+   * Drop the step timeline and the stop button, for a caller that already has both.
+   *
+   * The panel is the one place where three drawings of one job used to coexist: this card
+   * inside the stage's own card (with a `RunTimeline` and a «Cancelar»), `ActivityCard`
+   * beside it (with a second «Cancelar»), and the run drawer behind the floating pill
+   * (with the same timeline again). Two stop buttons for one job, thirty centimetres
+   * apart and in different variants, is not redundancy that helps.
+   *
+   * Compact keeps what the stage's own card is FOR — which phase, how far, how long — and
+   * lets the panel say the rest once, in the card whose subject is the run itself.
+   */
+  compact?: boolean;
 }) {
   const { t } = useT();
   const run = useArtifactRun(artifact);
@@ -44,6 +58,7 @@ export function BuildProgress({
       run={run}
       phases={phases}
       className={className}
+      compact={compact}
       waiting={t("progress.building")}
     />
   );
@@ -62,12 +77,15 @@ export function JobProgress({
   phases,
   className,
   waiting,
+  compact = false,
 }: {
   run: RunView | null;
   phases: BuildPhase[];
   className?: string;
   /** What the card says before the first step arrives. Defaults to the generic sentence. */
   waiting?: string;
+  /** See `BuildProgress`: no timeline and no stop button, for a caller that has both. */
+  compact?: boolean;
 }) {
   const { t } = useT();
   const waitingText = waiting ?? t("progress.running");
@@ -129,7 +147,7 @@ export function JobProgress({
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
-          {active ? <CancelButton run={run} className="ml-auto" /> : null}
+          {active && !compact ? <CancelButton run={run} className="ml-auto" /> : null}
         </div>
 
         {/* With no phase plan yet (start-up, or model loading) the bar is indeterminate on
@@ -167,17 +185,28 @@ export function JobProgress({
           ) : null}
         </div>
 
-        <div className="space-y-2">
-          <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-            {t("run.steps")}
-          </h4>
-          <RunTimeline steps={run.steps} />
-          {run.job.error ? (
+        {/* The timeline is the drawer's job when a caller says `compact`: on the panel it
+            was drawn here, inside the stage card, and again behind the floating pill. The
+            error is NOT part of that — a failure has to be readable where it happened. */}
+        {compact ? (
+          run.job.error ? (
             <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
               {run.job.error}
             </p>
-          ) : null}
-        </div>
+          ) : null
+        ) : (
+          <div className="space-y-2">
+            <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+              {t("run.steps")}
+            </h4>
+            <RunTimeline steps={run.steps} />
+            {run.job.error ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
+                {run.job.error}
+              </p>
+            ) : null}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

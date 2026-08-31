@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState, Spinner } from "@/components/ui/misc";
 import { useSession } from "@/state/auth";
 import { useCreateWorkspace } from "@/state/queries";
 import { usePromptLanguage } from "./promptLanguage";
@@ -27,6 +27,9 @@ export function NoWorkspace() {
   const create = useCreateWorkspace();
   const { t } = useT();
   const [name, setName] = useState("");
+  // Whether the form has been submitted once: the error only appears after a press,
+  // never while somebody is still typing the first letter.
+  const [touched, setTouched] = useState(false);
   // The first workspace of an installation, so this is the most expensive place to get the
   // prompt language wrong: nothing after the first build can change it.
   const [language, setLanguage] = usePromptLanguage();
@@ -47,6 +50,7 @@ export function NoWorkspace() {
             className="w-full max-w-sm space-y-2 text-left"
             onSubmit={(event) => {
               event.preventDefault();
+              setTouched(true);
               if (valid) create.mutate({ slug, name: name.trim(), language });
             }}
           >
@@ -92,10 +96,19 @@ export function NoWorkspace() {
             ) : slug ? (
               <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
             ) : null}
-            <Button type="submit" className="w-full" disabled={!valid || create.isPending}>
-              <FolderPlus />
+            {/* ENABLED WITH AN EMPTY NAME, AND THAT IS THE POINT. This is the only control
+                on the only screen the account can reach, and it greeted everybody greyed
+                out with nothing saying why — «prevención de errores» applied so early that
+                it stops being prevention and becomes a dead end. It validates on press
+                instead, and says what is missing. `create.isPending` still disables it:
+                that one is a real reason, and it is visible as a spinner. */}
+            <Button type="submit" className="w-full" disabled={create.isPending}>
+              {create.isPending ? <Spinner /> : <FolderPlus />}
               {t("noWorkspace.createMine")}
             </Button>
+            {touched && !valid ? (
+              <p className="text-small text-destructive">{t("workspace.nameRequired")}</p>
+            ) : null}
           </form>
         }
       >

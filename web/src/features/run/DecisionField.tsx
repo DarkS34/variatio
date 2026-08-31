@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { baseType, enumValues } from "@/features/profile/FieldEditor";
+import { readableValue } from "@/lib/text";
 import type { FieldSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT, type Translate } from "@/lib/i18n";
@@ -67,7 +68,7 @@ export function DecisionField({
           {enumValues(spec.schema).map((option) => (
             <Choice
               key={option}
-              label={option}
+              label={readableValue(option)}
               active={value === option}
               onClick={() => onChange(value === option ? undefined : option)}
             />

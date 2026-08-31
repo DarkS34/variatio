@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Activity, Archive, Files, Play, Scale, Wrench } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { RunDrawer } from "@/components/RunDrawer";
 import { buttonVariants } from "@/components/ui/button";
@@ -186,8 +186,42 @@ function MainNav({
   className?: string;
 }) {
   const { t } = useT();
+  // WHETHER THE STRIP IS CUT OFF ON THE RIGHT, so the fade below can say so.
+  // Measured at 390 px: the row needs 686 px, and «BANCO», «Generar» and «Evaluar» were
+  // simply not on screen. The scroller works, but its bar is hidden on purpose (a
+  // permanent scrollbar under the header is noise at every other width), so there was
+  // nothing at all to suggest the strip continued — on a phone, the two destinations that
+  // consume the whole chain did not exist.
+  const strip = useRef<HTMLElement>(null);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const measure = () => setCut(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [stages.length, locked, rawWaiting]);
+
   return (
     <nav
+      ref={strip}
+      // The fade is a mask rather than a gradient overlay: an overlay would need a
+      // background colour, and this strip sits on a translucent blurred header where
+      // any solid ground shows as a seam.
+      style={
+        cut
+          ? {
+              maskImage: "linear-gradient(to right, #000 calc(100% - 2rem), transparent)",
+              WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 2rem), transparent)",
+            }
+          : undefined
+      }
       className={cn(
         "min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
@@ -305,6 +339,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const stages = pipeline.data?.stages ?? [];
 
+  // WHETHER THE FLOATING PILL EXISTS AT ALL, and it is not a nicety: it made a real button
+  // unreachable. «Ver ejecución» is anchored to the bottom-right corner, and the CSV export
+  // of «Administración → Evaluaciones» is anchored to the right of its own row — measured,
+  // a real click on the centre of that button opened the run drawer and downloaded nothing.
+  // `main`'s `pb-20` keeps content from ENDING underneath, which is a different problem and
+  // never was this one.
+  //
+  // The condition is «has anything run in this session», not «is something running now»: a
+  // finished run is exactly what one goes to the drawer to read, and it would be perverse
+  // to hide the log the moment the job it belongs to ends. With nothing ever run there is
+  // nothing behind the pill, so the corner goes back to the page.
+  const hasRuns = Object.keys(stream.runs).length > 0;
+
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
 
@@ -363,13 +410,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             <WorkspaceSwitcher />
           </div>
 
-          <MainNav
-            path={path}
-            stages={stages}
-            locked={locked}
-            rawWaiting={rawWaiting}
-            className="hidden xl:flex"
-          />
+          {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
+              same «Todavía no tienes ningún workspace», so the bar was offering seven
+              doors into one room — and to a student account, five of them are the
+              teacher's preparation chain. `App` already gates the routes; this stops the
+              navigation from advertising them. */}
+          {hasWorkspace ? (
+            <MainNav
+              path={path}
+              stages={stages}
+              locked={locked}
+              rawWaiting={rawWaiting}
+              className="hidden xl:flex"
+            />
+          ) : null}
 
           <div className="flex flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
             {/* THE LOG GAVE THIS CORNER UP TO «Mis variantes» (2026-08-28, explicit user
@@ -404,13 +458,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* The same navigation, on its own line, for everything narrower than a laptop. */}
-        <MainNav
-          path={path}
-          stages={stages}
-          locked={locked}
-          rawWaiting={rawWaiting}
-          className="flex border-t border-border px-3 py-1.5 xl:hidden"
-        />
+        {hasWorkspace ? (
+          <MainNav
+            path={path}
+            stages={stages}
+            locked={locked}
+            rawWaiting={rawWaiting}
+            className="flex border-t border-border px-3 py-1.5 xl:hidden"
+          />
+        ) : null}
 
         {/* Whoever is seeing this while the door is closed is the account that closed it —
             everybody else is looking at the notice — so the strip is a reminder rather than
@@ -439,13 +495,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         className={cn(
+          "mx-auto w-full max-w-[1600px] flex-1 px-3 pt-4 sm:px-4 sm:pt-6",
           // The bottom padding is not symmetric with the top, and that is the floating
           // «Ver ejecución» pill: fixed to the corner, it covers whatever the page happens
           // to end on. It is 36 px tall over a 12/16 px offset, so the reservation has to
-          // clear ~52 px AT EVERY WIDTH — `sm:pb-6` cleared 24 and the pill swallowed the
-          // CSV button of «Administración → Evaluaciones» whole: measured, a real click on
-          // its centre opened the run drawer instead of downloading anything.
-          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-20 pt-4 sm:px-4 sm:pb-16 sm:pt-6",
+          // clear ~52 px AT EVERY WIDTH.
+          //
+          // It is reserved ONLY while the pill is drawn, and that half is what the padding
+          // never fixed on its own: the pill also sits on top of anything anchored to the
+          // right of its own row, which is how it ate the CSV button of «Administración →
+          // Evaluaciones». `hasRuns` is what removes it; this only stops a session that
+          // has never run anything from carrying 80 px of empty page.
+          hasRuns ? "pb-20 sm:pb-16" : "pb-8",
           // scroll-pb as well as pb: without it a control focused while the drawer is open
           // gets scrolled to a position underneath the drawer.
           drawerOpen && "pb-[56vh] scroll-pb-[56vh]",
@@ -461,7 +522,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           `logs/<slug>/jobs.log` on 2026-08-31 (explicit user request) and no screen shows
           it any more, so the counter had nothing to count and the second half nothing to
           open. */}
-      {!drawerOpen ? (
+      {!drawerOpen && hasRuns ? (
         <div className="fixed bottom-3 right-3 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised sm:bottom-4 sm:right-4">
           <button
             onClick={() => setDrawerOpen(true)}

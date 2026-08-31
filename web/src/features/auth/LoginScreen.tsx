@@ -101,7 +101,7 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
       description={t("auth.recoverBody")}
       footer={
         <button type="button" onClick={onBack} className="text-muted-foreground hover:underline">
-          Volver a entrar
+          {t("auth.backToLogin")}
         </button>
       }
     >
