@@ -388,6 +388,51 @@ export const es = {
   "tutorial.start": "Empezar por el Paso 1",
   "tutorial.again": "Ver la explicación otra vez",
 
+  "tutorial.stepName": "Paso {n}: {name}",
+
+  "tutorial.fig.yours": "Tus apuntes y tus ejercicios",
+  "tutorial.fig.learns": "Aprende tu asignatura",
+  "tutorial.fig.new": "Ejercicios nuevos",
+  "tutorial.fig.notes": "Apuntes: guiones, transparencias, el libro de la asignatura.",
+  "tutorial.fig.exercises": "Ejercicios: boletines, exámenes de otros años, hojas de problemas.",
+  "tutorial.fig.build": "Lo construyo",
+  "tutorial.fig.review": "Lo miras",
+  "tutorial.fig.approve": "Lo apruebas",
+  "tutorial.fig.headerRight": "Arriba a la derecha, en todas las pantallas",
+  "tutorial.fig.proposal": "Propuesta {letter}",
+
+  "tutorial.p1.title": "Paso 1: importar apuntes y ejercicios de clase",
+  "tutorial.p1.body":
+    "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es el único paso en el que tienes que buscar archivos.",
+  "tutorial.p1.b1":
+    "Leo cada documento página a página, como si lo mirara. Hay un botón para leerlos todos de una vez; si no lo pulsas, esa espera se reparte entre los pasos siguientes.",
+  "tutorial.p1.b2":
+    "Si me equivoco leyendo una página, puedes reescribirla a mano. Tu versión gana y sobrevive a todo lo que venga después.",
+
+  "tutorial.p2.title": "Paso 2: tipos de ejercicio",
+  "tutorial.p2.body":
+    "Miro los ejercicios que subiste y separo las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
+  "tutorial.p2.b1":
+    "Es la plantilla con la que escribiré los ejercicios nuevos, así que conviene que te suene: si falta una forma que usas, la añades; si sobra alguna, la quitas.",
+  "tutorial.p2.b2":
+    "Cada tipo lleva sus reglas de redacción: cómo escribe tu asignatura ese tipo de ejercicio. Puedes cambiarlas, añadir o borrar.",
+
+  "tutorial.p3.title": "Paso 3: el temario",
+  "tutorial.p3.body":
+    "Leo tus apuntes y saco los conceptos que enseñas y en qué orden se apoyan unos en otros. Es lo que me dice qué puedo dar por sabido en un ejercicio y qué todavía no.",
+  "tutorial.p3.b1":
+    "Va después del 2 porque, para saber qué conceptos sirven de etiqueta, primero tengo que saber qué ejercicios pones.",
+  "tutorial.p3.b2":
+    "Pulsa un tema para abrir su ficha: ahí cambias el nombre, la unidad, la descripción y las relaciones con otros temas.",
+
+  "tutorial.p4.title": "Paso 4: tus ejercicios",
+  "tutorial.p4.body":
+    "Recojo uno a uno los ejercicios de tus documentos y a cada uno le pongo el tema que practica. Son los que miraré para escribir uno nuevo.",
+  "tutorial.p4.b1":
+    "Si están bien copiados, lo nuevo se parecerá a lo tuyo. Puedes corregir el texto de cualquiera y el tema que le puse.",
+  "tutorial.p4.b2":
+    "Al terminar este paso ya puedes pedir ejercicios nuevos.",
+
   "tutorial.s1.title": "Variatio escribe ejercicios de tu asignatura",
   "tutorial.s1.body":
     "No los busca en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de los ejercicios que ya pones, imitando tu forma de plantearlos. Le enseñas la asignatura una vez, y a partir de ahí le pides los ejercicios que necesites.",
@@ -402,9 +447,11 @@ export const es = {
   "tutorial.s2.aside":
     "Cuantos más ejercicios le des, más se parecerán los nuevos a los tuyos. Con tres o cuatro documentos ya funciona.",
 
-  "tutorial.s3.title": "Estos son los cuatro pasos",
+  "tutorial.s3.title": "El recorrido son cuatro pasos",
   "tutorial.s3.body":
-    "Los haces en este orden y de una sentada. Después no hay que volver a prepararlos, aunque siempre puedes entrar a cambiar algo.",
+    "Se hacen en este orden, de una sentada, y son los cuatro botones que llevas arriba en todo momento. Después no hay que volver a prepararlos, aunque siempre puedes entrar a cambiar algo.",
+  "tutorial.s3.aside":
+    "Estos cuatro nombres son los que verás arriba en todas las pantallas, en ese orden y con el número delante. La barra te dice en cuál vas y cuál te toca.",
   "tutorial.s3.step1":
     "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es lo único que hay que preparar.",
   "tutorial.s3.step2":
@@ -414,19 +461,10 @@ export const es = {
   "tutorial.s3.step4":
     "Recojo uno a uno los ejercicios de tus documentos y a cada uno le pongo el tema que practica. De ahí saldrán los ejemplos que imito al escribir uno nuevo.",
 
-  "tutorial.s4.title": "Los pasos 2, 3 y 4 tardan un buen rato",
-  "tutorial.s4.body":
-    "Hay que leer tus documentos enteros, página a página. Puede ser de unos minutos a más de una hora, según lo que hayas subido. No te digo cuánto falta, porque depende de tus documentos y prefiero no inventarme una cifra.",
-  "tutorial.s4.b1":
-    "Puedes cerrar la pestaña. Esto no corre en tu ordenador: sigue por su cuenta y lo encuentras hecho al volver.",
-  "tutorial.s4.b2":
-    "Puedes pararlo. Lo que ya se hizo se guarda, y al volver a lanzarlo sigue por donde iba.",
-  "tutorial.s4.b3":
-    "En el Paso 1 hay un botón para leer todos los documentos de una vez. Es opcional, pero si no lo haces, esa espera se repite en cada paso.",
 
-  "tutorial.s5.title": "Cada paso termina igual: miras, valoras y decides",
+  "tutorial.s5.title": "Los cuatro terminan igual",
   "tutorial.s5.body":
-    "Te enseño lo que ha salido con el cuestionario al lado: cinco preguntas cortas sobre qué tal. Al guardarlas te propongo seguir al paso siguiente.",
+    "Yo lo construyo, tú lo miras y decides si vale. Al lado tienes un cuestionario de cinco preguntas cortas sobre qué tal ha salido; al guardarlo te propongo seguir al paso siguiente.",
   "tutorial.s5.b1":
     "Nada se da por bueno hasta que tú lo dices. Mientras no pulses «Aprobar», el paso sigue abierto y se puede cambiar.",
   "tutorial.s5.b2":
@@ -434,18 +472,9 @@ export const es = {
   "tutorial.s5.aside":
     "Las cinco preguntas son lo único que te pedimos a cambio, y son exactamente lo que se está midiendo en el estudio.",
 
-  "tutorial.s6.title": "Lo que corrijas a mano gana siempre",
-  "tutorial.s6.body":
-    "Me voy a equivocar: leyendo una página torcida, metiendo un concepto que no es tuyo, poniéndole a un ejercicio un tema que no era. Corrígelo sin miedo — tu corrección gana sobre lo que yo entendí y sobrevive a todo lo que venga después, incluso si rehaces el paso.",
-  "tutorial.s6.b1": "En el Paso 1 puedes reescribir a mano una página que no supe leer.",
-  "tutorial.s6.b2":
-    "En el Paso 2 puedes renombrar tipos de ejercicio, añadir uno que falte o quitar partes que no uses.",
-  "tutorial.s6.b3":
-    "En el Paso 3 puedes quitar conceptos, renombrarlos, moverlos de bloque o añadir los que falten.",
-  "tutorial.s6.b4":
-    "En el Paso 4 puedes corregir el texto de un ejercicio y el tema que le puse.",
+  "tutorial.s6.title": "Me voy a equivocar en algo, y lo que corrijas a mano gana siempre: sobre lo que yo entendí y sobre cualquier reconstrucción posterior.",
 
-  "tutorial.s7.title": "Pedir un ejercicio nuevo",
+  "tutorial.s7.title": "Pedir ejercicios, y dónde quedan guardados",
   "tutorial.s7.body":
     "Le dices de qué tema lo quieres y de qué tipo, y te lo escribe. Puedes pedir varios a la vez y quedarte con el que más te guste.",
   "tutorial.s7.b1":
@@ -465,13 +494,8 @@ export const es = {
   "tutorial.s8.aside":
     "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
 
-  "tutorial.s9.title": "Nada de esto es irreversible",
   "tutorial.s9.body":
-    "Puedes rehacer cualquier paso, volver atrás, corregir a mano y empezar de nuevo. Lo único que no se recupera es lo que borres a propósito, y eso siempre se pregunta antes.",
-  "tutorial.s9.b1":
-    "En cada pantalla hay un enlace a la guía, que explica esa pantalla en detalle.",
-  "tutorial.s9.b2":
-    "Esta explicación la puedes volver a ver cuando quieras, desde el menú de tu cuenta.",
+    "Nada de esto es irreversible: puedes rehacer cualquier paso, volver atrás y corregir a mano. En cada pantalla hay un enlace a la guía, y esta explicación la puedes volver a ver desde el menú de tu cuenta.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",

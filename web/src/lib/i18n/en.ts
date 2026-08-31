@@ -349,6 +349,51 @@ export const en: Catalogue = {
   "tutorial.start": "Start with step 1",
   "tutorial.again": "See the explanation again",
 
+  "tutorial.stepName": "Step {n}: {name}",
+
+  "tutorial.fig.yours": "Your notes and your exercises",
+  "tutorial.fig.learns": "Learns your subject",
+  "tutorial.fig.new": "New exercises",
+  "tutorial.fig.notes": "Notes: handouts, slides, the course book.",
+  "tutorial.fig.exercises": "Exercises: problem sheets, past exams, worksheets.",
+  "tutorial.fig.build": "I build it",
+  "tutorial.fig.review": "You look at it",
+  "tutorial.fig.approve": "You approve it",
+  "tutorial.fig.headerRight": "Top right, on every screen",
+  "tutorial.fig.proposal": "Proposal {letter}",
+
+  "tutorial.p1.title": "Step 1: import notes and class exercises",
+  "tutorial.p1.body":
+    "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files.",
+  "tutorial.p1.b1":
+    "I read every document page by page, as if I were looking at it. There is a button to read them all in one go; without it, that wait is spread across the steps that follow.",
+  "tutorial.p1.b2":
+    "If I get a page wrong you can rewrite it by hand. Your version wins and survives everything that comes after.",
+
+  "tutorial.p2.title": "Step 2: exercise types",
+  "tutorial.p2.body":
+    "I look at the exercises you uploaded and separate the different shapes they have: code, multiple choice, tracing… and what parts each one carries.",
+  "tutorial.p2.b1":
+    "It is the template I will write new exercises with, so it is worth recognising: if a shape you use is missing, add it; if one is spare, remove it.",
+  "tutorial.p2.b2":
+    "Each type carries its writing rules: how your subject writes that kind of exercise. You can change them, add or delete.",
+
+  "tutorial.p3.title": "Step 3: the syllabus",
+  "tutorial.p3.body":
+    "I read your notes and pull out the concepts you teach and the order they rest on one another. It is what tells me what I can take as known in an exercise and what I cannot yet.",
+  "tutorial.p3.b1":
+    "It comes after step 2 because, to know which concepts work as a label, I first have to know what exercises you set.",
+  "tutorial.p3.b2":
+    "Click a topic to open its card: that is where you change the name, the unit, the description and the relations to other topics.",
+
+  "tutorial.p4.title": "Step 4: your exercises",
+  "tutorial.p4.body":
+    "I collect the exercises from your documents one by one and give each the topic it practises. They are what I look at to write a new one.",
+  "tutorial.p4.b1":
+    "If they are copied well, what is new will look like yours. You can correct the text of any of them and the topic I gave it.",
+  "tutorial.p4.b2":
+    "Once this step is done you can ask for new exercises.",
+
   "tutorial.s1.title": "Variatio writes exercises for your subject",
   "tutorial.s1.body":
     "It does not search the internet or make them up from nothing: it writes them from your notes and from the exercises you already set, imitating the way you pose them. You teach it the subject once, and from then on you ask it for the exercises you need.",
@@ -362,9 +407,11 @@ export const en: Catalogue = {
   "tutorial.s2.aside":
     "The more exercises you give it, the more the new ones will look like yours. Three or four documents is already enough.",
 
-  "tutorial.s3.title": "These are the four steps",
+  "tutorial.s3.title": "The route is four steps",
   "tutorial.s3.body":
-    "You do them in this order and in one sitting. They never have to be prepared again, though you can always go in and change something.",
+    "They are done in this order, in one sitting, and they are the four buttons you carry along the top at all times. They never have to be prepared again, though you can always go in and change something.",
+  "tutorial.s3.aside":
+    "These four names are what you will see along the top of every screen, in that order and numbered. The bar tells you which one you are on and which is next.",
   "tutorial.s3.step1":
     "You upload your documents: the notes on one side and the exercises on the other. It is the only thing you have to prepare.",
   "tutorial.s3.step2":
@@ -374,19 +421,10 @@ export const en: Catalogue = {
   "tutorial.s3.step4":
     "I collect the exercises from your documents one by one and give each the topic it practises. They are the examples I imitate when writing a new one.",
 
-  "tutorial.s4.title": "Steps 2, 3 and 4 take a good while",
-  "tutorial.s4.body":
-    "Whole documents have to be read, page by page. It can be minutes or more than an hour, depending on what you uploaded. I do not tell you how much is left, because it depends on your documents and I would rather not invent a figure.",
-  "tutorial.s4.b1":
-    "You can close the tab. This does not run on your computer: it carries on by itself and you find it done when you come back.",
-  "tutorial.s4.b2":
-    "You can stop it. What is already done is kept, and relaunching picks up where it left off.",
-  "tutorial.s4.b3":
-    "Step 1 has a button to read every document in one go. It is optional, but without it that wait repeats at every step.",
 
-  "tutorial.s5.title": "Every step ends the same: you look, you judge, you decide",
+  "tutorial.s5.title": "All four end the same way",
   "tutorial.s5.body":
-    "I show you what came out with the questionnaire beside it: five short questions on how it went. Saving them offers you the next step.",
+    "I build it, you look at it and decide whether it holds. Beside it is a questionnaire of five short questions on how it came out; saving it offers you the next step.",
   "tutorial.s5.b1":
     "Nothing is taken as good until you say so. Until you press «Approve», the step stays open and can be changed.",
   "tutorial.s5.b2":
@@ -394,17 +432,9 @@ export const en: Catalogue = {
   "tutorial.s5.aside":
     "Those five questions are the only thing we ask in return, and they are exactly what is being measured in the study.",
 
-  "tutorial.s6.title": "What you correct by hand always wins",
-  "tutorial.s6.body":
-    "I will get things wrong: reading a crooked page, pulling in a concept that is not yours, giving an exercise the wrong topic. Correct it without worry — your correction wins over what I understood and survives everything that comes after, even if you redo the step.",
-  "tutorial.s6.b1": "In step 1 you can rewrite by hand a page I could not read.",
-  "tutorial.s6.b2":
-    "In step 2 you can rename exercise types, add a missing one or remove parts you do not use.",
-  "tutorial.s6.b3":
-    "In step 3 you can remove concepts, rename them, move them between blocks or add the missing ones.",
-  "tutorial.s6.b4": "In step 4 you can correct an exercise's text and the topic I gave it.",
+  "tutorial.s6.title": "I will get something wrong, and what you correct by hand always wins: over what I understood and over any later rebuild.",
 
-  "tutorial.s7.title": "Asking for a new exercise",
+  "tutorial.s7.title": "Asking for exercises, and where they are kept",
   "tutorial.s7.body":
     "You say what topic you want it on and what type, and it writes it. You can ask for several at once and keep the one you like best.",
   "tutorial.s7.b1":
@@ -424,12 +454,8 @@ export const en: Catalogue = {
   "tutorial.s8.aside":
     "This is the part the study rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
 
-  "tutorial.s9.title": "None of this is irreversible",
   "tutorial.s9.body":
-    "You can redo any step, go back, correct by hand and start again. The only thing that cannot be recovered is what you delete on purpose, and that is always asked first.",
-  "tutorial.s9.b1": "Every screen has a link to the guide, which explains that screen in detail.",
-  "tutorial.s9.b2":
-    "You can see this explanation again whenever you like, from your account menu.",
+    "None of this is irreversible: you can redo any step, go back and correct by hand. Every screen links to the guide, and you can see this explanation again from your account menu.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
