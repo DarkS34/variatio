@@ -43,8 +43,20 @@ export function Textarea({
   useLayoutEffect(() => {
     const node = ref.current;
     if (!autoGrow || !node) return;
-    node.style.height = "auto";
-    node.style.height = `${node.scrollHeight}px`;
+    const fit = () => {
+      node.style.height = "auto";
+      node.style.height = `${node.scrollHeight}px`;
+    };
+    fit();
+    // AND ON EVERY CHANGE OF WIDTH, because the height of a paragraph is a function of it.
+    // Sized once at one width and then narrowed — the stage screens do exactly that when
+    // the verdict drawer opens beside them — the box keeps a height for a wrap that no
+    // longer happens and clips its own last line, with `overflow-hidden` making sure
+    // nothing says so.
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [autoGrow, props.value]);
 
   return (

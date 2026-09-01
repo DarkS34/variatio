@@ -400,6 +400,9 @@ function ItemRow({
  * where it is on purpose: it is contextual, it appears only when there is a selection, and
  * it belongs to the rows it acts on rather than to the totals.
  */
+/** Cuántos ejemplares se dibujan de una vez. */
+const PAGE_SIZE = 7;
+
 /**
  * WHICH PAGE OF THE BANK, AND THE TWO STEPS EITHER SIDE OF IT.
  *
@@ -595,7 +598,11 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const tagStatus = tagRun?.job?.status;
   const tagging = tagStatus === "running" || tagStatus === "queued";
 
-  const params = { q: query, item_type: itemType, source, untagged, order, page, page_size: 40 };
+  // SIETE POR PÁGINA (2026-09-01, explicit user request). Cuarenta filas era un listado
+  // que se recorría con la rueda del ratón y en el que la paginación no pintaba nada;
+  // siete caben de una vez en la mitad izquierda de la pantalla, junto al cuestionario,
+  // que es donde se leen.
+  const params = { q: query, item_type: itemType, source, untagged, order, page, page_size: PAGE_SIZE };
   const bank = useQuery({
     queryKey: ["bank", workspace, params],
     queryFn: () => api.bank(params as never),

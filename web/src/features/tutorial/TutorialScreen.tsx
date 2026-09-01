@@ -42,7 +42,21 @@ import {
  *
  * The content is vertically centred rather than pinned to the top: a slide is two
  * paragraphs and a drawing, and hung from the top of a tall window it reads as a page that
- * failed to finish loading.
+ * failed to finish loading. It centres only while it FITS — the column scrolls when it does
+ * not, which is normal now that everything is set at one size.
+ *
+ * ONE SIZE FOR EVERY SENTENCE (2026-09-01, explicit user request). The lead was `heading`,
+ * the points `body` and the aside `small`, so three sentences that are equally true were
+ * drawn at three sizes and read as three degrees of importance. They are all `heading` at
+ * normal weight now; only the title above them is larger, because it is a title. The slides
+ * got taller and that is the accepted cost — «no pasa nada que ocupe un poco más».
+ *
+ * AND THE NAV NEVER MOVES. It is a footer of its own, outside the scrolling column, so the
+ * two buttons sit at the same pixel on all ten slides: measured before, the primary button
+ * wandered between y=575 and y=789 because it followed the content, «Atrás» was missing on
+ * the first slide, and «Empezar» is a shorter word than «Siguiente» so the last slide
+ * shifted it sideways too. «Atrás» is now always rendered (invisible on the first) and both
+ * buttons have a floor on their width.
  *
  * It is not a gate. «Saltar la explicación» is on every slide and the account menu leads
  * back, because a person who has understood should not have to page through it and one who
@@ -169,8 +183,10 @@ export function TutorialScreen() {
   const leave = () => navigate("/raw");
 
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="flex items-center gap-2.5 px-4 py-5 sm:px-6">
+    // `h-full` and not `min-h-full`: the footer is pinned to the bottom of the viewport and
+    // the column between scrolls, which only works if this box has a height to divide.
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center gap-2.5 px-4 py-5 sm:px-6">
         <Link
           to="/raw"
           aria-label="Variatio" // i18n-exempt: es el nombre del producto
@@ -189,19 +205,16 @@ export function TutorialScreen() {
         </button>
       </div>
 
-      {/* Centred vertically, and the column is narrow: what is on a slide is a sentence, a
-          drawing and two facts, and at the top of a tall window that reads as a page that
-          did not finish loading. */}
-      <div className="flex flex-1 items-center justify-center px-4 pb-10 pt-2 sm:px-6">
-        <div className="w-full max-w-[42rem] space-y-5">
-          <div className="space-y-2.5">
+      {/* CENTRADO MIENTRAS QUEPA, con scroll cuando no. `min-h-full` sobre el hijo es lo
+          que mantiene el `justify-center`: sin él la columna mide lo que mide su contenido
+          y se pega arriba en cuanto la diapositiva es corta. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[46rem] flex-col justify-center gap-7 py-8">
+          <div className="space-y-3">
             <p className="text-micro text-muted-foreground">
               {t("tutorial.of", { n: at + 1, total: SLIDES.length })}
             </p>
             <h1 className="font-display font-expanded text-title">{t(slide.title)}</h1>
-            {/* The heading STEP at body weight: a lead paragraph is one size up from the
-                text under it, and weight is the other axis this palette separates roles
-                with. The six steps are unchanged — this is not a seventh. */}
             <p className="text-heading font-normal leading-relaxed text-muted-foreground">
               {t(slide.body)}
             </p>
@@ -216,9 +229,9 @@ export function TutorialScreen() {
               rather than a thing that is true. The rule on the left is the same device the
               rest of the app uses to say «these belong together». */}
           {slide.points ? (
-            <div className="space-y-2.5 border-l-2 border-border pl-4">
+            <div className="space-y-4 border-l-2 border-border pl-5">
               {slide.points.map((point) => (
-                <p key={point} className="text-body">
+                <p key={point} className="text-heading font-normal leading-relaxed">
                   {t(point)}
                 </p>
               ))}
@@ -226,41 +239,57 @@ export function TutorialScreen() {
           ) : null}
 
           {slide.aside ? (
-            <p className="border border-[color-mix(in_oklch,var(--settled)_35%,transparent)] bg-[color-mix(in_oklch,var(--settled)_10%,transparent)] p-3 text-small">
+            <p className="border border-[color-mix(in_oklch,var(--settled)_35%,transparent)] bg-[color-mix(in_oklch,var(--settled)_10%,transparent)] p-4 text-heading font-normal leading-relaxed">
               {t(slide.aside)}
             </p>
           ) : null}
+        </div>
+      </div>
 
-          {/* The dashes are a position and not a control: ten clickable dots would make
-              this a menu, and what it is is a sequence with one obvious next move. */}
-          <div className="flex items-center gap-4 pt-1">
-            <div aria-hidden className="flex flex-1 flex-wrap gap-1.5">
-              {SLIDES.map((_, index) => (
-                <span
-                  key={index}
-                  className={cn(
-                    "h-[3px] w-5",
-                    index < at && "bg-settled",
-                    index === at && "bg-attention",
-                    index > at && "bg-border",
-                  )}
-                />
-              ))}
-            </div>
-            {at > 0 ? (
-              <Button variant="ghost" onClick={() => setAt((n) => n - 1)}>
-                {t("tutorial.back")}
-              </Button>
-            ) : null}
-            <Button
-              variant="attention"
-              size="lg"
-              onClick={() => (last ? leave() : setAt((n) => n + 1))}
-            >
-              {t(last ? "tutorial.start" : "tutorial.next")}
-              <ArrowRight />
-            </Button>
+      {/* THE NAV, IN THE SAME PLACE ON ALL TEN. Outside the scrolling column and pinned to
+          the bottom, so it never follows the content — and both buttons keep their box
+          whatever word is in them, because «Empezar» is shorter than «Siguiente» and the
+          first slide has nothing to go back to. The dashes are a position and not a
+          control: ten clickable dots would make this a menu, and what it is is a sequence
+          with one obvious next move. */}
+      <div className="shrink-0 border-t border-border px-4 py-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[46rem] items-center gap-4">
+          <div aria-hidden className="flex flex-1 flex-wrap gap-1.5">
+            {SLIDES.map((_, index) => (
+              <span
+                key={index}
+                className={cn(
+                  "h-[3px] w-5",
+                  index < at && "bg-settled",
+                  index === at && "bg-attention",
+                  index > at && "bg-border",
+                )}
+              />
+            ))}
           </div>
+          <Button
+            variant="ghost"
+            className="min-w-[6rem]"
+            // Rendered on every slide and merely INVISIBLE on the first: dropping it there
+            // moved «Siguiente» sideways on the one slide everybody sees first.
+            aria-hidden={at === 0}
+            tabIndex={at === 0 ? -1 : undefined}
+            disabled={at === 0}
+            onClick={() => setAt((n) => n - 1)}
+          >
+            <span className={cn(at === 0 && "invisible")}>{t("tutorial.back")}</span>
+          </Button>
+          <Button
+            variant="attention"
+            size="lg"
+            // 216px: «Empezar por el Paso 1» mide 212 y «Siguiente» 160, así que sin un
+            // suelo el botón se ensanchaba en la última y saltaba hacia la izquierda.
+            className="min-w-[13.5rem] justify-center"
+            onClick={() => (last ? leave() : setAt((n) => n + 1))}
+          >
+            {t(last ? "tutorial.start" : "tutorial.next")}
+            <ArrowRight />
+          </Button>
         </div>
       </div>
     </div>

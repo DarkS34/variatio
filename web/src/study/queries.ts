@@ -7,6 +7,7 @@ import type {
   EvaluationDetail,
   EvaluationParams,
   EvaluationRating,
+  StageReview,
   TriageValue,
 } from "./types";
 
@@ -158,6 +159,12 @@ export function useStageReview(artifact: string | undefined) {
  *
  * The response IS the new state of the form, so there is nothing to refetch: a second
  * round trip would only make the badge flicker between «guardada» and «sin contestar».
+ *
+ * IT MERGES ONTO WHAT IS THERE rather than replacing it, and that is a floor and not a
+ * nicety. The save used to answer a shorter shape than the read — no `instrument` — and
+ * `StageReview` renders nothing without one, so saving made the whole block disappear
+ * until the next reload. The server now answers the same shape (`study/api/stages.py`),
+ * and this is what keeps an API older than the bundle from doing it again.
  */
 export function useSaveStageReview(artifact: string) {
   const client = useQueryClient();
@@ -167,7 +174,10 @@ export function useSaveStageReview(artifact: string) {
       overall: number | null;
       note: string | null;
     }) => studyApi.saveStageReview(artifact, body),
-    onSuccess: (review) => client.setQueryData(stageReviewKey(artifact), review),
+    onSuccess: (review) =>
+      client.setQueryData(stageReviewKey(artifact), (previous: StageReview | undefined) =>
+        previous ? { ...previous, ...review } : review,
+      ),
   });
 }
 

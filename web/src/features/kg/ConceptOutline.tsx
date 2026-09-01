@@ -306,15 +306,21 @@ export function ConceptOutline({
   );
 
   // Choosing a concept — on the map, most of the time — is NEWER than having shut its unit
-  // a minute ago, so it drops that unit's override rather than losing to it. Without this,
+  // a minute ago, so it wins over the override rather than losing to it. Without this,
   // clicking a node answered with an inspector on the right and a list on the left that
   // refused to show the row it was about.
+  //
+  // It writes `true` rather than DELETING the entry, and that is the whole difference
+  // between opening a unit and lending it out: with the entry deleted the unit fell back
+  // to its default the moment the concept was deselected, so closing the concept's dialog
+  // shut the list under it and the person lost the place they were reading. Opening is a
+  // decision like any other, whoever made it — a click on the row or a click on the map.
   useEffect(() => {
     if (!selectedUnit) return;
     setOverrides((current) => {
-      if (!current.has(selectedUnit)) return current;
+      if (current.get(selectedUnit) === true) return current;
       const next = new Map(current);
-      next.delete(selectedUnit);
+      next.set(selectedUnit, true);
       return next;
     });
   }, [selectedUnit]);

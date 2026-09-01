@@ -31,7 +31,10 @@ function Box({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col items-center gap-1.5 border px-3 py-2.5 text-center",
+        // `justify-center` y no sólo `items-center`: las cajas de una fila se estiran a la
+        // altura de la más alta, así que una con menos dentro dejaba su texto pegado
+        // arriba. Es lo que se veía en la diapositiva de «los cuatro terminan igual».
+        "flex min-w-0 flex-col items-center justify-center gap-1.5 border px-3 py-2.5 text-center",
         marked
           ? "border-attention bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]"
           : "border-border bg-card",
@@ -153,11 +156,7 @@ export function CloseFigure() {
       {stages.map(({ key, marked }, index) => (
         <div key={key} className="flex min-w-0 flex-1 items-center gap-2.5">
           <Box marked={marked} className="w-full">
-            {marked ? (
-              <Check aria-hidden className="size-4 text-attention" />
-            ) : (
-              <span aria-hidden className="size-4" />
-            )}
+            {marked ? <Check aria-hidden className="size-4 text-attention" /> : null}
             <span className={cn("text-small", marked && "font-medium")}>{t(key)}</span>
           </Box>
           {index < stages.length - 1 ? <Arrow /> : null}

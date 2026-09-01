@@ -143,15 +143,19 @@
         "effort": {
           "ep_consolidate": "max",
           "kg_clean_merge": "high",
-          "kg_clean_drop": "medium",
+          "kg_clean_drop": "high",
           "kg_link_domain": "high",
           "kg_link_cross_domain": "high",
           "kg_taggable": "high",
           "concept_tagger": "medium",
-          "ep_scan": "high"
+          "ep_scan": "high",
+          "kg_units": "high"
         },
         "phases": {
-          "ep_scan": true
+          "ep_scan": true,
+          "kg_units": true,
+          "kg_domains_leftovers": true,
+          "kg_extract": true
         }
       }
     },

@@ -312,8 +312,20 @@
   --text-micro--font-weight: 600;
 }
 
-* {
-  border-color: var(--border);
+/* THE DEFAULT BORDER COLOUR, AND IT HAS TO BE IN `base` OR IT IS NOT A DEFAULT.
+   Unlayered declarations beat every layered one in the cascade, and Tailwind v4 emits its
+   utilities into `@layer utilities` — so with this rule outside a layer, `border-primary`,
+   `border-input`, `border-attention` and `border-destructive` were all generated, all
+   applied to elements, and all silently overruled by it. Measured in the browser: a span
+   with `border border-primary` computed `oklch(0.87 0.004 265)`, which is `--border`.
+
+   What that cost is exactly the complaint that found it — the selected option in the
+   stage questionnaire drew its ring in `--border` over a row in `--accent`, which in dark
+   is 0.30 against 0.285 and in light 0.87 against 0.925: the same colour as its ground. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 /* Without this the browser paints the remaining native controls with its own scheme

@@ -61,6 +61,23 @@ def _mine(row) -> dict | None:
     }
 
 
+def _payload(artifact: str, digest: str | None, row) -> dict:
+    """What both the read and the save answer: the questions, and this person's answers.
+
+    One function because the client treats a save's reply as the form's new state, so the
+    two shapes have to be the same one or a save blanks the screen.
+    """
+    return {
+        "artifact": artifact,
+        # Nothing to judge until something is built, and the screen has to be able to say
+        # so rather than draw a form about a file that does not exist.
+        "built": digest is not None,
+        "hash": digest,
+        "instrument": stage_instruments.for_artifact(artifact),
+        "mine": _mine(row),
+    }
+
+
 @router.get("/{artifact}")
 def read(
     artifact: str,
@@ -75,15 +92,7 @@ def read(
         if digest
         else None
     )
-    return {
-        "artifact": artifact,
-        # Nothing to judge until something is built, and the screen has to be able to say
-        # so rather than draw a form about a file that does not exist.
-        "built": digest is not None,
-        "hash": digest,
-        "instrument": stage_instruments.for_artifact(artifact),
-        "mine": _mine(row),
-    }
+    return _payload(artifact, digest, row)
 
 
 @router.post("/{artifact}/opened", dependencies=[auth.EDIT])
@@ -142,4 +151,9 @@ def write(
         note=(body.note or "").strip()[:2000] or None,
         job_id=body.job_id,
     )
-    return {"artifact": artifact, "hash": digest, "mine": _mine(row)}
+    # THE SAME SHAPE THE READ ANSWERS, and that is not tidiness. The client puts this reply
+    # straight into the cache as the form's new state, so a reply missing `instrument` left
+    # the screen holding a payload with no questions in it — and `StageReview` renders
+    # nothing at all without one. Saving made the whole block disappear, and a reload
+    # brought it back because the reload went through `read`.
+    return _payload(artifact, digest, row)

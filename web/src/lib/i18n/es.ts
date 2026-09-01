@@ -506,6 +506,9 @@ export const es = {
   // (`study/api/stage_instruments.py`), porque es el instrumento y no una etiqueta: aquí
   // solo está el armazón — el título, el estado y el botón.
   "stageReview.title": "Tu valoración",
+  "stageReview.close": "Cerrar la valoración",
+  "stageReview.openPending": "Cinco preguntas cortas sobre lo que acabas de revisar",
+  "stageReview.openAnswered": "Ya la contestaste. Ábrela si quieres cambiar algo",
   "stageReview.saved": "Guardada",
   "stageReview.unanswered": "Sin contestar",
   "stageReview.save": "Guardar valoración",

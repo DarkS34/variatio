@@ -1,5 +1,5 @@
-import { CircleCheck, Lock, LockOpen, TriangleAlert, UploadCloud } from "lucide-react";
-import { createContext, useContext, type ReactNode } from "react";
+import { ChevronRight, CircleCheck, ClipboardCheck, Lock, LockOpen, TriangleAlert, UploadCloud } from "lucide-react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { BuildButton, type BuildLabels } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
@@ -28,6 +28,7 @@ import {
 } from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
 import { StageReview } from "@/study/StageReview";
+import { useStageReview } from "@/study/queries";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
@@ -132,6 +133,13 @@ export function StageGate({
   const split = useSplitEngine();
   const toast = useToast();
   const confirm = useConfirm();
+  // EL CUESTIONARIO EMPIEZA CERRADO Y SE ABRE DESDE ARRIBA (2026-09-01, explicit user
+  // request). Vivía siempre desplegado en la columna derecha, que es donde sigue
+  // abriéndose; lo que cambia es que ahora hay que pedirlo, y que el botón que lo pide
+  // está pegado a «Reconstruir» donde se ve al entrar.
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const review = useStageReview(stage?.artifact);
+  const answeredReview = review.data?.mine?.answered ?? false;
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
   // changed the state of the whole chain and said nothing, and invalidating a query does
   // not always change anything visible on the screen you pressed the button from.
@@ -264,6 +272,49 @@ export function StageGate({
           </div>
         </header>
 
+        {/* EL BOTÓN QUE ABRE LA VALORACIÓN, pegado a los de construir y aprobar.
+            Aquí es donde se gasta `--study`: es el token de la evaluación en toda la
+            aplicación — la píldora «Comparar» del navbar se dibuja en él — y puesto en un
+            botón hace el trabajo que antes hacía un fondo teñido bajo el formulario, que
+            era el sitio equivocado: cada control de dentro tenía que pelearse con él.
+
+            Relleno mientras no se ha contestado y sobrio en cuanto se contesta, que es la
+            única diferencia que importa: lo que queda por hacer, y lo que ya está. No se
+            dibuja con la etapa sin construir ni bloqueada — no habría nada que juzgar. */}
+        {!missing && !blocked && review.data?.built ? (
+          <button
+            type="button"
+            onClick={() => setReviewOpen((was) => !was)}
+            aria-expanded={reviewOpen}
+            className={cn(
+              "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
+              answeredReview
+                ? "border-[color-mix(in_oklch,var(--study)_35%,transparent)] bg-[color-mix(in_oklab,var(--study)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--study)_12%,var(--card))]"
+                : "border-study bg-study text-[oklch(0.99_0.004_140)] hover:bg-[color-mix(in_oklab,var(--study)_88%,black)]",
+            )}
+          >
+            <ClipboardCheck aria-hidden className="size-5 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-heading font-semibold">{t("stageReview.title")}</span>
+              <span
+                className={cn(
+                  "block text-small",
+                  answeredReview ? "text-muted-foreground" : "opacity-85",
+                )}
+              >
+                {t(answeredReview ? "stageReview.openAnswered" : "stageReview.openPending")}
+              </span>
+            </span>
+            <ChevronRight
+              aria-hidden
+              className={cn(
+                "size-5 shrink-0 transition-transform duration-300",
+                reviewOpen && "rotate-90",
+              )}
+            />
+          </button>
+        ) : null}
+
         {stage.stale_because.length > 0 ? (
           <Alert tone="danger" title={t("stage.stale")}>
             {stage.stale_because.map((cause) => (
@@ -370,17 +421,54 @@ export function StageGate({
              que juzgar, y el formulario lo diría él mismo — pero atenuado junto al resto
              sería un control apagado sin explicación, que es justo lo que esta pantalla
              existe para no hacer. */
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          /* UNA FILA, NO UNA REJILLA, porque lo que se anima es un ANCHO y una rejilla de
+             `fr` no interpola de forma fiable entre «hay columna» y «no la hay». El panel
+             es una columna de ancho fijo en `xl` que va de 0 a 26rem, con `overflow-hidden`
+             recortándolo mientras viaja, y su contenido entra desplazado desde la derecha:
+             eso es «que se abra de lado». Por debajo de `xl` no hay dos columnas que valgan,
+             así que lo que se abre es el alto.
+
+             Se monta siempre y sólo se recorta: desmontarlo perdería lo que la persona
+             lleve escrito en el cuadro de texto cada vez que cierre el cajón. */
+          <div className="flex flex-col items-start gap-5 xl:flex-row">
             <div
               className={cn(
-                "min-w-0 space-y-5",
+                "min-w-0 flex-1 space-y-5",
                 blocked && "pointer-events-none select-none opacity-45",
               )}
             >
               {children}
             </div>
             {blocked ? null : (
-              <StageReview artifact={stage.artifact} nextStep={NEXT_STEP[stage.artifact] ?? null} />
+              <div
+                // `inert` and not only `aria-hidden`: clipped to zero height the panel is
+                // still in the tab order, so tabbing off the last control of the screen
+                // walked into a form nobody can see. React 19 forwards it as the real
+                // attribute, which takes the subtree out of focus AND out of the
+                // accessibility tree, and unlike `visibility: hidden` it does not fight
+                // the closing transition.
+                inert={!reviewOpen}
+                className={cn(
+                  "w-full shrink-0 overflow-hidden",
+                  "transition-[max-height,width,opacity] duration-300 ease-out motion-reduce:transition-none",
+                  reviewOpen
+                    ? "max-h-[400rem] opacity-100 xl:w-[26rem]"
+                    : "max-h-0 opacity-0 xl:w-0",
+                )}
+              >
+                <div
+                  className={cn(
+                    "transition-transform duration-300 ease-out motion-reduce:transition-none",
+                    reviewOpen ? "translate-x-0" : "translate-x-8",
+                  )}
+                >
+                  <StageReview
+                    artifact={stage.artifact}
+                    nextStep={NEXT_STEP[stage.artifact] ?? null}
+                    onClose={() => setReviewOpen(false)}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
