@@ -132,8 +132,11 @@ def _sort(rows: list[dict], order: str, profile: ExemplarsProfile) -> None:
         # instead of passing for the entry level.
         rows.sort(key=lambda r: (profile.difficulty_rank_of(r), r["id"]))
     elif order == "recent":
-        # Ids are C001, C002… in extraction order, so «the last thing written» is the tail
-        # of that list — which is what the live view reads while the builder still writes.
+        # Ids are C001, C002… in extraction order, so «the last thing written» is the tail of
+        # that list. No screen asks for it since the build's live feed was removed on
+        # 2026-09-01; it stays because this listing is an API and «newest first» is a real
+        # order, and `tests/server/test_bank_recent_order.py` is what keeps it from being
+        # deleted as dead — the same arrangement the `concept` filter has.
         rows.sort(key=lambda r: r["id"], reverse=True)
     else:
         rows.sort(key=lambda r: r["id"])

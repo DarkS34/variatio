@@ -430,7 +430,6 @@ export function ProfileEditor() {
                   and `Field` only injects into a single element child. */}
               <Field
                 label={t("modality.difficulty")}
-                description={t("modality.difficulty.hint")}
               >
                 {(props) => (
                   <div>

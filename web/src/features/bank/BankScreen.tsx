@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
 import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
-import { BankLive } from "./BankLive";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -753,10 +752,18 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const hasItems = (listing?.totals.items ?? 0) > 0;
   const locked = stage?.status === "approved";
 
+  // NOTHING IS SHOWN WHILE THE BANK IS BEING EXTRACTED (2026-09-01, explicit user request).
+  // `BankLive` — «Ejercicios que van saliendo» — polled the file every three seconds and let
+  // the items in one at a time under the progress bar; it is deleted, and what is left in
+  // that state is the phase bar and the notice beside it. The sliding window itself lives on
+  // in `TagLive`, which is a different job: tagging patches items that are ALREADY in the
+  // bank, so its feed says what is being decided rather than what is appearing.
+  const livePreview = tagging ? <TagLive run={tagRun} /> : null;
+
   return (
     <StageGate
       stage={stage}
-      livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
+      livePreview={livePreview}
       buildLabels={{
         // «Extraer» the first time, because that is what the bank does and nothing else on
         // the chain does it. «Reconstruir» after, which is the DEFAULT and the same word the
