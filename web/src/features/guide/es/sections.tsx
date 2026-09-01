@@ -586,8 +586,9 @@ function Profile() {
               Pulsa «Construir». Sale un <strong>borrador</strong>, no un resultado final.
             </>,
             <>
-              Repasa cada <strong>tipo de ejercicio</strong> y, dentro de ella, cada campo: su nombre, su
-              tipo, la descripción, la guía de extracción y quién decide su valor.
+              Repasa cada <strong>tipo de ejercicio</strong>: su descripción, su{" "}
+              <strong>nivel de dificultad</strong> y, dentro de ella, cada campo — su nombre, su
+              tipo, si es obligatorio y qué contiene.
             </>,
             <>
               Repasa las <strong>«{t("modality.rules")}»</strong> de cada tipo de ejercicio: son lo único
@@ -611,6 +612,45 @@ function Profile() {
           primera pregunta del formulario de generación. Un perfil con una sola tipo de ejercicio no
           dibuja ninguno de los dos: un desplegable de una única opción no elige nada.
         </Paragraph>
+      </Block>
+
+      <Block title="El nivel de dificultad, que lo llevan todos">
+        <Paragraph>
+          Todos los tipos de ejercicio llevan un <strong>nivel de dificultad</strong>, y no es un
+          campo más: no se añade, no se quita y no se le cambia el nombre. Se edita arriba, en
+          «{t("modality.identity")}», justo debajo de la descripción del tipo.
+        </Paragraph>
+        <Paragraph>
+          Los <strong>tres niveles son los mismos en todos los tipos</strong>. Eso es lo que
+          hace que «avanzado» signifique lo mismo en una pregunta de test y en un ejercicio de
+          programación, que la columna del banco se pueda leer de un vistazo y que se pueda
+          ordenar por ella. Lo que cambia de un tipo a otro es <em>qué hace</em> que un
+          ejercicio caiga en cada nivel, y eso es lo único que escribes tú.
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "senales",
+              head: "Escríbelo con señales que se vean",
+              body: "Qué pide el ejercicio, cuántos pasos hay que encadenar, cuántas cosas hay que combinar, si la respuesta se lee directamente o hay que sacarla. «Es difícil para un principiante» no se puede comprobar mirando un ejercicio, así que no clasifica nada.",
+            },
+            {
+              key: "escala",
+              head: "La escala se mide contra tus ejercicios",
+              body: "«Básico» es lo más sencillo que tu asignatura pide de verdad en ese tipo, y «avanzado» lo más exigente que llega a pedir. Un criterio copiado de otra asignatura deja todo tu material en «básico», y entonces el nivel no dice nada.",
+            },
+            {
+              key: "reparto",
+              head: "Compruébalo repartiendo",
+              body: "Mira unos cuantos ejercicios tuyos de ese tipo y aplícales el criterio. Si te caen todos en el mismo nivel, el criterio no separa: aféinalo hasta que reparta.",
+            },
+            {
+              key: "tema",
+              head: "No es de qué va, ni cuánto ocupa",
+              body: "Un enunciado largo no es un ejercicio difícil, y uno de la última unidad no lo es por estar al final. De qué va cada ejercicio ya se anota aparte, contra el temario.",
+            },
+          ]}
+        />
       </Block>
 
       <Block title="Qué tiene un campo">
@@ -899,8 +939,9 @@ function Bank() {
         </Paragraph>
         <Paragraph>
           Al final de la fila, y aparte de los filtros porque no quita ni pone nada, el{" "}
-          <strong>orden</strong>: «{t("bank.orderById")}», que es el de extracción, o «
-          {t("bank.orderBySuspicion")}».
+          <strong>orden</strong>: «{t("bank.orderById")}», que es el de extracción, «
+          {t("bank.orderByDifficulty")}» —de los más sencillos a los más exigentes, y los que
+          no tengan nivel al final— o «{t("bank.orderBySuspicion")}».
         </Paragraph>
         <Paragraph>
           Filtrar por tipo de ejercicio no ha movido nada del etiquetado por conceptos, que es el

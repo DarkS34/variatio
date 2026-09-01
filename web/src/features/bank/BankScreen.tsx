@@ -224,6 +224,8 @@ function ItemRow({
   primaryField,
   secondaryFields,
   typeLabel,
+  difficulty,
+  showDifficulty,
   selected,
   onToggle,
   onEdit,
@@ -233,6 +235,8 @@ function ItemRow({
   primaryField: string;
   secondaryFields: string[];
   typeLabel: string | null;
+  difficulty: string | null;
+  showDifficulty: boolean;
   selected: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -350,6 +354,19 @@ function ItemRow({
             )}
           </div>
         </TD>
+        {showDifficulty ? (
+          <TD className="py-2 pr-3">
+            {/* The rung as the profile spells it, never a word invented here: what the
+                three mean is written per type in «Tipos de ejercicio», and a label of our
+                own would be a second copy of it. An item nobody classified says so rather
+                than passing for the entry level. */}
+            {difficulty ? (
+              <Badge variant="secondary">{difficulty}</Badge>
+            ) : (
+              <span className="text-small text-muted-foreground">{t("bank.noDifficulty")}</span>
+            )}
+          </TD>
+        ) : null}
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
           <div
             className={cn(
@@ -402,6 +419,10 @@ function ItemRow({
  */
 /** Cuántos ejemplares se dibujan de una vez. */
 const PAGE_SIZE = 7;
+
+/** What the listing may be ordered by. `recent` is the live view's and is never offered
+ *  here; `difficulty` only appears when the profile declares one. */
+type BankOrder = "id" | "difficulty" | "suspicion";
 
 /**
  * WHICH PAGE OF THE BANK, AND THE TWO STEPS EITHER SIDE OF IT.
@@ -579,7 +600,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const [itemType, setItemType] = useState("");
   const [source, setSource] = useState("");
   const [untagged, setUntagged] = useState<boolean | undefined>(undefined);
-  const [order, setOrder] = useState<"suspicion" | "id">("id");
+  const [order, setOrder] = useState<BankOrder>("id");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
 
@@ -641,8 +662,22 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
     if (item.item_type) return itemTypes.find((t) => t.key === item.item_type);
     return itemTypes.length === 1 ? itemTypes[0] : undefined;
   };
+  // WHICH KEY CARRIES THE DIFFICULTY comes from the server, not from a table here: the name
+  // is the workspace's prompt language's (`nivel_dificultad` / `difficulty_level`) and a
+  // table drawing a column has no business looking that up. Every modality declares the
+  // same three rungs, which is what makes one column over a mixed list mean anything.
+  const difficultyField = itemTypes.find((t) => t.difficulty_field)?.difficulty_field ?? null;
+  const difficultyFor = (item: BankItem | null) => {
+    const name = typeOf(item)?.difficulty_field;
+    const value = name ? item?.[name] : undefined;
+    return typeof value === "string" && value ? value : null;
+  };
   const primaryFieldFor = (item: BankItem | null) => typeOf(item)?.primary_field ?? "";
   const fieldsFor = (item: BankItem | null) => typeOf(item)?.fields ?? [];
+  // Out of the expanded detail, because it is the column at the end of the same row. It
+  // stays in the item editor, where it is a value somebody corrects.
+  const detailFieldsFor = (item: BankItem | null) =>
+    fieldsFor(item).filter((f) => f !== primaryFieldFor(item) && f !== typeOf(item)?.difficulty_field);
   const labelFor = (item: BankItem | null) => typeOf(item)?.label ?? item?.item_type ?? "—";
   const primaryHeader = severalDeclared
     ? [...new Set(itemTypes.map((t) => t.primary_field))].join(" / ")
@@ -766,10 +801,16 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           <Select
             aria-label={t("bank.orderBy")}
             value={order}
-            onChange={(event) => setOrder(event.target.value as "suspicion" | "id")}
+            onChange={(event) => setOrder(event.target.value as BankOrder)}
             className="max-w-56"
           >
             <option value="id">{t("bank.orderById")}</option>
+            {/* Offered only where it would order anything: with no difficulty declared the
+                server falls back to the id order, and a control that silently does nothing
+                is worse than one that is not there. */}
+            {difficultyField ? (
+              <option value="difficulty">{t("bank.orderByDifficulty")}</option>
+            ) : null}
             <option value="suspicion">{t("bank.orderBySuspicion")}</option>
           </Select>
 
@@ -809,6 +850,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                   <TH>{primaryHeader}</TH>
                   {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
                   <TH className="w-72">{t("bank.column.concepts")}</TH>
+                  {difficultyField ? (
+                    <TH className="w-28">{t("bank.column.difficulty")}</TH>
+                  ) : null}
                   <TH className="w-20" />
                 </TR>
               </THead>
@@ -818,8 +862,10 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     key={item.id}
                     item={item}
                     primaryField={primaryFieldFor(item)}
-                    secondaryFields={fieldsFor(item).filter((f) => f !== primaryFieldFor(item))}
+                    secondaryFields={detailFieldsFor(item)}
                     typeLabel={manyTypes ? labelFor(item) : null}
+                    difficulty={difficultyField ? difficultyFor(item) : null}
+                    showDifficulty={Boolean(difficultyField)}
                     selected={selected.has(item.id)}
                     onToggle={() => toggle(item.id)}
                     onEdit={() => setEditing(item)}

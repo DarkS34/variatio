@@ -32,6 +32,10 @@ from .context import (
     synthesize_content_context_prompt,
 )
 from .profile import (
+    DIFFICULTY_FALLBACK_DESCRIPTION,
+    DIFFICULTY_FALLBACK_EXTRACTION,
+    DIFFICULTY_FIELD,
+    DIFFICULTY_LEVELS,
     EXEMPLARS_PROFILE_FIELD_NAMING,
     EXEMPLARS_PROFILE_SCHEMA_GRAMMAR,
     consolidate_exemplars_profile_prompt,
@@ -53,6 +57,10 @@ from .knowledge_graph import (
 
 __all__ = [
     "CORRECT_ANSWER_MARK",
+    "DIFFICULTY_FALLBACK_DESCRIPTION",
+    "DIFFICULTY_FALLBACK_EXTRACTION",
+    "DIFFICULTY_FIELD",
+    "DIFFICULTY_LEVELS",
     "EMPTY_PAGE_MARK",
     "EXEMPLARS_PROFILE_FIELD_NAMING",
     "EXEMPLARS_PROFILE_SCHEMA_GRAMMAR",

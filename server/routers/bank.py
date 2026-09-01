@@ -35,7 +35,7 @@ def listing(
     q: str | None = None,
     source: str | None = None,
     item_type: str | None = None,
-    order: str = Query("id", pattern="^(suspicion|id|recent)$"),
+    order: str = Query("id", pattern="^(suspicion|difficulty|id|recent)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     access: auth.Access = auth.VIEW,

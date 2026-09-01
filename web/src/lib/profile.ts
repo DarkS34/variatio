@@ -52,3 +52,28 @@ export function userDecidedFields(spec: ItemTypeSpec | null | undefined): string
     .filter(([, field]) => field.decided_by === "user")
     .map(([name]) => name);
 }
+
+// THE ONE FIELD EVERY MODALITY CARRIES ------------------------------------------------------
+
+/**
+ * Mirrors DIFFICULTY_FIELDS in variatio/instance/exemplars_profile.py.
+ *
+ * Two names because the name is the workspace's PROMPT language's: `prompts/es` writes
+ * Spanish field names and `prompts/en` English ones. A screen does not know which language a
+ * profile was built in and should not have to look it up, so it asks the modality which of
+ * the two it actually declares. Edit the Python first.
+ */
+export const DIFFICULTY_FIELDS = ["nivel_dificultad", "difficulty_level"] as const;
+
+/** Which key carries this modality's difficulty, or null when it declares none. */
+export function difficultyFieldOf(spec: ItemTypeSpec | null | undefined): string | null {
+  if (!spec) return null;
+  return DIFFICULTY_FIELDS.find((name) => name in spec.fields) ?? null;
+}
+
+/** Its rungs, in the order the modality declares them — never a table written here. */
+export function difficultyLevelsOf(spec: ItemTypeSpec | null | undefined): string[] {
+  const name = difficultyFieldOf(spec);
+  const values = name ? spec!.fields[name]?.schema?.enum : undefined;
+  return Array.isArray(values) ? values.map(String) : [];
+}

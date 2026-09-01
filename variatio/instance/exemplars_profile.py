@@ -22,6 +22,24 @@ RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_conc
 
 DRIFT_ASPECTS = ("type", "enum", "decided_by")
 
+# THE ONE FIELD EVERY MODALITY CARRIES, and the two names it answers to.
+#
+# Difficulty is not a field the consolidation may or may not invent: every modality has one,
+# because it is the axis a commission turns («uno más sencillo», «uno más exigente») and the
+# axis the bank is read along. What varies between modalities is the CRITERION, never the
+# ladder — see the profile prompts, which own that engineering.
+#
+# It is two names because the name is the PROMPT SET's: `prompts/es` writes Spanish field
+# names and `prompts/en` English ones, and a reader here does not know a workspace's prompt
+# language and should not have to look it up to sort a table. A writer resolves the
+# canonical name from its own prompt set; a reader asks the modality which of the two it
+# actually declares.
+DIFFICULTY_FIELDS = ("nivel_dificultad", "difficulty_level")
+
+# Sorts after every declared level, so an item with no difficulty — an older bank, or one
+# whose profile has since dropped the field — lands at the end instead of at «basic».
+UNRANKED_DIFFICULTY = 1_000_000
+
 
 def _fields_by_type(raw: dict) -> dict[str, dict]:
     """Return `{item_type: {field: spec}}` from a raw profile, tolerating any shape."""
@@ -108,6 +126,49 @@ class ItemType:
         model.PRIMARY_FIELD = self.primary_field
         model.ITEM_TYPE = self.key
         return model
+
+    @property
+    def difficulty_field(self) -> str | None:
+        """The name this modality declares its difficulty under, or None if it declares none.
+
+        Both canonical names are recognised because the writer's is its prompt set's; a
+        profile built in English and read here answers `difficulty_level`.
+        """
+        for name in DIFFICULTY_FIELDS:
+            if name in self.field_specs:
+                return name
+        return None
+
+    @property
+    def difficulty_levels(self) -> list[str]:
+        """The rungs this modality's difficulty declares, in order, or `[]` for none."""
+        name = self.difficulty_field
+        if name is None:
+            return []
+        schema = self.field_specs[name].get("schema")
+        values = schema.get("enum") if isinstance(schema, dict) else None
+        return [str(v) for v in values] if isinstance(values, list) else []
+
+    def difficulty_of(self, item: dict) -> str | None:
+        """The rung one item sits on, or None when it carries no readable difficulty."""
+        name = self.difficulty_field
+        if name is None:
+            return None
+        value = item.get(name)
+        return str(value) if isinstance(value, (str, int, float)) and value != "" else None
+
+    def difficulty_rank(self, item: dict) -> int:
+        """Where an item sits on its own modality's ladder, unrankable values last.
+
+        The rank is the position in the modality's OWN `enum` rather than in a table here:
+        that is what keeps a hand-edited profile with four rungs, or one built before the
+        ladder was fixed, sorting the way its own declaration reads.
+        """
+        value = self.difficulty_of(item)
+        if value is None:
+            return UNRANKED_DIFFICULTY
+        levels = self.difficulty_levels
+        return levels.index(value) if value in levels else UNRANKED_DIFFICULTY
 
     def stripped_schema(self) -> dict:
         """Return the JSON schema without the title or the per-field guidance.
@@ -274,6 +335,16 @@ class ExemplarsProfile:
     def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
         """Render the text an item is indexed by, resolving its modality first."""
         return self.item_type_of(item).embed_text(item, field_max_chars)
+
+    def difficulty_rank_of(self, item: dict) -> int:
+        """Where an item sits on its modality's difficulty ladder, unplaceable ones last.
+
+        Never raises: the listing sorts over items a stale profile may no longer recognise.
+        """
+        key = self.type_key_of_safe(item)
+        if key is None:
+            return UNRANKED_DIFFICULTY
+        return self.item_types[key].difficulty_rank(item)
 
     def primary_fields(self) -> dict[str, str]:
         """Return each modality's primary field."""

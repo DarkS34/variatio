@@ -121,10 +121,16 @@ def _matches(
     return True
 
 
-def _sort(rows: list[dict], order: str) -> None:
-    """Sort the rows in place by id, by review priority, or newest first."""
+def _sort(rows: list[dict], order: str, profile: ExemplarsProfile) -> None:
+    """Sort the rows in place by id, by review priority, by difficulty, or newest first."""
     if order == "suspicion":
         rows.sort(key=lambda r: (_suspicion(r), r["id"]))
+    elif order == "difficulty":
+        # Easiest first, and the rank is the position in the MODALITY's own ladder rather
+        # than in a table here — a profile whose rungs somebody renamed by hand still sorts
+        # the way its own declaration reads. An item with no readable difficulty ranks last
+        # instead of passing for the entry level.
+        rows.sort(key=lambda r: (profile.difficulty_rank_of(r), r["id"]))
     elif order == "recent":
         # Ids are C001, C002… in extraction order, so «the last thing written» is the tail
         # of that list — which is what the live view reads while the builder still writes.
@@ -147,6 +153,11 @@ def _type_summaries(profile: ExemplarsProfile, all_items: list[dict]) -> list[di
             "primary_field": t.primary_field,
             "embed_fields": list(t.embed_fields),
             "fields": list(t.field_specs),
+            # Named rather than left for the client to recognise: the field's name is the
+            # workspace's PROMPT language's, and a table drawing a column should not have to
+            # know which language a profile was built in.
+            "difficulty_field": t.difficulty_field,
+            "difficulty_levels": t.difficulty_levels,
             "count": sum(1 for i in all_items if profile.type_key_of_safe(i) == key),
         }
         for key, t in profile.item_types.items()
@@ -172,7 +183,7 @@ def listing(
     rows = [
         r for r in rows if _matches(r, profile, concept, untagged, query, source, item_type)
     ]
-    _sort(rows, order)
+    _sort(rows, order, profile)
 
     total = len(rows)
     start = max(0, (page - 1) * page_size)

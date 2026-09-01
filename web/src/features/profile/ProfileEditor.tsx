@@ -21,6 +21,7 @@ import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
@@ -220,9 +221,38 @@ export function ProfileEditor() {
   const updateType = (patch: Partial<ItemTypeSpec>) =>
     update({ item_types: { ...draft.item_types, [activeKey]: { ...spec, ...patch } } });
 
-  const names = Object.keys(spec.fields);
+  // THE DIFFICULTY IS NOT ONE MORE FIELD. Every modality carries one, its ladder is shared
+  // by all of them and only its criterion is its own — so what a person edits is that
+  // criterion, once, up in «Qué tipo es», and not a row in the list with a name, a type and
+  // an obligatoriedad it does not get to choose. Editing it in two places is what the
+  // «(i) and visible text never say the same thing» rule is about.
+  const difficultyField = difficultyFieldOf(spec) ?? query.data?.difficulty?.field ?? null;
+  const difficultyLevels = difficultyLevelsOf(spec).length
+    ? difficultyLevelsOf(spec)
+    : (query.data?.difficulty?.levels ?? []);
+  const difficulty = difficultyField ? spec.fields[difficultyField] : undefined;
+  const names = Object.keys(spec.fields).filter((name) => name !== difficultyField);
   const rules = spec.general_generation_rules ?? [];
   const indexed = embedFields(spec);
+
+  // Absent means a profile written before difficulty was guaranteed, so the first edit
+  // materialises it exactly as a build would — the canonical name and ladder come from the
+  // server, which is the only side that knows the workspace's prompt language.
+  const setDifficultyCriterion = (description: string) => {
+    if (!difficultyField) return;
+    const previous = spec.fields[difficultyField];
+    updateType({
+      fields: {
+        ...spec.fields,
+        [difficultyField]: {
+          ...previous,
+          schema: previous?.schema ?? { enum: difficultyLevels },
+          description,
+          decided_by: "user",
+        },
+      },
+    });
+  };
 
   const addType = (key: string) => {
     update({
@@ -239,6 +269,17 @@ export function ProfileEditor() {
               description: "",
               guidance: { extraction: "", generation: "" },
             },
+            // Born with the difficulty, like every type a build writes: it is not
+            // something a person adds, so there is no control that would add it.
+            ...(query.data?.difficulty
+              ? {
+                  [query.data.difficulty.field]: {
+                    schema: { enum: query.data.difficulty.levels },
+                    description: "",
+                    decided_by: "user" as const,
+                  },
+                }
+              : {}),
           },
         },
       },
@@ -267,13 +308,15 @@ export function ProfileEditor() {
   };
 
   const moveField = (name: string, direction: -1 | 1) => {
-    const entries = Object.entries(spec.fields);
-    const index = entries.findIndex(([key]) => key === name);
+    const order = [...names];
+    const index = order.indexOf(name);
     const target = index + direction;
-    if (index < 0 || target < 0 || target >= entries.length) return;
-    const next = [...entries];
-    [next[index], next[target]] = [next[target], next[index]];
-    updateType({ fields: Object.fromEntries(next) });
+    if (index < 0 || target < 0 || target >= order.length) return;
+    [order[index], order[target]] = [order[target], order[index]];
+    if (difficultyField && difficultyField in spec.fields) order.push(difficultyField);
+    updateType({
+      fields: Object.fromEntries(order.map((key) => [key, spec.fields[key]])),
+    });
   };
 
   const addField = (name: string) => {
@@ -379,6 +422,37 @@ export function ProfileEditor() {
                   onChange={(event) => updateType({ description: event.target.value })}
                 />
               </Field>
+              {/* The rungs are shown and not offered: they are the same three in every
+                  type, which is what lets «avanzado» mean one thing across the whole list
+                  and lets the list be ordered by it. What changes from one type to the next
+                  is what puts an exercise on each rung, and that is the box below. The
+                  render-prop form is not decoration — the label has to reach the textarea,
+                  and `Field` only injects into a single element child. */}
+              <Field
+                label={t("modality.difficulty")}
+                description={t("modality.difficulty.hint")}
+              >
+                {(props) => (
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      {difficultyLevels.map((level) => (
+                        <Badge key={level} variant="outline">
+                          {level}
+                        </Badge>
+                      ))}
+                    </div>
+                    <Textarea
+                      {...props}
+                      autoGrow
+                      value={difficulty?.description ?? ""}
+                      placeholder={t("modality.difficulty.placeholder")}
+                      className="min-h-20"
+                      readOnly={stageLocked}
+                      onChange={(event) => setDifficultyCriterion(event.target.value)}
+                    />
+                  </div>
+                )}
+              </Field>
             </CardContent>
           </Card>
 
@@ -480,11 +554,11 @@ export function ProfileEditor() {
         ) : null}
 
         <div className="space-y-2">
-          {Object.entries(spec.fields).map(([name, field], index) => (
+          {names.map((name, index) => (
             <FieldEditor
               key={name}
               name={name}
-              spec={field}
+              spec={spec.fields[name]}
               isPrimary={name === spec.primary_field}
               open={open.includes(name)}
               first={index === 0}

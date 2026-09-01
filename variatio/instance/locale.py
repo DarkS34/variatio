@@ -10,6 +10,7 @@ import json
 
 from loguru import logger
 
+from .. import prompts
 from ..core import languages
 from ..core.json_io import write_json
 from ..core.workspace import Workspace
@@ -66,3 +67,14 @@ def relation_schema(ws: Workspace):
 def prerequisite_relation(ws: Workspace) -> str | None:
     """Return the verbose label of the relation that orders the curriculum."""
     return relation_schema(ws).prerequisite_verbose
+
+
+def difficulty(ws: Workspace) -> tuple[str, list[str]]:
+    """Return the difficulty field name and its rungs, as this workspace's prompts write them.
+
+    Resolved here for the same reason as the relation vocabulary: the field NAME is prose
+    the prompt set owns — `nivel_dificultad` in Spanish, `difficulty_level` in English — so
+    a caller that writes one must not pair it with the other set's ladder.
+    """
+    module = prompts.of(prompt_language(ws))
+    return module.DIFFICULTY_FIELD, list(module.DIFFICULTY_LEVELS)

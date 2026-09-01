@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from variatio.core.workspace import Workspace
+from variatio.instance import locale
 from variatio.instance.exemplars_profile import profile_drift
 
 from .. import auth, review, storage
@@ -50,9 +51,20 @@ def pending_draft(ws: Workspace, payload: dict) -> dict | None:
 
 @router.get("")
 def read(access: auth.Access = auth.VIEW) -> dict:
-    """Answer the profile in force, with whatever draft is waiting beside it."""
+    """Answer the profile in force, with whatever draft is waiting beside it.
+
+    It carries the difficulty field's canonical name and rungs because the editor may have
+    to CREATE one — a profile written before difficulty was guaranteed has none — and the
+    name is the workspace's prompt language's. Resolving it in the browser would mean the
+    client guessing which language a workspace was built in.
+    """
     payload = profile_edit.load(access.ws)
-    return {**payload, "pending_draft": pending_draft(access.ws, payload)}
+    field, levels = locale.difficulty(access.ws)
+    return {
+        **payload,
+        "pending_draft": pending_draft(access.ws, payload),
+        "difficulty": {"field": field, "levels": levels},
+    }
 
 
 @router.post("/validate", dependencies=[auth.EDIT])

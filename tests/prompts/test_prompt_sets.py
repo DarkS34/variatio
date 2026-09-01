@@ -227,3 +227,69 @@ def test_no_context_renders_no_empty_heading(code):
     ):
         assert "CONTEXTO DOCENTE" not in rendered
         assert "TEACHING CONTEXT" not in rendered
+
+
+# THE DIFFICULTY LADDER ----------------------------------------------------------------------
+
+# The one field every modality carries. The prompt owns the engineering — what the rungs
+# mean is per modality — but the LADDER is shared, so what can be checked mechanically is
+# that each set declares one, that the two are the same shape, and that each prompt asks for
+# its OWN. A set naming the other's field would produce a profile no reader recognises.
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_each_set_declares_a_difficulty_field_that_could_be_a_field_name(code):
+    from variatio.instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
+
+    module = prompts.of(code)
+    assert module.DIFFICULTY_FIELD in DIFFICULTY_FIELDS, (
+        "a reader resolves the field by name and knows only these; adding one means adding "
+        "it to DIFFICULTY_FIELDS too"
+    )
+    assert ExemplarsProfile.NAME_RE.match(module.DIFFICULTY_FIELD)
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_ladder_is_three_rungs_of_plain_ascii(code):
+    levels = prompts.of(code).DIFFICULTY_LEVELS
+    assert len(levels) == 3, "three rungs is the measured shape; five stop being observable"
+    assert len(set(levels)) == 3
+    for level in levels:
+        assert level == level.lower() and level.isascii(), (
+            f"«{level}» is a stored value: an accent makes two builds disagree about one rung"
+        )
+
+
+def test_the_two_sets_agree_on_how_many_rungs_there_are():
+    # The criterion is per modality and the ladder is shared; a set with four rungs would
+    # make «advanced» mean something else depending on the language a workspace was built in.
+    sizes = {len(module.DIFFICULTY_LEVELS) for module in SETS.values()}
+    assert len(sizes) == 1
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_consolidation_asks_for_its_own_field_and_its_own_rungs(code):
+    module = prompts.of(code)
+    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    assert module.DIFFICULTY_FIELD in rendered
+    for level in module.DIFFICULTY_LEVELS:
+        assert f'"{level}"' in rendered, f"the rung «{level}» is never spelled out"
+    for other in SETS.values():
+        if other.DIFFICULTY_FIELD != module.DIFFICULTY_FIELD:
+            assert other.DIFFICULTY_FIELD not in rendered, "a set must not ask for the other's"
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_repair_is_told_not_to_drop_it(code):
+    module = prompts.of(code)
+    rendered = module.repair_exemplars_profile_prompt("{}", "err")
+    assert module.DIFFICULTY_FIELD in rendered
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_fallbacks_are_prose_and_not_a_criterion(code):
+    # They exist for the field to be honest about having none, not to classify a bank in
+    # silence: the words the criterion would be graded on must not appear as if measured.
+    module = prompts.of(code)
+    assert module.DIFFICULTY_FALLBACK_DESCRIPTION.strip()
+    assert module.DIFFICULTY_FALLBACK_EXTRACTION.strip()

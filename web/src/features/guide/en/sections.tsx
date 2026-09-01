@@ -596,8 +596,9 @@ function Profile() {
               Press "Build". What comes out is a <strong>draft</strong>, not a final result.
             </>,
             <>
-              Go over each <strong>exercise type</strong> and, inside it, each field: its name, its
-              type, the description, the extraction guidance and who decides its value.
+              Go over each <strong>exercise type</strong>: its description, its{" "}
+              <strong>difficulty level</strong> and, inside it, each field — its name, its type,
+              whether it is required and what it holds.
             </>,
             <>
               Go over each exercise type's <strong>"{t("modality.rules")}"</strong>: they are the only
@@ -621,6 +622,45 @@ function Profile() {
           the first question on the generation form. A profile with a single exercise type draws
           neither: a dropdown with one option chooses nothing.
         </Paragraph>
+      </Block>
+
+      <Block title="The difficulty level, which every type carries">
+        <Paragraph>
+          Every exercise type carries a <strong>difficulty level</strong>, and it is not one more
+          field: it is not added, not removed and not renamed. It is edited at the top, in "
+          {t("modality.identity")}", right below the type's description.
+        </Paragraph>
+        <Paragraph>
+          The <strong>three levels are the same in every type</strong>. That is what makes
+          "advanced" mean the same thing in a multiple-choice question and in a programming
+          exercise, what lets the bank's column be read at a glance and what lets the list be
+          ordered by it. What changes from one type to the next is <em>what puts</em> an exercise
+          on each level, and that is the only part you write.
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "signals",
+              head: "Write it with signals you can see",
+              body: "What the exercise asks for, how many steps have to be chained, how many things have to be combined, whether the answer is read off directly or has to be worked out. «It is hard for a beginner» cannot be checked by looking at an exercise, so it classifies nothing.",
+            },
+            {
+              key: "scale",
+              head: "The scale is measured against your exercises",
+              body: "«Basic» is the simplest thing your course actually sets in that type, and «advanced» the most demanding it ever sets. A criterion copied from another course leaves all your material on «basic», and then the level says nothing.",
+            },
+            {
+              key: "spread",
+              head: "Check it by spreading them",
+              body: "Take a few of your own exercises of that type and apply the criterion. If they all land on the same level, the criterion does not separate: sharpen it until it spreads them.",
+            },
+            {
+              key: "topic",
+              head: "It is not what it is about, nor how long it is",
+              body: "A long statement is not a hard exercise, and one from the last unit is not hard for being at the end. What each exercise is about is already recorded elsewhere, against the syllabus.",
+            },
+          ]}
+        />
       </Block>
 
       <Block title="What a field has">
@@ -917,7 +957,8 @@ function Bank() {
         <Paragraph>
           At the end of the row, and apart from the filters because it adds and removes nothing,
           the <strong>order</strong>: "{t("bank.orderById")}", which is the order of extraction,
-          or "{t("bank.orderBySuspicion")}".
+          "{t("bank.orderByDifficulty")}" — from the simplest to the most demanding, with the
+          ones carrying no level at the end — or "{t("bank.orderBySuspicion")}".
         </Paragraph>
         <Paragraph>
           Filtering by exercise type moved nothing about tagging by concept, which is the heart of the
