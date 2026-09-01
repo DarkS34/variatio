@@ -91,11 +91,17 @@ def unavailable_reason() -> str | None:
     )
 
 
-def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
+def generate(prompt: str) -> ExternalAnswer:
     """Walk the chain until one provider answers, raising ArmUnavailable if none does.
 
     Every failure means the same thing — no item came back — so all of them hand over to
     the next provider, the 200 with no candidates that a safety filter produces included.
+
+    NO SCHEMA CROSSES THIS BOUNDARY, and the signature is where that is enforced: there is
+    no parameter to pass one through. The arm this serves is «the prompt somebody would
+    type in a hurry», and nobody typing into a chat box attaches a JSON Schema to it — a
+    machine-enforced grammar made the baseline decode better than the thing it is a
+    baseline for, which flatters the system under test.
     """
     reason = unavailable_reason()
     if reason:
@@ -106,7 +112,7 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
         model = _model(provider)
         logger.info(f"Llamando al proveedor externo '{provider}' con '{model}'")
         try:
-            text = _CALLERS[provider](prompt, model, _key(provider), schema)
+            text = _CALLERS[provider](prompt, model, _key(provider))
             if failures:
                 logger.warning(
                     f"Se recurrió a '{provider}' tras {len(failures)} fallo(s) de otros proveedores"
@@ -124,19 +130,16 @@ def generate(prompt: str, schema: dict | None = None) -> ExternalAnswer:
     raise ArmUnavailable(" | ".join(failures))
 
 
-def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
-    """Call Gemini with the exemplars profile's own schema, untranslated.
+def _gemini(prompt: str, model: str, key: str) -> str:
+    """Call Gemini with the prompt and nothing else.
 
-    `gemini-3.6-flash` takes the Pydantic schema as it comes — `title`, `anyOf: [string,
-    null]` and all — and a converter written for its OpenAPI subset dropped
-    `minLength`/`maximum`, which would have this arm decode under a WEAKER schema than the
-    local two. The temperature goes out explicitly and is the same number the local arms
-    use, so the sampler is not a loose variable between the three.
+    Neither `responseSchema` nor `responseMimeType` goes out. The shape of the answer is
+    asked for in the prose of the prompt, the way a person asks for it, and what arrives
+    is read by `parse_with_repair` like any other arm's. The temperature is the one thing
+    still sent, and it is the same number the local arms use, so the sampler is not a
+    loose variable between the three.
     """
     generation_config = {"temperature": config.TEMPERATURE_GENERATION}
-    if schema is not None:
-        generation_config["responseMimeType"] = "application/json"
-        generation_config["responseSchema"] = schema
     response = httpx.post(
         GEMINI_URL.format(model=model),
         headers={"x-goog-api-key": key},
@@ -154,37 +157,13 @@ def _gemini(prompt: str, model: str, key: str, schema: dict | None = None) -> st
     return "".join(part.get("text", "") for part in parts)
 
 
-def _openai_schema(schema: dict) -> dict:
-    """Close every object of the schema, which OpenAI's strict mode demands.
+def _groq(prompt: str, model: str, key: str) -> str:
+    """Call Groq's endpoint with no `response_format`, at the local arms' temperature.
 
-    `additionalProperties: false` is the one thing Pydantic does not emit, so a 400 from
-    Groq's `json_schema` is what this exists to prevent.
+    The rule is the chain's and not Gemini's: a fallback that constrained the decoder
+    would smuggle back in, through the second provider, exactly what the first one stopped
+    sending — and the session would be filed under whichever one happened to answer.
     """
-    out = dict(schema)
-    if "properties" in out:
-        out["properties"] = {n: _openai_schema(s) for n, s in out["properties"].items()}
-        out["additionalProperties"] = False
-    if "items" in out:
-        out["items"] = _openai_schema(out["items"])
-    return out
-
-
-def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
-    """Call Groq's OpenAI-compatible endpoint, at the same temperature as the local arms."""
-    response_format = (
-        {}
-        if schema is None
-        else {
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "item",
-                    "schema": _openai_schema(schema),
-                    "strict": True,
-                },
-            }
-        }
-    )
     response = httpx.post(
         GROQ_URL,
         headers={"Authorization": f"Bearer {key}"},
@@ -192,7 +171,6 @@ def _groq(prompt: str, model: str, key: str, schema: dict | None = None) -> str:
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": config.TEMPERATURE_GENERATION,
-            **response_format,
         },
         timeout=study_config.EXTERNAL_TIMEOUT,
     )

@@ -25,27 +25,31 @@ def naive_generation_prompt(
     The one prompt that does NOT take the context's rendered block: it reads the three
     canonical facts by name, and handing it the synthesised narrative instead would change
     a measured baseline and make recorded sessions incomparable.
+
+    It reads as somebody thinking out loud because that is what it is measuring. The pinned
+    fields arrive already spoken (`naive._spoken_fixed`), so no field identifier is named,
+    and the only technical thing left is the list of keys — which stays for the reason the
+    module docstring gives, and is asked for in prose rather than enforced by a grammar.
     """
     subject = subject or "la asignatura"
     level = educational_level
     language = language_of_instruction
 
-    header = f"Eres experto en {subject}"
+    opening = f"Necesito un ejercicio de {subject}"
     if level:
-        header += f", a nivel de {level}"
-    header += "."
+        opening += f" para {level}"
+    opening += f", para practicar {', '.join(concepts)}."
 
-    lines = [header, f"Escribe un ejercicio para practicar: {', '.join(concepts)}."]
+    lines = [opening]
     if language:
-        lines.append(f"Redáctalo en {language}.")
+        lines.append(f"En {language}.")
     for name, value in (fixed or {}).items():
-        lines.append(f"El campo {name} debe ser: {value}.")
+        lines.append(f"{name}: {value}.")
     if instructions.strip():
         lines.append(instructions.strip())
-    lines.append(f"Devuélvelo en JSON con las claves: {', '.join(keys)}.")
     lines.append(
-        "El contenido de los campos es el ejercicio en sí: sin saludos, sin presentaciones, "
-        "sin ánimos ni comentarios tuyos sobre el ejercicio, y sin nada de texto fuera del JSON."
+        f"Dámelo en JSON con estas claves: {', '.join(keys)}. "
+        "Solo el ejercicio: sin saludos, sin explicaciones y sin nada de texto fuera del JSON."
     )
     return "\n".join(lines)
 

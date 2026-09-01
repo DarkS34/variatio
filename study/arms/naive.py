@@ -21,6 +21,19 @@ from .. import prompts as study_prompts
 from . import external
 
 
+def _spoken_fixed(commission: Commission, item_type) -> dict[str, object]:
+    """Re-key the pinned fields by their human label, falling back to the field name.
+
+    `nivel_dificultad` is an identifier of this system, not a word anybody says out loud,
+    and this arm is the sentence somebody types in a hurry. The commission itself is left
+    alone — only what the prompt SAYS is relabelled, never what `parse_item` validates.
+    """
+    spoken: dict[str, object] = {}
+    for name, value in (commission.fixed or {}).items():
+        spoken[item_type.field_specs.get(name, {}).get("label") or name] = value
+    return spoken
+
+
 def build_prompt(commission: Commission, context) -> str:
     """Render the baseline prompt from the context's three canonical facts.
 
@@ -34,7 +47,7 @@ def build_prompt(commission: Commission, context) -> str:
         language_of_instruction=context.content_context.language_of_instruction,
         concepts=commission.concepts,
         keys=list(item_type.field_specs),
-        fixed=commission.fixed,
+        fixed=_spoken_fixed(commission, item_type),
         instructions=commission.instructions,
     )
 
@@ -50,7 +63,7 @@ def run(commission: Commission, context) -> ArmResult:
         return round((time.perf_counter() - started) * 1000)
 
     try:
-        answer = external.generate(prompt, item_type.stripped_schema())
+        answer = external.generate(prompt)
     except ArmUnavailable as e:
         logger.warning(f"Propuesta externa no disponible: {e}")
         # Nobody answered, so the record keeps the head of the chain: who it would have asked.

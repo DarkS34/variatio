@@ -24,23 +24,21 @@ def naive_generation_prompt(
     level = educational_level
     language = language_of_instruction
 
-    header = f"You are an expert in {subject}"
+    opening = f"I need a {subject} exercise"
     if level:
-        header += f", at {level} level"
-    header += "."
+        opening += f" for {level}"
+    opening += f", to practise {', '.join(concepts)}."
 
-    lines = [header, f"Write an exercise to practise: {', '.join(concepts)}."]
+    lines = [opening]
     if language:
-        lines.append(f"Write it in {language}.")
+        lines.append(f"In {language}.")
     for name, value in (fixed or {}).items():
-        lines.append(f"The field {name} must be: {value}.")
+        lines.append(f"{name}: {value}.")
     if instructions.strip():
         lines.append(instructions.strip())
-    lines.append(f"Return it as JSON with the keys: {', '.join(keys)}.")
     lines.append(
-        "The content of the fields is the exercise itself: no greetings, no introductions, "
-        "no encouragement, no comments of your own about the exercise, and no text at all "
-        "outside the JSON."
+        f"Give it to me as JSON with these keys: {', '.join(keys)}. "
+        "Just the exercise: no greetings, no explanations and no text outside the JSON."
     )
     return "\n".join(lines)
 
