@@ -431,6 +431,7 @@ function PasswordCard() {
  */
 function MyWorkspacesTab() {
   const { t } = useT();
+  const session = useSession();
   const listing = useWorkspaces();
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
@@ -443,7 +444,18 @@ function MyWorkspacesTab() {
     <div className="space-y-4">
       {listing.isLoading ? <Spinner /> : null}
 
-      {!listing.isLoading && mine.length === 0 ? (
+      {/* NOT TO AN ADMINISTRATOR (2026-09-01, explicit user request). `mine` excludes every
+          workspace reached through the admin bypass, so an administrator with no membership
+          of their own lands here and was told that «an administrator can give you access» —
+          addressed to the one person on the installation who does the giving. The notice is
+          for the account that has to WAIT for somebody; an administrator does not, and the
+          rows below already say «no eres miembro: entras porque administras la instalación».
+          What it costs is the admin who genuinely has no workspace at all, and that one is
+          not left in the dark either: `/` still draws `NoWorkspace` with its create button.
+          The body's own pointer had to be corrected with it — it named «el panel», deleted
+          on 2026-08-31, and the switcher is not the answer either: it returns null with no
+          workspaces, so the account this notice is FOR never sees one. */}
+      {!listing.isLoading && mine.length === 0 && !session.data?.user.is_admin ? (
         <Alert tone="attention" title={t("access.none.title")}>
           <p>{t("access.none.body")}</p>
         </Alert>

@@ -106,7 +106,7 @@ export const es = {
   // ACCESS ------------------------------------------------------------------------------
   "access.none.title": "Tu cuenta no es miembro de ningún espacio de trabajo",
   "access.none.body":
-    "Es un estado normal, no una cuenta a medio hacer: el panel te ofrece crear tu propia instancia, y quien administra puede darte acceso a una que ya exista.",
+    "Es un estado normal, no una cuenta a medio hacer: la pantalla de inicio te ofrece «Crear mi espacio de trabajo», y quien administra puede darte acceso a una que ya exista.",
   "access.inUse": "en uso",
   "access.byAdmin": "por administración",
   "access.notAMember": "No eres miembro: entras porque administras la instalación.",

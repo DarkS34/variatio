@@ -94,7 +94,7 @@ export const en: Catalogue = {
   // ACCESS ------------------------------------------------------------------------------
   "access.none.title": "Your account is not a member of any workspace",
   "access.none.body":
-    "It is a normal state, not a half-made account: the panel offers you to create your own instance, and an administrator can give you access to one that already exists.",
+    "It is a normal state, not a half-made account: the home screen offers you «Create my workspace», and an administrator can give you access to one that already exists.",
   "access.inUse": "in use",
   "access.byAdmin": "by administration",
   "access.notAMember": "You are not a member: you get in because you administer the installation.",
