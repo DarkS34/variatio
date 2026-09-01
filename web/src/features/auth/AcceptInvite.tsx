@@ -18,24 +18,7 @@ import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useAcceptInvite } from "@/state/auth";
 import { AuthLayout, FormError } from "./AuthLayout";
 import { useStripTokenFromUrl } from "./token";
 
-/**
- * The only way an account comes into existence from the browser.
- *
- * The token is read from the query string and previewed before anything is typed, so an
- * expired or already-used invitation says so instead of failing after a full form.
- *
- * A redeemed invitation is *also* an invalid one, which is why the success branch comes
- * first: accepting adopts the session, and adopting drops every query except the session
- * — including this preview, which the still-mounted screen immediately refetched and got
- * a 404 for. The account had been created and the person was already logged in, and they
- * were being told their link had expired. Landing on the app is both the fix and what
- * should have happened anyway.
- *
- * The token leaves the URL on MOUNT and no longer on the way out: stripping it only on
- * success meant an expired or refused invitation kept a bearer secret in the address bar
- * for as long as the tab stayed open, which is the case where somebody is most likely to
- * paste the address to somebody else and ask why it does not work.
- */
+
 export function AcceptInvite({ token }: { token: string }) {
   const { t } = useT();
   const preview = useQuery({
@@ -49,20 +32,13 @@ export function AcceptInvite({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const [visible, setVisible] = useState(false);
-  // No default: the two are not a scale with a middle, and a preselected answer is one
-  // nobody gave. Nothing is submitted until it is chosen.
   const [profile, setProfile] = useState<EvaluatorProfile | null>(null);
-  // Seeded from what the browser already says, so a person whose machine is in English
-  // is not greeted in Spanish and then asked to fix it. It is a default and not an
-  // answer: the control below is what they actually decide with.
   const [language, setLanguage] = useState<Language>(useLanguage());
   const accept = useAcceptInvite();
   const { navigate } = useRouter();
   useStripTokenFromUrl();
 
   useEffect(() => {
-    // Al tutorial y no a «/»: quien acaba de canjear una invitación no ha visto nunca
-    // esto, y la primera pantalla no puede ser un paso que no sabe para qué sirve.
     if (accept.isSuccess) navigate("/tutorial", { replace: true });
   }, [accept.isSuccess, navigate]);
 
@@ -127,9 +103,6 @@ export function AcceptInvite({ token }: { token: string }) {
       }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
-        {/* First, and that is the field order saying what the form knows: everything under
-            it is read in whatever language this button leaves selected, so asking last
-            means asking somebody to re-read a form they have already filled in. */}
         <div className="flex flex-col gap-1.5">
           <Label id="invite-language-label">{t("invite.language")}</Label>
           <div role="group" aria-labelledby="invite-language-label" className="flex gap-1">
@@ -139,10 +112,6 @@ export function AcceptInvite({ token }: { token: string }) {
                 type="button"
                 onClick={() => {
                   setLanguage(option);
-                  // Written through at once: the rest of this form, and the screen behind
-                  // it, are already drawn — a choice that only landed on submit would leave
-                  // somebody finishing a form in a language they have just said they do not
-                  // read.
                   localeStore.set(option);
                 }}
                 aria-pressed={language === option}
@@ -194,10 +163,6 @@ export function AcceptInvite({ token }: { token: string }) {
           />
         </div>
 
-        {/* Asked here and only here. Whoever invited had no field for it: the link binds the
-            access and nothing else, and this is the one moment the person is in front of a
-            form — asking mid-comparison gets an answer of convenience. It is not a
-            permission, and an administrator corrects it from the panel afterwards. */}
         <div className="flex flex-col gap-1.5">
           <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
           <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
@@ -225,11 +190,6 @@ export function AcceptInvite({ token }: { token: string }) {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-password">{t("auth.password")}</Label>
-          {/* `new-password` on both fields is what makes this a sign-up form to a password
-              manager: it is the signal Google Contraseñas reads to offer «Sugerir
-              contraseña segura» on focus, and to store the pair afterwards. Generating one
-              is the manager's job and not this screen's — one that offered its own had to
-              show it in clear so it could be copied before the field was cleared. */}
           <div className="relative">
             <Input
               id="invite-password"

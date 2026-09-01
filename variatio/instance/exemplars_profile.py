@@ -346,6 +346,29 @@ class ExemplarsProfile:
             return UNRANKED_DIFFICULTY
         return self.item_types[key].difficulty_rank(item)
 
+    def difficulty_of(self, item: dict) -> str | None:
+        """The rung one item sits on, resolving its modality first. Never raises."""
+        key = self.type_key_of_safe(item)
+        if key is None:
+            return None
+        return self.item_types[key].difficulty_of(item)
+
+    def declared_difficulties(self) -> list[str]:
+        """Every rung any modality declares, in declaration order and without repeats.
+
+        Normally this is one ladder — that is the whole point of the shared scale — so the
+        union is what makes a filter over a mixed list mean the same thing in every row.
+        It stays a union rather than «the first modality's» because a profile somebody
+        edited by hand may disagree with itself, and a rung that exists in the bank must
+        still be selectable.
+        """
+        found: list[str] = []
+        for item_type in self.item_types.values():
+            for level in item_type.difficulty_levels:
+                if level not in found:
+                    found.append(level)
+        return found
+
     def primary_fields(self) -> dict[str, str]:
         """Return each modality's primary field."""
         return {key: item_type.primary_field for key, item_type in self.item_types.items()}

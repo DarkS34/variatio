@@ -417,6 +417,9 @@ export interface BankListing {
   page: number;
   page_size: number;
   item_types: BankItemType[];
+  /** Every rung the profile declares, with how many items of the whole bank sit on it —
+   *  declared and not gathered, so a rung nobody has written is still selectable. */
+  difficulties: { value: string; count: number }[];
   default_type: string;
   sources: string[];
   totals: { items: number; tagged: number; untagged: number };

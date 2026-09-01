@@ -24,6 +24,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
 import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
+import { readableValue } from "@/lib/text";
 import type {
   BankItem,
   BankItemType,
@@ -462,7 +463,6 @@ const MAX_ROW_CONCEPTS = 3;
 
 /** What the listing may be ordered by. `recent` is the live view's and is never offered
  *  here; `difficulty` only appears when the profile declares one. */
-type BankOrder = "id" | "difficulty" | "suspicion";
 
 /**
  * WHICH PAGE OF THE BANK, AND THE TWO STEPS EITHER SIDE OF IT.
@@ -640,13 +640,17 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const [itemType, setItemType] = useState("");
   const [source, setSource] = useState("");
   const [untagged, setUntagged] = useState<boolean | undefined>(undefined);
-  const [order, setOrder] = useState<BankOrder>("id");
+  const [difficulty, setDifficulty] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
 
   const workspace = useActiveWorkspace();
   useEffect(() => {
     setItemType("");
+    // Same rule as the modality: a rung is a value THIS profile declares, and the endpoint
+    // answers 422 for one it does not — so carrying it into another instance would greet
+    // the screen with an error about a filter nobody set here.
+    setDifficulty("");
     setPage(1);
   }, [workspace]);
 
@@ -663,7 +667,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // que se recorría con la rueda del ratón y en el que la paginación no pintaba nada;
   // siete caben de una vez en la mitad izquierda de la pantalla, junto al cuestionario,
   // que es donde se leen.
-  const params = { q: query, item_type: itemType, source, untagged, order, page, page_size: PAGE_SIZE };
+  const params = { q: query, item_type: itemType, source, untagged, difficulty, page, page_size: PAGE_SIZE };
   const bank = useQuery({
     queryKey: ["bank", workspace, params],
     queryFn: () => api.bank(params as never),
@@ -707,6 +711,11 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // table drawing a column has no business looking that up. Every modality declares the
   // same three rungs, which is what makes one column over a mixed list mean anything.
   const difficultyField = itemTypes.find((t) => t.difficulty_field)?.difficulty_field ?? null;
+  // The rungs the profile declares, counted over the WHOLE bank rather than over the
+  // page: the filter is about what is in there, and a count that moved with the other
+  // filters would be describing the question instead of the answer. Read defensively —
+  // an API older than this bundle sends no `difficulties` and the control just goes.
+  const rungs = listing?.difficulties ?? [];
   const difficultyFor = (item: BankItem | null) => {
     const name = typeOf(item)?.difficulty_field;
     const value = name ? item?.[name] : undefined;
@@ -839,6 +848,37 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               </option>
             ))}
           </Select>
+          {/* THE DIFFICULTY IS A FILTER AND NOT AN ORDER (2026-09-01, explicit user
+              request, reversing the sort asked for two days earlier). «Ordenar por
+              dificultad» answered a question nobody has — the rungs are three, so ordering
+              by them only groups the list — where «enséñame los avanzados» is the question
+              somebody actually asks. It stands where the order select stood, and the order
+              control went with it: the list is by id, which is extraction order.
+
+              Offered only where a modality declares rungs, like the column and the sort
+              before it: a filter with one option filters nothing. */}
+          {rungs.length > 0 ? (
+            <Select
+              aria-label={t("bank.filterByDifficulty")}
+              value={difficulty}
+              onChange={(event) => {
+                setDifficulty(event.target.value);
+                setPage(1);
+              }}
+              className="max-w-48"
+            >
+              <option value="">{t("bank.allDifficulties")}</option>
+              {rungs.map((rung) => (
+                <option key={rung.value} value={rung.value}>
+                  {readableValue(rung.value)} ({rung.count})
+                </option>
+              ))}
+            </Select>
+          ) : null}
+          {/* LAST OF THE ROW (2026-09-01, explicit user request). It is the only one of the
+              four that is not a property of an item but a state of the WORK — what still has
+              to be tagged — and it is a toggle among selects, so it reads as the end of the
+              row rather than as one more dropdown that lost its label. */}
           <Button
             variant={untagged === true ? "default" : "outline"}
             size="sm"
@@ -850,32 +890,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <TriangleAlert />
             {t("bank.untagged")}
           </Button>
-          <Select
-            aria-label={t("bank.orderBy")}
-            value={order}
-            onChange={(event) => setOrder(event.target.value as BankOrder)}
-            className="max-w-56"
-          >
-            <option value="id">{t("bank.orderById")}</option>
-            {/* Offered only where it would order anything: with no difficulty declared the
-                server falls back to the id order, and a control that silently does nothing
-                is worse than one that is not there. */}
-            {difficultyField ? (
-              <option value="difficulty">{t("bank.orderByDifficulty")}</option>
-            ) : null}
-            <option value="suspicion">{t("bank.orderBySuspicion")}</option>
-          </Select>
-
-          {listing && listing.items.length > 0 ? (
-            <div className="ml-auto flex items-center gap-3">
-              <Pager
-                page={listing.page}
-                pages={pages}
-                total={listing.total}
-                onPage={setPage}
-              />
-            </div>
-          ) : null}
         </div>
 
         {bank.isError ? (
@@ -941,6 +955,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 page controls between them — three strips around one list. Where you are in
                 the bank and what you have picked out of it belong on the same line, and
                 the line belongs inside the card they describe.
+
+                THE ONE AT THE TOP IS GONE (2026-09-01, explicit user request). Two pagers
+                for a page of seven rows is one control drawn twice a screen apart: the
+                whole list is in view, so the one at the end of it is the one under your
+                eyes when you run out of rows. What went with it is the second copy of
+                «N ejercicios · página M de P», which is the same reading in both places.
 
                 What has NOT come back is a whole-bank «Etiquetar pendientes»: extracting
                 and tagging are one job since the extractor tags each document as it comes

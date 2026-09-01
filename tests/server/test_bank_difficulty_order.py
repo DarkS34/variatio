@@ -4,6 +4,11 @@ The whole point of the shared ladder is that this order means something: two exe
 different modalities sit on the same three rungs, so «easiest first» reads as one list
 rather than as several interleaved scales. What is per-modality is the CRITERION, and the
 criterion never reaches this sort.
+
+NO SCREEN ASKS FOR IT since 2026-09-01, when the order control was replaced by a filter by
+explicit user request — with three rungs an order only groups the list. It stays on the
+endpoint for the same reason `order=recent` does, and this file is what keeps it from being
+swept up as dead code; `test_bank_difficulty_filter.py` covers what the screen actually does.
 """
 
 import json

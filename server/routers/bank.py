@@ -35,6 +35,7 @@ def listing(
     q: str | None = None,
     source: str | None = None,
     item_type: str | None = None,
+    difficulty: str | None = None,
     order: str = Query("id", pattern="^(suspicion|difficulty|id|recent)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
@@ -45,6 +46,7 @@ def listing(
     A modality the profile does not declare is a 422 naming it, never an empty page: the
     filter is an equality, so an unknown value would read as «the bank has none of these»
     rather than «that does not exist». The 404 of this route means «there is no bank yet».
+    A rung the profile does not declare is refused the same way and for the same reason.
     """
     try:
         result = bank_edit.listing(
@@ -54,6 +56,7 @@ def listing(
             query=q,
             source=source,
             item_type=item_type,
+            difficulty=difficulty,
             order=order,
             page=page,
             page_size=page_size,
@@ -67,6 +70,13 @@ def listing(
             422,
             f"El perfil de ejemplares no declara la modalidad «{item_type}»; "
             f"las que hay: {', '.join(declared) or 'ninguna'}",
+        )
+    rungs = [d["value"] for d in result["difficulties"]]
+    if difficulty and difficulty not in rungs:
+        raise HTTPException(
+            422,
+            f"El perfil de ejemplares no declara el nivel «{difficulty}»; "
+            f"los que hay: {', '.join(rungs) or 'ninguno'}",
         )
     return result
 

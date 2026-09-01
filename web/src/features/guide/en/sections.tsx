@@ -915,10 +915,9 @@ function Bank() {
               top counts them and "{t("bank.seeUntagged", { n: "N" })}" filters them.
             </>,
             <>
-              Then the decisions <strong>won by a narrow margin</strong>: that is where the
-              matching goes wrong without saying so. The order dropdown above the table has
-              "{t("bank.orderBySuspicion")}" for exactly this: it puts the ones left with no
-              concept first and, behind them, the ones decided by a hair.
+              Then the ones carrying <strong>a single concept</strong>, or one that does not
+              fit: the concepts column reads at a glance, and that is where the matching goes
+              wrong without saying so.
             </>,
             <>
               Correct the <strong>primary concept</strong> by hand where needed: it is the one
@@ -952,18 +951,19 @@ function Bank() {
 
       <Block title="Finding one particular exercise">
         <Paragraph>
-          Above the table there are four filters that combine: a <strong>search</strong> over the
+          Above the table there are five filters that combine: a <strong>search</strong> over the
           statement's text or by id, the <strong>exercise type</strong> — the ones your profile
           declares, each with how many exercises it has across the whole bank — the{" "}
-          <strong>source document</strong>, and a <strong>"{t("bank.untagged")}"</strong> toggle.
-          If your profile declares a single exercise type, that dropdown does not appear: a menu with
-          one option filters nothing.
+          <strong>source document</strong>, the <strong>level</strong> — the three rungs, each
+          with its own count — and, at the end of the row, the{" "}
+          <strong>"{t("bank.untagged")}"</strong> toggle. If your profile declares a single
+          exercise type, that dropdown does not appear: a menu with one option filters nothing.
         </Paragraph>
         <Paragraph>
-          At the end of the row, and apart from the filters because it adds and removes nothing,
-          the <strong>order</strong>: "{t("bank.orderById")}", which is the order of extraction,
-          "{t("bank.orderByDifficulty")}" — from the simplest to the most demanding, with the
-          ones carrying no level at the end — or "{t("bank.orderBySuspicion")}".
+          There is no order control: the table runs in the order the exercises were extracted
+          in, which is the order of their ids. The level is <em>filtered</em> and not sorted,
+          because with three rungs sorting only groups, and the question people actually ask is
+          «show me the advanced ones».
         </Paragraph>
         <Paragraph>
           Filtering by exercise type moved nothing about tagging by concept, which is the heart of the

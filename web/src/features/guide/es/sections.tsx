@@ -898,10 +898,9 @@ function Bank() {
               arriba los cuenta y «{t("bank.seeUntagged", { n: "N" })}» los filtra.
             </>,
             <>
-              Después, las decisiones <strong>ganadas por poco margen</strong>: ahí es donde el
-              emparejamiento se equivoca sin avisar. El desplegable de orden, sobre la tabla,
-              tiene «{t("bank.orderBySuspicion")}» justo para eso: pone delante los que se
-              quedaron sin concepto y, tras ellos, los que se decidieron por los pelos.
+              Después, los que llevan <strong>un solo concepto</strong> o uno que no encaja: la
+              columna de conceptos se lee de un vistazo, y ahí es donde el emparejamiento se
+              equivoca sin avisar.
             </>,
             <>
               Corrige el <strong>concepto primario</strong> a mano donde haga falta: es el que
@@ -935,18 +934,19 @@ function Bank() {
 
       <Block title="Encontrar un ejercicio concreto">
         <Paragraph>
-          Sobre la tabla hay cuatro filtros que se combinan: una <strong>búsqueda</strong> por
-          texto del enunciado o por id, la <strong>tipo de ejercicio</strong> —las que declara tu
-          perfil, cada una con cuántos ejercicios tiene en todo el banco—, el{" "}
-          <strong>documento de origen</strong> y un interruptor de{" "}
-          <strong>«{t("bank.untagged")}»</strong>. Si tu perfil declara una sola tipo de ejercicio, ese
+          Sobre la tabla hay cinco filtros que se combinan: una <strong>búsqueda</strong> por
+          texto del enunciado o por id, el <strong>tipo de ejercicio</strong> —los que declara tu
+          perfil, cada uno con cuántos ejercicios tiene en todo el banco—, el{" "}
+          <strong>documento de origen</strong>, el <strong>nivel</strong> —los tres peldaños, cada
+          uno con su cuenta— y, al final de la fila, el interruptor de{" "}
+          <strong>«{t("bank.untagged")}»</strong>. Si tu perfil declara un solo tipo de ejercicio, ese
           desplegable no aparece: un menú con una única opción no filtra nada.
         </Paragraph>
         <Paragraph>
-          Al final de la fila, y aparte de los filtros porque no quita ni pone nada, el{" "}
-          <strong>orden</strong>: «{t("bank.orderById")}», que es el de extracción, «
-          {t("bank.orderByDifficulty")}» —de los más sencillos a los más exigentes, y los que
-          no tengan nivel al final— o «{t("bank.orderBySuspicion")}».
+          No hay control de orden: la tabla va en el orden en que se extrajeron los ejercicios,
+          que es el de sus ids. El nivel se <em>filtra</em> y no se ordena, porque con tres
+          peldaños ordenar solo agrupa, y lo que se pregunta de verdad es «enséñame los
+          avanzados».
         </Paragraph>
         <Paragraph>
           Filtrar por tipo de ejercicio no ha movido nada del etiquetado por conceptos, que es el

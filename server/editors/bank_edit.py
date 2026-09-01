@@ -97,6 +97,7 @@ def _matches(
     query: str | None,
     source: str | None,
     item_type: str | None,
+    difficulty: str | None = None,
 ) -> bool:
     """Whether one row survives every filter the listing was given.
 
@@ -112,6 +113,8 @@ def _matches(
     if source and row.get("source") != source:
         return False
     if item_type and profile.type_key_of_safe(row) != item_type:
+        return False
+    if difficulty and profile.difficulty_of(row) != difficulty:
         return False
     if query:
         needle = query.lower()
@@ -167,6 +170,20 @@ def _type_summaries(profile: ExemplarsProfile, all_items: list[dict]) -> list[di
     ]
 
 
+def _difficulty_summaries(profile: ExemplarsProfile, all_items: list[dict]) -> list[dict]:
+    """Every rung the profile declares, with how many items of the whole bank sit on it.
+
+    Declared and not gathered, exactly as the modalities are: a rung nobody has written yet
+    is still a rung one may filter by, and it says «0» instead of not being offered.
+    """
+    counts: dict[str, int] = {level: 0 for level in profile.declared_difficulties()}
+    for item in all_items:
+        level = profile.difficulty_of(item)
+        if level in counts:
+            counts[level] += 1
+    return [{"value": level, "count": count} for level, count in counts.items()]
+
+
 def listing(
     ws: Workspace,
     concept: str | None = None,
@@ -174,6 +191,7 @@ def listing(
     query: str | None = None,
     source: str | None = None,
     item_type: str | None = None,
+    difficulty: str | None = None,
     order: str = "id",
     page: int = 1,
     page_size: int = 50,
@@ -184,7 +202,9 @@ def listing(
 
     rows = [{"id": item_id, **item} for item_id, item in bank.items()]
     rows = [
-        r for r in rows if _matches(r, profile, concept, untagged, query, source, item_type)
+        r
+        for r in rows
+        if _matches(r, profile, concept, untagged, query, source, item_type, difficulty)
     ]
     _sort(rows, order, profile)
 
@@ -200,6 +220,7 @@ def listing(
         "page": page,
         "page_size": page_size,
         "item_types": _type_summaries(profile, all_items),
+        "difficulties": _difficulty_summaries(profile, all_items),
         "default_type": profile.default_type,
         "sources": sorted({str(i.get("source")) for i in all_items if i.get("source")}),
         "totals": {
