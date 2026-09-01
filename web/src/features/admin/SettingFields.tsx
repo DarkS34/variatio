@@ -78,6 +78,7 @@ export function GroupCard({
   onChange,
   onReset,
   models,
+  offered,
 }: {
   title: string | null;
   settings: ConfigSetting[];
@@ -85,6 +86,8 @@ export function GroupCard({
   onChange: (key: string, value: unknown) => void;
   onReset: (key: string) => void;
   models: ConfigPayload["models"] | null;
+  /** Forwarded to `SettingRow` for the one field whose rows ARE the offered models. */
+  offered?: string[];
 }) {
   const current = (setting: ConfigSetting) =>
     setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
@@ -105,6 +108,7 @@ export function GroupCard({
             onChange={(next) => onChange(setting.key, next)}
             onReset={() => onReset(setting.key)}
             models={models}
+            offered={offered}
           />
         ))}
       </CardContent>
@@ -317,6 +321,14 @@ export function CerebrasModelsField({
  * listed first, in their stored order, and «Poner primero» is how that is edited. Checking
  * one appends it; a list of one is legal and simply hides the chooser on the generate
  * screen.
+ *
+ * A NAME CAN BE TYPED, and that is not a convenience: the rows are the engine's listing,
+ * which is empty whenever the engine does not answer — a tunnel down, the box off — and
+ * that is exactly when somebody comes here to point the installation at another model.
+ * With the checkboxes as the only way in, the field then offers what is already offered
+ * and nothing else. It is the same escape `ModelSelect` keeps as «Otro…», and it also
+ * covers the model that is not pulled yet: an offered model that is absent is a supported
+ * state, drawn as «sin instalar».
  */
 export function GenerationModelsField({
   id,
@@ -348,6 +360,15 @@ export function GenerationModelsField({
     onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
   const promote = (model: string) =>
     onChange([model, ...selected.filter((name) => name !== model)]);
+
+  const [typed, setTyped] = useState("");
+  const name = typed.trim();
+  const addable = name !== "" && !selected.includes(name);
+  const add = () => {
+    if (!addable) return;
+    onChange([...selected, name]);
+    setTyped("");
+  };
 
   return (
     <div className="space-y-1.5">
@@ -410,9 +431,116 @@ export function GenerationModelsField({
       {selected.length === 0 ? (
         <p className="text-small text-destructive">{t("cfg.offered.none")}</p>
       ) : null}
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label htmlFor={`${id}-add`}>{t("cfg.offered.addLabel")}</Label>
+          <Input
+            id={`${id}-add`}
+            placeholder={t("eng.models.pullPlaceholder")}
+            disabled={disabled}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              add();
+            }}
+          />
+        </div>
+        <Button variant="outline" size="sm" disabled={disabled || !addable} onClick={add}>
+          {t("cfg.offered.add")}
+        </Button>
+      </div>
       <p className="text-small text-muted-foreground">
         {installed.length === 0 ? t("cfg.noEngineList") : t("cfg.offered.hint")}
       </p>
+    </div>
+  );
+}
+
+
+/**
+ * Which offered models let their reasoning effort be adjusted when an exercise is asked for.
+ *
+ * ONE ROW PER OFFERED MODEL, and the rows come from the OTHER setting's draft rather than
+ * from what is saved: unchecking a model above and locking it below in the same visit has
+ * to work, and the save bar sends both keys in one request anyway.
+ *
+ * The switch is phrased the positive way — «se puede ajustar» — while the setting stores
+ * the negative, the models that may NOT. That is not a mismatch to tidy: the list is short
+ * because locking is the exception, and a setting that stores the exception is one whose
+ * default is the empty list. What a person reads is the question they are answering.
+ *
+ * A name in the setting that is no longer offered keeps its row, at the foot and marked:
+ * dropping it silently would throw away a measurement the next save could not recover, and
+ * the setting deliberately does not validate against the offer for the same reason.
+ */
+export function FixedEffortField({
+  id,
+  label,
+  value,
+  disabled,
+  offered,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: unknown;
+  disabled: boolean;
+  offered: string[];
+  onChange: (next: unknown) => void;
+}) {
+  const { t } = useT();
+  const fixed = Array.isArray(value) ? value.map(String) : [];
+  const orphans = fixed.filter((model) => !offered.includes(model));
+  const rows = [...offered, ...orphans];
+
+  const set = (model: string, adjustable: boolean) =>
+    onChange(adjustable ? fixed.filter((name) => name !== model) : [...fixed, model]);
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-body" id={id}>
+        {label}
+      </span>
+      {rows.length === 0 ? (
+        <p className="text-small text-muted-foreground">{t("cfg.effort.noModels")}</p>
+      ) : (
+        <ul aria-labelledby={id} className="space-y-1.5">
+          {rows.map((model) => {
+            const adjustable = !fixed.includes(model);
+            const family = familyOf(model);
+            return (
+              <li
+                key={model}
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 border border-border p-2"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-body font-medium">{family.label || model}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground">{model}</span>
+                  </span>
+                  <span className="mt-0.5 block text-small text-muted-foreground">
+                    {adjustable
+                      ? t("cfg.effort.adjustableNote", { levels: family.levels.length })
+                      : t("cfg.effort.fixedNote")}
+                  </span>
+                </span>
+                {!offered.includes(model) ? (
+                  <Badge variant="outline">{t("cfg.effort.notOffered")}</Badge>
+                ) : null}
+                <Switch
+                  checked={adjustable}
+                  disabled={disabled}
+                  onCheckedChange={(next) => set(model, next)}
+                  label={t("cfg.effort.toggle", { model })}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="text-small text-muted-foreground">{t("cfg.effort.hint")}</p>
     </div>
   );
 }
@@ -424,12 +552,16 @@ export function SettingRow({
   onChange,
   onReset,
   models,
+  offered,
 }: {
   setting: ConfigSetting;
   value: unknown;
   onChange: (next: unknown) => void;
   onReset: () => void;
   models: ConfigPayload["models"] | null;
+  /** The offered models as they stand in the draft. Only `generation.fixed_effort` reads
+   *  it: its rows ARE that list, and it has to follow an edit made in the same visit. */
+  offered?: string[];
 }) {
   const { t } = useT();
   const label = setting.name || setting.key;
@@ -469,6 +601,15 @@ export function SettingRow({
               value={value}
               disabled={disabled}
               models={models}
+              onChange={onChange}
+            />
+          ) : setting.key === "generation.fixed_effort" ? (
+            <FixedEffortField
+              id={id}
+              label={label}
+              value={value}
+              disabled={disabled}
+              offered={offered ?? []}
               onChange={onChange}
             />
           ) : setting.key === "engine.cerebras_models" ? (

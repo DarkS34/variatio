@@ -30,9 +30,9 @@ export function fromGeneration(row: GenerationRow): FormState {
     decisions: { ...row.fixed },
     instructions: row.instructions ?? "",
     think: row.think,
-    // The model is deliberately NOT carried over, even though the row records one: nobody
-    // chooses a writer any more, so a re-run goes out with none and the installation
-    // resolves its own. Carrying it would send a name the form cannot show and the person
-    // cannot change.
+    // «Otra como esta» means the same commission, and the model is part of it. A row from
+    // before it was recorded carries null, which is the default — the same thing that
+    // commission ran with.
+    model: row.model,
   };
 }

@@ -16,6 +16,16 @@ def generation_models() -> list[str]:
     return [str(model) for model in config.GENERATION_MODELS]
 
 
+def fixed_effort_models() -> list[str]:
+    """Return the offered models whose reasoning effort may not be adjusted per commission.
+
+    A separate list rather than a shape inside `generation.models`, so that removing a model
+    from the offer for an afternoon does not throw away a measurement of how it reasons.
+    Nothing here reads it: it travels to the browser, which draws or withholds one slider.
+    """
+    return [str(model) for model in config.FIXED_EFFORT_MODELS]
+
+
 def resolve_generation_model(requested: str | None) -> str:
     """Return the model a commission will be written with, or raise if it is not offered.
 

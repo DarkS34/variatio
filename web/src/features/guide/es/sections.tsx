@@ -1099,15 +1099,18 @@ function Generate() {
 
       <Block title="Qué modelo lo escribe">
         <Paragraph>
-          No lo eliges tú, y es a propósito: lo decide la instalación. Quien la administra lo
-          fija en «Configuración → Modelos ofrecidos», y el primero de esa lista es el que
-          escribe todo lo que se pide desde aquí.
+          Lo eliges tú, entre los que la instalación ofrece. Quien la administra fija esa
+          lista en «Configuración → Modelos generadores»; tú ves una ficha por modelo con lo
+          que cuesta cada uno —uno contesta en segundos, otro tarda minutos y delibera— y el
+          primero de la lista viene marcado. Si sólo se ofrece uno no se te pregunta nada.
         </Paragraph>
         <Paragraph>
-          El nombre aparece igualmente, junto a la barra de esfuerzo, porque es a lo que se
-          aplica ese esfuerzo: cuántos niveles hay, y cuál conviene evitar, es cosa del modelo.
-          Y queda guardado con cada variante, así que en «{t("menu.savedVariants")}» puedes
-          comparar dos enunciados sabiendo qué escribió cada uno.
+          Se elige <em>antes</em> que el esfuerzo y no después, porque cuántos niveles hay y
+          cuál conviene evitar es cosa del modelo. Hay modelos que contestan igual pongas el
+          nivel que pongas: en esos no se dibuja la barra, y quién es quién también lo declara
+          quien administra. El modelo queda guardado con cada variante, así que en
+          «{t("menu.savedVariants")}» puedes comparar dos enunciados sabiendo qué escribió
+          cada uno.
         </Paragraph>
       </Block>
 

@@ -1113,15 +1113,18 @@ function Generate() {
 
       <Block title="Which model writes it">
         <Paragraph>
-          You do not choose it, and that is deliberate: the installation does. Whoever
-          administers it sets the list in «Configuration → Offered models», and the first of
-          that list is what writes everything asked for here.
+          You choose it, out of what the installation offers. Whoever administers it sets that
+          list in «Configuration → Generator models»; you get a card per model with what each
+          one costs — one answers in seconds, the other takes minutes and deliberates — and
+          the first of the list comes selected. With a single one on offer nothing is asked.
         </Paragraph>
         <Paragraph>
-          Its name still appears, beside the effort bar, because that is what the effort
-          applies to: how many levels there are, and which one is worth avoiding, is the
-          model's business. And it is stored with every variant, so in
-          «{t("menu.savedVariants")}» you can compare two statements knowing what wrote each.
+          It is chosen <em>before</em> the effort and not after, because how many levels there
+          are and which one is worth avoiding is the model's business. Some models answer the
+          same whatever level you set: those draw no bar, and which ones they are is declared
+          by whoever administers the installation too. The model is stored with every variant,
+          so in «{t("menu.savedVariants")}» you can compare two statements knowing what wrote
+          each.
         </Paragraph>
       </Block>
 

@@ -6,7 +6,7 @@ import type { EffortLevel } from "./effort";
  * What the screen knows about each model it may offer to write a variant.
  *
  * WHICH models are offered is the installation's (`generation.models`, «Configuración →
- * Modelos ofrecidos»); this table is what turns one of those names into something a person
+ * Modelos generadores»); this table is what turns one of those names into something a person
  * can choose between — a name, one sentence about what the choice costs, a link to read
  * the rest, and the effort levels that model actually accepts.
  *
@@ -31,19 +31,22 @@ export interface ModelFamily {
   /** Choosing a level ABOVE this one shows `warningKey`. */
   warnAbove?: EffortLevel;
   warningKey?: Key;
-  /**
-   * Whether moving the slider changes the answer at all.
-   *
-   * `false` means the family accepts the levels and ignores them, and the SLIDER IS NOT
-   * DRAWN. `gemma-4` is the case that made it necessary: its own note said «en la práctica
-   * los tres se comportan casi igual», so the screen offered a control and explained in
-   * the same box that it does nothing. `levels` still lists what the engine accepts,
-   * because that is what `clampEffort` needs in order to send a valid value.
-   */
-  effortMatters?: boolean;
 }
 
-// To offer another model, add its family here and put its name in «Modelos ofrecidos».
+/*
+ * WHETHER THE SLIDER IS DRAWN AT ALL IS NOT HERE ANY MORE (2026-09-01, explicit user
+ * request). It was `effortMatters`, a field of the family: `false` meant «this one accepts
+ * the levels and ignores them», measured on `gemma-4`, and declaring it for a new model was
+ * a code change and a deploy. It is `generation.fixed_effort` now, an engine-scoped list in
+ * «Configuración → Modelos generadores» that reaches the browser through `/api/health`.
+ *
+ * `levels` stayed, and the split is the point: what a model ACCEPTS is what `clampEffort`
+ * needs in order to send a valid value, and sending an invalid one is a 400 rather than a
+ * matter of taste. What a model DOES with what it accepts is the measurement, and that is
+ * the administrator's to record.
+ */
+
+// To offer another model, add its family here and put its name in «Modelos generadores».
 export const MODEL_FAMILIES: ModelFamily[] = [
   {
     match: "qwen3.8",
@@ -57,7 +60,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     // byte-identical answer, where `low` is 44 and `medium` is 14, the model's own default.
     // A fourth stop that cannot change anything is a stop that lies.
     levels: ["low", "medium", "high"],
-    effortMatters: true,
     warnAbove: "medium",
     warningKey: "effort.warn.qwen38",
   },
@@ -67,11 +69,10 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     url: "https://huggingface.co/google/gemma-4-31B-it",
     blurbKey: "model.blurb.gemma4",
     speed: "fast",
+    // Measured: on this family the three levels answer the same, which is why it is the
+    // one name «Modelos generadores» ships in `generation.fixed_effort`. The switch stays
+    // there — reasoning on or off is a real choice, and it is what the run records.
     levels: ["low", "medium", "high"],
-    // Measured, and said out loud in the note the card already carried: on this family the
-    // three levels answer the same. So the switch stays — reasoning on or off is a real
-    // choice, and it is what the run records — and the slider goes.
-    effortMatters: false,
   },
 ];
 
@@ -81,10 +82,10 @@ const UNKNOWN: ModelFamily = {
   url: null,
   blurbKey: null,
   speed: null,
-  levels: ["low", "medium", "high", "max"],
   // An unrecognised model is offered whole, slider included: refusing a control because
-  // nobody has measured the model yet would make adding one a code change.
-  effortMatters: true,
+  // nobody has measured the model yet would make adding one a code change. Measure it and
+  // the answer goes in `generation.fixed_effort`, not here.
+  levels: ["low", "medium", "high", "max"],
 };
 
 /** The family a model belongs to; an unrecognised one keeps its own name and no note. */

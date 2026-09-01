@@ -53,3 +53,41 @@ def test_the_offered_list_may_not_be_emptied():
     assert coerce(setting, ["uno", "dos"]) == ["uno", "dos"]
     with pytest.raises(SettingError):
         coerce(setting, [])
+
+
+# WHICH MODELS IGNORE THE REASONING LEVELS is a measurement, and since 2026-09-01 it is a
+# setting rather than a table in the browser's source. It is deliberately NOT validated
+# against the offered list: a model is taken off the offer far more often than its
+# reasoning is re-measured, and dropping the measurement with it would force a re-run.
+def test_the_fixed_effort_listing_is_a_copy_of_the_setting(monkeypatch):
+    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
+    listing = stages.fixed_effort_models()
+    assert listing == ["el-rapido"]
+    listing.append("intruso")
+    assert stages.fixed_effort_models() == ["el-rapido"]
+
+
+def test_naming_a_model_nobody_offers_as_fixed_effort_is_not_an_error(offered, monkeypatch):
+    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-que-se-retiro-un-rato"])
+    assert stages.fixed_effort_models() == ["el-que-se-retiro-un-rato"]
+    # And it changes nothing about what may be generated with.
+    assert stages.resolve_generation_model(None) == "el-rapido"
+
+
+def test_the_two_lists_default_to_the_same_model_on_the_hybrid_engine():
+    # Today's behaviour, moved out of `models.ts` unchanged: the one model measured to
+    # answer the same at every level is the one the hybrid profile offers first.
+    fixed = BY_KEY["generation.fixed_effort"]
+    offered_setting = BY_KEY["generation.models"]
+    assert fixed.default == []
+    assert dict(fixed.engine_defaults or ()) == {"cerebras+ollama": ["gemma-4-31b"]}
+    assert dict(offered_setting.engine_defaults or ())["cerebras+ollama"][0] == "gemma-4-31b"
+
+
+def test_a_fixed_effort_value_reads_as_a_comma_list_or_is_refused():
+    setting = BY_KEY["generation.fixed_effort"]
+    # A string is split, which is what makes the environment override usable at all.
+    assert coerce(setting, "gemma-4-31b, otro") == ["gemma-4-31b", "otro"]
+    assert coerce(setting, []) == []
+    with pytest.raises(SettingError):
+        coerce(setting, {"gemma-4-31b": True})

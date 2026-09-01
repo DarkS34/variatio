@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { clampEffort, EFFORT_ORDER, effortWarning, type EffortLevel } from "./effort";
+import {
+  clampEffort,
+  EFFORT_ORDER,
+  effortAdjustable,
+  effortWarning,
+  type EffortLevel,
+} from "./effort";
 import { familyOf, MODEL_FAMILIES, modelLabel } from "./models";
 
 /* What the screen knows about a model it may offer. The claim worth pinning is the
@@ -92,5 +98,27 @@ describe("the warning above a model's comfortable level", () => {
     for (const level of EFFORT_ORDER) {
       expect(effortWarning(level, familyOf("gemma-4-31b"))).toBeNull();
     }
+  });
+});
+
+/* WHETHER THE SLIDER IS DRAWN is the installation's since 2026-09-01, not the table's. The
+   rule is whole-name and not prefix, unlike `familyOf`: both lists hold engine names, so a
+   prefix would lock a quantisation nobody measured. */
+describe("effortAdjustable", () => {
+  it("is true for a model nobody locked", () => {
+    expect(effortAdjustable("qwen3.8:27b-q8_0", ["gemma-4-31b"])).toBe(true);
+  });
+
+  it("is false for a model the installation locked", () => {
+    expect(effortAdjustable("gemma-4-31b", ["gemma-4-31b"])).toBe(false);
+  });
+
+  it("compares whole names, so another quantisation of a locked family stays adjustable", () => {
+    expect(effortAdjustable("gemma-4-31b-q8_0", ["gemma-4-31b"])).toBe(true);
+  });
+
+  it("degrades to adjustable with no list at all", () => {
+    expect(effortAdjustable("gemma-4-31b", [])).toBe(true);
+    expect(effortAdjustable(undefined, ["gemma-4-31b"])).toBe(true);
   });
 });

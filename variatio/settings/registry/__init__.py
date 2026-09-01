@@ -33,7 +33,7 @@ GROUPS = (
     "Motor",
     "Túnel SSH",
     "Modelos",
-    "Modelos ofrecidos",
+    "Modelos generadores",
     "Razonamiento",
     "Muestreo",
     "Ventana de contexto",

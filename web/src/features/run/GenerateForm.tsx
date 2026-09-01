@@ -3,6 +3,7 @@ import {
   Brain,
   Check,
   ChevronRight,
+  Cpu,
   ListChecks,
   Minus,
   Play,
@@ -12,7 +13,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
@@ -45,9 +46,17 @@ import { useT, type Translate } from "@/lib/i18n";
 import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
 import { DifficultyChoice } from "./DifficultyChoice";
-import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effort";
+import {
+  EFFORT_LABELS,
+  clampEffort,
+  effortAdjustable,
+  effortPolicy,
+  effortWarning,
+} from "./effort";
 import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
+import { ModelChoice } from "./ModelChoice";
+import { modelLabel } from "./models";
 import { adjacency, posteriors, priors } from "./prerequisites";
 import { CancelButton } from "@/components/CancelButton";
 import type { RunView } from "@/state/runStore";
@@ -323,18 +332,43 @@ export function GenerateForm({
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
-  // WHICH MODEL WRITES IT IS NOT ASKED HERE ANY MORE (2026-09-01, explicit user request),
-  // but it is still READ: which effort levels a family implements, and which of them is
-  // worth a warning, are properties of the model, so the slider has to know what it is
-  // sizing itself against. It is the first of `generation.models`, which is exactly what
-  // the server resolves an absent `model` to. Read defensively — an API older than this
-  // bundle sends no `offered`, and the slider degrades to the full scale.
+  // WHICH MODEL WRITES IT IS THE COMMISSION'S AGAIN (2026-09-01, explicit user request,
+  // reversing the removal of the same morning). The installation still decides everything
+  // AROUND the choice, in «Configuración → Modelos generadores»: which models are on offer,
+  // which of them is the default, and — new the same day — which of them let their effort
+  // be adjusted at all. Offering exactly one is what makes the chooser disappear, so an
+  // installation that wants to decide still does, without this screen changing shape.
+  //
+  // It is read before the effort because the effort depends on it: which levels a family
+  // implements and which of them is worth a warning are the model's. Every read is
+  // defensive — an API older than this bundle sends no `offered` and no `fixed_effort`, and
+  // the screen degrades to «the installation decides» with the full scale, never to blank.
   const health = useHealth();
   const offered = health.data?.models.offered ?? NONE;
-  const generationModel = offered[0];
+  const remoteModels = health.data?.models.remote ?? NONE;
+  const missingModels = health.data?.models.missing ?? NONE;
+  const fixedEffort = health.data?.models.fixed_effort ?? NONE;
+  // The first offered one is what the server resolves an absent `model` to, so it is what
+  // the screen has to name while nobody has chosen. A stored choice the installation has
+  // stopped offering is not one: the panel edits that list while this form is open.
+  const generationModel =
+    state.model && offered.includes(state.model) ? state.model : offered[0];
   const policy = effortPolicy(generationModel);
   const effort = clampEffort(state.effort, policy);
   const warning = effortWarning(effort, policy);
+  // Whether the slider is offered for THIS model. A measurement, and the installation's to
+  // record: see `generation.fixed_effort`.
+  const adjustable = effortAdjustable(generationModel, fixedEffort);
+
+  // Same reconciliation the curriculum preset gets, and for the same reason: a value the
+  // form can no longer show must not be what the request carries. The panel edits the
+  // offered list while this form sits open.
+  useEffect(() => {
+    if (state.model && offered.length > 0 && !offered.includes(state.model)) {
+      patch({ model: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.model, offered]);
 
   // The curriculum that will actually be in force, resolved exactly as the server resolves
   // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
@@ -876,11 +910,43 @@ export function GenerateForm({
             </div>
           ) : null}
 
+          {/* BEFORE THE EFFORT AND NOT AFTER IT: which levels exist, which of them is worth
+              a warning, and whether the slider is drawn at all are properties of the model
+              that was just chosen, so choosing it afterwards would silently re-clamp what
+              was just set. It draws nothing with a single model on offer. */}
+          {variant === "generate" ? (
+            <ModelChoice
+              offered={offered}
+              remote={remoteModels}
+              missing={missingModels}
+              value={generationModel ?? ""}
+              onChange={(model) => patch({ model })}
+            />
+          ) : null}
+
           {/* In comparison there is no switch on purpose: the reasoning mode is what is measured
               there, so the session draws it. Saying so here keeps the control's absence from reading
               as a missing checkbox. */}
           {variant === "generate" ? (
             <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+              {/* WHO WRITES IT, and ONLY when the chooser above is not drawn: with two on
+                  offer the selected card already names this one a centimetre up, and the
+                  two would be the same string twice. With ONE offered there is no card at
+                  all, and this is the only place in the whole application where the writer
+                  is named — which is why it sits outside the slider's guard rather than
+                  inside it, where `gemma-4-31b` (locked effort, and the first of the
+                  shipped list) went unnamed everywhere. It reads as the badge in «Mis
+                  variantes» does, same icon and same `modelLabel`: the same fact before
+                  the run and after it. */}
+              {generationModel && offered.length < 2 ? (
+                <div className="flex flex-wrap items-center gap-x-1.5 text-small text-muted-foreground">
+                  <Cpu className="size-3.5 shrink-0" />
+                  <span>{t("form.model.writes")}</span>
+                  <span className="font-medium text-foreground" title={generationModel}>
+                    {modelLabel(generationModel)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <Switch checked={state.think} onCheckedChange={(think) => patch({ think })}>
                   <span className="flex items-center gap-1.5 text-body font-medium">
@@ -890,31 +956,23 @@ export function GenerateForm({
                 </Switch>
                 <span className="ml-auto text-[11px] nums text-muted-foreground">
                   {state.think
-                    ? policy.effortMatters === false
-                      ? t("form.think.onPlain")
-                      : t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
+                    ? adjustable
+                      ? t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
+                      : t("form.think.onPlain")
                     : t("form.think.off")}
                 </span>
               </div>
-              {/* The slider only where it changes the answer. On a family whose own note
-                  says the three levels behave alike, drawing it offers a decision and
-                  explains underneath that it makes no difference. `effort` is still sent
-                  — clamped to a level the engine accepts — it just stops being asked. */}
-              {state.think && policy.effortMatters !== false ? (
-                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <EffortSlider
-                    levels={policy.levels}
-                    value={effort}
-                    onChange={(level) => patch({ effort: level })}
-                  />
-                  {/* The one place the writer is named at all, now that nobody picks it.
-                      It is not a control: it is what the effort beside it applies to. */}
-                  {generationModel ? (
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {generationModel}
-                    </span>
-                  ) : null}
-                </div>
+              {/* The slider only where it changes the answer, and WHICH models those are is
+                  the installation's since 2026-09-01 (`generation.fixed_effort`). On a
+                  model measured to answer the same at every level, drawing it offers a
+                  decision and then explains that it makes no difference. `effort` is still
+                  sent — clamped to a level the engine accepts — it just stops being asked. */}
+              {state.think && adjustable ? (
+                <EffortSlider
+                  levels={policy.levels}
+                  value={effort}
+                  onChange={(level) => patch({ effort: level })}
+                />
               ) : null}
               {state.think && warning ? (
                 <Alert tone="attention" title={t("form.think.highEffort")}>

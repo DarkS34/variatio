@@ -116,5 +116,9 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 143 and 115 later the same day, when `generation.max_items` arrived: the item count
     # was the one commission parameter with no ceiling anywhere, so a single request could
     # spend the whole day's quota before anything refused it.
-    assert len(REGISTRY) == 143
-    assert len(BY_NAME) == 115
+    # 144 and 116 on 2026-09-01, when `generation.fixed_effort` arrived: which models ignore
+    # the reasoning levels was a table in the browser's own source, so declaring it for a new
+    # model was a code change — a measurement made by whoever administers the installation,
+    # kept where only whoever deploys it could write it down.
+    assert len(REGISTRY) == 144
+    assert len(BY_NAME) == 116

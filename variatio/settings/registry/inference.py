@@ -198,7 +198,35 @@ es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 _MAIN = "qwen3.8:27b-q8_0"
 _MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
-OFFERED_GROUP = "Modelos ofrecidos"
+OFFERED_GROUP = "Modelos generadores"
+
+_FIXED_EFFORT_DOC = """QUÉ MODELOS NO DEJAN AJUSTAR EL ESFUERZO DE RAZONAMIENTO al pedir un ejercicio. Un
+nombre de esta lista sigue ofreciéndose para generar y sigue razonando si el encargo lo
+enciende; lo que pierde es el deslizador: se llama con el nivel que resuelva el motor y la
+pantalla lo dice en una palabra, «activado», en vez de «activado · bajo».
+
+ESTO ERA UNA TABLA EN EL CÓDIGO hasta el 2026-09-01 (petición explícita del usuario). Vivía
+en `web/src/features/run/models.ts` como el campo `effortMatters` de cada familia, indexada
+por el principio del nombre, así que declarar que un modelo nuevo ignora los niveles era un
+cambio de código y un despliegue. Es una propiedad medida del modelo, sí, pero quien la mide
+es quien administra la instalación y quien la sufre es quien pide el ejercicio, de modo que
+declararla es administrar y no programar.
+
+LO QUE HAY QUE MEDIR PARA PONER UN NOMBRE AQUÍ: la misma llamada, temperatura 0 y semilla
+fija, en cada nivel. Si dos niveles devuelven byte a byte lo mismo, el deslizador ofrece una
+decisión que no cambia nada. Así se midió `gemma-4-31b` —de ahí que sea el único valor por
+defecto, y sólo en el perfil de `cerebras+ollama`, que es donde se sirve— y así se midió que
+`qwen3.8:27b-q8_0` SÍ los distingue en tres (`max` es `high` con otro nombre, que es cosa de
+`levels` y no de este ajuste).
+
+LOS NOMBRES SON LOS DEL MOTOR y se comparan enteros, no por prefijo: la lista de ofrecidos
+también lo son, y el panel escribe aquí exactamente el nombre de la fila que se marca. De
+ámbito `engine` por lo mismo que la lista de ofrecidos — `gemma-4-31b` no existe en Ollama.
+
+NOMBRAR AQUÍ UN MODELO QUE NO SE OFREZCA no es un error y no se rechaza: se ofrece y se
+retira un modelo mucho más a menudo de lo que se vuelve a medir su razonamiento, y perder la
+medición al quitarlo de la lista un rato obligaría a repetirla."""
+
 
 _OFFERED_DOC = """QUÉ MODELOS PUEDE ELEGIR QUIEN PIDE UN ÍTEM, y en qué orden se le ofrecen. Sustituye desde
 el 2026-08-29, por petición explícita del usuario, al ajuste `models.phases.variant_generation`:
@@ -855,6 +883,19 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         min_items=1,
         engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
         doc=_OFFERED_DOC,
+    ),
+    Setting(
+        key="generation.fixed_effort",
+        name="FIXED_EFFORT_MODELS",
+        kind="list[str]",
+        default=[],
+        group=OFFERED_GROUP,
+        # Nothing on the server reads it: it travels to the browser through `/api/health`
+        # and decides one control. No context to rebuild, no index to re-embed.
+        impact=Impact.NONE,
+        scope="engine",
+        engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
+        doc=_FIXED_EFFORT_DOC,
     ),
     Setting(
         key="models.phases.admissibility",

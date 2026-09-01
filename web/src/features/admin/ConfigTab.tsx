@@ -39,7 +39,7 @@ const MODELS_GROUP = "Modelos";
 // A group of its own and not a card inside «Modelos», because it answers a different
 // question: those rows say which model serves each phase of the pipeline, this one says
 // between which models the PERSON asking for an item may choose.
-const OFFERED_GROUP = "Modelos ofrecidos"; // i18n-exempt
+const OFFERED_GROUP = "Modelos generadores"; // i18n-exempt
 const PHASE_MODEL_PREFIX = "models.phases.";
 const OTHERS_KEY = "__otros__";
 export const ENGINE_GROUPS = ["Motor", "Túnel SSH"]; // i18n-exempt
@@ -260,6 +260,18 @@ export function ConfigTab() {
       )
     : null;
 
+  // The offered models AS THEY STAND IN THE DRAFT, so «Esfuerzo ajustable» follows a model
+  // added or removed above it in the same visit rather than the last save.
+  const offeredNow = (() => {
+    const setting = payload.settings.find((entry) => entry.key === "generation.models");
+    const value = setting
+      ? setting.key in draft
+        ? draft[setting.key]
+        : (setting.value ?? setting.default)
+      : null;
+    return Array.isArray(value) ? value.map(String) : [];
+  })();
+
   const row = (setting: ConfigSetting) => (
     <SettingRow
       key={setting.key}
@@ -268,6 +280,7 @@ export function ConfigTab() {
       onChange={(next) => setValue(setting.key, next)}
       onReset={() => reset.mutate(setting.key)}
       models={payload.models ?? null}
+      offered={offeredNow}
     />
   );
 
@@ -377,6 +390,7 @@ export function ConfigTab() {
                   onChange={setValue}
                   onReset={(key) => reset.mutate(key)}
                   models={payload.models ?? null}
+                  offered={offeredNow}
                 />
               ) : (
                 activeSection.groups
@@ -390,6 +404,7 @@ export function ConfigTab() {
                       onChange={setValue}
                       onReset={(key) => reset.mutate(key)}
                       models={payload.models ?? null}
+                      offered={offeredNow}
                     />
                   ))
               )}

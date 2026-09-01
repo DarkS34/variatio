@@ -37,6 +37,7 @@ from .build import (
 from .generate import (
     UnofferedModelError,
     generate,
+    fixed_effort_models,
     generation_models,
     resolve_generation_model,
 )
@@ -86,6 +87,7 @@ __all__ = [
     "document_pages_listing",
     "exemplars_profile_path",
     "generate",
+    "fixed_effort_models",
     "generation_models",
     "initialize",
     "insert_document_page",

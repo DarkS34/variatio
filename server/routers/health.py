@@ -79,6 +79,9 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             # generate screen, so it travels here rather than on a route of its own: the
             # form already polls this one to know whether the engine answers at all.
             "offered": stages.generation_models(),
+            # Which of those may not have their effort adjusted per commission. It rides
+            # here for the same reason `offered` does: the form already polls this route.
+            "fixed_effort": stages.fixed_effort_models(),
             "installed": installed,
             "missing": _missing_models(required, installed, remote),
             "remote": sorted(remote & set(required.values())),

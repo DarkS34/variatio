@@ -347,9 +347,10 @@ PIPELINE: tuple[Lane, ...] = (
                 "generation.models",
                 fixed=COMMISSION,
                 note=(
-                    "Lo decide cada encargo, el modelo incluido desde el 2026-08-29: aquí "
-                    "se lista lo que se le ofrece, y el primero es el de por defecto. El "
-                    "estudio mide el razonamiento en ambas posiciones."
+                    "El razonamiento lo decide cada encargo; el modelo no, desde el "
+                    "2026-09-01: lo escribe el primero de esta lista, y los demás sólo "
+                    "quedan reservados. El estudio mide el razonamiento en ambas "
+                    "posiciones."
                 ),
             ),
             Phase(

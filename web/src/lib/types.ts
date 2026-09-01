@@ -165,6 +165,10 @@ export interface Health {
     required: Record<string, string>;
     /** What a commission may choose between, the default first. */
     offered: string[];
+    /** Those of them whose reasoning effort may not be adjusted per commission — measured
+     *  to answer the same at every level. Read defensively: an API older than this bundle
+     *  sends none, and every model is then adjustable, which is the safe half. */
+    fixed_effort?: string[];
     installed: string[];
     missing: string[];
     /** Required models a remote provider serves: never on this disk, never «sin instalar». */
