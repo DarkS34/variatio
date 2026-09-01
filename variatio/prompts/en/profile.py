@@ -14,10 +14,11 @@ DIFFICULTY_LEVELS = ("basic", "intermediate", "advanced")
 # says what has to be filled in. Never a made-up criterion — a criterion nobody wrote is one
 # nobody can check, and it would classify the whole bank silently.
 DIFFICULTY_FALLBACK_DESCRIPTION = (
-    "How demanding the exercise is. No criterion written yet: "
-    "«basic» is the simplest thing this course actually sets in this modality, "
-    "«intermediate» the ordinary case and «advanced» the most demanding it ever sets. "
-    "Write the observable signals of each rung here."
+    "How demanding the exercise is. No criterion written yet. "
+    "«basic»: the simplest thing this course actually sets in this modality. "
+    "«intermediate»: the ordinary case. "
+    "«advanced»: the most demanding it ever sets. "
+    "Write on each rung its observable signals, an example and its border with the neighbour."
 )
 DIFFICULTY_FALLBACK_EXTRACTION = (
     "If the document brings an explicit difficulty label, use that one. If it does not, "
@@ -26,6 +27,9 @@ DIFFICULTY_FALLBACK_EXTRACTION = (
 
 _LEVELS_ENUM = "[" + ", ".join(f'"{level}"' for level in DIFFICULTY_LEVELS) + "]"
 _LOW, _HIGH = DIFFICULTY_LEVELS[0], DIFFICULTY_LEVELS[-1]
+# The shape the criterion has to be written in, derived from the ladder rather than
+# typed out: it is what `lib/difficulty.ts` splits in order to show one rung at a time.
+_LEVELS_TEMPLATE = "  ".join(f"«{level}»: …" for level in DIFFICULTY_LEVELS)
 
 
 EXEMPLARS_PROFILE_FIELD_NAMING = """\
@@ -263,7 +267,21 @@ Exactly those three values, written exactly like that: lowercase, no accents, in
 ## What you DO write, and it is what matters: the criterion of THIS modality
 Between modalities the values do not change: what changes is what makes an exercise fall on each one. What makes writing a program from scratch demanding is not what makes choosing between four alternatives demanding. That criterion goes in the field's `description`, and it is written looking at THIS modality's exemplars.
 
-`description` = one sentence enumerating the THREE rungs in order, each with the OBSERVABLE SIGNALS that identify it in an exercise of this modality. Observable means checkable BY LOOKING at the exercise: which constructs it demands, how many steps have to be chained, how many prior pieces have to be combined, whether the answer is read off directly or has to be derived, whether there is a single route or a choice between several. NOT observable: «it is hard for a beginner», «it requires maturity», «it demands critical thinking» — they cannot be checked and they classify nothing.
+TWO READERS, AND THE SECOND ONE IS NEW. One is the extraction, which classifies every exemplar of the bank. The other is a PERSON: commissioning a new exercise, they see the rungs in a menu, read this text and pick one. To that reader «{_LOW} (recognition)» says nothing at all — what they need is to know WHAT THEY WILL GET if they press that rung. Write it for whoever chooses, and the extraction will classify well too.
+
+EXACT SHAPE of the `description`, in this order:
+1. ONE OPENING SENTENCE saying what the axis is in this modality: what exactly grows from one rung to the next.
+2. THE THREE RUNGS IN ORDER, each opened by its value between angle quotes and a colon, like this:
+   {_LEVELS_TEMPLATE}
+
+AND EVERY RUNG CARRIES THE THREE THINGS, in one or two consecutive sentences:
+   a) WHAT IT DEMANDS there, in observable signals: which constructs appear, how many steps have to be chained, how many prior pieces have to be combined, whether the answer is read off directly or has to be derived, whether there is a single route or a choice between several.
+   b) A CONCRETE EXAMPLE taken from THIS modality's exemplars in the inventory, in brackets and in a few words.
+   c) WHERE THE BORDER IS with the neighbouring rung: what is no longer asked for there, or which signal is the one that moves it up.
+
+Observable means checkable BY LOOKING at the exercise. NOT observable: «it is hard for a beginner», «it requires maturity», «it demands critical thinking» — they cannot be checked and they classify nothing. And a bare taxonomy label — «recognition», «application», «analysis» — will not do either: it fits any course on earth equally, so name the SIGNAL, never the category.
+
+THREE WORDS PER RUNG ARE NOT ENOUGH. If the whole text fits on one line it carries neither example nor border, and then it neither classifies nor lets anybody choose.
 
 Five rules, and all five are broken often:
 1. THE AXIS IS HOW MUCH IT ASKS, NOT WHAT IT IS ABOUT NOR HOW LONG IT IS. A long statement is not a hard exercise, and one from the last unit is not hard for being at the end. What each exercise is ABOUT is recorded elsewhere, against the syllabus; here only the demand is measured.
@@ -279,7 +297,7 @@ Five rules, and all five are broken often:
 ## How it ends up
 "{DIFFICULTY_FIELD}": {{
   "schema": {{"enum": {_LEVELS_ENUM}}},
-  "description": "<the three rungs in order, each with its observable signals IN THIS MODALITY>",
+  "description": "<opening sentence with the axis; then the three rungs in order, each with its observable signals, an example from THIS modality and its border>",
   "guidance": {{"extraction": "<explicit label if there is one; if not, the criterion in description>"}},
   "decided_by": "user"
 }}
@@ -316,7 +334,7 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
 - The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`, `general_generation_rules`) in the language of the material.
 - Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` on every field copied from the document that may be missing in some exercise, and on no deducible one.
 - Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
-- BEFORE ANSWERING, check the seven things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it; (8) EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` and outside `embed_fields`.
+- BEFORE ANSWERING, check the seven things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it; (8) EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` — an opening sentence and the three rungs each opened by its value between « » and a colon, each with its example and its border — and outside `embed_fields`.
 
 <<<INVENTORY>>>
 {findings}

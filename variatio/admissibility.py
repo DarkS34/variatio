@@ -77,7 +77,8 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
     """Derive the controls that already decide something for this commission.
 
     The terms belong to the instance, not to the code: the graph's non-target concepts,
-    the `decided_by: "user"` enums, the modalities, and the three context facts. Another
+    the `decided_by: "user"` enums plus the difficulty, the modalities, and the three
+    context facts. Another
     workspace gets other owners with no change here.
     """
     targets = set(concepts)
@@ -94,8 +95,13 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
             )
         )
 
+    # The difficulty owns its own step on the form, and it is offered there whether or not
+    # the artifact says `decided_by: "user"` — every modality carries it, so a profile built
+    # before that rule still gets the control. The judge has to see the same catalogue the
+    # screen does, or «hazlo avanzado» would pass as free text on exactly those instances.
+    difficulty = item_type.difficulty_field
     for name, spec in item_type.field_specs.items():
-        if spec.get("decided_by") != "user":
+        if name != difficulty and spec.get("decided_by") != "user":
             continue
         values = tuple(str(v) for v in (spec.get("schema") or {}).get("enum") or ())
         if not values:
@@ -104,7 +110,11 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
             Owner(
                 key=f"field:{name}",
                 label=name,
-                where="decídelo en «¿Cómo debe ser?»",
+                where=(
+                    "elígelo en «¿De qué nivel?»"
+                    if name == difficulty
+                    else "decídelo en «¿Cómo debe ser?»"
+                ),
                 terms=values,
             )
         )

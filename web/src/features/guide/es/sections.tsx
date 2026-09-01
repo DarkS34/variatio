@@ -649,6 +649,11 @@ function Profile() {
               head: "No es de qué va, ni cuánto ocupa",
               body: "Un enunciado largo no es un ejercicio difícil, y uno de la última unidad no lo es por estar al final. De qué va cada ejercicio ya se anota aparte, contra el temario.",
             },
+            {
+              key: "quien-lo-lee",
+              head: "Lo lee alguien que está eligiendo",
+              body: "Al pedir un ejercicio nuevo verás los tres niveles con su criterio al lado y elegirás uno. Por eso el criterio se escribe nivel a nivel, cada uno con un ejemplo tuyo y con dónde está la frontera con el de al lado: «básico (reconocimiento)» no le dice nada a quien tiene que elegir.",
+            },
           ]}
         />
       </Block>
@@ -1016,6 +1021,15 @@ function Generate() {
               </p>
             </>,
             <>
+              <p className="font-medium">{t("form.difficulty.title")}</p>
+              <p className="text-small text-muted-foreground">
+                Los tres niveles del tipo que hayas elegido, cada uno con el criterio que
+                escribiste en el Paso 2 debajo, y «{t("decision.any")}» para no fijarlo. Es
+                la misma escala en todos los tipos, así que pedir «avanzado» quiere decir lo
+                mismo aquí que en la columna del banco.
+              </p>
+            </>,
+            <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.decisions.titleMany")}
                 <Badge variant="outline">solo si el perfil deja algo a tu criterio</Badge>
@@ -1223,7 +1237,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Crear ejercicios», sin dos controles —cuántos ejercicios y si el modelo razona—, porque una comparación es siempre uno por versión. Si tu cuenta es de alumno, esta pestaña no aparece.",
+              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Crear ejercicios», sin dos controles —cuántos ejercicios y si el modelo razona—, porque una comparación es siempre uno por versión.",
             },
             {
               key: "sesiones",

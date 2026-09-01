@@ -23,7 +23,14 @@ import { Alert, Spinner, Switch } from "@/components/ui/misc";
 import { hasExemplars } from "@/lib/concepts";
 import { assumedKnown, notYetTaught } from "@/lib/curriculum";
 import { domainColours } from "@/lib/domains";
-import { defaultTypeKey, typeKeys, userDecidedFields } from "@/lib/profile";
+import {
+  defaultTypeKey,
+  difficultyFieldOf,
+  difficultyLevelsOf,
+  otherDecidedFields,
+  typeKeys,
+} from "@/lib/profile";
+import { readableValue } from "@/lib/text";
 import type {
   ExemplarsProfile,
   GraphView,
@@ -37,6 +44,7 @@ import { useT, type Translate } from "@/lib/i18n";
 
 import type { FormState } from "./commission";
 import { DecisionField, describeDecision } from "./DecisionField";
+import { DifficultyChoice } from "./DifficultyChoice";
 import { EFFORT_LABELS, clampEffort, effortPolicy, effortWarning } from "./effort";
 import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
@@ -103,7 +111,9 @@ export function summarize(
   const parts = [plural("form.items", state.n)];
   if (spec && typeKeys(profile).length > 1) parts.push(spec.label || activeTypeKey(state, profile)!);
   parts.push(state.concepts.join(" · ") || t("form.summary.noConcepts"));
-  for (const field of userDecidedFields(spec)) {
+  // The difficulty leads the pinned fields, because it is the one every modality carries.
+  const difficulty = difficultyFieldOf(spec);
+  for (const field of difficulty ? [difficulty, ...otherDecidedFields(spec)] : otherDecidedFields(spec)) {
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
   }
@@ -296,7 +306,12 @@ export function GenerateForm({
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
   const typeSpec = activeTypeSpec(state, profile);
-  const decided = userDecidedFields(typeSpec);
+  const decided = otherDecidedFields(typeSpec);
+  // The one field every modality carries, and the only one whose options come with a
+  // written criterion. It is asked in a step of its own — see `DifficultyChoice`.
+  const difficultyField = difficultyFieldOf(typeSpec);
+  const difficultyLevels = difficultyLevelsOf(typeSpec);
+  const asksDifficulty = Boolean(difficultyField) && difficultyLevels.length > 0;
   // What every exemplar count on this screen is about. With one modality declared there is
   // nothing to narrow: the total already counts exactly what the few-shot may draw from.
   const exemplarType = types.length > 1 ? typeKey : null;
@@ -403,6 +418,7 @@ export function GenerateForm({
   const steps = [
     types.length > 1 ? "itemType" : null,
     "concepts",
+    chosen && asksDifficulty ? "difficulty" : null,
     chosen && decided.length > 0 ? "decisions" : null,
   ].filter((id): id is string => id !== null);
 
@@ -629,6 +645,31 @@ export function GenerateForm({
           </div>
         ) : null}
       </FormStep>
+
+      {chosen && asksDifficulty ? (
+        <FormStep
+          index={++index}
+          title={t("form.difficulty.title")}
+          hint={t("form.difficulty.hint")}
+          answered={state.decisions[difficultyField!] !== undefined}
+          summary={
+            state.decisions[difficultyField!] === undefined
+              ? t("form.difficulty.any")
+              : readableValue(String(state.decisions[difficultyField!]))
+          }
+          {...step("difficulty")}
+        >
+          <DifficultyChoice
+            levels={difficultyLevels}
+            description={typeSpec!.fields[difficultyField!]?.description}
+            value={state.decisions[difficultyField!]}
+            onChange={(next) => {
+              patch({ decisions: { ...state.decisions, [difficultyField!]: next } });
+              if (next !== undefined) advance("difficulty");
+            }}
+          />
+        </FormStep>
+      ) : null}
 
       {chosen && decided.length > 0 ? (
         <FormStep

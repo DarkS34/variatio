@@ -109,16 +109,6 @@ export function AccountMenu() {
               label={t("nav.myVariants")}
               onClick={() => go("/account/variants")}
             />
-            {/* The whole installation: accounts, invitations, workspaces and the study. It lives here
-                and not in the bar because it appears for an installation-wide account and the bar is the
-                chain of artifacts. */}
-            {user.is_admin ? (
-              <MenuItem
-                icon={<ShieldCheck className="size-4" />}
-                label={t("menu.admin")}
-                onClick={() => go("/admin")}
-              />
-            ) : null}
             {/* La explicación de nueve pantallas que se ve al registrarse. Vive aquí
                 porque no es una reja: quien la saltó demasiado deprisa tiene que poder
                 volver, y quien ya la entendió no debería tropezarse con ella. */}
@@ -156,6 +146,32 @@ export function AccountMenu() {
               }}
             />
           </div>
+
+          {/* THE WHOLE INSTALLATION, AND IT IS THE LAST THING IN THE MENU (2026-09-01,
+              explicit user request). Everything above is about the person or the screen —
+              their profile, their exercises, what they read, how they leave. This is the
+              only entry that is about the INSTALLATION, so it sits below the rule that
+              closes the account, tinted, as a place you go on purpose rather than one more
+              destination in the list.
+
+              The tint is `--destructive`, the palette's one red, at the same 10 % as every
+              other soft ground here. What it means everywhere else is damage, and that is
+              a stretch it is worth naming: what it means HERE is «this reaches beyond your
+              own account». The pair (`text-destructive` on a tint of itself) is one
+              `check:color` already measures. */}
+          {user.is_admin ? (
+            <>
+              <Separator />
+              <div className="p-1">
+                <MenuItem
+                  icon={<ShieldCheck className="size-4" />}
+                  label={t("menu.admin")}
+                  onClick={() => go("/admin")}
+                  tone="admin"
+                />
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -204,18 +220,26 @@ function MenuItem({
   icon,
   label,
   onClick,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
+  tone?: "admin";
 }) {
+  const admin = tone === "admin";
   return (
     <button
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors",
+        admin
+          ? "bg-[color-mix(in_oklab,var(--destructive)_10%,var(--card))] text-destructive hover:bg-[color-mix(in_oklab,var(--destructive)_18%,var(--card))]"
+          : "hover:bg-accent",
+      )}
     >
-      <span className="text-muted-foreground">{icon}</span>
+      <span className={admin ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
       {label}
     </button>
   );

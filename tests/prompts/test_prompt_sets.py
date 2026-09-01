@@ -293,3 +293,27 @@ def test_the_fallbacks_are_prose_and_not_a_criterion(code):
     module = prompts.of(code)
     assert module.DIFFICULTY_FALLBACK_DESCRIPTION.strip()
     assert module.DIFFICULTY_FALLBACK_EXTRACTION.strip()
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_criterion_is_asked_for_in_the_shape_the_browser_splits(code):
+    """The rung markers the prompt legislates are the ones `lib/difficulty.ts` reads.
+
+    Since 2026-09-01 a person picks the rung of the exercise they are commissioning and
+    the criterion is drawn beside the option it describes, one clause each. That only
+    works while the two agree on the marker, so the prompt spells every rung as
+    `«rung»:` and the splitter looks for exactly that.
+    """
+    module = prompts.of(code)
+    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    for level in module.DIFFICULTY_LEVELS:
+        assert f"«{level}»:" in rendered, f"«{level}» is never shown in the shape asked for"
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_fallback_carries_the_same_markers_as_a_written_criterion(code):
+    # It says there is no criterion, and it still has to READ as one rung per line: it is
+    # what the form draws until somebody writes the real thing.
+    module = prompts.of(code)
+    for level in module.DIFFICULTY_LEVELS:
+        assert f"«{level}»:" in module.DIFFICULTY_FALLBACK_DESCRIPTION

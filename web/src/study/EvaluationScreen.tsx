@@ -219,9 +219,12 @@ export function EvaluationScreen() {
   const showComparison = Boolean(sessionId) && !running && positions.length > 0;
   const instruments = listing.data?.instruments;
   const queue = listing.data?.queue;
-  // A student never gets the commission form: it asks for concepts of the graph and a
-  // modality, which is the system's vocabulary and not theirs.
-  const canCompose = instruments?.profile !== "student";
+  // A student is not asked to write a commission WHILE SOMEBODY ELSE FILLS THEIR QUEUE:
+  // the form speaks the system's vocabulary — concepts of the graph, a modality — and
+  // theirs is the queue. With cross evaluation off nobody fills one, so withholding it
+  // leaves a student on an empty «Mis sesiones» with no way to compare anything at all,
+  // which is what it did: the flag hid the queue tab and this line hid the other one.
+  const canCompose = CROSS_EVALUATION ? instruments?.profile !== "student" : true;
 
   const closeSession = () => {
     setSessionId(null);

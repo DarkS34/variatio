@@ -251,6 +251,13 @@ function ItemRow({
   // holds control characters where its accents used to be. Nothing here can repair it —
   // only a re-extraction can — but until this the row looked exactly like a sound one.
   const broken = hasBrokenText(item);
+  // The primary concept leads: it is the tagging's own answer, and the cell shows at most
+  // three, so ordering by the raw list would let it be the one that gets dropped.
+  const orderedConcepts = (item.concepts ?? [])
+    .slice()
+    .sort((a, b) => Number(b === item.primary_concept) - Number(a === item.primary_concept));
+  const shownConcepts = orderedConcepts.slice(0, MAX_ROW_CONCEPTS);
+  const restConcepts = orderedConcepts.slice(MAX_ROW_CONCEPTS);
 
   return (
     <>
@@ -263,6 +270,17 @@ function ItemRow({
         selected={selected}
         className={cn(
           "group align-top",
+          // EVERY COLLAPSED ROW IS THE SAME HEIGHT (2026-09-01, explicit user request).
+          // A table whose rows breathe with the length of a statement cannot be scanned
+          // down a column, and the two cells that made them breathe are bounded rather
+          // than shortened: the statement is clamped to two lines and the concepts to two
+          // rows of badges. `height` on a table row is a MINIMUM, so it only does half the
+          // work — the clamping is the other half, and without it a long statement would
+          // still push past. An open row drops it: the detail it reveals is the point.
+          // 5rem is the MEASURED ceiling of a full one: the id's line box is the table's
+          // own 21.7px and not micro's 14.85 (an inline in a block sits on the parent's
+          // strut), plus two clamped lines at 21.7 and `py-2` either side.
+          !open && "h-20",
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         )}
       >
@@ -280,7 +298,14 @@ function ItemRow({
           <span className="font-mono text-micro tracking-normal text-muted-foreground">
             {item.id}
           </span>
-          <button onClick={onEdit} className="block text-left text-body hover:underline">
+          <button
+            onClick={onEdit}
+            // NOT `block`: `line-clamp-2` works by setting `display: -webkit-box`, and a
+            // `block` beside it wins in the cascade and switches the clamp off in silence
+            // — measured, `display` computed `block` and a long statement ran to a third
+            // line. `-webkit-box` is block-level anyway, so nothing else needed it.
+            className="line-clamp-2 text-left text-body hover:underline"
+          >
             {truncate(text, 200)}
           </button>
           {open ? (
@@ -333,7 +358,11 @@ function ItemRow({
           </TD>
         ) : null}
         <TD className="py-2 pr-3">
-          <div className="flex max-w-64 flex-wrap gap-1">
+          {/* Two rows of badges and no more, so the row keeps its height. What is cut is
+              named rather than hidden: `+N` carries the rest in its title, and the primary
+              concept is drawn FIRST so the one the tagger settled on is never the one that
+              falls off the end. */}
+          <div className="flex max-h-[2.875rem] max-w-64 flex-wrap gap-1 overflow-hidden">
             {broken ? (
               <Badge variant="danger" title={t("bank.brokenTextHint")}>
                 <TriangleAlert />
@@ -346,11 +375,18 @@ function ItemRow({
                 {t("bank.noConcept")}
               </Badge>
             ) : (
-              item.concepts!.map((concept) => (
-                <Badge key={concept} variant={concept === item.primary_concept ? "default" : "secondary"}>
-                  {concept}
-                </Badge>
-              ))
+              <>
+                {shownConcepts.map((concept) => (
+                  <Badge key={concept} variant={concept === item.primary_concept ? "default" : "secondary"}>
+                    {concept}
+                  </Badge>
+                ))}
+                {restConcepts.length > 0 ? (
+                  <Badge variant="outline" title={restConcepts.join(", ")}>
+                    +{restConcepts.length}
+                  </Badge>
+                ) : null}
+              </>
             )}
           </div>
         </TD>
@@ -419,6 +455,11 @@ function ItemRow({
  */
 /** Cuántos ejemplares se dibujan de una vez. */
 const PAGE_SIZE = 7;
+
+/** How many concepts a row draws before the rest become «+N». Three of ~10 characters is
+ *  what fits in two rows of the column, measured over the two reference banks (219 items,
+ *  median name 10 characters, 90th percentile 19). */
+const MAX_ROW_CONCEPTS = 3;
 
 /** What the listing may be ordered by. `recent` is the live view's and is never offered
  *  here; `difficulty` only appears when the profile declares one. */

@@ -46,8 +46,8 @@ function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; to
     <span
       className={
         tone === "study"
-          ? "flex exercises-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
-          : "flex exercises-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
+          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
+          : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
       <Icon className="size-4" />
@@ -659,6 +659,11 @@ function Profile() {
               head: "It is not what it is about, nor how long it is",
               body: "A long statement is not a hard exercise, and one from the last unit is not hard for being at the end. What each exercise is about is already recorded elsewhere, against the syllabus.",
             },
+            {
+              key: "who-reads-it",
+              head: "Somebody who is choosing reads it",
+              body: "When you ask for a new exercise you see the three levels with their criterion beside them and pick one. That is why the criterion is written rung by rung, each with an example of your own and with where the border to the next one is: «basic (recognition)» tells whoever has to choose nothing at all.",
+            },
           ]}
         />
       </Block>
@@ -767,7 +772,7 @@ function Graph() {
         <Steps
           items={[
             <>
-              <p className="flex flex-wrap exercises-center gap-2 font-medium">
+              <p className="flex flex-wrap items-center gap-2 font-medium">
                 Taggability
                 <Badge variant="attention">needs the profile approved</Badge>
               </p>
@@ -1004,7 +1009,7 @@ function Generate() {
         <Steps
           items={[
             <>
-              <p className="flex flex-wrap exercises-center gap-2 font-medium">
+              <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.type.title")}
                 <Badge variant="outline">only with several exercise types</Badge>
               </p>
@@ -1014,7 +1019,7 @@ function Generate() {
               </p>
             </>,
             <>
-              <p className="flex flex-wrap exercises-center gap-2 font-medium">
+              <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.taught.title")}
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
@@ -1034,14 +1039,23 @@ function Generate() {
               </p>
             </>,
             <>
-              <p className="flex flex-wrap exercises-center gap-2 font-medium">
+              <p className="font-medium">{t("form.difficulty.title")}</p>
+              <p className="text-small text-muted-foreground">
+                The three levels of the type you chose, each with the criterion you wrote in
+                Step 2 underneath, plus «{t("decision.any")}» to leave it unpinned. It is the
+                same ladder in every type, so asking for «advanced» means the same thing here
+                as it does in the bank's column.
+              </p>
+            </>,
+            <>
+              <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.decisions.titleMany")}
                 <Badge variant="outline">only if the profile leaves something to you</Badge>
               </p>
               <p className="text-small text-muted-foreground">{t("form.decisions.hint")}</p>
             </>,
             <>
-              <p className="flex flex-wrap exercises-center gap-2 font-medium">
+              <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.instructions.title")}
                 <Badge variant="outline">{t("common.optional")}</Badge>
               </p>
@@ -1241,7 +1255,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Create exercises" form, without two controls — how many exercises, and whether the model reasons — because a comparison is always one per version. If your account is a student\'s, this tab does not appear.',
+              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Create exercises" form, without two controls — how many exercises, and whether the model reasons — because a comparison is always one per version.',
             },
             {
               key: "sesiones",
@@ -1402,7 +1416,7 @@ function Runs() {
           items={STATE_ORDER.map((key) => ({
             key,
             head: (
-              <span className="flex exercises-center gap-3">
+              <span className="flex items-center gap-3">
                 <StatusMark
                   status={key === "blocked" ? "missing" : key}
                   blocked={key === "blocked"}

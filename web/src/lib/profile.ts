@@ -71,6 +71,18 @@ export function difficultyFieldOf(spec: ItemTypeSpec | null | undefined): string
   return DIFFICULTY_FIELDS.find((name) => name in spec.fields) ?? null;
 }
 
+/**
+ * The fields a commission pins BESIDE the difficulty.
+ *
+ * The difficulty has a step of its own, so it must not also appear among the generic
+ * `decided_by: "user"` controls — and it would, on a profile built since the rule, where
+ * the guarantee forces exactly that value.
+ */
+export function otherDecidedFields(spec: ItemTypeSpec | null | undefined): string[] {
+  const difficulty = difficultyFieldOf(spec);
+  return userDecidedFields(spec).filter((name) => name !== difficulty);
+}
+
 /** Its rungs, in the order the modality declares them — never a table written here. */
 export function difficultyLevelsOf(spec: ItemTypeSpec | null | undefined): string[] {
   const name = difficultyFieldOf(spec);

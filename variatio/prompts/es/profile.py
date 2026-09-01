@@ -14,10 +14,11 @@ DIFFICULTY_LEVELS = ("basico", "intermedio", "avanzado")
 # says what has to be filled in. Never a made-up criterion — a criterion nobody wrote is one
 # nobody can check, and it would classify the whole bank silently.
 DIFFICULTY_FALLBACK_DESCRIPTION = (
-    "Grado de exigencia del ejercicio. Sin criterio escrito todavía: "
-    "«basico» es lo más sencillo que esta asignatura pide de verdad en esta modalidad, "
-    "«intermedio» el caso corriente y «avanzado» lo más exigente que llega a pedir. "
-    "Escribe aquí las señales observables de cada peldaño."
+    "Grado de exigencia del ejercicio. Sin criterio escrito todavía. "
+    "«basico»: lo más sencillo que esta asignatura pide de verdad en esta modalidad. "
+    "«intermedio»: el caso corriente. "
+    "«avanzado»: lo más exigente que llega a pedir. "
+    "Escribe en cada peldaño sus señales observables, un ejemplo y su frontera con el vecino."
 )
 DIFFICULTY_FALLBACK_EXTRACTION = (
     "Si el documento trae una etiqueta explícita de dificultad, usarla. Si no la trae, "
@@ -27,6 +28,9 @@ DIFFICULTY_FALLBACK_EXTRACTION = (
 
 _LEVELS_ENUM = "[" + ", ".join(f'"{level}"' for level in DIFFICULTY_LEVELS) + "]"
 _LOW, _HIGH = DIFFICULTY_LEVELS[0], DIFFICULTY_LEVELS[-1]
+# The shape the criterion has to be written in, derived from the ladder rather than
+# typed out: it is what `lib/difficulty.ts` splits in order to show one rung at a time.
+_LEVELS_TEMPLATE = "  ".join(f"«{level}»: …" for level in DIFFICULTY_LEVELS)
 
 
 EXEMPLARS_PROFILE_FIELD_NAMING = """\
@@ -270,7 +274,21 @@ Exactamente esos tres valores, escritos así: en minúsculas, sin tildes, en ese
 ## Lo que sí escribes tú, y es lo que importa: el criterio de ESTA modalidad
 Entre modalidades no cambian los valores: cambia qué hace que un ejercicio caiga en cada uno. Lo que hace exigente escribir un programa desde cero no es lo que hace exigente elegir entre cuatro alternativas. Ese criterio va en la `description` del campo, y se escribe mirando los ejemplares de ESTA modalidad.
 
-`description` = una frase que enumere los TRES peldaños en orden, cada uno con las SEÑALES OBSERVABLES que lo identifican en un ejercicio de esta modalidad. Observable significa comprobable MIRANDO el ejercicio: qué construcciones exige, cuántos pasos hay que encadenar, cuántas piezas previas hay que combinar, si la respuesta se lee directamente o hay que derivarla, si hay un solo camino o hay que elegir entre varios. NO son observables «es difícil para un principiante», «requiere madurez» ni «exige pensamiento crítico»: no se pueden comprobar y no clasifican nada.
+LO LEEN DOS, y el segundo es nuevo. Uno es la extracción, que clasifica cada ejemplar del banco. El otro es una PERSONA: al encargar un ejercicio nuevo ve los peldaños en un menú, lee este texto y elige uno. Para ese lector «{_LOW} (reconocimiento)» no dice absolutamente nada — necesita saber QUÉ VA A RECIBIR si pulsa ese peldaño. Escríbelo para quien elige; así clasifica bien la extracción también.
+
+FORMA EXACTA de la `description`, en este orden:
+1. UNA FRASE DE ENTRADA que diga cuál es el eje en esta modalidad: qué es exactamente lo que crece de un peldaño al siguiente.
+2. LOS TRES PELDAÑOS EN ORDEN, cada uno abierto por su valor entre comillas angulares y dos puntos, así:
+   {_LEVELS_TEMPLATE}
+
+Y CADA PELDAÑO LLEVA LAS TRES COSAS, en una o dos frases seguidas:
+   a) QUÉ EXIGE ahí el ejercicio, en señales observables: qué construcciones aparecen, cuántos pasos hay que encadenar, cuántas piezas previas hay que combinar, si la respuesta se lee directa o hay que derivarla, si hay un solo camino o hay que elegir entre varios.
+   b) UN EJEMPLO CONCRETO tomado de los ejemplares de ESTA modalidad que trae el inventario, entre paréntesis y en pocas palabras.
+   c) DÓNDE ESTÁ LA FRONTERA con el peldaño vecino: qué es lo que ahí ya no se llega a pedir, o cuál es la señal que hace subir al siguiente.
+
+Observable significa comprobable MIRANDO el ejercicio. NO son observables «es difícil para un principiante», «requiere madurez» ni «exige pensamiento crítico»: no se pueden comprobar y no clasifican nada. Y una etiqueta de taxonomía suelta —«reconocimiento», «aplicación», «análisis»— tampoco vale: encaja igual en cualquier asignatura del mundo, así que nombra la SEÑAL, nunca la categoría.
+
+TRES PALABRAS POR PELDAÑO NO BASTAN. Si el texto entero cabe en una línea, no lleva ni ejemplo ni frontera, y entonces ni clasifica ni deja elegir.
 
 Cinco reglas, y las cinco se incumplen a menudo:
 1. EL EJE ES CUÁNTO PIDE, NO DE QUÉ VA NI CUÁNTO OCUPA. Un enunciado largo no es un ejercicio difícil, y uno de la última unidad no lo es por estar al final. De qué VA cada ejercicio se anota aparte, contra el temario; aquí solo se mide la exigencia.
@@ -286,7 +304,7 @@ Cinco reglas, y las cinco se incumplen a menudo:
 ## Cómo queda
 "{DIFFICULTY_FIELD}": {{
   "schema": {{"enum": {_LEVELS_ENUM}}},
-  "description": "<los tres peldanos en orden, cada uno con sus senales observables EN ESTA MODALIDAD>",
+  "description": "<frase de entrada con el eje; luego los tres peldanos en orden, cada uno con sus senales observables, un ejemplo de ESTA modalidad y su frontera>",
   "guidance": {{"extraction": "<etiqueta explicita si la hay; si no, el criterio de description>"}},
   "decided_by": "user"
 }}
@@ -323,7 +341,7 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 - Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`) en el idioma del material.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` en todo campo copiado del documento que pueda faltar en algún ejercicio, y en ninguno deducible.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
-- ANTES DE RESPONDER, verifica las siete cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables; (7) cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga; (8) TODAS las modalidades declaran `{DIFFICULTY_FIELD}` con exactamente `{_LEVELS_ENUM}`, con `decided_by` `"user"`, con un criterio propio de esa modalidad en su `description` y fuera de `embed_fields`.
+- ANTES DE RESPONDER, verifica las siete cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables; (7) cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga; (8) TODAS las modalidades declaran `{DIFFICULTY_FIELD}` con exactamente `{_LEVELS_ENUM}`, con `decided_by` `"user"`, con un criterio propio de esa modalidad en su `description` —frase de entrada y los tres peldaños abiertos por su valor entre « » y dos puntos, cada uno con su ejemplo y su frontera— y fuera de `embed_fields`.
 
 <<<INVENTARIO>>>
 {findings}
