@@ -20,7 +20,7 @@ const buttonVariants = cva(
         // convention is that a foreground matches its ground — `--destructive-foreground`
         // is 25, the red's.
         attention:
-          "bg-attention text-[oklch(0.99_0.003_262)] hover:bg-[color-mix(in_oklch,var(--attention)_88%,black)]",
+          "bg-attention text-attention-foreground hover:bg-[color-mix(in_oklch,var(--attention)_88%,var(--attention-foreground))]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

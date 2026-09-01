@@ -717,8 +717,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       stage={stage}
       livePreview={tagging ? <TagLive run={tagRun} /> : <BankLive />}
       buildLabels={{
+        // «Extraer» the first time, because that is what the bank does and nothing else on
+        // the chain does it. «Reconstruir» after, which is the DEFAULT and the same word the
+        // other three steps use: it is the button you press again and again, so a name of
+        // its own here only made the bank the odd one out.
         create: t("bank.extract"),
-        redo: t("bank.reextract"),
+        redo: t("build.redoDefault"),
         confirmRedo: hasItems
           ? plural("bank.confirmReextract", listing?.totals.items ?? 0)
           : undefined,

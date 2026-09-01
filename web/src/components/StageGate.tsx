@@ -290,7 +290,7 @@ export function StageGate({
               "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
               answeredReview
                 ? "border-[color-mix(in_oklch,var(--study)_35%,transparent)] bg-[color-mix(in_oklab,var(--study)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--study)_12%,var(--card))]"
-                : "border-study bg-study text-[oklch(0.99_0.004_140)] hover:bg-[color-mix(in_oklab,var(--study)_88%,black)]",
+                : "border-study bg-study text-study-foreground hover:bg-[color-mix(in_oklab,var(--study)_88%,var(--study-foreground))]",
             )}
           >
             <ClipboardCheck aria-hidden className="size-5 shrink-0" />

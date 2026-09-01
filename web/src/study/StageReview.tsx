@@ -130,9 +130,11 @@ export function StageReview({
         <CardHeader className="gap-1 pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="flex-1 text-study">{t("stageReview.title")}</CardTitle>
-            <Badge variant={answered ? "settled" : "attention"}>
-              {t(answered ? "stageReview.saved" : "stageReview.unanswered")}
-            </Badge>
+            {/* Only «guardada», never «sin contestar»: the button that opens this panel is
+                already filled while the form is unanswered and quiet once it is not, so a
+                badge repeating it inside was the same fact twice, a centimetre apart. What
+                survives is the half the opener cannot say — that what you typed persisted. */}
+            {answered ? <Badge variant="settled">{t("stageReview.saved")}</Badge> : null}
             {onClose ? (
               <Button
                 variant="ghost"

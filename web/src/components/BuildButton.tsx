@@ -40,8 +40,11 @@ export interface BuildLabels {
  *
  * Creating and redoing are the same job with opposite consequences — the first fills an
  * empty slot, the second discards what is in it — so they never share a label, an icon
- * or a variant. A screen may rename the pair (the bank *extracts*; it does not "build"),
- * but the distinction itself is not a screen's to drop.
+ * or a variant. A screen may rename EITHER HALF (the bank *extracts* the first time; it
+ * does not "build"), but the distinction itself is not a screen's to drop. Renaming the
+ * redo half is the one to think twice about: it is the button pressed again and again, so
+ * a name of its own makes that stage the odd one out — which is why the bank's went back
+ * to «Reconstruir» on 2026-09-01 while its «Extraer» stayed.
  *
  * A busy engine is NOT one of those reasons and never was: the job queues behind whatever
  * is there, so what the button owes the person is how many jobs it goes behind. What
@@ -92,10 +95,10 @@ export function BuildButton({
   // request). The rule was already written — «while approved, the screen offers no control
   // that rewrites the artifact, and the only way back to it is Reabrir» — and the screen
   // says it out loud in the notice under this row, but the button that discards the whole
-  // artifact stayed live two centimetres to its left. Measured on all three stages: banco
-  // «Volver a extraer», grafo and perfil «Reconstruir», every one of them enabled beside
-  // its own «Bloqueado para editar». The two cannot both be true, so the control goes and
-  // the sentence stands.
+  // artifact stayed live two centimetres to its left. Measured on all three stages — the
+  // bank under its own label at the time, the graph and the profile under «Reconstruir» —
+  // every one of them enabled beside its own «Bloqueado para editar». The two cannot both
+  // be true, so the control goes and the sentence stands.
   const reason = ((): string | null => {
     if (!canEdit) return t("build.readOnly");
     if (stage.status === "approved") return t("build.approved");

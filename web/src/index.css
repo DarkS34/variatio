@@ -87,6 +87,7 @@
      one way that survives every deficiency, since blue and red separate on the axis
      dichromats keep. */
   --attention: oklch(0.48 0.19 262);
+  --attention-foreground: oklch(0.99 0.003 262);
   /* Signal red, a true red at 25 rather than the wine at 350 that the marigold forced.
      With attention on the blue there is nothing warm left for it to collide with, so the
      correction can finally look like a correction. Chroma is 0.20 and not 0.21 for a
@@ -114,6 +115,7 @@
      visions. Chroma 0.13 rather than more keeps it inside sRGB; the greens that measured
      best were all outside it, which makes their measurement fiction. */
   --study: oklch(0.40 0.13 140);
+  --study-foreground: oklch(0.99 0.004 140);
 
   --border: oklch(0.87 0.004 265);
   /* --input is not the same value as --border, and the reason has not changed with the
@@ -201,6 +203,11 @@
 
   --settled: oklch(0.68 0.010 265);
   --attention: oklch(0.68 0.16 262);
+  /* Dark, like --destructive-foreground and --study-foreground, and for the same reason:
+     at 0.68 this blue is light enough that a near-white label on it measured 2.84 — under
+     the 4.5 floor, on the app's own «act here» button. It was a literal in `ui/button.tsx`,
+     so `check:color` could not see it; the pair check reads it now and it is 6.63. */
+  --attention-foreground: oklch(0.16 0.003 262);
   --destructive: oklch(0.68 0.19 25);
   /* Light red on a dark ground means the button's own label goes DARK, which is the
      opposite of the light mode and correct: the token names the text that sits on the
@@ -212,6 +219,12 @@
      opened at the top here rather than at the bottom. Measured at 28.5 against the nearest
      arm in the worst vision, against 23.0 at 0.80. */
   --study: oklch(0.84 0.13 140);
+  /* And the same inversion --destructive-foreground makes, for the same reason: in dark
+     mode --study is a LIGHT green, so the label that sits on it goes DARK. It was a
+     near-white literal in StageGate until 2026-09-01 — 1.72:1, unreadable — because a
+     colour written outside this file is invisible to `check:color`. It is a token now, and
+     the checker compares every --X-foreground against its --X. */
+  --study-foreground: oklch(0.16 0.004 140);
 
   --border: oklch(0.30 0.005 265);
   --input: oklch(0.50 0.008 265);
@@ -250,7 +263,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-settled: var(--settled);
   --color-attention: var(--attention);
+  --color-attention-foreground: var(--attention-foreground);
   --color-study: var(--study);
+  --color-study-foreground: var(--study-foreground);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
   --color-border: var(--border);

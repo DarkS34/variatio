@@ -141,6 +141,12 @@ const TINTED = [
   ["--study", 0.08],
 ];
 
+// EVERY `--X-foreground` AGAINST ITS `--X`. This is the pair the tables above cannot see:
+// they check a colour used as TEXT on the page's surfaces, and a foreground token is the
+// opposite case — the label that sits ON the colour. Added 2026-09-01, after the stage
+// review's opener button shipped a near-white label on `--study`, which is a LIGHT green in
+// dark mode: 1.72:1, and green enough on both sides that it read as a styling choice.
+// Derived from the token names rather than listed, so a new pair is covered by existing.
 const TEXT_MIN = 4.5;
 const DE_MIN = 15;
 
@@ -162,6 +168,16 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
     if (!tokens[name]) continue;
     const ratio = contrast(tokens[name], over(tokens[name], alpha, tokens["--card"]));
     const line = `${name.padEnd(20)} sobre su tinte al ${(alpha * 100).toFixed(0)}%  ${ratio.toFixed(2)}`;
+    ratio >= TEXT_MIN ? ok(line) : fail(`${line}  < ${TEXT_MIN}`);
+  }
+
+  for (const name of Object.keys(tokens).filter((n) => n.endsWith("-foreground"))) {
+    const ground = name.slice(0, -"-foreground".length);
+    // `--foreground` and `--muted-foreground` name no ground of their own; the TEXT table
+    // above is what covers those.
+    if (!tokens[ground]) continue;
+    const ratio = contrast(tokens[name], tokens[ground]);
+    const line = `${name.padEnd(20)} sobre ${ground}  ${ratio.toFixed(2)}`;
     ratio >= TEXT_MIN ? ok(line) : fail(`${line}  < ${TEXT_MIN}`);
   }
 
