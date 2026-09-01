@@ -68,18 +68,15 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   const stale = states.reduce((sum, entry) => sum + entry.stale, 0);
   const pending = states.reduce((sum, entry) => sum + entry.pending, 0);
 
+  // `done`, `files` and `known` went with the «todo leído» notice on 2026-09-01: `known`
+  // existed only to keep that notice from announcing completeness during the first second
+  // of a load, and with nothing announcing it there is nothing to hold back.
   return {
     running: corpusRunning || exemplarsRunning,
     stale,
     pending,
     todo: stale + pending,
-    done: states.reduce((sum, entry) => sum + entry.done, 0),
-    files: slots.reduce((sum, slot) => sum + slot.files.length, 0),
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
-    // Undefined until at least one stocked slot has answered: «nothing to do» and «we have
-    // not asked yet» are the same shape and must not read the same, or the panel would
-    // announce the chain is ready during the first second of every load.
-    known: slots.length === 0 || states.length > 0 || slots.every((s) => s.files.length === 0),
   };
 }
 

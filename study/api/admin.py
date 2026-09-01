@@ -220,7 +220,7 @@ def generate(
     if not 1 <= body.n <= 10:
         raise HTTPException(422, "Entre 1 y 10 comparaciones por tanda.")
     if repository.get_workspace(db, body.workspace) is None:
-        raise HTTPException(404, f"No existe el workspace '{body.workspace}'.")
+        raise HTTPException(404, f"No existe el espacio de trabajo '{body.workspace}'.")
 
     ws = settings.workspace_for(body.workspace)
     error = gate_error(ws, "evaluate")
@@ -262,7 +262,7 @@ def sets(workspace: str, db: DbSession = Depends(auth.db)) -> dict:
     """List a workspace's distinct sets with who holds each, plus who could hold one."""
     row = repository.get_workspace(db, workspace)
     if row is None:
-        raise HTTPException(404, f"No existe el workspace '{workspace}'.")
+        raise HTTPException(404, f"No existe el espacio de trabajo '{workspace}'.")
 
     members = [
         {
@@ -342,7 +342,7 @@ def assign_set(
         if identity.membership(db, source.workspace_id, user.id) is None and not user.is_admin:
             raise HTTPException(
                 409,
-                f"«{user.username}» no es miembro de ese workspace: dale acceso antes de asignarle nada.",
+                f"«{user.username}» no es miembro de ese espacio de trabajo: dale acceso antes de asignarle nada.",
             )
         try:
             session = evaluation_store.assign(
@@ -401,7 +401,7 @@ def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:
     if workspace:
         row = repository.get_workspace(db, workspace)
         if row is None:
-            raise HTTPException(404, f"No existe el workspace '{workspace}'.")
+            raise HTTPException(404, f"No existe el espacio de trabajo '{workspace}'.")
         workspace_id = row.id
     return evaluation_store.headers(db, workspace_id)
 

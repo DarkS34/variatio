@@ -54,7 +54,7 @@ def run_build(artifact: str, control: JobControl) -> dict:
     # slug is not optional on either side: a job without a workspace is a bug here, never a
     # build of something else.
     if not control.job.workspace:
-        raise ValueError("El trabajo no dice en qué workspace construir.")
+        raise ValueError("El trabajo no dice en qué espacio de trabajo construir.")
     command += ["--workspace", control.job.workspace]
     process = subprocess.Popen(
         command,

@@ -29,7 +29,7 @@ def test_the_escapes_would_leave_the_workspaces_directory():
 @pytest.mark.parametrize("slug", ESCAPES + MALFORMED)
 def test_import_refuses_a_slug_that_is_not_one(slug, capsys):
     assert _import(slug) == 1
-    assert "no vale como workspace" in capsys.readouterr().out
+    assert "no vale como espacio de trabajo" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("slug", ESCAPES)
@@ -41,7 +41,7 @@ def test_import_refuses_a_source_workspace_that_is_not_one(slug, capsys):
 @pytest.mark.parametrize("slug", ESCAPES + MALFORMED)
 def test_export_refuses_a_slug_that_is_not_one(slug, capsys):
     assert _export(slug) == 1
-    assert "no vale como workspace" in capsys.readouterr().out
+    assert "no vale como espacio de trabajo" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("slug", ESCAPES)

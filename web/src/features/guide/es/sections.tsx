@@ -1,4 +1,4 @@
-import { Play, Scale, type LucideIcon } from "lucide-react";
+import { Check, Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +123,7 @@ function Start() {
         <Steps
           items={[
             <>
-              Ponte en un <strong>workspace</strong>. Si aún no tienes ninguno, el panel te
+              Ponte en un <strong>espacio de trabajo</strong>. Si aún no tienes ninguno, el panel te
               ofrece crear el tuyo; si tienes varios, se cambia en el selector de arriba a la
               izquierda. Todo lo demás vive dentro de uno.
             </>,
@@ -192,8 +192,8 @@ function Workspace() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.workspace")}>
         <p>
-          Un <strong>workspace</strong> es una instancia completa: su material en bruto, sus tres
-          artefactos, su caché y su currículo. Dos asignaturas son dos workspaces. Dos formatos
+          Un <strong>espacio de trabajo</strong> es una instancia completa: su material en bruto, sus tres
+          artefactos, su caché y su currículo. Dos asignaturas son dos espacios de trabajo. Dos formatos
           de ejercicio muy distintos para la misma asignatura, también.
         </p>
       </SectionHead>
@@ -203,7 +203,7 @@ function Workspace() {
           { label: "Dónde se cambia", value: "El selector de arriba a la izquierda, junto a la marca." },
           { label: "Quién puede crear uno", value: "Cualquier cuenta, y queda como su propietaria." },
           { label: "Si no tienes ninguno", value: "El panel te ofrece crearlo. No hay ninguno por defecto." },
-          { label: "Qué se lleva al cambiar", value: "Nada. Cada workspace tiene lo suyo, incluida su caché." },
+          { label: "Qué se lleva al cambiar", value: "Nada. Cada espacio de trabajo tiene lo suyo, incluida su caché." },
           {
             label: "Qué se decide al crearlo",
             value: "El idioma de los prompts. Después ya no se puede cambiar.",
@@ -213,7 +213,7 @@ function Workspace() {
 
       <Block title="Entrar sin ninguno es normal">
         <Paragraph>
-          No hay un workspace inicial en el que caiga quien no tiene otro: una cuenta recién
+          No hay un espacio de trabajo inicial en el que caiga quien no tiene otro: una cuenta recién
           creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra el{" "}
           <strong>Panel</strong> pidiéndole que cree el suyo. Basta con el nombre de la
           asignatura. Las dos salidas son igual de válidas: créalo tú y serás su propietario, o
@@ -221,14 +221,14 @@ function Workspace() {
         </Paragraph>
         <Paragraph>
           Mientras tanto la aplicación no se queda bloqueada: esta guía, «Mi perfil» y —si
-          administras la instalación— «Administración» funcionan sin ningún workspace. Lo que
+          administras la instalación— «Administración» funcionan sin ningún espacio de trabajo. Lo que
           espera es todo lo que lee una instancia: las tres etapas, «Generar» y «Evaluar».
         </Paragraph>
       </Block>
 
       <Block title="El idioma de los prompts se elige al crearlo">
         <Paragraph>
-          Al crear un workspace eliges en qué idioma se le habla al modelo durante toda la
+          Al crear un espacio de trabajo eliges en qué idioma se le habla al modelo durante toda la
           construcción de esa instancia. <strong>No se puede cambiar después</strong>, y no es
           una restricción caprichosa: las etiquetas de las relaciones se escriben dentro del
           propio temario y el cargador indexa por ellas, así que el idioma queda cocido en los
@@ -242,11 +242,11 @@ function Workspace() {
         </Paragraph>
       </Block>
 
-      <Block title="Una pestaña, un workspace">
+      <Block title="Una pestaña, un espacio de trabajo">
         <Paragraph>
-          El workspace activo se guarda en tu cuenta y sobrevive a cerrar sesión; el que estás{" "}
+          El espacio de trabajo activo se guarda en tu cuenta y sobrevive a cerrar sesión; el que estás{" "}
           <em>mirando</em> lo guarda la pestaña. Puedes tener dos asignaturas abiertas en dos
-          pestañas del mismo navegador sin que se pisen. Al cambiar de workspace la pantalla se
+          pestañas del mismo navegador sin que se pisen. Al cambiar de espacio de trabajo la pantalla se
           vacía de lo que estabas viendo: los trabajos y el progreso pertenecen a la instancia
           que dejas.
         </Paragraph>
@@ -255,21 +255,20 @@ function Workspace() {
       <Block title="El contexto de la asignatura">
         <Paragraph>
           Es la prosa que dice de qué va esta instancia —materia, nivel, idioma de instrucción,
-          convenciones— y entra en <em>todas</em> las llamadas al modelo. Se lee y se edita en el{" "}
-          <strong>Panel</strong>, en la tarjeta «{t("context.title")}»: no es una etapa de la
-          cadena y por eso no está en la barra. Debajo del párrafo van tres datos sueltos —
-          {t("context.fact.subject").toLowerCase()}, {t("context.fact.level").toLowerCase()} e{" "}
-          {t("context.fact.language").toLowerCase()}—, que se leen por separado y deben decir lo
-          mismo que él.
+          convenciones— y entra en <em>todas</em> las llamadas al modelo. No se escribe a mano:
+          lo sintetizan la construcción del temario y la de los tipos de ejercicio, cada una con
+          lo que sabe de la asignatura. Se lee en «{t("account.title")} → {t("tabs.workspaces")}»,
+          debajo de cada espacio de trabajo, con los tres datos sueltos que van al lado del
+          párrafo — {t("context.fact.subject").toLowerCase()},{" "}
+          {t("context.fact.level").toLowerCase()} e {t("context.fact.language").toLowerCase()}—,
+          que se leen por separado y dicen lo mismo que él.
         </Paragraph>
-        <Alert tone="attention" title={`«${t("context.draft")}» frente a «${t("context.curated")}»`}>
+        <Alert tone="info" title={`«${t("context.draft")}» frente a «${t("context.curated")}»`}>
           <p>
-            Cada construcción escribe un borrador nuevo del contexto sin tocar el tuyo, y el
-            distintivo de la tarjeta dice cuál de los dos estás leyendo. Cuando hay una síntesis
-            nueva esperando aparece «{t("context.adopt")}»: adoptarla{" "}
-            <strong>sustituye tu texto entero</strong> por el del último borrador, así que si
-            solo quieres quedarte con una parte, cópiala tú y edita. Lo que no pasa nunca es que
-            se sobreescriba sola.
+            El distintivo dice de dónde sale el texto que estás leyendo: «{t("context.curated")}»
+            si alguien lo escribió en su día, «{t("context.draft")}» si es la síntesis de la
+            última construcción. Cada construcción escribe un borrador nuevo sin tocar lo que ya
+            hay, así que lo que se escribió a mano nunca se sobreescribe solo.
           </p>
         </Alert>
       </Block>
@@ -382,7 +381,12 @@ function Raw() {
           items={[
             {
               key: "done",
-              head: <Badge variant="settled">{t("transcribe.state.done")}</Badge>,
+              head: (
+                <span className="flex items-center gap-1.5 text-small text-muted-foreground">
+                  <Check aria-hidden className="size-4 text-settled" />
+                  {t("transcribe.state.done")}
+                </span>
+              ),
               body: "Sus páginas están escritas y siguen valiendo. Las construcciones las reutilizan tal cual, sin volver a preguntarle al modelo.",
             },
             {
@@ -1447,7 +1451,7 @@ function Runs() {
         <Paragraph>
           El <strong>registro técnico no se ve en la aplicación</strong>: cada línea que escribe
           la tubería se guarda en el servidor, en <code>logs/</code> y dentro en la carpeta del
-          workspace. Es material para leer junto a una traza, no para mirar mientras trabajas, y
+          espacio de trabajo. Es material para leer junto a una traza, no para mirar mientras trabajas, y
           es lo que se pide cuando algo falla.
         </Paragraph>
         <Paragraph>
@@ -1523,12 +1527,12 @@ function Account() {
           {
             key: "workspaces",
             head: t("tabs.workspaces"),
-            body: "En qué workspaces estás y con qué papel, y desde cuál entrar a otro. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellos es eliminar uno tuyo — de los que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearlo y solo lo cambia quien administra.",
+            body: "En qué espacios de trabajo estás y con qué papel, y desde cuál entrar a otro. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellos es eliminar uno tuyo — de los que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearlo y solo lo cambia quien administra.",
           },
           {
             key: "variantes",
             head: t("tabs.variants"),
-            body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de todo el workspace, relanzar «más como esta» y borrar.",
+            body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de todo el espacio de trabajo, relanzar «más como esta» y borrar.",
           },
         ]}
       />
@@ -1551,7 +1555,7 @@ function Account() {
               {
                 key: "prompts",
                 head: "El de los prompts",
-                body: "En el que se le HABLA AL MODELO. Vive en el workspace, se elige al crearlo y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
+                body: "En el que se le HABLA AL MODELO. Vive en el espacio de trabajo, se elige al crearlo y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
               },
               {
                 key: "material",
@@ -1605,8 +1609,8 @@ function Account() {
           quieras, o la que te sugiera tu gestor— y dices si das clase o si estudias.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya un workspace y un papel dentro de él, o no traer ninguno:
-          en ese caso entras igual y el panel te ofrece crear el tuyo. Una cuenta sin workspace
+          La invitación puede traer ya un espacio de trabajo y un papel dentro de él, o no traer ninguno:
+          en ese caso entras igual y el panel te ofrece crear el tuyo. Una cuenta sin espacio de trabajo
           es una cuenta normal, no una cuenta a medio hacer.
         </Paragraph>
       </Block>
@@ -1678,9 +1682,9 @@ function Admin() {
           clase o si estudia.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya un workspace y un permiso dentro de él, o no traer
-          ninguno. Los accesos se dan y se quitan después, cuenta por cuenta y workspace por
-          workspace, desde esta misma tabla; son tres:
+          La invitación puede traer ya un espacio de trabajo y un permiso dentro de él, o no traer
+          ninguno. Los accesos se dan y se quitan después, cuenta por cuenta y espacio de trabajo por
+          espacio de trabajo, desde esta misma tabla; son tres:
         </Paragraph>
         <Rows
           items={[
@@ -1695,7 +1699,7 @@ function Admin() {
             {
               key: "admin",
               head: <>«{t("acc.makeAdmin")}»</>,
-              body: "Quien administra entra en todos los workspaces sin ser miembro de ninguno. No se puede quitar a uno mismo: es lo que impide que la instalación se quede sin nadie que la administre.",
+              body: "Quien administra entra en todos los espacios de trabajo sin ser miembro de ninguno. No se puede quitar a uno mismo: es lo que impide que la instalación se quede sin nadie que la administre.",
             },
             {
               key: "reset",
@@ -1764,7 +1768,7 @@ function Admin() {
             {
               key: "borrar",
               head: "Borrar",
-              body: "Borrar un workspace desde aquí se lleva también su árbol de ficheros del disco, los documentos en bruto incluidos. El diálogo enumera lo que desaparece y hay que escribir el identificador de la instancia para confirmarlo. Sobre el único workspace que quede no se ofrece.",
+              body: "Borrar un espacio de trabajo desde aquí se lleva también su árbol de ficheros del disco, los documentos en bruto incluidos. El diálogo enumera lo que desaparece y hay que escribir el identificador de la instancia para confirmarlo. Sobre el único espacio de trabajo que quede no se ofrece.",
             },
           ]}
         />
@@ -1811,7 +1815,7 @@ function Admin() {
               body: (
                 <>
                   {t("eng.half.processNote")}. La cola entera de la instalación, de todos los
-                  workspaces: lo que se está ejecutando, lo que espera y de quién es cada cosa.
+                  espacios de trabajo: lo que se está ejecutando, lo que espera y de quién es cada cosa.
                 </>
               ),
             },

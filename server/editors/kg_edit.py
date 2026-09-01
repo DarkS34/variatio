@@ -311,7 +311,13 @@ def add_concept(ws: Workspace, name: str, domain: str, taggable: bool = True) ->
 
 
 def _relocate(domains: dict, name: str, target: str, domain: str | None) -> None:
-    """Move a concept out of its domain and into `domain`, or back where it was.
+    """Move a concept into `domain`, or leave it exactly where it is.
+
+    STAYING PUT IS THE COMMON CASE AND IT MUST NOT MOVE THE CONCEPT. This used to remove
+    the name and append it, whatever the destination, so every edit that did not change
+    the unit — marking a concept as not serving as a label, above all — dropped its row to
+    the bottom of the list under the hand that pressed the switch. A rename replaces the
+    entry in place for the same reason.
 
     Raises KGError when the destination does not exist.
     """
@@ -319,6 +325,11 @@ def _relocate(domains: dict, name: str, target: str, domain: str | None) -> None
     destination = domain or current
     if destination not in domains:
         raise KGError(f"El dominio '{destination}' no existe")
+    if destination == current:
+        if target != name:
+            names = domains[current]
+            names[names.index(name)] = target
+        return
     domains[current] = [c for c in domains[current] if c != name]
     if target not in domains[destination]:
         domains[destination].append(target)

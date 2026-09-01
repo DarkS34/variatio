@@ -32,7 +32,7 @@ CHAINS: dict[str, tuple[str, ...]] = {
 def _profile_exists(ws: Workspace) -> str | None:
     """Why describing cannot follow, or `None` when it can."""
     if stages.exemplars_profile_path(ws) is None:
-        return "este workspace todavía no tiene perfil de ejemplares"
+        return "este espacio de trabajo todavía no tiene perfil de ejemplares"
     return None
 
 

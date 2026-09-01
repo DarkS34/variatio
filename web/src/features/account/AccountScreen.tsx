@@ -3,6 +3,7 @@ import { ArrowRight, Check, KeyRound, Languages, Trash2, UserRound } from "lucid
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WorkspaceContext } from "@/features/context/WorkspaceContext";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -440,10 +441,6 @@ function MyWorkspacesTab() {
 
   return (
     <div className="space-y-4">
-      <Alert tone="info" title={t("access.granted.title")}>
-        <p>{t("access.granted.body")}</p>
-      </Alert>
-
       {listing.isLoading ? <Spinner /> : null}
 
       {!listing.isLoading && mine.length === 0 ? (
@@ -455,7 +452,8 @@ function MyWorkspacesTab() {
       {workspaces.length > 0 ? (
         <ul className="divide-y divide-border rounded-xl border border-border">
           {workspaces.map((workspace) => (
-            <li key={workspace.slug} className="flex flex-wrap items-center gap-3 p-3">
+            <li key={workspace.slug} className="space-y-2 p-3">
+              <div className="flex flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 truncate text-body font-medium">
                   {workspace.name}
@@ -502,6 +500,12 @@ function MyWorkspacesTab() {
                   <Trash2 />
                 </Button>
               ) : null}
+              </div>
+
+              {/* The subject's context, beside the instance it describes. It is the whole
+                  reason this list is more than a row of slugs: two workspaces called
+                  «Compiladores» and «CS0» say nothing about which course each one is. */}
+              <WorkspaceContext slug={workspace.slug} />
             </li>
           ))}
         </ul>

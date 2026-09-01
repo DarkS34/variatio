@@ -123,7 +123,7 @@ def test_the_last_workspace_of_the_installation_can_be_deleted(db):
 
 
 # `rehomed` is about everybody; `landed` is the one entry the tab that made the request
-# needs. Without it the browser blanks to «ningún workspace» until `me` answers, which is
+# needs. Without it the browser blanks to «ningún espacio de trabajo» until `me` answers, which is
 # the flicker this field exists to remove.
 def test_the_answer_says_where_the_caller_itself_lands(db):
     aula = _workspace(db, "aula")

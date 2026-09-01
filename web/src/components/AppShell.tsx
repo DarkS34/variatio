@@ -396,7 +396,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             «Evaluar» on top of «Mis variantes». Letting `min-width: auto` stand holds each
             flank at its own min-content, which is bounded: the lockup is fixed, the
             switcher is `max-w-44` and truncates. */}
-        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
+        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
           {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
               Side by side with only a gap between, the workspace name read as part of the
               product's own name. The lockup itself is `ui/logo.tsx`'s, and `compact` is
@@ -416,7 +416,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
-              same «Todavía no tienes ningún workspace», so the bar was offering seven
+              same «Todavía no tienes ningún espacio de trabajo», so the bar was offering seven
               doors into one room — and to a student account, five of them are the
               teacher's preparation chain. `App` already gates the routes; this stops the
               navigation from advertising them. */}

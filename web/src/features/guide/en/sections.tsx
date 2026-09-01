@@ -1,4 +1,4 @@
-import { Play, Scale, type LucideIcon } from "lucide-react";
+import { Check, Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -261,25 +261,21 @@ function Workspace() {
       <Block title="The subject's context">
         <Paragraph>
           It is the prose saying what this instance is about — subject, level, language of
-          instruction, conventions — and it goes into <em>every</em> call to the model. It is
-          read and edited on the <strong>Panel</strong>, on the "{t("context.title")}" card: it
-          is not a stage of the chain, which is why it is not on the bar. Under the paragraph sit
-          three loose facts — {t("context.fact.subject").toLowerCase()},{" "}
+          instruction, conventions — and it goes into <em>every</em> call to the model. It is not
+          written by hand: the syllabus build and the exercise-types build synthesise it, each
+          with what it knows about the subject. It is read under "{t("account.title")} →{" "}
+          {t("tabs.workspaces")}", below each workspace, with the three loose facts that sit
+          beside the paragraph — {t("context.fact.subject").toLowerCase()},{" "}
           {t("context.fact.level").toLowerCase()} and{" "}
-          {t("context.fact.language").toLowerCase()} — which are read separately and have to say
-          the same thing it does.
+          {t("context.fact.language").toLowerCase()} — which are read separately and say the same
+          thing it does.
         </Paragraph>
-        <Alert
-          tone="attention"
-          title={`"${t("context.draft")}" against "${t("context.curated")}"`}
-        >
+        <Alert tone="info" title={`"${t("context.draft")}" against "${t("context.curated")}"`}>
           <p>
-            Every build writes a fresh draft of the context without touching yours, and the
-            card's badge says which of the two you are reading. When a new synthesis is waiting,
-            "{t("context.adopt")}" appears: adopting it{" "}
-            <strong>replaces your text wholesale</strong> with the latest draft, so if you only
-            want part of it, copy that part across yourself and edit. What never happens is that
-            it overwrites itself.
+            The badge says where the text you are reading comes from: "{t("context.curated")}" if
+            somebody once wrote it, "{t("context.draft")}" if it is the last build's synthesis.
+            Every build writes a fresh draft without touching what is already there, so what was
+            written by hand is never overwritten on its own.
           </p>
         </Alert>
       </Block>
@@ -391,7 +387,12 @@ function Raw() {
           items={[
             {
               key: "done",
-              head: <Badge variant="settled">{t("transcribe.state.done")}</Badge>,
+              head: (
+                <span className="flex items-center gap-1.5 text-small text-muted-foreground">
+                  <Check aria-hidden className="size-4 text-settled" />
+                  {t("transcribe.state.done")}
+                </span>
+              ),
               body: "Its pages are written and still hold. Builds reuse them as they are, without asking the model again.",
             },
             {

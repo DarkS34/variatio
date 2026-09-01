@@ -44,7 +44,7 @@ import type {
 /**
  * What both deletions answer. `rehomed` is about everybody who was inside the instance;
  * `landed` is the one entry the tab that made the request needs — where THIS account ends
- * up — so the browser can move there at once instead of blanking to «ningún workspace»
+ * up — so the browser can move there at once instead of blanking to «ningún espacio de trabajo»
  * until `me` comes back. `null` means it stays where it was, which covers both «I was not
  * in it» and «I have nowhere left to go».
  *
@@ -256,10 +256,8 @@ export const api = {
       method: "DELETE",
     }),
 
-  context: () => request<ContentContextState>("/api/context"),
-  saveContext: (narrative: string, facts: Record<string, string>) =>
-    put<ContentContextState>("/api/context", { narrative, facts }),
-  adoptContextDraft: () => post<ContentContextState>("/api/context/adopt-draft", {}),
+  context: (workspace?: string | null) =>
+    request<ContentContextState>("/api/context", { workspace }),
 
   // The three reads a commission is composed from, and the three that take a slug: the
   // panel builds a form against the instance the work will RUN in, which is not always

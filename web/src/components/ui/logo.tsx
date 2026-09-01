@@ -73,7 +73,17 @@ export function Lockup({ className, compact = false }: { className?: string; com
   return (
     <span className={cn("flex justify-center flex-col items-center gap-1 leading-none", className)}>
       <Logo tight className="h-[0.67rem] w-[2.9rem] text-primary" />
-      <span className={cn("text-micro font-condensed uppercase", compact && "hidden lg:inline")}>
+      {/* The tracking of `text-micro` (0.12em) is added after the LAST letter too, so the
+          word paints left of its own box and the two halves of the lockup do not line up:
+          measured at 8x on the login screen, the mark's ink sat 0.875 px right of the
+          word's. Taking the trailing space back off the box is what `items-center` then
+          centres. */}
+      <span
+        className={cn(
+          "text-micro font-condensed uppercase [margin-inline-end:-0.12em]",
+          compact && "hidden lg:inline",
+        )}
+      >
         Variatio
       </span>
     </span>

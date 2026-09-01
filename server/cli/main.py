@@ -37,34 +37,34 @@ def build_parser():
     runner.set_defaults(func=serve)
 
     importer = subparsers.add_parser(
-        "import-instance", help="carga un workspace del disco en la base de datos"
+        "import-instance", help="carga un espacio de trabajo del disco en la base de datos"
     )
-    importer.add_argument("--slug", required=True, help="nombre del workspace en la BD")
-    importer.add_argument("--name", default=None, help="nombre legible del workspace")
+    importer.add_argument("--slug", required=True, help="nombre del espacio de trabajo en la BD")
+    importer.add_argument("--name", default=None, help="nombre legible del espacio de trabajo")
     importer.add_argument(
         "--from-workspace",
         default=None,
         metavar="SLUG",
-        help="workspace de origen en disco; por defecto, el mismo que --slug",
+        help="espacio de trabajo de origen en disco; por defecto, el mismo que --slug",
     )
     importer.set_defaults(func=guarded(instances.import_instance))
 
     exporter = subparsers.add_parser(
-        "export-instance", help="escribe un workspace de la base de datos en el disco"
+        "export-instance", help="escribe un espacio de trabajo de la base de datos en el disco"
     )
-    exporter.add_argument("--slug", required=True, help="workspace de la BD a exportar")
+    exporter.add_argument("--slug", required=True, help="espacio de trabajo de la BD a exportar")
     exporter.add_argument(
         "--to-workspace",
         default=None,
         metavar="SLUG",
-        help="workspace de destino en disco; por defecto, el mismo que --slug",
+        help="espacio de trabajo de destino en disco; por defecto, el mismo que --slug",
     )
     exporter.set_defaults(func=guarded(instances.export_instance))
 
-    listing = subparsers.add_parser("workspaces", help="lista los workspaces de la base de datos")
+    listing = subparsers.add_parser("workspaces", help="lista los espacios de trabajo de la base de datos")
     listing.set_defaults(func=guarded(instances.list_workspaces))
 
-    maker = subparsers.add_parser("create-workspace", help="crea un workspace vacío")
+    maker = subparsers.add_parser("create-workspace", help="crea un espacio de trabajo vacío")
     maker.add_argument("slug", help="identificador en minúsculas, cifras y guiones")
     maker.add_argument("--name", default="", help="nombre legible; por defecto, el slug")
     maker.add_argument("--owner", default=None, metavar="USUARIO", help="cuenta que lo poseerá")
@@ -90,10 +90,10 @@ def build_parser():
     # No default: an account with no workspace is a normal account, and the first thing
     # it is offered when it enters is to create its own.
     creator.add_argument(
-        "--workspace", default="", help="workspace del que será miembro; vacío para ninguno"
+        "--workspace", default="", help="espacio de trabajo del que será miembro; vacío para ninguno"
     )
     creator.add_argument(
-        "--role", default="owner", choices=("viewer", "editor", "owner"), help="rol en ese workspace"
+        "--role", default="owner", choices=("viewer", "editor", "owner"), help="rol en ese espacio de trabajo"
     )
     creator.add_argument(
         "--password",
@@ -119,7 +119,7 @@ def build_parser():
     users = subparsers.add_parser("users", help="lista las cuentas y sus roles")
     users.set_defaults(func=guarded(accounts.list_users))
 
-    granter = subparsers.add_parser("grant", help="da o cambia el rol de una cuenta en un workspace")
+    granter = subparsers.add_parser("grant", help="da o cambia el rol de una cuenta en un espacio de trabajo")
     granter.add_argument("--user", required=True, help="nombre de usuario de la cuenta")
     granter.add_argument("--workspace", required=True)
     granter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
@@ -127,7 +127,7 @@ def build_parser():
 
     inviter = subparsers.add_parser("invite", help="crea una invitación de un solo uso")
     inviter.add_argument(
-        "--workspace", default="", help="workspace al que suma; vacío para ninguno"
+        "--workspace", default="", help="espacio de trabajo al que suma; vacío para ninguno"
     )
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
     inviter.set_defaults(func=guarded(accounts.invite))

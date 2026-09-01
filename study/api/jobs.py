@@ -103,7 +103,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
         workspace = repository.get_workspace(db_session, job.workspace)
         if workspace is None:
             raise RuntimeError(
-                f"El workspace '{job.workspace}' ya no está en la base de datos: "
+                f"El espacio de trabajo '{job.workspace}' ya no está en la base de datos: "
                 "la sesión de evaluación no se puede guardar."
             )
         evaluation_store.save(db_session, workspace.id, evaluator_of(job), session)

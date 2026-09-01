@@ -17,7 +17,8 @@ const badgeVariants = cva(
         default: "border-transparent bg-primary/8 text-primary",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border text-muted-foreground",
-        settled: "border-transparent bg-[color-mix(in_oklch,var(--settled)_8%,transparent)] text-settled",
+        settled:
+          "border-transparent bg-[color-mix(in_oklch,var(--settled)_8%,transparent)] text-settled",
         attention:
           "border-transparent bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] text-attention",
         danger: "border-transparent bg-destructive/8 text-destructive",
@@ -28,14 +29,19 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {
+  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
   /** The state's shape, when the badge is a stage's. Colour cannot be the only channel,
    *  and a badge carrying text AND a shape says it twice without taking more room. */
   mark?: ReactNode;
 }
 
-export function Badge({ className, variant, mark, children, ...props }: BadgeProps) {
+export function Badge({
+  className,
+  variant,
+  mark,
+  children,
+  ...props
+}: BadgeProps) {
   return (
     <span className={cn(badgeVariants({ variant }), className)} {...props}>
       {mark}

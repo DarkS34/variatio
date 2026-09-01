@@ -1,5 +1,5 @@
 import { Check, ChevronDown, FolderPlus, Loader2, Shield } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ export function WorkspaceSwitcher() {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
-  const labelId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -50,40 +49,48 @@ export function WorkspaceSwitcher() {
 
   return (
     <div className="relative shrink-0" ref={holder}>
-      {/* THE CONTROL SAYS WHAT IT IS, ABOVE AND NOT BESIDE (2026-09-01, explicit user
-          request). Beside it, the caption would compete for the one axis the header has
-          no room on — the flanks hold at their own min-content and the nav sits on the
-          centre line between them, so every character added to this row moves the
-          navigation sideways. Stacked, it costs 13 px of the 56 the header already has
-          and the flank's width is still the button's.
+      {/* THE CONTROL SAYS WHAT IT IS, INSIDE ITSELF (2026-09-01, explicit user request,
+          and the second placement in a day: the caption sat above the button first). The
+          axis the header has no room on is the horizontal one — the flanks hold at their
+          own min-content and the nav sits on the centre line between them, so every
+          character added to that row moves the navigation sideways. Stacked INSIDE the
+          control, the caption costs the flank nothing at all: `max-w-44` is untouched and
+          the button measured 160.6 px wide either way, because what sets its width is the
+          caption and not the name. It is 42.5 px tall against the old 35.7, which the row
+          absorbs — it went to `h-16` the same day, so there are 10.75 px above and below.
 
-          The menu is anchored `top-full` rather than at a fixed offset for the same
-          reason: it now opens under whatever this block happens to be tall. */}
-      <span
-        id={labelId}
-        className="mb-0.5 block text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground"
-      >
-        {t("workspace.switcher.label")}
-      </span>
+          There is no `aria-labelledby` any more, and that is the point of the move rather
+          than an oversight: with the caption inside, the button's own text names it —
+          «ESPACIO DE TRABAJO Compiladores» — where pointing at the caption alone would
+          have thrown the name away.
+
+          The menu is anchored `top-full` rather than at a fixed offset, so it opens under
+          whatever this block happens to be tall. */}
       <button
         onClick={() => setOpen((was) => !was)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-labelledby={labelId}
         title={
           active
             ? t("workspace.switcher.current", { name: active.name })
             : t("workspace.switcher.choose")
         }
         className={cn(
-          "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-body transition-colors hover:bg-accent",
+          "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-body transition-colors hover:bg-accent",
           open && "bg-accent",
         )}
       >
         {switching.isPending ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         ) : null}
-        <span className="truncate font-medium">{active?.name ?? t("workspace.none")}</span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
+            {t("workspace.switcher.label")}
+          </span>
+          <span className="mt-1 block truncate font-medium leading-tight">
+            {active?.name ?? t("workspace.none")}
+          </span>
+        </span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
 
@@ -92,9 +99,6 @@ export function WorkspaceSwitcher() {
           role="menu"
           className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
-          <p className="px-3 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {t("workspace.switcher.title")}
-          </p>
           <div className="max-h-72 overflow-y-auto p-1">
             {workspaces.map((workspace) => (
               <button

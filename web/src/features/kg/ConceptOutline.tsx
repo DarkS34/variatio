@@ -1,7 +1,6 @@
 import {
   ArrowDown,
   ArrowUp,
-  Check,
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
@@ -12,6 +11,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useStageLocked } from "@/components/StageGate";
+import { InfoHint } from "@/components/ui/hint";
+import { Switch } from "@/components/ui/misc";
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -50,11 +51,23 @@ export type CurriculumPlace = "covered" | "frontier" | "ahead";
 // person actually judges row by row — whether the concept works as a label — said in words
 // and a tick rather than only by the shape of a dot.
 //
-// It is still NOT a control. A switch on every one of 131 rows is 36 px of chrome under a
-// list you scroll, and it is set where the concept is edited. This column reports.
+// IT IS A CONTROL AGAIN SINCE 2026-09-01 (explicit user request), reversing the
+// «this column reports» of 2026-08-27. What that decision weighed was 36 px of chrome on
+// every one of 131 rows against a dot that already said the same thing; what it did not
+// weigh is that the state it reports is the one a person sets ROW BY ROW while reading the
+// syllabus down — the taggability review is a pass over the whole list — and the setting
+// lived one click away, inside the concept. The switch is now the only place it is set.
+// It is drawn at EVERY width, unlike the tick it replaces: a control hidden on a phone is
+// a state that cannot be changed there at all, which is what the dialog's switch used to
+// cover.
+// The wide track is 11rem and was 9: «SIRVE DE ETIQUETA» measures 143.3 px at `micro` with
+// its tracking, so with the (i) beside it the header wrapped to two lines inside a row
+// 32 px tall. 143.3 + 4 gap + 14 icon + the 8 px this column keeps to ITS OWN RIGHT is
+// 169.3, which is what sets 11rem rather than 10.5. The 32 px come out of the name column,
+// which is `minmax(0,1fr)`.
 const COLUMNS =
-  "grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-x-2 px-2 " +
-  "md:grid-cols-[1.5rem_minmax(0,1fr)_9rem_1.25rem] md:px-3";
+  "grid grid-cols-[1.25rem_minmax(0,1fr)_2.25rem_1rem] items-center gap-x-2 px-2 " +
+  "md:grid-cols-[1.5rem_minmax(0,1fr)_11rem_1.25rem] md:px-3";
 
 /**
  * WHERE A CONCEPT FALLS RELATIVE TO WHAT THE COURSE HAS COVERED — no longer drawn.
@@ -183,12 +196,16 @@ function ConceptRow({
   concept,
   colour,
   selected,
+  locked,
   onSelect,
+  onSetTaggable,
 }: {
   concept: KgConcept;
   colour: string;
   selected: boolean;
+  locked: boolean;
   onSelect: () => void;
+  onSetTaggable: (next: boolean) => void;
 }) {
   const { t } = useT();
 
@@ -234,15 +251,23 @@ function ConceptRow({
         {concept.name}
       </span>
 
-      {/* A tick when it serves as a label and nothing at all when it does not. An empty
-          cell rather than a cross: what is being reported is a subset, and marking the
-          complement puts a symbol on the two thirds of the rows nobody has to look at. */}
-      <span className="hidden md:block">
-        {concept.taggable ? (
-          <Check className="size-3.5 text-settled" aria-label={t("kg.taggable")} />
-        ) : (
-          <span className="sr-only">{t("canvas.notTaggable")}</span>
-        )}
+      {/* The switch, and `stopPropagation` around it: the whole row is a button that opens
+          the concept, so without it flipping the state would also open what it is about.
+          The mouse-down is stopped as well as the click — the row's own handler is on
+          `onClick`, but a nested control that only stops the click still lets a drag out of
+          the switch land as a selection. */}
+      <span
+        className="flex justify-start pr-2"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <Switch
+          checked={concept.taggable}
+          disabled={locked}
+          label={t("kg.taggable")}
+          onCheckedChange={(next) => onSetTaggable(next)}
+        />
       </span>
 
       <ChevronRight className="size-3.5 text-muted-foreground" />
@@ -262,6 +287,7 @@ export function ConceptOutline({
   onMoveUnit,
   onDeleteUnit,
   onAddConcept,
+  onSetTaggable,
 }: {
   concepts: KgConcept[];
   /** Unit names in the order of the syllabus. */
@@ -282,6 +308,9 @@ export function ConceptOutline({
   onMoveUnit: (name: string, delta: number) => void;
   onDeleteUnit: (name: string, count: number) => void;
   onAddConcept: (unit: string) => void;
+  /** Mark a concept as serving — or not serving — as a label. It is the row's own switch
+   *  since 2026-09-01: the concept card no longer carries one. */
+  onSetTaggable: (name: string, next: boolean) => void;
 }) {
   const { plural, t } = useT();
   const locked = useStageLocked();
@@ -352,7 +381,13 @@ export function ConceptOutline({
       <div className={cn(COLUMNS, "h-8 text-micro font-condensed uppercase text-muted-foreground")}>
         <span />
         <span>{t("outline.column.concept")}</span>
-        <span className="hidden md:block">{t("outline.column.taggable")}</span>
+        <span className="flex items-center gap-1 pr-2">
+          <span className="hidden md:inline">{t("outline.column.taggable")}</span>
+          {/* The (i) moved here with the control it explains: it hung off the concept
+              card's switch, and that switch is gone. On a narrow screen the column has no
+              room for its own name and this is the only thing left to name it. */}
+          <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
+        </span>
         <span />
       </div>
 
@@ -417,7 +452,9 @@ export function ConceptOutline({
                     concept={concept}
                     colour={colour}
                     selected={selected === concept.name}
+                    locked={locked}
                     onSelect={() => onSelect(concept.name)}
+                    onSetTaggable={(next) => onSetTaggable(concept.name, next)}
                   />
                 ))
               : null}

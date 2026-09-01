@@ -1,4 +1,4 @@
-import { Hourglass } from "lucide-react";
+import { Check, Hourglass } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
@@ -68,7 +68,22 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
     return <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>;
   if (data.pending > 0)
     return <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>;
-  return <Badge variant="settled">{t("transcribe.upToDate")}</Badge>;
+  // A TICK AND NOT THE WORDS «al día» (2026-09-01, explicit user request). The state with
+  // nothing left to do is the one a person scans past, and a mark reads faster than a word
+  // in a row of words. `Badge` is what draws it, so the circle carries the same measured
+  // 8 % tint as every other badge; `p-0` and a fixed size are what turn the pill into a
+  // circle. The word survives as the accessible name — colour and shape are not a channel
+  // for a screen reader.
+  return (
+    <Badge
+      variant="attention"
+      className="size-6 justify-center p-0"
+      title={t("transcribe.upToDate")}
+    >
+      <Check aria-hidden />
+      <span className="sr-only">{t("transcribe.upToDate")}</span>
+    </Badge>
+  );
 }
 
 export function RunningBlock({ slot }: { slot: RawSlot }) {

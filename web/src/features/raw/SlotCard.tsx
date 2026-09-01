@@ -1,4 +1,4 @@
-import { FileText, PenLine, Trash2 } from "lucide-react";
+import { Check, FileText, PenLine, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,18 +26,6 @@ const STATE: Record<DocumentState, { labelKey: Key; variant: "settled" | "outlin
 
 const VISIBLE = 6;
 
-/**
- * ONE DOCUMENT, ONE ROW — which is the whole reason this screen exists.
- *
- * The panel used to draw two lists of the same filenames: `SlotFiles`' (name and size) and
- * `DocumentList`'s (pages and transcription state), in two components that were never on
- * screen at the same time, so nobody could see they were the same six names. A document is
- * one thing and it gets one line: what it is called, whether it has been read, and the two
- * operations that act on it.
- *
- * The CAUSE of a «caducado» goes under its own row and not in an aggregate badge: the
- * register's rule is that staleness is a state with a reason or it is not a state.
- */
 function DocumentRow({
   name,
   state,
@@ -72,27 +60,26 @@ function DocumentRow({
         <span className="min-w-0 flex-1 truncate" title={name}>
           {name}
         </span>
-        {/* NEITHER THE SIZE NOR THE PAGE COUNT (2026-09-01, explicit user request).
-            «928 KB · 45 pág.» is a fact about a file, and nobody uploading their own
-            lecture notes is deciding anything with it. What the row has to answer is
-            whether that document has been read, which the badge says on its own. */}
-        {/* A document can be transcribed AND have pages the model could not read: «al día»
-            is true of the transcription and says nothing about them. Two badges rather
-            than one, because the red sentence below used to be the only sign of it and the
-            badge column — the one anybody scans — read «settled» on the one row that
-            needs a person. */}
         <span className="flex shrink-0 items-center gap-1.5">
-          <Badge variant={busy ? "outline" : (meta?.variant ?? "outline")}>
-            {busy ? t("transcribe.transcribing") : meta ? t(meta.labelKey) : state}
-          </Badge>
+          {/* «leído» is a grey tick and the other two states keep their words (2026-09-01,
+              explicit user request): what a person scans this column for is the rows that
+              still need something, and a word on every finished row is what buries them.
+              Grey is `--settled`, which is the palette's own «behind you, resolved». */}
+          {!busy && state === "done" ? (
+            <span title={t("transcribe.state.done")} className="flex items-center px-1">
+              <Check aria-hidden className="size-4 text-settled" />
+              <span className="sr-only">{t("transcribe.state.done")}</span>
+            </span>
+          ) : (
+            <Badge variant={busy ? "outline" : (meta?.variant ?? "outline")}>
+              {busy ? t("transcribe.transcribing") : meta ? t(meta.labelKey) : state}
+            </Badge>
+          )}
           {!busy && failedPages > 0 ? (
             <Badge variant="danger">{plural("transcribe.failedCount", failedPages)}</Badge>
           ) : null}
         </span>
 
-        {/* Repeated per-row chrome is furniture: the two actions appear on hover and on
-            focus-within, never only on hover — a control that exists solely under a
-            pointer does not exist for a keyboard. */}
         <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100">
           <Button
             size="icon-sm"
@@ -136,14 +123,6 @@ function DocumentRow({
   );
 }
 
-/**
- * ONE ORIGIN, ONE CARD.
- *
- * The two cards are cells of a stretched grid, so an EMPTY origin's dropzone grows until
- * it matches the height of the stocked one beside it. That is not decoration: an empty
- * slot is the state every new workspace starts in, and there the import is the only thing
- * on the screen worth doing.
- */
 export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: string[] }) {
   const { t, plural } = useT();
   const canEdit = useCanEdit();
@@ -158,13 +137,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   const [opened, setOpened] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
-  // The size lives on the raw listing and the pages on the transcription, so a row is a
-  // join of the two by name — and a UNION rather than an intersection, keyed on the raw
-  // listing. The two queries do not land together: a file that has just been uploaded is
-  // in the listing before the transcription has been re-asked, and keying on the
-  // transcription would make it vanish for a second between the upload finishing and the
-  // refetch arriving. Unknown to the transcription simply means «not read yet», which is
-  // exactly what `pending` says.
+
   const rows = useMemo(() => {
     const read = new Map((state.data?.documents ?? []).map((entry) => [entry.name, entry]));
     return slot.files.map((file) => {
@@ -182,12 +155,6 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
 
   return (
     <Card className="flex flex-col">
-      {/* THE HEADER IS THE NAME AND ONE STATE (2026-09-01, explicit user request).
-          What left it: the «hace falta para» chips, which name two artifacts a teacher has
-          no reason to reason about while uploading a PDF; the aggregate «1 archivo · 928
-          KB · 45 páginas»; and the per-origin button, because reading the documents is now
-          ONE press for the whole screen. What stays is the sentence saying what belongs in
-          this box, which is the only thing the person is actually deciding here. */}
       <div className="flex flex-col gap-1.5 border-b border-border p-4">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <h2 className="min-w-0 flex-1 truncate text-heading">{slotLabel(slot, t)}</h2>
@@ -198,7 +165,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
           )}
         </div>
 
-        <p className="max-w-[60ch] text-small text-muted-foreground">{slotPurpose(slot, t)}</p>
+        <p className="w-[90%] text-small text-muted-foreground">{slotPurpose(slot, t)}</p>
       </div>
 
       <div className={cn("flex min-h-0 flex-1 flex-col gap-3 p-4")}>

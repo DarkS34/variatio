@@ -43,7 +43,7 @@ DB_UNREACHABLE = (
 WORKSPACE_HEADER = "x-workspace"
 
 NO_WORKSPACE = (
-    "Todavía no tienes ningún workspace. Crea el tuyo desde el panel, o pide acceso a "
+    "Todavía no tienes ningún espacio de trabajo. Crea el tuyo desde el panel, o pide acceso a "
     "uno existente a quien administra la instalación."
 )
 
@@ -267,7 +267,7 @@ def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Works
     if slug:
         workspace = repository.get_workspace(session, slug)
         if workspace is None:
-            raise HTTPException(404, f"No existe el workspace '{slug}'.")
+            raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
         return workspace
 
     workspace = current_workspace_for(session, user)
@@ -296,7 +296,7 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
 
     if row is None:
         if not user.is_admin:
-            raise HTTPException(403, f"No tienes acceso al workspace '{workspace.slug}'.")
+            raise HTTPException(403, f"No tienes acceso al espacio de trabajo '{workspace.slug}'.")
         as_admin, role = True, OWNER
     else:
         role = row.role

@@ -8,7 +8,6 @@ import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
 
-import { ContextCard } from "@/features/context/ContextCard";
 import { useStartAllTranscriptions, useTranscribeRun, useTranscriptionSummary } from "./queries";
 import { SlotCard } from "./SlotCard";
 import { CancelButton } from "@/components/CancelButton";
@@ -127,10 +126,6 @@ export function RawScreen() {
         >
           <p>{t("transcribe.notAGate")}</p>
         </Alert>
-      ) : summary.known && summary.files > 0 ? (
-        <Alert tone="settled" title={t("transcribe.allUpToDate")}>
-          <p>{plural("transcribe.allUpToDateBody", summary.done)}</p>
-        </Alert>
       ) : null}
 
       {startAll.isError ? (
@@ -145,15 +140,6 @@ export function RawScreen() {
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}
       </div>
-
-      {/* WHAT THIS SUBJECT IS ABOUT, IN PROSE — and this screen is where it belongs.
-          Its home was the panel, and it went down with it when the bar became the chain,
-          which left the one paragraph every prompt interpolates with nowhere to be read or
-          corrected. Here it keeps every property it had: it is not a stage, nobody
-          approves it, and it is upstream of more than one thing at once — the same three
-          reasons the raw documents are on a screen rather than on the rail. Last on the
-          page, because the two builds are what write it. */}
-      <ContextCard />
     </div>
   );
 }

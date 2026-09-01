@@ -335,7 +335,7 @@ export function ProfileEditor() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
+      <div className="sticky top-16 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
         {/* NO RAW-JSON TAB, and therefore no «Formulario» tab either (2026-08-31, explicit
             user request): with one view left there is nothing to switch between. What it
             offered — pasting a whole profile in and applying it — is the one edit that can
@@ -392,18 +392,25 @@ export function ProfileEditor() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader className="pb-2">
+            {/* No `pb-2` here or on the card beside it: the header's own `p-4` leaves 16 px
+                under the title, which is the gap between two fields — so every element of
+                the block is the same distance from the next one. Both cards of the row
+                change together or their contents stop starting at the same height. */}
+            <CardHeader>
               <div className="flex items-center gap-2">
                 <CardTitle>{t("modality.identity")}</CardTitle>
                 <InfoHint label={t("modality.identity.hintLabel")}>
                   {t("modality.identity.hint")}
                 </InfoHint>
-                <code className="ml-auto font-mono text-small text-muted-foreground">
-                  {activeKey}
-                </code>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            {/* `space-y-4` and not the `space-y-2` this had: `Field` separates its own
+                label from its own control by 6 px, so at 8 px the gap BETWEEN two fields
+                was barely wider than the gap INSIDE one and the three read as a single
+                undifferentiated block. 16 px is 2.7× the internal gap, which is what makes
+                the grouping legible; the difficulty's own 8 px between its rungs and its
+                box stays below it, so the hierarchy holds. */}
+            <CardContent className="space-y-4">
               <Field label={t("modality.readableName")}>
                 <Input
                   value={spec.label ?? ""}
@@ -433,7 +440,7 @@ export function ProfileEditor() {
               >
                 {(props) => (
                   <div>
-                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                       {difficultyLevels.map((level) => (
                         <Badge key={level} variant="outline">
                           {level}
@@ -456,13 +463,19 @@ export function ProfileEditor() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>{t("modality.rules")}</CardTitle>
-              {/* Visible, not behind an (i): this is the one thing on the screen that
-                  decides how a generated item reads, and it is the only instrument the
-                  profile carries for it — the per-field generation guidance is a manual
-                  exception now, not the other half of a pair. */}
-              <p className="text-small text-muted-foreground">{t("modality.rules.body")}</p>
+            <CardHeader>
+              {/* BEHIND THE (i) since 2026-09-01, by explicit user request, reversing the
+                  «visible, not hidden» this card carried. What it explains is what a rule
+                  HAS TO BE — checkable against an item already written, naming its field,
+                  useless if it would fit any subject — which is read once, when writing
+                  the first one, and then sits over the list for ever. The rule it bends is
+                  the app's own «visible beats hidden»; what keeps it honest is that
+                  nothing else on the screen says it, so the (i) is the only carrier and
+                  not a second copy. */}
+              <CardTitle className="flex items-center gap-1.5">
+                {t("modality.rules")}
+                <InfoHint label={t("modality.rules.hintLabel")}>{t("modality.rules.body")}</InfoHint>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {rules.map((rule, index) => (

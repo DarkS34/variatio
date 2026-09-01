@@ -10,6 +10,7 @@ import {
   Search,
   Trash2,
   Waypoints,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -20,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog, PromptDialog } from "@/components/ui/prompt";
-import { InfoHint } from "@/components/ui/hint";
 import { Field } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
@@ -131,21 +131,10 @@ function ConceptDetail({
             ))}
           </Select>
         </Field>
-        {/* The switch leads and the (i) closes the row: the hint is a button of its own, so
-            nesting it inside the label would make reading the explanation toggle the
-            control. Everywhere else in the app a switch sits to the left of its text. */}
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
-          <Switch
-            checked={concept.taggable}
-            disabled={locked}
-            onCheckedChange={(next) =>
-              run(() => api.updateConcept({ name: concept.name, taggable: next }))
-            }
-          >
-            <span className="text-body">{t("kg.taggable")}</span>
-          </Switch>
-          <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
-        </div>
+        {/* NO TAGGABILITY SWITCH HERE since 2026-09-01 (explicit user request): it is on the
+            concept's own row in the list, where the state is judged — a pass down the
+            syllabus deciding which concepts work as labels — instead of one click inside
+            each concept. Its (i) went to the column header with it. */}
         {dirty && !locked ? (
           <Button
             size="sm"
@@ -562,13 +551,23 @@ function GraphExplorer() {
           width of the longest concept name and scrolled the whole page sideways. `grid-cols-1`
           is `minmax(0, 1fr)`, which is the cap, and `min-w-0` on the card is what then lets
           it take it. */}
-      {/* UNA SOLA COLUMNA, desde que el cuestionario de la etapa ocupa la mitad derecha de
-          la pantalla. Tres columnas a 1440 px dejaban el listado en 442 px, y cada fila de
-          este listado trunca: el temario se volvía ilegible justo en la pantalla que existe
-          para leerlo. El mapa baja y se pliega — nunca se quita, que es la regla de la
-          casa: lo que estaba plegado sigue estando, y la leyenda de la frontera no vive en
-          ningún otro sitio. */}
-      <div className="space-y-4">
+      {/* EL CONCEPTO SE ABRE A LA DERECHA DE LA LISTA (2026-09-01, explicit user request),
+          que es donde estaba antes de volverse un diálogo unas horas antes ese mismo día.
+          Lo que hacía imposible la columna era el cuestionario de la etapa ocupando la
+          mitad derecha de forma permanente; se convirtió en un cajón esa misma tarde, así
+          que ese ancho ha vuelto y la respuesta a un clic puede estar al lado de la fila
+          que se ha pulsado. La segunda pista solo existe mientras hay concepto elegido: sin
+          él la lista se queda con la pantalla entera, que es lo que pide una fila que
+          trunca. Por debajo de `xl` la ficha se apila bajo la lista — es el único ancho en
+          el que no cabe al lado. El mapa sigue plegado bajo la lista: lo que estaba plegado
+          sigue estando, y la leyenda de la frontera no vive en ningún otro sitio. */}
+      <div
+        className={cn(
+          "grid gap-4",
+          selectedConcept && "xl:grid-cols-[minmax(0,1fr)_23rem]",
+        )}
+      >
+      <div className="min-w-0 space-y-4">
         {/* `min-w-0` is load-bearing, not tidiness: a grid item defaults to `min-width: auto`,
             and every row in here truncates — which means `white-space: nowrap`, which means a
             min-content width of the longest concept name in the graph. Without it the card
@@ -627,6 +626,12 @@ function GraphExplorer() {
               onMoveUnit={moveDomain}
               onDeleteUnit={(name, count) => setDeletingUnit({ name, count })}
               onAddConcept={setAddingIn}
+              onSetTaggable={(name, next) =>
+                api
+                  .updateConcept({ name, taggable: next })
+                  .then(refresh)
+                  .catch((e) => setError(e.message))
+              }
             />
           </div>
         </Card>
@@ -710,32 +715,35 @@ function GraphExplorer() {
         </details>
       </div>
 
-      {/* THE CONCEPT'S CARD IS A DIALOG (2026-09-01, explicit user request).
-          It was a card in the flow under the list, which worked only while the list had the
-          whole window: with the questionnaire back on the right the syllabus lives in 7/12
-          of the screen, and a card stacked under a hundred-odd rows put the answer to a
-          click 800 px below the row that was clicked. A column beside the list is not the
-          answer either — two columns inside that 7/12 leave the syllabus at ~440 px and
-          every row truncates, which is the one thing this screen exists to avoid.
-
-          So it opens over the page, like the enlarged map and like a raw document's pages:
-          the list keeps its width, and the card gets a comfortable one for a description
-          that is read as prose and for relations written as sentences. `key` remounts it
-          per concept, which is what resets the description draft when you move to the next
-          one. */}
-      <Dialog
-        open={Boolean(selectedConcept)}
-        onClose={() => setSelected(null)}
-        title={selectedConcept?.name ?? ""}
-        description={t("kg.conceptDialogHint")}
-        className="sm:max-w-3xl"
-      >
+        {/* `sticky` and not a second scroller for the page: the list scrolls inside its own
+            card, so the panel would otherwise sit at the top of a column as tall as the map
+            fold and drift off screen. `self-start` is what lets a sticky grid item be
+            shorter than its track — stretched to the full row height it has nothing to
+            stick within. `detail`'s `key` remounts per concept, which is what resets the
+            description draft when you move to the next one. */}
         {selectedConcept ? (
-          <div className="thin-scroll max-h-[72vh] overflow-y-auto pr-1">
-            {detail(selectedConcept)}
-          </div>
+          <aside className="min-w-0 xl:sticky xl:top-20 xl:self-start">
+            <Card className="flex max-h-[clamp(28rem,74vh,60rem)] min-h-0 flex-col overflow-hidden">
+              <header className="flex items-center gap-1.5 border-b border-border p-3">
+                <h3 className="min-w-0 flex-1 truncate text-heading">
+                  {selectedConcept.name}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setSelected(null)}
+                  aria-label={t("kg.clearSelection")}
+                >
+                  <X />
+                </Button>
+              </header>
+              <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
+                {detail(selectedConcept)}
+              </div>
+            </Card>
+          </aside>
         ) : null}
-      </Dialog>
+      </div>
 
       {/* The flag is absent from every graph written before it existed, so it reads `false`
           even on one whose exclusion list proves the old in-build pass ran. The second half

@@ -271,8 +271,11 @@ export function useProfile(workspace?: string | null) {
   });
 }
 
-export function useContentContext() {
-  return useQuery({ queryKey: keys.context, queryFn: api.context });
+export function useContentContext(workspace?: string | null) {
+  return useQuery({
+    queryKey: scoped(keys.context, workspace),
+    queryFn: () => api.context(workspace),
+  });
 }
 
 export function useKg(workspace?: string | null) {
@@ -467,7 +470,7 @@ function relandStream(client: QueryClient) {
  *
  * The deletion's own answer says where this account lands, so the tab goes STRAIGHT there
  * instead of to `null` and back — `me` would say the same thing a round trip later, and in
- * between the header reads «ningún workspace» and the panel offers to create one, over a
+ * between the header reads «ningún espacio de trabajo» and the panel offers to create one, over a
  * change that only moved you to the workspace next door. `set` before dropping the queries,
  * so what refetches afterwards already carries the new `X-Workspace`.
  *
