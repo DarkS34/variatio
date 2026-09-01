@@ -6,7 +6,14 @@ import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
-import { GENERATE_PHASE, STEPS, nextStepOf, stepNumber, stepNumberOf } from "@/lib/steps";
+import {
+  COMPARE_PHASE,
+  GENERATE_PHASE,
+  STEPS,
+  nextStepOf,
+  stepNumber,
+  stepNumberOf,
+} from "@/lib/steps";
 import { useT, type Translate } from "@/lib/i18n";
 import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
@@ -107,7 +114,7 @@ function Start() {
           ))}
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
           <Pill icon={Play} label={t("nav.create")} n={GENERATE_PHASE} />
-          <Pill icon={Scale} label={t("nav.compare")} tone="study" />
+          <Pill icon={Scale} label={t("nav.compare")} n={COMPARE_PHASE} tone="study" />
         </div>
         <Paragraph>
           It is exactly the bar above, and the numbers say what they are: the first four are{" "}
@@ -120,9 +127,9 @@ function Start() {
         <Paragraph>
           <strong>"{t("nav.create")}" is phase {GENERATE_PHASE}</strong>, and that is why it
           carries a number: it is what the other four exist for, not an extra outside the route.
-          It opens once phase 1 is finished. "{t("nav.compare")}", on the other hand, is
-          not numbered: it produces no material for your subject, it is there to measure the
-          system.
+          It opens once phase 1 is finished. "{t("nav.compare")}" is{" "}
+          <strong>phase {COMPARE_PHASE}</strong>, and it stands apart in its own colour: it
+          produces no material for your subject, it is there to measure the system.
         </Paragraph>
       </Block>
 
@@ -159,7 +166,7 @@ function Start() {
         <Steps
           items={[
             <>
-              Get yourself into a <strong>workspace</strong>. If you have none yet, you are
+              Get yourself into a <strong>subject</strong>. If you have none yet, you are
               offered to create yours as soon as you come in; if you have several, you switch in
               the selector at the top left. Everything else lives inside one.
             </>,
@@ -236,9 +243,10 @@ function Workspace() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.workspace")}>
         <p>
-          A <strong>workspace</strong> is a whole subject: its documents, the four steps of the
-          route and everything generated from it. Two subjects are two workspaces. Two very
-          different exercise formats for the same subject are too.
+          A <strong>subject</strong> is prepared whole and on its own: its documents, the four
+          steps of the route and everything generated from it. Nothing crosses from one to
+          another. If one syllabus is taught with two very different exercise formats, those are
+          two as well.
         </p>
       </SectionHead>
 
@@ -252,7 +260,7 @@ function Workspace() {
           },
           {
             label: "What travels with you",
-            value: "Nothing. Each workspace has its own, cache included.",
+            value: "Nothing. Each subject has its own, cache included.",
           },
           {
             label: "What is decided on creation",
@@ -263,23 +271,23 @@ function Workspace() {
 
       <Block title="Coming in with none is normal">
         <Paragraph>
-          There is no initial workspace for whoever has no other: a freshly created account, or
+          There is no initial subject for whoever has no other: a freshly created account, or
           one that has not been given access to anything yet, comes in and finds the offer to
-          create its own. The subject's name is enough. Both
-          ways out are equally valid: create it yourself and be its owner, or wait for whoever
-          administers to give you access to one that already exists.
+          create its own. Its name is enough. Both ways out are equally valid: create it
+          yourself and be its owner, or wait for whoever administers to give you access to one
+          that already exists.
         </Paragraph>
         <Paragraph>
           Meanwhile the application is not blocked: this guide, "{t("account.title")}" and — if
-          you administer the installation — "{t("admin.title")}" work with no workspace at all.
+          you administer the installation — "{t("admin.title")}" work with no subject at all.
           What waits is everything that reads an instance: the four steps, "{t("nav.create")}"
           and "{t("nav.compare")}".
         </Paragraph>
       </Block>
 
-      <Block title="The prompt language is chosen when the workspace is created">
+      <Block title="The prompt language is chosen when the subject is created">
         <Paragraph>
-          Creating a workspace is where you choose which language the model is spoken to in
+          Creating a subject is where you choose which language the model is spoken to in
           throughout the building of that instance. <strong>It cannot be changed afterwards</strong>
           , and that is not an arbitrary restriction: the relation labels are written inside the
           graph itself and the loader indexes by them, so the language is baked into the
@@ -292,11 +300,11 @@ function Workspace() {
         </Paragraph>
       </Block>
 
-      <Block title="One tab, one workspace">
+      <Block title="One tab, one subject">
         <Paragraph>
-          The active workspace is kept on your account and survives signing out; the one you are{" "}
+          The active subject is kept on your account and survives signing out; the one you are{" "}
           <em>looking at</em> is kept by the tab. You can have two subjects open in two tabs of
-          the same browser without them treading on each other. Switching workspace empties the
+          the same browser without them treading on each other. Switching subject empties the
           screen of what you were watching: the jobs and the progress belong to the instance
           you are leaving.
         </Paragraph>
@@ -308,7 +316,7 @@ function Workspace() {
           instruction, conventions — and it goes into <em>every</em> call to the model. It is not
           written by hand: the syllabus build and the exercise-types build synthesise it, each
           with what it knows about the subject. It is read under "{t("account.title")} →{" "}
-          {t("tabs.workspaces")}", below each workspace, with the three loose facts that sit
+          {t("tabs.workspaces")}", below each one, with the three loose facts that sit
           beside the paragraph — {t("context.fact.subject").toLowerCase()},{" "}
           {t("context.fact.level").toLowerCase()} and{" "}
           {t("context.fact.language").toLowerCase()} — which are read separately and say the same
@@ -1629,7 +1637,7 @@ function Runs() {
         <Paragraph>
           The <strong>technical log is not shown in the application</strong>: every line the
           pipeline writes is kept on the server, under <code>logs/</code> and inside it the
-          workspace's own folder. It is material to read next to a traceback, not something to
+          subject's own folder. It is material to read next to a traceback, not something to
           watch while you work, and it is what to ask for when something fails.
         </Paragraph>
         <Paragraph>
@@ -1709,12 +1717,12 @@ function Account() {
           {
             key: "workspaces",
             head: t("tabs.workspaces"),
-            body: "Which workspaces you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
+            body: "Which subjects you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
           },
           {
             key: "variantes",
             head: t("tabs.variants"),
-            body: 'Everything you have generated, with the commission that produced it: it can be searched, narrowed to yours or widened to the whole workspace, relaunched as "more like this one", and deleted.',
+            body: 'Everything you have generated, with the commission that produced it: it can be searched, narrowed to yours or widened to the whole subject, relaunched as "more like this one", and deleted.',
           },
         ]}
       />
@@ -1737,7 +1745,7 @@ function Account() {
               {
                 key: "prompts",
                 head: "The prompts'",
-                body: "The one the MODEL IS SPOKEN TO in. It lives on the workspace, is chosen when the workspace is created and never after: the relation labels end up written inside the graph and the loader indexes by them.",
+                body: "The one the MODEL IS SPOKEN TO in. It lives on the subject, is chosen when the subject is created and never after: the relation labels end up written inside the graph and the loader indexes by them.",
               },
               {
                 key: "material",
@@ -1793,9 +1801,9 @@ function Account() {
           the one your manager suggests — and say whether you teach or study.
         </Paragraph>
         <Paragraph>
-          The invitation may already carry a workspace and a role inside it, or carry none: in
+          The invitation may already carry a subject and a role inside it, or carry none: in
           that case you come in all the same and are offered to create yours. An account with no
-          workspace is a normal account, not a half-made one.
+          subject is a normal account, not a half-made one.
         </Paragraph>
       </Block>
 
@@ -1866,9 +1874,9 @@ function Admin() {
           chooses their username, their password, and whether they teach or study.
         </Paragraph>
         <Paragraph>
-          The invitation may already carry a workspace and a role inside it, or carry none.
-          Access is granted and revoked afterwards, account by account and workspace by
-          workspace, from this same table; there are three roles:
+          The invitation may already carry a subject and a role inside it, or carry none.
+          Access is granted and revoked afterwards, account by account and subject by subject,
+          from this same table; there are three roles:
         </Paragraph>
         <Rows
           items={[
@@ -1883,7 +1891,7 @@ function Admin() {
             {
               key: "admin",
               head: <>"{t("acc.makeAdmin")}"</>,
-              body: "Whoever administers gets into every workspace without being a member of any. It cannot be taken away from oneself: that is what stops the installation being left with nobody to administer it.",
+              body: "Whoever administers gets into every subject without being a member of any. It cannot be taken away from oneself: that is what stops the installation being left with nobody to administer it.",
             },
             {
               key: "reset",
@@ -1952,7 +1960,7 @@ function Admin() {
             {
               key: "borrar",
               head: "Delete",
-              body: "Deleting a workspace from here takes its directory tree off the disk too, the raw documents included. The dialog enumerates what disappears, and the instance's identifier has to be typed to confirm. It is not offered on the last workspace left.",
+              body: "Deleting a subject from here takes its directory tree off the disk too, the raw documents included. The dialog enumerates what disappears, and the instance's identifier has to be typed to confirm. It is not offered on the last subject left.",
             },
           ]}
         />
@@ -1999,7 +2007,7 @@ function Admin() {
               body: (
                 <>
                   {t("eng.half.processNote")}. The installation's whole queue, across every
-                  workspace: what is running, what is waiting, and whose each one is.
+                  subject: what is running, what is waiting, and whose each one is.
                 </>
               ),
             },

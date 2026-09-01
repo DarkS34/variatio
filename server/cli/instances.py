@@ -10,7 +10,7 @@ def _slug_error(*slugs: str | None) -> str | None:
             continue
         error = slug_error(slug)
         if error:
-            return f"«{slug}» no vale como espacio de trabajo. {error}"
+            return f"«{slug}» no vale como asignatura. {error}"
     return None
 
 
@@ -65,7 +65,7 @@ def list_workspaces(_args) -> int:
     with session_scope() as session:
         rows = rows_of(session)
     if not rows:
-        print("No hay espacios de trabajo en la base de datos.")
+        print("No hay asignaturas en la base de datos.")
         return 0
     for row in rows:
         print(f"{row.id:>4}  {row.slug:<24} {row.name:<32} {workspace_for(row.slug).root}")
@@ -95,7 +95,7 @@ def create_workspace(args) -> int:
 
     with session_scope() as session:
         if get_workspace(session, args.slug) is not None:
-            print(f"Ya existe el espacio de trabajo '{args.slug}'.")
+            print(f"Ya existe la asignatura '{args.slug}'.")
             return 1
 
         workspace = insert(
@@ -114,7 +114,7 @@ def create_workspace(args) -> int:
         # database at all, and the row beside it is a mirror for the panel to list by.
         locale.set_prompt_language(ws, args.language)
         print(
-            f"Espacio de trabajo '{workspace.slug}' creado en {ws.root}, "
+            f"Asignatura '{workspace.slug}' creada en {ws.root}, "
             f"con los prompts en «{args.language}»"
         )
         if args.owner:

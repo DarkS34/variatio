@@ -104,7 +104,7 @@ def create(
     if error:
         raise HTTPException(422, error)
     if repository.get_workspace(db, slug) is not None:
-        raise HTTPException(409, f"Ya existe un espacio de trabajo con el identificador '{slug}'.")
+        raise HTTPException(409, f"Ya existe una asignatura con el identificador '{slug}'.")
 
     error = languages.error(body.prompt_language)
     if error:
@@ -135,11 +135,11 @@ def activate(
     """Point the account at another instance it is allowed to open."""
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
 
     membership = identity.membership(db, workspace.id, user.id)
     if membership is None and not user.is_admin:
-        raise HTTPException(403, f"No tienes acceso al espacio de trabajo '{slug}'.")
+        raise HTTPException(403, f"No tienes acceso a la asignatura '{slug}'.")
 
     user.active_workspace_id = workspace.id
     return {
@@ -172,7 +172,7 @@ def remove(
     needs afterwards, because the confirmation dialog promised one of two things.
     """
     if slug != access.workspace.slug:
-        raise HTTPException(409, "Solo se puede borrar el espacio de trabajo activo.")
+        raise HTTPException(409, "Solo se puede borrar la asignatura activa.")
 
     ws = access.ws
     # Read before the cascade takes the rows away. An administrator reaching this through
@@ -235,7 +235,7 @@ def leave(
     """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
 
     # An administrator reaches every instance through the bypass and usually holds no row
     # at all. There is nothing for them to leave, and deleting somebody else's workspace
@@ -270,7 +270,7 @@ def leave(
     db.flush()
     if user.active_workspace_id == workspace.id:
         user.active_workspace_id = None
-    deps.invalidate(slug, "espacio de trabajo eliminado al salir su último miembro")
+    deps.invalidate(slug, "asignatura eliminada al salir su último miembro")
     logger.info(f"[workspace] «{user.username}» era el último de «{slug}»; se eliminó")
     return {
         "left": slug,

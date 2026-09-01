@@ -50,7 +50,7 @@ export const es = {
   "language.changed": "Idioma cambiado a {name}",
   "language.warning.title": "El cambio afecta solo a lo que lees",
   "language.warning.body":
-    "Los variatios que ya has generado, los temarios construidos y las sesiones de evaluación se quedan como están: se escribieron en el idioma del espacio de trabajo y no se traducen.",
+    "Los variatios que ya has generado, los temarios construidos y las sesiones de evaluación se quedan como están: se escribieron en el idioma de la asignatura y no se traducen.",
 
   // WORKSPACE LANGUAGE ------------------------------------------------------------------
   "workspace.language.title": "Idioma de los prompts",
@@ -58,7 +58,7 @@ export const es = {
     "En qué idioma se le habla al modelo durante toda la construcción de esta instancia.",
   "workspace.language.locked":
     "No se puede cambiar: las etiquetas de las relaciones quedan escritas dentro del temario, y el cargador indexa por ellas.",
-  "workspace.language.onlyAtCreation": "Se elige al crear el espacio de trabajo y no después.",
+  "workspace.language.onlyAtCreation": "Se elige al crear la asignatura y no después.",
 
   // ROLES -------------------------------------------------------------------------------
   "role.viewer": "Lector",
@@ -66,7 +66,7 @@ export const es = {
   "role.owner": "Propietario",
   "role.viewer.hint": "Puede verlo todo y no cambia nada.",
   "role.editor.hint": "Todo lo anterior, más construir, editar, aprobar y generar.",
-  "role.owner.hint": "Todo lo anterior, más renombrar o borrar el espacio de trabajo.",
+  "role.owner.hint": "Todo lo anterior, más renombrar o borrar la asignatura.",
   "role.undeclared": "Sin permiso declarado.",
 
   // ACCOUNT -----------------------------------------------------------------------------
@@ -103,15 +103,15 @@ export const es = {
   "password.changed.body": "Se ha cerrado la sesión en el resto de dispositivos.",
 
   // ACCESS ------------------------------------------------------------------------------
-  "access.none.title": "Tu cuenta no es miembro de ningún espacio de trabajo",
+  "access.none.title": "Tu cuenta no es miembro de ninguna asignatura",
   "access.none.body":
-    "Es un estado normal, no una cuenta a medio hacer: la pantalla de inicio te ofrece «Crear mi espacio de trabajo», y quien administra puede darte acceso a una que ya exista.",
+    "Es un estado normal, no una cuenta a medio hacer: la pantalla de inicio te ofrece «Crear mi asignatura», y quien administra puede darte acceso a una que ya exista.",
   "access.inUse": "en uso",
   "access.byAdmin": "por administración",
   "access.notAMember": "No eres miembro: entras porque administras la instalación.",
 
   "tabs.account": "Cuenta",
-  "tabs.workspaces": "Espacios de trabajo",
+  "tabs.workspaces": "Asignaturas",
   "tabs.variants": "Variatios",
 
   "acc.ws.delete": "Eliminar «{name}»",
@@ -119,7 +119,7 @@ export const es = {
   "acc.ws.whatGoes": "Desaparecen el temario, el perfil, el banco, las aprobaciones, los accesos de quien entra a esta instancia, los variatios guardados y las sesiones de evaluación.",
   "acc.ws.filesStay": "Los documentos en bruto que subiste se borran también del disco, a menos que quede alguien más con acceso: en ese caso siguen ahí y quien administra la instalación puede volver a importarlos.",
   "acc.ws.deletedMoved": "{slug}. Era el que tenías abierto: ahora estás en «{next}».",
-  "acc.ws.deletedHere": "{slug}. Era el que tenías abierto y tu cuenta no está en ningún otro: el panel te ofrece crear uno.",
+  "acc.ws.deletedHere": "{slug}. Era la que tenías abierta y tu cuenta no está en ninguna otra: el panel te ofrece crear una.",
   "acc.ws.deletedOther": "{slug}. Sigues donde estabas.",
   "action.copy": "Copiar",
   "engine.offline": "El motor de inferencia no responde.",
@@ -386,6 +386,7 @@ export const es = {
   "tutorial.of": "{n} de {total}",
   "tutorial.back": "Atrás",
   "tutorial.next": "Siguiente",
+  "tutorial.railStart": "Empezar",
   "tutorial.start": "Empezar por el Paso 1.1",
   "tutorial.again": "Ver la explicación otra vez",
 
@@ -402,30 +403,31 @@ export const es = {
     "Guiones, transparencias, el libro de la asignatura. De aquí salen los temas y en qué orden se apoyan unos en otros.",
   "tutorial.fig.exercises":
     "Boletines, exámenes de otros años, hojas de problemas, preferentemente resueltos. De aquí sale qué forma tienen tus ejercicios.",
-  "tutorial.fig.phase1": "Dados por buenos",
-  "tutorial.fig.phase2": "Fase 2: pedir ejercicios",
+  "tutorial.fig.youAsk": "Tú le dices",
+  "tutorial.fig.written": "Y te escribe el ejercicio",
   "tutorial.fig.build": "Se construye",
   "tutorial.fig.review": "Lo lees",
   "tutorial.fig.rate": "Lo valoras",
   "tutorial.fig.next": "Sigues o corriges",
-  "tutorial.fig.headerRight": "Arriba a la derecha, en todas las pantallas",
-  "tutorial.fig.headerLeft": "Arriba a la izquierda, en todas las pantallas",
-  "tutorial.fig.workspace": "Tu asignatura",
+  "tutorial.fig.you": "Tu cuenta",
   "tutorial.fig.proposal": "Propuesta {letter}",
 
-  "tutorial.s1.title": "Variatio es una aplicación que genera ejercicios para tu asignatura",
+  "tutorial.s1.title": "Variatio es una aplicación que escribe ejercicios para tu asignatura",
   "tutorial.s1.body":
-    "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de los ejercicios de la asignatura, imitando tu forma de plantearlos.",
+    "Funciona con modelos de inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de los ejercicios de la asignatura, imitando tu forma de plantearlos.",
 
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
     "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar dos cosas que ya tienes, en PDF o en Word, tal y como estén.",
+  // Absorbe lo que era un punto de la última diapositiva: «sube solo un par de temas» y
+  // «cada documento se lee entero» decían lo mismo con cinco diapositivas de por medio, y
+  // el sitio donde sirve de algo es este, justo antes de ir a buscar los archivos.
   "tutorial.s2.aside":
-    "Cada documento se lee entero, página a página, así que preparar la asignatura lleva su rato. No hace falta que te quedes mirando: puedes dejarlo trabajando y volver más tarde.",
+    "Con un par de temas basta para probarlo: cada documento se lee entero, página a página, así que subir la asignatura completa es tenerte esperando sin necesidad. No hace falta que te quedes mirando: puedes dejarlo trabajando y volver más tarde.",
 
-  "tutorial.s3.title": "Fase 1: preparar la asignatura, en cuatro pasos",
+  "tutorial.s3.title": "Fase 1: preparar la asignatura",
   "tutorial.s3.body":
-    "Se hacen en este orden y de una sentada. Son los cuatro botones que llevas arriba en todo momento, con su número delante: la barra te dice en cuál vas y cuál te toca.",
+    "Cuatro pasos, en este orden y de una sentada. Son los cuatro botones que llevas arriba en todo momento, numerados del 1.1 al 1.4: la barra te dice en cuál vas y cuál te toca.",
   "tutorial.s3.step1":
     "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es el único paso en el que tienes que buscar archivos, porque todo lo demás sale de aquí.",
   "tutorial.s3.step2":
@@ -435,54 +437,41 @@ export const es = {
   "tutorial.s3.step4":
     "Se recogen uno a uno los ejercicios de tus documentos y a cada uno se le pone el tema que practica. De ahí salen los ejemplos que se imitan al escribir uno nuevo.",
 
-
-  // LA BISAGRA ENTRE LAS DOS FASES. No describe el mecanismo compartido de las etapas —
-  // eso es el contrato de la diapositiva 7 — sino lo que se ha ganado al terminarlas.
-  "tutorial.s4.title": "Con eso, el sistema ya está preparado",
+  // LA BISAGRA ES LA PRIMERA FRASE DE LA FASE 2, no una diapositiva aparte: «con esto ya
+  // está preparado» seguido de «pedir ejercicios» era el mismo giro contado dos veces.
+  "tutorial.s4.title": "Fase 2: pedir ejercicios",
   "tutorial.s4.body":
-    "Ahí se acaba la preparación. Esos tres pasos que has revisado son todo lo que el sistema necesita saber de tu asignatura, y a partir de ahora puedes pedirle ejercicios nuevos siempre que quieras, sin volver a preparar nada.",
+    "Con esos cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí le pides ejercicios: le dices de qué tipo, sobre qué tema y de qué nivel, y te los escribe. Puedes pedir varios a la vez y quedarte con el que más te guste.",
   "tutorial.s4.b1":
-    "Puedes volver a cualquier paso cuando quieras. Si cambias algo de un paso anterior, se te avisa de qué pasos se han quedado desfasados.",
-
-  "tutorial.s5.title": "Pedir ejercicios",
-  "tutorial.s5.body":
-    "Le dices de qué tema lo quieres, de qué tipo y de qué nivel, y te lo escribe. Puedes pedir varios a la vez y quedarte con el que más te guste.",
-  "tutorial.s5.b1":
     "Si le dices lo que ya has dado en clase, el ejercicio se apoyará solo en eso y no usará nada que todavía no hayas explicado.",
-  "tutorial.s5.b2":
-    "Cada ejercicio que sale se guarda solo en «Mis variatios», con el encargo que lo produjo. No hace falta que lo copies a ningún sitio.",
+  "tutorial.s4.b2":
+    "Cada ejercicio que sale se guarda solo en «Mis variatios», en el menú de tu cuenta, con el encargo que lo produjo. No hace falta que lo copies a ningún sitio.",
+  "tutorial.s4.b3":
+    "Puedes volver a cualquier paso de la fase 1 cuando quieras. Si cambias algo de un paso anterior, se te avisa de qué pasos se han quedado desfasados.",
 
-  "tutorial.s6.title": "Comparar tres versiones, a ciegas",
-  "tutorial.s6.body":
+  "tutorial.s5.title": "Fase 3: comparar tres versiones a ciegas",
+  "tutorial.s5.body":
     "Se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría, y eliges la mejor. Solo al final se revela de dónde salía cada una.",
-  "tutorial.s6.b1":
+  "tutorial.s5.b1":
     "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
-  "tutorial.s6.b2":
+  "tutorial.s5.b2":
     "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
-  "tutorial.s6.aside":
+  "tutorial.s5.aside":
     "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
 
-  // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN. Hasta aquí se ha contado cómo funciona;
-  // esta diapositiva dice que lo que viene es un estudio, enuncia UNA vez el contrato que
-  // gobierna los cuatro pasos, y pone las dos condiciones que hacen que la prueba sea
-  // asumible.
-  "tutorial.s7.title": "Y ahora, evaluar el sistema",
-  "tutorial.s7.body":
+  // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN, y de ahí a la puerta. Eran dos
+  // diapositivas y la segunda decía lo que dice el botón: elige asignatura y empieza.
+  "tutorial.s6.title": "Y ahora, evaluar el sistema",
+  "tutorial.s6.body":
     "Hasta aquí, qué hace y cómo se usa. Lo que se te pide a partir de ahora es que lo montes con una asignatura tuya y digas, paso a paso, qué tal ha salido.",
-  "tutorial.s7.b1":
-    "Cada paso te avisa antes de lo que va a pasar, y no da nada por bueno por su cuenta: al pie tienes siempre dos salidas, «Quiero corregir algo» o continuar al paso siguiente.",
-  "tutorial.s7.b2":
-    "Sube solo un par de temas, no la asignatura entera. Cada documento se lee entero, así que subir cincuenta temas es tenerte esperando sin ninguna necesidad.",
-  "tutorial.s7.b3":
+  "tutorial.s6.b1":
+    "Ningún paso da nada por bueno por su cuenta: primero lo ves, después lo valoras, y al pie tienes siempre dos salidas, corregir algo o continuar al siguiente.",
+  "tutorial.s6.b2":
     "Corrige sin miedo: lo que arregles a mano gana siempre, sobre lo que se entendió y sobre cualquier reconstrucción posterior.",
-  "tutorial.s7.aside":
+  "tutorial.s6.aside":
     "Las preguntas de cada paso son lo único que se te pide a cambio, y son exactamente lo que se está midiendo en el estudio.",
-
-  "tutorial.s8.title": "Elige una asignatura y empieza",
-  "tutorial.s8.body":
-    "Cada espacio de trabajo es una asignatura. Elige arriba a la izquierda con cuál vas a trabajar y empieza por el Paso 1.1; si todavía no tienes ninguno, ahí mismo puedes crearlo.",
-  "tutorial.s8.aside":
-    "En cada pantalla hay un enlace a la guía, y esta explicación la puedes volver a ver desde el menú de tu cuenta.",
+  "tutorial.s6.outro":
+    "Elige tu asignatura arriba a la izquierda y empieza por el Paso 1.1; si todavía no tienes ninguna, ahí mismo puedes crearla. En el menú de tu cuenta, a la derecha, están tus ejercicios, la guía y esta explicación cuando quieras volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
@@ -645,7 +634,7 @@ export const es = {
   "concept.tab.listHint": "Los conceptos agrupados por dominio",
   "concept.tab.graph": "Temario",
   "concept.tab.graphHint": "El temario ordenado por niveles de prerrequisito",
-  "concept.noGraph": "Este espacio de trabajo no tiene temario que mostrar",
+  "concept.noGraph": "Esta asignatura no tiene temario que mostrar",
   "concept.noResults": "Sin resultados",
   "concept.byPrerequisite": "Viene incluido por prerrequisito de lo que ya has elegido",
   "concept.noExemplarsOfType": "Sin ejemplos de este tipo entre tus ejercicios",
@@ -711,11 +700,11 @@ export const es = {
   "generations.whatIsHere": "Qué hay aquí",
   "generations.inBank": "en el banco · {id}",
   "generations.mine": "Mías",
-  "generations.wholeWorkspace": "De todo el espacio de trabajo",
+  "generations.wholeWorkspace": "De toda la asignatura",
   "generations.search": "Buscar en el enunciado, el concepto o las instrucciones",
   "generations.search.placeholder": "Buscar en el enunciado, el concepto o las instrucciones…",
   "generations.noMatch": "Nada coincide con esa búsqueda",
-  "generations.noMatchHint": "Prueba con otro término, o cambia el ámbito a todo el espacio de trabajo.",
+  "generations.noMatchHint": "Prueba con otro término, o cambia el ámbito a toda la asignatura.",
   "generations.emptyHint": "Genera un ejercicio y quedará aquí, con los conceptos y las instrucciones con que lo pediste.",
   "generations.noConcepts": "Sin conceptos declarados",
   "generations.promoteHint": "Añade este ejercicio a los tuyos, con su tema puesto; el Paso 1.4 quedará desfasado hasta que lo vuelvas a dar por bueno.",
@@ -732,14 +721,14 @@ export const es = {
   "maintenance.nothingLost": "Nada se ha perdido: lo construido sigue donde estaba y volverá tal cual.",
   "maintenance.lessThanAMinute": "menos de un minuto",
   "maintenance.days": { one: "1 día", other: "{n} días" },
-  "workspace.none": "Sin espacio de trabajo",
+  "workspace.none": "Sin asignatura",
   "workspace.subjectName": "Nombre de la asignatura",
-  "workspace.name": "Nombre del espacio de trabajo",
+  "workspace.name": "Nombre de la asignatura",
   "workspace.name.placeholder": "Nombre, p. ej. «Álgebra 2026»",
-  "workspace.slug": "Identificador del espacio de trabajo",
-  "workspace.newName": "Nuevo nombre del espacio de trabajo",
+  "workspace.slug": "Identificador de la asignatura",
+  "workspace.newName": "Nuevo nombre de la asignatura",
   "workspace.nameRequired": "Ponle un nombre a la asignatura para poder crearlo.",
-  "workspace.noneYet": "Todavía no tienes ningún espacio de trabajo",
+  "workspace.noneYet": "Todavía no tienes ninguna asignatura",
   "generations.empty": "Todavía no hay variatios guardados",
   "generations.curriculum": "Currículo",
   "generations.instructions": "Instrucciones",
@@ -759,7 +748,7 @@ export const es = {
   "invite.toApp": "Te han invitado a Variatio.",
   "invite.teachOrStudy": "¿Eres estudiante o docente?",
   "invite.language": "Idioma de la interfaz",
-  "invite.languageHint": "Solo cambia lo que lees. El idioma de los prompts lo declara cada espacio de trabajo cuando se crea.",
+  "invite.languageHint": "Solo cambia lo que lees. El idioma de los prompts lo declara cada asignatura cuando se crea.",
   "invite.profileHint": "Decide qué se te preguntará cuando compares ejercicios. No cambia lo que puedes hacer aquí.",
   "menu.profile": "Perfil",
   "menu.savedVariants": "Variatios guardados",
@@ -791,7 +780,7 @@ export const es = {
   "dash.reviewAgain": "Revisar de nuevo",
   "dash.approvedOn": "Aprobado el {when}",
   "dash.goRaw": "Ir a Datos en bruto",
-  "dash.next.import": "Este espacio de trabajo todavía no tiene material",
+  "dash.next.import": "Esta asignatura todavía no tiene material",
   "dash.next.importBody":
     "Sin documentos en bruto no hay nada que construir. Sube los apuntes y los ejercicios ya resueltos, y la cadena podrá empezar.",
   "dash.next.transcribe": {
@@ -805,7 +794,7 @@ export const es = {
   "dash.transcriptionStale": "transcripción caducada",
   "model.notInstalled": "sin instalar",
   "dash.whatIsHere": "Qué se ve aquí",
-  "dash.busyElsewhere": "Nada tuyo en ejecución. Hay un trabajo de otro espacio de trabajo ocupando el motor: si lo que lances necesita ese mismo motor, esperará su turno.",
+  "dash.busyElsewhere": "Nada tuyo en ejecución. Hay un trabajo de otra asignatura ocupando el motor: si lo que lances necesita ese mismo motor, esperará su turno.",
   "dash.nothingRunning": "Nada en ejecución.",
   "dash.nextToStart": "siguiente en arrancar",
   "dash.jobsAhead": { one: "1 trabajo delante", other: "{n} trabajos delante" },
@@ -914,10 +903,10 @@ export const es = {
   "acc.openSessions": { one: "1 sesión", other: "{n} sesiones" },
   "ws.files": { one: "1 fichero", other: "{n} ficheros" },
   "ws.renameNamed": "Renombrar «{name}»",
-  "ws.createOne": "Crear un espacio de trabajo",
+  "ws.createOne": "Crear una asignatura",
   "ws.enter": "Entrar",
   "ws.slugUnchanged": "El identificador «{slug}» no cambia.",
-  "noWorkspace.createMine": "Crear mi espacio de trabajo",
+  "noWorkspace.createMine": "Crear mi asignatura",
   "noWorkspace.bodyA": "Una asignatura es todo lo suyo: sus documentos, su temario, sus tipos de ejercicio y sus ejercicios. Entraste como",
   "noWorkspace.bodyB": "; crea el tuyo ahora o espera a que te den acceso a uno existente.",
   "sessions.selected": { one: "1 seleccionada", other: "{n} seleccionadas" },
@@ -1039,7 +1028,7 @@ export const es = {
   "invite.visibleName": "Nombre visible",
   "account.identity.name": "Nombre",
   "account.identity.usernameLocked": "No se puede cambiar: es lo que identifica todo lo que has hecho.",
-  "account.identity.nameHelp": "Como apareces para el resto en este espacio de trabajo.",
+  "account.identity.nameHelp": "Como apareces para el resto en esta asignatura.",
   "bank.tagLive.title": "Ejercicios que se van etiquetando",
   "bank.tagLive.empty": "Todavía no ha salido ninguna decisión. Aparecerán aquí en cuanto el etiquetador termine con el primer ejercicio.",
   "bank.column.modality": "tipo",
@@ -1061,9 +1050,9 @@ export const es = {
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
   "generate.reopened": "Parte del encargo anterior. Los variatios de abajo ya están guardados: la nueva tanda los sustituye en pantalla, no en «Mis variatios».",
   "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada variatio validado se guarda solo en «Mis variatios».",
-  "workspace.switcher.label": "Espacio de trabajo",
-  "workspace.switcher.choose": "Elegir espacio de trabajo",
-  "workspace.switcher.current": "Espacio de trabajo: {name}",
+  "workspace.switcher.label": "Asignatura",
+  "workspace.switcher.choose": "Elegir asignatura",
+  "workspace.switcher.current": "Asignatura: {name}",
   "workspace.adminBadge": "admin",
   "workspace.startsEmpty": "Empieza vacía: subes sus apuntes y sus ejercicios y das los cuatro pasos.",
 
@@ -1072,14 +1061,14 @@ export const es = {
   "admin.notAdmin.body": "Esta pantalla es del administrador de la instalación. Tu cuenta no lo es.",
   "admin.title": "Administración",
   "admin.whatIsThis": "Qué es esto",
-  "admin.whatIsThis.body": "La instalación entera vista desde fuera: quién la usa, quién puede entrar y en qué, cuántos espacios de trabajo hay, qué hace la máquina y cómo va el estudio de evaluación. Es la única pantalla que cruza cuentas, y el único sitio desde el que se dan accesos.",
+  "admin.whatIsThis.body": "La instalación entera vista desde fuera: quién la usa, quién puede entrar y en qué, cuántas asignaturas hay, qué hace la máquina y cómo va el estudio de evaluación. Es la única pantalla que cruza cuentas, y el único sitio desde el que se dan accesos.",
   "admin.tab.study": "Evaluaciones",
   "admin.tab.accounts": "Cuentas y accesos",
-  "admin.tab.workspaces": "Espacios de trabajo",
+  "admin.tab.workspaces": "Asignaturas",
   "admin.tab.engine": "Motor",
   "admin.tab.config": "Configuración",
   "admin.stat.accounts": "Cuentas",
-  "admin.stat.workspaces": "Espacios de trabajo",
+  "admin.stat.workspaces": "Asignaturas",
   "admin.stat.generations": "Variatios generados",
   "admin.stat.comparisons": "Comparaciones",
   "admin.stat.decided": "{n} con elección registrada",
@@ -1169,7 +1158,7 @@ export const es = {
   "acc.badge.locked": "login bloqueado",
   "acc.lockedSeconds": "{n} s",
   "acc.fullAccess": "acceso total (administración)",
-  "acc.noAccess": "sin acceso a ninguno",
+  "acc.noAccess": "sin acceso a ninguna",
   "acc.decidedShort": "({n} dec.)",
   "acc.seeSessions": "Ver sus sesiones",
   "acc.reactivate": "Reactivar",
@@ -1188,9 +1177,9 @@ export const es = {
   "acc.removeAdmin": "Quitar administración",
   "acc.makeAdmin": "Hacer administrador",
   "acc.confirmMakeAdmin":
-    "¿Hacer administrador a «{username}»?\n\nEntrará en todos los espacios de trabajo sin ser miembro, verá este panel y podrá dar accesos y borrar instancias.",
+    "¿Hacer administrador a «{username}»?\n\nEntrará en todas las asignaturas sin ser miembro, verá este panel y podrá dar accesos y borrar instancias.",
   "acc.confirmRemoveAdmin":
-    "¿Quitar la administración a «{username}»?\n\nDeja de entrar en todos los espacios de trabajo y de ver este panel; conserva los accesos que tenga como miembro.",
+    "¿Quitar la administración a «{username}»?\n\nDeja de entrar en todas las asignaturas y de ver este panel; conserva los accesos que tenga como miembro.",
   "acc.resetDisabled": "Reactívala antes: una cuenta desactivada no puede restablecer nada",
   "acc.resetHint": "Genera un enlace de un solo uso para que fije una contraseña nueva",
   "acc.resetLink": "Enlace de restablecimiento",
@@ -1203,32 +1192,32 @@ export const es = {
   "acc.profileHint": "Qué cambia",
   "acc.profileHint.body": "Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el estudio sus respuestas. No da ni quita ningún permiso. Sin especificar se le hacen las preguntas de docente, y el reparto de comparaciones lo marca para que no se quede así.",
   "acc.resetCopy": "Pásaselo tú. Vale {minutes} minutos y una sola vez; quien lo abra fija la contraseña nueva de «{username}», así que no lo dejes en un sitio compartido.",
-  "acc.adminNoMemberships": "Esta cuenta administra la instalación: entra en todos los espacios de trabajo sin ser miembro de ninguno, así que no hay accesos que darle.",
+  "acc.adminNoMemberships": "Esta cuenta administra la instalación: entra en todas las asignaturas sin ser miembro de ninguna, así que no hay accesos que darle.",
   "acc.alsoMemberOf": "Consta además como miembro de",
-  "acc.noMemberships": "Esta cuenta no es miembro de ningún espacio de trabajo. Entra igual: el panel le ofrece crear la suya, y aquí puedes darle acceso a una que ya exista.",
-  "acc.revokeWorkspace": "Quitar el acceso a este espacio de trabajo",
+  "acc.noMemberships": "Esta cuenta no es miembro de ninguna asignatura. Entra igual: el panel le ofrece crear la suya, y aquí puedes darle acceso a una que ya exista.",
+  "acc.revokeWorkspace": "Quitar el acceso a esta asignatura",
   "acc.grantAccessTo": "Dar acceso a",
   "acc.permission": "Permiso",
   "acc.grant": "Conceder",
   "acc.invite": "Invitar a alguien",
   "acc.invite.hintLabel": "Cómo se entra aquí",
   "acc.invite.hint": "No hay registro abierto: una cuenta existe porque alguien abrió una invitación de un solo uso, o porque se creó desde la línea de órdenes. Quitar el registro público es lo que quita de en medio el mayor blanco de un login web.",
-  "acc.invite.workspace": "Espacio de trabajo",
-  "acc.invite.noWorkspace": "Ninguno (solo crear la cuenta)",
+  "acc.invite.workspace": "Asignatura",
+  "acc.invite.noWorkspace": "Ninguna (solo crear la cuenta)",
   "acc.invite.create": "Crear enlace",
   "acc.invite.noAccessHint": "Entrará sin acceso a ninguna instancia; se lo das después desde la tabla.",
   "acc.invite.copy": "Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio usuario, así que no lo dejes en un sitio compartido.",
   "acc.invite.linkOf": "Enlace del {date}",
   "acc.invite.createdBy": " · lo creó {name}",
-  "acc.invite.noWorkspaceShort": "sin espacio de trabajo",
+  "acc.invite.noWorkspaceShort": "sin asignatura",
   "acc.invite.expires": " · caduca el {date}",
   "acc.invite.revoke": "Anular",
   "acc.copied": "Copiado",
   "acc.copy": "Copiar",
-  "ws.heading": "Espacios de trabajo ({n}) · {size} en disco",
+  "ws.heading": "Asignaturas ({n}) · {size} en disco",
   "ws.diskHint": "Qué pesa cada parte",
   "ws.diskHint.body": "«Bruto» son los documentos subidos, lo único que no se reconstruye con una GPU y un rato. «Instancia» son los artefactos y su contexto. «Caché» son las derivaciones —vectores, markdown convertido, descripciones— y «historial» las copias que guarda cada edición junto con los registros de ejecución.",
-  "ws.col.workspace": "Espacio de trabajo",
+  "ws.col.workspace": "Asignatura",
   "ws.disk.raw": "bruto",
   "ws.disk.instance": "instancia",
   "ws.disk.cache": "caché",
@@ -1240,10 +1229,10 @@ export const es = {
   "ws.col.disk": "Disco",
   "ws.col.created": "Creado",
   "ws.inMemory": "· en memoria",
-  "ws.deleteTitle": "Eliminar el espacio de trabajo y sus ficheros",
-  "ws.deleted": "Espacio de trabajo eliminado",
+  "ws.deleteTitle": "Eliminar la asignatura y sus ficheros",
+  "ws.deleted": "Asignatura eliminada",
   "ws.deletedMoved": "{slug}, con su árbol de ficheros. Era el que tenías abierto: ahora estás en «{next}».",
-  "ws.deletedHere": "{slug}, con su árbol de ficheros. Era el que tenías abierto y tu cuenta no está en ningún otro: el panel te ofrece crear uno.",
+  "ws.deletedHere": "{slug}, con su árbol de ficheros. Era la que tenías abierta y tu cuenta no está en ninguna otra: el panel te ofrece crear una.",
   "ws.deletedOther": "{slug}, con su árbol de ficheros.",
   "ws.deleteFailed": "No se ha podido eliminar",
   "ws.clearConfirm": "¿Vaciar la caché regenerable de {slug}?\n\nSe borran los vectores y el markdown convertido; el próximo trabajo los vuelve a calcular (minutos). Las descripciones de conceptos y el anclaje al corpus se quedan.",
@@ -1270,7 +1259,7 @@ export const es = {
   "ws.cachesAccess": "sus cachés, sus accesos y sus aprobaciones",
   "ws.itsVariants": { one: "su {n} y sus comparaciones", other: "sus {n} y sus comparaciones" },
   "ws.itsComparisons": "sus comparaciones de evaluación, si las hubiera",
-  "ws.hereNow": "Es el que tienes abierto ahora mismo. Al borrarlo, esta pestaña se mueve sola a otro de tus accesos; si no te queda ninguno, la aplicación te ofrece crear uno.",
+  "ws.hereNow": "Es la que tienes abierta ahora mismo. Al borrarla, esta pestaña se mueve sola a otro de tus accesos; si no te queda ninguna, la aplicación te ofrece crear una.",
   "ws.typeToConfirm": "Escribe ",
   "ws.typeToConfirm.tail": " para confirmar",
   "maint.closed": "La instalación está cerrada",
@@ -1393,7 +1382,7 @@ export const es = {
   "eval.waitingTurn": "Empezará en cuanto le toque el turno.",
   "eval.nextInQueue": "Siguiente de la cola ({pending})",
   "sets.change": "Cambiar",
-  "sets.noWorkspaces": "«{username}» no es miembro de ningún espacio de trabajo todavía. Dale acceso en «Cuentas y accesos» antes de asignarle nada.",
+  "sets.noWorkspaces": "«{username}» no es miembro de ninguna asignatura todavía. Dale acceso en «Cuentas y accesos» antes de asignarle nada.",
   "sets.assignAria": "Asignar la comparación de {concepts}",
   "sets.noConcepts": "sin conceptos",
   "sets.withReasoning": " · con razonamiento",
@@ -1410,16 +1399,16 @@ export const es = {
   "sets.noAccountData": "Sin datos de cuentas.",
   "sets.noAccounts": "No hay cuentas activas a las que asignar. Crea alguna en «Cuentas y accesos».",
   "sets.step1": "¿A quién se la asignas?",
-  "sets.step2": "¿En cuál de sus espacios de trabajo?",
+  "sets.step2": "¿En cuál de sus asignaturas?",
   "sets.step3": "¿Cuáles?",
-  "sets.noneYet": "Este espacio de trabajo todavía no tiene comparaciones. Encarga unas cuantas abajo y reparte las que quieras: las que no asignes se quedan guardadas.",
+  "sets.noneYet": "Esta asignatura todavía no tiene comparaciones. Encarga unas cuantas abajo y reparte las que quieras: las que no asignes se quedan guardadas.",
   "sets.assignTo": "Asignar {n} a {username}",
   "sets.commissionMore": "Encargar más comparaciones",
   "sets.sameExercises": "Recibirá los mismos ejercicios con un orden propio.",
   "sets.searchAccounts": "Buscar por nombre o usuario",
   "sets.noAccountMatches": "Ninguna cuenta coincide con «{query}».",
   "sets.notReady": "Falta aprobar {stages} para poder encargar aquí.",
-  "sets.notReadyUnknown": "Este espacio de trabajo todavía no tiene la cadena aprobada.",
+  "sets.notReadyUnknown": "Esta asignatura todavía no tiene la cadena aprobada.",
   "sets.composeHint": "Cada comparación son tres propuestas del mismo encargo. Se preparan una detrás de otra en la cola, y las que no repartas se quedan guardadas para otra persona.",
   "sets.howMany": "¿Cuántas comparaciones?",
   "sets.oneSession": "una sesión, tres propuestas",
@@ -1434,8 +1423,8 @@ export const es = {
   "adminStudy.results.eyebrow": "Resultados",
   "adminStudy.results.title": "Lo que ya se ha evaluado",
   "adminStudy.results.description": "Solo lectura. El filtro acota lo que muestran las tarjetas y lo que descarga el CSV; no cambia nada de lo repartido.",
-  "adminStudy.filterByWorkspace": "Filtrar el estudio por espacio de trabajo",
-  "adminStudy.allWorkspaces": "Todos los espacios de trabajo",
+  "adminStudy.filterByWorkspace": "Filtrar el estudio por asignatura",
+  "adminStudy.allWorkspaces": "Todas las asignaturas",
   "adminStudy.clearAccountFilter": "Quitar el filtro de cuenta",
   "adminStudy.sessionsInFilter": { one: "1 sesión en el filtro", other: "{n} sesiones en el filtro" },
   "adminStudy.wouldUse": "{pct} la usarían",
@@ -1451,11 +1440,11 @@ export const es = {
   "adminStudy.card.think": "¿Aporta algo el razonamiento previo?",
   "adminStudy.card.byProfile": "Por perfil",
   "adminStudy.card.byAccount": "Por cuenta",
-  "adminStudy.card.byWorkspace": "Por espacio de trabajo",
+  "adminStudy.card.byWorkspace": "Por asignatura",
   "adminStudy.card.sessions": "Sesiones ({n})",
   "adminStudy.col.profile": "Perfil",
   "adminStudy.col.evaluator": "Evaluador",
-  "adminStudy.col.workspace": "Espacio de trabajo",
+  "adminStudy.col.workspace": "Asignatura",
   "adminStudy.noTriage": "Todavía sin respuestas de triaje. Se recogen a ciegas, una por tarjeta, antes de elegir.",
   "adminStudy.triageDetail": "{arm} · {yes} tal cual, {partly} con retoques, {no} no",
   "adminStudy.agreement": "Acuerdo entre evaluadores",
@@ -1562,8 +1551,8 @@ export const es = {
   "kg.newConcept.description": "Se añadirá al temario y podrá usarse ya para clasificar y para pedir ejercicios.",
   "kg.editError": "Error al editar el temario",
   "kg.outlineHeader": "Temario · {concepts} · {taggable} sirven de etiqueta",
-  "kg.search": "Buscar concepto o descripción",
-  "kg.searchPlaceholder": "Buscar concepto o descripción…",
+  "kg.search": "Buscar concepto",
+  "kg.searchPlaceholder": "Buscar concepto",
   "kg.newUnitTitle": "Nueva unidad",
   "kg.renameUnitTitle": "Renombrar la unidad",
   "kg.unitName": "Nombre de la unidad",
@@ -1813,8 +1802,8 @@ export const es = {
 
   // GENERATE FORM -----------------------------------------------------------------------
   "form.curriculum.none": "Sin restricción de currículo",
-  "form.curriculum.workspace": "Currículo del espacio de trabajo",
-  "form.curriculum.workspaceN": "Currículo del espacio de trabajo ({n} conceptos)",
+  "form.curriculum.workspace": "Currículo de la asignatura",
+  "form.curriculum.workspaceN": "Currículo de la asignatura ({n} conceptos)",
   "form.curriculum.ofN": "Currículo de {n} conceptos",
   "form.curriculum.noneChosen": "Sin conceptos elegidos todavía",
   "form.summary.noConcepts": "sin conceptos",
@@ -2008,8 +1997,8 @@ export const es = {
   "eng.pull.failed": "falló",
   "eng.ctx.title": "Contextos en memoria",
   "eng.ctx.hintLabel": "Qué es un contexto",
-  "eng.ctx.hint": "El índice de conceptos y el banco de un espacio de trabajo, embebidos y listos para etiquetar o generar. Construirlo cuesta minutos, así que el proceso guarda hasta ocho. Invalidar uno obliga al próximo trabajo a reconstruirlo desde los ficheros: es lo que se hace cuando algo parece rancio.",
-  "eng.ctx.none": "Ninguno: el próximo trabajo de cada espacio de trabajo construirá el suyo.",
+  "eng.ctx.hint": "El índice de conceptos y el banco de una asignatura, embebidos y listos para etiquetar o generar. Construirlo cuesta minutos, así que el proceso guarda hasta ocho. Invalidar uno obliga al próximo trabajo a reconstruirlo desde los ficheros: es lo que se hace cuando algo parece rancio.",
+  "eng.ctx.none": "Ninguno: el próximo trabajo de cada asignatura construirá el suyo.",
   "eng.ctx.count": "{n} de 8 como máximo",
   "eng.ctx.invalidateOne": "Invalidar este contexto",
   "eng.ctx.invalidated": "Contexto invalidado",
@@ -2032,10 +2021,10 @@ export const es = {
   "eng.queue.cancelFailed": "No se ha podido cancelar",
   "eng.queue.title": "Cola de la GPU ({n})",
   "eng.queue.hintLabel": "Cómo funciona la cola",
-  "eng.queue.hint": "La cola es por motor, no una sola: dos trabajos que se pelean por la misma máquina esperan uno al otro, y uno local y otro remoto corren a la vez. Lo que se pide mientras un motor está ocupado —construir, generar, evaluar, de cualquier espacio de trabajo— se apila por orden de llegada en ese motor. Cada persona ve desde su instancia solo lo suyo; aquí se ve la fila entera y se puede sacar a cualquiera de ella.",
+  "eng.queue.hint": "La cola es por motor, no una sola: dos trabajos que se pelean por la misma máquina esperan uno al otro, y uno local y otro remoto corren a la vez. Lo que se pide mientras un motor está ocupado —construir, generar, evaluar, de cualquier asignatura— se apila por orden de llegada en ese motor. Cada persona ve desde su instancia solo lo suyo; aquí se ve la fila entera y se puede sacar a cualquiera de ella.",
   "eng.queue.empty": "Nada en ejecución ni en espera.",
   "eng.queue.col.job": "Trabajo",
-  "eng.queue.col.workspace": "Espacio de trabajo",
+  "eng.queue.col.workspace": "Asignatura",
   "eng.queue.col.askedBy": "Pedido por",
   "eng.queue.col.asked": "Pedido",
   "eng.queue.col.state": "Estado",
@@ -2043,7 +2032,7 @@ export const es = {
   "eng.queue.removeShort": "Quitar",
   "eng.hist.title": "Trabajos terminados ({n})",
   "eng.hist.hintLabel": "De dónde sale",
-  "eng.hist.hint": "Lo que la cola ha ejecutado desde que arrancó la API, de todos los espacios de trabajo. Vive en memoria: reiniciar la API lo vacía. El detalle de cada uno está en el registro de ejecución de su espacio de trabajo.",
+  "eng.hist.hint": "Lo que la cola ha ejecutado desde que arrancó la API, de todas las asignaturas. Vive en memoria: reiniciar la API lo vacía. El detalle de cada uno está en el registro de ejecución de su asignatura.",
   "eng.hist.empty": "Ninguno desde que arrancó la API.",
   "eng.hist.col.finished": "Terminó",
   "eng.hist.col.elapsed": "Duró",
@@ -2144,7 +2133,7 @@ export const es = {
   "guide.group.use": "Usarla",
   "guide.group.daily": "Día a día",
   "guide.sec.start": "Qué es y cómo se recorre",
-  "guide.sec.workspace": "El espacio de trabajo y la asignatura",
+  "guide.sec.workspace": "Cada asignatura, por separado",
   // El índice de la guía nombra los pasos como los nombra la barra: una guía que llama a
   // las cosas de otra manera que la pantalla es una guía sobre otro programa.
   "guide.sec.raw": "Paso 1.1 · Apuntes y ejercicios",

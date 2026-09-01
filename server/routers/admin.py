@@ -201,7 +201,7 @@ def create_invite(
     if body.workspace:
         workspace = repository.get_workspace(db, body.workspace)
         if workspace is None:
-            raise HTTPException(404, f"No existe el espacio de trabajo '{body.workspace}'.")
+            raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
     token = auth.new_token()
     invite = identity.create_invite(
@@ -240,7 +240,7 @@ def grant_membership(
         raise HTTPException(404, "Esa cuenta no existe.")
     workspace = repository.get_workspace(db, body.workspace)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{body.workspace}'.")
+        raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
     identity.grant(db, workspace.id, user.id, body.role)
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
@@ -270,7 +270,7 @@ def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db))
     """Take one account's access to one instance away."""
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     identity.revoke_membership(db, workspace.id, user_id)
     return {"user_id": user_id, "workspace": slug}
 
@@ -296,10 +296,10 @@ def rename_workspace(slug: str, body: RenameBody, db: DbSession = Depends(auth.d
     """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     workspace.name = body.name.strip()
     db.flush()
-    logger.info(f"[admin] Espacio de trabajo '{slug}' renombrado a «{workspace.name}»")
+    logger.info(f"[admin] Asignatura '{slug}' renombrada a «{workspace.name}»")
     return {"slug": slug, "name": workspace.name}
 
 
@@ -321,7 +321,7 @@ def delete_workspace(
     """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     ws = settings.workspace_for(slug)
     # Tree before row: this way a failure leaves the row standing and the call retryable,
     # where the other order strands files nobody is on record as owning.
@@ -365,7 +365,7 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'.")
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     if artifact in runtime.runner.building_artifacts(slug):
         raise HTTPException(
             409, "Ese artefacto se está construyendo ahora mismo; cancela el trabajo antes."
@@ -386,11 +386,11 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     the workspace has work running or waiting, because that work reads these files.
     """
     if repository.get_workspace(db, slug) is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     # Every run of this workspace, on either lane: `current()` alone would miss the one on
     # the second lane whenever somebody else's older job holds the first.
     if runtime.runner.running(slug) or runtime.runner.pending(slug):
-        raise HTTPException(409, "Ese espacio de trabajo tiene trabajo en curso o en cola; espera o cancélalo.")
+        raise HTTPException(409, "Esa asignatura tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = settings.workspace_for(slug)
     result = settings.clear_cache(ws)
     deps.invalidate(slug, "caché vaciada desde administración")
@@ -406,7 +406,7 @@ def export_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
-        raise HTTPException(404, f"No existe el espacio de trabajo '{slug}'.")
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     ws = settings.workspace_for(slug)
     files = {
         "knowledge_graph": ws.kg_path,

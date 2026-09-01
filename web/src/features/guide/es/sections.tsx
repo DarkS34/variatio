@@ -6,7 +6,14 @@ import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
-import { GENERATE_PHASE, STEPS, nextStepOf, stepNumber, stepNumberOf } from "@/lib/steps";
+import {
+  COMPARE_PHASE,
+  GENERATE_PHASE,
+  STEPS,
+  nextStepOf,
+  stepNumber,
+  stepNumberOf,
+} from "@/lib/steps";
 import { useT, type Translate } from "@/lib/i18n";
 import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
@@ -105,7 +112,7 @@ function Start() {
           ))}
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
           <Pill icon={Play} label={t("nav.create")} n={GENERATE_PHASE} />
-          <Pill icon={Scale} label={t("nav.compare")} tone="study" />
+          <Pill icon={Scale} label={t("nav.compare")} n={COMPARE_PHASE} tone="study" />
         </div>
         <Paragraph>
           Es exactamente la barra de arriba, y los números dicen de qué van: los cuatro
@@ -117,9 +124,9 @@ function Start() {
         <Paragraph>
           <strong>«{t("nav.create")}» es la fase {GENERATE_PHASE}</strong>, y por eso lleva
           número: es aquello para lo que existen los otros cuatro, no un extra al margen del
-          recorrido. Se abre cuando la fase 1 está terminada. «{t("nav.compare")}»,
-          en cambio, no está numerado: no produce material para tu asignatura, sirve para
-          medir el sistema.
+          recorrido. Se abre cuando la fase 1 está terminada. «{t("nav.compare")}» es la{" "}
+          <strong>fase {COMPARE_PHASE}</strong>, y va aparte en color: no produce material
+          para tu asignatura, sirve para medir el sistema.
         </Paragraph>
       </Block>
 
@@ -157,9 +164,9 @@ function Start() {
         <Steps
           items={[
             <>
-              Ponte en un <strong>espacio de trabajo</strong>. Si aún no tienes ninguno, se te
-              ofrece crear el tuyo nada más entrar; si tienes varios, se cambia en el selector
-              de arriba a la izquierda. Todo lo demás vive dentro de uno.
+              Ponte en una <strong>asignatura</strong>. Si aún no tienes ninguna, se te
+              ofrece crear la tuya nada más entrar; si tienes varias, se cambia en el selector
+              de arriba a la izquierda. Todo lo demás vive dentro de una.
             </>,
             <>
               <strong>Paso {stepNumber(0)}</strong> — en «{t("nav.step.raw")}» sube los apuntes
@@ -235,45 +242,45 @@ function Workspace() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.workspace")}>
         <p>
-          Un <strong>espacio de trabajo</strong> es una asignatura entera: sus documentos, los
-          cuatro pasos del recorrido y todo lo que se ha generado con ella. Dos asignaturas son
-          dos espacios de trabajo. Dos formatos de ejercicio muy distintos para la misma
-          asignatura, también.
+          Una <strong>asignatura</strong> se prepara entera y por separado: sus documentos, los
+          cuatro pasos del recorrido y todo lo que se ha generado con ella. Nada cruza de una a
+          otra. Si un mismo temario se da con dos formatos de ejercicio muy distintos, también
+          son dos.
         </p>
       </SectionHead>
 
       <Facts
         items={[
           { label: "Dónde se cambia", value: "El selector de arriba a la izquierda, junto a la marca." },
-          { label: "Quién puede crear uno", value: "Cualquier cuenta, y queda como su propietaria." },
-          { label: "Si no tienes ninguno", value: "Se te ofrece crearlo nada más entrar. No hay ninguno por defecto." },
-          { label: "Qué se lleva al cambiar", value: "Nada. Cada espacio de trabajo tiene lo suyo, incluida su caché." },
+          { label: "Quién puede crear una", value: "Cualquier cuenta, y queda como su propietaria." },
+          { label: "Si no tienes ninguna", value: "Se te ofrece crearla nada más entrar. No hay ninguna por defecto." },
+          { label: "Qué se lleva al cambiar", value: "Nada. Cada asignatura tiene lo suyo, incluida su caché." },
           {
-            label: "Qué se decide al crearlo",
+            label: "Qué se decide al crearla",
             value: "El idioma de los prompts. Después ya no se puede cambiar.",
           },
         ]}
       />
 
-      <Block title="Entrar sin ninguno es normal">
+      <Block title="Entrar sin ninguna es normal">
         <Paragraph>
-          No hay un espacio de trabajo inicial en el que caiga quien no tiene otro: una cuenta recién
+          No hay una asignatura inicial en la que caiga quien no tiene otra: una cuenta recién
           creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra la
-          oferta de crear el suyo. Basta con el nombre de la
-          asignatura. Las dos salidas son igual de válidas: créalo tú y serás su propietario, o
-          espera a que quien administra te dé acceso a uno que ya existe.
+          oferta de crear la suya. Basta con su nombre. Las dos salidas son igual de válidas:
+          créala tú y serás su propietario, o espera a que quien administra te dé acceso a una
+          que ya existe.
         </Paragraph>
         <Paragraph>
           Mientras tanto la aplicación no se queda bloqueada: esta guía, «{t("account.title")}» y
-          —si administras la instalación— «{t("admin.title")}» funcionan sin ningún espacio de
-          trabajo. Lo que espera es todo lo que lee una instancia: los cuatro pasos, «
+          —si administras la instalación— «{t("admin.title")}» funcionan sin ninguna
+          asignatura. Lo que espera es todo lo que lee una instancia: los cuatro pasos, «
           {t("nav.create")}» y «{t("nav.compare")}».
         </Paragraph>
       </Block>
 
-      <Block title="El idioma de los prompts se elige al crearlo">
+      <Block title="El idioma de los prompts se elige al crear la asignatura">
         <Paragraph>
-          Al crear un espacio de trabajo eliges en qué idioma se le habla al modelo durante toda la
+          Al crear una asignatura eliges en qué idioma se le habla al modelo durante toda la
           construcción de esa instancia. <strong>No se puede cambiar después</strong>, y no es
           una restricción caprichosa: las etiquetas de las relaciones se escriben dentro del
           propio temario y el cargador indexa por ellas, así que el idioma queda cocido en los
@@ -287,11 +294,11 @@ function Workspace() {
         </Paragraph>
       </Block>
 
-      <Block title="Una pestaña, un espacio de trabajo">
+      <Block title="Una pestaña, una asignatura">
         <Paragraph>
-          El espacio de trabajo activo se guarda en tu cuenta y sobrevive a cerrar sesión; el que estás{" "}
-          <em>mirando</em> lo guarda la pestaña. Puedes tener dos asignaturas abiertas en dos
-          pestañas del mismo navegador sin que se pisen. Al cambiar de espacio de trabajo la pantalla se
+          La asignatura activa se guarda en tu cuenta y sobrevive a cerrar sesión; la que estás{" "}
+          <em>mirando</em> la guarda la pestaña. Puedes tener dos asignaturas abiertas en dos
+          pestañas del mismo navegador sin que se pisen. Al cambiar de asignatura la pantalla se
           vacía de lo que estabas viendo: los trabajos y el progreso pertenecen a la instancia
           que dejas.
         </Paragraph>
@@ -303,7 +310,7 @@ function Workspace() {
           convenciones— y entra en <em>todas</em> las llamadas al modelo. No se escribe a mano:
           lo sintetizan la construcción del temario y la de los tipos de ejercicio, cada una con
           lo que sabe de la asignatura. Se lee en «{t("account.title")} → {t("tabs.workspaces")}»,
-          debajo de cada espacio de trabajo, con los tres datos sueltos que van al lado del
+          debajo de cada una, con los tres datos sueltos que van al lado del
           párrafo — {t("context.fact.subject").toLowerCase()},{" "}
           {t("context.fact.level").toLowerCase()} e {t("context.fact.language").toLowerCase()}—,
           que se leen por separado y dicen lo mismo que él.
@@ -1620,8 +1627,8 @@ function Runs() {
         />
         <Paragraph>
           El <strong>registro técnico no se ve en la aplicación</strong>: cada línea que escribe
-          la tubería se guarda en el servidor, en <code>logs/</code> y dentro en la carpeta del
-          espacio de trabajo. Es material para leer junto a una traza, no para mirar mientras trabajas, y
+          la tubería se guarda en el servidor, en <code>logs/</code> y dentro en la carpeta de la
+          asignatura. Es material para leer junto a una traza, no para mirar mientras trabajas, y
           es lo que se pide cuando algo falla.
         </Paragraph>
         <Paragraph>
@@ -1701,12 +1708,12 @@ function Account() {
           {
             key: "workspaces",
             head: t("tabs.workspaces"),
-            body: "En qué espacios de trabajo estás y con qué papel, y desde cuál entrar a otro. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellos es eliminar uno tuyo — de los que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearlo y solo lo cambia quien administra.",
+            body: "En qué asignaturas estás y con qué papel, y desde cuál entrar a otra. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellas es eliminar una tuya — de las que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearla y solo lo cambia quien administra.",
           },
           {
             key: "variantes",
             head: t("tabs.variants"),
-            body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de todo el espacio de trabajo, relanzar «más como esta» y borrar.",
+            body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de toda la asignatura, relanzar «más como esta» y borrar.",
           },
         ]}
       />
@@ -1729,7 +1736,7 @@ function Account() {
               {
                 key: "prompts",
                 head: "El de los prompts",
-                body: "En el que se le HABLA AL MODELO. Vive en el espacio de trabajo, se elige al crearlo y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
+                body: "En el que se le HABLA AL MODELO. Vive en la asignatura, se elige al crearla y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
               },
               {
                 key: "material",
@@ -1784,9 +1791,9 @@ function Account() {
           quieras, o la que te sugiera tu gestor— y dices si das clase o si estudias.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya un espacio de trabajo y un papel dentro de él, o no traer ninguno:
-          en ese caso entras igual y se te ofrece crear el tuyo. Una cuenta sin espacio de trabajo
-          es una cuenta normal, no una cuenta a medio hacer.
+          La invitación puede traer ya una asignatura y un papel dentro de ella, o no traer
+          ninguna: en ese caso entras igual y se te ofrece crear la tuya. Una cuenta sin
+          asignatura es una cuenta normal, no una cuenta a medio hacer.
         </Paragraph>
       </Block>
 
@@ -1857,9 +1864,9 @@ function Admin() {
           clase o si estudia.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya un espacio de trabajo y un permiso dentro de él, o no traer
-          ninguno. Los accesos se dan y se quitan después, cuenta por cuenta y espacio de trabajo por
-          espacio de trabajo, desde esta misma tabla; son tres:
+          La invitación puede traer ya una asignatura y un permiso dentro de ella, o no traer
+          ninguna. Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por
+          asignatura, desde esta misma tabla; son tres:
         </Paragraph>
         <Rows
           items={[
@@ -1874,7 +1881,7 @@ function Admin() {
             {
               key: "admin",
               head: <>«{t("acc.makeAdmin")}»</>,
-              body: "Quien administra entra en todos los espacios de trabajo sin ser miembro de ninguno. No se puede quitar a uno mismo: es lo que impide que la instalación se quede sin nadie que la administre.",
+              body: "Quien administra entra en todas las asignaturas sin ser miembro de ninguna. No se puede quitar a uno mismo: es lo que impide que la instalación se quede sin nadie que la administre.",
             },
             {
               key: "reset",
@@ -1943,7 +1950,7 @@ function Admin() {
             {
               key: "borrar",
               head: "Borrar",
-              body: "Borrar un espacio de trabajo desde aquí se lleva también su árbol de ficheros del disco, los documentos en bruto incluidos. El diálogo enumera lo que desaparece y hay que escribir el identificador de la instancia para confirmarlo. Sobre el único espacio de trabajo que quede no se ofrece.",
+              body: "Borrar una asignatura desde aquí se lleva también su árbol de ficheros del disco, los documentos en bruto incluidos. El diálogo enumera lo que desaparece y hay que escribir el identificador de la instancia para confirmarlo. Sobre la única asignatura que quede no se ofrece.",
             },
           ]}
         />
@@ -1989,8 +1996,8 @@ function Admin() {
               head: t("eng.half.process"),
               body: (
                 <>
-                  {t("eng.half.processNote")}. La cola entera de la instalación, de todos los
-                  espacios de trabajo: lo que se está ejecutando, lo que espera y de quién es cada cosa.
+                  {t("eng.half.processNote")}. La cola entera de la instalación, de todas las
+                  asignaturas: lo que se está ejecutando, lo que espera y de quién es cada cosa.
                 </>
               ),
             },

@@ -6,7 +6,14 @@ import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
-import { GENERATE_PHASE, STEPS, stepNumber, stepStates, type StepState } from "@/lib/steps";
+import {
+  COMPARE_PHASE,
+  GENERATE_PHASE,
+  STEPS,
+  stepNumber,
+  stepStates,
+  type StepState,
+} from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useHasWorkspace } from "@/state/auth";
@@ -189,7 +196,7 @@ function UsePill({
   icon: typeof Play;
   active: boolean;
   study?: boolean;
-  /** Its number on the path, for the one that IS a phase. «Comparar» is not. */
+  /** Its number on the path. Both of these are phases: 2 and 3. */
   n?: number;
   disabledReason?: string | null;
 }) {
@@ -318,6 +325,7 @@ function MainNav({
         to="/evaluate"
         label={t("nav.compare")}
         icon={Scale}
+        n={COMPARE_PHASE}
         active={path === "/evaluate"}
         study
         disabledReason={locked}
@@ -432,7 +440,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
-              same «Todavía no tienes ningún espacio de trabajo», so the bar was offering seven
+              same «Todavía no tienes ninguna asignatura», so the bar was offering seven
               doors into one room — and to a student account, five of them are the
               teacher's preparation chain. `App` already gates the routes; this stops the
               navigation from advertising them. */}

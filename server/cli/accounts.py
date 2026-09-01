@@ -79,7 +79,7 @@ def create_user(args) -> int:
             evaluator_profile=getattr(args, "profile", None),
             ui_language=getattr(args, "language", None),
         )
-        membership = "sin espacio de trabajo"
+        membership = "sin asignatura"
         if args.workspace:
             workspace = ensure_workspace(session, args.workspace)
             grant(session, workspace.id, user.id, args.role)
@@ -110,7 +110,7 @@ def list_users(_args) -> int:
             profile = PROFILE_LABELS.get(user.evaluator_profile, "—")
             print(
                 f"{user.id:>4}  {user.username:<24} {profile:<8} "
-                f"{roles or '(sin espacios de trabajo)'}{flags}"
+                f"{roles or '(sin asignaturas)'}{flags}"
             )
     return 0
 
@@ -128,7 +128,7 @@ def grant_role(args) -> int:
             return 1
         workspace = get_workspace(session, args.workspace)
         if workspace is None:
-            print(f"No existe el espacio de trabajo '{args.workspace}'. Créalo con `import-instance`.")
+            print(f"No existe la asignatura '{args.workspace}'. Créala con `import-instance`.")
             return 1
         grant(session, workspace.id, user.id, args.role)
         print(f"{user.username} es ahora {args.role} de '{workspace.slug}'.")
@@ -152,7 +152,7 @@ def invite(args) -> int:
         if args.workspace:
             workspace = get_workspace(session, args.workspace)
             if workspace is None:
-                print(f"No existe el espacio de trabajo '{args.workspace}'.")
+                print(f"No existe la asignatura '{args.workspace}'.")
                 return 1
             workspace_id = workspace.id
 

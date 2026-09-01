@@ -1,10 +1,33 @@
-import { ArrowRight, Check, ChevronDown, FileText, Sparkles, User } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  FileText,
+  Sparkles,
+  User,
+  UserRound,
+} from "lucide-react";
 import { Fragment } from "react";
 
-import { Logo } from "@/components/ui/logo";
+import { Lockup, Logo } from "@/components/ui/logo";
 import { useT, type Key } from "@/lib/i18n";
-import { STEPS, stepNumber } from "@/lib/steps";
+import { COMPARE_PHASE, GENERATE_PHASE, STEPS, stepNumber } from "@/lib/steps";
+import { useSession } from "@/state/auth";
 import { cn } from "@/lib/utils";
+
+/**
+ * THE SIZE EVERY SENTENCE OF THE TUTORIAL IS SET AT, and the face it is set in.
+ *
+ * It lives here rather than in the screen because a figure contains sentences too — the
+ * two piles of documents on slide 2 are described in prose, not labelled — and the rule
+ * they follow is the one that separates this whole file from the screen beside it: a
+ * LABEL QUOTED FROM THE APP is drawn in the app's own face at the app's own size, because
+ * it is a picture of something the reader is about to go and look at; a SENTENCE WRITTEN
+ * FOR THE READER is set in the reading face at the reading size, wherever it happens to
+ * sit. Mixing those two up is what made slide 2 read as a diagram with a caption when it
+ * is two answers to one question.
+ */
+export const PROSE = "font-reading text-[1.1875rem] leading-[1.65] sm:text-[1.3125rem]";
 
 /**
  * THE PICTURES THE TUTORIAL EXPLAINS ITSELF WITH.
@@ -25,14 +48,25 @@ import { cn } from "@/lib/utils";
  * to be — so their labels are full sentences now and the prose beside them is shorter.
  */
 
-/** A labelled box: the unit every figure here is made of. */
+/**
+ * A labelled box: the unit every figure here is made of.
+ *
+ * `bare` drops the frame and the ground and keeps only the layout. A box says «this is a
+ * thing with an edge» — a drop zone, a card, a proposal — and where there is no edge in
+ * the product there should be none in the drawing either: the first slide's three moments
+ * are a story, not three containers, and framing them made the opening picture read as a
+ * form. What still separates them there is the arrow, which is the only thing that was
+ * ever doing the work.
+ */
 function Box({
   children,
   marked = false,
+  bare = false,
   className,
 }: {
   children: React.ReactNode;
   marked?: boolean;
+  bare?: boolean;
   className?: string;
 }) {
   return (
@@ -41,10 +75,13 @@ function Box({
         // `justify-center` y no sólo `items-center`: las cajas de una fila se estiran a la
         // altura de la más alta, así que una con menos dentro dejaba su texto pegado
         // arriba. Es lo que se veía en la diapositiva de «los cuatro terminan igual».
-        "flex min-w-0 flex-col items-center justify-center gap-1.5 border px-3 py-2.5 text-center",
-        marked
+        "flex min-w-0 flex-col items-center justify-center gap-1.5 text-center",
+        !bare && "border px-3 py-2.5",
+        !bare && marked
           ? "border-attention bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]"
-          : "border-border bg-card",
+          : null,
+        !bare && !marked && "border-border bg-card",
+        bare && "px-2 py-1",
         className,
       )}
     >
@@ -154,20 +191,20 @@ export function FlowFigure() {
   return (
     <Chain>
       {[
-        <Box key="yours" className="w-full">
+        <Box key="yours" bare className="w-full gap-2.5">
           <span aria-hidden className="flex items-center gap-1 text-muted-foreground">
-            <User className="size-4" />
-            <FileText className="size-4" />
+            <User className="size-5" />
+            <FileText className="size-5" />
           </span>
-          <span className="text-small">{t("tutorial.fig.yours")}</span>
+          <span className="text-body text-muted-foreground">{t("tutorial.fig.yours")}</span>
         </Box>,
-        <Box key="learns" className="w-full">
-          <Logo className="size-4 text-foreground" />
-          <span className="text-small">{t("tutorial.fig.learns")}</span>
+        <Box key="learns" bare className="w-full gap-2.5">
+          <Logo className="size-5 text-foreground" />
+          <span className="text-body text-muted-foreground">{t("tutorial.fig.learns")}</span>
         </Box>,
-        <Box key="new" marked className="w-full">
-          <Sparkles aria-hidden className="size-4 text-attention" />
-          <span className="text-small font-medium">{t("tutorial.fig.new")}</span>
+        <Box key="new" bare marked className="w-full gap-2.5">
+          <Sparkles aria-hidden className="size-5 text-attention" />
+          <span className="text-body font-semibold text-foreground">{t("tutorial.fig.new")}</span>
         </Box>,
       ]}
     </Chain>
@@ -190,12 +227,12 @@ export function SourcesFigure() {
   return (
     <div className="grid gap-2.5 sm:grid-cols-2">
       {piles.map(({ title, body }) => (
-        <Box key={title} className="items-start gap-2 text-left">
-          <span className="flex items-center gap-1.5 text-small font-semibold">
-            <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <Box key={title} className="items-start justify-start gap-2.5 p-4 text-left">
+          <span className="flex items-center gap-1.5 text-small font-semibold uppercase tracking-wide text-muted-foreground">
+            <FileText aria-hidden className="size-4 shrink-0" />
             {t(title)}
           </span>
-          <span className="text-small text-muted-foreground">{t(body)}</span>
+          <span className={PROSE}>{t(body)}</span>
         </Box>
       ))}
     </div>
@@ -203,33 +240,35 @@ export function SourcesFigure() {
 }
 
 /**
- * THE HINGE BETWEEN THE TWO PHASES: three things given as good, and then you can ask.
+ * WHAT ASKING FOR AN EXERCISE ACTUALLY LOOKS LIKE.
  *
- * The three names are read from `artifact.*`, which is what the stage headers and the bar
- * call them, so the picture of «what you have to have validated» cannot drift from the
- * screens where the validating happens. Step 1.1 is deliberately not among them: it is
- * the one step nobody approves — you either have documents or you do not.
+ * It replaces a drawing of the hinge — three ticked artifacts with «Fase 2» beside them —
+ * which said in a picture exactly what the slide's own title now says in words, and left
+ * the reader's real question unanswered: «and what do I have to give it?». Three chips and
+ * an arrow. The three are the generate form's OWN questions, read from `form.*.title`, so
+ * they are the words on the screen the reader is about to open and cannot drift from it.
  */
-export function PhasesFigure() {
+export function AskFigure() {
   const { t } = useT();
-  const validated: Key[] = ["artifact.profile", "artifact.graph", "artifact.bank"];
+  const asked: Key[] = ["form.type.title", "form.practise.title", "form.difficulty.title"];
   return (
     <Chain>
       {[
-        <Box key="phase1" className="w-full items-start gap-2 text-left">
-          <span className="text-small text-muted-foreground">{t("tutorial.fig.phase1")}</span>
-          <span className="flex flex-col gap-1">
-            {validated.map((key) => (
-              <span key={key} className="flex items-center gap-1.5 text-small">
-                <Check aria-hidden className="size-3.5 shrink-0 text-settled" strokeWidth={3} />
+        <Box key="ask" className="w-full items-start gap-2 p-3.5 text-left">
+          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("tutorial.fig.youAsk")}
+          </span>
+          <span className="flex flex-wrap gap-1.5">
+            {asked.map((key) => (
+              <span key={key} className="border border-input px-2 py-1 text-small">
                 {t(key)}
               </span>
             ))}
           </span>
         </Box>,
-        <Box key="phase2" marked className="w-full">
-          <Sparkles aria-hidden className="size-4 text-attention" />
-          <span className="text-small font-medium">{t("tutorial.fig.phase2")}</span>
+        <Box key="item" marked className="w-full gap-2">
+          <Sparkles aria-hidden className="size-5 text-attention" />
+          <span className="text-small font-semibold">{t("tutorial.fig.written")}</span>
         </Box>,
       ]}
     </Chain>
@@ -263,30 +302,6 @@ export function CloseFigure() {
   );
 }
 
-/**
- * The header's right flank, with «Mis variantes» marked.
- *
- * Drawn because the pill is the one destination in the whole application that is not on
- * the path and not in a menu, so the only way somebody finds it is by having been shown
- * where it is.
- */
-export function VariantsFigure() {
-  const { t } = useT();
-  return (
-    <div aria-hidden className="flex items-center justify-end gap-2 border border-border bg-card p-2">
-      <span className="mr-auto text-small text-muted-foreground">
-        {t("tutorial.fig.headerRight")}
-      </span>
-      <span className="border border-attention bg-[color-mix(in_oklch,var(--attention)_10%,transparent)] px-2.5 py-1 text-small font-medium">
-        {t("nav.myVariants")}
-      </span>
-      <span className="flex size-7 items-center justify-center rounded-full border border-border text-muted-foreground">
-        <span className="size-3 rounded-full border border-current" />
-      </span>
-    </div>
-  );
-}
-
 /** Three proposals, none of them named until you have chosen. */
 export function BlindFigure() {
   const { t } = useT();
@@ -309,32 +324,67 @@ export function BlindFigure() {
 }
 
 /**
- * The header's LEFT flank, with the workspace control marked.
+ * THE HEADER, DRAWN AS IT ACTUALLY IS, with the one control the last slide asks for marked.
  *
- * The last slide asks somebody to pick the subject they are going to work with, and the
- * control that does it is a button they have never seen carrying a caption they have
- * never read. Drawing it is cheaper than a sentence describing where to look, and the
- * caption is `workspace.switcher.label` — the same string the real control paints, so a
- * rename cannot leave the tutorial pointing at a word that is no longer there.
+ * It replaces two figures that each drew half of this row, and one of them had gone false:
+ * «Mis variatios» was a pill in the right flank when it was drawn and is an entry of the
+ * account menu now, so the tutorial was pointing at a button that is not there. Drawing
+ * the whole row fixes that by construction — there is one picture of the header and it is
+ * the header — and it answers the two questions the closing slide leaves: where the
+ * subject is chosen, and where everything the reader will need afterwards lives.
+ *
+ * THE TWO NAMES ARE THE READER'S OWN, read out of the session the gate already filled.
+ * Somebody who has just redeemed an invitation is being shown where their subject and
+ * their account are, and a drawing of somebody else's is a worse picture than a drawing of
+ * theirs. An account that is a member of nothing falls back to `workspace.none`, which is
+ * the string its real header is showing at that very moment — so this is not an
+ * illustration of the header, it is the header.
+ *
+ * ONE `--attention`, on the subject switcher: it is the only thing on the row the reader
+ * has to act on now. The account pill is drawn in its own ink and named in the prose.
  */
-export function WorkspaceFigure() {
+export function HeaderFigure() {
   const { t } = useT();
+  const session = useSession().data;
+  const username = session?.user.username;
+  const workspace = session?.workspaces.find((row) => row.active)?.name;
   return (
-    <div aria-hidden className="flex items-center gap-2 border border-border bg-card p-2">
-      <Logo className="size-4 shrink-0 text-foreground" />
-      <span className="flex min-w-0 items-center gap-1.5 border border-attention bg-[color-mix(in_oklch,var(--attention)_10%,transparent)] px-2 py-1">
+    <div
+      aria-hidden
+      className="flex items-center gap-2 overflow-hidden border border-border bg-card px-2.5 py-2"
+    >
+      <Lockup compact className="shrink-0" />
+      <span className="h-6 w-px shrink-0 bg-border" />
+      <span className="flex min-w-0 shrink items-center gap-1.5 border border-attention bg-[color-mix(in_oklch,var(--attention)_10%,transparent)] px-2 py-1">
         <span className="min-w-0 text-left">
           <span className="block truncate text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
             {t("workspace.switcher.label")}
           </span>
           <span className="mt-1 block truncate text-small font-medium leading-tight">
-            {t("tutorial.fig.workspace")}
+            {workspace ?? t("workspace.none")}
           </span>
         </span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </span>
-      <span className="ml-auto text-small text-muted-foreground">
-        {t("tutorial.fig.headerLeft")}
+      <span className="mx-auto hidden shrink items-center gap-2.5 md:flex">
+        {[...STEPS.map((_, index) => stepNumber(index)), `${GENERATE_PHASE}`, `${COMPARE_PHASE}`].map(
+          (label) => (
+            <span
+              key={label}
+              className="nums font-condensed text-small font-semibold text-muted-foreground"
+            >
+              {label}
+            </span>
+          ),
+        )}
+      </span>
+      <span className="ml-auto flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary pl-0.5 pr-0.5 sm:pr-3">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <UserRound aria-hidden className="size-4" />
+        </span>
+        <span className="hidden truncate text-small font-medium sm:block">
+          {username ?? t("tutorial.fig.you")}
+        </span>
       </span>
     </div>
   );

@@ -36,11 +36,11 @@ export const en: Catalogue = {
   "language.title": "Interface language",
   "language.help": "The language the screens, the guide and the error messages are shown in.",
   "language.notPrompts":
-    "It does not change the language of the prompts: each workspace declares that when it is created, and it is fixed into the artifacts it builds.",
+    "It does not change the language of the prompts: each subject declares that when it is created, and it is fixed into the artifacts it builds.",
   "language.changed": "Language changed to {name}",
   "language.warning.title": "The change only affects what you read",
   "language.warning.body":
-    "The variatios you have already generated, the graphs you have built and the evaluation sessions stay as they are: they were written in the workspace's language and they are not translated.",
+    "The variatios you have already generated, the graphs you have built and the evaluation sessions stay as they are: they were written in the subject's language and they are not translated.",
 
   // WORKSPACE LANGUAGE ------------------------------------------------------------------
   "workspace.language.title": "Prompt language",
@@ -48,7 +48,7 @@ export const en: Catalogue = {
     "The language the model is spoken to in throughout the building of this instance.",
   "workspace.language.locked":
     "It cannot be changed: the relation labels are written inside the syllabus, and the loader indexes by them.",
-  "workspace.language.onlyAtCreation": "Chosen when the workspace is created and not afterwards.",
+  "workspace.language.onlyAtCreation": "Chosen when the subject is created and not afterwards.",
 
   // ROLES -------------------------------------------------------------------------------
   "role.viewer": "Viewer",
@@ -56,14 +56,14 @@ export const en: Catalogue = {
   "role.owner": "Owner",
   "role.viewer.hint": "Can see everything and changes nothing.",
   "role.editor.hint": "All of the above, plus building, editing, approving and generating.",
-  "role.owner.hint": "All of the above, plus renaming or deleting the workspace.",
+  "role.owner.hint": "All of the above, plus renaming or deleting the subject.",
   "role.undeclared": "No permission declared.",
 
   // ACCOUNT -----------------------------------------------------------------------------
   "account.title": "My profile",
   "account.whatIsHere": "What is here",
   "account.whatIsHere.body":
-    "Your account and what is yours: the details you sign in with, the variatios you have generated and the workspaces you have access to. None of this is part of the artifact chain, which is why it is not in the bar above.",
+    "Your account and what is yours: the details you sign in with, the variatios you have generated and the subjects you have access to. None of this is part of the artifact chain, which is why it is not in the bar above.",
   "account.admin": "Administrator",
   "account.identity.title": "Account details",
   "account.identity.username": "Username",
@@ -91,15 +91,15 @@ export const en: Catalogue = {
   "password.changed.body": "You have been signed out on every other device.",
 
   // ACCESS ------------------------------------------------------------------------------
-  "access.none.title": "Your account is not a member of any workspace",
+  "access.none.title": "Your account is not a member of any subject",
   "access.none.body":
-    "It is a normal state, not a half-made account: the home screen offers you «Create my workspace», and an administrator can give you access to one that already exists.",
+    "It is a normal state, not a half-made account: the home screen offers you «Create my subject», and an administrator can give you access to one that already exists.",
   "access.inUse": "in use",
   "access.byAdmin": "by administration",
   "access.notAMember": "You are not a member: you get in because you administer the installation.",
 
   "tabs.account": "Account",
-  "tabs.workspaces": "Workspaces",
+  "tabs.workspaces": "Subjects",
   "tabs.variants": "Variatios",
 
   "acc.ws.delete": "Delete «{name}»",
@@ -342,6 +342,7 @@ export const en: Catalogue = {
   "tutorial.of": "{n} of {total}",
   "tutorial.back": "Back",
   "tutorial.next": "Next",
+  "tutorial.railStart": "Start",
   "tutorial.start": "Start with step 1.1",
   "tutorial.again": "See the explanation again",
 
@@ -354,30 +355,28 @@ export const en: Catalogue = {
     "Handouts, slides, the course book. This is where the topics come from, and the order in which they rest on one another.",
   "tutorial.fig.exercises":
     "Problem sheets, past exams, worksheets, preferably worked out. This is where the shape your exercises take comes from.",
-  "tutorial.fig.phase1": "Given as good",
-  "tutorial.fig.phase2": "Phase 2: asking for exercises",
+  "tutorial.fig.youAsk": "You say",
+  "tutorial.fig.written": "And it writes the exercise",
   "tutorial.fig.build": "It is built",
   "tutorial.fig.review": "You read it",
   "tutorial.fig.rate": "You rate it",
   "tutorial.fig.next": "You carry on or correct",
-  "tutorial.fig.headerRight": "Top right, on every screen",
-  "tutorial.fig.headerLeft": "Top left, on every screen",
-  "tutorial.fig.workspace": "Your subject",
+  "tutorial.fig.you": "Your account",
   "tutorial.fig.proposal": "Proposal {letter}",
 
-  "tutorial.s1.title": "Variatio is an application that generates exercises for your subject",
+  "tutorial.s1.title": "Variatio is an application that writes exercises for your subject",
   "tutorial.s1.body":
-    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it writes them from your notes and from the subject's own exercises, imitating the way they are posed.",
+    "It runs on AI models, but it does not search the internet for the exercises or make them up from nothing: it writes them from your notes and from the subject's own exercises, imitating the way you pose them.",
 
   "tutorial.s2.title": "Before you start, gather your files",
   "tutorial.s2.body":
     "The route has not begun yet. For now the only thing you have to do is find two things you already have, in PDF or Word, however they are.",
   "tutorial.s2.aside":
-    "Every document is read in full, page by page, so preparing the subject takes a while. There is no need to sit watching: it can be left working and come back to later.",
+    "A couple of topics is enough to try it out: every document is read in full, page by page, so uploading the whole subject is keeping you waiting for no reason. There is no need to sit watching: it can be left working and come back to later.",
 
-  "tutorial.s3.title": "Phase 1: preparing the subject, in four steps",
+  "tutorial.s3.title": "Phase 1: preparing the subject",
   "tutorial.s3.body":
-    "They are done in this order and in one sitting. They are the four buttons you carry along the top at all times, each with its number: the bar tells you which one you are on and which is next.",
+    "Four steps, in this order and in one sitting. They are the four buttons you carry along the top at all times, numbered 1.1 to 1.4: the bar tells you which one you are on and which is next.",
   "tutorial.s3.step1":
     "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files, because everything else comes from here.",
   "tutorial.s3.step2":
@@ -387,48 +386,37 @@ export const en: Catalogue = {
   "tutorial.s3.step4":
     "The exercises in your documents are collected one by one and each is given the topic it practises. They are the examples imitated when writing a new one.",
 
-
-  "tutorial.s4.title": "With that, the system is ready",
+  "tutorial.s4.title": "Phase 2: asking for exercises",
   "tutorial.s4.body":
-    "That is where preparing ends. Those three steps you have gone through are everything the system needs to know about your subject, and from now on you can ask it for new exercises whenever you like, without preparing anything again.",
+    "With those four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on you ask it for exercises: you say what type, on what topic and at what level, and it writes them. You can ask for several at once and keep the one you like best.",
   "tutorial.s4.b1":
-    "You can go back to any step whenever you like. If you change something in an earlier step, the later ones that have gone stale are named.",
-
-  "tutorial.s5.title": "Asking for exercises",
-  "tutorial.s5.body":
-    "You say what topic you want it on, what type and what level, and it writes it. You can ask for several at once and keep the one you like best.",
-  "tutorial.s5.b1":
     "If you tell it what you have already covered in class, the exercise will rest on that alone and use nothing you have not explained yet.",
-  "tutorial.s5.b2":
-    "Every exercise that comes out is saved on its own under «My variatios», with the commission that produced it. You do not have to copy it anywhere.",
+  "tutorial.s4.b2":
+    "Every exercise that comes out is saved on its own under «My variatios», in your account menu, with the commission that produced it. You do not have to copy it anywhere.",
+  "tutorial.s4.b3":
+    "You can go back to any step of phase 1 whenever you like. If you change something in an earlier step, the later ones that have gone stale are named.",
 
-  "tutorial.s6.title": "Comparing three versions, blind",
-  "tutorial.s6.body":
+  "tutorial.s5.title": "Phase 3: comparing three versions blind",
+  "tutorial.s5.body":
     "You are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use, and pick the best. Only at the end is it revealed where each came from.",
-  "tutorial.s6.b1":
+  "tutorial.s5.b1":
     "The order changes every time, so that a position on screen does not sway what you pick.",
-  "tutorial.s6.b2":
+  "tutorial.s5.b2":
     "«I am not in a position to judge this» is a valid answer and does not count as a preference. If the exercise is not in your area, saying so is worth more than picking at random.",
-  "tutorial.s6.aside":
+  "tutorial.s5.aside":
     "This is the part the study rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
 
-  "tutorial.s7.title": "And now, evaluating the system",
-  "tutorial.s7.body":
+  "tutorial.s6.title": "And now, evaluating the system",
+  "tutorial.s6.body":
     "So much for what it does and how it is used. What is asked of you from here on is to set it up with a subject of your own and say, step by step, how it came out.",
-  "tutorial.s7.b1":
-    "Every step tells you beforehand what is about to happen, and nothing is taken as good on its own: at the foot there are always two ways out, «I want to correct something» or carrying on to the next step.",
-  "tutorial.s7.b2":
-    "Upload only a couple of topics, not the whole subject. Every document is read in full, so uploading fifty topics is keeping you waiting for no reason at all.",
-  "tutorial.s7.b3":
+  "tutorial.s6.b1":
+    "No step takes anything as good on its own: first you see it, then you rate it, and at the foot there are always two ways out, correcting something or carrying on to the next one.",
+  "tutorial.s6.b2":
     "Correct without fear: what you fix by hand always wins, over what was understood and over any later rebuild.",
-  "tutorial.s7.aside":
+  "tutorial.s6.aside":
     "Each step's questions are the only thing asked in return, and they are exactly what is being measured in the study.",
-
-  "tutorial.s8.title": "Pick a subject and start",
-  "tutorial.s8.body":
-    "Every workspace is a subject. Pick the one you are going to work with at the top left and start at step 1.1; if you do not have one yet, you can create it right there.",
-  "tutorial.s8.aside":
-    "Every screen links to the guide, and you can see this explanation again from your account menu.",
+  "tutorial.s6.outro":
+    "Pick your subject at the top left and start at step 1.1; if you do not have one yet, you can create it right there. In your account menu, on the right, are your exercises, the guide and this explanation whenever you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -557,7 +545,7 @@ export const en: Catalogue = {
   "concept.tab.listHint": "The concepts grouped by domain",
   "concept.tab.graph": "Syllabus",
   "concept.tab.graphHint": "The syllabus ordered by prerequisite levels",
-  "concept.noGraph": "This workspace has no syllabus to show",
+  "concept.noGraph": "This subject has no syllabus to show",
   "concept.noResults": "No results",
   "concept.byPrerequisite": "It comes included as a prerequisite of what you have already chosen",
   "concept.noExemplarsOfType": "No examples of this modality in the bank",
@@ -596,7 +584,7 @@ export const en: Catalogue = {
   "raw.removed": "«{name}» deleted",
   "raw.screenIntro":
     "Upload what you already have: the subject's notes and its exercises. This is the only step where you have to go looking for files, because everything else comes from here. A couple of topics is enough: every document is read in full, so the more you upload, the longer it takes.",
-  "raw.nothingYet": "This workspace has no material yet",
+  "raw.nothingYet": "This subject has no material yet",
   "raw.nothingYetBody":
     "Drop the notes into «Subject notes» and the exercises into «Subject exercises». Until then there is nothing to start from.",
   "raw.dropHere": "Drag the documents here",
@@ -623,11 +611,11 @@ export const en: Catalogue = {
   "generations.whatIsHere": "What is here",
   "generations.inBank": "in the bank · {id}",
   "generations.mine": "Mine",
-  "generations.wholeWorkspace": "From the whole workspace",
+  "generations.wholeWorkspace": "From the whole subject",
   "generations.search": "Search the statement, the concept or the instructions",
   "generations.search.placeholder": "Search the statement, the concept or the instructions…",
   "generations.noMatch": "Nothing matches that search",
-  "generations.noMatchHint": "Try another term, or change the scope to the whole workspace.",
+  "generations.noMatchHint": "Try another term, or change the scope to the whole subject.",
   "generations.emptyHint": "Generate an exercise and it will stay here, with the concepts and the instructions you asked for it with.",
   "generations.noConcepts": "No concepts declared",
   "generations.promoteHint": "Adds this variatio to the exemplars bank, tagged with its concepts; the bank goes stale until it is approved again.",
@@ -644,14 +632,14 @@ export const en: Catalogue = {
   "maintenance.nothingLost": "Nothing has been lost: what is built is where it was and will come back as it was.",
   "maintenance.lessThanAMinute": "less than a minute",
   "maintenance.days": { one: "1 day", other: "{n} days" },
-  "workspace.none": "No workspace",
-  "workspace.subjectName": "Name of the course",
-  "workspace.name": "Name of the workspace",
+  "workspace.none": "No subject",
+  "workspace.subjectName": "Name of the subject",
+  "workspace.name": "Name of the subject",
   "workspace.name.placeholder": "Name, e.g. «Algebra 2026»",
-  "workspace.slug": "Identifier of the workspace",
-  "workspace.newName": "New name of the workspace",
+  "workspace.slug": "Identifier of the subject",
+  "workspace.newName": "New name of the subject",
   "workspace.nameRequired": "Give the subject a name so it can be created.",
-  "workspace.noneYet": "You do not have a workspace yet",
+  "workspace.noneYet": "You do not have a subject yet",
   "generations.empty": "No saved variatios yet",
   "generations.curriculum": "Curriculum",
   "generations.instructions": "Instructions",
@@ -671,7 +659,7 @@ export const en: Catalogue = {
   "invite.toApp": "You have been invited to Variatio.",
   "invite.teachOrStudy": "Do you study or do you teach?",
   "invite.language": "Interface language",
-  "invite.languageHint": "It only changes what you read. The prompt language is declared by each workspace when it is created.",
+  "invite.languageHint": "It only changes what you read. The prompt language is declared by each subject when it is created.",
   "invite.profileHint": "It decides what you will be asked when you compare exercises. It does not change what you can do here.",
   "menu.profile": "Profile",
   "menu.savedVariants": "Saved variatios",
@@ -703,7 +691,7 @@ export const en: Catalogue = {
   "dash.reviewAgain": "Review again",
   "dash.approvedOn": "Approved on {when}",
   "dash.goRaw": "Go to Raw data",
-  "dash.next.import": "This workspace has no material yet",
+  "dash.next.import": "This subject has no material yet",
   "dash.next.importBody":
     "With no raw documents there is nothing to build. Upload the course notes and the worked exercises, and the chain can start.",
   "dash.next.transcribe": {
@@ -717,7 +705,7 @@ export const en: Catalogue = {
   "dash.transcriptionStale": "transcription stale",
   "model.notInstalled": "not installed",
   "dash.whatIsHere": "What is shown here",
-  "dash.busyElsewhere": "Nothing of yours is running. Another workspace's job is occupying the engine: if what you launch needs that same engine, it will wait its turn.",
+  "dash.busyElsewhere": "Nothing of yours is running. Another subject's job is occupying the engine: if what you launch needs that same engine, it will wait its turn.",
   "dash.nothingRunning": "Nothing running.",
   "dash.nextToStart": "next to start",
   "dash.jobsAhead": { one: "1 job ahead", other: "{n} jobs ahead" },
@@ -825,11 +813,11 @@ export const en: Catalogue = {
   "acc.openSessions": { one: "1 session", other: "{n} sessions" },
   "ws.files": { one: "1 file", other: "{n} files" },
   "ws.renameNamed": "Rename «{name}»",
-  "ws.createOne": "Create a workspace",
+  "ws.createOne": "Create a subject",
   "ws.enter": "Enter",
   "ws.slugUnchanged": "The identifier «{slug}» does not change.",
-  "noWorkspace.createMine": "Create my workspace",
-  "noWorkspace.bodyA": "A workspace is a whole instance: its raw material, its syllabus, its exemplars profile and its bank. You signed in as",
+  "noWorkspace.createMine": "Create my subject",
+  "noWorkspace.bodyA": "A subject keeps everything of its own: its documents, its syllabus, its exercise types and its exercises. You signed in as",
   "noWorkspace.bodyB": "; create your own now, or wait until somebody gives you access to an existing one.",
   "sessions.selected": { one: "1 selected", other: "{n} selected" },
   "sessions.deletedCount": { one: "1 session", other: "{n} sessions" },
@@ -949,7 +937,7 @@ export const en: Catalogue = {
   "invite.visibleName": "Display name",
   "account.identity.name": "Name",
   "account.identity.usernameLocked": "It cannot be changed: it is what identifies everything you have done.",
-  "account.identity.nameHelp": "How you appear to everybody else in this workspace.",
+  "account.identity.nameHelp": "How you appear to everybody else in this subject.",
   "bank.tagLive.title": "Exercises as they get tagged",
   "bank.tagLive.empty": "No decision has come out yet. They will appear here as soon as the tagger finishes with the first exercise.",
   "bank.column.modality": "type",
@@ -971,9 +959,9 @@ export const en: Catalogue = {
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
   "generate.reopened": "Part of the previous commission. The variatios below are already saved: the new batch replaces them on screen, not in «My variatios».",
   "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated variatio saves itself in «My variatios».",
-  "workspace.switcher.label": "Workspace",
-  "workspace.switcher.choose": "Choose workspace",
-  "workspace.switcher.current": "Workspace: {name}",
+  "workspace.switcher.label": "Subject",
+  "workspace.switcher.choose": "Choose subject",
+  "workspace.switcher.current": "Subject: {name}",
   "workspace.adminBadge": "admin",
   "workspace.startsEmpty": "It starts empty: you upload its corpus and its exemplars and build its own chain.",
 
@@ -982,14 +970,14 @@ export const en: Catalogue = {
   "admin.notAdmin.body": "This screen belongs to the installation's administrator. Your account is not one.",
   "admin.title": "Administration",
   "admin.whatIsThis": "What this is",
-  "admin.whatIsThis.body": "The whole installation seen from outside: who uses it, who can get in and into what, how many workspaces there are, what the machine is doing and how the evaluation study is going. It is the only screen that crosses accounts, and the only place access is granted from.",
+  "admin.whatIsThis.body": "The whole installation seen from outside: who uses it, who can get in and into what, how many subjects there are, what the machine is doing and how the evaluation study is going. It is the only screen that crosses accounts, and the only place access is granted from.",
   "admin.tab.study": "Evaluations",
   "admin.tab.accounts": "Accounts and access",
-  "admin.tab.workspaces": "Workspaces",
+  "admin.tab.workspaces": "Subjects",
   "admin.tab.engine": "Engine",
   "admin.tab.config": "Configuration",
   "admin.stat.accounts": "Accounts",
-  "admin.stat.workspaces": "Workspaces",
+  "admin.stat.workspaces": "Subjects",
   "admin.stat.generations": "Variatios generated",
   "admin.stat.comparisons": "Comparisons",
   "admin.stat.decided": "{n} with a recorded choice",
@@ -1098,9 +1086,9 @@ export const en: Catalogue = {
   "acc.removeAdmin": "Remove administration",
   "acc.makeAdmin": "Make administrator",
   "acc.confirmMakeAdmin":
-    "Make «{username}» an administrator?\n\nThey will get into every workspace without being a member, see this panel, and be able to grant access and delete instances.",
+    "Make «{username}» an administrator?\n\nThey will get into every subject without being a member, see this panel, and be able to grant access and delete instances.",
   "acc.confirmRemoveAdmin":
-    "Take administration away from «{username}»?\n\nThey stop getting into every workspace and stop seeing this panel; whatever access they hold as a member stays.",
+    "Take administration away from «{username}»?\n\nThey stop getting into every subject and stop seeing this panel; whatever access they hold as a member stays.",
   "acc.resetDisabled": "Reactivate it first: a deactivated account cannot reset anything",
   "acc.resetHint": "Generates a single-use link for them to set a new password",
   "acc.resetLink": "Reset link",
@@ -1113,32 +1101,32 @@ export const en: Catalogue = {
   "acc.profileHint": "What it changes",
   "acc.profileHint.body": "It decides what words they are asked with when comparing proposals and how the study groups their answers. It grants and removes no permission. Unspecified means they get the teacher's wording, and handing out comparisons marks it so it does not stay that way.",
   "acc.resetCopy": "Hand it over yourself. It lasts {minutes} minutes and works once; whoever opens it sets «{username}»'s new password, so do not leave it anywhere shared.",
-  "acc.adminNoMemberships": "This account administers the installation: it enters every workspace without being a member of any, so there is no access to give it.",
+  "acc.adminNoMemberships": "This account administers the installation: it enters every subject without being a member of any, so there is no access to give it.",
   "acc.alsoMemberOf": "It is also recorded as a member of",
-  "acc.noMemberships": "This account is a member of no workspace. It gets in all the same: the panel offers it to create its own, and here you can give it access to one that already exists.",
-  "acc.revokeWorkspace": "Remove access to this workspace",
+  "acc.noMemberships": "This account is a member of no subject. It gets in all the same: the panel offers it to create its own, and here you can give it access to one that already exists.",
+  "acc.revokeWorkspace": "Remove access to this subject",
   "acc.grantAccessTo": "Give access to",
   "acc.permission": "Permission",
   "acc.grant": "Grant",
   "acc.invite": "Invite somebody",
   "acc.invite.hintLabel": "How people get in here",
   "acc.invite.hint": "There is no open registration: an account exists because somebody opened a single-use invitation, or because it was created from the command line. Removing public registration is what takes the biggest target of a web login out of the way.",
-  "acc.invite.workspace": "Workspace",
+  "acc.invite.workspace": "Subject",
   "acc.invite.noWorkspace": "None (just create the account)",
   "acc.invite.create": "Create link",
   "acc.invite.noAccessHint": "They will get in with access to no instance; you give it to them afterwards from the table.",
   "acc.invite.copy": "Hand it over to whoever you are inviting yourself. It works once and whoever opens it picks their own username, so do not leave it anywhere shared.",
   "acc.invite.linkOf": "Link of {date}",
   "acc.invite.createdBy": " · created by {name}",
-  "acc.invite.noWorkspaceShort": "no workspace",
+  "acc.invite.noWorkspaceShort": "no subject",
   "acc.invite.expires": " · expires on {date}",
   "acc.invite.revoke": "Revoke",
   "acc.copied": "Copied",
   "acc.copy": "Copy",
-  "ws.heading": "Workspaces ({n}) · {size} on disk",
+  "ws.heading": "Subjects ({n}) · {size} on disk",
   "ws.diskHint": "What each part weighs",
   "ws.diskHint.body": "«Raw» is the uploaded documents, the only thing a GPU and some time will not rebuild. «Instance» is the artifacts and their context. «Cache» is the derivations —vectors, converted markdown, descriptions— and «history» the copies every edit keeps, along with the run logs.",
-  "ws.col.workspace": "Workspace",
+  "ws.col.workspace": "Subject",
   "ws.disk.raw": "raw",
   "ws.disk.instance": "instance",
   "ws.disk.cache": "cache",
@@ -1150,8 +1138,8 @@ export const en: Catalogue = {
   "ws.col.disk": "Disk",
   "ws.col.created": "Created",
   "ws.inMemory": "· in memory",
-  "ws.deleteTitle": "Delete the workspace and its files",
-  "ws.deleted": "Workspace deleted",
+  "ws.deleteTitle": "Delete the subject and its files",
+  "ws.deleted": "Subject deleted",
   "ws.deletedMoved": "{slug}, with its file tree. It was the one you had open: you are now in «{next}».",
   "ws.deletedHere": "{slug}, with its file tree. It was the one you had open and your account is in no other: the panel offers you to create one.",
   "ws.deletedOther": "{slug}, with its file tree.",
@@ -1303,7 +1291,7 @@ export const en: Catalogue = {
   "eval.waitingTurn": "It will start as soon as its turn comes.",
   "eval.nextInQueue": "Next in the queue ({pending})",
   "sets.change": "Change",
-  "sets.noWorkspaces": "«{username}» is not a member of any workspace yet. Give them access in «Accounts and access» before assigning anything.",
+  "sets.noWorkspaces": "«{username}» is not a member of any subject yet. Give them access in «Accounts and access» before assigning anything.",
   "sets.assignAria": "Assign the comparison on {concepts}",
   "sets.noConcepts": "no concepts",
   "sets.withReasoning": " · with reasoning",
@@ -1320,16 +1308,16 @@ export const en: Catalogue = {
   "sets.noAccountData": "No account data.",
   "sets.noAccounts": "There are no active accounts to assign to. Create one in «Accounts and access».",
   "sets.step1": "Who are you assigning it to?",
-  "sets.step2": "In which of their workspaces?",
+  "sets.step2": "In which of their subjects?",
   "sets.step3": "Which ones?",
-  "sets.noneYet": "This workspace has no comparisons yet. Commission a few below and hand out whichever you like: the ones you do not assign stay saved.",
+  "sets.noneYet": "This subject has no comparisons yet. Commission a few below and hand out whichever you like: the ones you do not assign stay saved.",
   "sets.assignTo": "Assign {n} to {username}",
   "sets.commissionMore": "Commission more comparisons",
   "sets.sameExercises": "They will receive the same exercises in an order of their own.",
   "sets.searchAccounts": "Search by name or username",
   "sets.noAccountMatches": "No account matches «{query}».",
   "sets.notReady": "{stages} must be approved before commissioning here.",
-  "sets.notReadyUnknown": "This workspace has not approved its chain yet.",
+  "sets.notReadyUnknown": "This subject has not approved its chain yet.",
   "sets.composeHint": "Each comparison is three proposals of the same commission. They are prepared one after another in the queue, and the ones you do not hand out stay saved for somebody else.",
   "sets.howMany": "How many comparisons?",
   "sets.oneSession": "one session, three proposals",
@@ -1344,8 +1332,8 @@ export const en: Catalogue = {
   "adminStudy.results.eyebrow": "Results",
   "adminStudy.results.title": "What has already been evaluated",
   "adminStudy.results.description": "Read only. The filter narrows what the cards show and what the CSV downloads; it changes nothing about what has been handed out.",
-  "adminStudy.filterByWorkspace": "Filter the study by workspace",
-  "adminStudy.allWorkspaces": "Every workspace",
+  "adminStudy.filterByWorkspace": "Filter the study by subject",
+  "adminStudy.allWorkspaces": "Every subject",
   "adminStudy.clearAccountFilter": "Clear the account filter",
   "adminStudy.sessionsInFilter": { one: "1 session in the filter", other: "{n} sessions in the filter" },
   "adminStudy.wouldUse": "{pct} would use it",
@@ -1361,11 +1349,11 @@ export const en: Catalogue = {
   "adminStudy.card.think": "Does prior reasoning contribute anything?",
   "adminStudy.card.byProfile": "By profile",
   "adminStudy.card.byAccount": "By account",
-  "adminStudy.card.byWorkspace": "By workspace",
+  "adminStudy.card.byWorkspace": "By subject",
   "adminStudy.card.sessions": "Sessions ({n})",
   "adminStudy.col.profile": "Profile",
   "adminStudy.col.evaluator": "Evaluator",
-  "adminStudy.col.workspace": "Workspace",
+  "adminStudy.col.workspace": "Subject",
   "adminStudy.noTriage": "No triage answers yet. They are collected blind, one per card, before choosing.",
   "adminStudy.triageDetail": "{arm} · {yes} as they are, {partly} with tweaks, {no} no",
   "adminStudy.agreement": "Agreement between evaluators",
@@ -1720,8 +1708,8 @@ export const en: Catalogue = {
 
   // GENERATE FORM -----------------------------------------------------------------------
   "form.curriculum.none": "No curriculum restriction",
-  "form.curriculum.workspace": "The workspace's curriculum",
-  "form.curriculum.workspaceN": "The workspace's curriculum ({n} concepts)",
+  "form.curriculum.workspace": "The subject's curriculum",
+  "form.curriculum.workspaceN": "The subject's curriculum ({n} concepts)",
   "form.curriculum.ofN": "A curriculum of {n} concepts",
   "form.curriculum.noneChosen": "No concepts chosen yet",
   "form.summary.noConcepts": "no concepts",
@@ -1915,8 +1903,8 @@ export const en: Catalogue = {
   "eng.pull.failed": "failed",
   "eng.ctx.title": "Warm contexts",
   "eng.ctx.hintLabel": "What a context is",
-  "eng.ctx.hint": "A workspace's concepts index and bank, embedded and ready to tag or generate with. Building one costs minutes, so the process keeps up to eight. Invalidating one forces the next job to rebuild it from the files: it is what you do when something looks stale.",
-  "eng.ctx.none": "None: each workspace's next job will build its own.",
+  "eng.ctx.hint": "A subject's concepts index and bank, embedded and ready to tag or generate with. Building one costs minutes, so the process keeps up to eight. Invalidating one forces the next job to rebuild it from the files: it is what you do when something looks stale.",
+  "eng.ctx.none": "None: each subject's next job will build its own.",
   "eng.ctx.count": "{n} of 8 at most",
   "eng.ctx.invalidateOne": "Invalidate this context",
   "eng.ctx.invalidated": "Context invalidated",
@@ -1939,10 +1927,10 @@ export const en: Catalogue = {
   "eng.queue.cancelFailed": "It could not be cancelled",
   "eng.queue.title": "The GPU queue ({n})",
   "eng.queue.hintLabel": "How the queue works",
-  "eng.queue.hint": "The queue is per engine, not one line: two jobs competing for the same machine wait for each other, while a local one and a remote one run side by side. Whatever is asked for while an engine is busy — building, generating, evaluating, from any workspace — stacks up in order of arrival on that engine. Each person sees only their own workspace's entries from inside it; this is where the whole line is visible and where anyone can be taken out of it.",
+  "eng.queue.hint": "The queue is per engine, not one line: two jobs competing for the same machine wait for each other, while a local one and a remote one run side by side. Whatever is asked for while an engine is busy — building, generating, evaluating, from any subject — stacks up in order of arrival on that engine. Each person sees only their own subject's entries from inside it; this is where the whole line is visible and where anyone can be taken out of it.",
   "eng.queue.empty": "Nothing running and nothing waiting.",
   "eng.queue.col.job": "Job",
-  "eng.queue.col.workspace": "Workspace",
+  "eng.queue.col.workspace": "Subject",
   "eng.queue.col.askedBy": "Asked for by",
   "eng.queue.col.asked": "Asked",
   "eng.queue.col.state": "State",
@@ -1950,7 +1938,7 @@ export const en: Catalogue = {
   "eng.queue.removeShort": "Remove",
   "eng.hist.title": "Finished jobs ({n})",
   "eng.hist.hintLabel": "Where this comes from",
-  "eng.hist.hint": "What the queue has run since the API started, across every workspace. It lives in memory: restarting the API empties it. The detail of each one is in its workspace's run log.",
+  "eng.hist.hint": "What the queue has run since the API started, across every subject. It lives in memory: restarting the API empties it. The detail of each one is in its subject's run log.",
   "eng.hist.empty": "None since the API started.",
   "eng.hist.col.finished": "Finished",
   "eng.hist.col.elapsed": "Took",
@@ -2051,7 +2039,7 @@ export const en: Catalogue = {
   "guide.group.use": "Using it",
   "guide.group.daily": "Day to day",
   "guide.sec.start": "What it is and how you move through it",
-  "guide.sec.workspace": "The workspace and the subject",
+  "guide.sec.workspace": "Each subject, on its own",
   "guide.sec.raw": "Step 1.1 · Notes and exercises",
   "guide.sec.profile": "Step 1.2 · Exercise types",
   "guide.sec.graph": "Step 1.3 · The syllabus",

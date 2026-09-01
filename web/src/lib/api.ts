@@ -44,7 +44,7 @@ import type {
 /**
  * What both deletions answer. `rehomed` is about everybody who was inside the instance;
  * `landed` is the one entry the tab that made the request needs — where THIS account ends
- * up — so the browser can move there at once instead of blanking to «ningún espacio de trabajo»
+ * up — so the browser can move there at once instead of blanking to «ninguna asignatura»
  * until `me` comes back. `null` means it stays where it was, which covers both «I was not
  * in it» and «I have nowhere left to go».
  *

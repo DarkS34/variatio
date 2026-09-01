@@ -178,8 +178,8 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     profile_path = stages.exemplars_profile_path(ws)
     if profile_path is None:
         raise ValueError(
-            "La etiquetabilidad se decide contra el perfil de ejemplares, y este "
-            "espacio de trabajo no lo tiene todavía: constrúyelo antes."
+            "La etiquetabilidad se decide contra el perfil de ejemplares, y esta "
+            "asignatura no lo tiene todavía: constrúyelo antes."
         )
 
     graph_path = stages.knowledge_graph_path(ws)

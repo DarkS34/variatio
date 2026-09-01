@@ -244,6 +244,49 @@
   --arm-system: oklch(0.56 0.125 245);
 }
 
+/* THE READING FACE, AND ONLY THE TUTORIAL READS IT.
+   The application's own superfamily is Archivo and that has not changed: this is one face
+   for one screen, the tutorial, which is the only surface here that is READ rather than
+   operated — eight slides of prose somebody goes through once, where the app's grotesque
+   at 14 px reads like a control panel explaining itself.
+
+   Self-hosted rather than linked: `server/middleware.py` sets `font-src 'self' data:`, so
+   a `<link>` to Google's CDN is refused by our own CSP — and an installation of this is
+   somebody's course material, which has no business announcing itself to a third party on
+   every page load. Two subsets, exactly as Google's own stylesheet cuts them; Spanish is
+   entirely inside the latin one (á ñ ü ¿ ¡ « » are all below U+0100), so the ext file is
+   fetched by nobody who does not name a workspace in Polish or Vietnamese.
+
+   IT COSTS EVERY OTHER SCREEN NOTHING. A declared `@font-face` is not a download: the
+   browser fetches the file the first time a glyph actually needs it, which here is the
+   moment `/tutorial` paints and never before. That is why it is not a Fontsource import
+   in `main.tsx` beside Archivo — those are eager, and this would ride in the entry chunk
+   for the many people who never open the tutorial once.
+
+   Literata, variable, OFL — the licence sits beside the files. `opsz` is left to
+   `font-optical-sizing: auto`, the browser's default, so the 36 px title and the 20 px
+   prose are drawn from the two ends of the axis without a line of CSS. */
+@font-face {
+  font-family: "Literata";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/literata-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Literata";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/literata-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -284,6 +327,9 @@
   --font-sans: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* The one exception to the superfamily, and it is scoped to one screen. See the
+     `@font-face` above for why a serif and why it is free. */
+  --font-reading: "Literata", ui-serif, Georgia, "Times New Roman", serif;
 
   /* Six steps, with the levels IN ORDER. Before this the app had two sizes for everything
      and the headings ran backwards: CardTitle is an h3 at 14 px and the h4s are at 12, i.e.

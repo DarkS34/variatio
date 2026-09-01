@@ -22,7 +22,7 @@ export const STEPS = [
 ] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
 
 /**
- * TWO PHASES, AND THE FOUR STEPS ARE ALL INSIDE THE FIRST ONE (explicit user request).
+ * THREE PHASES, AND THE FOUR STEPS ARE ALL INSIDE THE FIRST ONE (explicit user request).
  *
  * «Hay que dejar claro que esto es el paso uno necesario para preparar esta asignatura en
  * el sistema. Y una vez que esto lo tengas claro, ya puedes generar ejercicios. […] El
@@ -33,9 +33,20 @@ export const STEPS = [
  * The numbers carry it on their own: `1.1 … 1.4` says these four are one thing, and `2` on
  * «Crear ejercicios» says what that thing was for. No extra captions in the bar; the
  * tutorial does the naming.
+ *
+ * COMPARING IS THE THIRD (2026-09-02, explicit user request), which reverses the note that
+ * used to sit on `UsePill`'s `n` — «its number on the path, for the one that IS a phase;
+ * «Comparar» is not». What made it not a phase was that it is optional and belongs to the
+ * study rather than to preparing a subject; what makes it one is that the tutorial now
+ * names it «Fase 3», and the rule the figures are held to is that a picture may not
+ * promise an order the navigation does not have. Either the deck stops calling it a phase
+ * or the bar starts counting it, and counting it is the truer of the two: the whole
+ * product is one numbered path, 1.1 → 2 → 3. Its `--study` tint is untouched — the number
+ * says where it sits, the colour still says it is a different kind of thing.
  */
 export const PREPARE_PHASE = 1;
 export const GENERATE_PHASE = 2;
+export const COMPARE_PHASE = 3;
 
 /** How a preparation step is numbered on screen, from its index in `STEPS`. */
 export function stepNumber(index: number): string {
