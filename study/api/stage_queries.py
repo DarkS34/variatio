@@ -78,13 +78,25 @@ def save(
     overall: int | None,
     note: str | None,
     job_id: str | None = None,
+    curated: bool | None = None,
 ) -> StageEvaluation:
-    """Write this person's answers about this build, replacing whatever they said before."""
+    """Write this person's answers about this build, replacing whatever they said before.
+
+    `curated` only ever climbs the ladder «nadie lo dijo» < «no» < «sí». Having corrected
+    the artifact by hand is something that HAPPENED, so a later save that stays silent, or
+    that says no because the correction was made in an earlier visit, must not erase a yes
+    already recorded — otherwise fixing a typo in the note an hour later moves the row into
+    the other half of the contrast the column exists for.
+    """
     row = mark_opened(session, workspace_id, user_id, artifact, artifact_hash)
     row.instrument = instrument
     row.answers = answers
     row.overall = overall
     row.note = note or None
+    if curated:
+        row.curated = True
+    elif curated is not None and row.curated is None:
+        row.curated = False
     if job_id:
         row.job_id = job_id
     row.updated_at = _now()

@@ -506,6 +506,15 @@ class StageEvaluation(Base):
     overall: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
     note: Mapped[str | None] = mapped_column(Text, default=None)
 
+    # Whether this person had corrected the artifact by hand before answering. Curating is
+    # no longer required to move down the chain, so it is a variable of the study instead
+    # of a guarantee: the verdict of somebody who fixed the thing is not the verdict of
+    # somebody who judged it as it came out, and one average over both says neither. It is
+    # NOT `CURATED` above, which names which FILE is being read; this is about the person.
+    # Three states: NULL is «nadie lo dijo» — every row predating the column, and every
+    # client that does not say — and `False` is somebody saying they did not.
+    curated: Mapped[bool | None] = mapped_column(Boolean, default=None)
+
     # When the questions first reached whoever had to answer them, so «cuánto tardó en
     # contestar» is a fact rather than an impression. Written once, never on a reload.
     opened_at: Mapped[float | None] = mapped_column(Float, default=None)

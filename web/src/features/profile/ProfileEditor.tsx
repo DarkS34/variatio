@@ -7,10 +7,9 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
-  LOCKED_HINT,
   StageGate,
   useRegisterPendingEdit,
   useStageLocked,
@@ -25,6 +24,7 @@ import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { splitCriterion } from "@/lib/difficulty";
 import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
@@ -33,22 +33,26 @@ import { FieldEditor, baseType, fieldNameError, nameError } from "./FieldEditor"
 import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
+/**
+ * A box that adds one thing, and it is drawn only while the stage is being corrected.
+ *
+ * It takes no `disabled`: an empty box and a button carry no information at all, so in the
+ * static view there is nothing to keep visible and greying them out would claim something
+ * is wrong when the only thing true is that this is not the moment's task.
+ */
 function AddInline({
   placeholder,
   cta,
   onAdd,
   validate,
   mono = true,
-  disabled = false,
 }: {
   placeholder: string;
   cta: string;
   onAdd: (value: string) => void;
   validate?: (value: string) => string | null;
   mono?: boolean;
-  disabled?: boolean;
 }) {
-  const { t } = useT();
   const [text, setText] = useState("");
   const error = text.trim() ? (validate?.(text.trim()) ?? null) : null;
 
@@ -64,8 +68,6 @@ function AddInline({
       <div className="min-w-0 flex-1">
         <Input
           aria-label={placeholder}
-          disabled={disabled}
-          title={disabled ? t(LOCKED_HINT) : undefined}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
@@ -79,12 +81,7 @@ function AddInline({
         />
         {error ? <p className="mt-1 text-small text-destructive">{error}</p> : null}
       </div>
-      <Button
-        variant="outline"
-        onClick={submit}
-        disabled={disabled || !text.trim() || Boolean(error)}
-        title={disabled ? t(LOCKED_HINT) : undefined}
-      >
+      <Button variant="outline" onClick={submit} disabled={!text.trim() || Boolean(error)}>
         <Plus />
         {cta}
       </Button>
@@ -92,6 +89,14 @@ function AddInline({
   );
 }
 
+/**
+ * The types, as the tabs that choose which one is being read.
+ *
+ * Choosing one is not correcting anything, so the strip is drawn in both states; what
+ * lives only in the correcting one is what ADDS and REMOVES a type. «Añadir un tipo» sat
+ * against the tabs of a screen somebody had opened to read it, where it reads as a
+ * question about the tab beside it rather than as an offer.
+ */
 function TypeStrip({
   keys,
   active,
@@ -99,7 +104,7 @@ function TypeStrip({
   onSelect,
   onAdd,
   onRemove,
-  disabled = false,
+  editing,
 }: {
   keys: string[];
   active: string;
@@ -107,7 +112,7 @@ function TypeStrip({
   onSelect: (key: string) => void;
   onAdd: (key: string) => void;
   onRemove: (key: string) => void;
-  disabled?: boolean;
+  editing: boolean;
 }) {
   const tr = useT();
   const confirm = useConfirm();
@@ -131,7 +136,7 @@ function TypeStrip({
             )}
           >
             <span className="text-body font-medium">{labels[key] || key}</span>
-            {keys.length > 1 && !disabled ? (
+            {keys.length > 1 && editing ? (
               <span
                 role="button"
                 tabIndex={-1}
@@ -150,13 +155,112 @@ function TypeStrip({
         ))}
       </div>
 
-      <AddInline
-        placeholder={t("modality.newPlaceholder")}
-        cta={t("modality.add")}
-        onAdd={onAdd}
-        validate={(key) => nameError(key, keys, tr)}
-        disabled={disabled}
-      />
+      {editing ? (
+        <AddInline
+          placeholder={t("modality.newPlaceholder")}
+          cta={t("modality.add")}
+          onAdd={onAdd}
+          validate={(key) => nameError(key, keys, tr)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A value somebody wrote, drawn as what it is.
+ *
+ * A disabled `Textarea` is not text: it is a control that will not work, and it reads as
+ * one. So the static view renders prose — keeping the line breaks, because the criteria
+ * and the rules are written with them.
+ */
+function Written({ text, className }: { text: string; className?: string }) {
+  const { t } = useT();
+  const value = text.trim();
+  return (
+    <p
+      className={cn(
+        "whitespace-pre-line text-body",
+        value ? null : "text-muted-foreground",
+        className,
+      )}
+    >
+      {value || t("modality.empty")}
+    </p>
+  );
+}
+
+/** The label over a block that has no control under it, in the type of `Field`'s own. */
+function Caption({ children }: { children: string }) {
+  return <p className="text-micro font-condensed uppercase text-muted-foreground">{children}</p>;
+}
+
+/** The rule's number, shared by the two states so they cannot drift apart. */
+function RuleNumber({ n, className }: { n: number; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground",
+        className,
+      )}
+    >
+      {n}
+    </span>
+  );
+}
+
+/**
+ * The ladder, and what puts an exercise on each rung.
+ *
+ * The criterion is ONE string in the artifact and `splitCriterion` is what takes it apart;
+ * a text it cannot take apart comes back whole and is drawn whole, over the bare ladder.
+ * When it does come apart, every DECLARED rung gets a row — including one the criterion
+ * says nothing about, or a ladder of three would be drawn as a ladder of two.
+ */
+function DifficultyRead({
+  levels,
+  description,
+}: {
+  levels: string[];
+  description?: string | null;
+}) {
+  const { t } = useT();
+  const { lead, rungs } = splitCriterion(description, levels);
+  const clause = new Map(rungs.map((rung) => [rung.level, rung.text]));
+
+  if (rungs.length)
+    return (
+      <div className="space-y-2">
+        {lead ? <p className="whitespace-pre-line text-body">{lead}</p> : null}
+        <dl className="space-y-1.5">
+          {levels.map((level) => (
+            <div key={level} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <dt>
+                <Badge variant="outline">{level}</Badge>
+              </dt>
+              <dd className="min-w-0 flex-1 text-body text-muted-foreground">
+                {clause.get(level) ?? t("modality.difficulty.rungSilent")}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {levels.map((level) => (
+          <Badge key={level} variant="outline">
+            {level}
+          </Badge>
+        ))}
+      </div>
+      {lead ? (
+        <p className="whitespace-pre-line text-body">{lead}</p>
+      ) : (
+        <p className="text-body text-muted-foreground">{t("modality.difficulty.noCriterion")}</p>
+      )}
     </div>
   );
 }
@@ -166,7 +270,10 @@ export function ProfileEditor() {
   const { t } = tr;
   const query = useProfile();
   const invalidate = useInvalidateChain();
-  const stageLocked = useStageLocked();
+  // VIEWING AND CORRECTING ARE TWO MOMENTS. Locked — for either reason — this is a static
+  // view: what somebody wrote is rendered as text, and a control that only serves to change
+  // it is not drawn at all. Hidden and not greyed, because nothing is wrong here.
+  const editing = !useStageLocked();
 
   const [draft, setDraft] = useState<ExemplarsProfile | null>(null);
   const [activeType, setActiveType] = useState<string | null>(null);
@@ -350,9 +457,14 @@ export function ProfileEditor() {
   };
 
   const allOpen = open.length === names.length && names.length > 0;
+  // With nothing to say the bar is a rule across an otherwise quiet screen, and in the
+  // static view it has nothing to say by construction: nothing there can be edited.
+  const invalid = Boolean(validation && !validation.valid);
+  const bar = invalid || save.isPending || dirty;
 
   return (
     <div className="space-y-4">
+      {bar ? (
       <div className="sticky top-16 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
         {/* NO RAW-JSON TAB, and therefore no «Formulario» tab either (2026-08-31, explicit
             user request): with one view left there is nothing to switch between. What it
@@ -364,11 +476,11 @@ export function ProfileEditor() {
             barra que sólo debería llevar el guardado; lo que sí tiene que estar es la
             frase del validador cuando el perfil NO carga, porque es la razón por la que
             el botón de guardar se niega. */}
-        {validation && !validation.valid ? (
+        {invalid ? (
           <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
             <TriangleAlert className="size-3.5 shrink-0" />
-            <span className="truncate" title={validation.error ?? undefined}>
-              {validation.error}
+            <span className="truncate" title={validation?.error ?? undefined}>
+              {validation?.error}
             </span>
           </span>
         ) : null}
@@ -393,6 +505,7 @@ export function ProfileEditor() {
           ) : null}
         </div>
       </div>
+      ) : null}
 
       {save.isError ? (
         <Alert tone="danger" title={t("profileEditor.saveFailed")}>
@@ -413,7 +526,7 @@ export function ProfileEditor() {
           }}
           onAdd={addType}
           onRemove={removeType}
-          disabled={stageLocked}
+          editing={editing}
         />
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -437,54 +550,82 @@ export function ProfileEditor() {
                 the grouping legible; the difficulty's own 8 px between its rungs and its
                 box stays below it, so the hierarchy holds. */}
             <CardContent className="space-y-4">
-              <Field label={t("modality.readableName")}>
-                <Input
-                  value={spec.label ?? ""}
-                  placeholder={t("modality.readableName.placeholder")}
-                  readOnly={stageLocked}
-                  onChange={(event) => updateType({ label: event.target.value })}
-                />
-              </Field>
-              <Field label={t("modality.description")}>
-                <Textarea
-                  autoGrow
-                  value={spec.description ?? ""}
-                  placeholder={t("modality.description.placeholder")}
-                  className="min-h-20"
-                  readOnly={stageLocked}
-                  onChange={(event) => updateType({ description: event.target.value })}
-                />
-              </Field>
-              {/* The rungs are shown and not offered: they are the same three in every
-                  type, which is what lets «avanzado» mean one thing across the whole list
-                  and lets the list be ordered by it. What changes from one type to the next
-                  is what puts an exercise on each rung, and that is the box below. The
-                  render-prop form is not decoration — the label has to reach the textarea,
+              {/* The readable name is on the tab that selected this type, so reading it
+                  here would be reading it twice; it comes back as a field the moment it
+                  can be changed. */}
+              {editing ? (
+                <Field label={t("modality.readableName")}>
+                  <Input
+                    value={spec.label ?? ""}
+                    placeholder={t("modality.readableName.placeholder")}
+                    onChange={(event) => updateType({ label: event.target.value })}
+                  />
+                </Field>
+              ) : null}
+
+              {editing ? (
+                <Field label={t("modality.description")}>
+                  <Textarea
+                    autoGrow
+                    value={spec.description ?? ""}
+                    placeholder={t("modality.description.placeholder")}
+                    className="min-h-20"
+                    onChange={(event) => updateType({ description: event.target.value })}
+                  />
+                </Field>
+              ) : (
+                <div className="space-y-1.5">
+                  <Caption>{t("modality.description")}</Caption>
+                  <Written text={spec.description ?? ""} />
+                </div>
+              )}
+
+              {/* THE LADDER IS SHARED AND THE CRITERION IS THE TYPE'S OWN, and the sentence
+                  saying so sits BETWEEN the two halves it is about: what is over it is the
+                  same in every type, what is under it belongs to this one alone. Read off
+                  the layout alone that relation takes a minute to work out.
+
+                  The rungs are shown and not offered — that is what lets one level mean one
+                  thing across the whole list and lets the list be ordered by it. The
+                  render-prop form is not decoration: the label has to reach the textarea,
                   and `Field` only injects into a single element child. */}
-              <Field
-                label={t("modality.difficulty")}
-              >
-                {(props) => (
-                  <div>
-                    <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                      {difficultyLevels.map((level) => (
-                        <Badge key={level} variant="outline">
-                          {level}
-                        </Badge>
-                      ))}
+              {editing ? (
+                <Field label={t("modality.difficulty")}>
+                  {(props) => (
+                    <div>
+                      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                        {difficultyLevels.map((level) => (
+                          <Badge key={level} variant="outline">
+                            {level}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="mb-1.5 text-small text-muted-foreground">
+                        {t("modality.difficulty.shared")}
+                      </p>
+                      <Textarea
+                        {...props}
+                        autoGrow
+                        value={difficulty?.description ?? ""}
+                        placeholder={t("modality.difficulty.placeholder")}
+                        className="min-h-20"
+                        onChange={(event) => setDifficultyCriterion(event.target.value)}
+                      />
                     </div>
-                    <Textarea
-                      {...props}
-                      autoGrow
-                      value={difficulty?.description ?? ""}
-                      placeholder={t("modality.difficulty.placeholder")}
-                      className="min-h-20"
-                      readOnly={stageLocked}
-                      onChange={(event) => setDifficultyCriterion(event.target.value)}
-                    />
-                  </div>
-                )}
-              </Field>
+                  )}
+                </Field>
+              ) : (
+                <div className="space-y-1.5">
+                  <Caption>{t("modality.difficulty")}</Caption>
+                  <p className="text-small text-muted-foreground">
+                    {t("modality.difficulty.shared")}
+                  </p>
+                  <DifficultyRead
+                    levels={difficultyLevels}
+                    description={difficulty?.description}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -503,143 +644,220 @@ export function ProfileEditor() {
                 <InfoHint label={t("modality.rules.hintLabel")}>{t("modality.rules.body")}</InfoHint>
               </CardTitle>
             </CardHeader>
+            {/* A numbered list either way, because that is what the rules ARE: the
+                correcting state writes into the numbers, the static one reads them. */}
             <CardContent className="space-y-2">
-              {rules.map((rule, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <span className="mt-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-micro nums text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <Textarea
-                    autoGrow
-                    aria-label={t("modality.rule.n", { n: index + 1 })}
-                    value={rule}
-                    className="min-h-16"
-                    readOnly={stageLocked}
-                    placeholder={t("modality.rule.placeholder")}
-                    onChange={(event) => {
-                      const next = [...rules];
-                      next[index] = event.target.value;
-                      updateType({ general_generation_rules: next });
-                    }}
-                  />
+              {editing ? (
+                <>
+                  {rules.map((rule, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <RuleNumber n={index + 1} className="mt-2" />
+                      <Textarea
+                        autoGrow
+                        aria-label={t("modality.rule.n", { n: index + 1 })}
+                        value={rule}
+                        className="min-h-16"
+                        placeholder={t("modality.rule.placeholder")}
+                        onChange={(event) => {
+                          const next = [...rules];
+                          next[index] = event.target.value;
+                          updateType({ general_generation_rules: next });
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title={t("modality.rule.remove")}
+                        className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() =>
+                          updateType({
+                            general_generation_rules: rules.filter((_, i) => i !== index),
+                          })
+                        }
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ))}
+
+                  {rules.length === 0 ? (
+                    <p className="text-small text-attention">{t("modality.rules.none")}</p>
+                  ) : null}
+
                   <Button
+                    size="sm"
                     variant="ghost"
-                    size="icon-sm"
-                    disabled={stageLocked}
-                    title={stageLocked ? t(LOCKED_HINT) : t("modality.rule.remove")}
-                    className="mt-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() =>
-                      updateType({
-                        general_generation_rules: rules.filter((_, i) => i !== index),
-                      })
-                    }
+                    onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
                   >
-                    <X />
+                    <Plus />
+                    {t("modality.rule.add")}
                   </Button>
-                </div>
-              ))}
-
-              {rules.length === 0 ? (
+                </>
+              ) : rules.length ? (
+                <ol className="space-y-2">
+                  {rules.map((rule, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <RuleNumber n={index + 1} className="mt-0.5" />
+                      <Written text={rule} className="min-w-0 flex-1" />
+                    </li>
+                  ))}
+                </ol>
+              ) : (
                 <p className="text-small text-attention">{t("modality.rules.none")}</p>
-              ) : null}
-
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={stageLocked}
-                title={stageLocked ? t(LOCKED_HINT) : undefined}
-                onClick={() => updateType({ general_generation_rules: [...rules, ""] })}
-              >
-                <Plus />
-                {t("modality.rule.add")}
-              </Button>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 pt-2">
-          <h2 className="text-body font-semibold tracking-tight">
-            {t("modality.fieldsOf", { name: spec.label || activeKey })}
-          </h2>
-          <InfoHint label={t("modality.fields.hintLabel")}>
-            {t("modality.fields.hintA")}{" "}
-            <Star className="inline size-3" /> {t("modality.fields.hintB")}
-          </InfoHint>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => setOpen(allOpen ? [] : names)}
-          >
-            {allOpen ? <ChevronsDownUp /> : <ChevronsUpDown />}
-            {allOpen ? t("modality.collapseAll") : t("modality.expandAll")}
-          </Button>
-        </div>
+        {/* «Campos de …» IS DRAWN ONLY WHILE CORRECTING (explicit user request). An editor
+            per field — its identifier, its type, whether it is obligatory — is the most
+            technical question the whole path asks, and it was greeting somebody who had
+            opened the screen to read it. What was worth learning from them is asked where
+            it belongs: «¿Las partes de cada tipo son las correctas?» is in the
+            questionnaire beside this, so nothing is lost by not offering the editor. */}
+        {editing ? (
+          <>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <h2 className="text-body font-semibold tracking-tight">
+              {t("modality.fieldsOf", { name: spec.label || activeKey })}
+            </h2>
+            <InfoHint label={t("modality.fields.hintLabel")}>
+              {t("modality.fields.hintA")}{" "}
+              <Star className="inline size-3" /> {t("modality.fields.hintB")}
+            </InfoHint>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto"
+              onClick={() => setOpen(allOpen ? [] : names)}
+            >
+              {allOpen ? <ChevronsDownUp /> : <ChevronsUpDown />}
+              {allOpen ? t("modality.collapseAll") : t("modality.expandAll")}
+            </Button>
+          </div>
 
-        {/* LA TARJETA «CAMPOS QUE SE INDEXAN» YA NO ESTÁ (2026-09-01, explicit user
-            request). Qué campos entran en el índice es una decisión sobre la recuperación,
-            no sobre la asignatura, y quien prepara una instancia no tiene con qué
-            decidirla: se queda lo que el perfil traiga, que es lo que el constructor
-            dedujo. `embed_fields` sigue en el artefacto y `toggleIndexed` sigue existiendo
-            para cuando haya que volver a ofrecerlo. */}
-        {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
-          <Alert tone="attention" title={t("modality.primaryNotText")}>
-            <p>
-              <code className="font-mono">{spec.primary_field}</code>{" "}
-              {t("modality.primaryNotTextBody")}
-            </p>
-          </Alert>
+          {/* LA TARJETA «CAMPOS QUE SE INDEXAN» YA NO ESTÁ (2026-09-01, explicit user
+              request). Qué campos entran en el índice es una decisión sobre la recuperación,
+              no sobre la asignatura, y quien prepara una instancia no tiene con qué
+              decidirla: se queda lo que el perfil traiga, que es lo que el constructor
+              dedujo. `embed_fields` sigue en el artefacto y `toggleIndexed` sigue existiendo
+              para cuando haya que volver a ofrecerlo. */}
+          {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
+            <Alert tone="attention" title={t("modality.primaryNotText")}>
+              <p>
+                <code className="font-mono">{spec.primary_field}</code>{" "}
+                {t("modality.primaryNotTextBody")}
+              </p>
+            </Alert>
+          ) : null}
+
+          <div className="space-y-2">
+            {names.map((name, index) => (
+              <FieldEditor
+                key={name}
+                name={name}
+                spec={spec.fields[name]}
+                isPrimary={name === spec.primary_field}
+                open={open.includes(name)}
+                first={index === 0}
+                last={index === names.length - 1}
+                taken={names}
+                onToggleOpen={() =>
+                  setOpen((current) =>
+                    current.includes(name)
+                      ? current.filter((entry) => entry !== name)
+                      : [...current, name],
+                  )
+                }
+                onChange={(next) => updateType({ fields: { ...spec.fields, [name]: next } })}
+                onRename={(next) => renameField(name, next)}
+                onRemove={() => removeField(name)}
+                onMakePrimary={() =>
+                  updateType({
+                    primary_field: name,
+                    embed_fields: names.filter(
+                      (field) => field === name || indexed.includes(field),
+                    ),
+                  })
+                }
+                onMove={(direction) => moveField(name, direction)}
+              />
+            ))}
+          </div>
+
+          <AddInline
+            placeholder={t("modality.newFieldPlaceholder")}
+            cta={t("modality.addField")}
+            onAdd={addField}
+            validate={(name) => fieldNameError(name, names, tr)}
+          />
+          </>
         ) : null}
-
-        <div className="space-y-2">
-          {names.map((name, index) => (
-            <FieldEditor
-              key={name}
-              name={name}
-              spec={spec.fields[name]}
-              isPrimary={name === spec.primary_field}
-              open={open.includes(name)}
-              first={index === 0}
-              last={index === names.length - 1}
-              taken={names}
-              onToggleOpen={() =>
-                setOpen((current) =>
-                  current.includes(name)
-                    ? current.filter((entry) => entry !== name)
-                    : [...current, name],
-                )
-              }
-              onChange={(next) => updateType({ fields: { ...spec.fields, [name]: next } })}
-              onRename={(next) => renameField(name, next)}
-              onRemove={() => removeField(name)}
-              onMakePrimary={() =>
-                updateType({
-                  primary_field: name,
-                  embed_fields: names.filter(
-                    (field) => field === name || indexed.includes(field),
-                  ),
-                })
-              }
-              onMove={(direction) => moveField(name, direction)}
-            />
-          ))}
-        </div>
-
-        <AddInline
-          placeholder={t("modality.newFieldPlaceholder")}
-          cta={t("modality.addField")}
-          onAdd={addField}
-          validate={(name) => fieldNameError(name, names, tr)}
-          disabled={stageLocked}
-        />
       </div>
     </div>
   );
 }
 
-export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
+// How many types the opening sentence names before it stops naming them. Every profile in
+// the reference workspaces declares between two and six, so nothing real is elided; past
+// that the sentence becomes a wall, and the count at its head stays true either way
+// because what is left over is said out loud rather than dropped.
+const MAX_NAMED_TYPES = 6;
+
+/**
+ * WHAT CAME OUT OF THE BUILD, COUNTED AND NAMED (explicit user request).
+ *
+ * The sentence under the title was the same paragraph whatever the profile turned out to
+ * hold, so it could not say the one thing somebody opening this screen has to know: how
+ * many shapes of exercise were found and what they are called. Only this screen holds
+ * those, which is why it hands the sentence up rather than the header reaching down.
+ *
+ * `undefined` while there is no profile yet, because that is what `StageGate` falls back
+ * on: «se han detectado 0 tipos» for half a second is worse than the generic sentence.
+ * With ONE type the tabs are not a way of filtering anything, so nothing invites a press.
+ *
+ * What it counts is the file, twice over. Not the editor's draft — «se han detectado» is
+ * about what the build produced, not about a name somebody is halfway through typing, and
+ * the two can only differ while the bar below is saying «sin guardar». And not the file at
+ * all during a REBUILD: the builder writes at the end, so the query still serves the
+ * profile about to be replaced, and the header would spend the build naming types on their
+ * way out — under a screen that hides that very artifact for exactly that reason.
+ */
+function useProfileIntro(stage: StageState | undefined): ReactNode {
+  const { t, plural, language } = useT();
+  const query = useProfile();
+  const stale = !stage || stage.status === "building";
+  const profile = !stale && query.data?.exists ? query.data.profile : null;
+  const names = profile
+    ? Object.entries(profile.item_types).map(([key, spec]) => spec.label || key)
+    : [];
+  if (!names.length) return undefined;
+
+  const shown = names.slice(0, MAX_NAMED_TYPES);
+  const rest = names.length - shown.length;
+  // The list joiner is the language's own: Spanish puts «y» before the last name and
+  // English an Oxford comma, and neither belongs in a catalogue string.
+  const listed = new Intl.ListFormat(language, { type: "conjunction" }).format(
+    rest ? [...shown, plural("stage.what.profile.more", rest)] : shown,
+  );
+
   return (
-    <StageGate stage={stage}>
+    <p className="max-w-[74ch] text-body text-muted-foreground">
+      {[
+        plural("stage.what.profile.found", names.length, { names: listed }),
+        t("stage.what.profile.why"),
+        names.length > 1 ? t("stage.what.profile.tabs") : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    </p>
+  );
+}
+
+export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
+  const intro = useProfileIntro(stage);
+  return (
+    <StageGate stage={stage} intro={intro}>
       <ProfileEditor />
     </StageGate>
   );

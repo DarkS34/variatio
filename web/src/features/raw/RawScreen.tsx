@@ -19,13 +19,11 @@ import { CancelButton } from "@/components/CancelButton";
  * two true things: the raw documents are touched once at the start of an instance's life,
  * and they are also the thing that decides how long every build takes. Folded into a card
  * it could only serve the first. As a screen it can serve both — a document is one row
- * with its size, its pages, its state and the two operations on it, and the transcription
- * is a first-class step rather than a disclosure inside a disclosure.
+ * with its state and the two operations on it, and the transcription is a first-class step
+ * rather than a disclosure inside a disclosure.
  *
  * The colour budget is one `--attention`, and it is the alert at the top: import, or
- * transcribe, or nothing. Everything else on the screen reports, achromatically. The
- * per-origin buttons are therefore `default` — the global one in the alert is the frontier
- * action, and two ultramarine buttons would be none.
+ * transcribe, or nothing. Everything else on the screen reports, achromatically.
  *
  * What this screen must NOT become is a gate. Transcribing is an accelerator: every
  * builder keeps its own conversion phase, so nothing here is ever a precondition for

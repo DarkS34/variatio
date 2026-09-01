@@ -6,7 +6,7 @@ import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
-import { STEPS } from "@/lib/steps";
+import { GENERATE_PHASE, STEPS, nextStepOf, stepNumber, stepNumberOf } from "@/lib/steps";
 import { useT, type Translate } from "@/lib/i18n";
 import { useBuildPhases } from "@/state/queries";
 import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../blocks";
@@ -14,14 +14,15 @@ import { Block, Detail, Facts, Paragraph, Rows, SectionHead, Steps } from "../bl
 const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "missing", "blocked"];
 
 const STATE_HINTS: Record<StatusKey, string> = {
-  approved: "Cerrado y contado como bueno. Es lo que desbloquea la etapa siguiente.",
-  draft: "Construido pero sin revisar. Se puede editar; todavía no cuenta.",
+  approved:
+    "Cerrado y dado por bueno. Se cierra al continuar al paso siguiente, y «Reabrir» es la única vuelta atrás.",
+  draft: "Construido y todavía sin cerrar. Se puede mirar y corregir; lo que viene detrás sigue esperando.",
   stale:
-    "Algo de lo que depende cambió después de aprobarlo. Hay que reconstruir o volver a aprobar.",
+    "Algo de lo que depende cambió después de cerrarlo. Hay que reconstruirlo, o repasarlo y volver a cerrarlo.",
   building:
     "La pantalla dice cuál de tres cosas pasa: se construye por primera vez y no hay nada que reemplazar; se trabaja sobre lo que ya hay, que sigue guardado y solo deja de verse; o el trabajo sigue en cola y todavía no ha empezado, y entonces no hay barra.",
   missing: "Todavía no existe. La pantalla enseña la cabecera y un único botón: construir.",
-  blocked: "No es «no está hecho», es «no te toca todavía»: falta aprobar algo de lo que depende.",
+  blocked: "No es «no está hecho», es «no te toca todavía»: falta cerrar algo de lo que depende.",
 };
 
 const ARM_ORDER = ["naive", "rag", "system"] as const;
@@ -40,7 +41,23 @@ function BuildPlanBar() {
   return <PhaseBar phases={phases} percent={58} activeKey="clean" />;
 }
 
-function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone?: "study" }) {
+/**
+ * One of the two things the path leads to, drawn as the bar draws it.
+ *
+ * `n` replaces the icon on the one that IS a phase, exactly as `UsePill` does: the number
+ * beside «Crear ejercicios» is what says the four stops before it were for something.
+ */
+function Pill({
+  icon: Icon,
+  label,
+  tone,
+  n,
+}: {
+  icon: LucideIcon;
+  label: string;
+  tone?: "study";
+  n?: number;
+}) {
   return (
     <span
       className={
@@ -49,7 +66,11 @@ function Pill({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; to
           : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
-      <Icon className="size-4" />
+      {n === undefined ? (
+        <Icon className="size-4" />
+      ) : (
+        <span className="nums font-condensed font-semibold">{n}</span>
+      )}
       {label}
     </span>
   );
@@ -64,30 +85,41 @@ function Start() {
         <p>
           <strong>Variatio</strong> genera <strong>ejercicios de aprendizaje</strong> —ejercicios,
           problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
-          en abstracto: parte de los tres pasos con los que describes tu asignatura y produce variantes
+          en abstracto: parte de los cuatro pasos con los que describes tu asignatura y produce variatios
           que respetan lo que el alumno ya ha visto y lo que todavía no.
         </p>
       </SectionHead>
 
       <Block title="El recorrido, de un vistazo">
-        {/* Es la barra de arriba, dibujada aquí: cuatro pasos numerados y las dos cosas que
-            se hacen con lo que producen. El raíl que había antes se fue con el panel — lo
-            que codificaba, la dependencia entre etapas, lo dicen ahora los números. */}
+        {/* Es la barra de arriba, dibujada aquí: los números salen de `STEPS` y de las dos
+            constantes de fase, así que esta figura no puede prometer un orden que la
+            navegación no tenga. */}
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
           {STEPS.map((step, index) => (
             <div key={step.path} className="flex items-center gap-2">
-              <span className="nums flex size-6 shrink-0 items-center justify-center bg-primary font-condensed text-small font-semibold text-primary-foreground">
-                {index + 1}
+              <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+                {stepNumber(index)}
               </span>
               <span className="text-body font-medium">{t(step.labelKey)}</span>
             </div>
           ))}
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <Pill icon={Play} label={t("nav.create")} />
+          <Pill icon={Play} label={t("nav.create")} n={GENERATE_PHASE} />
           <Pill icon={Scale} label={t("nav.compare")} tone="study" />
         </div>
         <Paragraph>
-          Es exactamente la barra de arriba. Los cuatro pasos se hacen en ese orden y cada uno lleva debajo una palabra diciendo dónde estás: <em>hecho</em>, <em>te toca ahora</em> o <em>después</em>. Las dos píldoras de la derecha no son pasos: son lo que se hace con lo que los pasos producen, y se abren cuando los cuatro están dados.
+          Es exactamente la barra de arriba, y los números dicen de qué van: los cuatro
+          primeros son <strong>1.1</strong> a <strong>1.4</strong> porque son un solo
+          trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden. Cada uno lleva
+          debajo una palabra diciendo dónde estás: <em>{t("nav.state.done")}</em>,{" "}
+          <em>{t("nav.state.now").toLowerCase()}</em> o <em>{t("nav.state.later").toLowerCase()}</em>.
+        </Paragraph>
+        <Paragraph>
+          <strong>«{t("nav.create")}» es la fase {GENERATE_PHASE}</strong>, y por eso lleva
+          número: es aquello para lo que existen los otros cuatro, no un extra al margen del
+          recorrido. Se abre cuando la fase 1 está terminada. «{t("nav.compare")}»,
+          en cambio, no está numerado: no produce material para tu asignatura, sirve para
+          medir el sistema.
         </Paragraph>
       </Block>
 
@@ -95,66 +127,69 @@ function Start() {
         items={[
           {
             key: "perfil",
-            head: t("artifact.profile"),
-            body: "Qué es un ejercicio aquí: sus campos, sus tipos y las guías que el modelo sigue.",
+            head: `${stepNumberOf("exemplars_profile")} · ${t("artifact.profile")}`,
+            body: "Qué formas tienen tus ejercicios: qué partes lleva cada tipo, cuál es su nivel de dificultad y cómo se redactan.",
           },
           {
             key: "temario",
-            head: t("artifact.graph"),
-            body: "El vocabulario: conceptos, dominios y las relaciones entre ellos.",
+            head: `${stepNumberOf("knowledge_graph")} · ${t("artifact.graph")}`,
+            body: "Los temas de la asignatura, agrupados en unidades y unidos por lo que hace falta saber antes de cada cosa.",
           },
           {
             key: "banco",
-            head: t("artifact.bank"),
-            body: "Ejercicios reales de tu asignatura, ya etiquetados con conceptos del temario.",
+            head: `${stepNumberOf("exemplars_bank")} · ${t("artifact.bank")}`,
+            body: "Tus ejercicios recogidos uno a uno de los documentos, con los temas del temario que practica cada uno.",
           },
         ]}
       />
 
-      <Alert tone="info" title="Se empieza por el perfil, no por el temario">
+      <Alert tone="info" title="Los tipos de ejercicio van antes que el temario">
         <p>
-          Un temario se puede construir sin nada más, pero su revisión de qué conceptos sirven de etiqueta necesita
-          el perfil <em>aprobado</em>. Empezar por el temario es empezar por una etapa que no
-          puedes terminar.
+          Un temario se puede construir sin nada más, pero la revisión de qué temas sirven de
+          etiqueta necesita los <em>tipos de ejercicio ya cerrados</em>: se juzga contra las
+          formas de ejercicio que pones tú. Por eso el Paso{" "}
+          {stepNumberOf("exemplars_profile")} va delante del{" "}
+          {stepNumberOf("knowledge_graph")}, y no al revés.
         </p>
       </Alert>
 
-      <Block title="La primera media hora">
+      <Block title="Cómo se empieza">
         <Steps
           items={[
             <>
-              Ponte en un <strong>espacio de trabajo</strong>. Si aún no tienes ninguno, el panel te
-              ofrece crear el tuyo; si tienes varios, se cambia en el selector de arriba a la
-              izquierda. Todo lo demás vive dentro de uno.
+              Ponte en un <strong>espacio de trabajo</strong>. Si aún no tienes ninguno, se te
+              ofrece crear el tuyo nada más entrar; si tienes varios, se cambia en el selector
+              de arriba a la izquierda. Todo lo demás vive dentro de uno.
             </>,
             <>
-              Desde <strong>«{t("dash.rawData")}»</strong>, en la navegación, sube el material:
-              los documentos con ejercicios de ejemplo y los apuntes de la asignatura.
+              <strong>Paso {stepNumber(0)}</strong> — en «{t("nav.step.raw")}» sube los apuntes
+              de la asignatura y los ejercicios que ya tienes. Con un par de temas basta: cada
+              documento se lee entero, así que cuanto más subas, más se tarda.
             </>,
             <>
-              En esa misma pantalla, lanza la <strong>transcripción</strong> de cada origen. No
-              es obligatoria —si no la haces, cada construcción transcribe lo suyo por el
-              camino—, pero es el trabajo mecánico que abre las tres: hecho una vez, deja de
-              pagarse al principio de cada una. Y es donde puedes leer y corregir a mano una
-              página que haya salido mal.
+              En esa misma pantalla, «{t("transcribe.startAll")}» adelanta la lectura de los
+              documentos. No es obligatoria —si no la haces, cada construcción lee lo suyo por
+              el camino—, pero es el trabajo mecánico que abre los tres pasos siguientes. Y es
+              donde puedes leer y corregir a mano una página que haya salido mal.
             </>,
             <>
-              Construye el <strong>perfil</strong>, revísalo campo a campo y apruébalo.
+              <strong>Paso {stepNumber(1)}</strong> — construye los{" "}
+              <strong>{t("nav.step.profile").toLowerCase()}</strong>, míralos, corrige lo que no
+              encaje y continúa.
             </>,
             <>
-              Lanza el <strong>temario</strong>. Es el trabajo más caro de la cadena: puedes
-              cerrar la pestaña, el servidor sigue.
+              <strong>Paso {stepNumber(2)}</strong> — lanza <strong>el temario</strong>. Es el
+              trabajo más caro del recorrido: puedes cerrar la pestaña, el servidor sigue. Al
+              terminar encadena por su cuenta las descripciones de cada tema y la revisión de
+              cuáles sirven de etiqueta.
             </>,
             <>
-              Marca <strong>qué conceptos sirven de etiqueta</strong>, repasa las
-              <strong> descripciones</strong> y apruébalo.
+              <strong>Paso {stepNumber(3)}</strong> — recoge tus ejercicios y repasa el{" "}
+              <strong>{t("nav.step.bank").toLowerCase()}</strong>: si el tema que se le ha
+              puesto a cada uno es el que de verdad practica.
             </>,
             <>
-              Extrae el <strong>banco</strong>, repasa los ejercicios que se quedaron sin concepto y
-              apruébalo.
-            </>,
-            <>
-              Con las tres aprobadas se abren «{t("nav.generate")}» y «{t("nav.evaluate")}».
+              Con los cuatro cerrados se abren «{t("nav.create")}» y «{t("nav.compare")}».
             </>,
           ]}
         />
@@ -169,17 +204,25 @@ function Start() {
         </Paragraph>
       </Block>
 
-      <Detail title="¿Por qué hay que aprobar cada etapa?">
+      <Detail title="¿Qué quiere decir «cerrar» un paso?">
         <p>
-          Lo que se aprueba es el <em>hash del fichero</em>. Mientras una etapa está aprobada, su
-          pantalla no ofrece ningún control que reescriba el artefacto: bajo el botón «
-          {t("stage.reopen")}» lo dice con todas las letras —«{t("stage.locked")}»— y ese botón
-          es el único camino de vuelta. Aprobar es lo que desbloquea la etapa siguiente y, con
-          las tres, la generación.
+          No hay ningún botón que se llame «aprobar». Un paso se cierra{" "}
+          <strong>al continuar al siguiente</strong>: el botón «
+          {t("stage.continue", { n: stepNumber(2) })}» del final de la pantalla guarda primero
+          lo que tengas sin guardar y da por bueno lo que hay. Si esa escritura se rechaza, no
+          se cierra nada y no se avanza.
         </p>
         <p>
-          Lo que <em>no</em> reescribe el artefacto —las descripciones de conceptos y el
-          currículo— sigue estando disponible con la etapa aprobada.
+          Cerrar un paso es lo que desbloquea el siguiente, y cerrar los tres que construyen
+          algo es lo que abre «{t("nav.create")}». Lo que se da por bueno es el fichero{" "}
+          <em>tal como está</em>, así
+          que mientras el paso siga cerrado la pantalla no ofrece nada que lo reescriba: «
+          {t("stage.locked")}». El botón «{t("stage.reopen")}», arriba, es la única vuelta
+          atrás.
+        </p>
+        <p>
+          Lo que <em>no</em> forma parte de ese fichero —la descripción de cada tema— se puede
+          seguir corrigiendo con el paso cerrado, porque vive aparte y no caduca nada.
         </p>
       </Detail>
     </div>
@@ -192,9 +235,10 @@ function Workspace() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.workspace")}>
         <p>
-          Un <strong>espacio de trabajo</strong> es una instancia completa: su material en bruto, sus tres
-          artefactos, su caché y su currículo. Dos asignaturas son dos espacios de trabajo. Dos formatos
-          de ejercicio muy distintos para la misma asignatura, también.
+          Un <strong>espacio de trabajo</strong> es una asignatura entera: sus documentos, los
+          cuatro pasos del recorrido y todo lo que se ha generado con ella. Dos asignaturas son
+          dos espacios de trabajo. Dos formatos de ejercicio muy distintos para la misma
+          asignatura, también.
         </p>
       </SectionHead>
 
@@ -202,7 +246,7 @@ function Workspace() {
         items={[
           { label: "Dónde se cambia", value: "El selector de arriba a la izquierda, junto a la marca." },
           { label: "Quién puede crear uno", value: "Cualquier cuenta, y queda como su propietaria." },
-          { label: "Si no tienes ninguno", value: "El panel te ofrece crearlo. No hay ninguno por defecto." },
+          { label: "Si no tienes ninguno", value: "Se te ofrece crearlo nada más entrar. No hay ninguno por defecto." },
           { label: "Qué se lleva al cambiar", value: "Nada. Cada espacio de trabajo tiene lo suyo, incluida su caché." },
           {
             label: "Qué se decide al crearlo",
@@ -214,15 +258,16 @@ function Workspace() {
       <Block title="Entrar sin ninguno es normal">
         <Paragraph>
           No hay un espacio de trabajo inicial en el que caiga quien no tiene otro: una cuenta recién
-          creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra el{" "}
-          <strong>Panel</strong> pidiéndole que cree el suyo. Basta con el nombre de la
+          creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra la
+          oferta de crear el suyo. Basta con el nombre de la
           asignatura. Las dos salidas son igual de válidas: créalo tú y serás su propietario, o
           espera a que quien administra te dé acceso a uno que ya existe.
         </Paragraph>
         <Paragraph>
-          Mientras tanto la aplicación no se queda bloqueada: esta guía, «Mi perfil» y —si
-          administras la instalación— «Administración» funcionan sin ningún espacio de trabajo. Lo que
-          espera es todo lo que lee una instancia: las tres etapas, «Generar» y «Evaluar».
+          Mientras tanto la aplicación no se queda bloqueada: esta guía, «{t("account.title")}» y
+          —si administras la instalación— «{t("admin.title")}» funcionan sin ningún espacio de
+          trabajo. Lo que espera es todo lo que lee una instancia: los cuatro pasos, «
+          {t("nav.create")}» y «{t("nav.compare")}».
         </Paragraph>
       </Block>
 
@@ -275,10 +320,10 @@ function Workspace() {
 
       <Block title="Lo que ya has dado en clase">
         <Paragraph>
-          Al pedir un ejercicio puedes decir qué conceptos ha visto ya la clase. Es lo que acota
-          el andamiaje: de un concepto impartido el ejercicio puede apoyarse; de uno que aún no
-          se ha dado, no puede depender. Se elige <em>en el encargo</em>, en «Ajustes», y vale
-          para esa tanda — no se guarda en la asignatura.
+          Al pedir un ejercicio puedes decir hasta dónde ha llegado la clase. Es lo que acota
+          el andamiaje: en un tema ya dado el ejercicio puede apoyarse; de uno que aún no se ha
+          visto, no puede depender. Se elige <em>en el propio encargo</em>, dentro de «
+          {t("form.settings.title")}», y vale para esa tanda — no se guarda en la asignatura.
         </Paragraph>
         <Alert tone="info" title="Sin marcar nada no significa «nada impartido»">
           <p>
@@ -298,28 +343,32 @@ function Raw() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.raw")}>
         <p>
-          Los documentos de los que sale todo lo demás. Tienen pantalla propia —{" "}
-          <strong>«{t("nav.rawData")}»</strong> en la navegación,{" "}
-          <code className="font-mono text-small">/raw</code>— y su propia píldora, delante de
-          las tres etapas y separada de ellas por una raya: el material en bruto alimenta la
-          cadena sin ser un paso de ella. No escribe ningún artefacto, nadie lo aprueba y por eso
-          no está en el raíl.
+          Los documentos de los que sale todo lo demás, y el primer paso del recorrido —{" "}
+          <strong>«{t("nav.step.raw")}»</strong> en la barra de arriba,{" "}
+          <code className="font-mono text-small">/raw</code>. Es el único sitio en el que hace
+          falta que busques archivos en tu equipo: los otros tres pasos trabajan sobre lo que
+          dejes aquí.
+        </p>
+        <p>
+          <strong>Con un par de temas basta.</strong> Cada documento se lee entero, así que
+          cuanto más subas más se tarda, y para ver si esto sirve para tu asignatura no hace
+          falta el curso completo.
         </p>
       </SectionHead>
 
       <Facts
         items={[
           {
-            label: "Qué produce",
-            value: "Ningún artefacto: las páginas de cada documento pasadas a markdown, guardadas una a una.",
+            label: "Qué se hace aquí",
+            value: "Subir tus documentos, y opcionalmente adelantar su lectura y corregir a mano lo que salga mal.",
           },
           {
-            label: "Qué cuesta",
+            label: "Qué cuesta leerlos",
             value: "Una llamada al modelo por página, en los dos orígenes por igual.",
           },
           {
-            label: "Qué desbloquea",
-            value: "Nada, y es deliberado: adelanta trabajo que las construcciones harían igualmente.",
+            label: "Cuándo está hecho",
+            value: "En cuanto los dos orígenes tienen documentos. Leerlos no es un requisito.",
           },
         ]}
       />
@@ -340,40 +389,39 @@ function Raw() {
           ]}
         />
         <Paragraph>
-          Cada tarjeta lleva bajo el título la etapa a la que alimenta, con los nombres cortos de
-          la barra de arriba: «{t("nav.graph")}» para los apuntes, «{t("nav.profile")}» y «
-          {t("nav.bank")}» para los ejemplares. Un origen vacío no dibuja una lista vacía: la
-          tarjeta entera se convierte en la zona donde soltar los ficheros, que es lo único que
-          hay que hacer ahí.
+          Bajo el título de cada tarjeta va esa misma frase, diciendo qué hay que soltar ahí y
+          para qué se usa. Un origen vacío no dibuja una lista vacía: la tarjeta entera se
+          convierte en la zona donde soltar los ficheros, que es lo único que hay que hacer ahí.
+        </Paragraph>
+        <Paragraph>
+          Una vez hay documentos, cada uno es <strong>una fila</strong>: su nombre, cómo va su
+          lectura y los dos botones que actúan sobre él —abrirlo para corregir sus páginas, o
+          quitarlo del origen—.
         </Paragraph>
       </Block>
 
-      <Alert tone="info" title="Transcribir adelanta trabajo; nunca es un requisito">
+      <Alert tone="info" title="Leerlos ahora adelanta trabajo; nunca es un requisito">
         <p>
-          Pasar los documentos a markdown es lo primero que hace <em>cada</em> construcción, y es
-          trabajo mecánico: hacerlo aquí una vez lo saca del principio de las tres. Si construyes
-          sin haber transcrito, la construcción lo hace por su cuenta y nadie te lo impide —{" "}
-          <strong>nada se rechaza jamás por falta de transcripción</strong>.
+          Pasar los documentos a texto es lo primero que hace <em>cada</em> construcción, y es
+          trabajo mecánico: hacerlo aquí una vez lo saca del principio de los tres pasos
+          siguientes. Si construyes sin haberlos leído, la construcción lo hace por su cuenta y
+          nadie te lo impide — <strong>nada se rechaza jamás por falta de lectura</strong>.
         </p>
         <p>
-          Por eso, mientras queden documentos sin transcribir, la píldora de «{t("nav.rawData")}»
-          lleva un punto y las tres etapas de la barra de arriba se ven <em>atenuadas</em>,
-          diciendo por qué al pasar el cursor. Atenuado no es desactivado: siguen siendo
-          pulsables y siguen construyendo. Es una indicación de por dónde empezar, no un
+          Por eso, mientras queden documentos sin leer, el propio paso «{t("nav.step.raw")}» de
+          la barra de arriba lo dice al pasar el cursor, y lo dice contando: cuántos quedan y
+          que puedes construir igualmente. Es una indicación de por dónde empezar, no un
           candado.
         </p>
       </Alert>
 
-      <Block title="Dos botones, y no tienen el mismo alcance">
-        <Rows
-          items={[
-            {
-              key: "todo",
-              head: <>«{t("transcribe.startAll")}»</>,
-              body: "En el aviso de arriba de la pantalla. Lanza de una vez los orígenes que tengan algo que hacer, y es el camino normal.",
-            },
-          ]}
-        />
+      <Block title="Un solo botón, y lo lanza todo">
+        <Paragraph>
+          «{t("transcribe.startAll")}» está en el aviso de arriba de la pantalla y es el único
+          que hay: lanza de una vez los orígenes que tengan algo que hacer. Por dentro son{" "}
+          <strong>dos trabajos</strong>, uno por origen, así que en la cola se ven dos y hay que
+          detener los dos si te arrepientes.
+        </Paragraph>
       </Block>
 
       <Block title="Cómo va cada documento">
@@ -397,17 +445,17 @@ function Raw() {
             {
               key: "stale",
               head: <Badge variant="attention">{t("transcribe.state.stale")}</Badge>,
-              body: "Se transcribió, pero algo de lo que dependía ha cambiado. La fila dice qué: el propio documento, la ruta de transcripción, el modelo, la resolución de render, el OCR o el prompt.",
+              body: "Se leyó, pero algo de lo que dependía ha cambiado. La fila dice qué: el propio documento, la ruta de lectura, el modelo, la resolución de render, el OCR o el prompt.",
             },
             {
               key: "failed",
               head: <Badge variant="danger">{t("transcribe.failedCount", { n: "N" })}</Badge>,
-              body: "Va junto al estado, no en su lugar: un documento puede estar transcrito y al día y aun así tener páginas que el modelo no supo leer. Ese distintivo es el único aviso de que ahí falta texto, y se arregla abriendo el documento.",
+              body: "Va junto al estado, no en su lugar: un documento puede estar leído y al día y aun así tener páginas que el modelo no supo descifrar. Ese distintivo es el único aviso de que ahí falta texto, y se arregla abriendo el documento.",
             },
           ]}
         />
         <Paragraph>
-          El motivo va en la fila del documento y no escondido en un recuento: «2 caducados» dice
+          El motivo va en la fila del documento y no escondido en un recuento: «2 hay que releerlos» dice
           el estado y se calla justo la mitad sobre la que se actúa. Un estado sin motivo no es
           un estado, y lo que hay debajo es una lista de páginas que la siguiente construcción
           iba a rehacer en silencio.
@@ -416,7 +464,7 @@ function Raw() {
 
       <Alert tone="settled" title="Detenerla no pierde nada">
         <p>
-          Las páginas se escriben documento a documento, así que una transcripción cancelada
+          Las páginas se escriben documento a documento, así que una lectura cancelada
           conserva todo lo que ya había salido y al relanzarla sigue por donde iba. El botón lo
           dice ahí mismo, porque uno que pudiera estar tirando trabajo a la basura es un botón
           que nadie pulsa.
@@ -473,7 +521,7 @@ function Raw() {
             silencio todo lo corregido.
           </p>
           <p>
-            Mientras un origen se transcribe puedes revisar y corregir los documentos que ya han
+            Mientras un origen se lee puedes revisar y corregir los documentos que ya han
             salido. El único que no se deja abrir es el que se está reescribiendo en ese
             instante: su fila lo dice con un indicador de actividad y con «
             {t("transcribe.transcribing")}» en lugar de su estado.
@@ -483,7 +531,7 @@ function Raw() {
 
       <Detail title="Los dos orígenes van por la misma ruta, y cuesta lo que cuesta">
         <p>
-          Corpus y ejemplares se transcriben con el mismo algoritmo: se dibuja cada página y se
+          Apuntes y ejercicios se leen con el mismo algoritmo: se dibuja cada página y se
           le pide al modelo que la copie carácter a carácter, sin completar y sin corregir. Una
           llamada por página, sin excepciones, porque la imagen de la página es la fuente
           honesta — una tabla partida en dos hojas, un bloque de código con su sangría o una
@@ -508,34 +556,57 @@ function Raw() {
 }
 
 /**
- * Cómo termina cada uno de los tres pasos. Es el mismo bloque en las tres secciones porque
- * es la misma tarea: la única diferencia son las preguntas, que las escribe el servidor.
+ * Cómo termina cada uno de los tres pasos que construyen algo. Es el mismo bloque en las
+ * tres secciones porque es la misma tarea: la única diferencia son las preguntas, que las
+ * escribe el servidor.
  */
-function Verdict() {
+function Verdict({ artifact }: { artifact: string }) {
+  const { t } = useT();
+  const next = nextStepOf(artifact);
   return (
     <Block title="Cómo se cierra este paso">
       <Paragraph>
-        A la derecha de lo que has construido hay un cuestionario corto sobre qué tal ha
-        salido. Las preguntas cambian según el paso, pero dos son siempre las mismas —cuánto
-        tendrías que corregir para poder usarlo, y del 1 al 5 en conjunto—, y son las que
-        permiten comparar un paso con otro.
+        El paso se abre <strong>en modo lectura</strong>: se mira, no se toca. Ver y corregir
+        son dos cosas distintas, y por eso están en dos momentos distintos. Al final de la
+        pantalla, y no al entrar, hay tres cosas seguidas: la valoración, la oferta de
+        corregir y el paso siguiente.
       </Paragraph>
       <Steps
         items={[
           <>
-            Mira lo que hay a la izquierda. No hace falta leerlo entero: lo que se pregunta
-            es si te suena a tu asignatura.
+            <strong>Mira lo que hay arriba.</strong> No hace falta leerlo entero: lo que se
+            pregunta después es si te suena a tu asignatura.
           </>,
           <>
-            Contesta las preguntas y guarda. Puedes dejarlas a medias y volver: media
-            respuesta también es un dato.
+            <strong>«{t("stageReview.openTitle")}»</strong>, el botón del final, abre por el
+            lado un cuestionario corto y lo va contando: él mismo dice cuántas preguntas
+            tiene. Puedes dejarlo a medias y volver, porque media respuesta también es un
+            dato, y en cuanto guardas puedes cerrarlo sin perder nada.
           </>,
           <>
-            Al guardarlas aparece el paso siguiente. Corregir a mano lo de la izquierda
-            sigue disponible todo el tiempo, antes y después.
+            <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
+            arriba. Mientras corriges, ese mismo botón guarda —«{t("stage.curate.save")}»— y,
+            cuando no queda nada por guardar, sirve para dejar de corregir.
+          </>,
+          <>
+            <strong>
+              «
+              {next.number === null
+                ? t("stage.continueGenerate")
+                : t("stage.continue", { n: next.number })}
+              »
+            </strong>{" "}
+            cierra el paso y te lleva a lo que viene después. Antes de cerrarlo guarda lo que tuvieras
+            pendiente, y si esa escritura se rechaza no cierra ni avanza: te lo dice y te
+            deja donde estabas.
           </>,
         ]}
       />
+      <Paragraph>
+        Corregir es opcional y valorar también: puedes continuar sin haber hecho ninguna de
+        las dos. Lo que no se puede es avanzar sin cerrar, porque el paso siguiente necesita
+        que este esté dado por bueno.
+      </Paragraph>
       <Detail title="Qué se guarda exactamente">
         <p>
           Tus respuestas, con la <em>versión concreta</em> que juzgaste. Si vuelves a
@@ -544,7 +615,19 @@ function Verdict() {
           sobre lo mismo sí corrige tu respuesta anterior.
         </p>
         <p>
-          Es lo único que te pedimos a cambio de usar esto, y es lo que se está midiendo:
+          Se guarda también <strong>si corregiste antes de valorar</strong>. No es
+          vigilancia: es una variable del estudio, porque no es lo mismo la nota de quien ha
+          curado el resultado a mano que la de quien lo juzga tal como salió, y sin
+          distinguirlas las dos se mezclan en el mismo promedio.
+        </p>
+        <p>
+          Las preguntas cambian según el paso, pero dos son siempre las mismas —cuánto
+          tendrías que corregir para poder usarlo, y del 1 al 5 en conjunto—, y son las que
+          permiten comparar un paso con otro. Al final hay una caja opcional para lo que no
+          quepa en las opciones.
+        </p>
+        <p>
+          Es lo único que se te pide a cambio de usar esto, y es lo que se está midiendo:
           sin ello no hay forma de saber si el sistema prepara bien una asignatura o solo lo
           parece.
         </p>
@@ -557,24 +640,25 @@ function Profile() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 1`} title={t("guide.sec.profile")}>
+      <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.profile")}>
         <p>
-          Define qué es un ejercicio: sus campos, sus tipos y las guías que el modelo sigue al
-          extraerlos y al generarlos. Es la pieza que instancia el caso de uso — cambiar de
-          perfil es cambiar de tipo de material, no de asignatura.
+          Qué formas tienen los ejercicios que pones tú: una pregunta con opciones, un encargo
+          de escribir código, un fallo que corregir. De cada forma se anota qué partes lleva,
+          cómo se redacta y qué la hace más o menos difícil. Es la plantilla con la que se
+          escriben los ejercicios nuevos.
         </p>
       </SectionHead>
 
       <Facts
         items={[
           {
-            label: "Qué produce",
-            value: <code className="font-mono text-small">exemplars_profile.json</code>,
+            label: "De dónde sale",
+            value: `De los documentos que dejaste en «${t("raw.slot.exemplars")}», leyendo una muestra.`,
           },
           { label: "Qué cuesta", value: "Una pasada larga sobre una muestra de tus ejercicios, no sobre todos." },
           {
             label: "Qué desbloquea",
-            value: "Recoger los ejercicios y decidir qué conceptos del temario sirven de etiqueta.",
+            value: "Recoger tus ejercicios, y decidir qué temas del temario sirven de etiqueta.",
           },
         ]}
       />
@@ -583,55 +667,64 @@ function Profile() {
         <Steps
           items={[
             <>
-              Sube al hueco de ejemplares en bruto uno o varios documentos con ejercicios reales
-              de la asignatura. Sin material, el botón de construir está apagado y dice por qué.
+              En el Paso {stepNumber(0)} sube a «{t("raw.slot.exemplars")}» uno o varios
+              documentos con ejercicios reales de la asignatura. Sin material, el botón de
+              construir está apagado y dice por qué.
             </>,
             <>
-              Pulsa «Construir». Sale un <strong>borrador</strong>, no un resultado final.
+              Pulsa «Construir». Sale una <strong>primera versión</strong>, no un resultado
+              final.
             </>,
             <>
-              Repasa cada <strong>tipo de ejercicio</strong>: su descripción, su{" "}
-              <strong>nivel de dificultad</strong> y, dentro de ella, cada campo — su nombre, su
-              tipo, si es obligatorio y qué contiene.
+              Lee cada <strong>tipo de ejercicio</strong> —la tira de arriba los elige uno a
+              uno—: qué es, cuándo un ejercicio suyo es básico, intermedio o avanzado, y las
+              <strong> «{t("modality.rules")}»</strong>, que son lo único que se le dice al
+              modelo sobre la <em>forma</em> del ejercicio.
             </>,
             <>
-              Repasa las <strong>«{t("modality.rules")}»</strong> de cada tipo de ejercicio: son lo único
-              que el perfil le dice al generador sobre la <em>forma</em> del ejercicio.
+              Si algo no encaja, «{t("stage.curate.start")}» al final de la pantalla desbloquea
+              la edición. Solo entonces aparecen «{t("modality.add")}» y las partes de cada
+              tipo, que es la pregunta más técnica de todo el recorrido y no la que se hace al
+              entrar.
             </>,
-            <>Aprueba. La etapa se cierra y la pantalla deja de ofrecer nada que la reescriba.</>,
+            <>
+              Valora el paso y continúa. Al continuar, lo que tengas sin guardar se guarda y el
+              paso se cierra.
+            </>,
           ]}
         />
         <Paragraph>
-          El perfil se edita solo por el formulario: no hay una pestaña con el JSON en crudo, y
-          tampoco hay botón de guardar. Lo que escribe los cambios es <strong>«Aprobar»</strong>:
-          guarda primero y cierra la etapa después, en una sola pulsación. Mientras haya algo sin
-          guardar la barra lo dice, y arriba del todo está el aviso de si el perfil <em>carga</em>
-          — mientras no cargue, aprobar está desactivado, que es lo que impide dejar la instancia
-          con un esquema roto.
+          No hay botón de guardar propio ni una pestaña con el fichero en crudo: lo que escribe
+          los cambios es el mismo botón con el que se deja de corregir, y también «continuar».
+          Mientras haya algo sin guardar aparece una barra arriba que lo dice, y ahí está
+          también el aviso de si el fichero <em>carga</em> — mientras no cargue no se puede
+          guardar, que es lo que impide dejar la asignatura con una plantilla rota.
         </Paragraph>
       </Block>
 
-      <Block title="Las tipos de ejercicio, y por qué se notan en todas partes">
+      <Block title="Los tipos de ejercicio, y por qué se notan en todas partes">
         <Paragraph>{t("modality.whatAre.body")}</Paragraph>
         <Paragraph>
-          Por eso la tipo de ejercicio reaparece luego como columna y como filtro en el banco, y como
-          primera pregunta del formulario de generación. Un perfil con una sola tipo de ejercicio no
-          dibuja ninguno de los dos: un desplegable de una única opción no elige nada.
+          Por eso el tipo de ejercicio reaparece luego como columna y como filtro en tus
+          ejercicios, y como primera pregunta al pedir uno nuevo. Con un solo tipo declarado no
+          se dibuja ninguno de los dos: un desplegable de una única opción no elige nada.
         </Paragraph>
       </Block>
 
       <Block title="El nivel de dificultad, que lo llevan todos">
         <Paragraph>
-          Todos los tipos de ejercicio llevan un <strong>nivel de dificultad</strong>, y no es un
-          campo más: no se añade, no se quita y no se le cambia el nombre. Se edita arriba, en
-          «{t("modality.identity")}», justo debajo de la descripción del tipo.
+          Todos los tipos de ejercicio llevan un <strong>nivel de dificultad</strong>, y no es
+          una parte más: no se añade, no se quita y no se le cambia el nombre. Vive arriba, en
+          «{t("modality.identity")}», justo debajo de la descripción del tipo — al mirar, los
+          tres peldaños se ven con lo que dice el criterio de cada uno debajo; al corregir, se
+          convierte en una caja de texto.
         </Paragraph>
         <Paragraph>
           Los <strong>tres niveles son los mismos en todos los tipos</strong>. Eso es lo que
           hace que «avanzado» signifique lo mismo en una pregunta de test y en un ejercicio de
-          programación, que la columna del banco se pueda leer de un vistazo y que se pueda
-          ordenar por ella. Lo que cambia de un tipo a otro es <em>qué hace</em> que un
-          ejercicio caiga en cada nivel, y eso es lo único que escribes tú.
+          programación, y que se pueda filtrar por él una lista con tipos mezclados. Lo que
+          cambia de un tipo a otro es <em>qué hace</em> que un ejercicio caiga en cada nivel, y
+          eso es lo único que escribes tú.
         </Paragraph>
         <Rows
           items={[
@@ -664,7 +757,13 @@ function Profile() {
         />
       </Block>
 
-      <Block title="Qué tiene un campo">
+      <Block title="Qué tiene cada parte de un tipo">
+        <Paragraph>
+          Esto solo se ve <strong>mientras corriges</strong>: el bloque{" "}
+          {t("modality.fieldsOf", { name: "…" })} aparece bajo las dos tarjetas de arriba en
+          cuanto pulsas «{t("stage.curate.start")}», y no antes. Es lo más técnico que se
+          pregunta en todo el recorrido, y la pantalla no abre por ahí.
+        </Paragraph>
         <Rows
           items={[
             {
@@ -685,28 +784,29 @@ function Profile() {
             {
               key: "primario",
               head: t("field.primary.badge"),
-              body: "El que lleva el enunciado. Es el que se convierte en vector para emparejar con conceptos, y solo puede serlo un campo de texto.",
+              body: "El que lleva el enunciado. Es el texto con el que se empareja el ejercicio con los temas del temario, y solo puede serlo una parte de tipo texto.",
             },
           ]}
         />
       </Block>
 
-      <Alert tone="danger" title="Tocarlo después de extraer el banco lo invalida">
+      <Alert tone="danger" title="Tocarlo después de recoger tus ejercicios lo invalida">
         <p>
-          Los ejercicios del banco se extrajeron contra el esquema anterior. Si cambias los campos, el
-          banco pasa a «Obsoleto» y hay que volver a extraerlo.
+          Tus ejercicios se recogieron con estas partes. Si cambias las de un tipo, el Paso{" "}
+          {stepNumberOf("exemplars_bank")} pasa a «{t(STATUS.stale.labelKey)}» y hay que volver
+          a recogerlos.
         </p>
       </Alert>
 
-      <Detail title="El borrador no es estable, y conviene saberlo">
+      <Detail title="Esta primera versión no es estable, y conviene saberlo">
         <p>
-          El perfil se infiere de una muestra de tus ejercicios, y ha producido conjuntos de
-          campos <em>distintos</em> en dos pasadas sobre el mismo material. Trátalo como un punto
-          de partida: la versión que apruebas es tuya, no suya.
+          Los tipos se deducen de una muestra de tus ejercicios, y dos pasadas sobre el mismo
+          material han llegado a producir conjuntos de partes <em>distintos</em>. Trátalo como
+          un punto de partida: la versión que das por buena es tuya, no suya.
         </p>
         <p>Si vuelves a construirlo, compáralo antes de sustituir el que ya tenías.</p>
       </Detail>
-      <Verdict />
+      <Verdict artifact="exemplars_profile" />
     </div>
   );
 }
@@ -715,25 +815,29 @@ function Graph() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 2`} title={t("guide.sec.graph")}>
+      <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.graph")}>
         <p>
-          El vocabulario del sistema. Todo lo que se etiquete y se genere después sale de aquí:
-          ni el modelo ni tú podéis usar un concepto que no esté en el temario.
+          Los temas de tu asignatura, agrupados en unidades y unidos por lo que hace falta
+          saber antes de cada cosa. Todo lo que se etiquete y se escriba después sale de aquí:
+          ni el modelo ni tú podéis usar un tema que no esté en el temario.
         </p>
       </SectionHead>
 
       <Facts
         items={[
           {
-            label: "Qué produce",
-            value: <code className="font-mono text-small">knowledge_graph.json</code>,
+            label: "De dónde sale",
+            value: `De los documentos que dejaste en «${t("raw.slot.corpus")}», leídos enteros.`,
           },
           {
             label: "Qué cuesta",
             value:
-              "Es el trabajo más caro de la cadena: una llamada por página de tus apuntes y unas cuantas que razonan sobre el inventario entero.",
+              "Es el trabajo más caro del recorrido: una llamada por página de tus apuntes y unas cuantas que razonan sobre la lista entera.",
           },
-          { label: "Qué desbloquea", value: "El etiquetado del banco, el currículo y la generación." },
+          {
+            label: "Qué desbloquea",
+            value: "Poner temas a tus ejercicios, decir hasta dónde ha llegado la clase, y pedir ejercicios nuevos.",
+          },
         ]}
       />
 
@@ -741,9 +845,17 @@ function Graph() {
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
           Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el tema
-          y si <strong>sirve de etiqueta</strong>; al pulsarla se abre su ficha sobre la
-          página, que es donde se corrige el nombre, la unidad, la descripción y las
-          relaciones.
+          y si <strong>{t("kg.taggable").toLowerCase()}</strong> —«{t("common.yes")}» o «
+          {t("common.no")}»—; al pulsarla se abre su ficha <em>al lado de la lista</em>, con su
+          unidad, su descripción y sus relaciones. Mientras solo estás mirando eso es una
+          lectura, que es justo lo que se pide aquí: abrir un tema y ver si lo que dice de él
+          es tu asignatura.
+        </Paragraph>
+        <Paragraph>
+          Al pulsar «{t("stage.curate.start")}», al final de la pantalla, esa misma ficha se
+          vuelve editable —el nombre, la unidad y las relaciones— y en la lista aparecen los
+          botones de añadir unidad y añadir tema, y el «{t("kg.taggable").toLowerCase()}» de
+          cada fila pasa de ser un «{t("common.yes")}» a ser un interruptor.
         </Paragraph>
         <Paragraph>
           El mapa va plegado bajo la lista, porque lo primero que se ve del temario tiene que
@@ -753,7 +865,7 @@ function Graph() {
         </Paragraph>
         <Paragraph>
           El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que
-          agrupa cada concepto junto a aquellos con los que se relaciona, y{" "}
+          agrupa cada tema junto a aquellos con los que se relaciona, y{" "}
           <strong>«{t("canvas.layout.curriculum")}»</strong>, que ordena por niveles de
           prerrequisito. Cambiar de una a otra no reconstruye nada: los nodos se desplazan hasta
           su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario
@@ -762,83 +874,98 @@ function Graph() {
         </Paragraph>
       </Block>
 
-      <Block title="Después de construir, tres cosas que mirar">
+      <Block title="La construcción no acaba con el temario">
+        <Paragraph>
+          En cuanto el temario está escrito se encadenan solas otras dos cosas, y la pantalla
+          lo dice mientras pasan. No bloquean nada de lo que hay debajo: puedes ir leyendo el
+          temario mientras terminan.
+        </Paragraph>
         <Steps
           items={[
             <>
+              <p className="font-medium">Las descripciones de cada tema</p>
+              <p className="text-small text-muted-foreground">
+                La prosa que describe cada tema, escrita contra los párrafos de tus apuntes de
+                los que salió. <strong>Es el texto con el que se compara, no el nombre.</strong>{" "}
+                Se corrigen en la ficha del tema, que es donde se están leyendo — y es lo único
+                que se puede seguir corrigiendo con el paso cerrado, porque vive aparte y no
+                caduca nada.
+              </p>
+            </>,
+            <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
-                Etiquetabilidad
-                <Badge variant="attention">necesita el perfil aprobado</Badge>
+                Qué temas sirven de etiqueta
+                <Badge variant="attention">
+                  necesita el Paso {stepNumberOf("exemplars_profile")} cerrado
+                </Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                Qué conceptos sirven de <em>etiqueta</em>. Los que valdrían para cualquier ejercicio
-                —«codificación», «diseño»— se marcan como que NO sirven de etiqueta: siguen existiendo y
-                siguen funcionando a través de sus relaciones, simplemente dejan de poder ser el
-                tema de un ejercicio. Ante la duda se excluye: una etiqueta vaga contamina el
-                banco entero.
-              </p>
-            </>,
-            <>
-              <p className="font-medium">Descripciones</p>
-              <p className="text-small text-muted-foreground">
-                La prosa que describe cada concepto, escrita contra los párrafos de tus apuntes de
-                los que salió. <strong>Es el texto contra el que se compara, no el nombre.</strong>{" "}
-                Se escriben solas después de construir; se corrigen en la ficha del concepto,
-                que es donde se están leyendo.
-              </p>
-            </>,
-            <>
-              <p className="font-medium">Curación a mano</p>
-              <p className="text-small text-muted-foreground">
-                Renombrar lo que quedó torcido, borrar lo que no es un concepto de la materia y
-                arreglar relaciones. Renombrar arrastra consigo el anclaje a tus apuntes; borrar lo
-                suelta.
+                Los que valdrían para cualquier ejercicio —«codificación», «diseño»— se marcan
+                como que NO sirven de etiqueta: siguen existiendo y siguen funcionando a través
+                de sus relaciones, simplemente dejan de poder ser el tema de un ejercicio. Ante
+                la duda se excluye: una etiqueta vaga contamina todos tus ejercicios. Se juzga
+                contra los tipos de ejercicio del paso anterior, y por eso ese paso va antes.
               </p>
             </>,
           ]}
         />
+        <Paragraph>
+          El botón que vuelve a lanzar esa revisión está arriba a la derecha y{" "}
+          <strong>solo aparece mientras corriges</strong>: es algo que se le hace al temario, no
+          algo que se mire. Con el paso ya cerrado se ve, pero se niega y dice por qué.
+        </Paragraph>
+      </Block>
+
+      <Block title="Curar el temario a mano">
+        <Paragraph>
+          Con «{t("stage.curate.start")}» pulsado se puede renombrar lo que quedó torcido,
+          borrar lo que no es un tema de la materia, mover temas de unidad y arreglar
+          relaciones. Renombrar un tema arrastra consigo el trozo de tus apuntes del que salió;
+          borrarlo lo suelta. Marcar o desmarcar «{t("kg.taggable").toLowerCase()}» no mueve la
+          fila de sitio: se queda donde estaba, debajo de la mano que la pulsó.
+        </Paragraph>
       </Block>
 
       <div className="space-y-2">
-        <Detail title="Por qué no se empareja por el nombre del concepto">
+        <Detail title="Por qué no se empareja por el nombre del tema">
           <p>
             Un nombre es una etiqueta de dos palabras y no dice nada de qué se practica al
-            usarlo. Lo que se convierte en vector es la <em>descripción</em>, fundida con el
-            centro de los ejercicios del banco que ya llevan ese concepto.
+            usarlo. Con lo que se compara es con la <em>descripción</em>, fundida con lo que
+            tienen en común tus ejercicios que ya llevan ese tema.
           </p>
           <p>
-            Por eso una descripción mal escrita se paga en cada etiquetado y en cada generación,
-            y por eso conviene leerlas.
+            Por eso una descripción mal escrita se paga cada vez que se pone un tema a un
+            ejercicio y cada vez que se escribe uno nuevo, y por eso conviene leerlas.
           </p>
         </Detail>
 
-        <Detail title="Prerrequisitos: lo que se da por sabido y lo que se prohíbe">
+        <Detail title="Lo que se da por sabido y lo que se prohíbe">
           <p>
-            Alrededor de los conceptos que pides, el sistema deriva dos listas del temario y las
-            mete en el prompt:
+            Alrededor de los temas que pides, se sacan del temario dos listas y se le dan al
+            modelo:
           </p>
           <Rows
             items={[
               {
                 key: "sabido",
-                head: <span className="text-settled">Se da por sabido</span>,
-                body: "Prerrequisitos que además están en el currículo. El ejercicio puede apoyarse en ellos, pero no puede convertirlos en la dificultad. Van con su descripción, no con su nombre a secas.",
+                head: <span className="text-settled">{t("form.given")}</span>,
+                body: "Lo que hace falta saber antes del tema pedido y además ha dado ya la clase. El ejercicio puede apoyarse en ello, pero no puede convertirlo en la dificultad. Va con su descripción, no con su nombre a secas.",
               },
               {
                 key: "prohibido",
-                head: <span className="text-destructive">Prohibido</span>,
-                body: "Lo que va después del objetivo y todavía no se ha impartido. No puede aparecer.",
+                head: <span className="text-destructive">{t("form.forbidden")}</span>,
+                body: "Lo que va después del tema pedido y la clase todavía no ha visto. No puede aparecer.",
               },
             ]}
           />
           <p>
-            Las dos listas recorren el temario entero, no un salto: son cierres transitivos
-            acotados por el currículo. En la pantalla de generación se dibujan antes de lanzar,
-            para que veas exactamente con qué va a contar el modelo.
+            Las dos recorren el temario entero y no un salto, y se acotan con lo que digas que
+            ha dado la clase. Al pedir un ejercicio se dibujan antes de lanzar, para que veas
+            exactamente con qué va a contar el modelo.
           </p>
         </Detail>
       </div>
-      <Verdict />
+      <Verdict artifact="knowledge_graph" />
     </div>
   );
 }
@@ -847,30 +974,38 @@ function Bank() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <SectionHead eyebrow={`${t("guide.group.prepare")} · etapa 3`} title={t("guide.sec.bank")}>
+      <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.bank")}>
         <p>
-          Los ejercicios extraídos de tus documentos y etiquetados con conceptos del temario. Son los
-          ejemplos que acompañan a cada generación: de aquí sale el «así se escriben los
-          ejercicios en esta asignatura» que el modelo imita.
+          Tus ejercicios recogidos uno a uno de los documentos, cada uno con los temas del
+          temario que practica. Lo que se repasa aquí es <strong>ese emparejamiento</strong>:
+          si el tema que se le ha puesto a cada ejercicio es el que de verdad practica.
+        </p>
+        <p>
+          Importa porque son los ejemplos que acompañan a cada ejercicio nuevo: de aquí sale el
+          «así se escriben los ejercicios en esta asignatura» que el modelo imita, y se eligen
+          por el tema que lleva cada uno.
         </p>
       </SectionHead>
 
       <Facts
         items={[
           {
-            label: "Qué produce",
-            value: <code className="font-mono text-small">exemplars_bank.json</code>,
+            label: "De dónde sale",
+            value: `De los documentos de «${t("raw.slot.exemplars")}», recorridos uno detrás de otro.`,
           },
-          { label: "Qué cuesta", value: "Crece con el número de documentos: se recorren todos, uno detrás de otro." },
-          { label: "Se guarda", value: "Tras cada documento. Cancelar no pierde lo ya extraído." },
+          { label: "Qué cuesta", value: "Crece con el número de documentos: se recorren todos, enteros." },
+          {
+            label: "Si lo cancelas",
+            value: "Se pierde la pasada entera, pero lo que ya tenías se queda tal cual: se reemplaza sólo al terminar.",
+          },
         ]}
       />
 
-      <Alert tone="info" title="Extraer y etiquetar son un solo trabajo">
+      <Alert tone="info" title="Recoger y etiquetar son un solo trabajo">
         <p>
-          Cada documento se etiqueta según sale del extractor, así que al terminar la extracción
-          el banco ya está etiquetado: no hay un paso intermedio que lanzar. Lo que queda es
-          corregir lo que salió mal, y para eso hay tres controles distintos.
+          A cada documento se le ponen los temas según sale, así que al terminar ya está todo
+          etiquetado: no hay un paso intermedio que lanzar. Lo que queda es corregir lo que
+          salió mal, y para eso hay tres controles distintos.
         </p>
       </Alert>
 
@@ -880,7 +1015,7 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "Cuántos ejercicios del banco llevan al menos un concepto. Es el trabajo de corrección que queda por delante, y lleva al lado los dos controles que actúan sobre ese mismo número. Sólo aparece mientras falte alguno: con el banco entero etiquetado no hay nada que mirar ahí.",
+              body: "Cuántos de tus ejercicios llevan al menos un tema. Es el trabajo de corrección que queda por delante. Sólo aparece mientras falte alguno: con todos etiquetados no hay nada que mirar ahí.",
             },
             {
               key: "cobertura",
@@ -891,8 +1026,8 @@ function Bank() {
         />
         <Paragraph>
           Los dos miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
-          <em>ejercicios sin concepto</em>, el otro <em>conceptos sin ejercicio</em>. Se puede tener el
-          banco entero etiquetado y media asignatura sin un solo ejemplo que imitar.
+          <em>ejercicios sin tema</em>, el otro <em>temas sin ejercicio</em>. Se puede tenerlo
+          todo etiquetado y media asignatura sin un solo ejemplo que imitar.
         </Paragraph>
       </Block>
 
@@ -900,39 +1035,47 @@ function Bank() {
         <Steps
           items={[
             <>
-              Primero, los que <strong>se quedaron sin concepto</strong>. La tira de medidores de
+              Primero, los que <strong>se quedaron sin tema</strong>. La tira de medidores de
               arriba los cuenta y «{t("bank.seeUntagged", { n: "N" })}» los filtra.
             </>,
             <>
-              Después, los que llevan <strong>un solo concepto</strong> o uno que no encaja: la
-              columna de conceptos se lee de un vistazo, y ahí es donde el emparejamiento se
-              equivoca sin avisar.
+              Después, los que llevan <strong>un solo tema</strong> o uno que no encaja: todas
+              las filas miden lo mismo y la columna de temas se lee de un vistazo, que es donde
+              el emparejamiento se equivoca sin avisar. Pulsa una fila para leer el ejercicio
+              entero.
             </>,
             <>
-              Corrige el <strong>concepto primario</strong> a mano donde haga falta: es el que
-              decide con qué se compara ese ejercicio después.
+              Si hay que corregir, «{t("stage.curate.start")}» al final de la pantalla: entonces
+              cada ejercicio se puede editar y se puede cambiar a mano su <strong>tema
+              principal</strong>, que es el que decide con qué se compara después.
             </>,
           ]}
         />
       </Block>
 
-      <Block title="Las tres formas de re-etiquetar, que no hacen lo mismo">
+      <Block title="Las tres formas de volver a poner temas, que no hacen lo mismo">
+        <Paragraph>
+          Las tres <strong>solo aparecen mientras corriges</strong>: son lo único de esta
+          pantalla que escribe. Lo que dicen no se pierde al ocultarlas — cuántos ejercicios
+          están sin tema lo sigue diciendo el medidor, y «{t("bank.seeUntagged", { n: "N" })}»
+          es un filtro y sigue ahí.
+        </Paragraph>
         <Rows
           items={[
             {
               key: "pendientes",
               head: <>«{t("bank.retagUntagged", { n: "N" })}»</>,
-              body: "Sin selección: se lanza sobre exactamente los ejercicios que se quedaron sin concepto, nunca sobre el banco entero. Está en la tira de medidores, al lado del número sobre el que actúa.",
+              body: "Se lanza sobre exactamente los ejercicios que se quedaron sin tema, nunca sobre todos. Está en la tira de medidores, al lado del número sobre el que actúa.",
             },
             {
               key: "todo",
               head: <>«{t("bank.retagAll")}»</>,
-              body: "El banco entero, desde cero. Sobrescribe las etiquetas actuales, incluidas las que hayas corregido a mano, y por eso pide confirmación antes de lanzarse.",
+              body: "Todos, desde cero. Sobrescribe los temas actuales, incluidos los que hayas corregido a mano, y por eso pide confirmación antes de lanzarse.",
             },
             {
               key: "seleccion",
               head: <>«{t("bank.retagSelected")}»</>,
-              body: "Solo los ejercicios marcados a mano, aunque ya tuvieran concepto. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
+              body: "Solo los ejercicios marcados a mano, aunque ya tuvieran tema. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
             },
           ]}
         />
@@ -941,39 +1084,41 @@ function Bank() {
       <Block title="Encontrar un ejercicio concreto">
         <Paragraph>
           Sobre la tabla hay cinco filtros que se combinan: una <strong>búsqueda</strong> por
-          texto del enunciado o por id, el <strong>tipo de ejercicio</strong> —los que declara tu
-          perfil, cada uno con cuántos ejercicios tiene en todo el banco—, el{" "}
+          texto del enunciado o por id, el <strong>tipo de ejercicio</strong> —los del Paso{" "}
+          {stepNumberOf("exemplars_profile")}, cada uno con cuántos ejercicios tuyos tiene—, el{" "}
           <strong>documento de origen</strong>, el <strong>nivel</strong> —los tres peldaños, cada
           uno con su cuenta— y, al final de la fila, el interruptor de{" "}
-          <strong>«{t("bank.untagged")}»</strong>. Si tu perfil declara un solo tipo de ejercicio, ese
+          <strong>«{t("bank.untagged")}»</strong>, que es el único de los cinco que no habla de
+          cómo es un ejercicio sino del trabajo que queda. Con un solo tipo declarado ese
           desplegable no aparece: un menú con una única opción no filtra nada.
         </Paragraph>
         <Paragraph>
-          No hay control de orden: la tabla va en el orden en que se extrajeron los ejercicios,
-          que es el de sus ids. El nivel se <em>filtra</em> y no se ordena, porque con tres
-          peldaños ordenar solo agrupa, y lo que se pregunta de verdad es «enséñame los
-          avanzados».
+          Las cuentas de esos menús son sobre <em>todos</em> tus ejercicios y no se mueven con
+          los demás filtros: dicen qué hay ahí dentro, no qué acabas de preguntar. No hay
+          control de orden: la lista va en el orden en que se recogieron. El nivel se{" "}
+          <em>filtra</em> y no se ordena, porque con tres peldaños ordenar solo agrupa, y lo que
+          se pregunta de verdad es «enséñame los avanzados».
         </Paragraph>
         <Paragraph>
-          Filtrar por tipo de ejercicio no ha movido nada del etiquetado por conceptos, que es el
-          corazón del banco: los medidores, «{t("bank.seeUntagged", { n: "N" })}», los tres
-          botones de re-etiquetar, la columna de conceptos y el selector de concepto principal
-          del editor siguen exactamente donde estaban.
+          Cada página son <strong>siete ejercicios</strong>, y todas las filas cerradas miden lo
+          mismo: el enunciado se corta a dos líneas y se dibujan como mucho tres temas, con un
+          «+N» que los nombra al pasar el cursor. Una tabla cuyas filas crecen con lo largo que
+          sea cada enunciado no se puede leer por columnas, que es como se busca lo que está mal.
         </Paragraph>
       </Block>
 
-      <Detail title="Reintentar tiene sentido: el índice mejora entre pasadas">
+      <Detail title="Reintentar tiene sentido: el emparejamiento mejora entre pasadas">
         <p>
-          Cada ejercicio bien etiquetado empuja el centro de su concepto hacia donde de verdad está,
-          así que el índice de una pasada lo consume la siguiente. Un ejercicio que hoy no encuentra
-          concepto puede encontrarlo mañana sin que hayas tocado nada.
+          Cada ejercicio bien etiquetado tira de su tema hacia donde de verdad está, así que lo
+          que aprende una pasada lo aprovecha la siguiente. Un ejercicio que hoy no encuentra
+          tema puede encontrarlo mañana sin que hayas tocado nada.
         </p>
         <p>
-          Por eso los rechazados se vuelven a intentar en cada pasada, en vez de quedar marcados
-          como imposibles.
+          Por eso los que se quedaron fuera se vuelven a intentar en cada pasada, en vez de
+          quedar marcados como imposibles.
         </p>
       </Detail>
-      <Verdict />
+      <Verdict artifact="exemplars_bank" />
     </div>
   );
 }
@@ -984,92 +1129,107 @@ function Generate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          Un encargo, un lote de variantes. El formulario es un acordeón: se responde de arriba
-          abajo y cada pregunta se cierra en una línea al contestarla, así que volver a cambiar
-          los conceptos cuesta un clic y ningún scroll.
+          La <strong>fase {GENERATE_PHASE}</strong>, y aquello para lo que existen los cuatro
+          pasos anteriores: un encargo, una tanda de ejercicios nuevos. El formulario es un
+          acordeón — se responde de arriba abajo y cada pregunta se cierra en una línea al
+          contestarla, así que volver a cambiar los temas cuesta un clic y ningún scroll.
         </p>
         <p>
-          Son <strong>hasta cinco</strong> preguntas, no siempre cinco: dos de ellas solo
-          aparecen si tu instancia las necesita, y la numeración cuenta las que se dibujan.
+          Lo <strong>numerado es el encargo</strong>: como mucho cuatro preguntas, y dos de
+          ellas solo aparecen si tu asignatura las necesita. Lo opcional no lleva número y vive
+          plegado en «{t("form.settings.title")}», debajo.
         </p>
       </SectionHead>
 
-      <Block title="Las preguntas, en el orden en que se hacen">
+      <Block title="Las preguntas numeradas, en el orden en que se hacen">
         <Steps
           items={[
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.type.title")}
-                <Badge variant="outline">solo con varias tipos de ejercicio</Badge>
+                <Badge variant="outline">solo con varios tipos de ejercicio</Badge>
               </p>
               <p className="text-small text-muted-foreground">
-                {t("form.type.hint")} Si tu perfil declara una sola, esta pregunta no se hace.
-              </p>
-            </>,
-            <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
-                {t("form.taught.title")}
-                <Badge variant="outline">{t("common.optional")}</Badge>
-              </p>
-              <p className="text-small text-muted-foreground">
-                Lo que la clase ya ha dado, para <em>este</em> encargo, y llega{" "}
-                <strong>apagado</strong>: sin restricción. Al encenderlo eliges a mano los
-                conceptos cubiertos, y valen solo para esta tirada — no se guardan en la
-                asignatura. {t("form.taught.hint")}
+                {t("form.type.hint")} Con un solo tipo declarado, esta pregunta no se hace.
               </p>
             </>,
             <>
               <p className="font-medium">{t("form.practise.title")}</p>
               <p className="text-small text-muted-foreground">
-                {t("form.practise.hint")} Solo se ofrecen los conceptos{" "}
-                <strong>que sirven de etiqueta</strong>: aquí se elige de qué va el ejercicio, y para eso un
-                concepto genérico no vale.
+                {t("form.practise.hint")} Solo se ofrecen los temas{" "}
+                <strong>{t("kg.taggable").toLowerCase()}</strong>: aquí se elige de qué va el
+                ejercicio, y para eso un tema genérico no vale.
               </p>
             </>,
             <>
               <p className="font-medium">{t("form.difficulty.title")}</p>
               <p className="text-small text-muted-foreground">
-                Los tres niveles del tipo que hayas elegido, cada uno con el criterio que
-                escribiste en el Paso 2 debajo, y «{t("decision.any")}» para no fijarlo. Es
-                la misma escala en todos los tipos, así que pedir «avanzado» quiere decir lo
-                mismo aquí que en la columna del banco.
+                Los tres niveles del tipo que hayas elegido, cada uno con debajo el criterio que
+                escribiste en el Paso {stepNumberOf("exemplars_profile")}, y «
+                {t("decision.any")}» para no fijarlo. Es la misma escala en todos los tipos, así
+                que pedir «avanzado» quiere decir lo mismo aquí que en la lista de tus
+                ejercicios.
               </p>
             </>,
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
                 {t("form.decisions.titleMany")}
-                <Badge variant="outline">solo si el perfil deja algo a tu criterio</Badge>
+                <Badge variant="outline">solo si algún tipo deja algo a tu criterio</Badge>
               </p>
               <p className="text-small text-muted-foreground">
                 {t("form.decisions.hint")}
-              </p>
-            </>,
-            <>
-              <p className="flex flex-wrap items-center gap-2 font-medium">
-                {t("form.instructions.title")}
-                <Badge variant="outline">{t("common.optional")}</Badge>
-              </p>
-              <p className="text-small text-muted-foreground">
-                Texto libre para lo que ningún control de arriba decide, con un tope de 600
-                caracteres que la propia caja va contando. Pasa por dos filtros antes de entrar
-                en el prompt.
               </p>
             </>,
           ]}
         />
       </Block>
 
+      <Block title={`Lo opcional, plegado en «${t("form.settings.title")}»`}>
+        <Paragraph>
+          Debajo de las preguntas numeradas hay una divulgación que dice de un vistazo qué hay
+          puesto dentro. Ninguna de las dos cosas que guarda es obligatoria, y por eso no
+          ocupan un número: el orden de la pantalla es primero lo que hay que contestar y
+          después lo que se puede añadir.
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "taught",
+              head: t("form.taught.title"),
+              body: (
+                <>
+                  {t("form.taught.hint")} Vale solo para esta tanda: no se guarda en la
+                  asignatura.
+                </>
+              ),
+            },
+            {
+              key: "instructions",
+              head: t("form.instructions.title"),
+              body: (
+                <>
+                  {t("form.instructions.hint")} Hay un tope de 600 caracteres que la propia caja
+                  va contando, y lo que escribas pasa por dos filtros antes de llegar al modelo.
+                </>
+              ),
+            },
+          ]}
+        />
+      </Block>
+
       <Block title="Antes de lanzar, lo que el temario va a decirle al modelo">
         <Paragraph>
-          Bajo los conceptos elegidos aparece «{t("form.graphSays")}» con las dos listas que el
-          prompt va a llevar: «{t("form.given")}» y «{t("form.forbidden")}». Salen del temario y del
-          currículo de esta pregunta, y se ven <em>antes</em> de gastar nada.
+          Bajo los temas elegidos aparece «{t("form.graphSays")}» con las dos listas que se le
+          van a dar: «{t("form.given")}» y «{t("form.forbidden")}». Salen del temario y de lo que
+          hayas dicho que ha dado la clase, y se ven <em>antes</em> de gastar nada.
         </Paragraph>
         <Paragraph>
-          Ahí mismo se avisa de <strong>los temas sin ejemplo</strong>: si algún concepto elegido no tiene
-          ningún ejemplar en el banco —o ninguno de la tipo de ejercicio pedida—, el lote se genera sin
-          ejemplo que imitar y la calidad suele bajar. Hay un interruptor para ocultar de la
-          lista los conceptos sin ejemplares; apagarlo es lo que permite pedirlos a sabiendas.
+          Ahí mismo se avisa de <strong>los temas sin ejemplo</strong>: si algún tema elegido no
+          tiene ningún ejercicio tuyo —o ninguno del tipo pedido—, la tanda se escribe sin
+          ejemplo que imitar y la calidad suele bajar. La lista solo ofrece temas que tus
+          ejercicios puedan ilustrar, y el propio selector dice cuántos se está dejando fuera.
+          Puede aparecer de todos modos al recuperar un encargo antiguo, si el material ha
+          cambiado desde entonces.
         </Paragraph>
       </Block>
 
@@ -1084,7 +1244,7 @@ function Generate() {
             {
               key: "admisibilidad",
               head: "2 · Admisibilidad",
-              body: "Decide si lo que pides es de este campo o de algo que ya has decidido más arriba: los conceptos, la tipo de ejercicio, los campos del ejercicio o la propia asignatura. Si lo es, te dice qué control lo decide.",
+              body: "Decide si lo que pides es de esta caja o de algo que ya has decidido más arriba: los temas, el tipo de ejercicio, las partes del ejercicio o la propia asignatura. Si lo es, te dice qué control lo decide.",
             },
           ]}
         />
@@ -1108,7 +1268,7 @@ function Generate() {
           Se elige <em>antes</em> que el esfuerzo y no después, porque cuántos niveles hay y
           cuál conviene evitar es cosa del modelo. Hay modelos que contestan igual pongas el
           nivel que pongas: en esos no se dibuja la barra, y quién es quién también lo declara
-          quien administra. El modelo queda guardado con cada variante, así que en
+          quien administra. El modelo queda guardado con cada variatio, así que en
           «{t("menu.savedVariants")}» puedes comparar dos enunciados sabiendo qué escribió
           cada uno.
         </Paragraph>
@@ -1132,9 +1292,9 @@ function Generate() {
         </Paragraph>
         <Paragraph>
           El resto se pliega detrás de «{t("run.detail")}», en esa misma tira: los pasos, el
-          texto según se escribe, los ejemplares del banco que se le han dado al modelo y los
-          detalles técnicos de la llamada. Se abre solo mientras el trabajo corre y se cierra al
-          terminar, salvo que lo toques tú.
+          texto según se escribe, los ejercicios tuyos que se le han enseñado al modelo y los
+          detalles técnicos de la llamada. Es el único sitio donde se ven esas tres cosas. Se
+          abre solo mientras el trabajo corre y se cierra al terminar, salvo que lo toques tú.
         </Paragraph>
       </Block>
 
@@ -1146,7 +1306,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Cada variante se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
+                  Cada variatio se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
                   con su encargo entero. Un lote cancelado a la tercera conserva tres.
                 </>
               ),
@@ -1156,11 +1316,11 @@ function Generate() {
               head: <Badge variant="attention">2 señales</Badge>,
               body: (
                 <>
-                  Lo que el sistema puede comprobar sin juzgar el ejercicio: si nombra algo no
-                  impartido, si se parece demasiado a un ejemplo o a otra del lote, y si el
-                  etiquetador la reconoce como el concepto que pediste. Las dos primeras hacen
-                  que el generador <em>vuelva a intentarlo</em> antes de darte el ejercicio; lo que
-                  llega marcado es lo que siguió sin salir limpio, y entonces{" "}
+                  Lo que se puede comprobar sin juzgar el ejercicio: si nombra algo que la clase
+                  aún no ha visto, si se parece demasiado a un ejemplo o a otro de la misma
+                  tanda, y si al releerlo se le reconoce el tema que pediste. Las dos primeras
+                  hacen que se <em>vuelva a intentar</em> antes de dártelo; lo que llega marcado
+                  es lo que siguió sin salir limpio, y entonces{" "}
                   <strong>es una señal para quien lee, no un rechazo</strong>.
                 </>
               ),
@@ -1168,12 +1328,12 @@ function Generate() {
             {
               key: "reintentada",
               head: <Badge variant="outline">{t("result.retried", { n: "N" })}</Badge>,
-              body: "Cuántas veces hubo que repetir la llamada por esas dos señales. No dice que la variante esté mal: dice lo que costó.",
+              body: "Cuántas veces hubo que repetir la llamada por esas dos señales. No dice que el variatio esté mal: dice lo que costó.",
             },
           ]}
         />
         <Paragraph>
-          Una variante sin nada que señalar lo dice igual de claro: «{t("result.noFlags")}».
+          Un variatio sin nada que señalar lo dice igual de claro: «{t("result.noFlags")}».
         </Paragraph>
       </Block>
 
@@ -1198,7 +1358,12 @@ function Generate() {
             {
               key: "como-esta",
               head: <>«{t("generations.moreLikeThis")}»</>,
-              body: "Está en «Mis variantes» y recupera el encargo de una variante concreta, aunque sea de otro día.",
+              body: (
+                <>
+                  Está en «{t("nav.myVariants")}» y recupera el encargo de un ejercicio
+                  concreto, aunque sea de otro día.
+                </>
+              ),
             },
           ]}
         />
@@ -1235,7 +1400,7 @@ function Evaluate() {
           },
           {
             label: "Qué necesitas",
-            value: "Los cuatro pasos dados: las tres versiones se escriben con tu asignatura.",
+            value: "Los cuatro pasos cerrados: las tres versiones se escriben con tu asignatura.",
           },
         ]}
       />
@@ -1246,7 +1411,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Crear ejercicios», sin dos controles —cuántos ejercicios y si el modelo razona—, porque una comparación es siempre uno por versión.",
+              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Crear ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión.",
             },
             {
               key: "sesiones",
@@ -1286,8 +1451,8 @@ function Evaluate() {
               <strong>opcional</strong>: la comparación ya quedó registrada al elegir.
             </>,
             <>
-              Debajo, «{t("eval.nextInQueue", { pending: "N" })}» salta directamente a la
-              siguiente sin juzgar, sin pasar por la lista.
+              Debajo, «{t("eval.backToList")}» cierra la sesión y te devuelve a tu histórico,
+              desde donde se pide la siguiente.
             </>,
           ]}
         />
@@ -1348,7 +1513,7 @@ function Evaluate() {
         <p>
           Qué recibe exactamente cada una está escrito, fila a fila, bajo el formulario de «
           {t("eval.tab.compose")}»: es la tabla «{t("fair.title")}», y dice quién ve los
-          conceptos, quién las descripciones, quién los ejemplos del banco, quién los
+          temas, quién las descripciones, quién tus ejercicios como ejemplo, quién los
           prerrequisitos. {t("fair.footnote")}
         </p>
       </Detail>
@@ -1395,15 +1560,15 @@ function Runs() {
           llamada a llamada — así que dos personas pueden generar contra Cerebras al mismo
           tiempo sin esperarse. Un trabajo local y otro remoto nunca se esperan entre sí. Puedes
           cerrar la pestaña: el trabajo corre en el servidor y al volver lo encuentras donde
-          estaba. Lo que se está haciendo se mira desde el <strong>{t("nav.dashboard")}</strong>{" "}
-          y desde el cajón de ejecución.
+          estaba. Cada trabajo se mira <strong>en la pantalla que lo lanzó</strong>: no hay un
+          sitio aparte desde el que vigilarlos todos.
         </p>
       </SectionHead>
 
       <Block title="Los seis estados">
         <Paragraph>
           Ningún estado se distingue solo por el color: cada uno tiene su forma, y esa forma es la
-          misma en la barra de arriba, en las tarjetas del panel y en la cabecera de cada etapa.
+          misma en la barra de arriba y en la cabecera de cada paso.
         </Paragraph>
         <Rows
           items={STATE_ORDER.map((key) => ({
@@ -1443,7 +1608,7 @@ function Runs() {
           items={[
             {
               key: "etapa",
-              head: <>En la pantalla de la etapa</>,
+              head: <>En la pantalla del paso</>,
               body: "Mientras un paso se construye, su pantalla lleva la barra de fases: qué fase corre, cuánto pesa cada una y cuánto va hecho. Es donde se mira una construcción, y desde ahí se cancela.",
             },
             {
@@ -1471,7 +1636,7 @@ function Runs() {
           Un trabajo que espera su turno lo dice con «{t("queue.queuedAhead", { n: "N" })}» y{" "}
           <strong>no dibuja barra de progreso</strong>: una barra sobre algo que no ha empezado
           afirma que se está haciendo un trabajo que nadie está haciendo. Vale igual en la
-          tarjeta del panel, en la cabecera de la etapa y en el botón que lo lanzó.
+          cabecera del paso y en el botón que lo lanzó.
         </Paragraph>
         <Paragraph>
           El número entre paréntesis cuenta trabajos, no minutos, y solo cuenta los del{" "}
@@ -1483,10 +1648,14 @@ function Runs() {
 
       <Alert tone="attention" title="Cancelar y reconstruir">
         <p>
-          Cancelar no corta a mitad de una llamada: para en el próximo punto seguro, así que puede
-          tardar. Y una reconstrucción <em>esconde</em> el artefacto que va a reemplazar sin
-          borrarlo —el constructor escribe al final—, por eso cancelar lo devuelve intacto y sin
-          ningún paso de restauración.
+          Cancelar corta enseguida: no hay que esperar a que el modelo termine de escribir lo
+          que estuviera escribiendo, se le corta a media frase y la máquina queda libre. Lo que
+          ya hubiera salido en firme se conserva.
+        </p>
+        <p>
+          Y una reconstrucción <em>esconde</em> lo que va a reemplazar sin borrarlo —lo nuevo se
+          escribe al final—, por eso cancelar devuelve lo anterior intacto y sin ningún paso de
+          restauración.
         </p>
       </Alert>
 
@@ -1577,23 +1746,24 @@ function Account() {
         </Detail>
       </Block>
 
-      <Block title="Una variante puede volver al banco">
+      <Block title="Un variatio puede pasar a ser un ejercicio tuyo">
         <Paragraph>
-          En «{t("tabs.variants")}», cada variante ofrece «{t("generations.promote")}»:{" "}
+          En «{t("tabs.variants")}», cada variatio ofrece «{t("generations.promote")}»:{" "}
           {t("generations.promoteHint")}
         </Paragraph>
         <Paragraph>
           Es la forma de que lo que salga bien deje de ser un resultado suelto y pase a ser un
           ejemplo que el modelo imita la próxima vez. Lo que hay que tener presente es la
-          segunda mitad de esa frase: el banco queda obsoleto y hay que volver a aprobarlo, así
-          que conviene promover varias de una vez y no de una en una.
+          segunda mitad de esa frase: el Paso {stepNumberOf("exemplars_bank")} pasa a «
+          {t(STATUS.stale.labelKey)}» y hay que volver a cerrarlo, así que conviene pasar varias
+          de una vez y no de una en una.
         </Paragraph>
       </Block>
 
       <Block title="Dos cosas que sorprenden">
         <Alert tone="info" title="El usuario no se puede cambiar">
           <p>
-            Es lo que identifica todo lo que has hecho: cada variante, cada sesión de evaluación y
+            Es lo que identifica todo lo que has hecho: cada variatio, cada sesión de evaluación y
             cada línea del registro apuntan a él. El nombre visible sí se cambia cuando quieras.
           </p>
         </Alert>
@@ -1615,7 +1785,7 @@ function Account() {
         </Paragraph>
         <Paragraph>
           La invitación puede traer ya un espacio de trabajo y un papel dentro de él, o no traer ninguno:
-          en ese caso entras igual y el panel te ofrece crear el tuyo. Una cuenta sin espacio de trabajo
+          en ese caso entras igual y se te ofrece crear el tuyo. Una cuenta sin espacio de trabajo
           es una cuenta normal, no una cuenta a medio hacer.
         </Paragraph>
       </Block>
@@ -1672,8 +1842,8 @@ function Admin() {
         </p>
         <p>
           Son cinco pestañas, y esta sección las cubre todas. La de «
-          {t("admin.tab.study")}» reúne lo que ha contestado la gente: las comparaciones que
-          han hecho y las valoraciones que dejaron al terminar cada paso.
+          {t("admin.tab.study")}» reúne las comparaciones que ha juzgado la gente, con sus
+          recuentos y sus contrastes.
         </p>
       </SectionHead>
 
@@ -1741,7 +1911,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>«{t("common.delete")}»</>,
-              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: las variantes generadas y las sesiones de evaluación se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó, y el estudio no pierde las comparaciones que contó.",
+              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: los variatios generados y las sesiones de evaluación se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó, y el estudio no pierde las comparaciones que contó.",
             },
           ]}
         />
@@ -1753,7 +1923,7 @@ function Admin() {
 
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
-          Todas las instancias de la instalación con sus miembros, sus variantes y el estado de
+          Todas las instancias de la instalación con sus miembros, sus variatios y el estado de
           su cadena. Lo que pesa cada una va repartido por papel —{t("ws.disk.raw")},{" "}
           {t("ws.disk.instance")}, {t("ws.disk.cache")} e {t("ws.disk.history")}—, que es la
           única forma de ver que lo caro casi nunca son los artefactos.
@@ -1778,9 +1948,9 @@ function Admin() {
           ]}
         />
         <Paragraph>
-          <strong>Vaciar una etapa concreta</strong> se hace desde su propio distintivo en la
-          columna de la cadena: se pulsa el de la etapa y se confirma. No toca el historial, así
-          que si te equivocas se restaura desde la pantalla del propio artefacto.
+          <strong>Vaciar un paso concreto</strong> se hace desde su propio distintivo en la
+          columna del recorrido: se pulsa el del paso y se confirma. No toca el historial, así
+          que si te equivocas se restaura desde la pantalla de ese mismo paso.
         </Paragraph>
       </Block>
 
@@ -1870,7 +2040,7 @@ function Admin() {
           construcciones y la generación— y cada parada, una llamada al modelo. Bajo el nombre de
           la parada, qué modelo la atiende; el círculo dice si razona antes de contestar y,
           mientras razona, el selector de al lado fija cuánto. Tres paradas no llevan interruptor
-          y lo dicen con el círculo a trazos: el guardián porque su modelo no razona, la variante
+          y lo dicen con el círculo a trazos: el guardián porque su modelo no razona, el variatio
           porque eso lo decide cada encargo, y la reparación porque va con gramática y con
           gramática no se puede razonar.
         </Paragraph>
@@ -1890,7 +2060,7 @@ const problems = (
         <p>
           No es un fallo: quien administra la instalación la ha cerrado a propósito para
           aplicar cambios. El aviso dice desde cuándo, y lo tuyo sigue donde estaba —
-          artefactos, variantes y evaluaciones se leen igual cuando vuelva a abrirse.
+          artefactos, variatios y evaluaciones se leen igual cuando vuelva a abrirse.
         </p>
         <p>
           No hay hora prevista de vuelta, y no la hay porque nadie la sabe. «
@@ -1958,43 +2128,46 @@ const problems = (
   },
   {
     key: "obsoleto",
-    question: `Una etapa dice «${t(STATUS.stale.labelKey)}»`,
+    question: `Un paso dice «${t(STATUS.stale.labelKey)}»`,
     answer: (
       <p>
-        Algo de lo que depende cambió después de que la aprobaras. Abre la etapa: o reconstruyes
-        con lo nuevo, o compruebas que sigue valiendo y la vuelves a aprobar. Mientras tanto, las
-        etapas que dependen de ella quedan bloqueadas.
+        Algo de lo que depende cambió después de que lo cerraras. Ábrelo: o lo reconstruyes con
+        lo nuevo, o compruebas que sigue valiendo y lo vuelves a cerrar continuando al
+        siguiente. Mientras tanto, los pasos que dependen de él quedan bloqueados.
       </p>
     ),
   },
   {
     key: "bloqueado",
-    question: `Una etapa dice «${t(STATUS.blocked.labelKey)}»`,
+    question: `Un paso dice «${t(STATUS.blocked.labelKey)}»`,
     answer: (
       <p>
-        No es «no está hecho», es «no te toca todavía»: falta aprobar algo de lo que depende. La
+        No es «no está hecho», es «no te toca todavía»: falta cerrar algo de lo que depende. La
         propia pantalla dice cuál, con enlace.
       </p>
     ),
   },
   {
-    key: "aprobada",
-    question: "Una etapa aprobada no me deja cambiar nada",
+    key: "solo-lectura",
+    question: "No me deja cambiar nada",
     answer: (
       <>
         <p>
-          Es lo que significa aprobar. Lo que se aprueba es el fichero tal cual está, así que
-          mientras la etapa esté cerrada la pantalla no ofrece ningún control que lo reescriba:
-          los campos se ven, pero de solo lectura.
+          Son dos situaciones distintas y se salen por sitios distintos. Si el paso está{" "}
+          <strong>abierto</strong>, lo que pasa es que estás <em>mirándolo</em>: cada paso se
+          abre en modo lectura, y la edición se desbloquea con «{t("stage.curate.start")}», al
+          final de la pantalla. Nada está mal — simplemente todavía no has pedido corregir.
         </p>
         <p>
-          El camino de vuelta es el botón «{t("stage.reopen")}» de la cabecera, con el aviso
-          debajo diciéndolo con todas las letras: «{t("stage.locked")}». Reabrir quita la
-          aprobación y nada más — no borra, no reconstruye — y volver a aprobar cuesta un clic.
+          Si el paso está <strong>cerrado</strong>, es una negativa de verdad: lo que se dio por
+          bueno es el fichero tal cual está, así que la pantalla no ofrece nada que lo reescriba
+          y lo dice —«{t("stage.locked")}»—. El camino de vuelta es «{t("stage.reopen")}», en la
+          cabecera. Reabrir no borra ni reconstruye nada, y volver a cerrarlo es continuar otra
+          vez al paso siguiente.
         </p>
         <p>
-          Dos cosas siguen funcionando con la etapa aprobada, porque no tocan el artefacto: las
-          descripciones de conceptos y el currículo.
+          La descripción de un tema se puede corregir con el paso cerrado: vive en un fichero
+          aparte y no caduca nada.
         </p>
       </>
     ),
@@ -2006,10 +2179,10 @@ const problems = (
       <>
         <p>
           Pasa el cursor por encima: dice el motivo. Son cinco, y se comprueban en este orden —
-          tu permiso sobre la instancia es de solo lectura; la etapa anterior no está aprobada;
-          el origen en bruto no tiene ningún documento; el motor no responde; o esta misma
-          construcción ya está en cola. Si es la del material, el enlace del propio aviso lleva
-          a subirlo.
+          tu permiso sobre esta asignatura es de solo lectura; el paso anterior no está cerrado;
+          el origen del Paso {stepNumber(0)} no tiene ningún documento; el motor no responde; o
+          esta misma construcción ya está en cola. Si es la del material, el enlace del propio
+          aviso lleva a subirlo.
         </p>
         <p>
           Que haya <em>otro</em> trabajo corriendo no es motivo: la construcción se pone en cola
@@ -2020,13 +2193,13 @@ const problems = (
   },
   {
     key: "sin-concepto",
-    question: "Hay ejercicios del banco sin ningún concepto",
+    question: "Hay ejercicios míos sin ningún tema",
     answer: (
       <p>
-        Es normal en la primera pasada. Usa «{t("bank.retagUntagged", { n: "N" })}»: se lanza
-        solo sobre esos, nunca sobre el banco entero. Y tiene sentido repetir, porque el índice
-        mejora con cada ejercicio bien etiquetado. Si uno sigue resistiéndose, ponle el concepto a
-        mano.
+        Es normal en la primera pasada. Pulsa «{t("stage.curate.start")}» y usa «
+        {t("bank.retagUntagged", { n: "N" })}»: se lanza solo sobre esos, nunca sobre todos. Y
+        tiene sentido repetir, porque el emparejamiento mejora con cada ejercicio bien
+        etiquetado. Si uno sigue resistiéndose, ponle el tema a mano.
       </p>
     ),
   },
@@ -2046,9 +2219,10 @@ const problems = (
     question: "Llevo horas y no sé si está avanzando",
     answer: (
       <p>
-        La construcción del temario es el trabajo más caro de la cadena. La barra por fases dice en
-        cuál está y el tramo que se mueve es el que corre; el cajón de ejecución enseña el paso
-        concreto. Puedes cerrar la pestaña y volver más tarde.
+        La construcción del temario es el trabajo más caro del recorrido. En su propia pantalla,
+        la barra por fases dice en cuál está: el tramo que se mueve es el que corre, y debajo va
+        el nombre de lo que se está haciendo ahora mismo. Puedes cerrar la pestaña y volver más
+        tarde.
       </p>
     ),
   },
@@ -2077,9 +2251,10 @@ function Troubleshooting() {
         <p>
           Ningún control desactivado se queda callado en esta aplicación. El botón de construir
           decide en un único sitio todas las razones para no ofrecerse —permiso de solo lectura,
-          la etapa anterior sin aprobar, el origen en bruto vacío, el motor sin responder, esa
-          misma construcción ya en cola— y las dice en su propio tooltip. Que haya otro trabajo
-          corriendo no está en la lista: eso se resuelve esperando turno, y el botón lo cuenta.
+          el paso anterior sin cerrar, el origen del Paso {stepNumber(0)} vacío, el motor sin
+          responder, esa misma construcción ya en cola— y las dice en su propio tooltip. Que haya
+          otro trabajo corriendo no está en la lista: eso se resuelve esperando turno, y el botón
+          lo cuenta.
         </p>
       </Alert>
     </div>

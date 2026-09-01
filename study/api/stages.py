@@ -31,6 +31,10 @@ class AnswersBody(BaseModel):
     overall: int | None = None
     note: str | None = None
     job_id: str | None = None
+    # Whether this person had corrected the artifact by hand before answering. Absent is
+    # «no se sabe» and never «no»: a client that does not send it is not denying it, and
+    # `stage_queries.save` refuses to let an absence lower what a row already records.
+    curated: bool | None = None
 
 
 def _artifact(artifact: str) -> str:
@@ -53,6 +57,9 @@ def _mine(row) -> dict | None:
         "answers": row.answers or {},
         "overall": row.overall,
         "note": row.note,
+        # Passed through as it stands, `null` included: «nadie lo dijo» is a third state
+        # and the form has to be able to tell it from a «no», so it is never folded to one.
+        "curated": row.curated,
         # «Contestada» is `overall`, which is the one question asked of all three stages
         # and the last one on the form: with it set, the person reached the end.
         "answered": row.overall is not None,
@@ -150,6 +157,7 @@ def write(
         overall=overall,
         note=(body.note or "").strip()[:2000] or None,
         job_id=body.job_id,
+        curated=body.curated,
     )
     # THE SAME SHAPE THE READ ANSWERS, and that is not tidiness. The client puts this reply
     # straight into the cache as the form's new state, so a reply missing `instrument` left

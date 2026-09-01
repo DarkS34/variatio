@@ -6,7 +6,7 @@ import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
-import { STEPS, stepStates, type StepState } from "@/lib/steps";
+import { GENERATE_PHASE, STEPS, stepNumber, stepStates, type StepState } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useHasWorkspace } from "@/state/auth";
@@ -77,8 +77,10 @@ const STATE_KEY: Record<StepState, Key> = {
  * supposed to look like. The 22 px box stays as empty space so the four names still line
  * up on one column.
  */
-function StepCounter({ state, n }: { state: StepState; n: number }) {
-  const box = "flex size-[22px] shrink-0 items-center justify-center";
+function StepCounter({ state, n }: { state: StepState; n: string }) {
+  // `min-w` and not a fixed square: «1.1» is wider than «1» and the height is what keeps
+  // the four names on one column.
+  const box = "flex h-[22px] min-w-[22px] shrink-0 items-center justify-center px-1";
   if (state === "done") {
     return (
       <span className={cn(box, "text-settled")}>
@@ -92,7 +94,11 @@ function StepCounter({ state, n }: { state: StepState; n: number }) {
         box,
         "nums font-condensed text-small font-semibold",
         state === "now"
-          ? "bg-attention text-[oklch(0.99_0.003_262)]"
+          // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
+          // mode, so the literal put a near-white number on it. This is the same defect the
+          // palette pass of 2026-09-01 found in two other places, and it is invisible to
+          // `check:color`, which reads `index.css` and not a class in a component.
+          ? "bg-attention text-attention-foreground"
           : "border border-dashed border-input text-muted-foreground",
       )}
     >
@@ -117,7 +123,7 @@ function StepPill({
 }: {
   step: (typeof STEPS)[number];
   state: StepState;
-  n: number;
+  n: string;
   active: boolean;
   title?: string;
 }) {
@@ -175,6 +181,7 @@ function UsePill({
   icon: Icon,
   active,
   study = false,
+  n,
   disabledReason,
 }: {
   to: string;
@@ -182,6 +189,8 @@ function UsePill({
   icon: typeof Play;
   active: boolean;
   study?: boolean;
+  /** Its number on the path, for the one that IS a phase. «Comparar» is not. */
+  n?: number;
   disabledReason?: string | null;
 }) {
   return (
@@ -199,7 +208,13 @@ function UsePill({
         disabledReason && "opacity-45",
       )}
     >
-      <Icon className="size-4" />
+      {n === undefined ? (
+        <Icon className="size-4" />
+      ) : (
+        // The number where the icon would be, so «2» lines up with the «1.1» of the stops
+        // and says what the four of them were for. Only the phase gets one.
+        <span className="nums font-condensed text-small font-semibold">{n}</span>
+      )}
       {label}
     </Link>
   );
@@ -283,7 +298,7 @@ function MainNav({
           key={step.path}
           step={step}
           state={states[index]}
-          n={index + 1}
+          n={stepNumber(index)}
           active={path === step.path}
           title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
         />
@@ -295,6 +310,7 @@ function MainNav({
         to="/generate"
         label={t("nav.create")}
         icon={Play}
+        n={GENERATE_PHASE}
         active={path === "/generate"}
         disabledReason={locked}
       />

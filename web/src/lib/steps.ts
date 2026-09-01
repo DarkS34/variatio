@@ -21,6 +21,42 @@ export const STEPS = [
   { path: "/prepare/bank", labelKey: "nav.step.bank", artifact: "exemplars_bank" },
 ] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
 
+/**
+ * TWO PHASES, AND THE FOUR STEPS ARE ALL INSIDE THE FIRST ONE (explicit user request).
+ *
+ * «Hay que dejar claro que esto es el paso uno necesario para preparar esta asignatura en
+ * el sistema. Y una vez que esto lo tengas claro, ya puedes generar ejercicios. […] El
+ * paso 1 tiene 1-1, 1-2, 1-3 y 1-4.» The app used to present four steps at one level with
+ * generating outside the numbering altogether, as though asking for an exercise were not
+ * part of the path — when it is the only reason the other four exist.
+ *
+ * The numbers carry it on their own: `1.1 … 1.4` says these four are one thing, and `2` on
+ * «Crear ejercicios» says what that thing was for. No extra captions in the bar; the
+ * tutorial does the naming.
+ */
+export const PREPARE_PHASE = 1;
+export const GENERATE_PHASE = 2;
+
+/** How a preparation step is numbered on screen, from its index in `STEPS`. */
+export function stepNumber(index: number): string {
+  return `${PREPARE_PHASE}.${index + 1}`;
+}
+
+/** The same, addressed by the artifact a step builds — the stage screens' way in. */
+export function stepNumberOf(artifact: string): string | null {
+  const index = STEPS.findIndex((step) => step.artifact === artifact);
+  return index === -1 ? null : stepNumber(index);
+}
+
+/** Where the step AFTER this artifact's leads, and what to call it. */
+export function nextStepOf(artifact: string): { path: string; number: string | null } {
+  const index = STEPS.findIndex((step) => step.artifact === artifact);
+  const next = index === -1 ? -1 : index + 1;
+  return next > 0 && next < STEPS.length
+    ? { path: STEPS[next].path, number: stepNumber(next) }
+    : { path: "/generate", number: null };
+}
+
 export type StepState = "done" | "now" | "later";
 
 /**

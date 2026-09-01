@@ -230,8 +230,7 @@ function ConceptRow({
       )}
     >
       {/* The same code as the canvas: filled is a taggable target, hollow is structure. It
-          carries the name of the state as well as the shape now that it is the only place
-          the row says it — shape alone is not a label. */}
+          names the state as well as drawing it, because shape alone is not a label. */}
       <span
         className="flex justify-center"
         title={concept.taggable ? t("kg.taggable") : t("canvas.notTaggable")}
@@ -251,24 +250,41 @@ function ConceptRow({
         {concept.name}
       </span>
 
-      {/* The switch, and `stopPropagation` around it: the whole row is a button that opens
-          the concept, so without it flipping the state would also open what it is about.
-          The mouse-down is stopped as well as the click — the row's own handler is on
-          `onClick`, but a nested control that only stops the click still lets a drag out of
-          the switch land as a selection. */}
-      <span
-        className="flex justify-start pr-2"
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <Switch
-          checked={concept.taggable}
-          disabled={locked}
-          label={t("kg.taggable")}
-          onCheckedChange={(next) => onSetTaggable(next)}
-        />
-      </span>
+      {/* THE ONLY PLACE THIS STATE IS SET, AND THEREFORE THE ONLY PLACE IT MUST STILL BE
+          READ WHEN NOTHING IS BEING SET. While the stage is a view the switch is not drawn
+          — a greyed row of 131 of them claims something is wrong with a screen whose task
+          is to be read — but the column's own question is answered in words, so the answer
+          does not fall to the dot's tooltip. The track stays 11rem in both states: its
+          width comes from the header, so the list does not jump when correcting starts.
+
+          `stopPropagation` around the control and not around the text: the whole row is a
+          button that opens the concept, so without it flipping the state would also open
+          what it is about. The mouse-down is stopped as well as the click — the row's own
+          handler is on `onClick`, but a nested control that only stops the click still lets
+          a drag out of the switch land as a selection. */}
+      {locked ? (
+        <span
+          className={cn(
+            "truncate pr-2 text-small",
+            concept.taggable ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {t(concept.taggable ? "common.yes" : "common.no")}
+        </span>
+      ) : (
+        <span
+          className="flex justify-start pr-2"
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Switch
+            checked={concept.taggable}
+            label={t("kg.taggable")}
+            onCheckedChange={(next) => onSetTaggable(next)}
+          />
+        </span>
+      )}
 
       <ChevronRight className="size-3.5 text-muted-foreground" />
     </div>

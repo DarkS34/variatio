@@ -32,14 +32,6 @@ export interface ConceptSelectorProps {
   restrictTo?: string[] | null;
   onlyWithExemplars?: boolean;
   /**
-   * Lifts the exemplar filter from inside the overlay.
-   *
-   * Its switch lives in the step behind this panel, so with the filter on the board
-   * simply showed fewer concepts and said nothing about it. Given, the tray offers the
-   * count and the way back.
-   */
-  onShowWithoutExemplars?: () => void;
-  /**
    * The modality being generated. Given, every exemplar count on screen is the count of
    * THAT modality, because it is the only one the few-shot block may draw from. Null when
    * the profile declares a single one, where the total already says it.
@@ -51,7 +43,6 @@ export interface ConceptSelectorProps {
    * legitimately contain non-taggable concepts.
    */
   allowNonTaggable?: boolean;
-  showExemplarCount?: boolean;
   title: string;
   open: boolean;
   /** Dismissing: the X and Escape. The selection is applied as it is made, so it keeps it. */
@@ -74,10 +65,8 @@ export function ConceptSelector({
   implied,
   restrictTo,
   onlyWithExemplars = false,
-  onShowWithoutExemplars,
   exemplarType = null,
   allowNonTaggable = false,
-  showExemplarCount = true,
   title,
   open,
   onClose,
@@ -96,6 +85,22 @@ export function ConceptSelector({
     () => new Map(concepts.map((concept) => [concept.name, concept.domain])),
     [concepts],
   );
+
+  // A FILTER THAT WOULD LEAVE NOTHING FILTERS NOTHING. The exemplar filter stopped being
+  // a question and became fixed, which is right — it was a control nobody could read — but
+  // fixed it can also empty the board outright, on a bank whose items are all untagged or
+  // whose modality has no example yet. An empty selector is a dead end with no lever left
+  // to lift, so the filter stands down instead: everything the caller's OWN restrictions
+  // allow is offered, and `hiddenByExemplars` then counts nothing, which is true.
+  const filterByExemplars = useMemo(() => {
+    if (!onlyWithExemplars) return false;
+    const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
+    return concepts.some((concept) => {
+      if (allowed && !allowed.has(concept.name)) return false;
+      if (!concept.taggable && !allowNonTaggable) return false;
+      return hasExemplars(concept, exemplarType);
+    });
+  }, [concepts, onlyWithExemplars, restrictTo, allowNonTaggable, exemplarType]);
 
   // The one place that decides what state a concept is in. `implied` is shown always,
   // `selected` is shown always, and every filter only decides what ELSE is offered —
@@ -117,7 +122,7 @@ export function ConceptSelector({
       if (!chosen.has(name)) {
         if (allowed && !allowed.has(name)) continue;
         if (!concept.taggable && !allowNonTaggable) continue;
-        if (onlyWithExemplars && !hasExemplars(concept, exemplarType)) continue;
+        if (filterByExemplars && !hasExemplars(concept, exemplarType)) continue;
       }
       visible.push(concept);
       selectable.add(name);
@@ -126,7 +131,7 @@ export function ConceptSelector({
   }, [
     concepts,
     restrictTo,
-    onlyWithExemplars,
+    filterByExemplars,
     exemplarType,
     allowNonTaggable,
     chosen,
@@ -136,7 +141,7 @@ export function ConceptSelector({
   // Concepts the EXEMPLAR filter alone is keeping out — not the curriculum and not
   // taggability, which are the caller's own restrictions and have their own wording.
   const hiddenByExemplars = useMemo(() => {
-    if (!onlyWithExemplars) return 0;
+    if (!filterByExemplars) return 0;
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     return concepts.filter((concept) => {
       if (chosen.has(concept.name) || implied?.has(concept.name)) return false;
@@ -144,7 +149,7 @@ export function ConceptSelector({
       if (!concept.taggable && !allowNonTaggable) return false;
       return !hasExemplars(concept, exemplarType);
     }).length;
-  }, [concepts, onlyWithExemplars, restrictTo, allowNonTaggable, exemplarType, chosen, implied]);
+  }, [concepts, filterByExemplars, restrictTo, allowNonTaggable, exemplarType, chosen, implied]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -321,8 +326,6 @@ export function ConceptSelector({
             chosen={chosen}
             selectable={state.selectable}
             colours={colours}
-            showExemplarCount={showExemplarCount}
-            exemplarType={exemplarType}
             activeName={flat[cursor] ?? null}
             onToggle={toggle}
             onToggleDomain={toggleDomain}
@@ -339,8 +342,7 @@ export function ConceptSelector({
         onClear={() => onChange([])}
         onConfirm={onConfirm ?? onClose}
         confirmLabel={confirmLabel ?? t("concept.done")}
-        hidden={onShowWithoutExemplars ? hiddenByExemplars : 0}
-        onShowHidden={onShowWithoutExemplars}
+        hidden={hiddenByExemplars}
       />
     </div>,
     document.body,

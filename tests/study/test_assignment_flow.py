@@ -143,7 +143,7 @@ def test_the_gate_is_read_once_per_workspace_and_not_once_per_account(db, monkey
     asked = []
     monkeypatch.setattr(
         "study.api.admin.gate_error",
-        lambda ws, kind: asked.append(ws.slug) or "Para generar hay que aprobar antes: X.",
+        lambda ws, kind: asked.append(ws.slug) or "Para crear ejercicios hay que dar antes por buenos: X.",
     )
 
     _accounts(session)

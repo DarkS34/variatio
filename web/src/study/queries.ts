@@ -173,6 +173,7 @@ export function useSaveStageReview(artifact: string) {
       answers: Record<string, string>;
       overall: number | null;
       note: string | null;
+      curated?: boolean;
     }) => studyApi.saveStageReview(artifact, body),
     onSuccess: (review) =>
       client.setQueryData(stageReviewKey(artifact), (previous: StageReview | undefined) =>

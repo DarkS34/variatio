@@ -56,7 +56,7 @@ UPSTREAM: dict[str, tuple[str, ...]] = {
 LABELS = {
     EXEMPLARS_PROFILE: "Tipos de ejercicio",
     KNOWLEDGE_GRAPH: "El temario",
-    EXEMPLARS_BANK: "Tus ejercicios",
+    EXEMPLARS_BANK: "Etiquetado",
 }
 
 STALE_ACTION = {
@@ -314,7 +314,7 @@ class ReviewState:
             ]
             state["blocked_by"] = blockers
             state["blocked_reason"] = (
-                f"Aprueba primero: {', '.join(blockers)}." if blockers else None
+                f"Antes hay que dar por bueno: {', '.join(blockers)}." if blockers else None
             )
             result.append(state)
         return result

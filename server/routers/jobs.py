@@ -66,11 +66,16 @@ def _unapproved_upstream(state, gate: str) -> list[str]:
 
 
 def gate_error(ws: Workspace, kind: str) -> str | None:
-    """Say in Spanish what has to be approved before `kind` may run, or nothing."""
+    """Say in Spanish which steps have to be settled before `kind` may run, or nothing.
+
+    It names the STATE and not a button: «Aprobar» is not a control any more — a stage is
+    closed by moving on from it — so «aprueba primero» sent people looking for something
+    that is not on the screen.
+    """
     needed = NEEDS_APPROVED.get(kind)
     if needed is not None:
         if runtime.review_state(ws).state(needed)["status"] != "approved":
-            return f"Aprueba primero: {review.LABELS[needed]}."
+            return f"Antes hay que dar por bueno: {review.LABELS[needed]}."
 
     gate = GATES.get(kind)
     if gate is None:
@@ -79,11 +84,11 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
     if gate == "__all__":
         if not state.generation_unlocked():
             pending = _pending_labels(ws)
-            return f"Para generar hay que aprobar antes: {', '.join(pending)}."
+            return f"Para crear ejercicios hay que dar antes por buenos: {', '.join(pending)}."
         return None
     if not state.gate_open(gate):
         blockers = _unapproved_upstream(state, gate)
-        return f"Aprueba primero: {', '.join(blockers)}."
+        return f"Antes hay que dar por bueno: {', '.join(blockers)}."
     return None
 
 

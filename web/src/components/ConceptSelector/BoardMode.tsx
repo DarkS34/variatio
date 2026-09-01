@@ -1,7 +1,6 @@
 import { Lock } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import { exemplarCount } from "@/lib/concepts";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -11,8 +10,6 @@ export function BoardMode({
   chosen,
   selectable,
   colours,
-  showExemplarCount,
-  exemplarType,
   activeName,
   onToggle,
   onToggleDomain,
@@ -22,13 +19,11 @@ export function BoardMode({
   /** Everything the selector is showing minus what came in by prerequisite. */
   selectable: Set<string>;
   colours: Map<string, string>;
-  showExemplarCount: boolean;
-  exemplarType: string | null;
   activeName: string | null;
   onToggle: (concept: string) => void;
   onToggleDomain: (items: KgConcept[], allChosen: boolean) => void;
 }) {
-  const { t, plural } = useT();
+  const { t } = useT();
   const activeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -97,8 +92,6 @@ export function BoardMode({
                     ? "selected"
                     : "free";
                 const isActive = activeName === concept.name;
-                const count = exemplarCount(concept, exemplarType);
-                const zeroShot = showExemplarCount && count === 0;
                 return (
                   <button
                     key={concept.name}
@@ -106,19 +99,7 @@ export function BoardMode({
                     type="button"
                     disabled={state === "implied"}
                     onClick={() => onToggle(concept.name)}
-                    title={
-                      state === "implied"
-                        ? t("concept.byPrerequisite")
-                        : showExemplarCount
-                          ? zeroShot
-                            ? exemplarType
-                              ? t("concept.noExemplarsOfType")
-                              : t("concept.noExemplars")
-                            : exemplarType
-        ? plural("concept.exemplarsOfType", count)
-        : plural("concept.exemplars", count)
-                          : undefined
-                    }
+                    title={state === "implied" ? t("concept.byPrerequisite") : undefined}
                     className={cn(
                       "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-small transition-colors",
                       state === "selected" && "border-primary bg-primary text-primary-foreground",
@@ -131,29 +112,6 @@ export function BoardMode({
                   >
                     {state === "implied" ? <Lock className="size-3 shrink-0" /> : null}
                     <span className="truncate">{concept.name}</span>
-                    {showExemplarCount && state !== "implied" ? (
-                      zeroShot ? (
-                        <span
-                          className={cn(
-                            "size-1.5 shrink-0 rounded-full",
-                            state === "selected"
-                              ? "bg-primary-foreground/70"
-                              : "bg-attention",
-                          )}
-                        />
-                      ) : (
-                        <span
-                          className={cn(
-                            "shrink-0 nums",
-                            state === "selected"
-                              ? "text-primary-foreground/70"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {count}
-                        </span>
-                      )
-                    ) : null}
                   </button>
                 );
               })}

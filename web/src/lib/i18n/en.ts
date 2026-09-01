@@ -28,7 +28,6 @@ export const en: Catalogue = {
   "common.continue": "Continue",
   "common.create": "Create",
   "common.rename": "Rename",
-  "common.approve": "Approve",
   "common.enter": "Sign in",
   "common.optional": "optional",
   "common.empty": "empty",
@@ -41,7 +40,7 @@ export const en: Catalogue = {
   "language.changed": "Language changed to {name}",
   "language.warning.title": "The change only affects what you read",
   "language.warning.body":
-    "The variants you have already generated, the graphs you have built and the evaluation sessions stay as they are: they were written in the workspace's language and they are not translated.",
+    "The variatios you have already generated, the graphs you have built and the evaluation sessions stay as they are: they were written in the workspace's language and they are not translated.",
 
   // WORKSPACE LANGUAGE ------------------------------------------------------------------
   "workspace.language.title": "Prompt language",
@@ -64,7 +63,7 @@ export const en: Catalogue = {
   "account.title": "My profile",
   "account.whatIsHere": "What is here",
   "account.whatIsHere.body":
-    "Your account and what is yours: the details you sign in with, the variants you have generated and the workspaces you have access to. None of this is part of the artifact chain, which is why it is not in the bar above.",
+    "Your account and what is yours: the details you sign in with, the variatios you have generated and the workspaces you have access to. None of this is part of the artifact chain, which is why it is not in the bar above.",
   "account.admin": "Administrator",
   "account.identity.title": "Account details",
   "account.identity.username": "Username",
@@ -101,11 +100,11 @@ export const en: Catalogue = {
 
   "tabs.account": "Account",
   "tabs.workspaces": "Workspaces",
-  "tabs.variants": "Variants",
+  "tabs.variants": "Variatios",
 
   "acc.ws.delete": "Delete «{name}»",
   "acc.ws.deleteTitle": "Delete «{name}»",
-  "acc.ws.whatGoes": "The syllabus, the profile, the bank, the approvals, the access of everybody who opens this instance, the saved variants and the evaluation sessions all go.",
+  "acc.ws.whatGoes": "The syllabus, the profile, the bank, the approvals, the access of everybody who opens this instance, the saved variatios and the evaluation sessions all go.",
   "acc.ws.filesStay": "The raw documents you uploaded are deleted from disk too, unless somebody else still has access: then they stay, and an administrator can import them again.",
   "acc.ws.deletedMoved": "{slug}. It was the one you had open: you are now in «{next}».",
   "acc.ws.deletedHere": "{slug}. It was the one you had open and your account is in no other: the panel offers you to create one.",
@@ -194,8 +193,8 @@ export const en: Catalogue = {
   "step.tagging": "For each exercise: candidates by similarity over the vectors already computed and, if more than one is plausible, a verification by the model.",
   "step.guardrail": "Before the additional instructions enter the prompt, a fixed check blocks instruction-override commands («forget the above…») and then a judge model decides whether they contain anything harmful or an attempt to get around the exercise's constraints. It only runs if you wrote something.",
   "step.admissibility": "A model reads your request and decides whether what you are asking for is one of the things this field is for, or one of the things you already decided above: the concepts, the modality, the exercise's fields or the subject itself. It only runs if you wrote something.",
-  "step.generate": "One variant per turn, with the same exemplars in all of them: prompt, streaming generation and validation against the schema.",
-  "step.check": "What the system can check about the variant without judging it: whether it names something not yet taught, whether it is too similar to an example or to another of the batch, and whether the tagger recognises it as the concept asked for. Signals for whoever reads it, not a rejection.",
+  "step.generate": "One variatio per turn, with the same exemplars in all of them: prompt, streaming generation and validation against the schema.",
+  "step.check": "What the system can check about the variatio without judging it: whether it names something not yet taught, whether it is too similar to an example or to another of the batch, and whether the tagger recognises it as the concept asked for. Signals for whoever reads it, not a rejection.",
   "step.build_exemplars_profile": "Infers an exercise's schema from the raw exemplars.",
   "step.build_knowledge_graph": "Builds the syllabus from the corpus: extraction, cleaning and curation.",
   "step.build_exemplars_bank": "Extracts the exercises from the documents and validates them against the profile.",
@@ -245,7 +244,7 @@ export const en: Catalogue = {
   "activity.item.retried": "Exercise {index} rejected, retry {attempt}: {reasons}",
   "activity.item.flagged": { one: "Exercise {index} generated, with 1 signal", other: "Exercise {index} generated, with {n} signals" },
   "activity.item.produced": "Exercise {index} generated and validated",
-  "activity.item.saved": "Exercise {index} saved to «My variants»",
+  "activity.item.saved": "Exercise {index} saved to «My variatios»",
   "activity.item.rejected": "Exercise {index} discarded: it does not validate against the schema",
   "activity.item.tagged": "{id} tagged: {concepts}",
   "activity.item.taggedNone": "{id} tagged with no concepts",
@@ -258,7 +257,7 @@ export const en: Catalogue = {
   "activity.empty": "Nothing to report yet.",
   "artifact.profile": "Exercise types",
   "artifact.graph": "The syllabus",
-  "artifact.bank": "Your exercises",
+  "artifact.bank": "Tagging",
   "job.build_profile.label": "Build the exemplars profile",
   "job.build_kg.label": "Build the knowledge syllabus",
   "job.build_bank.label": "Extract the exemplars bank",
@@ -293,8 +292,8 @@ export const en: Catalogue = {
   "step.tagging.label": "Tagging the bank with concepts from the syllabus",
   "step.guardrail.label": "Checking the instructions",
   "step.admissibility.label": "Checking the commission's scope",
-  "step.generate.label": "Generating variants",
-  "step.check.label": "Checking the variant",
+  "step.generate.label": "Generating variatios",
+  "step.check.label": "Checking the variatio",
   "step.build_exemplars_profile.label": "Building: exemplars profile",
   "step.build_knowledge_graph.label": "Building: knowledge syllabus",
   "step.build_exemplars_bank.label": "Building: exemplars bank",
@@ -327,140 +326,139 @@ export const en: Catalogue = {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
   },
-  "nav.myVariants": "My variants",
-  "nav.needsApproved": "Requires the three stages approved",
+  "nav.myVariants": "My variatios",
+  "nav.needsApproved": "Phase 1 — preparing the subject — has to be finished first",
   "nav.step.raw": "Notes and exercises",
   "nav.step.profile": "Exercise types",
   "nav.step.graph": "The syllabus",
-  "nav.step.bank": "Your exercises",
+  "nav.step.bank": "Tagging",
   "nav.state.done": "Done",
   "nav.state.now": "Your turn",
   "nav.state.later": "Later",
   "nav.create": "Create exercises",
   "nav.compare": "Compare",
-  "nav.stepNumber": "Step {n} of 4",
+  "nav.stepNumber": "Step {n} · Preparing the subject",
   "tutorial.skip": "Skip the explanation",
   "tutorial.of": "{n} of {total}",
   "tutorial.back": "Back",
   "tutorial.next": "Next",
-  "tutorial.start": "Start with step 1",
+  "tutorial.start": "Start with step 1.1",
   "tutorial.again": "See the explanation again",
 
   "tutorial.stepName": "Step {n}: {name}",
 
-  "tutorial.fig.yours": "Your notes and your exercises",
-  "tutorial.fig.learns": "Learns your subject",
-  "tutorial.fig.new": "New exercises",
-  "tutorial.fig.notes": "Notes: handouts, slides, the course book.",
-  "tutorial.fig.exercises": "Exercises: problem sheets, past exams, worksheets.",
+  "tutorial.fig.yours": "You provide your notes and your exercises",
+  "tutorial.fig.learns": "The system learns your subject",
+  "tutorial.fig.new": "You ask it for as many exercises as you want",
+  "tutorial.fig.notes":
+    "Handouts, slides, the course book. This is where the topics come from, and the order in which they rest on one another.",
+  "tutorial.fig.exercises":
+    "Problem sheets, past exams, worksheets, preferably worked out. This is where the shape your exercises take comes from.",
+  "tutorial.fig.phase1": "Given as good",
+  "tutorial.fig.phase2": "Phase 2: asking for exercises",
   "tutorial.fig.build": "It is built",
-  "tutorial.fig.review": "You look at it",
-  "tutorial.fig.approve": "You approve it",
+  "tutorial.fig.review": "You read it",
+  "tutorial.fig.rate": "You rate it",
+  "tutorial.fig.next": "You carry on or correct",
   "tutorial.fig.headerRight": "Top right, on every screen",
+  "tutorial.fig.headerLeft": "Top left, on every screen",
+  "tutorial.fig.workspace": "Your subject",
   "tutorial.fig.proposal": "Proposal {letter}",
 
-  "tutorial.p1.title": "Step 1: import notes and class exercises",
-  "tutorial.p1.body":
-    "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files.",
-  "tutorial.p1.b1":
-    "Every document is read page by page, as if it were being looked at. There is a button to read them all in one go; without it, that wait is spread across the steps that follow.",
-  "tutorial.p1.b2":
-    "If a page comes out wrong you can rewrite it by hand. Your version wins and survives everything that comes after.",
-
-  "tutorial.p2.title": "Step 2: exercise types",
-  "tutorial.p2.body":
-    "The exercises you uploaded are looked at and the different shapes they have are separated: code, multiple choice, tracing… and what parts each one carries.",
-  "tutorial.p2.b1":
-    "It is the template new exercises are written with, so it is worth recognising: if a shape you use is missing, add it; if one is spare, remove it.",
-  "tutorial.p2.b2":
-    "Each type carries its writing rules: how your subject writes that kind of exercise. You can change them, add or delete.",
-
-  "tutorial.p3.title": "Step 3: the syllabus",
-  "tutorial.p3.body":
-    "Your notes are read and the concepts you teach are pulled out, along with the order they rest on one another. It is what says what can be taken as known in an exercise and what cannot yet.",
-  "tutorial.p3.b1":
-    "It comes after step 2 because, to know which concepts work as a label, what exercises you set has to be known first.",
-  "tutorial.p3.b2":
-    "Click a topic to open its card: that is where you change the name, the unit, the description and the relations to other topics.",
-
-  "tutorial.p4.title": "Step 4: your exercises",
-  "tutorial.p4.body":
-    "The exercises in your documents are collected one by one and each is given the topic it practises. They are what is looked at to write a new one.",
-  "tutorial.p4.b1":
-    "If they are copied well, what is new will look like yours. You can correct the text of any of them and the topic it was given.",
-  "tutorial.p4.b2":
-    "Once this step is done you can ask for new exercises.",
-
-  "tutorial.s1.title": "Variatio writes exercises for your subject",
+  "tutorial.s1.title": "Variatio is an application that generates exercises for your subject",
   "tutorial.s1.body":
-    "It does not search the internet or make them up from nothing: it writes them from your notes and from the exercises you already set, imitating the way you pose them. You teach it the subject once, and from then on you ask it for the exercises you need.",
+    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it writes them from your notes and from the subject's own exercises, imitating the way they are posed.",
 
-  "tutorial.s2.title": "The only thing you have to find is your files",
-  "tutorial.s2.body": "Two things, and you already have both. PDF or Word, however they are.",
-  "tutorial.s2.b1":
-    "The notes you teach from: handouts, slides, the course book. This is where the concepts you teach come from, and the order in which they rest on one another.",
-  "tutorial.s2.b2":
-    "The exercises you already set: problem sheets, past exams, lab handouts. This is where the shape your exercises take comes from, and new ones will look like these.",
+  "tutorial.s2.title": "Before you start, gather your files",
+  "tutorial.s2.body":
+    "The route has not begun yet. For now the only thing you have to do is find two things you already have, in PDF or Word, however they are.",
   "tutorial.s2.aside":
-    "The more exercises you give it, the more the new ones will look like yours. Three or four documents is already enough.",
+    "Every document is read in full, page by page, so preparing the subject takes a while. There is no need to sit watching: it can be left working and come back to later.",
 
-  "tutorial.s3.title": "The route is four steps",
+  "tutorial.s3.title": "Phase 1: preparing the subject, in four steps",
   "tutorial.s3.body":
-    "They are done in this order, in one sitting, and they are the four buttons you carry along the top at all times. They never have to be prepared again, though you can always go in and change something.",
-  "tutorial.s3.aside":
-    "These four names are what you will see along the top of every screen, in that order and numbered. The bar tells you which one you are on and which is next.",
+    "They are done in this order and in one sitting. They are the four buttons you carry along the top at all times, each with its number: the bar tells you which one you are on and which is next.",
   "tutorial.s3.step1":
-    "You upload your documents: the notes on one side and the exercises on the other. It is the only thing you have to prepare.",
+    "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files, because everything else comes from here.",
   "tutorial.s3.step2":
-    "Your exercises are looked at and the different shapes they take are separated: code, multiple choice, tracing… and what parts each one carries.",
+    "Your exercises are looked at and the different shapes they take are separated: code, multiple choice, tracing… and what parts each one carries. It is the template new ones are written with, so it is worth recognising.",
   "tutorial.s3.step3":
-    "Your notes are read and the concepts you teach are pulled out, along with the order they rest in. It comes after step 2 because what exercises you set has to be known before which concepts work as a label.",
+    "Your notes are read and the subject's topics are pulled out, along with the order they rest on one another. It is what says what can be taken as known in an exercise and what cannot yet.",
   "tutorial.s3.step4":
     "The exercises in your documents are collected one by one and each is given the topic it practises. They are the examples imitated when writing a new one.",
 
 
-  "tutorial.s5.title": "All four end the same way",
-  "tutorial.s5.body":
-    "It is built on its own, you look at it and decide whether it holds. Beside it is a questionnaire of five short questions on how it came out; saving it offers you the next step.",
-  "tutorial.s5.b1":
-    "Nothing is taken as good until you say so. Until you press «Approve», the step stays open and can be changed.",
-  "tutorial.s5.b2":
+  "tutorial.s4.title": "With that, the system is ready",
+  "tutorial.s4.body":
+    "That is where preparing ends. Those three steps you have gone through are everything the system needs to know about your subject, and from now on you can ask it for new exercises whenever you like, without preparing anything again.",
+  "tutorial.s4.b1":
     "You can go back to any step whenever you like. If you change something in an earlier step, the later ones that have gone stale are named.",
-  "tutorial.s5.aside":
-    "Those five questions are the only thing asked in return, and they are exactly what is being measured in the study.",
 
-  "tutorial.s6.title": "Something will come out wrong, and what you correct by hand always wins: over what was understood and over any later rebuild.",
-
-  "tutorial.s7.title": "Asking for exercises, and where they are kept",
-  "tutorial.s7.body":
-    "You say what topic you want it on and what type, and it writes it. You can ask for several at once and keep the one you like best.",
-  "tutorial.s7.b1":
+  "tutorial.s5.title": "Asking for exercises",
+  "tutorial.s5.body":
+    "You say what topic you want it on, what type and what level, and it writes it. You can ask for several at once and keep the one you like best.",
+  "tutorial.s5.b1":
     "If you tell it what you have already covered in class, the exercise will rest on that alone and use nothing you have not explained yet.",
-  "tutorial.s7.b2":
-    "Every exercise that comes out is saved on its own under «My variants», with the commission that produced it. You do not have to copy it anywhere.",
-  "tutorial.s7.b3":
-    "If one does not convince you, «Generate more» asks again with the same commission and gives you different ones.",
+  "tutorial.s5.b2":
+    "Every exercise that comes out is saved on its own under «My variatios», with the commission that produced it. You do not have to copy it anywhere.",
 
-  "tutorial.s8.title": "Comparing three versions, blind",
-  "tutorial.s8.body":
+  "tutorial.s6.title": "Comparing three versions, blind",
+  "tutorial.s6.body":
     "You are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use, and pick the best. Only at the end is it revealed where each came from.",
-  "tutorial.s8.b1":
+  "tutorial.s6.b1":
     "The order changes every time, so that a position on screen does not sway what you pick.",
-  "tutorial.s8.b2":
+  "tutorial.s6.b2":
     "«I am not in a position to judge this» is a valid answer and does not count as a preference. If the exercise is not in your area, saying so is worth more than picking at random.",
-  "tutorial.s8.aside":
+  "tutorial.s6.aside":
     "This is the part the study rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
 
-  "tutorial.s9.body":
-    "None of this is irreversible: you can redo any step, go back and correct by hand. Every screen links to the guide, and you can see this explanation again from your account menu.",
+  "tutorial.s7.title": "And now, evaluating the system",
+  "tutorial.s7.body":
+    "So much for what it does and how it is used. What is asked of you from here on is to set it up with a subject of your own and say, step by step, how it came out.",
+  "tutorial.s7.b1":
+    "Every step tells you beforehand what is about to happen, and nothing is taken as good on its own: at the foot there are always two ways out, «I want to correct something» or carrying on to the next step.",
+  "tutorial.s7.b2":
+    "Upload only a couple of topics, not the whole subject. Every document is read in full, so uploading fifty topics is keeping you waiting for no reason at all.",
+  "tutorial.s7.b3":
+    "Correct without fear: what you fix by hand always wins, over what was understood and over any later rebuild.",
+  "tutorial.s7.aside":
+    "Each step's questions are the only thing asked in return, and they are exactly what is being measured in the study.",
+
+  "tutorial.s8.title": "Pick a subject and start",
+  "tutorial.s8.body":
+    "Every workspace is a subject. Pick the one you are going to work with at the top left and start at step 1.1; if you do not have one yet, you can create it right there.",
+  "tutorial.s8.aside":
+    "Every screen links to the guide, and you can see this explanation again from your account menu.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
   "shell.viewFullLog": "View the session's full log",
   "stage.lockedHint": "Approved: press «Reopen» to be able to edit it",
+  "stage.viewHint":
+    "Right now this is a view. To be able to edit it, press «I want to correct something» at the foot of the page.",
+  "stage.curate.title": "Do you want to correct anything?",
+  "stage.curate.body":
+    "This is a first version. If you correct whatever does not fit, the exercises generated afterwards will look more like yours. If you leave it as it is, you can carry on too.",
+  "stage.curate.bodyBank":
+    "This is a first version. New exercises are copied from these ones, so what you correct here shows up in everything that follows. If you leave it as it is you can still carry on, but the result will be worse.",
+  "stage.curate.editing":
+    "You are correcting. Save your changes before leaving it; moving on to the next step saves them too.",
+  "stage.curate.start": "I want to correct something",
+  "stage.curate.save": "Save the changes",
+  "stage.curate.saveFailed": "The changes could not be saved. They are still here: try again.",
+  "stage.curate.stop": "Stop correcting",
+  "stage.curate.closedTitle": "This step is already signed off",
+  "stage.curate.closed": "To correct it again, open it back up with «Reopen», above.",
+  "stage.continue": "Continue to step {n}",
+  "stage.continueGenerate": "That is it: create my first exercise",
+  "stage.continueFailed": "This step could not be closed, so nothing moved on. Try again.",
   "stageReview.title": "Your verdict",
+  "stageReview.openTitle": "Rate this step",
   "stageReview.close": "Close the verdict",
-  "stageReview.openPending": "Five short questions about what you have just reviewed",
+  "stageReview.openPending": {
+    one: "1 short question about what you have just reviewed",
+    other: "{n} short questions about what you have just reviewed",
+  },
   "stageReview.openAnswered": "Already answered. Open it to change anything",
   "stageReview.saved": "Saved",
   "stageReview.unanswered": "Unanswered",
@@ -471,20 +469,34 @@ export const en: Catalogue = {
     one: "1 question left",
     other: "{n} questions left",
   },
-  "stageReview.notBuilt":
-    "Once it is built you will be asked here how it came out. Five short questions.",
+  "stageReview.notBuilt": {
+    one: "Once it is built you will be asked here how it came out. 1 short question.",
+    other: "Once it is built you will be asked here how it came out. {n} short questions.",
+  },
   "stageReview.failed": "It could not be saved. Try again.",
   "stageReview.done.title": "Verdict saved. Thank you.",
   "stageReview.done.body":
-    "Carry on correcting the thing on the left as much as you like: this stays saved and the next step does not touch it.",
+    "Moving on signs this step off, which is what the next one needs. Your verdict stays saved and you can come back to this step whenever you like.",
+  "stageReview.done.bodyClosed":
+    "This step is already signed off. Your verdict stays saved and you can come back to it whenever you like.",
+  "stageReview.done.failed":
+    "This step could not be closed, so nothing moved on. Try again.",
   "stageReview.done.next": "Continue to step {n}",
   "stageReview.done.generate": "That is it: create my first exercise",
   "stage.what.profile":
-    "The exercises you uploaded have been read and the different shapes they take separated: what parts each one carries and which are compulsory. It is the template new exercises are written from, so it is worth recognising.",
+    "It is the template new exercises are written from: the different shapes your exercises take and what parts each one carries.",
+  "stage.what.profile.found": {
+    one: "One type of exercise has been detected: {names}.",
+    other: "{n} types of exercise have been detected: {names}.",
+  },
+  "stage.what.profile.more": { one: "1 more", other: "{n} more" },
+  "stage.what.profile.why":
+    "It is the template new exercises are written from, so it is worth recognising.",
+  "stage.what.profile.tabs": "Press each tab to see the details.",
   "stage.what.graph":
-    "These are the concepts pulled out of your notes, grouped into blocks and ordered by what is needed before what. It is what says which ideas an exercise may take for granted and which it may not.",
+    "The syllabus is drawn as a graph of topics: this is what has been pulled out of your notes, grouped into units and joined by what has to be known before what. Go through the topics, look at what each one relates to, and press any of them to read its description. At the end you are asked to rate this step.",
   "stage.what.bank":
-    "The exercises in your documents have been collected one by one and each given the topic it practises. They are what is looked at to write a new one, so if they are copied well, the new ones will look like yours.",
+    "The exercises in your documents have been collected one by one, and each one has automatically been given one or more concepts from the syllabus of the previous step. Check whether the concepts on each exercise are the ones it really practises: press one to read it whole. At the end you are asked to rate this step.",
   "stage.approved": "Approved",
   "stage.reopened": "Reopened",
   "stage.whatIs": "What {title} is",
@@ -583,10 +595,10 @@ export const en: Catalogue = {
   "raw.imported": { one: "1 file imported", other: "{n} files imported" },
   "raw.removed": "«{name}» deleted",
   "raw.screenIntro":
-    "The material the three stages are built from. Documents are imported here and transcribed to text once, so that no build has to do it again.",
+    "Upload what you already have: the subject's notes and its exercises. This is the only step where you have to go looking for files, because everything else comes from here. A couple of topics is enough: every document is read in full, so the more you upload, the longer it takes.",
   "raw.nothingYet": "This workspace has no material yet",
   "raw.nothingYetBody":
-    "Drop the course notes into «Subject notes» and the exercises you already set into «Exercises you already set». Until then there is nothing to start from.",
+    "Drop the notes into «Subject notes» and the exercises into «Subject exercises». Until then there is nothing to start from.",
   "raw.dropHere": "Drag the documents here",
   "raw.orPick": "or click to pick them from your computer",
   "raw.dropInto": "Import documents into {slot}",
@@ -595,10 +607,10 @@ export const en: Catalogue = {
   // `slot.kind` and the wording lives beside every other sentence.
   "raw.slot.corpus": "Subject notes",
   "raw.slot.corpus.purpose":
-    "The syllabus as you actually teach it: handouts, slides, the course book. This is where the concepts you teach come from, and the order in which they rest on one another.",
-  "raw.slot.exemplars": "Exercises you already set",
+    "Upload the subject's notes or theory material: handouts, slides, the course book. This is where the topics come from, and the order in which they rest on one another.",
+  "raw.slot.exemplars": "Subject exercises",
   "raw.slot.exemplars.purpose":
-    "Problem sheets, past exams, lab handouts. They are the model: this is where the shapes your exercises take come from, and new ones will look like these.",
+    "Upload the exercises you have for the subject, preferably worked out: problem sheets, past exams, lab handouts. They are the model: this is where the shape the exercises take comes from, and new ones will look like these.",
   "concept.expandAll": "Expand all",
   "chips.editValue": "Edit value",
   "chips.remove": "Remove {value}",
@@ -607,7 +619,7 @@ export const en: Catalogue = {
   "chips.alreadyThere": "Already in the list: {values}",
   "ui.closeNotice": "Close notice",
   "ui.moreInfo": "More information",
-  "generations.title": "Saved variants",
+  "generations.title": "Saved variatios",
   "generations.whatIsHere": "What is here",
   "generations.inBank": "in the bank · {id}",
   "generations.mine": "Mine",
@@ -618,7 +630,7 @@ export const en: Catalogue = {
   "generations.noMatchHint": "Try another term, or change the scope to the whole workspace.",
   "generations.emptyHint": "Generate an exercise and it will stay here, with the concepts and the instructions you asked for it with.",
   "generations.noConcepts": "No concepts declared",
-  "generations.promoteHint": "Adds this variant to the exemplars bank, tagged with its concepts; the bank goes stale until it is approved again.",
+  "generations.promoteHint": "Adds this variatio to the exemplars bank, tagged with its concepts; the bank goes stale until it is approved again.",
   "generations.promote": "Promote to the bank",
   "generations.againHint": "Opens «Generate» with the same commission: concepts, curriculum, pinned fields and instructions.",
   "generations.copyJson": "Copy JSON",
@@ -640,7 +652,7 @@ export const en: Catalogue = {
   "workspace.newName": "New name of the workspace",
   "workspace.nameRequired": "Give the subject a name so it can be created.",
   "workspace.noneYet": "You do not have a workspace yet",
-  "generations.empty": "No saved variants yet",
+  "generations.empty": "No saved variatios yet",
   "generations.curriculum": "Curriculum",
   "generations.instructions": "Instructions",
   "generations.promoting": "Promoting…",
@@ -662,7 +674,7 @@ export const en: Catalogue = {
   "invite.languageHint": "It only changes what you read. The prompt language is declared by each workspace when it is created.",
   "invite.profileHint": "It decides what you will be asked when you compare exercises. It does not change what you can do here.",
   "menu.profile": "Profile",
-  "menu.savedVariants": "Saved variants",
+  "menu.savedVariants": "Saved variatios",
   "menu.openAccount": "{name}'s account",
   "menu.admin": "Administration",
   "menu.guide": "Guide",
@@ -777,8 +789,8 @@ export const en: Catalogue = {
   "doc.mark.failed": "failed",
   "doc.mark.empty": "empty",
   "generate.savedNotice": {
-    one: "This variant is already in",
-    other: "These {n} variants are already in",
+    one: "This variatio is already in",
+    other: "These {n} variatios are already in",
   },
   "curric.impliedTitle": {
     one: "1 prerequisite will come in when saving",
@@ -808,7 +820,7 @@ export const en: Catalogue = {
   "adminStudy.decidedCount": { one: "1 session", other: "{n} sessions" },
   "adminStudy.ratedCount": { one: "1 rated", other: "{n} rated" },
   "admin.warmContexts": { one: "1 warm context", other: "{n} warm contexts" },
-  "acc.savedVariants": { one: "1 saved variant", other: "{n} saved variants" },
+  "acc.savedVariants": { one: "1 saved variatio", other: "{n} saved variatios" },
   "acc.comparisons": { one: "1 comparison", other: "{n} comparisons" },
   "acc.openSessions": { one: "1 session", other: "{n} sessions" },
   "ws.files": { one: "1 file", other: "{n} files" },
@@ -832,14 +844,6 @@ export const en: Catalogue = {
   "field.options": { one: "1 option", other: "{n} options" },
   "form.items": { one: "1 exercise", other: "{n} exercises" },
   "form.generateItems": { one: "Generate 1 exercise", other: "Generate {n} exercises" },
-  "form.hiddenNoExemplars": {
-    one: "1 hidden with no exemplars",
-    other: "{n} hidden with no exemplars",
-  },
-  "form.withoutExemplars": {
-    one: "1 with no exemplar in sight",
-    other: "{n} with no exemplar in sight",
-  },
   "transcribe.staleCount": { one: "1 stale", other: "{n} stale" },
   "transcribe.pendingCount": { one: "1 pending", other: "{n} pending" },
   "transcribe.failedCount": { one: "1 failed", other: "{n} failed" },
@@ -864,7 +868,6 @@ export const en: Catalogue = {
   "bank.selectItem": "Select exercise {id}",
   "bank.detail": "Detail",
   "bank.delete": "Delete",
-  "bank.title": "Exemplars bank",
   "bank.extract": "Extract",
   "bank.confirmReextract": { one: "Rebuilding discards the one exercise there is now — with its tags and the corrections made by hand — and takes it out of the raw documents again. Continue?", other: "Rebuilding discards the {n} exercises there are now — with their tags and the corrections made by hand — and takes them out of the raw documents again. Continue?" },
   "bank.taggedItems": "Exercises with a concept",
@@ -882,8 +885,6 @@ export const en: Catalogue = {
   "bank.coverageHint": "What the coverage measures",
   "bank.coverageBody": "How many concepts that work as a label have at least one exercise of yours. The ones that do not are written with no example to imitate at all, and it shows.",
   "bank.conceptsWithExample": "Concepts with an example",
-  "bank.minSimilarity": "Minimum similarity",
-  "bank.candidatesPerItem": "Candidates per exercise",
   "bank.emptyBank": "The bank holds no exercises",
   "bank.search": "Search the statement or by id…",
   "bank.filterByModality": "Filter by type",
@@ -902,7 +903,7 @@ export const en: Catalogue = {
   "admin.unreadable": "The installation summary could not be read",
   "curriculum.unreadable": "The curriculum could not be read",
   "desc.unreadable": "The descriptions could not be read",
-  "generations.unreadable": "The saved variants could not be read",
+  "generations.unreadable": "The saved variatios could not be read",
   "profile.unreadable": "The profile could not be read",
   "bank.deselectPage": "Deselect this page's exercises",
   "bank.selectPage": "Select every exercise on this page",
@@ -957,7 +958,6 @@ export const en: Catalogue = {
   "bank.column.concepts": "concepts",
   "bank.noCandidates": "No candidate cleared the similarity threshold.",
   "bank.noneWithFilters": "No exercise with these filters.",
-  "bank.tagging": "Tagging",
   "bank.deselect": "Deselect",
   "generations.reasoned": "reasoned",
   "generations.whatIsHere.body": "Every exercise the generator validated, with the commission that produced it. They save themselves, one by one as they validate: there is nothing to press when generating, and a cancelled batch keeps what had already come out.",
@@ -969,8 +969,8 @@ export const en: Catalogue = {
   "doc.emptyPage": "It may be a genuinely empty page of the original —a cover, a separator— or something the model could not read. Check it before building.",
   "fewshot.title": "Exercises of yours shown to it as examples",
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
-  "generate.reopened": "Part of the previous commission. The variants below are already saved: the new batch replaces them on screen, not in «My variants».",
-  "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated variant saves itself in «My variants».",
+  "generate.reopened": "Part of the previous commission. The variatios below are already saved: the new batch replaces them on screen, not in «My variatios».",
+  "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated variatio saves itself in «My variatios».",
   "workspace.switcher.label": "Workspace",
   "workspace.switcher.choose": "Choose workspace",
   "workspace.switcher.current": "Workspace: {name}",
@@ -990,7 +990,7 @@ export const en: Catalogue = {
   "admin.tab.config": "Configuration",
   "admin.stat.accounts": "Accounts",
   "admin.stat.workspaces": "Workspaces",
-  "admin.stat.generations": "Variants generated",
+  "admin.stat.generations": "Variatios generated",
   "admin.stat.comparisons": "Comparisons",
   "admin.stat.decided": "{n} with a recorded choice",
   "admin.stat.engine": "Engine",
@@ -1069,7 +1069,7 @@ export const en: Catalogue = {
   "acc.heading": "Accounts ({n})",
   "acc.col.account": "Account",
   "acc.col.access": "Access",
-  "acc.col.variants": "Variants",
+  "acc.col.variants": "Variatios",
   "acc.col.comparisons": "Comparisons",
   "acc.col.sessions": "Sessions",
   "acc.col.created": "Created",
@@ -1146,7 +1146,7 @@ export const en: Catalogue = {
   "ws.disk.empty": "empty",
   "ws.col.chain": "Chain",
   "ws.col.members": "Members",
-  "ws.col.variants": "Variants",
+  "ws.col.variants": "Variatios",
   "ws.col.disk": "Disk",
   "ws.col.created": "Created",
   "ws.inMemory": "· in memory",
@@ -1294,7 +1294,7 @@ export const en: Catalogue = {
   "eval.whatFor": "What it is for",
   "eval.whatFor.body": "The same commission is solved three ways: a commercial model with an ordinary prompt, a similarity search over the bank, and this system with the syllabus. You choose blind and only afterwards is it revealed which was which.",
   "eval.backToList": "Back to the list",
-  "chain.pending": "Not approved: {stages}",
+  "chain.pending": "Still to sign off: {stages}",
   "chain.goFix": "Go to Step {n} · {label}",
   "eval.blocked": "Comparison blocked",
   "eval.failed": "The comparison failed",
@@ -1357,7 +1357,7 @@ export const en: Catalogue = {
   "adminStudy.card.pace": "The study's pace",
   "adminStudy.card.triage": "Would they use each proposal? (blind, per card)",
   "adminStudy.card.measurement": "Quality of the measurement",
-  "adminStudy.card.rubric": "Rubric on the system's variant",
+  "adminStudy.card.rubric": "Rubric on the system's variatio",
   "adminStudy.card.think": "Does prior reasoning contribute anything?",
   "adminStudy.card.byProfile": "By profile",
   "adminStudy.card.byAccount": "By account",
@@ -1487,6 +1487,8 @@ export const en: Catalogue = {
   "kg.noDescriptionBadge": "Not described",
   "kg.descriptionPlaceholder": "What is practised when an exercise is about this topic.",
   "kg.descriptionNote": "This is what is used to decide what each exercise is about. Correct it if it does not describe what you teach.",
+  "kg.descriptionRole": "This is what is used to decide what each exercise is about.",
+  "kg.noDescription": "This topic has no description yet.",
   "kg.descriptionSaved": "Description saved",
   "kg.noRelations": "This topic points at no other.",
   "kg.finishing": "Finishing the syllabus",
@@ -1507,7 +1509,7 @@ export const en: Catalogue = {
   "kg.pickOnMap": "Choose a concept on the map and it will appear here to be edited.",
   "kg.review.buildFirst": "The syllabus has to come out first.",
   "kg.review.rebuilding": "The syllabus is being rebuilt.",
-  "kg.review.needsProfile": "Step 2 has to be signed off first: what works as a label depends on what shape your exercises take.",
+  "kg.review.needsProfile": "Step 1.2 has to be signed off first: what works as a label depends on what shape your exercises take.",
   "kg.review.running": "The review is under way.",
   "kg.stage.title": "Knowledge syllabus",
   "kg.review.again":
@@ -1517,7 +1519,7 @@ export const en: Catalogue = {
   "kg.review.reviewing": "Reviewing…",
   "kg.review.button": "Mark the labels",
   "kg.review.waiting": "Deciding which concepts work as a label. The detail appears with the first block.",
-  "kg.goToBank": "Go to step 4",
+  "kg.goToBank": "Go to step 1.4",
 
   // THE CURRICULUM TAB --------------------------------------------------------------------
   "curric.notice.none.title": "The syllabus declares no prerequisites",
@@ -1677,7 +1679,7 @@ export const en: Catalogue = {
   "modality.newPlaceholder": "new_type",
   "modality.add": "Add a type",
   "profileEditor.unsaved": "unsaved",
-  "profileEditor.savesOnApprove": "they are saved on approving, above",
+  "profileEditor.savesOnApprove": "they are saved with «Save the changes», at the foot of the page",
   "profileEditor.saving": "Saving…",
   "profileEditor.invalid": "The profile does not load: it has to be corrected before it can be approved.",
   "profileEditor.saveFailed": "Could not save",
@@ -1688,8 +1690,14 @@ export const en: Catalogue = {
   "modality.readableName.placeholder": "Multiple-choice question",
   "modality.description": "Description",
   "modality.description.placeholder": "What this type of exercise is and how it is recognised in your documents",
+  "modality.empty": "Not written yet.",
   "modality.difficulty": "Difficulty level",
   "modality.difficulty.placeholder": "basic: … · intermediate: … · advanced: …",
+  "modality.difficulty.shared":
+    "The rungs are the same in every type, so that one level means the same thing across the whole list; what changes from one type to another is what makes an exercise fall on each, and that is what the criterion says.",
+  "modality.difficulty.noCriterion":
+    "No criterion written yet: the rungs are there, but nothing says what puts an exercise on each.",
+  "modality.difficulty.rungSilent": "The criterion says nothing about this rung.",
   "modality.rules": "Writing rules",
   "modality.rules.hintLabel": "What the rules are",
   "modality.rules.body": "How your subject writes this type of exercise, and the only thing said about its shape when a new one is written. Every rule has to be checkable by reading an exercise already written, and has to name the field it applies to. What would hold for any subject is not a rule.",
@@ -1732,13 +1740,11 @@ export const en: Catalogue = {
   "form.outside.lift": "Remove the curriculum restriction",
   "form.problem.outside": "These target concepts are not in the curriculum: {names}.",
   "form.problem.tooLong": "The instructions cannot go beyond {max} characters.",
-  "form.filter.ofType": "Only concepts with «{type}» exemplars",
-  "form.filter.any": "Only concepts with exemplars in the bank",
   "form.type.title": "What type of exercise?",
   "form.type.hint": "The type decides what parts the exercise carries, its writing rules and which of your exercises the examples are taken from: only those of this same type get in.",
   "form.type.none": "No type chosen yet",
-  "form.taught.title": "What has been covered?",
-  "form.taught.hint": "It bounds what the model may take as known: the exercise cannot demand anything outside this list, and only concepts inside it are offered as targets.",
+  "form.taught.title": "How far has the class got?",
+  "form.taught.hint": "Leave it alone and exercises may build on any topic in the syllabus. Turn it on if the class is only halfway through: then only what you tick counts as already known, and anything later stays out.",
   "form.taught.restrict": "Restrict to a curriculum",
   "form.taught.pick": "Choose the concepts covered ({n})",
   "form.practise.title": "What has to be practised?",
@@ -1747,8 +1753,6 @@ export const en: Catalogue = {
   "form.practise.pick": "Choose concepts ({n})",
   "form.practise.clear": "Clear",
   "form.practise.empty": "Choose the concepts that have to be practised",
-  "form.zeroShot.filterOffType": "With the filter off you can choose topics with no «{type}» exercise in the bank. If none of the chosen ones has exercises of that type, the new one will be written with no example to imitate, and it usually shows.",
-  "form.zeroShot.filterOff": "With the filter off you can choose topics with no exercise in the bank. If none of the chosen ones has exercises of yours, the new one will be written with no example to imitate, and it usually shows.",
   "form.zeroShot.wholeBatchType": "No chosen topic has «{type}» exercises of yours. The examples are only taken from the chosen type, so the batch will be written with none unless a prerequisite contributes one.",
   "form.zeroShot.wholeBatch": "No chosen topic has exercises of yours: it will be written with no example to imitate.",
   "form.zeroShot.noneOfType": "No exemplars of this modality",
@@ -1765,9 +1769,8 @@ export const en: Catalogue = {
   "form.decisions.titleMany": "What should they be like?",
   "form.decisions.hint": "What you decide instead of the model. The exemplars profile marks which fields are asked here; «Any» leaves it to the model.",
   "form.instructions.title": "Additional instructions",
-  "form.instructions.hint": "A free request for this batch. It is honoured whenever it does not contradict the objective, the prior knowledge or the curriculum. A judge model reviews it before it enters the prompt.",
+  "form.instructions.hint": "A free request for this batch: the theme, the setting, that kind of thing. For instance, make the context sporting.",
   "form.instructions.none": "None",
-  "form.instructions.placeholder": "For instance: make the context sporting",
   "form.instructions.blocked": "Instructions blocked",
   "form.scope.canAsk": "Here you can ask for",
   "form.scope.decidedAbove": "This is decided above",
@@ -1804,7 +1807,7 @@ export const en: Catalogue = {
   "generate.startOver": "Start over",
   "generate.anotherN": "Generate another {n}",
   "generate.ofRequested": " of {n}",
-  "generate.title": "Generate variants",
+  "generate.title": "Generate variatios",
   "generate.export": "Export",
   "generate.downloadJson": "Download JSON",
   "generate.downloadMarkdown": "Download Markdown",
@@ -1987,7 +1990,7 @@ export const en: Catalogue = {
   "cfg.section.retrieval": "Retrieval",
   "cfg.section.retrievalDesc": "The concepts index: embedding prefixes, weights, thresholds, and how many candidates are retrieved.",
   "cfg.section.generation": "Tagging and generation",
-  "cfg.section.generationDesc": "The bank's tagger and the generation of variants: few-shot examples, retries and the guardrail.",
+  "cfg.section.generationDesc": "The bank's tagger and the generation of variatios: few-shot examples, retries and the guardrail.",
   "cfg.section.evaluation": "Evaluation",
   "cfg.section.evaluationDesc": "The comparative study: the external providers of the baseline arms and the state of their keys.",
   "cfg.section.logging": "Logging",
@@ -2008,7 +2011,7 @@ export const en: Catalogue = {
   "cfg.engineChange": "Engine change",
   "cfg.engineChangeBody": "On saving, every engine-scoped setting (models, phases, context windows and reasoning) moves to the «{next}» profile. The «{current}» profile is kept exactly as it is, for when you come back to it.",
   "cfg.unsaved": { one: "1 unsaved change", other: "{n} unsaved changes" },
-  "cfg.pipelineNote": "Each column is one build and reads top to bottom; each stop is one call to a model. Under the name, which model serves it — every phase names its own and none is left empty; the circle says whether it reasons before answering and, while it reasons, the selector beside it fixes how hard. Reasoning and a grammar do not coexist on this stack, so switching on a phase that today answers under a grammar takes the grammar away and leaves the shape to the parser and to the repair. Three nodes depend on no setting: the guardrail does not reason, the variant is decided by each commission, and the repair is its own grammar.",
+  "cfg.pipelineNote": "Each column is one build and reads top to bottom; each stop is one call to a model. Under the name, which model serves it — every phase names its own and none is left empty; the circle says whether it reasons before answering and, while it reasons, the selector beside it fixes how hard. Reasoning and a grammar do not coexist on this stack, so switching on a phase that today answers under a grammar takes the grammar away and leaves the shape to the parser and to the repair. Three nodes depend on no setting: the guardrail does not reason, the variatio is decided by each commission, and the repair is its own grammar.",
   "cfg.whyEachNode": "Why each node",
   "cfg.followMain": "Follow the main model",
   "cfg.notInstalled": "{model} — not installed",
@@ -2044,16 +2047,16 @@ export const en: Catalogue = {
   "guide.noMatch": "Nothing matches that search.",
   "guide.next": "Next",
   "guide.group.start": "Getting started",
-  "guide.group.prepare": "Preparing the instance",
+  "guide.group.prepare": "Preparing the subject",
   "guide.group.use": "Using it",
   "guide.group.daily": "Day to day",
   "guide.sec.start": "What it is and how you move through it",
   "guide.sec.workspace": "The workspace and the subject",
-  "guide.sec.raw": "Step 1 · Notes and exercises",
-  "guide.sec.profile": "Step 2 · Exercise types",
-  "guide.sec.graph": "Step 3 · The syllabus",
-  "guide.sec.bank": "Step 4 · Your exercises",
-  "guide.sec.generate": "Generate variants",
+  "guide.sec.raw": "Step 1.1 · Notes and exercises",
+  "guide.sec.profile": "Step 1.2 · Exercise types",
+  "guide.sec.graph": "Step 1.3 · The syllabus",
+  "guide.sec.bank": "Step 1.4 · Tagging",
+  "guide.sec.generate": "Generate variatios",
   "guide.sec.evaluate": "Evaluate proposals",
   "guide.sec.runs": "Following a run",
   "guide.sec.account": "Your account and the installation",

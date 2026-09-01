@@ -397,6 +397,11 @@ export interface StageInstrument {
   artifact: string;
   version: string;
   preamble: string;
+  /** How many the form asks, `overall` included. The button that OPENS the form says it,
+   *  and it may not count for itself: a constant here promised five on all three stages
+   *  while the graph asked six. Optional because an API older than the bundle does not
+   *  send it — `questionCount()` derives exactly the same number from `questions`. */
+  count?: number;
   questions: StageQuestion[];
   overall: {
     key: string;
@@ -406,12 +411,27 @@ export interface StageInstrument {
   note: { key: string; question: string; hint: string };
 }
 
+/**
+ * How many questions a stage's form asks, `overall` included.
+ *
+ * The server sends it (`stage_instruments.count`) and this recomputes it when an older API
+ * does not: `overall` is on the form, it is the last thing answered, and it is what
+ * «contestada» means, so a count that left it out would be short by one.
+ */
+export function questionCount(instrument: StageInstrument): number {
+  return instrument.count ?? instrument.questions.length + 1;
+}
+
 export interface StageAnswers {
   answers: Record<string, string>;
   overall: number | null;
   note: string | null;
   /** `overall` is set, which is the last question: the person reached the end. */
   answered: boolean;
+  /** Whether this person corrected the artifact before judging it — the study's own
+   *  contrast, «cómo lo valoran los que curaron y cómo los que no». `null` is «nadie lo
+   *  dijo», which every row written before the question existed carries. */
+  curated: boolean | null;
   instrument: string;
   updated_at: string | null;
 }

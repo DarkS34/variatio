@@ -7,11 +7,16 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { ConceptPicker } from "@/components/ConceptPicker";
-import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
+import {
+  StageGate,
+  useStageLocked,
+  useStageLockReason,
+  useStageLockedHint,
+} from "@/components/StageGate";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +37,7 @@ import type {
   Coverage,
   KgConcept,
   StageState,
+  TaggingTrace,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -46,6 +52,158 @@ import {
 import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
+/**
+ * A control that exists only to CORRECT the bank.
+ *
+ * Hidden — never greyed — while the stage is being looked at: nothing on screen is wrong,
+ * and a dimmed button says otherwise. It comes back with «Quiero corregir algo» at the foot
+ * of the page. `approved` is the other half and keeps drawing the control refused, because
+ * that one IS a refusal and names its own way out in the header.
+ */
+function Correction({ children }: { children: ReactNode }) {
+  return useStageLockReason() === "reviewing" ? null : <>{children}</>;
+}
+
+/** An item's temas with the primary one first. It is the tagging's own answer, and the row
+ *  draws at most three, so leaving it in the raw order lets it be the badge that is cut. */
+function orderedConcepts(item: BankItem): string[] {
+  return (item.concepts ?? [])
+    .slice()
+    .sort((a, b) => Number(b === item.primary_concept) - Number(a === item.primary_concept));
+}
+
+/** How the tagger reached its answer and what else it weighed. Information and not a
+ *  control, so it is drawn the same whether the stage may be corrected or only read. */
+function TaggingPanel({ trace }: { trace: TaggingTrace }) {
+  const { t } = useT();
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <p className="mb-2 text-small font-medium text-muted-foreground">
+        {t("bank.taggingMethod", {
+          method: TAGGING_METHOD_KEYS[trace.method]
+            ? t(TAGGING_METHOD_KEYS[trace.method])
+            : trace.method,
+        })}
+      </p>
+      {trace.candidates.length === 0 ? (
+        <p className="text-small text-[var(--attention)]">{t("bank.noCandidates")}</p>
+      ) : (
+        <ul className="space-y-1">
+          {trace.candidates.map(([name, score]) => (
+            <li key={name} className="flex items-center gap-2 text-small">
+              <span className="w-12 shrink-0 nums text-muted-foreground">{score.toFixed(3)}</span>
+              <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.min(100, score * 100)}%` }}
+                />
+              </div>
+              <span className="min-w-0 truncate">{name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+interface ItemDialogProps {
+  item: BankItem;
+  fields: string[];
+  primaryField: string;
+  concepts: KgConcept[];
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/**
+ * ONE EXERCISE, WHOLE: the form, or the reading of it.
+ *
+ * Two components rather than one with every field refused. A dialog of greyed textareas
+ * over an item nobody has objected to is the «atenuar en vez de ocultar» failure at full
+ * size — it reports damage where there is none.
+ *
+ * The reading is not a control taken away either, and that is why it survives the hiding
+ * pass: the row clamps the statement to two lines and draws three of its temas, so this is
+ * the only place an exercise can be read entire with everything it was tagged with. Reading
+ * one is precisely what this step asks of the person.
+ */
+function ItemDialog(props: ItemDialogProps) {
+  return useStageLocked() ? <ItemReading {...props} /> : <ItemEditor {...props} />;
+}
+
+function ItemReading({ item, fields, primaryField, onClose }: ItemDialogProps) {
+  const { t } = useT();
+  const concepts = orderedConcepts(item);
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("bank.item", { id: item.id })}
+      description={item.source ? t("bank.source", { source: item.source }) : undefined}
+      className="max-w-4xl"
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      }
+    >
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-3">
+          {fields.map((field) => {
+            const value = item[field];
+            // An empty field is skipped rather than drawn empty: here it is nothing to
+            // read, where in the form it is a gap somebody may want to fill.
+            if (isEmptyField(value)) return null;
+            return (
+              <div key={field} className="space-y-1">
+                <Label>
+                  {field}
+                  {field === primaryField ? t("bank.primaryField") : ""}
+                </Label>
+                {isCodeField(field) ? (
+                  <CodeBlock code={fieldText(value)} maxHeight="16rem" />
+                ) : (
+                  <p className="whitespace-pre-wrap text-body">{fieldText(value)}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <div className="mb-2 flex items-center gap-1.5">
+              <Label>{t("bank.concepts")}</Label>
+              <InfoHint label={t("bank.howTagged")}>{t("bank.howTaggedBody")}</InfoHint>
+            </div>
+            {concepts.length === 0 ? (
+              <Badge variant="attention">
+                <TriangleAlert />
+                {t("bank.noConcept")}
+              </Badge>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {concepts.map((concept) => (
+                  <Badge
+                    key={concept}
+                    variant={concept === item.primary_concept ? "default" : "secondary"}
+                  >
+                    {concept}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {item._tagging ? <TaggingPanel trace={item._tagging} /> : null}
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 function ItemEditor({
   item,
   fields,
@@ -53,16 +211,8 @@ function ItemEditor({
   concepts,
   onClose,
   onSaved,
-}: {
-  item: BankItem;
-  fields: string[];
-  primaryField: string;
-  concepts: KgConcept[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+}: ItemDialogProps) {
   const { t } = useT();
-  const locked = useStageLocked();
   const listFields = useMemo(
     () => new Set(fields.filter((field) => Array.isArray(item[field]))),
     [fields, item],
@@ -114,21 +264,15 @@ function ItemEditor({
       description={item.source ? t("bank.source", { source: item.source }) : undefined}
       className="max-w-4xl"
       footer={
-        locked ? (
+        <>
           <Button variant="ghost" onClick={onClose}>
-            {t("common.close")}
+            {t("common.cancel")}
           </Button>
-        ) : (
-          <>
-            <Button variant="ghost" onClick={onClose}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={submit} disabled={pending}>
-              {pending ? <Spinner /> : null}
-              {t("common.save")}
-            </Button>
-          </>
-        )
+          <Button onClick={submit} disabled={pending}>
+            {pending ? <Spinner /> : null}
+            {t("common.save")}
+          </Button>
+        </>
       }
     >
       <div className="grid gap-5 lg:grid-cols-2">
@@ -142,7 +286,6 @@ function ItemEditor({
               </Label>
               <Textarea
                 value={values[field] ?? ""}
-                readOnly={locked}
                 onChange={(event) =>
                   setValues((current) => ({ ...current, [field]: event.target.value }))
                 }
@@ -164,44 +307,11 @@ function ItemEditor({
               onChange={setSelected}
               primary={primary}
               onPrimaryChange={setPrimary}
-              disabled={locked}
               maxHeight="14rem"
             />
           </div>
 
-          {item._tagging ? (
-            <div className="rounded-lg border border-border p-3">
-              <p className="mb-2 text-small font-medium text-muted-foreground">
-                {t("bank.taggingMethod", {
-                  method: TAGGING_METHOD_KEYS[item._tagging.method]
-                    ? t(TAGGING_METHOD_KEYS[item._tagging.method])
-                    : item._tagging.method,
-                })}
-              </p>
-              {item._tagging.candidates.length === 0 ? (
-                <p className="text-small text-[var(--attention)]">
-                  {t("bank.noCandidates")}
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {item._tagging.candidates.map(([name, score]) => (
-                    <li key={name} className="flex items-center gap-2 text-small">
-                      <span className="w-12 shrink-0 nums text-muted-foreground">
-                        {score.toFixed(3)}
-                      </span>
-                      <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full bg-primary"
-                          style={{ width: `${Math.min(100, score * 100)}%` }}
-                        />
-                      </div>
-                      <span className="min-w-0 truncate">{name}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : null}
+          {item._tagging ? <TaggingPanel trace={item._tagging} /> : null}
         </div>
       </div>
 
@@ -244,6 +354,11 @@ function ItemRow({
 }) {
   const { t } = useT();
   const locked = useStageLocked();
+  const lockedHint = useStageLockedHint();
+  // A selection made while correcting survives going back to the view, where the box that
+  // made it is no longer drawn — and a tinted row whose cause is off screen reads as the
+  // table having decided something. Nothing is lost: the picks come back with the boxes.
+  const reviewing = useStageLockReason() === "reviewing";
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
   const text = fieldText(item[primaryField]);
@@ -251,13 +366,9 @@ function ItemRow({
   // holds control characters where its accents used to be. Nothing here can repair it —
   // only a re-extraction can — but until this the row looked exactly like a sound one.
   const broken = hasBrokenText(item);
-  // The primary concept leads: it is the tagging's own answer, and the cell shows at most
-  // three, so ordering by the raw list would let it be the one that gets dropped.
-  const orderedConcepts = (item.concepts ?? [])
-    .slice()
-    .sort((a, b) => Number(b === item.primary_concept) - Number(a === item.primary_concept));
-  const shownConcepts = orderedConcepts.slice(0, MAX_ROW_CONCEPTS);
-  const restConcepts = orderedConcepts.slice(MAX_ROW_CONCEPTS);
+  const ordered = orderedConcepts(item);
+  const shownConcepts = ordered.slice(0, MAX_ROW_CONCEPTS);
+  const restConcepts = ordered.slice(MAX_ROW_CONCEPTS);
 
   return (
     <>
@@ -267,7 +378,7 @@ function ItemRow({
           there are to do with it. `focus-within` is the other half and is not optional: a
           control that only exists under a mouse pointer does not exist for a keyboard. */}
       <TR
-        selected={selected}
+        selected={selected && !reviewing}
         className={cn(
           "group align-top",
           // EVERY COLLAPSED ROW IS THE SAME HEIGHT (2026-09-01, explicit user request).
@@ -284,14 +395,19 @@ function ItemRow({
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         )}
       >
-        <TD className="py-2 pl-3">
-          <Checkbox
-            checked={selected}
-            onCheckedChange={onToggle}
-            label={t("bank.selectItem", { id: item.id })}
-            className="mt-1"
-          />
-        </TD>
+        {/* The box goes with what it is a handle for. Selecting rows has exactly one
+            consumer, «Re-etiquetar selección», so with that hidden the column would be a
+            control down every row that does nothing at all. */}
+        <Correction>
+          <TD className="py-2 pl-3">
+            <Checkbox
+              checked={selected}
+              onCheckedChange={onToggle}
+              label={t("bank.selectItem", { id: item.id })}
+              className="mt-1"
+            />
+          </TD>
+        </Correction>
         <TD className="min-w-0 py-2 pl-2 pr-3">
           {/* The id rides above the statement instead of holding a column of its own: it is
               how you name an item when talking about it, not something anybody scans down. */}
@@ -413,19 +529,23 @@ function ItemRow({
               open ? "opacity-100" : "opacity-0",
             )}
           >
+            {/* Opening the row is not a correction and stays in both states: it is how the
+                rest of an exercise is read, which is the whole task of this step. */}
             <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label={t("bank.detail")}>
               <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onDelete}
-              disabled={locked}
-              title={locked ? t(LOCKED_HINT) : t("bank.delete")}
-              aria-label={t("bank.delete")}
-            >
-              <Trash2 />
-            </Button>
+            <Correction>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onDelete}
+                disabled={locked}
+                title={locked ? t(lockedHint) : t("bank.delete")}
+                aria-label={t("bank.delete")}
+              >
+                <Trash2 />
+              </Button>
+            </Correction>
           </div>
         </TD>
       </TR>
@@ -521,7 +641,6 @@ function Pager({
 function BankMeters({
   listing,
   coverage,
-  locked,
   offline,
   submitting,
   onRetag,
@@ -529,7 +648,6 @@ function BankMeters({
 }: {
   listing: BankListing | undefined;
   coverage: Coverage | undefined;
-  locked: boolean;
   offline: string | null;
   submitting: boolean;
   onRetag: (params: Record<string, unknown>) => void;
@@ -537,12 +655,14 @@ function BankMeters({
 }) {
   const { t, plural } = useT();
   const confirm = useConfirm();
+  const locked = useStageLocked();
+  const lockedHint = useStageLockedHint();
 
   if (!listing) return <Skeleton className="h-24" />;
 
   const { items, tagged, untagged } = listing.totals;
   const busy = locked || submitting || Boolean(offline);
-  const why = locked ? t(LOCKED_HINT) : offline;
+  const why = locked ? t(lockedHint) : offline;
 
   return (
     <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
@@ -587,42 +707,98 @@ function BankMeters({
         <Progress value={coverage?.covered ?? 0} max={coverage?.total ?? null} tone="settled" />
       </div>
 
-      <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
-        <div className="flex flex-wrap gap-2">
-          {untagged > 0 ? (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              title={why ?? plural("bank.retagUntaggedHint", untagged)}
-              onClick={() => onRetag({})}
-            >
-              {submitting ? <Spinner /> : <RefreshCw />}
-              {plural("bank.retagUntagged", untagged)}
-            </Button>
-          ) : null}
-          {items > 0 ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              title={why ?? plural("bank.retagAllHint", items)}
-              onClick={async () => {
-                if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
-                  onRetag({ all: true });
-              }}
-            >
-              {t("bank.retagAll")}
-            </Button>
-          ) : null}
+      {/* LOS DOS RE-ETIQUETADOS GLOBALES SON CORRECCIÓN, y desaparecen enteros mientras la
+          etapa se mira: son las dos únicas cosas de esta franja que ESCRIBEN. Lo que dicen
+          no se pierde al ocultarlos, y por eso pueden ocultarse — cuántos ejercicios están
+          sin tema lo dice el medidor de al lado, y «Ver los N sin concepto», que es un
+          filtro, sigue ahí. La columna entera se va con ellos: vacía sería un cuarto de
+          tarjeta con su borde y su relleno anunciando que aquí había algo. */}
+      <Correction>
+        <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
+          <div className="flex flex-wrap gap-2">
+            {untagged > 0 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                title={why ?? plural("bank.retagUntaggedHint", untagged)}
+                onClick={() => onRetag({})}
+              >
+                {submitting ? <Spinner /> : <RefreshCw />}
+                {plural("bank.retagUntagged", untagged)}
+              </Button>
+            ) : null}
+            {items > 0 ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                title={why ?? plural("bank.retagAllHint", items)}
+                onClick={async () => {
+                  if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
+                    onRetag({ all: true });
+                }}
+              >
+                {t("bank.retagAll")}
+              </Button>
+            ) : null}
+          </div>
+          {/* «Umbral 0.4 · 10 candidatos» ya no se dibuja (2026-09-01, explicit user
+              request). Son dos ajustes de recuperación que se leían aquí y se cambian en
+              «Configuración»: quien prepara una asignatura no decide nada con ellos, y en la
+              franja que responde «¿sirve ya este banco?» eran la única línea que no lo
+              respondía. Siguen en el payload del listado. */}
         </div>
-        {/* «Umbral 0.4 · 10 candidatos» ya no se dibuja (2026-09-01, explicit user
-            request). Son dos ajustes de recuperación que se leían aquí y se cambian en
-            «Configuración»: quien prepara una asignatura no decide nada con ellos, y en la
-            franja que responde «¿sirve ya este banco?» eran la única línea que no lo
-            respondía. Siguen en el payload del listado. */}
-      </div>
+      </Correction>
     </Card>
+  );
+}
+
+/**
+ * WHAT TO DO WITH THE ROWS PICKED BY HAND, at the foot of the table they were picked from.
+ *
+ * The third scope of one verb and the only contextual one, so it stays down here rather
+ * than joining the two global re-tags in the strip above. It is correction all the same and
+ * goes with the boxes that feed it while the stage is only being looked at.
+ */
+function SelectionActions({
+  selected,
+  offline,
+  submitting,
+  onRetag,
+  onClear,
+}: {
+  selected: Set<string>;
+  offline: string | null;
+  submitting: boolean;
+  onRetag: () => void;
+  onClear: () => void;
+}) {
+  const { t, plural } = useT();
+  const locked = useStageLocked();
+  const lockedHint = useStageLockedHint();
+
+  if (selected.size === 0) return null;
+
+  return (
+    <>
+      <span className="text-small font-medium">{plural("bank.selectedCount", selected.size)}</span>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={locked || submitting || Boolean(offline)}
+        title={
+          locked ? t(lockedHint) : (offline ?? plural("bank.retagSelectedHint", selected.size))
+        }
+        onClick={onRetag}
+      >
+        {submitting ? <Spinner /> : <RefreshCw />}
+        {t("bank.retagSelected")}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onClear}>
+        {t("bank.deselect")}
+      </Button>
+    </>
   );
 }
 
@@ -759,7 +935,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // bank it is the missing step, and with items inside it deletes everything tagged and
   // corrected. The button says so and `BuildButton` asks for confirmation.
   const hasItems = (listing?.totals.items ?? 0) > 0;
-  const locked = stage?.status === "approved";
+  // Whether the bank may be written to is NOT read here and cannot be: `reviewing` is
+  // `StageGate`'s own state and this component is the one that renders it, so the hooks that
+  // answer only work below. Every control that writes therefore reads it for itself.
 
   // NOTHING IS SHOWN WHILE THE BANK IS BEING EXTRACTED (2026-09-01, explicit user request).
   // `BankLive` — «Ejercicios que van saliendo» — polled the file every three seconds and let
@@ -789,7 +967,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         <BankMeters
           listing={listing}
           coverage={coverage.data}
-          locked={locked}
           offline={offline}
           submitting={submit.isPending}
           onRetag={(params) => submit.mutate({ kind: "tag", params })}
@@ -901,18 +1078,20 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
             <Table minWidth="44rem">
               <THead>
                 <TR>
-                  <TH className="w-8">
-                    <Checkbox
-                      checked={pageSelected}
-                      indeterminate={someSelected}
-                      onCheckedChange={togglePage}
-                      label={
-                        pageSelected
-                          ? t("bank.deselectPage")
-                          : t("bank.selectPage")
-                      }
-                    />
-                  </TH>
+                  <Correction>
+                    <TH className="w-8">
+                      <Checkbox
+                        checked={pageSelected}
+                        indeterminate={someSelected}
+                        onCheckedChange={togglePage}
+                        label={
+                          pageSelected
+                            ? t("bank.deselectPage")
+                            : t("bank.selectPage")
+                        }
+                      />
+                    </TH>
+                  </Correction>
                   <TH>{primaryHeader}</TH>
                   {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
                   <TH className="w-72">{t("bank.column.concepts")}</TH>
@@ -978,30 +1157,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
                 <span className="flex-1" />
 
-                {selected.size > 0 ? (
-                  <>
-                    <span className="text-small font-medium">
-                      {plural("bank.selectedCount", selected.size)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={locked || submit.isPending || Boolean(offline)}
-                      title={
-                        locked
-                          ? t(LOCKED_HINT)
-                          : (offline ?? plural("bank.retagSelectedHint", selected.size))
-                      }
-                      onClick={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
-                    >
-                      {submit.isPending ? <Spinner /> : <RefreshCw />}
-                      {t("bank.retagSelected")}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-                      {t("bank.deselect")}
-                    </Button>
-                  </>
-                ) : null}
+                <Correction>
+                  <SelectionActions
+                    selected={selected}
+                    offline={offline}
+                    submitting={submit.isPending}
+                    onRetag={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
+                    onClear={() => setSelected(new Set())}
+                  />
+                </Correction>
               </div>
             ) : null}
           </div>
@@ -1011,7 +1175,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       </div>
 
       {editing && listing ? (
-        <ItemEditor
+        <ItemDialog
           item={editing}
           fields={fieldsFor(editing)}
           primaryField={primaryFieldFor(editing)}

@@ -178,14 +178,50 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
 
 # What the screen puts above the questions: why it is worth a minute. Said once per
 # artifact and not per question, because a hint on every row is a form nobody finishes.
+#
+# THE NUMBER IS NOT WRITTEN HERE. It is `{n}`, filled by `count()` below, because a hand
+# written figure drifts the moment a question is added or dropped — and it had: the
+# button that opens this form promised «cinco preguntas» for all three stages while the
+# graph asked six, so the control contradicted the form it opened.
 PREAMBLE: dict[str, str] = {
     review.EXEMPLARS_PROFILE: (
-        "Cinco preguntas sobre lo que tienes al lado. Es lo único que te pedimos a cambio, "
+        "{n} preguntas sobre lo que tienes al lado. Es lo único que te pedimos a cambio, "
         "y es lo que se está midiendo en el estudio."
     ),
-    review.KNOWLEDGE_GRAPH: "Seis preguntas sobre el temario que tienes al lado.",
-    review.EXEMPLARS_BANK: "Cinco preguntas sobre los ejercicios que tienes al lado.",
+    review.KNOWLEDGE_GRAPH: "{n} preguntas sobre el temario que tienes al lado.",
+    review.EXEMPLARS_BANK: "{n} preguntas sobre los ejercicios que tienes al lado.",
 }
+
+# Spelled out, because the preamble is prose and «5 preguntas» reads as a form field. Only
+# the range an instrument can plausibly reach; anything outside it falls back to the digit
+# rather than to nothing.
+_SPELLED: dict[int, str] = {
+    2: "Dos",
+    3: "Tres",
+    4: "Cuatro",
+    5: "Cinco",
+    6: "Seis",
+    7: "Siete",
+    8: "Ocho",
+    9: "Nueve",
+    10: "Diez",
+}
+
+
+def count(artifact: str) -> int:
+    """How many questions this stage's form actually asks.
+
+    `overall` is one of them: it is on the form, it is the last thing answered, and it is
+    what «contestada» means — so a count that left it out would be short by one wherever
+    a person is told how much is left.
+    """
+    return len(QUESTIONS.get(artifact, ())) + 1
+
+
+def preamble(artifact: str) -> str:
+    """The prose above the questions, with its own count filled in."""
+    n = count(artifact)
+    return PREAMBLE.get(artifact, "").replace("{n}", _SPELLED.get(n, str(n)))
 
 
 def options_for(artifact: str, key: str) -> tuple[str, ...]:
@@ -219,7 +255,10 @@ def for_artifact(artifact: str) -> dict:
     return {
         "artifact": artifact,
         "version": VERSION,
-        "preamble": PREAMBLE.get(artifact, ""),
+        "preamble": preamble(artifact),
+        # What the button that OPENS this form has to say, and it may not count for
+        # itself: a constant in the browser is exactly what drifted from the instrument.
+        "count": count(artifact),
         "questions": [dict(question) for question in QUESTIONS.get(artifact, ())],
         "overall": _OVERALL,
         "note": _NOTE,

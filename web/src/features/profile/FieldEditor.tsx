@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
-import { LOCKED_HINT, useStageLocked } from "@/components/StageGate";
+import { useStageLocked, useStageLockedHint } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChipInput } from "@/components/ui/chips";
@@ -164,6 +164,7 @@ function TypePicker({
   disabled?: boolean;
 }) {
   const { t } = useT();
+  const lockedHint = useStageLockedHint();
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map(({ value: option, labelKey, icon: Icon, captionKey }) => (
@@ -171,7 +172,7 @@ function TypePicker({
           key={option}
           type="button"
           disabled={disabled}
-          title={disabled ? t(LOCKED_HINT) : t(captionKey)}
+          title={disabled ? t(lockedHint) : t(captionKey)}
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
@@ -312,6 +313,10 @@ export function FieldEditor({
   const tr = useT();
   const { t } = tr;
   const locked = useStageLocked();
+  // What a control that is disabled RIGHT NOW should say about itself: the two locked
+  // states name different ways out, so one sentence for both sends half the readers to a
+  // button that is not on their screen.
+  const lockedHint = useStageLockedHint();
   const [nameDraft, setNameDraft] = useState(name);
 
   useEffect(() => setNameDraft(name), [name]);
@@ -394,7 +399,7 @@ export function FieldEditor({
               isPrimary
                 ? t("field.primary.already")
                 : locked
-                  ? t(LOCKED_HINT)
+                  ? t(lockedHint)
                   : canBePrimary
                     ? t("field.primary.make")
                     : t("field.primary.onlyText")
@@ -407,7 +412,7 @@ export function FieldEditor({
             size="icon-sm"
             onClick={() => onMove(-1)}
             disabled={first || locked}
-            title={locked ? t(LOCKED_HINT) : t("field.moveUp")}
+            title={locked ? t(lockedHint) : t("field.moveUp")}
           >
             <ArrowUp />
           </Button>
@@ -416,7 +421,7 @@ export function FieldEditor({
             size="icon-sm"
             onClick={() => onMove(1)}
             disabled={last || locked}
-            title={locked ? t(LOCKED_HINT) : t("field.moveDown")}
+            title={locked ? t(lockedHint) : t("field.moveDown")}
           >
             <ArrowDown />
           </Button>
@@ -429,7 +434,7 @@ export function FieldEditor({
               isPrimary
                 ? t("field.primary.noDelete")
                 : locked
-                  ? t(LOCKED_HINT)
+                  ? t(lockedHint)
                   : t("field.delete")
             }
             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -481,7 +486,7 @@ export function FieldEditor({
                 <Segmented
                   value={nullable ? "optional" : "required"}
                   disabled={locked}
-                  title={locked ? t(LOCKED_HINT) : undefined}
+                  title={locked ? t(lockedHint) : undefined}
                   onChange={(next) => setNullable(next === "optional")}
                   options={[
                     { value: "required", label: t("field.required.required") },

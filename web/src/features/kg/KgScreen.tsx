@@ -15,7 +15,12 @@ import {
 import { useMemo, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
-import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
+import {
+  StageGate,
+  useStageLocked,
+  useStageLockReason,
+  useStageLockedHint,
+} from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,6 +64,12 @@ function ConceptDetail({
 }) {
   const { t } = useT();
   const locked = useStageLocked();
+  // A DESCRIPTION IS NOT PART OF THE APPROVED ARTIFACT. It lives in its own file and does
+  // not revoke the approval, so sealing the stage has never stopped anybody fixing one —
+  // and taking that away would mean withdrawing an approval to correct a sentence. What it
+  // does follow is the other axis: while the stage is merely being LOOKED at, nothing
+  // writes.
+  const viewing = useStageLockReason() === "reviewing";
   const [name, setName] = useState(concept.name);
   const [domain, setDomain] = useState(concept.domain);
   const [relation, setRelation] = useState(relations[0] ?? "");
@@ -109,60 +120,61 @@ function ConceptDetail({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Field label={t("kg.conceptName")}>
-          <Input
-            value={name}
-            readOnly={locked}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
-        <Field label={t("kg.unit")}>
-          <Select
-            value={domain}
-            disabled={locked}
-            title={locked ? t(LOCKED_HINT) : undefined}
-            onChange={(event) => setDomain(event.target.value)}
-          >
-            {domains.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        {/* NO TAGGABILITY SWITCH HERE since 2026-09-01 (explicit user request): it is on the
-            concept's own row in the list, where the state is judged — a pass down the
-            syllabus deciding which concepts work as labels — instead of one click inside
-            each concept. Its (i) went to the column header with it. */}
-        {dirty && !locked ? (
-          <Button
-            size="sm"
-            className="w-full"
-            disabled={update.isPending}
-            onClick={() =>
-              run(() =>
-                api.updateConcept({
-                  name: concept.name,
-                  new_name: name !== concept.name ? name : undefined,
-                  domain: domain !== concept.domain ? domain : undefined,
-                }),
-              )
-            }
-          >
-            {t("kg.saveChanges")}
-          </Button>
-        ) : null}
-      </div>
+      {/* WHILE THE STAGE IS BEING LOOKED AT, THIS CARD IS A READ. Opening a concept and
+          reading its description is what the step asks for, so the card itself stays in the
+          static view — what goes is every control that would rewrite it. The name is not
+          repeated as a field: the card's own header already carries it, here and inside the
+          expanded map. */}
+      {locked ? (
+        <div className="space-y-1">
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">
+            {t("kg.unit")}
+          </h4>
+          <p className="text-body">{concept.domain}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Field label={t("kg.conceptName")}>
+            <Input value={name} onChange={(event) => setName(event.target.value)} />
+          </Field>
+          <Field label={t("kg.unit")}>
+            <Select value={domain} onChange={(event) => setDomain(event.target.value)}>
+              {domains.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {/* NO TAGGABILITY SWITCH HERE since 2026-09-01 (explicit user request): it is on the
+              concept's own row in the list, where the state is judged — a pass down the
+              syllabus deciding which concepts work as labels — instead of one click inside
+              each concept. Its (i) went to the column header with it. */}
+          {dirty ? (
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={update.isPending}
+              onClick={() =>
+                run(() =>
+                  api.updateConcept({
+                    name: concept.name,
+                    new_name: name !== concept.name ? name : undefined,
+                    domain: domain !== concept.domain ? domain : undefined,
+                  }),
+                )
+              }
+            >
+              {t("kg.saveChanges")}
+            </Button>
+          ) : null}
+        </div>
+      )}
 
-      {/* LA DESCRIPCIÓN SE CORRIGE AQUÍ (2026-09-01, explicit user request), que es donde
-          se está leyendo. Antes vivía en una pestaña propia que revisaba las 162 en fila,
-          lo cual es una tarea distinta de la única que se hace de verdad: leer un concepto,
-          ver que su descripción no lo describe y arreglarla.
-
-          Es un fichero aparte del artefacto, así que editarla NO caduca la aprobación de la
-          etapa — por eso el campo sigue vivo con el temario aprobado, a diferencia del
-          nombre y la unidad. */}
+      {/* The description is READ here and corrected here, on the concept it belongs to.
+          It is a file of its own, so writing it revokes no approval — what leaves it
+          read-only is the moment and not the lock: reading a description is what the step
+          asks for, correcting one is the other task. */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <h4 className="text-micro font-condensed uppercase text-muted-foreground">
@@ -172,40 +184,53 @@ function ConceptDetail({
             <Badge variant="attention">{t("kg.noDescriptionBadge")}</Badge>
           ) : null}
         </div>
-        <Textarea
-          autoGrow
-          aria-label={t("kg.description")}
-          value={description}
-          placeholder={t("kg.descriptionPlaceholder")}
-          onChange={(event) => setDescription(event.target.value)}
-          className="min-h-20 text-small"
-        />
-        <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-small text-muted-foreground">
-            {t("kg.descriptionNote")}
-          </p>
-          {description !== (concept.description ?? "") ? (
-            <Button
-              size="sm"
-              disabled={saveDescription.isPending}
-              onClick={() =>
-                saveDescription.mutate(
-                  { concept: concept.name, description },
-                  {
-                    onSuccess: () => {
-                      onChanged();
-                      toast({ title: t("kg.descriptionSaved") });
-                    },
-                    onError: (e: Error) => setError(e.message),
-                  },
-                )
-              }
-            >
-              {saveDescription.isPending ? <Spinner /> : null}
-              {t("common.save")}
-            </Button>
-          ) : null}
-        </div>
+        {viewing ? (
+          <>
+            {concept.description ? (
+              <p className="whitespace-pre-wrap text-small">{concept.description}</p>
+            ) : (
+              <p className="text-small text-muted-foreground">{t("kg.noDescription")}</p>
+            )}
+            <p className="text-small text-muted-foreground">{t("kg.descriptionRole")}</p>
+          </>
+        ) : (
+          <>
+            <Textarea
+              autoGrow
+              aria-label={t("kg.description")}
+              value={description}
+              placeholder={t("kg.descriptionPlaceholder")}
+              onChange={(event) => setDescription(event.target.value)}
+              className="min-h-20 text-small"
+            />
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 text-small text-muted-foreground">
+                {t("kg.descriptionNote")}
+              </p>
+              {description !== (concept.description ?? "") ? (
+                <Button
+                  size="sm"
+                  disabled={saveDescription.isPending}
+                  onClick={() =>
+                    saveDescription.mutate(
+                      { concept: concept.name, description },
+                      {
+                        onSuccess: () => {
+                          onChanged();
+                          toast({ title: t("kg.descriptionSaved") });
+                        },
+                        onError: (e: Error) => setError(e.message),
+                      },
+                    )
+                  }
+                >
+                  {saveDescription.isPending ? <Spinner /> : null}
+                  {t("common.save")}
+                </Button>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
 
       <Separator />
@@ -256,77 +281,78 @@ function ConceptDetail({
           </ul>
         )}
 
-        <div className="flex gap-1 pt-1">
-          <Select
-            aria-label={t("kg.relationType")}
-            disabled={locked}
-            value={relation}
-            onChange={(event) => setRelation(event.target.value)}
-            className="text-small"
-          >
-            {relations.map((verb) => (
-              <option key={verb} value={verb}>
-                {verb}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label={t("kg.targetConcept")}
-            disabled={locked}
-            value={target}
-            onChange={(event) => setTarget(event.target.value)}
-            className="text-small"
-          >
-            <option value="">{t("kg.conceptPlaceholder")}</option>
-            {concepts
-              .filter((c) => c.name !== concept.name)
-              .map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
+        {locked ? null : (
+          <div className="flex gap-1 pt-1">
+            <Select
+              aria-label={t("kg.relationType")}
+              value={relation}
+              onChange={(event) => setRelation(event.target.value)}
+              className="text-small"
+            >
+              {relations.map((verb) => (
+                <option key={verb} value={verb}>
+                  {verb}
                 </option>
               ))}
-          </Select>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={locked || !target || !relation}
-            title={locked ? t(LOCKED_HINT) : undefined}
-            onClick={() => run(() => api.addEdge(relation, concept.name, target)).then(() => setTarget(""))}
-            aria-label={t("kg.addRelation")}
-          >
-            <Link2 />
-          </Button>
-        </div>
+            </Select>
+            <Select
+              aria-label={t("kg.targetConcept")}
+              value={target}
+              onChange={(event) => setTarget(event.target.value)}
+              className="text-small"
+            >
+              <option value="">{t("kg.conceptPlaceholder")}</option>
+              {concepts
+                .filter((c) => c.name !== concept.name)
+                .map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+            </Select>
+            <Button
+              size="icon"
+              variant="outline"
+              disabled={!target || !relation}
+              onClick={() => run(() => api.addEdge(relation, concept.name, target)).then(() => setTarget(""))}
+              aria-label={t("kg.addRelation")}
+            >
+              <Link2 />
+            </Button>
+          </div>
+        )}
       </div>
 
       {error ? <p className="text-small text-destructive">{error}</p> : null}
 
-      <Separator />
+      {locked ? null : (
+        <>
+          <Separator />
 
-      <Button
-        variant="outline"
-        disabled={locked}
-        title={locked ? t(LOCKED_HINT) : undefined}
-        className="w-full text-destructive hover:bg-destructive/10"
-        onClick={() => setConfirmDelete(true)}
-      >
-        <Trash2 />
-        {t("kg.deleteConcept")}
-      </Button>
+          <Button
+            variant="outline"
+            className="w-full text-destructive hover:bg-destructive/10"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 />
+            {t("kg.deleteConcept")}
+          </Button>
 
-      <ConfirmDialog
-        open={confirmDelete}
-        tone="danger"
-        title={t("kg.deleteConceptTitle", { name: concept.name })}
-        confirmLabel={t("common.delete")}
-        onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => {
-          setConfirmDelete(false);
-          run(() => api.deleteConcept(concept.name), t("kg.conceptDeleted"));
-        }}
-      >
-        <p>{t("kg.deleteConceptBody")}</p>
-      </ConfirmDialog>
+          <ConfirmDialog
+            open={confirmDelete}
+            tone="danger"
+            title={t("kg.deleteConceptTitle", { name: concept.name })}
+            confirmLabel={t("common.delete")}
+            onCancel={() => setConfirmDelete(false)}
+            onConfirm={() => {
+              setConfirmDelete(false);
+              run(() => api.deleteConcept(concept.name), t("kg.conceptDeleted"));
+            }}
+          >
+            <p>{t("kg.deleteConceptBody")}</p>
+          </ConfirmDialog>
+        </>
+      )}
     </div>
   );
 }
@@ -591,26 +617,26 @@ function GraphExplorer() {
                 className="h-8 pl-8"
               />
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={locked}
-              title={locked ? t(LOCKED_HINT) : undefined}
-              onClick={() => setNewUnit(true)}
-            >
-              <FolderPlus />
-              {t("kg.unitButton")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={locked}
-              title={locked ? t(LOCKED_HINT) : undefined}
-              onClick={() => setAddingIn(domains[0] ?? "")}
-            >
-              <Plus />
-              {t("kg.conceptButton")}
-            </Button>
+            {/* Adding a unit or a concept only ever writes, so while the stage is being
+                looked at neither is drawn. Greyed out they would claim something is wrong
+                with a screen whose task, right now, is to be read. The search beside them
+                stays in both states: it changes what is on screen and nothing on disk. */}
+            {locked ? null : (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setNewUnit(true)}>
+                  <FolderPlus />
+                  {t("kg.unitButton")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAddingIn(domains[0] ?? "")}
+                >
+                  <Plus />
+                  {t("kg.conceptButton")}
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
@@ -866,12 +892,63 @@ function GraphExplorer() {
   );
 }
 
-export function KgScreen({ stage }: { stage: StageState | undefined }) {
+/**
+ * Deciding which topics serve as labels — a job launched on the graph, so a correction.
+ *
+ * It is a child of `StageGate` rather than a block of `KgScreen` because that is the only
+ * side of the boundary where the lock is readable: `curating` lives inside the header and
+ * travels down as context. Out of the static view entirely, and merely refused once the
+ * step is closed, where «Reabrir» is the way back and the tooltip names it.
+ */
+function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
+  const reason = useStageLockReason();
+  const lockedHint = useStageLockedHint();
   const kg = useKg();
   const pipeline = usePipeline();
   const submitReview = useSubmitJob();
   const offline = useEngineOffline();
+  const reviewing = useJobRunning("review_taggability");
+
+  const totals = kg.data?.totals;
+  const reviewed = Boolean(totals?.taggability_reviewed);
+  const profileReady =
+    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
+  const reviewReason =
+    !stage || stage.status === "missing"
+      ? t("kg.review.buildFirst")
+      : stage.status === "building"
+        ? t("kg.review.rebuilding")
+        : reason === "approved"
+          ? t(lockedHint)
+          : offline
+            ? offline
+            : !profileReady
+              ? t("kg.review.needsProfile")
+              : reviewing
+                ? t("kg.review.running")
+                : null;
+
+  if (reason === "reviewing") return null;
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+      <Button
+        size="sm"
+        variant={reviewed ? "ghost" : "attention"}
+        disabled={Boolean(reviewReason) || submitReview.isPending}
+        title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
+        onClick={() => submitReview.mutate({ kind: "review_taggability" })}
+      >
+        {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
+        {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
+      </Button>
+    </div>
+  );
+}
+
+export function KgScreen({ stage }: { stage: StageState | undefined }) {
+  const { t } = useT();
   const reviewRun = useJobRun("review_taggability");
   const reviewing = useJobRunning("review_taggability");
   const reviewPhases = useJobPhases("review_taggability");
@@ -887,29 +964,6 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const describePhases = useJobPhases("describe_concepts");
   const finishing = describing || reviewing;
 
-  // Taggability is launched from the header, like everything else an artifact knows how to
-  // do to itself, and not from a notice buried in the graph tab. It does not put the stage in
-  // «construyendo» — it patches a list in place, rewrites nothing — so its progress goes under
-  // the header and the rest of the screen stays live.
-  const totals = kg.data?.totals;
-  const reviewed = Boolean(totals?.taggability_reviewed);
-  const profileReady =
-    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
-  const reviewReason =
-    !stage || stage.status === "missing"
-      ? t("kg.review.buildFirst")
-      : stage.status === "building"
-        ? t("kg.review.rebuilding")
-        : stage.status === "approved"
-          ? t(LOCKED_HINT)
-          : offline
-            ? offline
-            : !profileReady
-              ? t("kg.review.needsProfile")
-              : reviewing
-                ? t("kg.review.running")
-                : null;
-
   return (
     <StageGate stage={stage}>
       {/* ONE VIEW, AND ONE THING TO DO TO IT (2026-09-01, explicit user request).
@@ -922,19 +976,9 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
 
           The review button stays where the tabs were: it is something done TO the graph, it
           exists in both states (a first pass and a re-run), and the notice below exists in
-          only one of them. */}
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-        <Button
-          size="sm"
-          variant={reviewed ? "ghost" : "attention"}
-          disabled={Boolean(reviewReason) || submitReview.isPending}
-          title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
-          onClick={() => submitReview.mutate({ kind: "review_taggability" })}
-        >
-          {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
-          {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
-        </Button>
-      </div>
+          only one of them. What reports — the finishing notice and the two bars — stays in
+          every state, because it says what is happening to what is being read. */}
+      <TaggabilityReview stage={stage} />
 
       {finishing ? (
         <Alert tone="info" className="mb-4" title={t("kg.finishing")}>

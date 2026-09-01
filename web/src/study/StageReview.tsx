@@ -7,11 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
-import { Link } from "@/lib/router";
 import { cn } from "@/lib/utils";
 
 import { useOpenStageReview, useSaveStageReview, useStageReview } from "./queries";
-import type { StageInstrument, StageQuestion } from "./types";
+import { questionCount, type StageInstrument, type StageQuestion } from "./types";
 
 /**
  * WHAT THE TEACHER SAYS ABOUT THE BUILD THEY ARE LOOKING AT.
@@ -39,11 +38,13 @@ import type { StageInstrument, StageQuestion } from "./types";
  */
 export function StageReview({
   artifact,
-  nextStep,
+  curated,
   onClose,
 }: {
   artifact: string;
-  nextStep: number | null;
+  /** Whether the artifact was corrected before this verdict — the study's own contrast.
+   *  Told from above, because the panel cannot see an edit made beside it. */
+  curated?: boolean;
   /** Given by the drawer that holds it, so the panel can shut itself once it is answered. */
   onClose?: () => void;
 }) {
@@ -106,7 +107,9 @@ export function StageReview({
           <CardTitle className="text-study">{t("stageReview.title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-small text-muted-foreground">{t("stageReview.notBuilt")}</p>
+          <p className="text-small text-muted-foreground">
+            {plural("stageReview.notBuilt", questionCount(instrument))}
+          </p>
         </CardContent>
       </Card>
     );
@@ -232,7 +235,7 @@ export function StageReview({
               disabled={save.isPending || (!dirty && answered)}
               onClick={() =>
                 save.mutate(
-                  { answers, overall, note: note.trim() || null },
+                  { answers, overall, note: note.trim() || null, curated },
                   { onSuccess: () => setTouched(false) },
                 )
               }
@@ -249,35 +252,20 @@ export function StageReview({
         </CardContent>
       </Card>
 
-      {/* THE ONE OBVIOUS NEXT MOVE, and it appears only once the verdict is in. There is no
-          «corregir a mano» button beside it because correcting is what the whole left-hand
-          column already is: an extra button would only scroll the page to something that
-          is already on screen. */}
+      {/* THE VERDICT IS SAVED AND THAT IS ALL THIS SAYS. The forward button used to live
+          here and navigate without closing the stage, which walked a person into a step
+          that then refused to build. There is ONE «continuar» now and it is at the foot of
+          the screen, beside the offer to correct — two exits together, as they were asked
+          for. */}
       {answered ? (
-        <Alert tone="attention" title={t("stageReview.done.title")}>
+        <Alert tone="settled" title={t("stageReview.done.title")}>
           <p>{t("stageReview.done.body")}</p>
-          <div className="mt-3">
-            <Link to={nextStep === null ? "/generate" : STEP_PATH[nextStep]}>
-              <Button variant="attention">
-                {nextStep === null
-                  ? t("stageReview.done.generate")
-                  : t("stageReview.done.next", { n: nextStep })}
-              </Button>
-            </Link>
-          </div>
         </Alert>
       ) : null}
     </div>
   );
 }
 
-// Where «el paso siguiente» leads. The numbers are the bar's, so a renamed route breaks
-// here and not silently on the one button a person is meant to press.
-const STEP_PATH: Record<number, string> = {
-  2: "/prepare/profile",
-  3: "/prepare/graph",
-  4: "/prepare/bank",
-};
 
 /**
  * One question, its options stacked, best first.

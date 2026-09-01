@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/misc";
 import { buttonVariants } from "@/components/ui/button";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
-import { STEPS } from "@/lib/steps";
+import { STEPS, stepNumberOf } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  *
  * The common case is not «you have not built it» but «it went stale»: approving the
  * syllabus after the bank leaves the bank pointing at an older upstream, and putting that
- * right is one press of «Aprobar» on a screen the person has already seen. So the gate
+ * right is one press of «Continuar» on a screen the person has already seen. So the gate
  * links straight to the first stage in the way, by artifact and never by a hand-written
  * path — `STEPS` is the same list the bar draws, so this offer cannot promise a
  * destination the navigation does not have.
@@ -33,7 +33,9 @@ export function ChainGate({ title, stages }: { title: string; stages: StageState
 
   const first = pending[0];
   const step = STEPS.find((s) => s.artifact === first.artifact);
-  const at = STEPS.findIndex((s) => s.artifact === first.artifact);
+  // The number is `STEPS`' own, not a position: the four steps are 1.1–1.4 inside one
+  // phase, and an index+1 here promised «Paso 2» for what the bar calls 1.2.
+  const at = stepNumberOf(first.artifact);
 
   return (
     <Alert tone="attention" title={title}>
@@ -47,7 +49,7 @@ export function ChainGate({ title, stages }: { title: string; stages: StageState
             to={step.path}
             className={cn(buttonVariants({ variant: "attention", size: "sm" }))}
           >
-            {t("chain.goFix", { n: at + 1, label: first.label })}
+            {t("chain.goFix", { n: at ?? "", label: first.label })}
             <ArrowRight />
           </Link>
         </div>

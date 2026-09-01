@@ -306,7 +306,6 @@ export function GenerateForm({
   const tr = useT();
   const { t, plural } = tr;
   const [open, setOpen] = useState<string | null | undefined>(undefined);
-  const [onlyWithExemplars, setOnlyWithExemplars] = useState(true);
   // What the full-screen selector is choosing: the targets, the ad-hoc curriculum, or
   // nothing. One state, because only one overlay can be open.
   const [picking, setPicking] = useState<"concepts" | "curriculum" | null>(null);
@@ -422,22 +421,6 @@ export function GenerateForm({
   // about each name that happens to have none.
   const wholeBatchZeroShot = chosen && zeroShot.length === state.concepts.length;
 
-  const withoutExemplars = useMemo(
-    () =>
-      concepts.filter((concept) => concept.taggable && !hasExemplars(concept, exemplarType))
-        .length,
-    [concepts, exemplarType],
-  );
-  // Anything already chosen stays on screen, so it is not part of what the filter hides.
-  const hidden = withoutExemplars - zeroShot.length;
-
-  const applyFilter = (next: boolean) => {
-    setOnlyWithExemplars(next);
-    if (next && zeroShot.length > 0) {
-      patch({ concepts: state.concepts.filter((name) => !zeroShot.includes(name)) });
-    }
-  };
-
   // The steps actually on screen, in order. It is derived and not a constant because which
   // of them exist depends on the state: with a single modality declared there is nothing to
   // ask first, and the last two only appear once something has been chosen. It is also the
@@ -469,16 +452,12 @@ export function GenerateForm({
   const advance = (from: string) => setOpen(steps[steps.indexOf(from) + 1] ?? null);
 
   // Changing modality changes which concepts have exemplars at all, so what was chosen
-  // under the previous one has to pass the filter again — the same pruning `applyFilter`
-  // does when it is switched on. With the filter off nothing is dropped: choosing a
-  // concept the bank cannot illustrate is then a deliberate answer.
+  // under the previous one has to pass the same filter the selector applies.
   const chooseType = (key: string) => {
-    const kept = onlyWithExemplars
-      ? state.concepts.filter((name) => {
-          const concept = byName.get(name);
-          return Boolean(concept && hasExemplars(concept, key));
-        })
-      : state.concepts;
+    const kept = state.concepts.filter((name) => {
+      const concept = byName.get(name);
+      return Boolean(concept && hasExemplars(concept, key));
+    });
     patch({ itemType: key, decisions: {}, concepts: kept });
     advance("itemType");
   };
@@ -522,10 +501,6 @@ export function GenerateForm({
     if (state.instructions.trim()) parts.push(t("form.settings.withInstructions"));
     return parts.length > 0 ? parts.join(" · ") : t("form.settings.none");
   })();
-
-  const filterLabel = exemplarType
-    ? t("form.filter.ofType", { type: typeLabel })
-    : t("form.filter.any");
 
   let index = 0;
 
@@ -600,19 +575,6 @@ export function GenerateForm({
         summary={state.concepts.join(" · ") || t("form.practise.none")}
         {...step("concepts")}
       >
-        {withoutExemplars > 0 ? (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-            <Switch checked={onlyWithExemplars} onCheckedChange={applyFilter}>
-              <span className="text-small font-medium">{filterLabel}</span>
-            </Switch>
-            <span className="ml-auto text-[11px] nums text-muted-foreground">
-              {onlyWithExemplars
-                ? plural("form.hiddenNoExemplars", hidden)
-                : plural("form.withoutExemplars", withoutExemplars)}
-            </span>
-          </div>
-        ) : null}
-
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setPicking("concepts")}>
             <ListChecks />
@@ -634,15 +596,11 @@ export function GenerateForm({
           empty={t("form.practise.empty")}
         />
 
-        {!onlyWithExemplars && withoutExemplars > 0 ? (
-          <p className="flex items-start gap-1.5 text-small text-attention">
-            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-            {exemplarType
-              ? t("form.zeroShot.filterOffType", { type: typeLabel })
-              : t("form.zeroShot.filterOff")}
-          </p>
-        ) : null}
-
+        {/* The chosen topics against what the bank can illustrate. It survives the filter
+            becoming fixed because a commission can still be RESTORED with topics that have
+            no exemplar left — «Generar más como esta» over a bank that has changed since —
+            and nothing else on the screen says the batch will be written with no example
+            to imitate. */}
         {wholeBatchZeroShot ? (
           <p className="flex items-start gap-1.5 text-small text-attention">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -774,6 +732,10 @@ export function GenerateForm({
           <div className="space-y-4 px-3 pb-3">
           <div className="space-y-2">
             <p className="text-body font-medium">{t("form.taught.title")}</p>
+            {/* The two movements the question needs to be answerable: what happens if it is
+                left alone, and the case for touching it. It was written for the guide only,
+                so on the screen the title had to carry the whole explanation by itself. */}
+            <p className="text-small text-muted-foreground">{t("form.taught.hint")}</p>
           <div className="flex flex-wrap items-center gap-2">
             <Switch
               checked={state.useCurriculum}
@@ -853,11 +815,16 @@ export function GenerateForm({
                 </InfoHint>
               ) : null}
             </div>
+            {/* THE EXAMPLE IS IN THE STATEMENT, NOT IN THE BOX (2026-09-01, explicit user
+                request). It was the textarea's placeholder, which is the one place a
+                sentence disappears the moment somebody starts writing — and what it
+                answers is «what do I write here». The (i) beside the title keeps the
+                catalogue derived for THIS instance, which this line does not repeat. */}
+            <p className="text-small text-muted-foreground">{t("form.instructions.hint")}</p>
             <Textarea
               aria-label={t("form.instructions.title")}
               value={state.instructions}
               maxLength={MAX_INSTRUCTIONS}
-              placeholder={t("form.instructions.placeholder")}
               onChange={(event) => patch({ instructions: event.target.value })}
               className={cn("min-h-20", blockedInstructions && "border-destructive")}
             />
@@ -1028,6 +995,13 @@ export function GenerateForm({
         </div>
       ) : null}
 
+      {/* ONLY TOPICS THE BANK CAN ILLUSTRATE ARE OFFERED AS TARGETS, AND IT IS NO LONGER A
+          QUESTION (2026-09-01, explicit user request, revoking the switch that used to
+          offer it in the step above and the lever the tray offered beside its count). The
+          value is the one the switch defaulted to, so what is on offer has not moved. What
+          the tray still says is how many topics it is keeping out — with no way to lift it,
+          that count is the only thing left explaining why a topic of the syllabus is not on
+          the board, and it is said where the absence is felt. */}
       <ConceptSelector
         title={t("form.practise.title")}
         concepts={concepts}
@@ -1036,8 +1010,7 @@ export function GenerateForm({
         onChange={(next) => patch({ concepts: next })}
         implied={implied}
         restrictTo={activeCurriculum}
-        onlyWithExemplars={onlyWithExemplars}
-        onShowWithoutExemplars={() => applyFilter(false)}
+        onlyWithExemplars
         exemplarType={exemplarType}
         open={picking === "concepts"}
         onClose={() => setPicking(null)}
@@ -1061,7 +1034,6 @@ export function GenerateForm({
         selected={state.curriculum}
         onChange={(next) => patch({ curriculum: next })}
         allowNonTaggable
-        showExemplarCount={false}
         open={picking === "curriculum"}
         onClose={() => setPicking(null)}
         onConfirm={() => setPicking(null)}

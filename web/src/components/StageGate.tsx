@@ -1,4 +1,15 @@
-import { ChevronRight, CircleCheck, ClipboardCheck, Lock, LockOpen, TriangleAlert, UploadCloud } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  CircleCheck,
+  ClipboardCheck,
+  Eye,
+  Lock,
+  LockOpen,
+  Pencil,
+  TriangleAlert,
+  UploadCloud,
+} from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -23,10 +34,11 @@ import { api } from "@/lib/api";
 import { ARTIFACT_STATUS } from "@/lib/format";
 import { isQueued, waitOf, waitReason } from "@/lib/queue";
 import { slotLabelOf } from "@/lib/raw";
-import { Link } from "@/lib/router";
+import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isRebuild } from "@/lib/progress";
+import { nextStepOf, stepNumberOf } from "@/lib/steps";
 import {
   useArtifactRun,
   useInvalidateChain,
@@ -37,18 +49,9 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { StageReview } from "@/study/StageReview";
 import { useStageReview } from "@/study/queries";
+import { questionCount } from "@/study/types";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
-
-// WHERE THIS STAGE SITS ON THE PATH. The raw material is step 1, so the three artifacts
-// are 2, 3 and 4 — the same numbering the bar draws and the tutorial promises, and the
-// order is `review.ARTIFACTS`. It is one map here rather than a prop on three screens,
-// which is what stops the two numberings from ever disagreeing again.
-const STEP_OF: Record<string, number> = {
-  exemplars_profile: 2,
-  knowledge_graph: 3,
-  exemplars_bank: 4,
-};
 
 // What the stage IS, in two sentences and without naming a single piece of the system.
 // Visible under the title and not behind a glyph: the sentence that says what a screen is
@@ -59,12 +62,11 @@ const WHAT: Record<string, Key> = {
   exemplars_bank: "stage.what.bank",
 };
 
-// Where «continuar» leads once the verdict is in. The bank has no next STEP — what
-// follows it is asking for an exercise, which is the point of the whole path.
-const NEXT_STEP: Record<string, number | null> = {
-  exemplars_profile: 3,
-  knowledge_graph: 4,
-  exemplars_bank: null,
+// Why correcting this particular stage is worth the time. One shared argument, and the
+// bank's own because the tutor hardened it there: past the bank, what is not corrected is
+// what every generated exercise is copied from.
+const CURATE_WHY: Record<string, Key> = {
+  exemplars_bank: "stage.curate.bodyBank",
 };
 
 // Which page of the guide explains each stage. One map rather than a prop, because all
@@ -75,19 +77,56 @@ const GUIDE: Record<string, GuideSlug> = {
   exemplars_bank: "bank",
 };
 
-// Approving closes the stage. What is approved is the file's hash, so editing it underneath
-// would silently revoke the approval: while approved, the screen offers no control that
-// rewrites the artifact, and the only way back to it is «Reabrir» — hence the open lock.
-// What does NOT rewrite the artifact stays live: the concept descriptions and the curriculum
-// are separate files and do not revoke it.
-const StageLock = createContext(false);
+/**
+ * WHY THE SCREEN BELOW MAY NOT BE WRITTEN TO RIGHT NOW.
+ *
+ * READ-ONLY STOPPED MEANING «APPROVED» (explicit user request). A stage used to open as a
+ * form from top to bottom and ask, in the same breath, for a verdict on it — so the one
+ * question a person could not answer was «what have I reviewed, if I have reviewed
+ * nothing?». Viewing and correcting are two tasks, so they are two moments: the stage
+ * opens as a STATIC VIEW, and correcting is what unlocks it.
+ *
+ * The two reasons are not interchangeable and the screens have to tell them apart: out of
+ * `reviewing` the way is the «Quiero corregir algo» button at the foot of the page, and
+ * out of `approved` it is «Reabrir» in the header. `reviewing` also means the control is
+ * better HIDDEN than greyed — there is nothing wrong, it is simply not this moment's task
+ * — while `approved` is a real refusal and says so.
+ *
+ * What is approved is the file's hash, so editing it underneath would silently revoke the
+ * approval. What does NOT rewrite the artifact stays live in both states: the concept
+ * descriptions and the curriculum are separate files and do not revoke anything.
+ */
+export type StageLockReason = "approved" | "reviewing" | null;
 
-export function useStageLocked() {
+const StageLock = createContext<StageLockReason>(null);
+
+export function useStageLockReason() {
   return useContext(StageLock);
 }
 
-// A key, because it is read by four screens and each one has its own `t`.
+export function useStageLocked() {
+  return useContext(StageLock) !== null;
+}
+
+/**
+ * What a control that is disabled RIGHT NOW should say about itself.
+ *
+ * A key and not a sentence, because it is read by four screens and each one has its own
+ * `t`. The two locked states name different ways out — «Reabrir» in the header, «Quiero
+ * corregir algo» at the foot — so one sentence for both would send half the readers to a
+ * button that is not on their screen.
+ *
+ * Preferably nothing reads this in the `reviewing` state at all: a control that exists
+ * only to correct the artifact is HIDDEN while the stage is being looked at, because
+ * nothing is wrong and greying it out claims something is.
+ */
+// The `approved` half, for a call site that has not moved to the hook yet. Prefer the
+// hook: this one is only right in one of the two states.
 export const LOCKED_HINT: Key = "stage.lockedHint";
+
+export function useStageLockedHint(): Key {
+  return useStageLockReason() === "approved" ? "stage.lockedHint" : "stage.viewHint";
+}
 
 /**
  * What a screen is holding that the artifact on disk does not have yet.
@@ -126,7 +165,7 @@ function StageScope({
   register,
   children,
 }: {
-  locked: boolean;
+  locked: StageLockReason;
   register: (edit: PendingEdit | null) => void;
   children: ReactNode;
 }) {
@@ -183,12 +222,22 @@ export function StageBadge({ stage }: { stage: StageState }) {
 export function StageGate({
   stage,
   actions,
+  intro,
   buildLabels,
   livePreview,
   children,
 }: {
   stage: StageState | undefined;
   actions?: ReactNode;
+  /**
+   * What this stage is, when the screen can say it better than a fixed sentence can.
+   *
+   * `WHAT` below is the same paragraph whatever came out of the build, and «se han
+   * detectado tres tipos de ejercicio: …» is worth more than any wording that cannot
+   * count. Only the screen holds those numbers, so it passes the sentence up rather than
+   * the header reaching down for data it has no business fetching.
+   */
+  intro?: ReactNode;
   buildLabels?: BuildLabels;
   /**
  * What the builder is writing NOW, under the bar. Not the artifact about to be replaced —
@@ -198,7 +247,7 @@ export function StageGate({
   children: ReactNode;
 }) {
   const tr = useT();
-  const { t } = tr;
+  const { t, plural } = tr;
   const invalidate = useInvalidateChain();
   const rawMissing = useRawMissingFor(stage?.artifact);
   const busyRun = useArtifactRun(stage?.artifact);
@@ -206,14 +255,51 @@ export function StageGate({
   const split = useSplitEngine();
   const toast = useToast();
   const confirm = useConfirm();
+  const { navigate } = useRouter();
   // EL CUESTIONARIO EMPIEZA CERRADO Y SE ABRE DESDE ARRIBA (2026-09-01, explicit user
   // request). Vivía siempre desplegado en la columna derecha, que es donde sigue
   // abriéndose; lo que cambia es que ahora hay que pedirlo, y que el botón que lo pide
   // está pegado a «Reconstruir» donde se ve al entrar.
   const [reviewOpen, setReviewOpen] = useState(false);
+  // CORREGIR ES UN ACTO, NO EL ESTADO POR DEFECTO. The stage opens as a static view and
+  // this is what opens it for writing. It belongs to the visit and not to the artifact:
+  // it is «estoy corrigiendo ahora», which nothing on disk records.
+  const [curating, setCurating] = useState(false);
+  const reviewPanel = useRef<HTMLDivElement>(null);
+  // WHETHER THIS PERSON CORRECTED BEFORE JUDGING, which is the study's own contrast:
+  // «cómo lo valoran los que curaron y cómo lo valoran los que no». It is the header that
+  // knows — the verdict panel only sees its own form — and it is a WRITE that counts, not
+  // merely having opened the controls.
+  //
+  // It states what THIS visit did, which is what the contrast asks and not quite the same
+  // as what the person ever did: correcting, leaving without answering and coming back
+  // records a «no». The server only ever lets the mark climb, so any verdict given after
+  // a correction in the same visit settles it for good.
+  const [curated, setCurated] = useState(false);
+  // Another artifact is another stage: what was open for correcting was the one you left.
+  useEffect(() => {
+    setCurating(false);
+    setCurated(false);
+    setReviewOpen(false);
+  }, [stage?.artifact]);
+  // ASKED FOR AT THE FOOT, DRAWN BESIDE THE ARTIFACT. The two are far apart above `xl`,
+  // where the panel is a right-hand column starting at the top of the content while the
+  // button that opens it is below all of it — so a press could look like nothing happened.
+  useEffect(() => {
+    if (!reviewOpen) return;
+    // `scrollIntoView` does not honour the media query on its own, unlike a CSS transition.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    reviewPanel.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "nearest" });
+  }, [reviewOpen]);
   const review = useStageReview(stage?.artifact);
   const answeredReview = review.data?.mine?.answered ?? false;
+  // How many the form asks, from the form itself. It was «Cinco» written into the string
+  // for all three stages while the graph asks six, so the button promised one thing and
+  // opened another.
+  const reviewCount = review.data ? questionCount(review.data.instrument) : 0;
   // What the screen below is holding, if it holds anything. See `PendingEdit`.
+  const [advanceFailed, setAdvanceFailed] = useState(false);
+  const [curateFailed, setCurateFailed] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const register = useCallback((edit: PendingEdit | null) => setPending(edit), []);
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
@@ -252,7 +338,10 @@ export function StageGate({
   const building = stage.status === "building";
   const missing = stage.status === "missing";
   const ready = !building && !missing;
-  const locked = stage.status === "approved";
+  const approved = stage.status === "approved";
+  // Approved outranks curating: closing the stage seals a hash, and the way back to it is
+  // «Reabrir» and not a button that quietly reopens what somebody signed off.
+  const locked: StageLockReason = approved ? "approved" : curating ? null : "reviewing";
   // «Building» covers a job that has not started: a queued build already marks the
   // artifact, which is right — it is about to be rewritten — but a bar and «se está
   // construyendo» over a job waiting its turn says work is happening that is not.
@@ -261,6 +350,25 @@ export function StageGate({
   // What the build is about to replace, which «building» hides: the hash is of the file on
   // disk and stays null through a first build, when there is nothing to replace at all.
   const hasPrevious = Boolean(stage.hash);
+  // Where moving on goes, and what it is called there. Read from `STEPS` so the number on
+  // the button and the screen it opens cannot drift apart.
+  const next = nextStepOf(stage.artifact);
+
+  // MOVING ON CLOSES THE STAGE. The verdict panel's forward button used to navigate and
+  // nothing else, so the one control the screen offers led to a step that then refused to
+  // build for want of an approval nobody had been asked for. Closing is the same operation
+  // «Aprobar» performs — the pending write first, and no approval at all if it is refused
+  // — so it is that mutation and not a second path to the same endpoint.
+  const advance = {
+    closed: approved,
+    blocked: (pending?.dirty && pending.blocked) || null,
+    running: approve.isPending,
+    run: async () => {
+      const writes = Boolean(pending?.dirty) && !approved;
+      if (!approved) await approve.mutateAsync();
+      if (writes) setCurated(true);
+    },
+  };
 
   return (
     <StageScope locked={locked} register={register}>
@@ -278,20 +386,22 @@ export function StageGate({
               nothing a person acts on, and it sat in the row that reports whether the stage
               is built, approved or stale — which is what that row is for. */}
           <div className="min-w-0 space-y-1.5">
-            {STEP_OF[stage.artifact] ? (
+            {stepNumberOf(stage.artifact) ? (
               <p className="text-micro text-muted-foreground">
-                {t("nav.stepNumber", { n: STEP_OF[stage.artifact] })}
+                {t("nav.stepNumber", { n: stepNumberOf(stage.artifact)! })}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
               <StageBadge stage={stage} />
             </div>
-            {WHAT[stage.artifact] ? (
-              <p className="max-w-[74ch] text-body text-muted-foreground">
-                {t(WHAT[stage.artifact])}
-              </p>
-            ) : null}
+            {intro ?? (
+              WHAT[stage.artifact] ? (
+                <p className="max-w-[74ch] text-body text-muted-foreground">
+                  {t(WHAT[stage.artifact])}
+                </p>
+              ) : null
+            )}
             {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}
           </div>
 
@@ -312,8 +422,14 @@ export function StageGate({
             <div className="flex flex-wrap items-center gap-2">
               {missing ? null : actions}
               {building ? null : <BuildButton stage={stage} labels={buildLabels} />}
-              {ready && !blocked ? (
-                locked ? (
+              {/* NO «APROBAR» IN THE HEADER (explicit user request). «¿Y aprobar? ¿Pero qué
+                  es aprobar? Es que esto no le va a quedar claro…» — it was a word nobody
+                  could act on, and it sat beside the build button as though replacing an
+                  artifact and signing one off were the same kind of thing. Closing the
+                  stage is what moving on does now, at the foot of the page, next to the
+                  offer to correct it: two exits, both named after what they do. What stays
+                  here is the way BACK out of a closed stage. */}
+              {ready && !blocked && approved ? (
                   <Button
                     variant="outline"
                     // ASKED FOR, LIKE «Reconstruir» ALREADY IS. This one undoes a human
@@ -336,23 +452,10 @@ export function StageGate({
                     <LockOpen />
                     {t("stage.reopen")}
                   </Button>
-                ) : (
-                  <Button
-                    onClick={() => approve.mutate()}
-                    // A dirty screen that cannot be written is a screen that cannot be
-                    // approved: approving would save first, and the save is refused. The
-                    // reason is the validator's own sentence, which is on the bar below too.
-                    disabled={approve.isPending || Boolean(pending?.dirty && pending.blocked)}
-                    title={(pending?.dirty && pending.blocked) || undefined}
-                  >
-                    {approve.isPending ? <Spinner /> : <CircleCheck />}
-                    {t("common.approve")}
-                  </Button>
-                )
               ) : null}
             </div>
 
-            {ready && !blocked && locked ? (
+            {ready && !blocked && approved ? (
               <p className="flex max-w-[24rem] items-start gap-1.5 text-small text-muted-foreground sm:justify-end sm:text-right">
                 <Lock aria-hidden className="mt-0.5 size-3.5 shrink-0" />
                 {t("stage.locked")}
@@ -360,49 +463,6 @@ export function StageGate({
             ) : null}
           </div>
         </header>
-
-        {/* EL BOTÓN QUE ABRE LA VALORACIÓN, pegado a los de construir y aprobar.
-            Aquí es donde se gasta `--study`: es el token de la evaluación en toda la
-            aplicación — la píldora «Comparar» del navbar se dibuja en él — y puesto en un
-            botón hace el trabajo que antes hacía un fondo teñido bajo el formulario, que
-            era el sitio equivocado: cada control de dentro tenía que pelearse con él.
-
-            Relleno mientras no se ha contestado y sobrio en cuanto se contesta, que es la
-            única diferencia que importa: lo que queda por hacer, y lo que ya está. No se
-            dibuja con la etapa sin construir ni bloqueada — no habría nada que juzgar. */}
-        {!missing && !blocked && review.data?.built ? (
-          <button
-            type="button"
-            onClick={() => setReviewOpen((was) => !was)}
-            aria-expanded={reviewOpen}
-            className={cn(
-              "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
-              answeredReview
-                ? "border-[color-mix(in_oklch,var(--study)_35%,transparent)] bg-[color-mix(in_oklab,var(--study)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--study)_12%,var(--card))]"
-                : "border-study bg-study text-study-foreground hover:bg-[color-mix(in_oklab,var(--study)_88%,var(--study-foreground))]",
-            )}
-          >
-            <ClipboardCheck aria-hidden className="size-5 shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-heading font-semibold">{t("stageReview.title")}</span>
-              <span
-                className={cn(
-                  "block text-small",
-                  answeredReview ? "text-muted-foreground" : "opacity-85",
-                )}
-              >
-                {t(answeredReview ? "stageReview.openAnswered" : "stageReview.openPending")}
-              </span>
-            </span>
-            <ChevronRight
-              aria-hidden
-              className={cn(
-                "size-5 shrink-0 transition-transform duration-300",
-                reviewOpen && "rotate-90",
-              )}
-            />
-          </button>
-        ) : null}
 
         {stage.stale_because.length > 0 ? (
           <Alert tone="danger" title={t("stage.stale")}>
@@ -530,6 +590,7 @@ export function StageGate({
             </div>
             {blocked ? null : (
               <div
+                ref={reviewPanel}
                 // `inert` and not only `aria-hidden`: clipped to zero height the panel is
                 // still in the tab order, so tabbing off the last control of the screen
                 // walked into a form nobody can see. React 19 forwards it as the real
@@ -553,7 +614,7 @@ export function StageGate({
                 >
                   <StageReview
                     artifact={stage.artifact}
-                    nextStep={NEXT_STEP[stage.artifact] ?? null}
+                    curated={curated}
                     onClose={() => setReviewOpen(false)}
                   />
                 </div>
@@ -561,6 +622,144 @@ export function StageGate({
             )}
           </div>
         )}
+
+        {/* EL BOTÓN QUE ABRE LA VALORACIÓN, AL FINAL Y NO AL ENTRAR (explicit user
+            request, revoking the placement of 2026-09-01). Arriba decía «preguntas sobre
+            lo que acabas de revisar» encima de algo que todavía no se había mirado, y la
+            objeción fue literal: «le doy aquí, pero ¿qué he revisado, si yo no he revisado
+            nada?». Debajo del artefacto la frase es cierta.
+
+            Aquí es donde se gasta `--study`: es el token de la evaluación en toda la
+            aplicación — la píldora «Comparar» del navbar se dibuja en él. Relleno mientras
+            no se ha contestado y sobrio en cuanto se contesta, que es la única diferencia
+            que importa. No se dibuja con la etapa sin construir ni bloqueada — no habría
+            nada que juzgar. */}
+        {!missing && !blocked && review.data?.built ? (
+          <button
+            type="button"
+            onClick={() => setReviewOpen((was) => !was)}
+            aria-expanded={reviewOpen}
+            className={cn(
+              "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
+              answeredReview
+                ? "border-[color-mix(in_oklch,var(--study)_35%,transparent)] bg-[color-mix(in_oklab,var(--study)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--study)_12%,var(--card))]"
+                : "border-study bg-study text-study-foreground hover:bg-[color-mix(in_oklab,var(--study)_88%,var(--study-foreground))]",
+            )}
+          >
+            <ClipboardCheck aria-hidden className="size-5 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-heading font-semibold">{t("stageReview.openTitle")}</span>
+              <span
+                className={cn(
+                  "block text-small",
+                  answeredReview ? "text-muted-foreground" : "opacity-85",
+                )}
+              >
+                {answeredReview
+                  ? t("stageReview.openAnswered")
+                  : plural("stageReview.openPending", reviewCount)}
+              </span>
+            </span>
+            <ChevronRight
+              aria-hidden
+              className={cn(
+                "size-5 shrink-0 transition-transform duration-300",
+                reviewOpen && "rotate-90",
+              )}
+            />
+          </button>
+        ) : null}
+
+        {/* LAS DOS SALIDAS, JUNTAS Y AL FINAL (explicit user request). «Pulsa aquí para
+            curar, o pulsa para pasar al siguiente paso sin curar»: corregir es opcional y
+            avanzar no exige entender la palabra «aprobar», que es lo que este bloque
+            sustituye. El orden de toda la pantalla queda vista → valoración → ¿quieres
+            corregir algo? → corrección.
+
+            Avanzar CIERRA la etapa, porque el paso siguiente no se puede construir sin eso
+            y quedarse a medias era el callejón que traía a la gente de vuelta. Guardar y
+            cerrar son la misma operación de siempre: primero la escritura pendiente, y
+            ninguna aprobación si la escritura se rechaza. */}
+        {ready && !blocked ? (
+          <section className="border border-border bg-card p-4 sm:p-5">
+            <h2 className="text-heading font-semibold">
+              {t(approved ? "stage.curate.closedTitle" : "stage.curate.title")}
+            </h2>
+            <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">
+              {approved
+                ? t("stage.curate.closed")
+                : curating
+                  ? t("stage.curate.editing")
+                  : t(CURATE_WHY[stage.artifact] ?? "stage.curate.body")}
+            </p>
+            {advanceFailed ? (
+              <p className="mt-2 text-body text-destructive">{t("stage.continueFailed")}</p>
+            ) : null}
+            {curateFailed ? (
+              <p className="mt-2 text-body text-destructive">{t("stage.curate.saveFailed")}</p>
+            ) : null}
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
+              {approved ? null : curating ? (
+                // ONE BUTTON, TWO STATES, AND NEITHER CAN LOSE ANYTHING. While there is
+                // something unwritten it saves; once there is not, it is the way back to
+                // the view. Offering «dejar de corregir» over an unsaved draft would be
+                // offering to throw it away, and the screen has no «Guardar» of its own.
+                <Button
+                  variant="outline"
+                  disabled={approve.isPending || Boolean(pending?.dirty && pending.blocked)}
+                  title={(pending?.dirty && pending.blocked) || undefined}
+                  onClick={async () => {
+                    if (!pending?.dirty) {
+                      setCurating(false);
+                      return;
+                    }
+                    setCurateFailed(false);
+                    // A refused write rejects, and an unhandled rejection here would leave
+                    // the button looking as though it had worked.
+                    try {
+                      await pending.save();
+                    } catch {
+                      setCurateFailed(true);
+                      return;
+                    }
+                    setCurated(true);
+                  }}
+                >
+                  {pending?.dirty ? <Check /> : <Eye />}
+                  {t(pending?.dirty ? "stage.curate.save" : "stage.curate.stop")}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setCurating(true)}>
+                  <Pencil />
+                  {t("stage.curate.start")}
+                </Button>
+              )}
+              <Button
+                // `--attention` goes to the move that is left: while the verdict is
+                // unanswered the loud thing on the screen is the button above, and this one
+                // waits its turn. One `--attention` per screen.
+                variant={answeredReview ? "attention" : "default"}
+                disabled={advance.running || Boolean(advance.blocked)}
+                title={advance.blocked ?? undefined}
+                onClick={async () => {
+                  setAdvanceFailed(false);
+                  try {
+                    await advance.run();
+                  } catch {
+                    setAdvanceFailed(true);
+                    return;
+                  }
+                  navigate(next.path);
+                }}
+              >
+                {advance.running ? <Spinner /> : <CircleCheck />}
+                {next.number === null
+                  ? t("stage.continueGenerate")
+                  : t("stage.continue", { n: next.number })}
+              </Button>
+            </div>
+          </section>
+        ) : null}
       </div>
     </StageScope>
   );

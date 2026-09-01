@@ -37,7 +37,12 @@ export const studyApi = {
     post<{ opened_at: number | null }>(`/api/stage-evaluations/${artifact}/opened`, {}),
   saveStageReview: (
     artifact: string,
-    body: { answers: Record<string, string>; overall: number | null; note: string | null },
+    body: {
+      answers: Record<string, string>;
+      overall: number | null;
+      note: string | null;
+      curated?: boolean;
+    },
   ) =>
     request<StageReview>(`/api/stage-evaluations/${artifact}`, {
       method: "PUT",
