@@ -3,14 +3,18 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Plus,
-  Save,
   Star,
   TriangleAlert,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { LOCKED_HINT, StageGate, useStageLocked } from "@/components/StageGate";
+import {
+  LOCKED_HINT,
+  StageGate,
+  useRegisterPendingEdit,
+  useStageLocked,
+} from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -202,6 +206,20 @@ export function ProfileEditor() {
     },
   });
 
+  // THIS SCREEN HAS NO «Guardar» (2026-09-01, explicit user request): what writes the file
+  // is «Aprobar», which saves first and closes the stage after. What is offered upwards is
+  // the draft, so that button knows there is something pending and why it may not be
+  // written — the sentence is the pipeline validator's own, the same one the bar below
+  // shows, because refusing without saying why is what this screen exists to avoid.
+  // `draft` is null only before the first read, where `dirty` is false and `save` unreachable.
+  useRegisterPendingEdit({
+    dirty,
+    blocked: validation?.valid === false ? (validation.error ?? t("profileEditor.invalid")) : null,
+    save: async () => {
+      if (draft) await save.mutateAsync(draft);
+    },
+  });
+
   if (query.isLoading) return <Skeleton className="h-96" />;
 
   // «No hay perfil todavía» and «no se pudo leer» look the same from here and are not the
@@ -355,16 +373,24 @@ export function ProfileEditor() {
           </span>
         ) : null}
 
+        {/* THE BADGE STAYS AND THE BUTTON GOES. With «Guardar» removed, saying only «sin
+            guardar» would be a trap — a state with no visible way out — so the sentence
+            beside it says where the way out is: up in «Aprobar». While the write is in
+            flight it says so here too, because the button that fired it is in the header
+            and is not always in view from down here. */}
         <div className="ml-auto flex items-center gap-2">
-          {dirty ? <Badge variant="attention">{t("profileEditor.unsaved")}</Badge> : null}
-          <Button
-            onClick={() => save.mutate(draft)}
-            disabled={stageLocked || !dirty || save.isPending || validation?.valid === false}
-            title={stageLocked ? t(LOCKED_HINT) : undefined}
-          >
-            {save.isPending ? <Spinner /> : <Save />}
-            {t("common.save")}
-          </Button>
+          {save.isPending ? (
+            <span className="flex items-center gap-1.5 text-small text-muted-foreground">
+              <Spinner /> {t("profileEditor.saving")}
+            </span>
+          ) : dirty ? (
+            <>
+              <Badge variant="attention">{t("profileEditor.unsaved")}</Badge>
+              <span className="text-small text-muted-foreground">
+                {t("profileEditor.savesOnApprove")}
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
 

@@ -602,9 +602,11 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          El perfil se edita solo por el formulario: no hay una pestaña con el JSON en crudo.
-          Arriba del todo, siempre visible, está el aviso de si el perfil <em>carga</em> — y
-          mientras no cargue, guardar está desactivado, que es lo que impide dejar la instancia
+          El perfil se edita solo por el formulario: no hay una pestaña con el JSON en crudo, y
+          tampoco hay botón de guardar. Lo que escribe los cambios es <strong>«Aprobar»</strong>:
+          guarda primero y cierra la etapa después, en una sola pulsación. Mientras haya algo sin
+          guardar la barra lo dice, y arriba del todo está el aviso de si el perfil <em>carga</em>
+          — mientras no cargue, aprobar está desactivado, que es lo que impide dejar la instancia
           con un esquema roto.
         </Paragraph>
       </Block>

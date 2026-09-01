@@ -609,10 +609,12 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          The profile is edited through the form alone: there is no raw-JSON tab. At the very
-          top, always visible, is the notice saying whether the profile <em>loads</em> — and
-          while it does not, saving is disabled, which is what keeps the instance from being
-          left with a broken schema.
+          The profile is edited through the form alone: there is no raw-JSON tab, and no save
+          button either. What writes the changes is <strong>"Approve"</strong>: it saves first
+          and closes the stage after, in one press. While something is unsaved the bar says so,
+          and at the very top is the notice saying whether the profile <em>loads</em> — while it
+          does not, approving is disabled, which is what keeps the instance from being left with
+          a broken schema.
         </Paragraph>
       </Block>
 

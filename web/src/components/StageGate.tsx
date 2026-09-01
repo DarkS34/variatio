@@ -1,5 +1,13 @@
 import { ChevronRight, CircleCheck, ClipboardCheck, Lock, LockOpen, TriangleAlert, UploadCloud } from "lucide-react";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { BuildButton, type BuildLabels } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
@@ -81,6 +89,71 @@ export function useStageLocked() {
 // A key, because it is read by four screens and each one has its own `t`.
 export const LOCKED_HINT: Key = "stage.lockedHint";
 
+/**
+ * What a screen is holding that the artifact on disk does not have yet.
+ *
+ * «APROBAR» GUARDA (2026-09-01, explicit user request). «Tipos de ejercicio» has no
+ * «Guardar» of its own any more: one press commits the edit and closes the stage. The
+ * order is forced rather than preferred — what is approved is the file's HASH, so
+ * approving while a change sits in the browser would stamp the artifact that is about to
+ * be replaced, and the very next write would revoke the approval just given.
+ *
+ * It is a REGISTRATION and not a prop because the draft lives in the editor, under the
+ * header that draws the button: passing it down would mean lifting a whole artifact's
+ * state into `ProfileScreen` so that one button could read one boolean off it. The mirror
+ * of `StageLock`, which travels the other way through the same children.
+ */
+export interface PendingEdit {
+  /** Whether the screen is holding something the file does not have. */
+  dirty: boolean;
+  /** Why it cannot be written right now — the validator's own sentence, or null. */
+  blocked: string | null;
+  /** Write it. `approve` awaits this and never approves if it rejects. */
+  save: () => Promise<unknown>;
+}
+
+const StagePending = createContext<((edit: PendingEdit | null) => void) | null>(null);
+
+/**
+ * The two contexts every stage screen sits in, as ONE element.
+ *
+ * They compose here rather than nesting around the header's JSX so that adding the second
+ * one did not re-indent three hundred lines of it. The lock travels down (what may be
+ * edited) and the pending edit travels up (what is not written yet).
+ */
+function StageScope({
+  locked,
+  register,
+  children,
+}: {
+  locked: boolean;
+  register: (edit: PendingEdit | null) => void;
+  children: ReactNode;
+}) {
+  return (
+    <StageLock.Provider value={locked}>
+      <StagePending.Provider value={register}>{children}</StagePending.Provider>
+    </StageLock.Provider>
+  );
+}
+
+/**
+ * Offer this screen's unsaved edit to the «Aprobar» button above it.
+ *
+ * `save` is a fresh closure over the draft on every render, so it is kept in a ref and the
+ * effect re-runs only when `dirty` or `blocked` actually change: registering on every
+ * keystroke would re-render the header for each character typed.
+ */
+export function useRegisterPendingEdit({ dirty, blocked, save }: PendingEdit) {
+  const register = useContext(StagePending);
+  const latest = useRef(save);
+  latest.current = save;
+  useEffect(() => {
+    register?.({ dirty, blocked, save: () => latest.current() });
+    return () => register?.(null);
+  }, [register, dirty, blocked]);
+}
+
 export function StageBadge({ stage }: { stage: StageState }) {
   const { t } = useT();
   // A status the table does not know comes from an API newer than the bundle, and a badge
@@ -140,11 +213,20 @@ export function StageGate({
   const [reviewOpen, setReviewOpen] = useState(false);
   const review = useStageReview(stage?.artifact);
   const answeredReview = review.data?.mine?.answered ?? false;
+  // What the screen below is holding, if it holds anything. See `PendingEdit`.
+  const [pending, setPending] = useState<PendingEdit | null>(null);
+  const register = useCallback((edit: PendingEdit | null) => setPending(edit), []);
   // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
   // changed the state of the whole chain and said nothing, and invalidating a query does
   // not always change anything visible on the screen you pressed the button from.
   const approve = useMutation({
-    mutationFn: () => api.approve(stage!.artifact),
+    // SAVE FIRST, AND ONLY THEN APPROVE — and never approve if the write fails, which is
+    // what awaiting it buys: an approval over the previous file is worse than no approval,
+    // because it reads as done.
+    mutationFn: async () => {
+      if (pending?.dirty) await pending.save();
+      return api.approve(stage!.artifact);
+    },
     onSuccess: () => {
       invalidate();
       toast({ title: t("stage.approved"), description: stage!.label });
@@ -181,7 +263,7 @@ export function StageGate({
   const hasPrevious = Boolean(stage.hash);
 
   return (
-    <StageLock.Provider value={locked}>
+    <StageScope locked={locked} register={register}>
       <div className="space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-4">
           {/* The guide link goes UNDER the title, on a line of its own. Beside it, it was one
@@ -255,8 +337,15 @@ export function StageGate({
                     {t("stage.reopen")}
                   </Button>
                 ) : (
-                  <Button onClick={() => approve.mutate()} disabled={approve.isPending}>
-                    <CircleCheck />
+                  <Button
+                    onClick={() => approve.mutate()}
+                    // A dirty screen that cannot be written is a screen that cannot be
+                    // approved: approving would save first, and the save is refused. The
+                    // reason is the validator's own sentence, which is on the bar below too.
+                    disabled={approve.isPending || Boolean(pending?.dirty && pending.blocked)}
+                    title={(pending?.dirty && pending.blocked) || undefined}
+                  >
+                    {approve.isPending ? <Spinner /> : <CircleCheck />}
                     {t("common.approve")}
                   </Button>
                 )
@@ -473,7 +562,7 @@ export function StageGate({
           </div>
         )}
       </div>
-    </StageLock.Provider>
+    </StageScope>
   );
 }
 
