@@ -48,7 +48,7 @@ export interface FormState {
  */
 
 export const EMPTY_FORM: FormState = {
-  n: 2,
+  n: 1,
   concepts: [],
   itemType: null,
   useCurriculum: false,

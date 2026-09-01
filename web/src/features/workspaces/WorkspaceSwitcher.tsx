@@ -1,5 +1,5 @@
 import { Check, ChevronDown, FolderPlus, Loader2, Shield } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ export function WorkspaceSwitcher() {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
+  const labelId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -49,10 +50,26 @@ export function WorkspaceSwitcher() {
 
   return (
     <div className="relative shrink-0" ref={holder}>
+      {/* THE CONTROL SAYS WHAT IT IS, ABOVE AND NOT BESIDE (2026-09-01, explicit user
+          request). Beside it, the caption would compete for the one axis the header has
+          no room on — the flanks hold at their own min-content and the nav sits on the
+          centre line between them, so every character added to this row moves the
+          navigation sideways. Stacked, it costs 13 px of the 56 the header already has
+          and the flank's width is still the button's.
+
+          The menu is anchored `top-full` rather than at a fixed offset for the same
+          reason: it now opens under whatever this block happens to be tall. */}
+      <span
+        id={labelId}
+        className="mb-0.5 block text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground"
+      >
+        {t("workspace.switcher.label")}
+      </span>
       <button
         onClick={() => setOpen((was) => !was)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-labelledby={labelId}
         title={
           active
             ? t("workspace.switcher.current", { name: active.name })
@@ -73,7 +90,7 @@ export function WorkspaceSwitcher() {
       {open ? (
         <div
           role="menu"
-          className="absolute left-0 top-10 z-40 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
           <p className="px-3 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {t("workspace.switcher.title")}

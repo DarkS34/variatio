@@ -31,8 +31,6 @@ export interface ModelFamily {
   /** Choosing a level ABOVE this one shows `warningKey`. */
   warnAbove?: EffortLevel;
   warningKey?: Key;
-  /** Always-visible nuance about this model's effort levels, warning or not. */
-  noteKey?: Key;
   /**
    * Whether moving the slider changes the answer at all.
    *
@@ -74,7 +72,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     // three levels answer the same. So the switch stays — reasoning on or off is a real
     // choice, and it is what the run records — and the slider goes.
     effortMatters: false,
-    noteKey: "effort.note.gemma4",
   },
 ];
 

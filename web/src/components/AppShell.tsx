@@ -1,8 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Check, Play, Scale, Wrench } from "lucide-react";
+import { Check, Play, Scale, Wrench } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { RunDrawer } from "@/components/RunDrawer";
 import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
@@ -314,7 +313,6 @@ function MainNav({
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useT();
   const { path } = useRouter();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const pipeline = usePipeline();
   const health = useHealth();
   const maintenance = useMaintenance();
@@ -353,7 +351,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   // finished run is exactly what one goes to the drawer to read, and it would be perverse
   // to hide the log the moment the job it belongs to ends. With nothing ever run there is
   // nothing behind the pill, so the corner goes back to the page.
-  const hasRuns = Object.keys(stream.runs).length > 0;
 
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
@@ -478,44 +475,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         className={cn(
-          "mx-auto w-full max-w-[1600px] flex-1 px-3 pt-4 sm:px-4 sm:pt-6",
-          // The bottom padding is not symmetric with the top, and that is the floating
-          // «Ver ejecución» pill: fixed to the corner, it covers whatever the page happens
-          // to end on. It is 36 px tall over a 12/16 px offset, so the reservation has to
-          // clear ~52 px AT EVERY WIDTH.
-          //
-          // It is reserved ONLY while the pill is drawn, and that half is what the padding
-          // never fixed on its own: the pill also sits on top of anything anchored to the
-          // right of its own row, which is how it ate the CSV button of «Administración →
-          // Evaluaciones». `hasRuns` is what removes it; this only stops a session that
-          // has never run anything from carrying 80 px of empty page.
-          hasRuns ? "pb-20 sm:pb-16" : "pb-8",
-          // scroll-pb as well as pb: without it a control focused while the drawer is open
-          // gets scrolled to a position underneath the drawer.
-          drawerOpen && "pb-[56vh] scroll-pb-[56vh]",
+          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-8 pt-4 sm:px-4 sm:pt-6",
         )}
       >
         {children}
       </main>
 
-      <RunDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-      {/* ONE BUTTON, because there is one thing behind it. The pill used to be two: the
-          run, and the raw log with its unread count. The log went to
-          `logs/<slug>/jobs.log` on 2026-08-31 (explicit user request) and no screen shows
-          it any more, so the counter had nothing to count and the second half nothing to
-          open. */}
-      {!drawerOpen && hasRuns ? (
-        <div className="fixed bottom-3 right-3 z-30 flex items-center overflow-hidden rounded-full border border-border bg-card text-small font-medium shadow-raised sm:bottom-4 sm:right-4">
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-accent"
-          >
-            <Activity className="size-4" />
-            {t("shell.viewRun")}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

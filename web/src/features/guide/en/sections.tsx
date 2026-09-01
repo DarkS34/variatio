@@ -1449,14 +1449,14 @@ function Runs() {
         <Rows
           items={[
             {
-              key: "panel",
-              head: <>"{t("dash.activity")}"</>,
-              body: 'The panel\'s card. It says which job of yours is running, how long it has been going and how it is doing, and offers to cancel it. When you have none but the machine is busy with another instance\'s, it says that too: "nothing running" would be false at exactly the moment whatever you launch is going to wait.',
+              key: "etapa",
+              head: <>On the step's own screen</>,
+              body: "While a step is being built, its screen carries the phase bar: which phase is running, how much each one weighs and how far it has got. That is where a build is watched, and where it is cancelled.",
             },
             {
               key: "ejecucion",
-              head: <>"{t("shell.viewRun")}"</>,
-              body: "The pill at the bottom right, always present. It opens the run drawer: the steps, the phase and what is being written.",
+              head: <>When asking for exercises</>,
+              body: "A strip appears above the results with the job in flight: how long it has been going, where it has got to and how to stop it. It opens out to show the steps, what the model is writing and the examples it was shown.",
             },
           ]}
         />

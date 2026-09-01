@@ -395,7 +395,7 @@ export const es = {
   "tutorial.fig.new": "Ejercicios nuevos",
   "tutorial.fig.notes": "Apuntes: guiones, transparencias, el libro de la asignatura.",
   "tutorial.fig.exercises": "Ejercicios: boletines, exámenes de otros años, hojas de problemas.",
-  "tutorial.fig.build": "Lo construyo",
+  "tutorial.fig.build": "Se construye",
   "tutorial.fig.review": "Lo miras",
   "tutorial.fig.approve": "Lo apruebas",
   "tutorial.fig.headerRight": "Arriba a la derecha, en todas las pantallas",
@@ -405,31 +405,31 @@ export const es = {
   "tutorial.p1.body":
     "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es el único paso en el que tienes que buscar archivos.",
   "tutorial.p1.b1":
-    "Leo cada documento página a página, como si lo mirara. Hay un botón para leerlos todos de una vez; si no lo pulsas, esa espera se reparte entre los pasos siguientes.",
+    "Cada documento se lee página a página, como si se mirara. Hay un botón para leerlos todos de una vez; si no lo pulsas, esa espera se reparte entre los pasos siguientes.",
   "tutorial.p1.b2":
-    "Si me equivoco leyendo una página, puedes reescribirla a mano. Tu versión gana y sobrevive a todo lo que venga después.",
+    "Si una página se lee mal, puedes reescribirla a mano. Tu versión gana y sobrevive a todo lo que venga después.",
 
   "tutorial.p2.title": "Paso 2: tipos de ejercicio",
   "tutorial.p2.body":
-    "Miro los ejercicios que subiste y separo las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
+    "Se miran los ejercicios que subiste y se separan las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
   "tutorial.p2.b1":
-    "Es la plantilla con la que escribiré los ejercicios nuevos, así que conviene que te suene: si falta una forma que usas, la añades; si sobra alguna, la quitas.",
+    "Es la plantilla con la que se escriben los ejercicios nuevos, así que conviene que te suene: si falta una forma que usas, la añades; si sobra alguna, la quitas.",
   "tutorial.p2.b2":
     "Cada tipo lleva sus reglas de redacción: cómo escribe tu asignatura ese tipo de ejercicio. Puedes cambiarlas, añadir o borrar.",
 
   "tutorial.p3.title": "Paso 3: el temario",
   "tutorial.p3.body":
-    "Leo tus apuntes y saco los conceptos que enseñas y en qué orden se apoyan unos en otros. Es lo que me dice qué puedo dar por sabido en un ejercicio y qué todavía no.",
+    "Se leen tus apuntes y se sacan los conceptos que enseñas y en qué orden se apoyan unos en otros. Es lo que dice qué se puede dar por sabido en un ejercicio y qué todavía no.",
   "tutorial.p3.b1":
-    "Va después del 2 porque, para saber qué conceptos sirven de etiqueta, primero tengo que saber qué ejercicios pones.",
+    "Va después del 2 porque, para saber qué conceptos sirven de etiqueta, primero hace falta saber qué ejercicios pones.",
   "tutorial.p3.b2":
     "Pulsa un tema para abrir su ficha: ahí cambias el nombre, la unidad, la descripción y las relaciones con otros temas.",
 
   "tutorial.p4.title": "Paso 4: tus ejercicios",
   "tutorial.p4.body":
-    "Recojo uno a uno los ejercicios de tus documentos y a cada uno le pongo el tema que practica. Son los que miraré para escribir uno nuevo.",
+    "Se recogen uno a uno los ejercicios de tus documentos y a cada uno se le pone el tema que practica. Son los que se miran para escribir uno nuevo.",
   "tutorial.p4.b1":
-    "Si están bien copiados, lo nuevo se parecerá a lo tuyo. Puedes corregir el texto de cualquiera y el tema que le puse.",
+    "Si están bien copiados, lo nuevo se parecerá a lo tuyo. Puedes corregir el texto de cualquiera y el tema que se le puso.",
   "tutorial.p4.b2":
     "Al terminar este paso ya puedes pedir ejercicios nuevos.",
 
@@ -441,9 +441,9 @@ export const es = {
   "tutorial.s2.body":
     "Dos cosas, y las dos las tienes ya. En PDF o en Word, tal y como estén.",
   "tutorial.s2.b1":
-    "Los apuntes con los que das la asignatura: guiones, transparencias, el libro. De ahí saco los conceptos que enseñas y en qué orden se apoyan unos en otros.",
+    "Los apuntes con los que das la asignatura: guiones, transparencias, el libro. De ahí salen los conceptos que enseñas y en qué orden se apoyan unos en otros.",
   "tutorial.s2.b2":
-    "Los ejercicios que ya pones: boletines, exámenes de otros años, hojas de problemas. De ahí saco qué forma tienen tus ejercicios, y los nuevos se parecerán a estos.",
+    "Los ejercicios que ya pones: boletines, exámenes de otros años, hojas de problemas. De ahí sale qué forma tienen tus ejercicios, y los nuevos se parecerán a estos.",
   "tutorial.s2.aside":
     "Cuantos más ejercicios le des, más se parecerán los nuevos a los tuyos. Con tres o cuatro documentos ya funciona.",
 
@@ -455,24 +455,24 @@ export const es = {
   "tutorial.s3.step1":
     "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es lo único que hay que preparar.",
   "tutorial.s3.step2":
-    "Miro tus ejercicios y separo las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
+    "Se miran tus ejercicios y se separan las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una.",
   "tutorial.s3.step3":
-    "Leo tus apuntes y saco los conceptos que enseñas y en qué orden se apoyan. Va después del 2 porque necesito saber qué ejercicios pones para saber qué conceptos sirven de etiqueta.",
+    "Se leen tus apuntes y se sacan los conceptos que enseñas y en qué orden se apoyan. Va después del 2 porque hace falta saber qué ejercicios pones para saber qué conceptos sirven de etiqueta.",
   "tutorial.s3.step4":
-    "Recojo uno a uno los ejercicios de tus documentos y a cada uno le pongo el tema que practica. De ahí saldrán los ejemplos que imito al escribir uno nuevo.",
+    "Se recogen uno a uno los ejercicios de tus documentos y a cada uno se le pone el tema que practica. De ahí salen los ejemplos que se imitan al escribir uno nuevo.",
 
 
   "tutorial.s5.title": "Los cuatro terminan igual",
   "tutorial.s5.body":
-    "Yo lo construyo, tú lo miras y decides si vale. Al lado tienes un cuestionario de cinco preguntas cortas sobre qué tal ha salido; al guardarlo te propongo seguir al paso siguiente.",
+    "Se construye solo, tú lo miras y decides si vale. Al lado tienes un cuestionario de cinco preguntas cortas sobre qué tal ha salido; al guardarlo se te ofrece seguir al paso siguiente.",
   "tutorial.s5.b1":
     "Nada se da por bueno hasta que tú lo dices. Mientras no pulses «Aprobar», el paso sigue abierto y se puede cambiar.",
   "tutorial.s5.b2":
-    "Puedes volver a cualquier paso cuando quieras. Si cambias algo de un paso anterior, te aviso de qué pasos se han quedado desfasados.",
+    "Puedes volver a cualquier paso cuando quieras. Si cambias algo de un paso anterior, se te avisa de qué pasos se han quedado desfasados.",
   "tutorial.s5.aside":
     "Las cinco preguntas son lo único que te pedimos a cambio, y son exactamente lo que se está midiendo en el estudio.",
 
-  "tutorial.s6.title": "Me voy a equivocar en algo, y lo que corrijas a mano gana siempre: sobre lo que yo entendí y sobre cualquier reconstrucción posterior.",
+  "tutorial.s6.title": "Algo va a salir mal, y lo que corrijas a mano gana siempre: sobre lo que se entendió y sobre cualquier reconstrucción posterior.",
 
   "tutorial.s7.title": "Pedir ejercicios, y dónde quedan guardados",
   "tutorial.s7.body":
@@ -486,7 +486,7 @@ export const es = {
 
   "tutorial.s8.title": "Comparar tres versiones, a ciegas",
   "tutorial.s8.body":
-    "Te doy tres versiones del mismo ejercicio, escritas de tres maneras distintas, y no te digo cuál es cuál. Las lees, dices de cada una si te serviría, y eliges la mejor. Solo al final te enseño de dónde salía cada una.",
+    "Se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría, y eliges la mejor. Solo al final se revela de dónde salía cada una.",
   "tutorial.s8.b1":
     "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
   "tutorial.s8.b2":
@@ -499,7 +499,6 @@ export const es = {
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
-  "shell.viewRun": "Ver ejecución",
   "shell.viewFullLog": "Ver el registro completo de la sesión",
   "stage.lockedHint": "Aprobado: pulsa «Reabrir» para poder editarlo",
   // EL CUESTIONARIO DE CADA PASO. Lo que se PREGUNTA viaja del servidor
@@ -519,7 +518,7 @@ export const es = {
     other: "Faltan {n} preguntas",
   },
   "stageReview.notBuilt":
-    "Cuando esté construido te preguntaré aquí qué tal ha salido. Son cinco preguntas cortas.",
+    "Cuando esté construido se te preguntará aquí qué tal ha salido. Son cinco preguntas cortas.",
   "stageReview.failed": "No se ha podido guardar. Vuelve a intentarlo.",
   "stageReview.done.title": "Valoración guardada. Gracias.",
   "stageReview.done.body":
@@ -530,11 +529,11 @@ export const es = {
   // bajo el título, y no detrás de una (i): lo que explica de qué va la pantalla no puede
   // estar escondido en la pantalla que explica.
   "stage.what.profile":
-    "He leído los ejercicios que subiste y he separado las formas distintas que tienen: qué partes lleva cada una y cuáles son obligatorias. Es la plantilla con la que escribiré los ejercicios nuevos, así que conviene que te suene.",
+    "Se han leído los ejercicios que subiste y se han separado las formas distintas que tienen: qué partes lleva cada una y cuáles son obligatorias. Es la plantilla con la que se escriben los ejercicios nuevos, así que conviene que te suene.",
   "stage.what.graph":
-    "Estos son los conceptos que he sacado de tus apuntes, agrupados en bloques y ordenados por lo que hace falta antes de cada cosa. Es lo que me dice qué puedo dar por sabido en un ejercicio y qué todavía no.",
+    "Estos son los conceptos que se han sacado de tus apuntes, agrupados en bloques y ordenados por lo que hace falta antes de cada cosa. Es lo que dice qué se puede dar por sabido en un ejercicio y qué todavía no.",
   "stage.what.bank":
-    "He recogido uno a uno los ejercicios de tus documentos y a cada uno le he puesto el tema que practica. Son los que miraré para escribir uno nuevo, así que si están bien copiados, lo nuevo se parecerá a lo tuyo.",
+    "Se han recogido uno a uno los ejercicios de tus documentos y a cada uno se le ha puesto el tema que practica. Son los que se miran para escribir uno nuevo, así que si están bien copiados, lo nuevo se parecerá a lo tuyo.",
   "stage.approved": "Aprobado",
   "stage.reopened": "Reabierto",
   "stage.whatIs": "Qué es {title}",
@@ -645,10 +644,10 @@ export const es = {
   // `slot.kind` and the wording lives beside every other sentence.
   "raw.slot.corpus": "Apuntes de la asignatura",
   "raw.slot.corpus.purpose":
-    "El temario tal y como lo explicas: guiones, transparencias, el libro de la asignatura. De aquí saco los conceptos que enseñas y en qué orden se apoyan unos en otros.",
+    "El temario tal y como lo explicas: guiones, transparencias, el libro de la asignatura. De aquí salen los conceptos que enseñas y en qué orden se apoyan unos en otros.",
   "raw.slot.exemplars": "Ejercicios que ya pones",
   "raw.slot.exemplars.purpose":
-    "Boletines, exámenes de otros años, hojas de problemas. Son el modelo: de aquí saco qué formas tienen tus ejercicios, y los ejercicios nuevos se parecerán a estos.",
+    "Boletines, exámenes de otros años, hojas de problemas. Son el modelo: de aquí sale qué formas tienen tus ejercicios, y los ejercicios nuevos se parecerán a estos.",
   "concept.expandAll": "Desplegar todo",
   "chips.editValue": "Editar valor",
   "chips.remove": "Quitar {value}",
@@ -682,7 +681,7 @@ export const es = {
   "maintenance.nothingLost": "Nada se ha perdido: lo construido sigue donde estaba y volverá tal cual.",
   "maintenance.lessThanAMinute": "menos de un minuto",
   "maintenance.days": { one: "1 día", other: "{n} días" },
-  "workspace.none": "Sin workspace",
+  "workspace.none": "Sin espacio de trabajo",
   "workspace.subjectName": "Nombre de la asignatura",
   "workspace.name": "Nombre del workspace",
   "workspace.name.placeholder": "Nombre, p. ej. «Álgebra 2026»",
@@ -754,7 +753,6 @@ export const es = {
   "dash.slotsEmpty": "{slots} sin archivos",
   "dash.transcriptionStale": "transcripción caducada",
   "model.notInstalled": "sin instalar",
-  "dash.activity": "Actividad",
   "dash.whatIsHere": "Qué se ve aquí",
   "dash.busyElsewhere": "Nada tuyo en ejecución. Hay un trabajo de otro workspace ocupando el motor: si lo que lances necesita ese mismo motor, esperará su turno.",
   "dash.nothingRunning": "Nada en ejecución.",
@@ -793,8 +791,8 @@ export const es = {
   "transcribe.upToDate": "al día",
   "transcribe.unreadable": "No se pudo saber qué documentos están leídos",
   "transcribe.queued": "En cola: esperando a que se libere la máquina",
-  "transcribe.preparing": "Preparándome para leerlos…",
-  "transcribe.notAGate": "Leerlos ahora solo adelanta trabajo: si sigues sin hacerlo, cada paso los leerá por su cuenta cuando le hagan falta. Lo que corrijas a mano gana sobre lo que yo entendí, y sobrevive a todo lo que venga después.",
+  "transcribe.preparing": "Preparando la lectura…",
+  "transcribe.notAGate": "Leerlos ahora solo adelanta trabajo: si sigues sin hacerlo, cada paso los leerá por su cuenta cuando le hagan falta. Lo que corrijas a mano gana sobre lo que se entendió, y sobrevive a todo lo que venga después.",
   "transcribe.runningNote":
     "Pararlo no pierde nada: cada página se guarda en cuanto sale, y al volver a lanzarlo sigue por donde iba.",
   "transcribe.reviewPages": "Ver y corregir las páginas",
@@ -1039,9 +1037,10 @@ export const es = {
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
   "generate.reopened": "Parte del encargo anterior. Las variantes de abajo ya están guardadas: la nueva tanda las sustituye en pantalla, no en «Mis variantes».",
   "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada variante validada se guarda sola en «Mis variantes».",
-  "workspace.switcher.title": "Workspaces",
-  "workspace.switcher.choose": "Elegir workspace",
-  "workspace.switcher.current": "Workspace: {name}",
+  "workspace.switcher.label": "Espacio de trabajo",
+  "workspace.switcher.title": "Espacios de trabajo",
+  "workspace.switcher.choose": "Elegir espacio de trabajo",
+  "workspace.switcher.current": "Espacio de trabajo: {name}",
   "workspace.adminBadge": "admin",
   "workspace.startsEmpty": "Empieza vacía: subes sus apuntes y sus ejercicios y das los cuatro pasos.",
 
@@ -1097,7 +1096,7 @@ export const es = {
   "cere.state.idle": "en reposo",
   "cere.budgetHint": "Cómo se cuenta el presupuesto",
   "cere.budgetHint.body1": "La cuota es por modelo, y la de esta cuenta no es la que anuncia el catálogo: medido el 2026-08-26 sobre «gemma-4-31b», el catálogo anuncia 500 peticiones por minuto y la cuenta admite 5. Los headers no sirven para averiguarlo, ni los «limit» ni los «remaining», así que lo que ves aquí son los techos que hay puestos a la derecha y nada más: son un tope rígido y el limitador nunca los sube solo.",
-  "cere.budgetHint.body2": "Los tokens se cuentan con el «usage» exacto de cada respuesta y no con los headers, que van con retraso. Y como la API no manda ningún «reset», la ventana es deslizante: se reconstruye con las marcas de tiempo de nuestras propias llamadas.",
+  "cere.budgetHint.body2": "Los tokens se cuentan con el «usage» exacto de cada respuesta y no con los headers, que van con retraso. Y como la API no manda ningún «reset», la ventana es deslizante: se reconstruye con las marcas de tiempo de las llamadas propias.",
   "cere.noRouted": "Ningún modelo enrutado",
   "cere.noKeyEnv": " · falta CEREBRAS_API_KEY en el entorno",
   "cere.nothingSpent": "Todavía no se ha gastado nada. Los medidores aparecen con la primera llamada.",
@@ -1554,11 +1553,11 @@ export const es = {
   "kg.mapFold": "Ver el mapa del temario",
   "kg.noDescriptionBadge": "Sin describir",
   "kg.descriptionPlaceholder": "Qué se practica cuando un ejercicio va de este tema.",
-  "kg.descriptionNote": "Es lo que uso para decidir de qué va cada ejercicio. Corrígela si no describe lo que enseñas.",
+  "kg.descriptionNote": "Es lo que se usa para decidir de qué va cada ejercicio. Corrígela si no describe lo que enseñas.",
   "kg.descriptionSaved": "Descripción guardada",
   "kg.noRelations": "Este tema no apunta a ningún otro.",
   "kg.finishing": "Rematando el temario",
-  "kg.finishing.describing": "Escribiendo una descripción de cada tema. Es lo que uso después para decidir de qué va cada ejercicio. Puedes seguir revisando la lista mientras tanto.",
+  "kg.finishing.describing": "Escribiendo una descripción de cada tema. Es lo que se usa después para decidir de qué va cada ejercicio. Puedes seguir revisando la lista mientras tanto.",
   "kg.finishing.taggable": "Decidiendo qué temas sirven de etiqueta para clasificar un ejercicio. Puedes seguir revisando la lista mientras tanto.",
   "kg.conceptDialogHint": "Cambia lo que no encaje: el nombre, la unidad, la descripción o las relaciones.",
   "kg.map": "Mapa",
@@ -1587,7 +1586,6 @@ export const es = {
   "kg.review.reviewing": "Revisando…",
   "kg.review.button": "Marcar las etiquetas",
   "kg.review.waiting": "Decidiendo qué conceptos sirven de etiqueta. El detalle aparecerá con el primer bloque.",
-  "kg.readyToTag": "El temario ya sirve para clasificar ejercicios",
   "kg.goToBank": "Ir al Paso 4",
 
   // THE CURRICULUM TAB --------------------------------------------------------------------
@@ -1601,7 +1599,7 @@ export const es = {
   "curric.whatItDeclares.body": "El temario ya impartido. Mientras esté definido, la generación se limita a estos conceptos y no introduce ninguno de fuera; vacío significa sin restricción, es decir todo el temario. Un concepto no etiquetable también puede formar parte: aquí se declara cobertura, no objetivos.",
   "curric.howFar": "Hasta dónde ha llegado el curso",
   "curric.howFar.body": "Las unidades salen en el orden del temario. Elegir una mete en el currículo los conceptos de ésa y de todas las anteriores; después puedes seguir ajustándolo a mano, y no se guarda nada hasta que pulses «Guardar currículo».",
-  "curric.upTo": "Hemos llegado hasta…",
+  "curric.upTo": "Se ha llegado hasta…",
   "curric.chooseUnit": "Elige una unidad",
   "curric.unitOption": "{index} · {name} ({concepts})",
   "curric.title": "Currículo ({concepts})",
@@ -1771,7 +1769,7 @@ export const es = {
   "modality.expandAll": "Expandir todo",
   "modality.primaryNotText": "El campo primario no es de texto",
   "modality.primaryNotTextBody": "es el enunciado, y es el texto que se compara con el temario para decidir de qué va; si no es texto, esa comparación no significa nada.",
-  "modality.fields.hintA": "Son las partes que lleva un ejercicio de este tipo, y valen tanto para los que recojo de tus documentos como para los que escribo. El campo marcado con",
+  "modality.fields.hintA": "Son las partes que lleva un ejercicio de este tipo, y valen tanto para los que se recogen de tus documentos como para los que se escriben. El campo marcado con",
   "modality.fields.hintB": "es el principal: el enunciado, que es lo que se lee para decidir de qué tema va.",
   "modality.newFieldPlaceholder": "nombre_del_campo",
   "modality.addField": "Añadir campo",
@@ -1809,7 +1807,7 @@ export const es = {
   "form.taught.restrict": "Restringir a un currículo",
   "form.taught.pick": "Elegir los conceptos cubiertos ({n})",
   "form.practise.title": "¿Qué hay que practicar?",
-  "form.practise.hint": "Lo que el ejercicio debe hacer practicar, no lo que menciona. Sale del temario, y los ejemplos que imito se eligen entre tus ejercicios etiquetados con estos temas.",
+  "form.practise.hint": "Lo que el ejercicio debe hacer practicar, no lo que menciona. Sale del temario, y los ejemplos que se imitan se eligen entre tus ejercicios etiquetados con estos temas.",
   "form.practise.none": "Ningún concepto elegido todavía",
   "form.practise.pick": "Elegir conceptos ({n})",
   "form.practise.clear": "Limpiar",
@@ -1848,8 +1846,6 @@ export const es = {
   "form.think.onPlain": "activado",
   "form.think.on": "activado · {level}",
   "form.think.off": "desactivado",
-  "form.think.onBody": "El modelo delibera antes de escribir: repasa el objetivo, lo que se da por sabido y lo que aún no se ha impartido. Más esfuerzo es más deliberación, y ese razonamiento queda visible junto al resultado.",
-  "form.think.offBody": "El modelo responde directamente, sin deliberar. Va mucho más rápido, pero suele ajustarse peor al concepto objetivo y respetar peor lo que el temario marca como todavía no impartido.",
   "form.think.highEffort": "Esfuerzo elevado",
   "form.think.comparison": "El razonamiento previo no se elige aquí: cada comparación lo enciende o lo apaga al azar, igual para las dos propuestas locales —la comercial delibera según decida su proveedor—. Así, sesión a sesión, los datos dicen si deliberar antes de escribir sirve de algo.",
   "form.cancelComparison": "Cancelar la comparación",
@@ -1882,7 +1878,6 @@ export const es = {
   "effort.high": "Alto",
   "effort.max": "Máximo",
   "effort.warn.qwen38": "Por encima de «Medio», qwen3.8 delibera durante miles de palabras en la GPU local: cada ejercicio puede tardar muchos minutos, y en el nivel alto se ha medido que llega a devolver una respuesta vacía.",
-  "effort.note.gemma4": "Servido por Cerebras: responde en segundos con cualquier nivel, y en la práctica los tres se comportan casi igual.",
   // COUNTS ------------------------------------------------------------------------------
   "count.items": { one: "{n} ejercicio", other: "{n} ejercicios" },
   "count.concepts": { one: "{n} concepto", other: "{n} conceptos" },

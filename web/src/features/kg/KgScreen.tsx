@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  ArrowRight,
   ChevronRight,
   FolderPlus,
   Link2,
@@ -28,7 +27,6 @@ import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/compon
 import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
 import { relationColour } from "@/lib/format";
-import { useRouter } from "@/lib/router";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -880,8 +878,6 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const describing = useJobRunning("describe_concepts");
   const describePhases = useJobPhases("describe_concepts");
   const finishing = describing || reviewing;
-  const { navigate } = useRouter();
-  const missing = (kg.data?.totals.taggable ?? 0) - (kg.data?.totals.described ?? 0);
 
   // Taggability is launched from the header, like everything else an artifact knows how to
   // do to itself, and not from a notice buried in the graph tab. It does not put the stage in
@@ -952,20 +948,6 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
       ) : null}
 
       <GraphExplorer />
-
-      {stage?.status === "approved" && missing === 0 ? (
-        <Alert
-          tone="settled"
-          className="mt-4"
-          title={t("kg.readyToTag")}
-          action={
-            <Button size="sm" onClick={() => navigate("/prepare/bank")}>
-              {t("kg.goToBank")}
-              <ArrowRight />
-            </Button>
-          }
-        />
-      ) : null}
     </StageGate>
   );
 }

@@ -33,9 +33,14 @@ describe("how many comparisons a stocked batch prepares", () => {
     expect(toStockParams({ ...EMPTY_FORM, n: 7 }, "default", 1).n).toBe(1);
   });
 
-  it("is not the form's default either, which is what shipped broken", () => {
-    expect(EMPTY_FORM.n).not.toBe(1);
-    expect(toStockParams(EMPTY_FORM, "default", 1).n).toBe(1);
+  // The guard used to read `expect(EMPTY_FORM.n).not.toBe(1)` and then stock ONE, so what
+  // proved the counter was not leaking through was a difference BORROWED from the form's
+  // default. That default is a product decision and it moved (2 → 1), which broke the
+  // technique without touching the property. It makes its own difference now, and asks
+  // twice so that no single number can be right by accident.
+  it("is not the form's counter leaking through, which is what shipped broken", () => {
+    expect(toStockParams({ ...EMPTY_FORM, n: 9 }, "default", 1).n).toBe(1);
+    expect(toStockParams({ ...EMPTY_FORM, n: 9 }, "default", 4).n).toBe(4);
   });
 
   it("takes the workspace it was told to stock", () => {

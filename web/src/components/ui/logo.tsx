@@ -71,13 +71,7 @@ export function Logo({ className, tight = false }: { className?: string; tight?:
  */
 export function Lockup({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
-    <span className={cn("flex flex-col items-center gap-1 leading-none", className)}>
-      {/* SIZED BY WIDTH, and the height is the band's own ratio (20 : 4.6). The mark
-          keeps the 2.9rem it always had in the header — nothing moves sideways — and
-          the squares come out slightly taller than before, because the box no longer
-          has to reserve the overhang of a stroke. A height that does not match the
-          ratio only letterboxes: `meet` would centre the band and leave dead space
-          between it and the wordmark. */}
+    <span className={cn("flex justify-center flex-col items-center gap-1 leading-none", className)}>
       <Logo tight className="h-[0.67rem] w-[2.9rem] text-primary" />
       <span className={cn("text-micro font-condensed uppercase", compact && "hidden lg:inline")}>
         Variatio

@@ -20,7 +20,6 @@ import { runStore } from "@/state/runStore";
 import { themeStore, type ThemePreference } from "@/state/theme";
 import { cn } from "@/lib/utils";
 
-
 export function AccountMenu() {
   const { t } = useT();
   const session = useSession();
@@ -49,6 +48,18 @@ export function AccountMenu() {
 
   return (
     <div className="relative" ref={holder}>
+      {/* WHO IS LOGGED IN, SAID RATHER THAN IMPLIED (2026-09-01, explicit user request).
+          It was a bare 32 px circle with a generic figure in it — the same drawing for
+          everybody, on an installation where two accounts read the same instance and one
+          of them is the administrator. The pill carries the username beside the mark, and
+          what makes it stand out is WEIGHT AND GROUND rather than a colour: the mark is
+          filled in the ink, which is the palette's rule that colour is evidence and
+          structure is achromatic.
+
+          The name is dropped below `sm` and the circle stands alone there. The header's
+          flanks hold at their own min-content and the nav sits on the centre line between
+          them, so on a phone the name would push the navigation off centre for a fact the
+          account menu states anyway the moment it opens. */}
       <button
         onClick={() => setOpen((was) => !was)}
         title={user.username}
@@ -56,11 +67,14 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          "flex size-8 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-          open && "bg-accent text-foreground ring-2 ring-ring",
+          "flex h-8 max-w-44 items-center gap-1.5 rounded-full border border-border bg-secondary py-0 pl-0.5 pr-0.5 text-body font-medium text-foreground transition-colors hover:bg-accent sm:pr-3",
+          open && "bg-accent ring-2 ring-ring",
         )}
       >
-        <UserRound aria-hidden className="size-4" />
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <UserRound aria-hidden className="size-4" />
+        </span>
+        <span className="hidden truncate sm:block">{user.username}</span>
       </button>
 
       {open ? (
@@ -96,6 +110,21 @@ export function AccountMenu() {
               label={t("nav.myVariants")}
               onClick={() => go("/account/variants")}
             />
+
+            {user.is_admin ? (
+              <MenuItem
+                icon={<ShieldCheck className="size-4" />}
+                label={t("menu.admin")}
+                onClick={() => go("/admin")}
+                tone="admin"
+              />
+            ) : null}
+          </div>
+
+          <Separator />
+          <ThemeRow />
+          <Separator />
+          <div className="p-1">
             <MenuItem
               icon={<Compass className="size-4" />}
               label={t("tutorial.again")}
@@ -106,20 +135,8 @@ export function AccountMenu() {
               label={t("menu.guide")}
               onClick={() => go("/guide")}
             />
+            <Separator />
           </div>
-          {user.is_admin ? (
-            <MenuItem
-              icon={<ShieldCheck className="size-4" />}
-              label={t("menu.admin")}
-              onClick={() => go("/admin")}
-              tone="admin"
-            />
-          ) : null}
-
-          <Separator />
-          <ThemeRow />
-          <Separator />
-
           <div className="p-1">
             <MenuItem
               icon={<LogOut className="size-4" />}

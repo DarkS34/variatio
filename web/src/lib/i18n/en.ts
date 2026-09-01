@@ -356,7 +356,7 @@ export const en: Catalogue = {
   "tutorial.fig.new": "New exercises",
   "tutorial.fig.notes": "Notes: handouts, slides, the course book.",
   "tutorial.fig.exercises": "Exercises: problem sheets, past exams, worksheets.",
-  "tutorial.fig.build": "I build it",
+  "tutorial.fig.build": "It is built",
   "tutorial.fig.review": "You look at it",
   "tutorial.fig.approve": "You approve it",
   "tutorial.fig.headerRight": "Top right, on every screen",
@@ -366,31 +366,31 @@ export const en: Catalogue = {
   "tutorial.p1.body":
     "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files.",
   "tutorial.p1.b1":
-    "I read every document page by page, as if I were looking at it. There is a button to read them all in one go; without it, that wait is spread across the steps that follow.",
+    "Every document is read page by page, as if it were being looked at. There is a button to read them all in one go; without it, that wait is spread across the steps that follow.",
   "tutorial.p1.b2":
-    "If I get a page wrong you can rewrite it by hand. Your version wins and survives everything that comes after.",
+    "If a page comes out wrong you can rewrite it by hand. Your version wins and survives everything that comes after.",
 
   "tutorial.p2.title": "Step 2: exercise types",
   "tutorial.p2.body":
-    "I look at the exercises you uploaded and separate the different shapes they have: code, multiple choice, tracing… and what parts each one carries.",
+    "The exercises you uploaded are looked at and the different shapes they have are separated: code, multiple choice, tracing… and what parts each one carries.",
   "tutorial.p2.b1":
-    "It is the template I will write new exercises with, so it is worth recognising: if a shape you use is missing, add it; if one is spare, remove it.",
+    "It is the template new exercises are written with, so it is worth recognising: if a shape you use is missing, add it; if one is spare, remove it.",
   "tutorial.p2.b2":
     "Each type carries its writing rules: how your subject writes that kind of exercise. You can change them, add or delete.",
 
   "tutorial.p3.title": "Step 3: the syllabus",
   "tutorial.p3.body":
-    "I read your notes and pull out the concepts you teach and the order they rest on one another. It is what tells me what I can take as known in an exercise and what I cannot yet.",
+    "Your notes are read and the concepts you teach are pulled out, along with the order they rest on one another. It is what says what can be taken as known in an exercise and what cannot yet.",
   "tutorial.p3.b1":
-    "It comes after step 2 because, to know which concepts work as a label, I first have to know what exercises you set.",
+    "It comes after step 2 because, to know which concepts work as a label, what exercises you set has to be known first.",
   "tutorial.p3.b2":
     "Click a topic to open its card: that is where you change the name, the unit, the description and the relations to other topics.",
 
   "tutorial.p4.title": "Step 4: your exercises",
   "tutorial.p4.body":
-    "I collect the exercises from your documents one by one and give each the topic it practises. They are what I look at to write a new one.",
+    "The exercises in your documents are collected one by one and each is given the topic it practises. They are what is looked at to write a new one.",
   "tutorial.p4.b1":
-    "If they are copied well, what is new will look like yours. You can correct the text of any of them and the topic I gave it.",
+    "If they are copied well, what is new will look like yours. You can correct the text of any of them and the topic it was given.",
   "tutorial.p4.b2":
     "Once this step is done you can ask for new exercises.",
 
@@ -401,9 +401,9 @@ export const en: Catalogue = {
   "tutorial.s2.title": "The only thing you have to find is your files",
   "tutorial.s2.body": "Two things, and you already have both. PDF or Word, however they are.",
   "tutorial.s2.b1":
-    "The notes you teach from: handouts, slides, the course book. This is where I get the concepts you teach and the order in which they rest on one another.",
+    "The notes you teach from: handouts, slides, the course book. This is where the concepts you teach come from, and the order in which they rest on one another.",
   "tutorial.s2.b2":
-    "The exercises you already set: problem sheets, past exams, lab handouts. This is where I get the shape your exercises take, and new ones will look like these.",
+    "The exercises you already set: problem sheets, past exams, lab handouts. This is where the shape your exercises take comes from, and new ones will look like these.",
   "tutorial.s2.aside":
     "The more exercises you give it, the more the new ones will look like yours. Three or four documents is already enough.",
 
@@ -415,24 +415,24 @@ export const en: Catalogue = {
   "tutorial.s3.step1":
     "You upload your documents: the notes on one side and the exercises on the other. It is the only thing you have to prepare.",
   "tutorial.s3.step2":
-    "I look at your exercises and separate the different shapes they take: code, multiple choice, tracing… and what parts each one carries.",
+    "Your exercises are looked at and the different shapes they take are separated: code, multiple choice, tracing… and what parts each one carries.",
   "tutorial.s3.step3":
-    "I read your notes and pull out the concepts you teach and the order they rest in. It comes after step 2 because I need to know what exercises you set to know which concepts work as a label.",
+    "Your notes are read and the concepts you teach are pulled out, along with the order they rest in. It comes after step 2 because what exercises you set has to be known before which concepts work as a label.",
   "tutorial.s3.step4":
-    "I collect the exercises from your documents one by one and give each the topic it practises. They are the examples I imitate when writing a new one.",
+    "The exercises in your documents are collected one by one and each is given the topic it practises. They are the examples imitated when writing a new one.",
 
 
   "tutorial.s5.title": "All four end the same way",
   "tutorial.s5.body":
-    "I build it, you look at it and decide whether it holds. Beside it is a questionnaire of five short questions on how it came out; saving it offers you the next step.",
+    "It is built on its own, you look at it and decide whether it holds. Beside it is a questionnaire of five short questions on how it came out; saving it offers you the next step.",
   "tutorial.s5.b1":
     "Nothing is taken as good until you say so. Until you press «Approve», the step stays open and can be changed.",
   "tutorial.s5.b2":
-    "You can go back to any step whenever you like. If you change something in an earlier step, I tell you which later ones have gone stale.",
+    "You can go back to any step whenever you like. If you change something in an earlier step, the later ones that have gone stale are named.",
   "tutorial.s5.aside":
-    "Those five questions are the only thing we ask in return, and they are exactly what is being measured in the study.",
+    "Those five questions are the only thing asked in return, and they are exactly what is being measured in the study.",
 
-  "tutorial.s6.title": "I will get something wrong, and what you correct by hand always wins: over what I understood and over any later rebuild.",
+  "tutorial.s6.title": "Something will come out wrong, and what you correct by hand always wins: over what was understood and over any later rebuild.",
 
   "tutorial.s7.title": "Asking for exercises, and where they are kept",
   "tutorial.s7.body":
@@ -446,7 +446,7 @@ export const en: Catalogue = {
 
   "tutorial.s8.title": "Comparing three versions, blind",
   "tutorial.s8.body":
-    "I give you three versions of the same exercise, written three different ways, and I do not tell you which is which. You read them, say of each whether it would be of use, and pick the best. Only at the end do I show you where each came from.",
+    "You are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use, and pick the best. Only at the end is it revealed where each came from.",
   "tutorial.s8.b1":
     "The order changes every time, so that a position on screen does not sway what you pick.",
   "tutorial.s8.b2":
@@ -459,7 +459,6 @@ export const en: Catalogue = {
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
-  "shell.viewRun": "View run",
   "shell.viewFullLog": "View the session's full log",
   "stage.lockedHint": "Approved: press «Reopen» to be able to edit it",
   "stageReview.title": "Your verdict",
@@ -476,7 +475,7 @@ export const en: Catalogue = {
     other: "{n} questions left",
   },
   "stageReview.notBuilt":
-    "Once it is built I will ask you here how it came out. Five short questions.",
+    "Once it is built you will be asked here how it came out. Five short questions.",
   "stageReview.failed": "It could not be saved. Try again.",
   "stageReview.done.title": "Verdict saved. Thank you.",
   "stageReview.done.body":
@@ -484,11 +483,11 @@ export const en: Catalogue = {
   "stageReview.done.next": "Continue to step {n}",
   "stageReview.done.generate": "That is it: create my first exercise",
   "stage.what.profile":
-    "I have read the exercises you uploaded and separated the different shapes they take: what parts each one carries and which are compulsory. It is the template I will write new exercises from, so it is worth recognising.",
+    "The exercises you uploaded have been read and the different shapes they take separated: what parts each one carries and which are compulsory. It is the template new exercises are written from, so it is worth recognising.",
   "stage.what.graph":
-    "These are the concepts I pulled out of your notes, grouped into blocks and ordered by what is needed before what. It is what tells me which ideas an exercise may take for granted and which it may not.",
+    "These are the concepts pulled out of your notes, grouped into blocks and ordered by what is needed before what. It is what says which ideas an exercise may take for granted and which it may not.",
   "stage.what.bank":
-    "I have collected the exercises from your documents one by one and given each the topic it practises. They are what I look at to write a new one, so if they are copied well, the new ones will look like yours.",
+    "The exercises in your documents have been collected one by one and each given the topic it practises. They are what is looked at to write a new one, so if they are copied well, the new ones will look like yours.",
   "stage.approved": "Approved",
   "stage.reopened": "Reopened",
   "stage.whatIs": "What {title} is",
@@ -599,10 +598,10 @@ export const en: Catalogue = {
   // `slot.kind` and the wording lives beside every other sentence.
   "raw.slot.corpus": "Subject notes",
   "raw.slot.corpus.purpose":
-    "The syllabus as you actually teach it: handouts, slides, the course book. This is where I get the concepts you teach and the order in which they rest on one another.",
+    "The syllabus as you actually teach it: handouts, slides, the course book. This is where the concepts you teach come from, and the order in which they rest on one another.",
   "raw.slot.exemplars": "Exercises you already set",
   "raw.slot.exemplars.purpose":
-    "Problem sheets, past exams, lab handouts. They are the model: this is where I get the shapes your exercises take, and new ones will look like these.",
+    "Problem sheets, past exams, lab handouts. They are the model: this is where the shapes your exercises take come from, and new ones will look like these.",
   "concept.expandAll": "Expand all",
   "chips.editValue": "Edit value",
   "chips.remove": "Remove {value}",
@@ -708,7 +707,6 @@ export const en: Catalogue = {
   "dash.slotsEmpty": "{slots} with no files",
   "dash.transcriptionStale": "transcription stale",
   "model.notInstalled": "not installed",
-  "dash.activity": "Activity",
   "dash.whatIsHere": "What is shown here",
   "dash.busyElsewhere": "Nothing of yours is running. Another workspace's job is occupying the engine: if what you launch needs that same engine, it will wait its turn.",
   "dash.nothingRunning": "Nothing running.",
@@ -991,6 +989,7 @@ export const en: Catalogue = {
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
   "generate.reopened": "Part of the previous commission. The variants below are already saved: the new batch replaces them on screen, not in «My variants».",
   "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated variant saves itself in «My variants».",
+  "workspace.switcher.label": "Workspace",
   "workspace.switcher.title": "Workspaces",
   "workspace.switcher.choose": "Choose workspace",
   "workspace.switcher.current": "Workspace: {name}",
@@ -1049,7 +1048,7 @@ export const en: Catalogue = {
   "cere.state.idle": "at rest",
   "cere.budgetHint": "How the budget is counted",
   "cere.budgetHint.body1": "The quota is per model, and this account's is not the one the catalogue announces: measured on 2026-08-26 against «gemma-4-31b», the catalogue announces 500 requests a minute and the account allows 5. The headers are no way to find that out — neither «limit» nor «remaining» — so what you see here are the ceilings set on the right and nothing else: they are a hard cap, and the limiter never raises them by itself.",
-  "cere.budgetHint.body2": "Tokens are counted with each response's exact «usage» and not with the headers, which lag. And since the API sends no «reset» at all, the window is a rolling one: it is reconstructed from the timestamps of our own calls.",
+  "cere.budgetHint.body2": "Tokens are counted with each response's exact «usage» and not with the headers, which lag. And since the API sends no «reset» at all, the window is a rolling one: it is reconstructed from the timestamps of the calls made here.",
   "cere.noRouted": "No model routed",
   "cere.noKeyEnv": " · CEREBRAS_API_KEY is missing from the environment",
   "cere.nothingSpent": "Nothing has been spent yet. The meters appear with the first call.",
@@ -1506,11 +1505,11 @@ export const en: Catalogue = {
   "kg.mapFold": "See the syllabus map",
   "kg.noDescriptionBadge": "Not described",
   "kg.descriptionPlaceholder": "What is practised when an exercise is about this topic.",
-  "kg.descriptionNote": "This is what I use to decide what each exercise is about. Correct it if it does not describe what you teach.",
+  "kg.descriptionNote": "This is what is used to decide what each exercise is about. Correct it if it does not describe what you teach.",
   "kg.descriptionSaved": "Description saved",
   "kg.noRelations": "This topic points at no other.",
   "kg.finishing": "Finishing the syllabus",
-  "kg.finishing.describing": "Writing a description of every topic. It is what I use afterwards to decide what each exercise is about. You can carry on reviewing the list meanwhile.",
+  "kg.finishing.describing": "Writing a description of every topic. It is what is used afterwards to decide what each exercise is about. You can carry on reviewing the list meanwhile.",
   "kg.finishing.taggable": "Deciding which topics work as a label for classifying an exercise. You can carry on reviewing the list meanwhile.",
   "kg.conceptDialogHint": "Change whatever does not fit: the name, the unit, the description or the relations.",
   "kg.map": "Map",
@@ -1538,7 +1537,6 @@ export const en: Catalogue = {
   "kg.review.reviewing": "Reviewing…",
   "kg.review.button": "Mark the labels",
   "kg.review.waiting": "Deciding which concepts work as a label. The detail appears with the first block.",
-  "kg.readyToTag": "The syllabus can now classify exercises",
   "kg.goToBank": "Go to step 4",
 
   // THE CURRICULUM TAB --------------------------------------------------------------------
@@ -1722,7 +1720,7 @@ export const en: Catalogue = {
   "modality.expandAll": "Expand all",
   "modality.primaryNotText": "The primary field is not text",
   "modality.primaryNotTextBody": "is the statement, and it is the text compared against the syllabus to decide what the exercise is about; if it is not text, that comparison means nothing.",
-  "modality.fields.hintA": "They are the parts an exercise of this type carries, and they hold both for the ones I collect from your documents and for the ones I write. The field marked with",
+  "modality.fields.hintA": "They are the parts an exercise of this type carries, and they hold both for the ones collected from your documents and for the ones written here. The field marked with",
   "modality.fields.hintB": "is the main one: the statement, which is what gets read to decide what topic it is about.",
   "modality.newFieldPlaceholder": "field_name",
   "modality.addField": "Add field",
@@ -1760,7 +1758,7 @@ export const en: Catalogue = {
   "form.taught.restrict": "Restrict to a curriculum",
   "form.taught.pick": "Choose the concepts covered ({n})",
   "form.practise.title": "What has to be practised?",
-  "form.practise.hint": "What the exercise must make the student practise, not what it mentions. It comes from the syllabus, and the examples I imitate are chosen among your exercises tagged with these topics.",
+  "form.practise.hint": "What the exercise must make the student practise, not what it mentions. It comes from the syllabus, and the examples imitated are chosen among your exercises tagged with these topics.",
   "form.practise.none": "No concept chosen yet",
   "form.practise.pick": "Choose concepts ({n})",
   "form.practise.clear": "Clear",
@@ -1799,8 +1797,6 @@ export const en: Catalogue = {
   "form.think.onPlain": "on",
   "form.think.on": "on · {level}",
   "form.think.off": "off",
-  "form.think.onBody": "The model deliberates before writing: it goes over the objective, what is taken as known and what has not been taught yet. More effort is more deliberation, and that reasoning stays visible beside the result.",
-  "form.think.offBody": "The model answers directly, without deliberating. It is much faster, but it usually fits the target concept worse and respects what the syllabus marks as not taught yet worse.",
   "form.think.highEffort": "High effort",
   "form.think.comparison": "Prior reasoning is not chosen here: every comparison turns it on or off at random, the same for both local proposals —the commercial one deliberates as its provider decides—. That way, session by session, the data say whether deliberating before writing is worth anything.",
   "form.cancelComparison": "Cancel the comparison",
@@ -1833,7 +1829,6 @@ export const en: Catalogue = {
   "effort.high": "High",
   "effort.max": "Maximum",
   "effort.warn.qwen38": "Above «Medium», qwen3.8 deliberates for thousands of words on the local GPU: every exercise can take many minutes, and at the high level it has been measured returning an empty answer.",
-  "effort.note.gemma4": "Served by Cerebras: it answers in seconds at any level, and in practice the three behave almost identically.",
   // COUNTS ------------------------------------------------------------------------------
   "count.items": { one: "{n} exercise", other: "{n} exercises" },
   "count.concepts": { one: "{n} concept", other: "{n} concepts" },

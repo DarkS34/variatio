@@ -916,12 +916,6 @@ export function GenerateForm({
                   ) : null}
                 </div>
               ) : null}
-              <p className="text-small text-muted-foreground">
-                {state.think ? t("form.think.onBody") : t("form.think.offBody")}
-              </p>
-              {state.think && policy.noteKey ? (
-                <p className="text-small text-muted-foreground">{t(policy.noteKey)}</p>
-              ) : null}
               {state.think && warning ? (
                 <Alert tone="attention" title={t("form.think.highEffort")}>
                   <p>{t(warning)}</p>

@@ -1433,14 +1433,14 @@ function Runs() {
         <Rows
           items={[
             {
-              key: "panel",
-              head: <>«{t("dash.activity")}»</>,
-              body: "La tarjeta del panel. Dice qué trabajo tuyo corre, cuánto lleva y cómo va, y lo ofrece cancelar. Cuando no tienes ninguno pero la máquina está ocupada con el de otra instancia, lo dice también: «nada en ejecución» sería falso justo cuando lo que lances va a esperar.",
+              key: "etapa",
+              head: <>En la pantalla de la etapa</>,
+              body: "Mientras un paso se construye, su pantalla lleva la barra de fases: qué fase corre, cuánto pesa cada una y cuánto va hecho. Es donde se mira una construcción, y desde ahí se cancela.",
             },
             {
               key: "ejecucion",
-              head: <>«{t("shell.viewRun")}»</>,
-              body: "La píldora de abajo a la derecha, siempre presente. Abre el cajón de ejecución: los pasos, la fase y lo que se está escribiendo.",
+              head: <>Al pedir ejercicios</>,
+              body: "Sobre los resultados aparece una tira con el trabajo en curso: cuánto lleva, por dónde va y cómo pararlo. Se despliega para ver los pasos, lo que el modelo va escribiendo y los ejemplos que se le han enseñado.",
             },
           ]}
         />
