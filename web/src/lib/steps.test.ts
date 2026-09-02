@@ -83,7 +83,7 @@ describe("nextStepOf", () => {
     // El paso sin artefacto ofrece el mismo «Continuar» que los demás, leído de la misma lista.
     expect(nextStepOf(null)).toEqual({
       path: "/prepare/profile",
-      number: "1.2",
+      number: "2",
       labelKey: "nav.step.profile",
     });
   });

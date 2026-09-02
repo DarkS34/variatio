@@ -30,13 +30,16 @@ import { SLIDE_COUNT, slidePath } from "./reveal";
  * THE DECK IS THE PHASES (2026-09-02, explicit user request). It was eight slides and the
  * shape was invisible: one slide said «con eso el sistema ya está preparado» and the next
  * said «pedir ejercicios», which is one hinge told twice — and comparing, the third thing
- * the product does, was not presented as a phase at all. The three are named on their own
- * titles now, «Fase 1 / 2 / 3», the hinge is the opening sentence of Fase 2 instead of a
+ * the product does, was not presented as a phase at all. The phases are named on the
+ * titles now, the hinge is the opening sentence of the generating slide instead of a
  * slide of its own, and the closing pair — what the study asks, and where to start —
  * became one slide, because a slide whose whole content is «press the button below» says
- * what the button says. `COMPARE_PHASE` was added to `lib/steps.ts` in the same change:
- * the bar numbers «Evaluar el sistema» 3, or this deck would be promising a shape the navigation
- * does not have.
+ * what the button says. THE PHASES ARE TWO AND THEY ARE NAMED, NOT NUMBERED (2026-09-02,
+ * explicit user request): the construction, whose four steps are numbered 1–4 because
+ * they go in order, and the testing phase, whose two doors — generating and evaluating —
+ * have no order between them and were wrongly numbered 2 and 3 for a day. The bar draws
+ * the same two names (`lib/steps.ts`), or this deck would be promising a shape the
+ * navigation does not have.
  *
  * IT RUNS UNDER THE REAL HEADER, AND THE HEADER IS PART OF THE DECK (2026-09-02, explicit
  * user request). The screen used to sit outside the shell with a header of its own, and
@@ -82,7 +85,7 @@ interface Slide {
   points?: Key[];
   /** One aside, set apart: the thing that is true but is not an instruction. */
   aside?: Key;
-  /** Only the index slide: the four steps of the first phase, as a numbered list. */
+  /** Only the index slide: the four steps of the construction, as a numbered list. */
   steps?: boolean;
   /**
    * Only the last slide: the door, drawn under a rule. Two sentences, because the reader
@@ -119,7 +122,7 @@ const SLIDES: Slide[] = [
     title: "tutorial.s5.title",
     body: "tutorial.s5.body",
     figure: <BlindFigure />,
-    points: ["tutorial.s5.b1", "tutorial.s5.b2", "tutorial.s5.b3"],
+    points: ["tutorial.s5.b1", "tutorial.s5.b3"],
     aside: "tutorial.s5.aside",
   },
   {
@@ -147,10 +150,10 @@ if (SLIDES.length !== SLIDE_COUNT) {
 const COLUMN = "mx-auto w-full max-w-[46rem]";
 
 /**
- * The index: the four steps of the first phase, numbered exactly as the bar numbers them.
+ * The index: the four steps of the construction, numbered exactly as the bar numbers them.
  *
  * Each row is the number, the step's own name and one paragraph. The name is not prefixed
- * «Paso 1.1:» — the counter beside it already says so, and with the bar lit up just above
+ * «Paso 1:» — the counter beside it already says so, and with the bar lit up just above
  * that made four names read three times each.
  */
 function Steps() {
@@ -191,7 +194,7 @@ function Steps() {
  *
  * THE LAST FORWARD ONE IS NOT FADED. Everywhere else the rail is the quiet continuation of
  * a sequence; on the last slide it is the one action of the whole screen — leaving for
- * step 1.1, or for the form that creates a subject — so it takes the `--attention` the
+ * step 1, or for the form that creates a subject — so it takes the `--attention` the
  * palette spends on «act here», which no other element of this deck is using. Its
  * accessible name is the full sentence, never the vertical word alone.
  *
@@ -282,7 +285,7 @@ export function TutorialScreen({ at }: { at: number }) {
   // browser's back button leaving it is what a reader expects, not stepping through six
   // slides they already turned.
   const go = (index: number) => navigate(slidePath(index), { replace: true });
-  // The path starts at step 1.1, which is the only one of the four that needs nothing built
+  // The path starts at step 1, which is the only one of the four that needs nothing built
   // to be useful. Leaving lands there and so does finishing — and with no subject yet, the
   // same screen is the form that creates one.
   const leave = () => navigate("/raw");

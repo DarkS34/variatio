@@ -6,10 +6,10 @@ import {
   Cpu,
   ListChecks,
   Minus,
+  PenLine,
   Play,
   Plus,
   Scale,
-  Sliders,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -189,16 +189,22 @@ function ChosenConcepts({
   colourFor,
   onRemove,
   empty,
+  centred = false,
 }: {
   names: string[];
   colourFor: (name: string) => string | undefined;
   onRemove: (name: string) => void;
   empty: string;
+  /** Under a centred button, so that the chosen names sit under the control that chose them. */
+  centred?: boolean;
 }) {
   const { t } = useT();
-  if (names.length === 0) return <p className="text-body text-muted-foreground">{empty}</p>;
+  if (names.length === 0)
+    return (
+      <p className={cn("text-body text-muted-foreground", centred && "text-center")}>{empty}</p>
+    );
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className={cn("flex flex-wrap items-center gap-1.5", centred && "justify-center")}>
       {names.map((name) => (
         <Badge key={name} variant="secondary" className="pr-1">
           <span
@@ -462,15 +468,21 @@ export function GenerateForm({
     advance("itemType");
   };
 
-  // Concepts that the curriculum, once chosen, leaves out. With the curriculum asked
-  // BEFORE the concepts this could not happen — the selector restricted what was on offer
-  // — and asking it after is what makes it possible. It is a correction and not a wall:
-  // the launch button still refuses, and the offer to drop them is one click.
+  // Concepts that the curriculum leaves out. Since the curriculum moved ABOVE the targets
+  // (2026-09-02) the selector's `restrictTo` keeps it from arising the normal way round,
+  // so what is left is NARROWING the curriculum after choosing — and a commission restored
+  // from an older row. It is a correction and not a wall: the launch button still refuses,
+  // and the offer to drop them is one click.
   const outsideCurriculum = useMemo(() => {
     if (!activeCurriculum) return [];
     const inside = new Set(activeCurriculum);
     return state.concepts.filter((c) => !inside.has(c));
   }, [activeCurriculum, state.concepts]);
+
+  // The same question asked of a selection that has NOT been committed to `state` yet,
+  // which is what the selector's confirm has to decide on.
+  const hasOutside = (names: string[]) =>
+    Boolean(activeCurriculum) && names.some((c) => !new Set(activeCurriculum!).has(c));
 
   // Same rules the generator enforces server-side; failing here is just faster.
   const problems = useMemo(() => {
@@ -478,8 +490,8 @@ export function GenerateForm({
     if (types.length > 1 && !typeKey) found.push(t("form.problem.itemType"));
     if (state.concepts.length === 0) found.push(t("form.problem.concepts"));
     // Este entra en la lista para que el botón se niegue, pero NO se imprime: el aviso
-    // de «Ajustes» dice lo mismo y además ofrece las dos formas de arreglarlo, así que
-    // repetirlo junto al botón es el mismo error dos veces en la misma pantalla.
+    // del paso de conceptos dice lo mismo y además ofrece las dos formas de arreglarlo,
+    // así que repetirlo junto al botón es el mismo error dos veces en la misma pantalla.
     if (outsideCurriculum.length > 0) found.push(SILENT_OUTSIDE);
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
       found.push(t("form.problem.tooLong", { max: MAX_INSTRUCTIONS }));
@@ -494,13 +506,11 @@ export function GenerateForm({
 
   // What «Ajustes» says while it is shut: nothing set reads as «nada»; anything set is
   // named, because a disclosure that hides a decision without saying so is where a
-  // curriculum goes to be forgotten.
-  const settingsSummary = (() => {
-    const parts: string[] = [];
-    if (state.useCurriculum && activeCurriculum) parts.push(curriculumSummary);
-    if (state.instructions.trim()) parts.push(t("form.settings.withInstructions"));
-    return parts.length > 0 ? parts.join(" · ") : t("form.settings.none");
-  })();
+  // decision goes to be forgotten. The curriculum left this summary with the control
+  // itself (2026-09-02) — it is answered in the concepts step and reported in its line.
+  const settingsSummary = state.instructions.trim()
+    ? t("form.settings.withInstructions")
+    : t("form.settings.none");
 
   let index = 0;
 
@@ -572,11 +582,66 @@ export function GenerateForm({
         title={t("form.practise.title")}
         hint={t("form.practise.hint")}
         answered={chosen}
-        summary={state.concepts.join(" · ") || t("form.practise.none")}
+        summary={[
+          state.concepts.join(" · ") || t("form.practise.none"),
+          state.useCurriculum && activeCurriculum ? curriculumSummary : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         {...step("concepts")}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setPicking("concepts")}>
+        {/* HASTA DÓNDE HA LLEGADO LA CLASE VA ANTES DE ELEGIR LOS OBJETIVOS, Y EN EL
+            MISMO PASO (2026-09-02, petición explícita). Vivía plegado en «Ajustes», que
+            está DESPUÉS: se decidía qué practicar y sólo entonces, una sección más abajo,
+            se podía acotar el temario que sostiene esa elección — y lo normal era no
+            encontrarlo. Aquí es la primera mitad de una sola pregunta: primero el terreno,
+            después el objetivo dentro de él.
+
+            Es una caja propia y no una fila suelta: lo que la separa del botón grande de
+            debajo es que acota, no elige, y sin borde las dos cosas se leerían como una
+            lista de dos controles del mismo rango. */}
+        <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+          <Switch
+            checked={state.useCurriculum}
+            onCheckedChange={(useCurriculum) => patch({ useCurriculum })}
+          >
+            <span className="text-body font-medium">{t("form.taught.restrict")}</span>
+          </Switch>
+          <p className="text-small text-muted-foreground">{t("form.taught.hint")}</p>
+          {state.useCurriculum ? (
+            <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
+              <ListChecks />
+              {t("form.taught.pick", { n: state.curriculum.length })}
+            </Button>
+          ) : null}
+        </div>
+
+        {/* La corrección, no el muro: el botón de lanzar ya se niega, y aquí está la forma
+            de arreglarlo sin volver al selector. Vive junto a los dos controles que la
+            producen, que es donde se puede actuar sobre ella. */}
+        {outsideCurriculum.length > 0 ? (
+          <Alert tone="attention" title={t("form.outside.title")}>
+            <p>{t("form.outside.body", { names: outsideCurriculum.join(", ") })}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const drop = new Set(outsideCurriculum);
+                  patch({ concepts: state.concepts.filter((c) => !drop.has(c)) });
+                }}
+              >
+                {plural("form.outside.drop", outsideCurriculum.length)}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => patch({ useCurriculum: false })}>
+                {t("form.outside.lift")}
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button size="lg" variant="outline" onClick={() => setPicking("concepts")}>
             <ListChecks />
             {t("form.practise.pick", { n: state.concepts.length })}
           </Button>
@@ -594,6 +659,7 @@ export function GenerateForm({
             patch({ concepts: state.concepts.filter((c) => c !== name) })
           }
           empty={t("form.practise.empty")}
+          centred
         />
 
         {/* The chosen topics against what the bank can illustrate. It survives the filter
@@ -704,25 +770,24 @@ export function GenerateForm({
       ) : null}
 
 
-      {/* AJUSTES: LO OPCIONAL, PLEGADO Y DESPUÉS DE LO OBLIGATORIO.
+      {/* «INSTRUCCIONES ADICIONALES»: LO OPCIONAL, PLEGADO Y DESPUÉS DE LO OBLIGATORIO.
 
-          El currículo era el paso 2 de 5 — opcional, con tres niveles anidados — y
-          estaba delante de «¿Qué hay que practicar?», que es el único obligatorio y el
-          motivo de la pantalla. Quien solo quiere dos ejercicios de recursividad tenía
-          que leer y descartar una pregunta de tres niveles antes de llegar a la suya.
+          Se llamaba «Ajustes» y guardaba dos cosas, el currículo y el texto libre. El
+          currículo se fue al paso de conceptos (2026-09-02, petición explícita), así que
+          un nombre genérico para una sola cosa era una etiqueta que no decía cuál: la
+          divulgación se llama ahora como lo que contiene, y el rótulo de dentro se fue con
+          el cambio para no decir lo mismo dos veces a un centímetro.
 
-          No desaparece nada: los dos siguen aquí, con las mismas preguntas y el mismo
-          estado, detrás de una divulgación que dice cuántos hay puestos. Y el currículo
-          aplicado DESPUÉS ya no puede restringir el selector, así que `problems` avisa
-          de los conceptos que quedan fuera y ofrece quitarlos de un clic. */}
+          Sigue detrás de una divulgación que dice si hay algo puesto, porque es opcional y
+          va después de la única pregunta obligatoria de la pantalla. */}
       {chosen ? (
         <details className="group rounded-xl border border-transparent open:border-border open:bg-card">
           <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5">
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <Sliders className="size-3.5" />
+              <PenLine className="size-3.5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-body font-medium">{t("form.settings.title")}</span>
+              <span className="block text-body font-medium">{t("form.instructions.title")}</span>
               <span className="mt-0.5 block truncate text-small text-muted-foreground">
                 {settingsSummary}
               </span>
@@ -730,44 +795,15 @@ export function GenerateForm({
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
           </summary>
           <div className="space-y-4 px-3 pb-3">
-          <div className="space-y-2">
-            <p className="text-body font-medium">{t("form.taught.title")}</p>
-            {/* The two movements the question needs to be answerable: what happens if it is
-                left alone, and the case for touching it. It was written for the guide only,
-                so on the screen the title had to carry the whole explanation by itself. */}
-            <p className="text-small text-muted-foreground">{t("form.taught.hint")}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Switch
-              checked={state.useCurriculum}
-              onCheckedChange={(useCurriculum) => {
-                patch({ useCurriculum });
-              }}
-            >
-              <span className="text-body font-medium">{t("form.taught.restrict")}</span>
-            </Switch>
-          </div>
-
-          {/* WHAT THE CLASS HAS COVERED IS CHOSEN HERE AND NOWHERE ELSE (2026-09-01,
-              explicit user request). There used to be a second switch offering the
-              workspace's STORED list, edited on a tab of the syllabus screen; that tab is
-              gone, so the stored list can no longer be set, and offering it would be
-              offering a saved answer nobody can save. What is left is the list for THIS
-              commission, which holds for this batch and is not written anywhere.
+          {/* WHAT THE CLASS HAS COVERED IS CHOSEN IN THE CONCEPTS STEP AND NOWHERE ELSE
+              (2026-09-02, explicit user request). It used to be the first half of this
+              disclosure; what is left here is the free text alone.
 
               `usePresetCurriculum` survives in the form state and is never set true by
-              this screen: `fromParams` still reads it, so a row recorded before the change
-              — whose request carried no `curriculum` at all and therefore ran against the
-              workspace's own — is still described faithfully in the collapsed bar and
-              re-runs exactly as it ran. */}
-          {state.useCurriculum ? (
-            <div className="ml-6 space-y-2">
-              <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
-                <ListChecks />
-                {t("form.taught.pick", { n: state.curriculum.length })}
-              </Button>
-            </div>
-          ) : null}
-          </div>
+              this screen: `fromParams` still reads it, so a row recorded before the
+              workspace curriculum stopped being offered — whose request carried no
+              `curriculum` at all and therefore ran against the workspace's own — is still
+              described faithfully in the collapsed bar and re-runs exactly as it ran. */}
           <div className="space-y-2">
             {/* THE CATALOGUE IS BEHIND THE (i) (2026-09-01, explicit user request).
                 What the free text may legitimately ask for — the four slots, the controls
@@ -776,8 +812,10 @@ export function GenerateForm({
                 twice the height of the field it explains. It is read once, which is what
                 the hint is for; and it belongs beside the label rather than under the box,
                 because it answers «what do I write here», not «what did I write». */}
-            <div className="flex items-center gap-1.5">
-              <p className="text-body font-medium">{t("form.instructions.title")}</p>
+            <div className="flex items-start gap-1.5">
+              <p className="min-w-0 flex-1 text-small text-muted-foreground">
+                {t("form.instructions.hint")}
+              </p>
               {scope.data ? (
                 <InfoHint label={t("form.instructions.title")}>
                   <div className="space-y-2">
@@ -815,12 +853,6 @@ export function GenerateForm({
                 </InfoHint>
               ) : null}
             </div>
-            {/* THE EXAMPLE IS IN THE STATEMENT, NOT IN THE BOX (2026-09-01, explicit user
-                request). It was the textarea's placeholder, which is the one place a
-                sentence disappears the moment somebody starts writing — and what it
-                answers is «what do I write here». The (i) beside the title keeps the
-                catalogue derived for THIS instance, which this line does not repeat. */}
-            <p className="text-small text-muted-foreground">{t("form.instructions.hint")}</p>
             <Textarea
               aria-label={t("form.instructions.title")}
               value={state.instructions}
@@ -840,28 +872,6 @@ export function GenerateForm({
               </Alert>
             ) : null}
           </div>
-            {/* La corrección, no el muro: el botón de lanzar ya se niega, y aquí está la
-                forma de arreglarlo sin volver al selector. */}
-            {outsideCurriculum.length > 0 ? (
-              <Alert tone="attention" title={t("form.outside.title")}>
-                <p>{t("form.outside.body", { names: outsideCurriculum.join(", ") })}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const drop = new Set(outsideCurriculum);
-                      patch({ concepts: state.concepts.filter((c) => !drop.has(c)) });
-                    }}
-                  >
-                    {plural("form.outside.drop", outsideCurriculum.length)}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => patch({ useCurriculum: false })}>
-                    {t("form.outside.lift")}
-                  </Button>
-                </div>
-              </Alert>
-            ) : null}
           </div>
         </details>
       ) : null}
@@ -1017,8 +1027,11 @@ export function GenerateForm({
         onConfirm={() => {
           setPicking(null);
           // Confirming an empty selection answers nothing: the step stays open, which is
-          // where it already was.
-          if (state.concepts.length > 0) advance("concepts");
+          // where it already was. And so does a selection that CONTRADICTS the curriculum
+          // chosen just above it — the launch button refuses for it and says nothing (the
+          // notice inside this step is what explains it and offers the two ways out), so
+          // collapsing the step here would hide the only explanation there is.
+          if (state.concepts.length > 0 && !hasOutside(state.concepts)) advance("concepts");
         }}
         confirmLabel={t("form.confirmContinue")}
       />

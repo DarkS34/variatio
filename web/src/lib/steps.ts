@@ -23,35 +23,37 @@ export const STEPS = [
 ] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
 
 /**
- * THREE PHASES, AND THE FOUR STEPS ARE ALL INSIDE THE FIRST ONE (explicit user request).
+ * TWO PHASES, NAMED AND NOT NUMBERED (2026-09-02, explicit user request).
  *
- * «Hay que dejar claro que esto es el paso uno necesario para preparar esta asignatura en
- * el sistema. Y una vez que esto lo tengas claro, ya puedes generar ejercicios. […] El
- * paso 1 tiene 1-1, 1-2, 1-3 y 1-4.» The app used to present four steps at one level with
- * generating outside the numbering altogether, as though asking for an exercise were not
- * part of the path — when it is the only reason the other four exist.
+ * «Primero va la fase de construcción, luego la fase de pruebas. Esta segunda comprende
+ * dos posibles acciones: generar ejercicios de tu asignatura con el sistema y evaluar el
+ * sistema.» The bar used to number the phases themselves — `1.1 … 1.4`, then `2` on
+ * generating and `3` on evaluating — and a number says «after», which is false of the
+ * last two: both open on the same condition, the whole construction closed, and neither
+ * waits for the other. A number encodes dependency, so it goes exactly where there is
+ * one: INSIDE the construction, `1 … 4`, where each step needs the one before it closed.
+ * The two phases carry a NAME instead (`nav.phase.build` / `nav.phase.test`), drawn as a
+ * caption over each group, and the two actions of the second carry an icon where a step
+ * carries its number — an icon says «a door», a number would say «a stop».
  *
- * The numbers carry it on their own: `1.1 … 1.4` says these four are one thing, and `2` on
- * «Crear ejercicios» says what that thing was for. No extra captions in the bar; the
- * tutorial does the naming.
- *
- * COMPARING IS THE THIRD (2026-09-02, explicit user request), which reverses the note that
- * used to sit on `UsePill`'s `n` — «its number on the path, for the one that IS a phase;
- * «Comparar» is not». What made it not a phase was that it is optional and belongs to the
- * study rather than to preparing a subject; what makes it one is that the tutorial now
- * names it «Fase 3», and the rule the figures are held to is that a picture may not
- * promise an order the navigation does not have. Either the deck stops calling it a phase
- * or the bar starts counting it, and counting it is the truer of the two: the whole
- * product is one numbered path, 1.1 → 2 → 3. Its `--study` tint is untouched — the number
- * says where it sits, the colour still says it is a different kind of thing.
+ * The four steps are one thing and their captions say so; the tutorial names the same two
+ * phases on its own slides, so the deck cannot promise a shape the navigation does not
+ * have. `USES` is the second phase's two doors, one home for the bar and the guide.
  */
-export const PREPARE_PHASE = 1;
-export const GENERATE_PHASE = 2;
-export const COMPARE_PHASE = 3;
+export const USES = [
+  { key: "generate", path: "/generate", labelKey: "nav.create", study: false },
+  { key: "compare", path: "/evaluate", labelKey: "nav.compare", study: true },
+] as const satisfies readonly {
+  key: string;
+  path: string;
+  labelKey: Key;
+  /** Whether the door belongs to the study rather than to the product: drawn in `--study`. */
+  study: boolean;
+}[];
 
-/** How a preparation step is numbered on screen, from its index in `STEPS`. */
+/** How a construction step is numbered on screen, from its index in `STEPS`. */
 export function stepNumber(index: number): string {
-  return `${PREPARE_PHASE}.${index + 1}`;
+  return `${index + 1}`;
 }
 
 /** The same, addressed by the artifact a step builds — the stage screens' way in. */

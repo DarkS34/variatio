@@ -127,7 +127,7 @@ export const GUIDE_SECTIONS = [
     icon: UserRound,
   },
   // The other two administrator-only sections, and both sit in «Día a día» rather than
-  // «Usarla» because neither is something an evaluator ever does. This one first: it is the
+  // «Fase de pruebas» because neither is something an evaluator ever does. This one first: it is the
   // panel as a whole, and «repartir» is one of its five tabs read in detail.
   {
     slug: "admin",

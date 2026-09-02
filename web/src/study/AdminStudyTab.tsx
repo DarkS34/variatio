@@ -29,7 +29,7 @@ const CHANCE = 1 / 3;
 const ARMS: EvaluationArm[] = ["naive", "rag", "system"];
 
 const RUBRIC_LABELS: Record<string, Key> = {
-  originality: "rubricScale.originality",
+  prerequisites: "rubricScale.prerequisites",
   complexity: "rubricScale.complexity",
   concept_fit: "rubricScale.concept_fit",
   soundness: "rubricScale.soundness",

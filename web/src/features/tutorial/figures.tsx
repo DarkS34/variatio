@@ -158,7 +158,7 @@ export function FlowFigure() {
  * The two piles of documents, side by side, because they are two answers to one question.
  *
  * Each box is titled with the NAME OF THE DROP ZONE it will be dropped into, from
- * `raw.slot.*` — the same string the screen of step 1.1 draws — so the figure is already
+ * `raw.slot.*` — the same string the screen of step 1 draws — so the figure is already
  * pointing at where the files go rather than describing them a second time.
  */
 export function SourcesFigure() {

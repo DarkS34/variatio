@@ -73,7 +73,7 @@ export interface Instruments {
 
 export interface EvaluationRating {
   arm: string;
-  originality?: number;
+  prerequisites?: number;
   complexity?: number;
   concept_fit?: number;
   soundness?: number;

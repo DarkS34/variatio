@@ -58,7 +58,7 @@ class DeleteBody(BaseModel):
 class RatingBody(BaseModel):
     """The post-reveal rubric over the system's variant. Every field is optional."""
 
-    originality: int | None = None
+    prerequisites: int | None = None
     complexity: int | None = None
     concept_fit: int | None = None
     soundness: int | None = None

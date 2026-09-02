@@ -7,8 +7,7 @@ import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
 import {
-  COMPARE_PHASE,
-  GENERATE_PHASE,
+  USES,
   STEPS,
   nextStepOf,
   stepNumber,
@@ -35,7 +34,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
 const ARM_ORDER = ["naive", "rag", "system"] as const;
 
 /**
- * El plan real del constructor del temario, leído de la API como lo lee el panel.
+ * El plan real del constructor del grafo, leído de la API como lo lee el panel.
  *
  * Estuvo copiado a mano en este fichero y se quedó atrás: dibujaba la conversión al 10 %
  * cuando pesa un tercio, y no dibujaba la fase de contexto en absoluto. La guía lee las
@@ -49,21 +48,17 @@ function BuildPlanBar() {
 }
 
 /**
- * One of the two things the path leads to, drawn as the bar draws it.
- *
- * `n` replaces the icon on the one that IS a phase, exactly as `UsePill` does: the number
- * beside «Pedir ejercicios» is what says the four stops before it were for something.
+ * One of the two doors of the testing phase, drawn as the bar draws it: an icon and no
+ * number, because the two have no order between them.
  */
 function Pill({
   icon: Icon,
   label,
   tone,
-  n,
 }: {
   icon: LucideIcon;
   label: string;
   tone?: "study";
-  n?: number;
 }) {
   return (
     <span
@@ -73,11 +68,7 @@ function Pill({
           : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
-      {n === undefined ? (
-        <Icon className="size-4" />
-      ) : (
-        <span className="nums font-condensed font-semibold">{n}</span>
-      )}
+      <Icon className="size-4" />
       {label}
     </span>
   );
@@ -91,42 +82,67 @@ function Start() {
       <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.start")}>
         <p>
           <strong>Variatio</strong> genera <strong>ejercicios de aprendizaje</strong> —ejercicios,
-          problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un tema
-          en abstracto: parte de los cuatro pasos con los que describes tu asignatura y produce variatios
+          problemas, tareas de evaluación— anclados al temario de una asignatura. No escribe sobre un concepto
+          en abstracto: parte de los cuatro pasos con los que describes tu asignatura y produce ejercicios
           que respetan lo que el alumno ya ha visto y lo que todavía no.
         </p>
       </SectionHead>
 
       <Block title="El recorrido, de un vistazo">
-        {/* Es la barra de arriba, dibujada aquí: los números salen de `STEPS` y de las dos
-            constantes de fase, así que esta figura no puede prometer un orden que la
+        {/* Es la barra de arriba, dibujada aquí: los pasos salen de `STEPS` y las dos
+            puertas de `USES`, así que esta figura no puede prometer un orden que la
             navegación no tenga. */}
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
-          {STEPS.map((step, index) => (
-            <div key={step.path} className="flex items-center gap-2">
-              <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
-                {stepNumber(index)}
-              </span>
-              <span className="text-body font-medium">{t(step.labelKey)}</span>
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.build")}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              {STEPS.map((step, index) => (
+                <div key={step.path} className="flex items-center gap-2">
+                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+                    {stepNumber(index)}
+                  </span>
+                  <span className="text-body font-medium">{t(step.labelKey)}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <Pill icon={Play} label={t("nav.create")} n={GENERATE_PHASE} />
-          <Pill icon={Scale} label={t("nav.compare")} n={COMPARE_PHASE} tone="study" />
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.test")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {USES.map((door) => (
+                <Pill
+                  key={door.key}
+                  icon={door.key === "generate" ? Play : Scale}
+                  label={t(door.labelKey)}
+                  tone={door.study ? "study" : undefined}
+                />
+              ))}
+            </div>
+          </div>
         </div>
         <Paragraph>
-          Es exactamente la barra de arriba, y los números dicen de qué van: los cuatro
-          primeros son <strong>1.1</strong> a <strong>1.4</strong> porque son un solo
-          trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden. Cada uno lleva
-          debajo una palabra diciendo dónde estás: <em>{t("nav.state.done")}</em>,{" "}
-          <em>{t("nav.state.now").toLowerCase()}</em> o <em>{t("nav.state.later").toLowerCase()}</em>.
+          Es exactamente la barra de arriba, y son dos fases con nombre. La{" "}
+          <strong>{t("nav.phase.build").toLowerCase()}</strong> son cuatro pasos numerados{" "}
+          <strong>{stepNumber(0)}</strong> a <strong>{stepNumber(3)}</strong> porque son un solo
+          trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden: cada uno necesita
+          el anterior cerrado. Cada uno lleva debajo una palabra diciendo dónde estás:{" "}
+          <em>{t("nav.state.done")}</em>, <em>{t("nav.state.now").toLowerCase()}</em> o{" "}
+          <em>{t("nav.state.later").toLowerCase()}</em>.
         </Paragraph>
         <Paragraph>
-          <strong>«{t("nav.create")}» es la fase {GENERATE_PHASE}</strong>, y por eso lleva
-          número: es aquello para lo que existen los otros cuatro, no un extra al margen del
-          recorrido. Se abre cuando la fase 1 está terminada. «{t("nav.compare")}» es la{" "}
-          <strong>fase {COMPARE_PHASE}</strong>, y va aparte en color: no produce material
-          para tu asignatura, sirve para medir el sistema.
+          La <strong>{t("nav.phase.test").toLowerCase()}</strong> son dos cosas que puedes
+          hacer con la asignatura construida, y por eso no llevan número: ninguna va antes que
+          la otra y ninguna necesita a la otra. Las dos se encienden a la vez, cuando la
+          construcción está cerrada; hasta entonces están medio apagadas, dicen «
+          {t("nav.state.later").toLowerCase()}» y no responden al pulsarlas.
+          «{t("nav.create")}» es aquello para lo que existe la construcción. «{t("nav.compare")}»
+          va aparte en color: no produce material para tu asignatura, sirve para medir el
+          sistema.
         </Paragraph>
       </Block>
 
@@ -140,19 +156,19 @@ function Start() {
           {
             key: "temario",
             head: `${stepNumberOf("knowledge_graph")} · ${t("artifact.graph")}`,
-            body: "Los temas de la asignatura, agrupados en unidades y unidos por lo que hace falta saber antes de cada cosa.",
+            body: "El temario de la asignatura: sus conceptos, agrupados en unidades y unidos por lo que hace falta saber antes de cada cosa.",
           },
           {
             key: "banco",
             head: `${stepNumberOf("exemplars_bank")} · ${t("artifact.bank")}`,
-            body: "Tus ejercicios recogidos uno a uno de los documentos, con los temas del temario que practica cada uno.",
+            body: "Tus ejercicios recogidos uno a uno de los documentos, con los conceptos del temario que practica cada uno.",
           },
         ]}
       />
 
       <Alert tone="info" title="Los tipos de ejercicio van antes que el temario">
         <p>
-          Un temario se puede construir sin nada más, pero la revisión de qué temas sirven de
+          Un temario se puede construir sin nada más, pero la revisión de qué conceptos sirven de
           etiqueta necesita los <em>tipos de ejercicio ya cerrados</em>: se juzga contra las
           formas de ejercicio que pones tú. Por eso el Paso{" "}
           {stepNumberOf("exemplars_profile")} va delante del{" "}
@@ -187,12 +203,12 @@ function Start() {
             <>
               <strong>Paso {stepNumber(2)}</strong> — lanza <strong>el temario</strong>. Es el
               trabajo más caro del recorrido: puedes cerrar la pestaña, el servidor sigue. Al
-              terminar encadena por su cuenta las descripciones de cada tema y la revisión de
+              terminar encadena por su cuenta las descripciones de cada concepto y la revisión de
               cuáles sirven de etiqueta.
             </>,
             <>
               <strong>Paso {stepNumber(3)}</strong> — recoge tus ejercicios y repasa el{" "}
-              <strong>{t("nav.step.bank").toLowerCase()}</strong>: si el tema que se le ha
+              <strong>{t("nav.step.bank").toLowerCase()}</strong>: si el concepto que se le ha
               puesto a cada uno es el que de verdad practica.
             </>,
             <>
@@ -228,7 +244,7 @@ function Start() {
           vuelve a abrir — habrá que cerrarlo otra vez continuando.
         </p>
         <p>
-          Lo que <em>no</em> forma parte de ese fichero —la descripción de cada tema— se puede
+          Lo que <em>no</em> forma parte de ese fichero —la descripción de cada concepto— se puede
           seguir corrigiendo con el paso cerrado, porque vive aparte y no caduca nada.
         </p>
       </Detail>
@@ -244,7 +260,7 @@ function Workspace() {
         <p>
           Una <strong>asignatura</strong> se prepara entera y por separado: sus documentos, los
           cuatro pasos del recorrido y todo lo que se ha generado con ella. Nada cruza de una a
-          otra. Si un mismo temario se da con dos formatos de ejercicio muy distintos, también
+          otra. Si una misma asignatura se da con dos formatos de ejercicio muy distintos, también
           son dos.
         </p>
       </SectionHead>
@@ -283,7 +299,7 @@ function Workspace() {
           Al crear una asignatura eliges en qué idioma se le habla al modelo durante toda la
           construcción de esa instancia. <strong>No se puede cambiar después</strong>, y no es
           una restricción caprichosa: las etiquetas de las relaciones se escriben dentro del
-          propio temario y el cargador indexa por ellas, así que el idioma queda cocido en los
+          propio grafo y el cargador indexa por ellas, así que el idioma queda cocido en los
           artefactos desde la primera construcción. El formulario de creación lo dice ahí
           mismo.
         </Paragraph>
@@ -328,9 +344,10 @@ function Workspace() {
       <Block title="Lo que ya has dado en clase">
         <Paragraph>
           Al pedir un ejercicio puedes decir hasta dónde ha llegado la clase. Es lo que acota
-          el andamiaje: en un tema ya dado el ejercicio puede apoyarse; de uno que aún no se ha
-          visto, no puede depender. Se elige <em>en el propio encargo</em>, dentro de «
-          {t("form.settings.title")}», y vale para esa tanda — no se guarda en la asignatura.
+          el andamiaje: en un concepto ya dado el ejercicio puede apoyarse; de uno que aún no se ha
+          visto, no puede depender. Se elige <em>en el propio encargo</em>, en la misma pregunta
+          en la que eliges qué practicar y justo encima de ella, y vale para esa tanda — no se
+          guarda en la asignatura.
         </Paragraph>
         <Alert tone="info" title="Sin marcar nada no significa «nada impartido»">
           <p>
@@ -604,10 +621,11 @@ function Verdict({ artifact }: { artifact: string }) {
             pregunta después es si te suena a tu asignatura.
           </>,
           <>
-            <strong>«{t("stageReview.openTitle")}»</strong>, el botón del final, abre por el
-            lado un cuestionario corto y lo va contando: él mismo dice cuántas preguntas
-            tiene. Puedes dejarlo a medias y volver, porque media respuesta también es un
-            dato, y en cuanto guardas puedes cerrarlo sin perder nada.
+            <strong>«{t("stageReview.openTitle")}»</strong>, el botón del final, despliega
+            debajo un cuestionario corto: cinco preguntas, las mismas cinco ideas en los
+            tres pasos. Puedes dejarlo a medias y volver, porque media respuesta también es
+            un dato, y en cuanto guardas puedes cerrarlo sin perder nada. Está ahí aunque el
+            paso anterior se haya vuelto a abrir: lo que se valora es lo que hay construido.
           </>,
           <>
             <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
@@ -647,10 +665,12 @@ function Verdict({ artifact }: { artifact: string }) {
           distinguirlas las dos se mezclan en el mismo promedio.
         </p>
         <p>
-          Las preguntas cambian según el paso, pero dos son siempre las mismas —cuánto
-          tendrías que corregir para poder usarlo, y del 1 al 5 en conjunto—, y son las que
-          permiten comparar un paso con otro. Al final hay una caja opcional para lo que no
-          quepa en las opciones.
+          Son cinco preguntas en cada paso y siguen el mismo orden en los tres: si sobra
+          algo, si falta algo, si lo que ese paso tiene que hacer lo hace —las partes de cada
+          tipo, el orden del temario, el concepto de cada ejercicio—, cuánto tendrías que
+          corregir para poder usarlo, y del 1 al 5 en conjunto. Las dos últimas son idénticas
+          en los tres, y son las que permiten comparar un paso con otro. Al final hay una
+          caja opcional para lo que no quepa en las opciones.
         </p>
         <p>
           Es lo único que se te pide a cambio de usar esto, y es lo que se está midiendo:
@@ -684,7 +704,7 @@ function Profile() {
           { label: "Qué cuesta", value: "Una pasada larga sobre una muestra de tus ejercicios, no sobre todos." },
           {
             label: "Qué desbloquea",
-            value: "Recoger tus ejercicios, y decidir qué temas del temario sirven de etiqueta.",
+            value: "Recoger tus ejercicios, y decidir qué conceptos del temario sirven de etiqueta.",
           },
         ]}
       />
@@ -771,7 +791,7 @@ function Profile() {
               body: "Mira unos cuantos ejercicios tuyos de ese tipo y aplícales el criterio. Si te caen todos en el mismo nivel, el criterio no separa: aféinalo hasta que reparta.",
             },
             {
-              key: "tema",
+              key: "concepto",
               head: "No es de qué va, ni cuánto ocupa",
               body: "Un enunciado largo no es un ejercicio difícil, y uno de la última unidad no lo es por estar al final. De qué va cada ejercicio ya se anota aparte, contra el temario.",
             },
@@ -811,7 +831,7 @@ function Profile() {
             {
               key: "primario",
               head: t("field.primary.badge"),
-              body: "El que lleva el enunciado. Es el texto con el que se empareja el ejercicio con los temas del temario, y solo puede serlo una parte de tipo texto.",
+              body: "El que lleva el enunciado. Es el texto con el que se empareja el ejercicio con los conceptos del temario, y solo puede serlo una parte de tipo texto.",
             },
           ]}
         />
@@ -843,9 +863,9 @@ function Graph() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.graph")}>
         <p>
-          Los temas de tu asignatura, agrupados en unidades y unidos por lo que hace falta
-          saber antes de cada cosa. Todo lo que se etiquete y se escriba después sale de aquí:
-          ni el modelo ni tú podéis usar un tema que no esté en el temario.
+          El temario de tu asignatura: sus conceptos, agrupados en unidades y unidos por lo
+          que hace falta saber antes de cada cosa. Todo lo que se etiquete y se escriba después
+          sale de aquí: ni el modelo ni tú podéis usar un concepto que no esté en el temario.
         </p>
       </SectionHead>
 
@@ -862,7 +882,7 @@ function Graph() {
           },
           {
             label: "Qué desbloquea",
-            value: "Poner temas a tus ejercicios, decir hasta dónde ha llegado la clase, y pedir ejercicios nuevos.",
+            value: "Poner a tus ejercicios los conceptos del temario, decir hasta dónde ha llegado la clase, y pedir ejercicios nuevos.",
           },
         ]}
       />
@@ -870,17 +890,17 @@ function Graph() {
       <Block title="Una lista, y un mapa debajo">
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
-          Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el tema
+          Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el concepto
           y si <strong>{t("kg.taggable").toLowerCase()}</strong> —«{t("common.yes")}» o «
           {t("common.no")}»—; al pulsarla se abre su ficha <em>al lado de la lista</em>, con su
           unidad, su descripción y sus relaciones. Mientras solo estás mirando eso es una
-          lectura, que es justo lo que se pide aquí: abrir un tema y ver si lo que dice de él
+          lectura, que es justo lo que se pide aquí: abrir un concepto y ver si lo que dice de él
           es tu asignatura.
         </Paragraph>
         <Paragraph>
           Al pulsar «{t("stage.curate.start")}», al final de la pantalla, esa misma ficha se
           vuelve editable —el nombre, la unidad y las relaciones— y en la lista aparecen los
-          botones de añadir unidad y añadir tema, y el «{t("kg.taggable").toLowerCase()}» de
+          botones de añadir unidad y añadir concepto, y el «{t("kg.taggable").toLowerCase()}» de
           cada fila pasa de ser un «{t("common.yes")}» a ser un interruptor.
         </Paragraph>
         <Paragraph>
@@ -891,11 +911,11 @@ function Graph() {
         </Paragraph>
         <Paragraph>
           El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que
-          agrupa cada tema junto a aquellos con los que se relaciona, y{" "}
+          agrupa cada concepto junto a aquellos con los que se relaciona, y{" "}
           <strong>«{t("canvas.layout.curriculum")}»</strong>, que ordena por niveles de
           prerrequisito. Cambiar de una a otra no reconstruye nada: los nodos se desplazan hasta
-          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario
-          real reparte los prerrequisitos de forma muy desigual; si hay menos de tres niveles el
+          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario real
+          reparte los prerrequisitos de forma muy desigual; si hay menos de tres niveles el
           propio lienzo lo dice, porque eso es un dato sobre el temario y no una vista rota.
         </Paragraph>
       </Block>
@@ -903,24 +923,24 @@ function Graph() {
       <Block title="La construcción no acaba con el temario">
         <Paragraph>
           En cuanto el temario está escrito se encadenan solas otras dos cosas, y la pantalla
-          lo dice mientras pasan. No bloquean nada de lo que hay debajo: puedes ir leyendo el
-          temario mientras terminan.
+          lo dice mientras pasan. No bloquean nada de lo que hay debajo: puedes ir leyendo los
+          conceptos mientras terminan.
         </Paragraph>
         <Steps
           items={[
             <>
-              <p className="font-medium">Las descripciones de cada tema</p>
+              <p className="font-medium">Las descripciones de cada concepto</p>
               <p className="text-small text-muted-foreground">
-                La prosa que describe cada tema, escrita contra los párrafos de tus apuntes de
+                La prosa que describe cada concepto, escrita contra los párrafos de tus apuntes de
                 los que salió. <strong>Es el texto con el que se compara, no el nombre.</strong>{" "}
-                Se corrigen en la ficha del tema, que es donde se están leyendo — y es lo único
+                Se corrigen en la ficha del concepto, que es donde se están leyendo — y es lo único
                 que se puede seguir corrigiendo con el paso cerrado, porque vive aparte y no
                 caduca nada.
               </p>
             </>,
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
-                Qué temas sirven de etiqueta
+                Qué conceptos sirven de etiqueta
                 <Badge variant="attention">
                   necesita el Paso {stepNumberOf("exemplars_profile")} cerrado
                 </Badge>
@@ -928,7 +948,7 @@ function Graph() {
               <p className="text-small text-muted-foreground">
                 Los que valdrían para cualquier ejercicio —«codificación», «diseño»— se marcan
                 como que NO sirven de etiqueta: siguen existiendo y siguen funcionando a través
-                de sus relaciones, simplemente dejan de poder ser el tema de un ejercicio. Ante
+                de sus relaciones, simplemente dejan de poder ser el concepto de un ejercicio. Ante
                 la duda se excluye: una etiqueta vaga contamina todos tus ejercicios. Se juzga
                 contra los tipos de ejercicio del paso anterior, y por eso ese paso va antes.
               </p>
@@ -945,29 +965,29 @@ function Graph() {
       <Block title="Curar el temario a mano">
         <Paragraph>
           Con «{t("stage.curate.start")}» pulsado se puede renombrar lo que quedó torcido,
-          borrar lo que no es un tema de la materia, mover temas de unidad y arreglar
-          relaciones. Renombrar un tema arrastra consigo el trozo de tus apuntes del que salió;
+          borrar lo que no es un concepto de la materia, mover conceptos de unidad y arreglar
+          relaciones. Renombrar un concepto arrastra consigo el trozo de tus apuntes del que salió;
           borrarlo lo suelta. Marcar o desmarcar «{t("kg.taggable").toLowerCase()}» no mueve la
           fila de sitio: se queda donde estaba, debajo de la mano que la pulsó.
         </Paragraph>
       </Block>
 
       <div className="space-y-2">
-        <Detail title="Por qué no se empareja por el nombre del tema">
+        <Detail title="Por qué no se empareja por el nombre del concepto">
           <p>
             Un nombre es una etiqueta de dos palabras y no dice nada de qué se practica al
             usarlo. Con lo que se compara es con la <em>descripción</em>, fundida con lo que
-            tienen en común tus ejercicios que ya llevan ese tema.
+            tienen en común tus ejercicios que ya llevan ese concepto.
           </p>
           <p>
-            Por eso una descripción mal escrita se paga cada vez que se pone un tema a un
+            Por eso una descripción mal escrita se paga cada vez que se pone un concepto a un
             ejercicio y cada vez que se escribe uno nuevo, y por eso conviene leerlas.
           </p>
         </Detail>
 
         <Detail title="Lo que se da por sabido y lo que se prohíbe">
           <p>
-            Alrededor de los temas que pides, se sacan del temario dos listas y se le dan al
+            Alrededor de los conceptos que pides, se sacan del temario dos listas y se le dan al
             modelo:
           </p>
           <Rows
@@ -975,12 +995,12 @@ function Graph() {
               {
                 key: "sabido",
                 head: <span className="text-settled">{t("form.given")}</span>,
-                body: "Lo que hace falta saber antes del tema pedido y además ha dado ya la clase. El ejercicio puede apoyarse en ello, pero no puede convertirlo en la dificultad. Va con su descripción, no con su nombre a secas.",
+                body: "Lo que hace falta saber antes del concepto pedido y además ha dado ya la clase. El ejercicio puede apoyarse en ello, pero no puede convertirlo en la dificultad. Va con su descripción, no con su nombre a secas.",
               },
               {
                 key: "prohibido",
                 head: <span className="text-destructive">{t("form.forbidden")}</span>,
-                body: "Lo que va después del tema pedido y la clase todavía no ha visto. No puede aparecer.",
+                body: "Lo que va después del concepto pedido y la clase todavía no ha visto. No puede aparecer.",
               },
             ]}
           />
@@ -1002,14 +1022,14 @@ function Bank() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.bank")}>
         <p>
-          Tus ejercicios recogidos uno a uno de los documentos, cada uno con los temas del
+          Tus ejercicios recogidos uno a uno de los documentos, cada uno con los conceptos del
           temario que practica. Lo que se repasa aquí es <strong>ese emparejamiento</strong>:
-          si el tema que se le ha puesto a cada ejercicio es el que de verdad practica.
+          si el concepto que se le ha puesto a cada ejercicio es el que de verdad practica.
         </p>
         <p>
           Importa porque son los ejemplos que acompañan a cada ejercicio nuevo: de aquí sale el
           «así se escriben los ejercicios en esta asignatura» que el modelo imita, y se eligen
-          por el tema que lleva cada uno.
+          por el concepto que lleva cada uno.
         </p>
       </SectionHead>
 
@@ -1029,7 +1049,7 @@ function Bank() {
 
       <Alert tone="info" title="Recoger y etiquetar son un solo trabajo">
         <p>
-          A cada documento se le ponen los temas según sale, así que al terminar ya está todo
+          A cada documento se le ponen los conceptos según sale, así que al terminar ya está todo
           etiquetado: no hay un paso intermedio que lanzar. Lo que queda es corregir lo que
           salió mal, y para eso hay tres controles distintos.
         </p>
@@ -1041,7 +1061,7 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "Cuántos de tus ejercicios llevan al menos un tema. Es el trabajo de corrección que queda por delante. Sólo aparece mientras falte alguno: con todos etiquetados no hay nada que mirar ahí.",
+              body: "Cuántos de tus ejercicios llevan al menos un concepto. Es el trabajo de corrección que queda por delante. Sólo aparece mientras falte alguno: con todos etiquetados no hay nada que mirar ahí.",
             },
             {
               key: "cobertura",
@@ -1052,8 +1072,8 @@ function Bank() {
         />
         <Paragraph>
           Los dos miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
-          <em>ejercicios sin tema</em>, el otro <em>temas sin ejercicio</em>. Se puede tenerlo
-          todo etiquetado y media asignatura sin un solo ejemplo que imitar.
+          <em>ejercicios sin concepto</em>, el otro <em>conceptos sin ejercicio</em>. Se puede tenerlo
+          todo etiquetado y medio temario sin un solo ejemplo que imitar.
         </Paragraph>
       </Block>
 
@@ -1061,29 +1081,29 @@ function Bank() {
         <Steps
           items={[
             <>
-              Primero, los que <strong>se quedaron sin tema</strong>. La tira de medidores de
+              Primero, los que <strong>se quedaron sin concepto</strong>. La tira de medidores de
               arriba los cuenta y «{t("bank.seeUntagged", { n: "N" })}» los filtra.
             </>,
             <>
-              Después, los que llevan <strong>un solo tema</strong> o uno que no encaja: todas
-              las filas miden lo mismo y la columna de temas se lee de un vistazo, que es donde
+              Después, los que llevan <strong>un solo concepto</strong> o uno que no encaja: todas
+              las filas miden lo mismo y la columna de conceptos se lee de un vistazo, que es donde
               el emparejamiento se equivoca sin avisar. Pulsa una fila para leer el ejercicio
               entero.
             </>,
             <>
               Si hay que corregir, «{t("stage.curate.start")}» al final de la pantalla: entonces
-              cada ejercicio se puede editar y se puede cambiar a mano su <strong>tema
+              cada ejercicio se puede editar y se puede cambiar a mano su <strong>concepto
               principal</strong>, que es el que decide con qué se compara después.
             </>,
           ]}
         />
       </Block>
 
-      <Block title="Las tres formas de volver a poner temas, que no hacen lo mismo">
+      <Block title="Las tres formas de volver a poner conceptos, que no hacen lo mismo">
         <Paragraph>
           Las tres <strong>solo aparecen mientras corriges</strong>: son lo único de esta
           pantalla que escribe. Lo que dicen no se pierde al ocultarlas — cuántos ejercicios
-          están sin tema lo sigue diciendo el medidor, y «{t("bank.seeUntagged", { n: "N" })}»
+          están sin concepto lo sigue diciendo el medidor, y «{t("bank.seeUntagged", { n: "N" })}»
           es un filtro y sigue ahí.
         </Paragraph>
         <Rows
@@ -1091,17 +1111,17 @@ function Bank() {
             {
               key: "pendientes",
               head: <>«{t("bank.retagUntagged", { n: "N" })}»</>,
-              body: "Se lanza sobre exactamente los ejercicios que se quedaron sin tema, nunca sobre todos. Está en la tira de medidores, al lado del número sobre el que actúa.",
+              body: "Se lanza sobre exactamente los ejercicios que se quedaron sin concepto, nunca sobre todos. Está en la tira de medidores, al lado del número sobre el que actúa.",
             },
             {
               key: "todo",
               head: <>«{t("bank.retagAll")}»</>,
-              body: "Todos, desde cero. Sobrescribe los temas actuales, incluidos los que hayas corregido a mano, y por eso pide confirmación antes de lanzarse.",
+              body: "Todos, desde cero. Sobrescribe los conceptos actuales, incluidos los que hayas corregido a mano, y por eso pide confirmación antes de lanzarse.",
             },
             {
               key: "seleccion",
               head: <>«{t("bank.retagSelected")}»</>,
-              body: "Solo los ejercicios marcados a mano, aunque ya tuvieran tema. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
+              body: "Solo los ejercicios marcados a mano, aunque ya tuvieran concepto. Vive al pie de la tabla, porque es contextual: pertenece a las filas y no a los totales.",
             },
           ]}
         />
@@ -1127,7 +1147,7 @@ function Bank() {
         </Paragraph>
         <Paragraph>
           Cada página son <strong>siete ejercicios</strong>, y todas las filas cerradas miden lo
-          mismo: el enunciado se corta a dos líneas y se dibujan como mucho tres temas, con un
+          mismo: el enunciado se corta a dos líneas y se dibujan como mucho tres conceptos, con un
           «+N» que los nombra al pasar el cursor. Una tabla cuyas filas crecen con lo largo que
           sea cada enunciado no se puede leer por columnas, que es como se busca lo que está mal.
         </Paragraph>
@@ -1135,9 +1155,9 @@ function Bank() {
 
       <Detail title="Reintentar tiene sentido: el emparejamiento mejora entre pasadas">
         <p>
-          Cada ejercicio bien etiquetado tira de su tema hacia donde de verdad está, así que lo
+          Cada ejercicio bien etiquetado tira de su concepto hacia donde de verdad está, así que lo
           que aprende una pasada lo aprovecha la siguiente. Un ejercicio que hoy no encuentra
-          tema puede encontrarlo mañana sin que hayas tocado nada.
+          concepto puede encontrarlo mañana sin que hayas tocado nada.
         </p>
         <p>
           Por eso los que se quedaron fuera se vuelven a intentar en cada pasada, en vez de
@@ -1155,15 +1175,15 @@ function Generate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          La <strong>fase {GENERATE_PHASE}</strong>, y aquello para lo que existen los cuatro
-          pasos anteriores: un encargo, una tanda de ejercicios nuevos. El formulario es un
+          La primera puerta de la <strong>{t("nav.phase.test").toLowerCase()}</strong>, y
+          aquello para lo que existe la construcción: un encargo, una tanda de ejercicios nuevos. El formulario es un
           acordeón — se responde de arriba abajo y cada pregunta se cierra en una línea al
-          contestarla, así que volver a cambiar los temas cuesta un clic y ningún scroll.
+          contestarla, así que volver a cambiar los conceptos cuesta un clic y ningún scroll.
         </p>
         <p>
           Lo <strong>numerado es el encargo</strong>: como mucho cuatro preguntas, y dos de
-          ellas solo aparecen si tu asignatura las necesita. Lo opcional no lleva número y vive
-          plegado en «{t("form.settings.title")}», debajo.
+          ellas solo aparecen si tu asignatura las necesita. El texto libre no lleva número y
+          vive plegado en «{t("form.instructions.title")}», debajo.
         </p>
       </SectionHead>
 
@@ -1182,9 +1202,9 @@ function Generate() {
             <>
               <p className="font-medium">{t("form.practise.title")}</p>
               <p className="text-small text-muted-foreground">
-                {t("form.practise.hint")} Solo se ofrecen los temas{" "}
+                {t("form.practise.hint")} Solo se ofrecen los conceptos{" "}
                 <strong>{t("kg.taggable").toLowerCase()}</strong>: aquí se elige de qué va el
-                ejercicio, y para eso un tema genérico no vale.
+                ejercicio, y para eso un concepto genérico no vale.
               </p>
             </>,
             <>
@@ -1210,25 +1230,14 @@ function Generate() {
         />
       </Block>
 
-      <Block title={`Lo opcional, plegado en «${t("form.settings.title")}»`}>
+      <Block title={`Lo opcional, plegado en «${t("form.instructions.title")}»`}>
         <Paragraph>
-          Debajo de las preguntas numeradas hay una divulgación que dice de un vistazo qué hay
-          puesto dentro. Ninguna de las dos cosas que guarda es obligatoria, y por eso no
-          ocupan un número: el orden de la pantalla es primero lo que hay que contestar y
-          después lo que se puede añadir.
+          Debajo de las preguntas numeradas hay una divulgación que dice de un vistazo si hay
+          algo escrito dentro. No es obligatoria, y por eso no ocupa un número: el orden de la
+          pantalla es primero lo que hay que contestar y después lo que se puede añadir.
         </Paragraph>
         <Rows
           items={[
-            {
-              key: "taught",
-              head: t("form.taught.title"),
-              body: (
-                <>
-                  {t("form.taught.hint")} Vale solo para esta tanda: no se guarda en la
-                  asignatura.
-                </>
-              ),
-            },
             {
               key: "instructions",
               head: t("form.instructions.title"),
@@ -1245,14 +1254,14 @@ function Generate() {
 
       <Block title="Antes de lanzar, lo que el temario va a decirle al modelo">
         <Paragraph>
-          Bajo los temas elegidos aparece «{t("form.graphSays")}» con las dos listas que se le
+          Bajo los conceptos elegidos aparece «{t("form.graphSays")}» con las dos listas que se le
           van a dar: «{t("form.given")}» y «{t("form.forbidden")}». Salen del temario y de lo que
           hayas dicho que ha dado la clase, y se ven <em>antes</em> de gastar nada.
         </Paragraph>
         <Paragraph>
-          Ahí mismo se avisa de <strong>los temas sin ejemplo</strong>: si algún tema elegido no
+          Ahí mismo se avisa de <strong>los conceptos sin ejemplo</strong>: si algún concepto elegido no
           tiene ningún ejercicio tuyo —o ninguno del tipo pedido—, la tanda se escribe sin
-          ejemplo que imitar y la calidad suele bajar. La lista solo ofrece temas que tus
+          ejemplo que imitar y la calidad suele bajar. La lista solo ofrece conceptos que tus
           ejercicios puedan ilustrar, y el propio selector dice cuántos se está dejando fuera.
           Puede aparecer de todos modos al recuperar un encargo antiguo, si el material ha
           cambiado desde entonces.
@@ -1270,7 +1279,7 @@ function Generate() {
             {
               key: "admisibilidad",
               head: "2 · Admisibilidad",
-              body: "Decide si lo que pides es de esta caja o de algo que ya has decidido más arriba: los temas, el tipo de ejercicio, las partes del ejercicio o la propia asignatura. Si lo es, te dice qué control lo decide.",
+              body: "Decide si lo que pides es de esta caja o de algo que ya has decidido más arriba: los conceptos, el tipo de ejercicio, las partes del ejercicio o la propia asignatura. Si lo es, te dice qué control lo decide.",
             },
           ]}
         />
@@ -1294,7 +1303,7 @@ function Generate() {
           Se elige <em>antes</em> que el esfuerzo y no después, porque cuántos niveles hay y
           cuál conviene evitar es cosa del modelo. Hay modelos que contestan igual pongas el
           nivel que pongas: en esos no se dibuja la barra, y quién es quién también lo declara
-          quien administra. El modelo queda guardado con cada variatio, así que en
+          quien administra. El modelo queda guardado con cada ejercicio, así que en
           «{t("menu.savedVariants")}» puedes comparar dos enunciados sabiendo qué escribió
           cada uno.
         </Paragraph>
@@ -1332,7 +1341,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Cada variatio se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
+                  Cada ejercicio se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
                   con su encargo entero. Un lote cancelado a la tercera conserva tres.
                 </>
               ),
@@ -1344,7 +1353,7 @@ function Generate() {
                 <>
                   Lo que se puede comprobar sin juzgar el ejercicio: si nombra algo que la clase
                   aún no ha visto, si se parece demasiado a un ejemplo o a otro de la misma
-                  tanda, y si al releerlo se le reconoce el tema que pediste. Las dos primeras
+                  tanda, y si al releerlo se le reconoce el concepto que pediste. Las dos primeras
                   hacen que se <em>vuelva a intentar</em> antes de dártelo; lo que llega marcado
                   es lo que siguió sin salir limpio, y entonces{" "}
                   <strong>es una señal para quien lee, no un rechazo</strong>.
@@ -1354,12 +1363,13 @@ function Generate() {
             {
               key: "reintentada",
               head: <Badge variant="outline">{t("result.retried", { n: "N" })}</Badge>,
-              body: "Cuántas veces hubo que repetir la llamada por esas dos señales. No dice que el variatio esté mal: dice lo que costó.",
+              body: "Cuántas veces hubo que repetir la llamada por esas dos señales. No dice que el ejercicio esté mal: dice lo que costó.",
             },
           ]}
         />
         <Paragraph>
-          Un variatio sin nada que señalar lo dice igual de claro: «{t("result.noFlags")}».
+          Un ejercicio sin nada que señalar no lleva esa caja: sólo se dibuja cuando hay algo
+          que mirar.
         </Paragraph>
       </Block>
 
@@ -1367,14 +1377,14 @@ function Generate() {
         <Rows
           items={[
             {
-              key: "cambiar",
-              head: <>«{t("generate.changeCommission")}»</>,
-              body: "Reabre el formulario con todo relleno y deja los resultados a la vista hasta que lanzas otra tanda. Al reabrirlo aparece además «Empezar de cero», por si lo que quieres es otro encargo y no una variación del mismo.",
+              key: "variar",
+              head: <>«{t("generate.vary")}»</>,
+              body: "Reabre el formulario con todo relleno y deja los resultados a la vista hasta que lanzas otra tanda. Cambia lo que quieras —o no cambies nada, si lo que buscas es otro lote del mismo encargo— y vuelve a lanzar.",
             },
             {
-              key: "otras",
-              head: <>«{t("generate.anotherN", { n: "N" })}»</>,
-              body: "Repite el mismo encargo, lote nuevo. Con un solo ejercicio la etiqueta es «Generar otra».",
+              key: "cero",
+              head: <>«{t("generate.startOver")}»</>,
+              body: "Reabre el formulario vacío, para un encargo que no tiene nada que ver con el anterior.",
             },
             {
               key: "exportar",
@@ -1409,7 +1419,7 @@ function Evaluate() {
           sistema que sirve para medirlo, no para producir material.
         </p>
         <p>
-          Tú pides la comparación y tú la juzgas: eliges de qué tema quieres el ejercicio,
+          Tú pides la comparación y tú la juzgas: eliges de qué concepto quieres el ejercicio,
           se preparan las tres versiones y las lees cuando estén.
         </p>
       </SectionHead>
@@ -1437,7 +1447,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Donde abre la pantalla. Eliges de qué tema y de qué tipo quieres el ejercicio: es el mismo formulario de «Pedir ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión.",
+              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión.",
             },
             {
               key: "sesiones",
@@ -1458,7 +1468,7 @@ function Evaluate() {
           items={[
             <>
               Aparecen las tres propuestas, sin etiquetar y en un orden que es solo tuyo.
-              Encima, en una línea, el encargo: el tipo de ejercicio, los temas y el nivel si
+              Encima, en una línea, el encargo: el tipo de ejercicio, los conceptos y el nivel si
               se fijó uno. Es el mismo para las tres, así que no delata nada.
             </>,
             <>
@@ -1548,7 +1558,7 @@ function Evaluate() {
         <p>
           Qué recibe exactamente cada una está escrito, fila a fila, bajo el formulario de «
           {t("eval.tab.compose")}»: es la tabla «{t("fair.title")}», y dice quién ve los
-          temas, quién las descripciones, quién tus ejercicios como ejemplo, quién los
+          conceptos, quién las descripciones, quién tus ejercicios como ejemplo, quién los
           prerrequisitos. {t("fair.footnote")}
         </p>
       </Detail>
@@ -1602,8 +1612,9 @@ function Runs() {
 
       <Block title="Los seis estados">
         <Paragraph>
-          Ningún estado se distingue solo por el color: cada uno tiene su forma, y esa forma es la
-          misma en la barra de arriba y en la cabecera de cada paso.
+          Ningún estado se distingue solo por el color: cada uno tiene su forma, y se lee en la
+          barra de arriba, bajo el nombre de cada paso. La cabecera del paso no lleva ninguna
+          etiqueta: lo que un estado te pide lo dicen los avisos de la pantalla.
         </Paragraph>
         <Rows
           items={STATE_ORDER.map((key) => ({
@@ -1627,7 +1638,7 @@ function Runs() {
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <BuildPlanBar />
           <Paragraph>
-            Es el plan real del constructor del temario, leído de la API y no copiado aquí. Cada
+            Es el plan real del constructor del grafo, leído de la API y no copiado aquí. Cada
             tramo es una fase y su anchura es el <em>peso medido</em> de esa fase: por eso la
             lectura de los apuntes se lleva ella sola un tercio de la barra, el enlazado y la
             limpieza casi la mitad entre los dos, y la curación final es una raya. La que se
@@ -1759,7 +1770,7 @@ function Account() {
               {
                 key: "prompts",
                 head: "El de los prompts",
-                body: "En el que se le HABLA AL MODELO. Vive en la asignatura, se elige al crearla y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del temario y el cargador indexa por ellas.",
+                body: "En el que se le HABLA AL MODELO. Vive en la asignatura, se elige al crearla y ya no se cambia: las etiquetas de las relaciones quedan escritas dentro del grafo y el cargador indexa por ellas.",
               },
               {
                 key: "material",
@@ -1779,7 +1790,7 @@ function Account() {
       <Block title="Dos cosas que sorprenden">
         <Alert tone="info" title="El usuario no se puede cambiar">
           <p>
-            Es lo que identifica todo lo que has hecho: cada variatio, cada sesión de evaluación y
+            Es lo que identifica todo lo que has hecho: cada ejercicio, cada sesión de evaluación y
             cada línea del registro apuntan a él. El nombre visible sí se cambia cuando quieras.
           </p>
         </Alert>
@@ -1806,7 +1817,7 @@ function Account() {
         </Paragraph>
       </Block>
 
-      <Block title="Tema claro, oscuro o como el sistema">
+      <Block title="Concepto claro, oscuro o como el sistema">
         <Paragraph>
           Tres botones en el mismo menú del avatar. Es una propiedad de la pantalla y no de la
           cuenta: se guarda por navegador, porque la misma persona lee esto en un portátil al sol
@@ -1927,7 +1938,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>«{t("common.delete")}»</>,
-              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: los variatios generados y las sesiones de evaluación se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó, y el estudio no pierde las comparaciones que contó.",
+              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: los ejercicios generados y las sesiones de evaluación se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó, y el estudio no pierde las comparaciones que contó.",
             },
           ]}
         />
@@ -1939,7 +1950,7 @@ function Admin() {
 
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
-          Todas las instancias de la instalación con sus miembros, sus variatios y el estado de
+          Todas las instancias de la instalación con sus miembros, sus ejercicios y el estado de
           su cadena. Lo que pesa cada una va repartido por papel —{t("ws.disk.raw")},{" "}
           {t("ws.disk.instance")}, {t("ws.disk.cache")} e {t("ws.disk.history")}—, que es la
           única forma de ver que lo caro casi nunca son los artefactos.
@@ -2056,7 +2067,7 @@ function Admin() {
           construcciones y la generación— y cada parada, una llamada al modelo. Bajo el nombre de
           la parada, qué modelo la atiende; el círculo dice si razona antes de contestar y,
           mientras razona, el selector de al lado fija cuánto. Tres paradas no llevan interruptor
-          y lo dicen con el círculo a trazos: el guardián porque su modelo no razona, el variatio
+          y lo dicen con el círculo a trazos: el guardián porque su modelo no razona, el ejercicio
           porque eso lo decide cada encargo, y la reparación porque va con gramática y con
           gramática no se puede razonar.
         </Paragraph>
@@ -2076,7 +2087,7 @@ const problems = (
         <p>
           No es un fallo: quien administra la instalación la ha cerrado a propósito para
           aplicar cambios. El aviso dice desde cuándo, y lo tuyo sigue donde estaba —
-          artefactos, variatios y evaluaciones se leen igual cuando vuelva a abrirse.
+          artefactos, ejercicios y evaluaciones se leen igual cuando vuelva a abrirse.
         </p>
         <p>
           No hay hora prevista de vuelta, y no la hay porque nadie la sabe. «
@@ -2182,7 +2193,7 @@ const problems = (
           siguiente.
         </p>
         <p>
-          La descripción de un tema se puede corregir con el paso cerrado: vive en un fichero
+          La descripción de un concepto se puede corregir con el paso cerrado: vive en un fichero
           aparte y no caduca nada.
         </p>
       </>
@@ -2209,13 +2220,13 @@ const problems = (
   },
   {
     key: "sin-concepto",
-    question: "Hay ejercicios míos sin ningún tema",
+    question: "Hay ejercicios míos sin ningún concepto",
     answer: (
       <p>
         Es normal en la primera pasada. Pulsa «{t("stage.curate.start")}» y usa «
         {t("bank.retagUntagged", { n: "N" })}»: se lanza solo sobre esos, nunca sobre todos. Y
         tiene sentido repetir, porque el emparejamiento mejora con cada ejercicio bien
-        etiquetado. Si uno sigue resistiéndose, ponle el tema a mano.
+        etiquetado. Si uno sigue resistiéndose, ponle el concepto a mano.
       </p>
     ),
   },
@@ -2235,7 +2246,7 @@ const problems = (
     question: "Llevo horas y no sé si está avanzando",
     answer: (
       <p>
-        La construcción del temario es el trabajo más caro del recorrido. En su propia pantalla,
+        La construcción del grafo es el trabajo más caro del recorrido. En su propia pantalla,
         la barra por fases dice en cuál está: el tramo que se mueve es el que corre, y debajo va
         el nombre de lo que se está haciendo ahora mismo. Puedes cerrar la pestaña y volver más
         tarde.

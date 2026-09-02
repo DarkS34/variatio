@@ -5,11 +5,24 @@ which nothing did before: a workspace could be prepared end to end and leave no 
 whether its profile, its graph or its bank came out any good — so a poor comparison could
 never be told apart from a poor instance underneath it.
 
-Two questions are asked of ALL THREE artifacts and are what makes them comparable in the
-memoria: `effort`, how much correcting it would take before the thing is usable, and
-`overall`, the one ordinal scale. Everything else is specific to what the artifact IS —
-asking «¿el orden tiene sentido?» about a bank of exercises would produce an answer, which
-is worse than producing none.
+FIVE QUESTIONS PER STAGE, THE SAME FIVE AXES ON ALL THREE (2026-09-03, explicit user
+request: few enough not to overload the person, each one carrying a conclusion). The
+axes are what a builder can get wrong, and they are the same for any artifact that is a
+list the system extracted from somebody's documents:
+
+  1. `surplus` — PRECISION: is there something here that should not be?
+  2. `missing` — RECALL: is something that should be here absent?
+  3. the FUNCTION the artifact exists for — the fields of a type, the order of the
+     syllabus, the concept put on each exercise.
+  4. `effort` — how much correcting before it is usable, identical wording on all three.
+  5. `overall` — the one 1-5 scale shared with the rest of the study.
+
+Precision and recall are asked APART because they are opposite conclusions about the
+extractor — over-generating and under-generating are fixed in different places — and a
+single «¿lo reconoces?» folds them into one answer that says neither. The function
+question is the one that differs, and it is the most diagnostic of the three: «the
+concept is right almost always» is a claim about the tagger, not about the person's mood.
+The optional note is not a question and is not counted.
 
 Not one question names an artifact, a model or a phase. The person answering has never
 seen this tool and is being asked about their own subject: «tipos de ejercicio», «el
@@ -25,7 +38,14 @@ without doing so.
 from server import review
 
 # Stored in `stage_evaluations.instrument`. Bump on ANY change to the questions below.
-VERSION = "1"
+# «3» since 2026-09-03: the instrument was cut to five questions per stage on the five
+# axes the module docstring names — the graph lost its holistic «¿es este el temario?»
+# (precision and recall already say it, apart), the profile's «¿reconoces…?» became the
+# precision question, the bank's questions changed order and its first one widened to
+# «nothing that is not an exercise». «2» (2026-09-02) was the bank's tagging question
+# reworded from «tema» to «concepto»; «1» the original wording. Rows under «» are a
+# pre-existing oddity of the save path, all dated 2026-09-02.
+VERSION = "3"
 
 # Ordinal and best first, which is what lets the analysis score an answer without a table
 # per artifact: the index in `values` IS the score. Neutral keys, so a CSV column keeps its
@@ -35,14 +55,6 @@ EFFORT_VALUES: tuple[str, ...] = ("none", "touch_up", "a_lot", "redo")
 # The one scale shared with the rest of the study, asked last and about the whole thing.
 OVERALL_MIN = 1
 OVERALL_MAX = 5
-
-_RECOGNISES = {
-    "options": [
-        {"value": "yes", "label": "Sí, es lo mío"},
-        {"value": "partly", "label": "Se le parece"},
-        {"value": "no", "label": "No lo reconozco"},
-    ]
-}
 
 # Asked of all three, and the second half of the comparable spine. Four options and not
 # three: «nada» and «algún retoque» are the difference between usable and not, and
@@ -72,20 +84,32 @@ _NOTE = {
 
 QUESTIONS: dict[str, tuple[dict, ...]] = {
     review.EXEMPLARS_PROFILE: (
+        # PRECISION. The consolidator has produced different type sets across runs on one
+        # corpus and has split one modality in two, which is what «el mismo tipo dos veces»
+        # is there to catch.
         {
-            "key": "recognises",
-            "question": "¿Reconoces aquí los ejercicios que tú pones?",
-            **_RECOGNISES,
-        },
-        {
-            "key": "missing_type",
-            "question": "¿Falta alguna forma de ejercicio que uses?",
+            "key": "surplus",
+            "question": "¿Hay tipos de ejercicio que sobran?",
+            "hint": "Que tú no pones, o que son el mismo tipo repetido con otro nombre.",
             "options": [
-                {"value": "none", "label": "No falta ninguna"},
-                {"value": "secondary", "label": "Falta alguna secundaria"},
-                {"value": "main", "label": "Falta la principal"},
+                {"value": "none", "label": "Ninguno"},
+                {"value": "some", "label": "Alguno"},
+                {"value": "many", "label": "Varios"},
             ],
         },
+        # RECALL. «Principal» and not «alguno» is the difference between a profile that is
+        # usable with an addition and one that missed the point of the course.
+        {
+            "key": "missing_type",
+            "question": "¿Falta algún tipo de ejercicio que sí pones?",
+            "options": [
+                {"value": "none", "label": "No falta ninguno"},
+                {"value": "secondary", "label": "Falta alguno secundario"},
+                {"value": "main", "label": "Falta el principal"},
+            ],
+        },
+        # FUNCTION. The fields are what every generated exercise is made of: a wrong part
+        # here is a wrong part in every item written afterwards.
         {
             "key": "fields_right",
             "question": "¿Las partes de cada tipo son las correctas?",
@@ -99,27 +123,20 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         _EFFORT,
     ),
     review.KNOWLEDGE_GRAPH: (
-        # Sus propias opciones y no las de `_RECOGNISES`: la pregunta es sobre «el
-        # temario», así que «lo mío» no concuerda. La forma es la misma — tres, ordinal y
-        # la mejor primero — que es lo que el análisis necesita compartir.
+        # PRECISION, and wider than «not of my subject»: the extractor's measured failures
+        # are an example exercise's terms pulled in as concepts, a concept twice under two
+        # names, and a granularity no teacher would put on a syllabus.
         {
-            "key": "recognises",
-            "question": "¿Es este el temario de tu asignatura?",
-            "options": [
-                {"value": "yes", "label": "Sí, es el mío"},
-                {"value": "partly", "label": "Se le parece"},
-                {"value": "no", "label": "No lo reconozco"},
-            ],
-        },
-        {
-            "key": "foreign",
-            "question": "¿Hay conceptos que no son de tu asignatura?",
+            "key": "surplus",
+            "question": "¿Hay conceptos que sobran?",
+            "hint": "Que no son de tu asignatura, están repetidos o son demasiado concretos.",
             "options": [
                 {"value": "none", "label": "Ninguno"},
                 {"value": "some", "label": "Alguno suelto"},
                 {"value": "many", "label": "Muchos"},
             ],
         },
+        # RECALL.
         {
             "key": "missing_taught",
             "question": "¿Falta algo que sí enseñas?",
@@ -129,12 +146,13 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
                 {"value": "block", "label": "Falta un bloque entero"},
             ],
         },
-        # The graph is asked one more than the other two, and this is the one: what the
-        # graph is FOR is deciding what may be assumed known and what may not be leaned
-        # on, and that is a claim about the order rather than about the list.
+        # FUNCTION. What the graph is FOR is deciding what may be assumed known and what
+        # may not be leaned on, and that is a claim about the order rather than the list.
+        # «No lo he mirado» is a non-answer and the analysis treats it as missing, never as
+        # the worst rung: it is offered because the honest alternative is a guess.
         {
             "key": "order",
-            "question": "El orden — qué hace falta antes de qué — ¿tiene sentido?",
+            "question": "El orden — qué hace falta saber antes de qué — ¿tiene sentido?",
             "options": [
                 {"value": "yes", "label": "Sí"},
                 {"value": "some_reversed", "label": "Hay cosas del revés"},
@@ -144,25 +162,19 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         _EFFORT,
     ),
     review.EXEMPLARS_BANK: (
+        # PRECISION, in the bank's own terms: an item cut in half and a paragraph of theory
+        # taken for an exercise are the two ways something that should not be here got in.
         {
-            "key": "copied",
-            "question": "¿Están bien copiados de tus documentos?",
-            "hint": "Completos, sin cortar a mitad y sin partes perdidas.",
+            "key": "intact",
+            "question": "¿Están bien recogidos de tus documentos?",
+            "hint": "Completos, sin cortar a mitad, y sin que se cuele nada que no sea un ejercicio.",
             "options": [
-                {"value": "yes", "label": "Sí, completos"},
-                {"value": "some_cut", "label": "Alguno está cortado"},
+                {"value": "yes", "label": "Sí, todos bien"},
+                {"value": "some_bad", "label": "Alguno cortado, o que no es un ejercicio"},
                 {"value": "many_bad", "label": "Muchos están mal"},
             ],
         },
-        {
-            "key": "tagging",
-            "question": "El tema que se les ha puesto, ¿es el correcto?",
-            "options": [
-                {"value": "mostly", "label": "Casi siempre"},
-                {"value": "half", "label": "Como la mitad"},
-                {"value": "rarely", "label": "Casi nunca"},
-            ],
-        },
+        # RECALL.
         {
             "key": "missing_items",
             "question": "¿Falta algún ejercicio de tus documentos?",
@@ -172,8 +184,32 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
                 {"value": "document", "label": "Falta un documento entero"},
             ],
         },
+        # FUNCTION. The step is called «Etiquetado»: this is the question it is named after.
+        {
+            "key": "tagging",
+            "question": "El concepto que se les ha puesto, ¿es el correcto?",
+            "options": [
+                {"value": "mostly", "label": "Casi siempre"},
+                {"value": "half", "label": "Como la mitad"},
+                {"value": "rarely", "label": "Casi nunca"},
+            ],
+        },
         _EFFORT,
     ),
+}
+
+# The axis of each question, by key, so the analysis can lay the three stages side by side
+# without a table of its own. The order is the order asked.
+AXES: dict[str, str] = {
+    "surplus": "precision",
+    "intact": "precision",
+    "missing_type": "recall",
+    "missing_taught": "recall",
+    "missing_items": "recall",
+    "fields_right": "function",
+    "order": "function",
+    "tagging": "function",
+    "effort": "effort",
 }
 
 # What the screen puts above the questions: why it is worth a minute. Said once per
@@ -185,8 +221,8 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
 # graph asked six, so the control contradicted the form it opened.
 PREAMBLE: dict[str, str] = {
     review.EXEMPLARS_PROFILE: (
-        "{n} preguntas sobre lo que acabas de revisar. Es lo único que te pedimos a cambio, "
-        "y es lo que se está midiendo en el estudio."
+        "{n} preguntas sobre los tipos de ejercicio que acabas de revisar. Es lo único que "
+        "te pedimos a cambio, y es lo que se está midiendo en el estudio."
     ),
     review.KNOWLEDGE_GRAPH: "{n} preguntas sobre el temario que acabas de revisar.",
     review.EXEMPLARS_BANK: "{n} preguntas sobre los ejercicios que acabas de revisar.",

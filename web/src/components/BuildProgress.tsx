@@ -1,4 +1,5 @@
-import { Hourglass } from "lucide-react";
+import { ChevronRight, Hourglass } from "lucide-react";
+import { useId, useState } from "react";
 
 import { RunTimeline } from "@/components/RunTimeline";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,6 +73,35 @@ export function BuildProgress({
  * own plan. They were the same bar, and separating them would have given two different ways
  * of drawing the same thing.
  */
+/**
+ * Whether the step timeline is unfolded, remembered per browser.
+ *
+ * CLOSED BY DEFAULT (2026-09-03, explicit user request). The card's own header already
+ * says which phase is running, how far and for how long; the step-by-step list under it is
+ * detail for whoever wants it, and on a build of thirteen phases it was most of the card.
+ * `localStorage` and not state, so the choice survives moving between the four steps: a
+ * person who opened it once is reading builds, and one who shut it is not. Every access is
+ * guarded, because the accessor itself throws in some browsers' private modes.
+ */
+const STEPS_KEY = "vg.steps";
+
+function readStepsOpen(): boolean {
+  try {
+    return localStorage.getItem(STEPS_KEY) === "open";
+  } catch {
+    return false;
+  }
+}
+
+function writeStepsOpen(open: boolean) {
+  try {
+    if (open) localStorage.setItem(STEPS_KEY, "open");
+    else localStorage.removeItem(STEPS_KEY);
+  } catch {
+    // Nothing to remember with: the card still folds and unfolds for this visit.
+  }
+}
+
 export function JobProgress({
   run,
   phases,
@@ -98,6 +128,8 @@ export function JobProgress({
   cancel?: { runs?: (RunView | null)[]; word?: "cancel" | "stop"; hint?: string };
 }) {
   const { t } = useT();
+  const [stepsOpen, setStepsOpen] = useState(readStepsOpen);
+  const stepsId = useId();
   const waitingText = waiting ?? t("progress.running");
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
@@ -213,10 +245,38 @@ export function JobProgress({
           ) : null
         ) : (
           <div className="space-y-2">
-            <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+            {/* A button and not a heading: the list folds under it and starts folded. The
+                count beside the word is what the shut state still says — how many steps
+                there are to look at — and the error is never behind the fold. */}
+            <button
+              type="button"
+              onClick={() =>
+                setStepsOpen((was) => {
+                  writeStepsOpen(!was);
+                  return !was;
+                })
+              }
+              aria-expanded={stepsOpen}
+              aria-controls={stepsId}
+              className="flex items-center gap-1.5 text-small font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronRight
+                aria-hidden
+                className={cn(
+                  "size-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+                  stepsOpen && "rotate-90",
+                )}
+              />
               {t("run.steps")}
-            </h4>
-            <RunTimeline steps={run.steps} />
+              <span className="nums font-normal normal-case tracking-normal">
+                ({run.steps.length})
+              </span>
+            </button>
+            {stepsOpen ? (
+              <div id={stepsId}>
+                <RunTimeline steps={run.steps} />
+              </div>
+            ) : null}
             {run.job.error ? (
               <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-small text-destructive">
                 {run.job.error}

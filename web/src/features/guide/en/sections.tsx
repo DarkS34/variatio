@@ -7,8 +7,7 @@ import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
 import { ARM_META } from "@/study/arms";
 import {
-  COMPARE_PHASE,
-  GENERATE_PHASE,
+  USES,
   STEPS,
   nextStepOf,
   stepNumber,
@@ -50,21 +49,17 @@ function BuildPlanBar() {
 }
 
 /**
- * One of the two things the path leads to, drawn as the bar draws it.
- *
- * `n` replaces the icon on the one that IS a phase, exactly as `UsePill` does: the number
- * beside "Ask for exercises" is what says the four stops before it were for something.
+ * One of the two doors of the testing phase, drawn as the bar draws it: an icon and no
+ * number, because the two have no order between them.
  */
 function Pill({
   icon: Icon,
   label,
   tone,
-  n,
 }: {
   icon: LucideIcon;
   label: string;
   tone?: "study";
-  n?: number;
 }) {
   return (
     <span
@@ -74,11 +69,7 @@ function Pill({
           : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
-      {n === undefined ? (
-        <Icon className="size-4" />
-      ) : (
-        <span className="nums font-condensed font-semibold">{n}</span>
-      )}
+      <Icon className="size-4" />
       {label}
     </span>
   );
@@ -93,43 +84,68 @@ function Start() {
         <p>
           <strong>Variatio</strong> generates <strong>learning exercises</strong> — exercises,
           problems, assessment tasks — anchored to a course's syllabus. It does not write about a
-          topic in the abstract: it starts from the four steps you describe your subject with, and
-          produces variatios that respect what the student has already seen and what they have
+          concept in the abstract: it starts from the four steps you describe your subject with, and
+          produces exercises that respect what the student has already seen and what they have
           not.
         </p>
       </SectionHead>
 
       <Block title="The route, at a glance">
-        {/* It is the bar above, drawn here: the numbers come from `STEPS` and from the two
-            phase constants, so this figure cannot promise an order the navigation does not
+        {/* It is the bar above, drawn here: the steps come from `STEPS` and the two doors
+            from `USES`, so this figure cannot promise an order the navigation does not
             have. */}
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
-          {STEPS.map((step, index) => (
-            <div key={step.path} className="flex items-center gap-2">
-              <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
-                {stepNumber(index)}
-              </span>
-              <span className="text-body font-medium">{t(step.labelKey)}</span>
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.build")}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              {STEPS.map((step, index) => (
+                <div key={step.path} className="flex items-center gap-2">
+                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+                    {stepNumber(index)}
+                  </span>
+                  <span className="text-body font-medium">{t(step.labelKey)}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <Pill icon={Play} label={t("nav.create")} n={GENERATE_PHASE} />
-          <Pill icon={Scale} label={t("nav.compare")} n={COMPARE_PHASE} tone="study" />
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.test")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {USES.map((door) => (
+                <Pill
+                  key={door.key}
+                  icon={door.key === "generate" ? Play : Scale}
+                  label={t(door.labelKey)}
+                  tone={door.study ? "study" : undefined}
+                />
+              ))}
+            </div>
+          </div>
         </div>
         <Paragraph>
-          It is exactly the bar above, and the numbers say what they are: the first four are{" "}
-          <strong>1.1</strong> to <strong>1.4</strong> because they are one single job,{" "}
-          <em>preparing the subject</em>, and they are done in that order. Each carries a word
-          underneath saying where you are: <em>{t("nav.state.done").toLowerCase()}</em>,{" "}
+          It is exactly the bar above, and it is two named phases. The{" "}
+          <strong>{t("nav.phase.build").toLowerCase()}</strong> is four steps numbered{" "}
+          <strong>{stepNumber(0)}</strong> to <strong>{stepNumber(3)}</strong> because they are
+          one single job, <em>preparing the subject</em>, and they are done in that order: each
+          needs the one before it closed. Each carries a word underneath saying where you are:{" "}
+          <em>{t("nav.state.done").toLowerCase()}</em>,{" "}
           <em>{t("nav.state.now").toLowerCase()}</em> or{" "}
           <em>{t("nav.state.later").toLowerCase()}</em>.
         </Paragraph>
         <Paragraph>
-          <strong>"{t("nav.create")}" is phase {GENERATE_PHASE}</strong>, and that is why it
-          carries a number: it is what the other four exist for, not an extra outside the route.
-          It opens once phase 1 is finished. "{t("nav.compare")}" is{" "}
-          <strong>phase {COMPARE_PHASE}</strong>, and it stands apart in its own colour: it
-          produces no material for your subject, it is there to measure the system.
+          The <strong>{t("nav.phase.test").toLowerCase()}</strong> is two things you can do with
+          the subject once it is built, and that is why they carry no number: neither comes
+          before the other and neither needs the other. Both light up at once, when the construction
+          is closed; until then they are half off, they say "{t("nav.state.later").toLowerCase()}"
+          and they answer no click.
+          "{t("nav.create")}" is what the construction exists for. "{t("nav.compare")}" stands
+          apart in its own colour: it produces no material for your subject, it is there to
+          measure the system.
         </Paragraph>
       </Block>
 
@@ -143,19 +159,19 @@ function Start() {
           {
             key: "grafo",
             head: `${stepNumberOf("knowledge_graph")} · ${t("artifact.graph")}`,
-            body: "The subject's topics, grouped into units and joined by what has to be known before what.",
+            body: "The subject's syllabus: its concepts, grouped into units and joined by what has to be known before what.",
           },
           {
             key: "banco",
             head: `${stepNumberOf("exemplars_bank")} · ${t("artifact.bank")}`,
-            body: "Your own exercises, collected one by one out of the documents, each with the topics it practises.",
+            body: "Your own exercises, collected one by one out of the documents, each with the syllabus concepts it practises.",
           },
         ]}
       />
 
       <Alert tone="info" title="Exercise types come before the syllabus">
         <p>
-          A syllabus can be built with nothing else, but the review of which topics work as a
+          A syllabus can be built with nothing else, but the review of which concepts work as a
           label needs the <em>exercise types already closed</em>: it is judged against the shapes
           of exercise you set. That is why Step {stepNumberOf("exemplars_profile")} comes before
           Step {stepNumberOf("knowledge_graph")}, and not the other way round.
@@ -189,12 +205,12 @@ function Start() {
             <>
               <strong>Step {stepNumber(2)}</strong> — launch <strong>the syllabus</strong>. It is
               the most expensive job on the route: you can close the tab, the server carries on.
-              When it finishes it chains on its own the description of every topic and the review
+              When it finishes it chains on its own the description of every concept and the review
               of which ones work as a label.
             </>,
             <>
               <strong>Step {stepNumber(3)}</strong> — collect your exercises and go over the{" "}
-              <strong>{t("nav.step.bank").toLowerCase()}</strong>: whether the topic each one has
+              <strong>{t("nav.step.bank").toLowerCase()}</strong>: whether the concept each one has
               been given is the one it really practises.
             </>,
             <>
@@ -230,7 +246,7 @@ function Start() {
           by carrying on.
         </p>
         <p>
-          What is <em>not</em> part of that file — a topic's description — can still be
+          What is <em>not</em> part of that file — a concept's description — can still be
           corrected with the step closed, because it lives apart and expires nothing.
         </p>
       </Detail>
@@ -246,7 +262,7 @@ function Workspace() {
         <p>
           A <strong>subject</strong> is prepared whole and on its own: its documents, the four
           steps of the route and everything generated from it. Nothing crosses from one to
-          another. If one syllabus is taught with two very different exercise formats, those are
+          another. If one subject is taught with two very different exercise formats, those are
           two as well.
         </p>
       </SectionHead>
@@ -336,10 +352,10 @@ function Workspace() {
       <Block title="What the class has already covered">
         <Paragraph>
           When asking for an exercise you can say how far the class has got. That is what bounds
-          the scaffolding: an exercise may lean on a topic already taught; it may not depend on
-          one the class has not seen yet. It is chosen <em>in the commission itself</em>, inside
-          "{t("form.settings.title")}", and holds for that batch — it is not stored on the
-          subject.
+          the scaffolding: an exercise may lean on a concept already taught; it may not depend on
+          one the class has not seen yet. It is chosen <em>in the commission itself</em>, in the
+          same question where you choose what to practise and directly above it, and holds for
+          that batch — it is not stored on the subject.
         </Paragraph>
         <Alert tone="info" title="Marking nothing does not mean nothing covered">
           <p>
@@ -609,10 +625,11 @@ function Verdict({ artifact }: { artifact: string }) {
             asked afterwards is whether it sounds like your subject.
           </>,
           <>
-            <strong>"{t("stageReview.openTitle")}"</strong>, the button at the foot, opens a
-            short questionnaire from the side and counts for itself: it says how many
-            questions it has. You can leave it half done and come back, because half an answer
-            is a datum too, and once you have saved you can close it without losing anything.
+            <strong>"{t("stageReview.openTitle")}"</strong>, the button at the foot, unfolds a
+            short questionnaire beneath it: five questions, the same five ideas on all three
+            steps. You can leave it half done and come back, because half an answer is a datum
+            too, and once you have saved you can close it without losing anything. It is there
+            even when the previous step has been reopened: what is judged is what is built.
           </>,
           <>
             <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what is above.
@@ -652,10 +669,13 @@ function Verdict({ artifact }: { artifact: string }) {
           and without telling them apart the two are mixed into the same average.
         </p>
         <p>
-          The questions change with the step, but two are always the same — how much you would
-          have to correct before you could use it, and 1 to 5 overall — and those are the ones
-          that let one step be compared with another. At the end there is an optional box for
-          whatever does not fit the options.
+          There are five questions on every step and they follow the same order on all three:
+          whether something is there that should not be, whether something is missing, whether
+          the step does what it is for — the parts of each type, the order of the syllabus,
+          the concept on each exercise — how much you would have to correct before you could
+          use it, and 1 to 5 overall. The last two are identical on all three, and those are
+          the ones that let one step be compared with another. At the end there is an optional
+          box for whatever does not fit the options.
         </p>
         <p>
           It is the only thing asked in return for using this, and it is what is being
@@ -692,7 +712,7 @@ function Profile() {
           },
           {
             label: "What it unlocks",
-            value: "Collecting your exercises, and deciding which topics of the syllabus work as a label.",
+            value: "Collecting your exercises, and deciding which concepts of the syllabus work as a label.",
           },
         ]}
       />
@@ -779,7 +799,7 @@ function Profile() {
               body: "Take a few of your own exercises of that type and apply the criterion. If they all land on the same level, the criterion does not separate: sharpen it until it spreads them.",
             },
             {
-              key: "topic",
+              key: "concept",
               head: "It is not what it is about, nor how long it is",
               body: "A long statement is not a hard exercise, and one from the last unit is not hard for being at the end. What each exercise is about is already recorded elsewhere, against the syllabus.",
             },
@@ -819,7 +839,7 @@ function Profile() {
             {
               key: "primario",
               head: t("field.primary.badge"),
-              body: "The one carrying the statement. It is the text the exercise is matched against the syllabus's topics with, and only a part of type text can be it.",
+              body: "The one carrying the statement. It is the text the exercise is matched against the syllabus's concepts with, and only a part of type text can be it.",
             },
           ]}
         />
@@ -851,9 +871,9 @@ function Graph() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.graph")}>
         <p>
-          Your subject's topics, grouped into units and joined by what has to be known before
-          what. Everything tagged and written afterwards comes from here: neither the model nor
-          you can use a topic that is not in the syllabus.
+          Your subject's syllabus: its concepts, grouped into units and joined by what has to be
+          known before what. Everything tagged and written afterwards comes from here: neither the model nor
+          you can use a concept that is not in the syllabus.
         </p>
       </SectionHead>
 
@@ -870,7 +890,7 @@ function Graph() {
           },
           {
             label: "What it unlocks",
-            value: "Putting topics on your exercises, saying how far the class has got, and asking for new exercises.",
+            value: "Putting the syllabus's concepts on your exercises, saying how far the class has got, and asking for new exercises.",
           },
         ]}
       />
@@ -878,17 +898,17 @@ function Graph() {
       <Block title="A list, with a map under it">
         <Paragraph>
           What you see first is the syllabus: the units in teaching order, folded. Open them, or
-          search and the ones with results open on their own. Every row carries the topic and
+          search and the ones with results open on their own. Every row carries the concept and
           whether it <strong>{t("kg.taggable").toLowerCase()}</strong> — "{t("common.yes")}" or "
           {t("common.no")}"; clicking it opens its card <em>beside the list</em>, with its unit,
           its description and its relations. While you are only looking, that is a read, which is
-          exactly what is asked here: open a topic and see whether what it says about it is your
+          exactly what is asked here: open a concept and see whether what it says about it is your
           subject.
         </Paragraph>
         <Paragraph>
           Press "{t("stage.curate.start")}" at the foot of the screen and that same card becomes
           editable — the name, the unit and the relations — and the list grows the buttons for
-          adding a unit and adding a topic, and each row's "{t("kg.taggable").toLowerCase()}"
+          adding a unit and adding a concept, and each row's "{t("kg.taggable").toLowerCase()}"
           turns from a "{t("common.yes")}" into a switch.
         </Paragraph>
         <Paragraph>
@@ -917,18 +937,18 @@ function Graph() {
         <Steps
           items={[
             <>
-              <p className="font-medium">Each topic's description</p>
+              <p className="font-medium">Each concept's description</p>
               <p className="text-small text-muted-foreground">
-                The prose describing each topic, written against the paragraphs of your notes it
+                The prose describing each concept, written against the paragraphs of your notes it
                 came from. <strong>It is the text matched against, not the name.</strong> They
-                are corrected on the topic's own card, which is where they are being read — and
+                are corrected on the concept's own card, which is where they are being read — and
                 they are the one thing that can still be corrected with the step closed, because
                 they live apart and expire nothing.
               </p>
             </>,
             <>
               <p className="flex flex-wrap items-center gap-2 font-medium">
-                Which topics work as a label
+                Which concepts work as a label
                 <Badge variant="attention">
                   needs Step {stepNumberOf("exemplars_profile")} closed
                 </Badge>
@@ -954,29 +974,29 @@ function Graph() {
       <Block title="Curating the syllabus by hand">
         <Paragraph>
           With "{t("stage.curate.start")}" pressed you can rename what came out crooked, delete
-          what is not a topic of the subject, move topics between units and fix relations.
-          Renaming a topic carries with it the piece of your notes it came from; deleting it lets
+          what is not a concept of the subject, move concepts between units and fix relations.
+          Renaming a concept carries with it the piece of your notes it came from; deleting it lets
           it go. Ticking or unticking "{t("kg.taggable").toLowerCase()}" does not move the row:
           it stays where it was, under the hand that pressed it.
         </Paragraph>
       </Block>
 
       <div className="space-y-2">
-        <Detail title="Why matching is not done on the topic's name">
+        <Detail title="Why matching is not done on the concept's name">
           <p>
             A name is a two-word label and says nothing about what is practised by using it. What
             is matched against is the <em>description</em>, fused with what your exercises
-            already carrying that topic have in common.
+            already carrying that concept have in common.
           </p>
           <p>
-            That is why a badly written description is paid for every time a topic is put on an
+            That is why a badly written description is paid for every time a concept is put on an
             exercise and every time a new one is written, and why they are worth reading.
           </p>
         </Detail>
 
         <Detail title="What is assumed known and what is forbidden">
           <p>
-            Around the topics you ask for, two lists are taken from the syllabus and handed to
+            Around the concepts you ask for, two lists are taken from the syllabus and handed to
             the model:
           </p>
           <Rows
@@ -984,12 +1004,12 @@ function Graph() {
               {
                 key: "sabido",
                 head: <span className="text-settled">{t("form.given")}</span>,
-                body: "What has to be known before the topic asked for and the class has already covered. The exercise may lean on it, but must not turn it into the difficulty. It travels with its description, not as a bare name.",
+                body: "What has to be known before the concept asked for and the class has already covered. The exercise may lean on it, but must not turn it into the difficulty. It travels with its description, not as a bare name.",
               },
               {
                 key: "prohibido",
                 head: <span className="text-destructive">{t("form.forbidden")}</span>,
-                body: "What comes after the topic asked for and the class has not seen yet. It must not appear.",
+                body: "What comes after the concept asked for and the class has not seen yet. It must not appear.",
               },
             ]}
           />
@@ -1012,13 +1032,13 @@ function Bank() {
       <SectionHead eyebrow={t("guide.group.prepare")} title={t("guide.sec.bank")}>
         <p>
           Your exercises, collected one by one out of the documents, each with the syllabus
-          topics it practises. What is reviewed here is <strong>that matching</strong>: whether
-          the topic each exercise has been given is the one it really practises.
+          concepts it practises. What is reviewed here is <strong>that matching</strong>: whether
+          the concept each exercise has been given is the one it really practises.
         </p>
         <p>
           It matters because these are the examples that accompany every new exercise: this is
           where "here is how exercises are written in this subject" comes from, for the model to
-          imitate, and they are picked by the topic each one carries.
+          imitate, and they are picked by the concept each one carries.
         </p>
       </SectionHead>
 
@@ -1041,7 +1061,7 @@ function Bank() {
 
       <Alert tone="info" title="Collecting and tagging are one single job">
         <p>
-          Each document is given its topics as it comes out, so by the time it finishes
+          Each document is given its concepts as it comes out, so by the time it finishes
           everything is already tagged: there is no intermediate step to launch. What is left is
           correcting what came out wrong, and there are three separate controls for that.
         </p>
@@ -1053,7 +1073,7 @@ function Bank() {
             {
               key: "etiquetados",
               head: t("bank.taggedItems"),
-              body: "How many of your exercises carry at least one topic. It is the correcting still ahead of you. It is only drawn while some are missing: with everything tagged there is nothing to look at there.",
+              body: "How many of your exercises carry at least one concept. It is the correcting still ahead of you. It is only drawn while some are missing: with everything tagged there is nothing to look at there.",
             },
             {
               key: "cobertura",
@@ -1064,7 +1084,7 @@ function Bank() {
         />
         <Paragraph>
           The two look in opposite directions and are worth keeping apart: one counts{" "}
-          <em>exercises with no topic</em>, the other <em>topics with no exercise</em>.
+          <em>exercises with no concept</em>, the other <em>concepts with no exercise</em>.
           Everything can be tagged while half the syllabus has not a single example to imitate.
         </Paragraph>
       </Block>
@@ -1073,18 +1093,18 @@ function Bank() {
         <Steps
           items={[
             <>
-              First, the ones <strong>left with no topic</strong>. The strip of meters at the
+              First, the ones <strong>left with no concept</strong>. The strip of meters at the
               top counts them and "{t("bank.seeUntagged", { n: "N" })}" filters them.
             </>,
             <>
-              Then the ones carrying <strong>a single topic</strong>, or one that does not fit:
-              every row measures the same and the topics column reads at a glance, which is
+              Then the ones carrying <strong>a single concept</strong>, or one that does not fit:
+              every row measures the same and the concepts column reads at a glance, which is
               where the matching goes wrong without saying so. Click a row to read the whole
               exercise.
             </>,
             <>
               If there is correcting to do, "{t("stage.curate.start")}" at the foot of the
-              screen: then each exercise can be edited and its <strong>primary topic</strong>{" "}
+              screen: then each exercise can be edited and its <strong>primary concept</strong>{" "}
               changed by hand, which is the one that decides what it is compared against
               afterwards.
             </>,
@@ -1092,11 +1112,11 @@ function Bank() {
         />
       </Block>
 
-      <Block title="The three ways to put topics back, which do not do the same thing">
+      <Block title="The three ways to put concepts back, which do not do the same thing">
         <Paragraph>
           All three <strong>only appear while you are correcting</strong>: they are the only
           things on this screen that write. What they say is not lost by hiding them — how many
-          exercises have no topic is still on the meter, and "
+          exercises have no concept is still on the meter, and "
           {t("bank.seeUntagged", { n: "N" })}" is a filter and stays.
         </Paragraph>
         <Rows
@@ -1104,17 +1124,17 @@ function Bank() {
             {
               key: "pendientes",
               head: <>"{t("bank.retagUntagged", { n: "N" })}"</>,
-              body: "It runs over exactly the exercises left with no topic, never over all of them. It sits in the strip of meters, next to the number it acts on.",
+              body: "It runs over exactly the exercises left with no concept, never over all of them. It sits in the strip of meters, next to the number it acts on.",
             },
             {
               key: "todo",
               head: <>"{t("bank.retagAll")}"</>,
-              body: "All of them, from scratch. It overwrites the current topics, the ones you corrected by hand included, which is why it asks for confirmation before it runs.",
+              body: "All of them, from scratch. It overwrites the current concepts, the ones you corrected by hand included, which is why it asks for confirmation before it runs.",
             },
             {
               key: "seleccion",
               head: <>"{t("bank.retagSelected")}"</>,
-              body: "Only the exercises ticked by hand, even if they already had a topic. It lives at the foot of the table, because it is contextual: it belongs to the rows and not to the totals.",
+              body: "Only the exercises ticked by hand, even if they already had a concept. It lives at the foot of the table, because it is contextual: it belongs to the rows and not to the totals.",
             },
           ]}
         />
@@ -1140,7 +1160,7 @@ function Bank() {
         </Paragraph>
         <Paragraph>
           Each page holds <strong>seven exercises</strong>, and every closed row measures the
-          same: the statement is cut to two lines and at most three topics are drawn, with a "+N"
+          same: the statement is cut to two lines and at most three concepts are drawn, with a "+N"
           that names the rest on hover. A table whose rows grow with the length of each statement
           cannot be read down a column, which is how you look for what is wrong.
         </Paragraph>
@@ -1148,8 +1168,8 @@ function Bank() {
 
       <Detail title="Retrying makes sense: the matching improves between passes">
         <p>
-          Every well-tagged exercise pulls its topic towards where it really is, so what one pass
-          learns the next one uses. An exercise that finds no topic today may find one tomorrow
+          Every well-tagged exercise pulls its concept towards where it really is, so what one pass
+          learns the next one uses. An exercise that finds no concept today may find one tomorrow
           without your having touched anything.
         </p>
         <p>
@@ -1168,15 +1188,15 @@ function Generate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          <strong>Phase {GENERATE_PHASE}</strong>, and what the four steps before it exist for:
-          one commission, one batch of new exercises. The form is an accordion — it is answered
+          The first door of the <strong>{t("nav.phase.test").toLowerCase()}</strong>, and what
+          the construction exists for: one commission, one batch of new exercises. The form is an accordion — it is answered
           top to bottom and each question collapses to a single line once answered, so changing
-          the topics again costs one click and no scrolling.
+          the concepts again costs one click and no scrolling.
         </p>
         <p>
           What is <strong>numbered is the commission</strong>: four questions at most, and two of
-          them appear only if your subject needs them. What is optional carries no number and
-          sits folded in "{t("form.settings.title")}", underneath.
+          them appear only if your subject needs them. The free text carries no number and sits
+          folded in "{t("form.instructions.title")}", underneath.
         </p>
       </SectionHead>
 
@@ -1195,9 +1215,9 @@ function Generate() {
             <>
               <p className="font-medium">{t("form.practise.title")}</p>
               <p className="text-small text-muted-foreground">
-                {t("form.practise.hint")} Only topics that{" "}
+                {t("form.practise.hint")} Only concepts that{" "}
                 <strong>{t("kg.taggable").toLowerCase()}</strong> are offered: this is where you
-                choose what the exercise is about, and a generic topic is no use for that.
+                choose what the exercise is about, and a generic concept is no use for that.
               </p>
             </>,
             <>
@@ -1220,24 +1240,14 @@ function Generate() {
         />
       </Block>
 
-      <Block title={`What is optional, folded into "${t("form.settings.title")}"`}>
+      <Block title={`What is optional, folded into "${t("form.instructions.title")}"`}>
         <Paragraph>
-          Under the numbered questions there is a disclosure saying at a glance what is set
-          inside it. Neither of the two things it holds is required, and that is why they take up
-          no number: the screen's order is first what has to be answered, then what may be added.
+          Under the numbered questions there is a disclosure saying at a glance whether anything
+          is written inside it. It is not required, and that is why it takes up no number: the
+          screen's order is first what has to be answered, then what may be added.
         </Paragraph>
         <Rows
           items={[
-            {
-              key: "taught",
-              head: t("form.taught.title"),
-              body: (
-                <>
-                  {t("form.taught.hint")} It holds for this batch alone: nothing is stored on the
-                  subject.
-                </>
-              ),
-            },
             {
               key: "instructions",
               head: t("form.instructions.title"),
@@ -1255,15 +1265,15 @@ function Generate() {
 
       <Block title="Before launching, what the syllabus is about to tell the model">
         <Paragraph>
-          Under the chosen topics, "{t("form.graphSays")}" appears with the two lists that will
+          Under the chosen concepts, "{t("form.graphSays")}" appears with the two lists that will
           be handed over: "{t("form.given")}" and "{t("form.forbidden")}". They come out of the
           syllabus and of whatever you said the class has covered, and they are visible{" "}
           <em>before</em> anything is spent.
         </Paragraph>
         <Paragraph>
-          The same box warns about <strong>topics with no example</strong>: if a chosen topic has
+          The same box warns about <strong>concepts with no example</strong>: if a chosen concept has
           no exercise of yours — or none of the type asked for — the batch is written with no
-          example to imitate and quality usually drops. The list only offers topics your exercises
+          example to imitate and quality usually drops. The list only offers concepts your exercises
           can illustrate, and the selector itself says how many it is leaving out. It can show up
           anyway when you restore an old commission, if the material has changed since.
         </Paragraph>
@@ -1280,7 +1290,7 @@ function Generate() {
             {
               key: "admisibilidad",
               head: "2 · Admissibility",
-              body: "It decides whether what you are asking for belongs to this box or to something you already decided above: the topics, the exercise type, the exercise's parts, or the subject itself. If it does, it tells you which control decides it.",
+              body: "It decides whether what you are asking for belongs to this box or to something you already decided above: the concepts, the exercise type, the exercise's parts, or the subject itself. If it does, it tells you which control decides it.",
             },
           ]}
         />
@@ -1304,7 +1314,7 @@ function Generate() {
           It is chosen <em>before</em> the effort and not after, because how many levels there
           are and which one is worth avoiding is the model's business. Some models answer the
           same whatever level you set: those draw no bar, and which ones they are is declared
-          by whoever administers the installation too. The model is stored with every variatio,
+          by whoever administers the installation too. The model is stored with every exercise,
           so in «{t("menu.savedVariants")}» you can compare two statements knowing what wrote
           each.
         </Paragraph>
@@ -1342,7 +1352,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Every variatio is saved into "{t("menu.savedVariants")}"{" "}
+                  Every exercise is saved into "{t("menu.savedVariants")}"{" "}
                   <em>the moment it validates</em>, with its whole commission. A batch cancelled
                   at the third keeps three.
                 </>
@@ -1355,7 +1365,7 @@ function Generate() {
                 <>
                   What can be checked without judging the exercise: whether it names something
                   the class has not seen yet, whether it looks too much like an example or
-                  another one in the same batch, and whether re-reading it recognises the topic
+                  another one in the same batch, and whether re-reading it recognises the concept
                   you asked for. The first two make it <em>try again</em> before handing it to
                   you; what arrives flagged is what still did not come out clean, and at that
                   point <strong>it is a signal for whoever reads, not a rejection</strong>.
@@ -1365,12 +1375,13 @@ function Generate() {
             {
               key: "reintentada",
               head: <Badge variant="outline">{t("result.retried", { n: "N" })}</Badge>,
-              body: "How many times the call had to be repeated because of those two signals. It does not say the variatio is bad: it says what it cost.",
+              body: "How many times the call had to be repeated because of those two signals. It does not say the exercise is bad: it says what it cost.",
             },
           ]}
         />
         <Paragraph>
-          A variatio with nothing to flag says so just as plainly: "{t("result.noFlags")}".
+          An exercise with nothing to flag carries no such box: it is only drawn when there is
+          something to look at.
         </Paragraph>
       </Block>
 
@@ -1378,14 +1389,14 @@ function Generate() {
         <Rows
           items={[
             {
-              key: "cambiar",
-              head: <>"{t("generate.changeCommission")}"</>,
-              body: 'Reopens the form with everything filled in and leaves the results in view until you launch another batch. Reopening also brings up "Start over", for when what you want is a different commission rather than a variation on the same one.',
+              key: "variar",
+              head: <>"{t("generate.vary")}"</>,
+              body: "Reopens the form with everything filled in and leaves the results in view until you launch another batch. Change whatever you like — or change nothing, if what you want is another batch of the same commission — and launch again.",
             },
             {
-              key: "otras",
-              head: <>"{t("generate.anotherN", { n: "N" })}"</>,
-              body: 'Repeats the same commission, new batch. With a single exercise the label reads "Generate another".',
+              key: "cero",
+              head: <>"{t("generate.startOver")}"</>,
+              body: "Reopens the form empty, for a commission that has nothing to do with the last one.",
             },
             {
               key: "exportar",
@@ -1420,7 +1431,7 @@ function Evaluate() {
           part of the system that exists to measure it, not to produce material.
         </p>
         <p>
-          You ask for the comparison and you judge it: you pick the topic you want the
+          You ask for the comparison and you judge it: you pick the concept you want the
           exercise on, the three versions are prepared, and you read them when they are ready.
         </p>
       </SectionHead>
@@ -1448,7 +1459,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Ask for exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version.',
+              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version.',
             },
             {
               key: "sesiones",
@@ -1469,7 +1480,7 @@ function Evaluate() {
           items={[
             <>
               The three proposals appear, unlabelled and in an order that is yours alone. Above
-              them, in one line, the commission: the type of exercise, the topics and the level
+              them, in one line, the commission: the type of exercise, the concepts and the level
               if one was pinned. It is the same for all three, so it gives nothing away.
             </>,
             <>
@@ -1615,8 +1626,9 @@ function Runs() {
 
       <Block title="The six states">
         <Paragraph>
-          No state is told apart by colour alone: each has its own shape, and that shape is the
-          same on the bar at the top and in each step's header.
+          No state is told apart by colour alone: each has its own shape, and it is read on the
+          bar at the top, under each step's name. The step's header carries no tag at all: what
+          a state asks of you is said by the notices on the screen.
         </Paragraph>
         <Rows
           items={STATE_ORDER.map((key) => ({
@@ -1792,7 +1804,7 @@ function Account() {
       <Block title="Two things that come as a surprise">
         <Alert tone="info" title="The username cannot be changed">
           <p>
-            It is what identifies everything you have done: every variatio, every evaluation
+            It is what identifies everything you have done: every exercise, every evaluation
             session and every line of the log point at it. The visible name can be changed
             whenever you like.
           </p>
@@ -1941,7 +1953,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>"{t("common.delete")}"</>,
-              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated variatios and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the study does not lose the comparisons it counted.",
+              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated exercises and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the study does not lose the comparisons it counted.",
             },
           ]}
         />
@@ -1953,7 +1965,7 @@ function Admin() {
 
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
-          Every instance of the installation with its members, its variatios and the state of its
+          Every instance of the installation with its members, its exercises and the state of its
           chain. What each one weighs is broken down by role — {t("ws.disk.raw")},{" "}
           {t("ws.disk.instance")}, {t("ws.disk.cache")} and {t("ws.disk.history")} — which is the
           only way to see that the expensive part is almost never the artifacts.
@@ -2071,7 +2083,7 @@ function Admin() {
           stop a call to the model. Under the stop's name, which model serves it; the circle says
           whether it deliberates before answering and, while it does, the selector beside it sets
           how much. Three stops carry no switch and say so with a dashed circle: the guardrail
-          because its model does not reason, the variatio because each commission decides that,
+          because its model does not reason, the exercise because each commission decides that,
           and the repair because it runs under a grammar and a grammar leaves no room to reason.
         </Paragraph>
       </Block>
@@ -2090,7 +2102,7 @@ const problems = (
         <p>
           It is not a failure: whoever administers the installation has closed it deliberately to
           apply changes. The notice says since when, and yours is where it was — artifacts,
-          variatios and evaluations read exactly the same when it opens again.
+          exercises and evaluations read exactly the same when it opens again.
         </p>
         <p>
           There is no expected time of return, and there is none because nobody knows it. "
@@ -2196,7 +2208,7 @@ const problems = (
           rebuilding nothing — and closing it again is carrying on to the next step once more.
         </p>
         <p>
-          A topic's description can be corrected with the step closed: it lives in a file of its
+          A concept's description can be corrected with the step closed: it lives in a file of its
           own and expires nothing.
         </p>
       </>
@@ -2223,13 +2235,13 @@ const problems = (
   },
   {
     key: "sin-concepto",
-    question: "There are exercises of mine with no topic at all",
+    question: "There are exercises of mine with no concept at all",
     answer: (
       <p>
         That is normal on the first pass. Press "{t("stage.curate.start")}" and use "
         {t("bank.retagUntagged", { n: "N" })}": it runs only over those, never over all of them.
         And repeating makes sense, because the matching improves with every well-tagged exercise.
-        If one keeps resisting, set its topic by hand.
+        If one keeps resisting, set its concept by hand.
       </p>
     ),
   },
@@ -2249,7 +2261,7 @@ const problems = (
     question: "It has been hours and I do not know if it is progressing",
     answer: (
       <p>
-        Building the syllabus is the most expensive job on the route. On its own screen, the
+        Building the graph is the most expensive job on the route. On its own screen, the
         phase bar says which one it is on: the section that moves is the one running, and
         underneath goes the name of what is being done right now. You can close the tab and come
         back later.

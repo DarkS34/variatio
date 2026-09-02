@@ -1,4 +1,4 @@
-import { Copy, Download, Eraser, Pencil, Sparkles } from "lucide-react";
+import { Copy, Download, Eraser, Pencil } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, Skeleton } from "@/components/ui/misc";
 import { isLive, isQueued, waitOf, waitReason } from "@/lib/queue";
 import { Link } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
@@ -39,7 +39,6 @@ const GUARDRAIL_ERROR: Key = "generate.notPassed";
 interface Result {
   item: Record<string, unknown>;
   item_type?: string;
-  thinking?: string;
   checks?: ItemChecks | null;
   retried?: number;
   saved_id?: number | null;
@@ -109,7 +108,6 @@ export function GenerateScreen() {
     return (run?.items ?? []).map((i) => ({
       item: i.item,
       item_type: i.item_type,
-      thinking: i.thinking ?? undefined,
       checks: i.checks,
       retried: i.retried,
       saved_id: i.saved_id,
@@ -158,14 +156,24 @@ export function GenerateScreen() {
 
   const launch = () => submit.mutate({ kind: "generate", params: { ...toParams(form) } });
 
-  // The bar describes and repeats the commission that ran; only with no job to read it from
-  // does it fall back to the form.
+  // The bar describes the commission that ran; only with no job to read it from does it
+  // fall back to the form.
   const again = commission ?? form;
-  const relaunch = () => submit.mutate({ kind: "generate", params: { ...toParams(again) } });
 
-  // The collapsed bar re-runs the same parameters without reopening the form, so it has to
-  // repeat the one precondition the form checks before it enables its own button.
-  const canLaunch = unlocked && !offline && again.concepts.length > 0;
+  // TWO WAYS ON, AND BOTH ARE PROMINENT (2026-09-02, explicit user request). What used to
+  // sit here was «Cambiar el encargo» beside «Generar otros N» at `sm`, so the likelier
+  // next move — adjust what you asked for and ask again — was the quieter of the two and
+  // repeating a commission verbatim was the loud one. Now the choice is the one a person
+  // actually faces once a batch has landed: vary THIS commission, or start from an empty
+  // form. Repeating it unchanged is the first of those with nothing touched.
+  const vary = () => {
+    setForm(again);
+    setEditing(true);
+  };
+  const fromScratch = () => {
+    setForm(EMPTY_FORM);
+    setEditing(true);
+  };
 
   const hasRun = Boolean(run) && (active || results.length > 0 || status === "failed");
   const collapsed = hasRun && !editing;
@@ -200,6 +208,28 @@ export function GenerateScreen() {
     </div>
   );
 
+  // THE COMMISSION SITS DIRECTLY ABOVE WHAT IT ASKED FOR (2026-09-02, explicit user
+  // request). It was the first block of the screen, above the strip — so between «1
+  // ejercicio · … · avanzado» and the exercise it describes there were a progress bar, a
+  // clock and a disclosure. It is the heading of the result, not a line about the run.
+  const commissionBar = (
+    <div className="space-y-3 rounded-xl border border-border bg-card px-3 py-2.5">
+      <p className="truncate text-body text-muted-foreground">{summarize(again, profile, tr)}</p>
+      {active ? null : (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="attention" onClick={vary} disabled={!unlocked || Boolean(offline)}>
+            <Pencil />
+            {t("generate.vary")}
+          </Button>
+          <Button variant="outline" onClick={fromScratch} disabled={!unlocked || Boolean(offline)}>
+            <Eraser />
+            {t("generate.startOver")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   const runPane = run ? (
     <div className="space-y-4">
       <RunStrip
@@ -209,15 +239,15 @@ export function GenerateScreen() {
         wait={wait}
         expanded={detail.expanded}
         onToggle={detail.toggle}
-      />
-      {detail.expanded ? (
+      >
         <RunPanel
           run={run}
           running={running}
           waiting={queued ? (wait ? waitReason(wait, split, tr) : t("generate.queued")) : null}
           profile={profile}
         />
-      ) : null}
+      </RunStrip>
+      {collapsed ? commissionBar : null}
       {results.length > 0 && profile ? (
         <Results results={results} profile={profile} run={run} savedCount={savedCount} />
       ) : null}
@@ -261,46 +291,8 @@ export function GenerateScreen() {
           The commission collapses to a line, the run to a strip, and what is left is the
           items, at a width you can read a statement and a block of code in. */}
       <div className="mx-auto w-full max-w-4xl space-y-4">
-        {collapsed ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-              <p className="min-w-0 flex-1 truncate text-body text-muted-foreground">
-                {summarize(again, profile, tr)}
-              </p>
-              {active ? null : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setForm(again);
-                      setEditing(true);
-                    }}
-                  >
-                    <Pencil />
-                    {t("generate.changeCommission")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={relaunch}
-                    disabled={!canLaunch || submit.isPending}
-                    title={offline ?? undefined}
-                  >
-                    {submit.isPending ? <Spinner /> : <Sparkles />}
-                    {again.n === 1 ? t("generate.another") : t("generate.anotherN", { n: again.n })}
-                  </Button>
-                </>
-              )}
-            </div>
-
-            {runPane}
-          </>
-        ) : (
-          <>
-            {formPanel}
-            {hasRun ? runPane : null}
-          </>
-        )}
+        {collapsed ? null : formPanel}
+        {hasRun ? runPane : null}
       </div>
     </div>
   );
@@ -433,7 +425,6 @@ function Results({
           index={index + 1}
           item={result.item}
           itemType={result.item_type}
-          thinking={result.thinking}
           checks={result.checks}
           retried={result.retried}
           profile={profile}

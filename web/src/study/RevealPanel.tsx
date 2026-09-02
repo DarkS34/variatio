@@ -137,7 +137,7 @@ function TechnicalDetail({ position }: { position: EvaluationPosition }) {
   return (
     <div className="space-y-2">
       {position.checks ? (
-        <ItemChecks checks={position.checks} retried={position.retried} />
+        <ItemChecks checks={position.checks} retried={position.retried} detail />
       ) : null}
       <button
         type="button"

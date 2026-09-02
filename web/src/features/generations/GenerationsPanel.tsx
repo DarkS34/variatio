@@ -250,7 +250,7 @@ function GenerationCard({
           {/* THE TITLE, THE MODALITY AND — ACROSS THE WHOLE SUBJECT — WHO ASKED (2026-09-02,
               explicit user request). Three chips left this row: «razonó», the model that
               wrote it and the date. All three are still on the row's data and in the
-              expanded commission, where somebody reproducing the variatio reads them; on
+              expanded commission, where somebody reproducing the exercise reads them; on
               the header they were three tags beside a title that is itself a list. */}
           {manyTypes && profile ? (
             <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>

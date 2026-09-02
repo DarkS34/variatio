@@ -1,7 +1,5 @@
-import { describeEvent, type ActivityLine } from "@/lib/explain";
 import type { FewShotExemplar, ItemChecks, Job, VgEvent } from "@/lib/types";
 import { activeWorkspace } from "./workspace";
-import type { Translate } from "@/lib/i18n";
 
 /**
  * One live view of what the system is doing, fed by a single WebSocket.
@@ -78,7 +76,15 @@ export interface RunView {
   answer: string;
   thinking: string;
   phase: StreamPhase;
-  activity: ActivityLine[];
+  /**
+   * THE RETRY IN FLIGHT, so the strip can say one is happening and why (2026-09-02,
+   * explicit user request). The event reached nothing a person watching the bar could
+   * see, so a commission sat still through a second whole generation with no word of why.
+   *
+   * It is cleared by `item.produced`, which is the moment the retrying stops: what
+   * happened afterwards is the card's own «Reintentada ×N» badge.
+   */
+  retry: { index: number; attempt: number; max: number; reasons: string[] } | null;
   items: ProducedItem[];
   repairs: { attempt: number; max_attempts: number; error: string; where: string }[];
   retrieval: { query: string; candidates: [string, number][] } | null;
@@ -104,11 +110,6 @@ export interface RunView {
 }
 
 const MAX_TOKENS = 120_000;
-// Whether an event deserves a line does not depend on the language, so the reducer asks
-// with a translator that answers nothing: what it needs is the null, never the words.
-const SILENT: Translate = { t: () => "", plural: () => "" };
-
-const MAX_ACTIVITY = 600;
 const MAX_RUNS = 12;
 const MAX_TAGGED = 24;
 
@@ -134,7 +135,7 @@ function emptyRun(jobId: string): RunView {
     answer: "",
     thinking: "",
     phase: "idle",
-    activity: [],
+    retry: null,
     items: [],
     repairs: [],
     retrieval: null,
@@ -382,23 +383,10 @@ class RunStore {
     return next;
   }
 
+  // The store kept the whole event stream beside the reduced run, so «Qué ha ido pasando»
+  // could narrate it. That section went on 2026-09-02 (explicit user request) and the array
+  // went with it: re-adding the feed means re-adding the state.
   private reduce(run: RunView, event: VgEvent): RunView {
-    return this.withActivity(this.reduceRun(run, event), event);
-  }
-
-  // The event stream is written for the code; this is the running commentary a human
-  // reads instead. Kept next to the reducer so a new event kind is described once.
-  private withActivity(run: RunView, event: VgEvent): RunView {
-    // Only whether it is worth a line is decided here; the words are the reader's.
-    if (!describeEvent(event, SILENT)) return run;
-    const activity = [...run.activity, { seq: event.seq, ts: event.ts, event }];
-    return {
-      ...run,
-      activity: activity.length > MAX_ACTIVITY ? activity.slice(-MAX_ACTIVITY) : activity,
-    };
-  }
-
-  private reduceRun(run: RunView, event: VgEvent): RunView {
     switch (event.kind) {
       case "job.queued":
       case "job.started":
@@ -528,10 +516,21 @@ class RunStore {
             },
           ],
         };
+      case "item.retried":
+        return {
+          ...run,
+          retry: {
+            index: event.index ?? 0,
+            attempt: event.attempt ?? 0,
+            max: event.max ?? 0,
+            reasons: event.reasons ?? [],
+          },
+        };
       case "item.produced":
         return {
           ...run,
           phase: "idle",
+          retry: null,
           items: [
             ...run.items,
             {

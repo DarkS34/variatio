@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
-import { nextStepOf } from "@/lib/steps";
+import { nextStepOf, stepNumber } from "@/lib/steps";
 import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
@@ -89,7 +89,7 @@ export function RawScreen() {
             recorrido: es el Paso 1 aunque no sea una etapa. El título deja de ser
             `text-display`: cuatro pasos con la misma pinta, y este era el único que
             gritaba. */}
-        <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: 1 })}</p>
+        <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
         <h1 className="text-title">{t("nav.step.raw")}</h1>
         <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
         <GuideLink slug="raw" />

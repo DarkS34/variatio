@@ -149,11 +149,21 @@ function UnitMenu({
           role="menu"
           className="absolute right-0 top-7 z-30 w-60 overflow-hidden border border-border bg-popover py-1 shadow-overlay"
         >
-          <button type="button" role="menuitem" className={item} onClick={run(onAddConcept)}>
+          <button
+            type="button"
+            role="menuitem"
+            className={item}
+            onClick={run(onAddConcept)}
+          >
             <Plus />
             {t("outline.addConcept")}
           </button>
-          <button type="button" role="menuitem" className={item} onClick={run(onRename)}>
+          <button
+            type="button"
+            role="menuitem"
+            className={item}
+            onClick={run(onRename)}
+          >
             <Pencil />
             {t("outline.renameUnit")}
           </button>
@@ -238,13 +248,22 @@ function ConceptRow({
         <span
           className="block size-2 rounded-full"
           role="img"
-          aria-label={concept.taggable ? t("kg.taggable") : t("canvas.notTaggable")}
-          style={concept.taggable ? { background: colour } : { border: `1.5px solid ${colour}` }}
+          aria-label={
+            concept.taggable ? t("kg.taggable") : t("canvas.notTaggable")
+          }
+          style={
+            concept.taggable
+              ? { background: colour }
+              : { border: `1.5px solid ${colour}` }
+          }
         />
       </span>
 
       <span
-        className={cn("truncate text-body", !concept.taggable && "text-muted-foreground")}
+        className={cn(
+          "truncate text-body",
+          !concept.taggable && "text-muted-foreground",
+        )}
         title={concept.name}
       >
         {concept.name}
@@ -394,31 +413,49 @@ export function ConceptOutline({
 
   return (
     <div>
-      <div className={cn(COLUMNS, "h-8 text-micro font-condensed uppercase text-muted-foreground")}>
+      <div
+        className={cn(
+          COLUMNS,
+          "h-8 text-micro font-condensed uppercase text-muted-foreground",
+        )}
+      >
         <span />
-        <span>{t("outline.column.concept")}</span>
+        <span>{t("outline.column.unit")}</span>
         <span className="flex items-center gap-1 pr-2">
-          <span className="hidden md:inline">{t("outline.column.taggable")}</span>
+          <span className="hidden md:inline">
+            {t("outline.column.taggable")}
+          </span>
           {/* The (i) moved here with the control it explains: it hung off the concept
               card's switch, and that switch is gone. On a narrow screen the column has no
               room for its own name and this is the only thing left to name it. */}
-          <InfoHint label={t("kg.taggable.hintLabel")}>{t("kg.taggable.hint")}</InfoHint>
+          <InfoHint label={t("kg.taggable.hintLabel")}>
+            {t("kg.taggable.hint")}
+          </InfoHint>
         </span>
         <span />
       </div>
 
       {shown.map(([unit, items]) => {
         const order = units.indexOf(unit);
-        const colour = domainColour(Math.max(0, groups.indexOf(unit)), Math.max(1, groups.length));
-        const open = overrides.get(unit) ?? (filtering || unit === selectedUnit);
-        const undescribed = items.filter((concept) => !concept.description).length;
+        const colour = domainColour(
+          Math.max(0, groups.indexOf(unit)),
+          Math.max(1, groups.length),
+        );
+        const open =
+          overrides.get(unit) ?? (filtering || unit === selectedUnit);
+        const undescribed = items.filter(
+          (concept) => !concept.description,
+        ).length;
         const { total } = unitStats(unit);
         const partial = items.length !== total;
 
         return (
           <div key={unit}>
             <div className="flex items-center gap-2.5 border-t border-border bg-muted/45 py-2 pl-2 pr-3">
-              <span className="w-[3px] self-stretch" style={{ background: colour }} />
+              <span
+                className="w-[3px] self-stretch"
+                style={{ background: colour }}
+              />
               <button
                 type="button"
                 onClick={() =>
@@ -441,7 +478,9 @@ export function ConceptOutline({
                   {partial
                     ? t("outline.partialCount", { shown: items.length, total })
                     : plural("outline.conceptCount", total)}
-                  {undescribed > 0 ? t("outline.undescribed", { n: undescribed }) : ""}
+                  {undescribed > 0
+                    ? t("outline.undescribed", { n: undescribed })
+                    : ""}
                 </span>
               </button>
 

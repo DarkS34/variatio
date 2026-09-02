@@ -1,5 +1,5 @@
-import { ChevronRight, Clock, Hourglass } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight, Clock, Hourglass, RotateCcw } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Progress } from "@/components/ui/misc";
 import { JOB_STATUS, duration } from "@/lib/format";
@@ -23,11 +23,22 @@ import { CancelButton } from "@/components/CancelButton";
  * So the run collapses to what a person actually watches: what is running, how far it has
  * got, how long it has been and how to stop it.
  *
+ * WHAT A RETRY IS DOING IS NOT BEHIND THE DISCLOSURE (2026-09-02, explicit user request).
+ * A rejected variant is generated again — up to `CHECK_MAX_RETRIES` times — and each of
+ * those is a whole call, so the bar sits still for minutes; saying why costs one line and
+ * is the difference between «se ha quedado colgado» and «lo está rehaciendo porque
+ * menciona algo no impartido». It is drawn in `--attention` because it is the one thing on
+ * the strip that is not merely a measurement, and it goes when the item lands.
+ *
  * WHAT IS BEHIND THE DISCLOSURE IS NOT DUPLICATED ANYWHERE, and that is why it is a
- * disclosure and not a deletion. The step timeline is also in «Ver ejecución», but the
- * token stream, the technical details and the exemplars the few-shot used are here and
- * nowhere else — folding them away is fine, dropping them is not. It opens by itself while
- * the job runs, because that is when watching the model write is worth a screen.
+ * disclosure and not a deletion: the model's reasoning, the token stream, the technical
+ * details and the exemplars the few-shot used are here and nowhere else — folding them
+ * away is fine, dropping them is not. It opens by itself while the job runs, because that
+ * is when watching the model write is worth a screen.
+ *
+ * AND IT OPENS INSIDE THIS BLOCK (2026-09-02, explicit user request): `children` are drawn
+ * under a rule within the strip's own card, so pressing a disclosure grows the block it
+ * belongs to instead of producing a second card beneath it.
  */
 export function RunStrip({
   run,
@@ -36,6 +47,7 @@ export function RunStrip({
   wait,
   onToggle,
   expanded,
+  children,
 }: {
   run: RunView;
   running: boolean;
@@ -43,6 +55,8 @@ export function RunStrip({
   wait: Wait | null;
   expanded: boolean;
   onToggle: () => void;
+  /** What «Detalle» opens. Drawn inside this card, never as a block of its own. */
+  children?: ReactNode;
 }) {
   const tr: Translate = useT();
   const { t } = tr;
@@ -108,6 +122,23 @@ export function RunStrip({
         {active ? <CancelButton run={run} /> : null}
       </div>
 
+      {/* The reasons are the checker's own sentences, in the workspace's language, so they
+          are printed rather than keyed: inventing a client-side table for them would be a
+          second copy of `checks.py`. */}
+      {running && !queued && run.retry ? (
+        <div className="flex items-start gap-2 px-3 pb-2.5 text-small text-attention">
+          <RotateCcw aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          <p className="min-w-0">
+            {t("run.retrying", {
+              index: run.retry.index,
+              attempt: run.retry.attempt,
+              max: run.retry.max,
+            })}{" "}
+            <span className="text-muted-foreground">{run.retry.reasons.join("; ")}</span>
+          </p>
+        </div>
+      ) : null}
+
       {running && !queued ? (
         <div className="space-y-1.5 px-3 pb-2.5">
           <div className="flex items-baseline justify-between gap-2">
@@ -135,6 +166,8 @@ export function RunStrip({
           />
         </div>
       ) : null}
+
+      {expanded && children ? <div className="border-t border-border">{children}</div> : null}
     </div>
   );
 }

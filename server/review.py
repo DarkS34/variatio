@@ -64,7 +64,7 @@ STALE_ACTION = {
         "Los tipos de ejercicio cambiaron: estos se recogieron con los anteriores."
     ),
     (EXEMPLARS_BANK, KNOWLEDGE_GRAPH): (
-        "El temario cambió: los temas puestos apuntan a conceptos anteriores."
+        "El temario cambió: las etiquetas puestas apuntan a conceptos anteriores."
     ),
 }
 

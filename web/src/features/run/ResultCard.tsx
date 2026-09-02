@@ -1,5 +1,4 @@
-import { Brain, Check, ChevronRight, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Markdown } from "@/components/Markdown";
@@ -84,12 +83,31 @@ export function ItemFields({
  * What the pipeline could verify about a variant after writing it. None of it rejects:
  * the schema already did that, and what is left — a forbidden concept named, a near
  * copy, the tagger not recognising the objective — are signals for the person reading.
+ *
+ * NOTHING IS DRAWN WHEN THERE IS NOTHING TO SAY (2026-09-02, explicit user request).
+ * «Sin señales: el etiquetador la reconoce, nada prohibido, escenario propio» and the
+ * line under it — «etiquetada como ValueError · más cercana a C046 (0.67)» — were on
+ * every card of every batch: a reassurance nobody asked for and a similarity score
+ * nobody preparing a subject decides anything with. A flag is worth a line because it
+ * names something to look at; its absence is not.
+ *
+ * `detail` puts both back, and has exactly one caller: the study's reveal panel, where
+ * the technical half of a proposal is the point of the fold it sits in.
  */
-export function ItemChecks({ checks, retried }: { checks?: ItemChecks | null; retried?: number }) {
+export function ItemChecks({
+  checks,
+  retried,
+  detail = false,
+}: {
+  checks?: ItemChecks | null;
+  retried?: number;
+  detail?: boolean;
+}) {
   const { t } = useT();
   if (!checks) return null;
   const flagged = checks.flags.length > 0;
   const tagger = checks.tagger;
+  if (!detail && !flagged && !retried) return null;
   return (
     <div
       className={cn(
@@ -104,32 +122,38 @@ export function ItemChecks({ checks, retried }: { checks?: ItemChecks | null; re
             <Badge variant="outline">{t("result.retried", { n: retried })}</Badge>
           </span>
         ) : null}
-        {flagged ? (
-          checks.flags.map((flag) => <span key={flag}>{flag}</span>)
-        ) : (
-          <span>{t("result.noFlags")}</span>
-        )}
-        <span className="text-micro text-muted-foreground">
-          {tagger
-            ? t("result.taggedAs", { concept: tagger.primary ?? t("common.none").toLowerCase() })
-            : t("result.noTagger")}
-          {checks.similarity
-            ? ` ${t("result.closestTo", {
-                to: checks.similarity.to,
-                score: checks.similarity.score.toFixed(2),
-              })}`
-            : ""}
-        </span>
+        {flagged ? checks.flags.map((flag) => <span key={flag}>{flag}</span>) : null}
+        {!flagged && detail ? <span>{t("result.noFlags")}</span> : null}
+        {detail ? (
+          <span className="text-micro text-muted-foreground">
+            {tagger
+              ? t("result.taggedAs", { concept: tagger.primary ?? t("common.none").toLowerCase() })
+              : t("result.noTagger")}
+            {checks.similarity
+              ? ` ${t("result.closestTo", {
+                  to: checks.similarity.to,
+                  score: checks.similarity.score.toFixed(2),
+                })}`
+              : ""}
+          </span>
+        ) : null}
       </div>
     </div>
   );
 }
 
+/**
+ * One generated item, as it is read.
+ *
+ * IT DOES NOT CARRY THE REASONING (2026-09-02, explicit user request). It had a
+ * «Razonamiento» fold of its own under the fields, and the run's own «Detalle» has the
+ * same text a screen above — the model reasons once and it was drawn twice. What is left
+ * is the item.
+ */
 export function ResultCard({
   index,
   item,
   itemType,
-  thinking,
   checks,
   retried,
   profile,
@@ -138,15 +162,13 @@ export function ResultCard({
   index: number;
   item: Record<string, unknown>;
   itemType?: string;
-  thinking?: string | null;
   checks?: ItemChecks | null;
   retried?: number;
   profile: ExemplarsProfile;
   /** Whether the server has already kept this item as a row of «Mis variantes». */
   saved?: boolean;
 }) {
-  const { t, language } = useT();
-  const [showThinking, setShowThinking] = useState(false);
+  const { t } = useT();
   const spec = itemTypeOf(profile, { item_type: itemType });
   const manyTypes = Object.keys(profile.item_types).length > 1;
 
@@ -181,31 +203,6 @@ export function ResultCard({
       <CardContent className="space-y-3">
         <ItemFields item={item} spec={spec} />
         <ItemChecks checks={checks} retried={retried} />
-
-        {thinking ? (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <button
-              type="button"
-              onClick={() => setShowThinking((v) => !v)}
-              aria-expanded={showThinking}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ChevronRight
-                className={cn("size-3.5 transition-transform", showThinking && "rotate-90")}
-              />
-              <Brain className="size-3.5" />
-              {t("result.reasoning")}
-              <span className="ml-auto nums">
-                {thinking.length.toLocaleString(language)}
-              </span>
-            </button>
-            {showThinking ? (
-              <pre className="thin-scroll max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-small leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                {thinking}
-              </pre>
-            ) : null}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );

@@ -237,8 +237,19 @@ def test_the_count_is_the_instruments_own_and_includes_overall():
         expected = len(instruments.QUESTIONS[artifact]) + 1
         assert instruments.count(artifact) == expected, artifact
         assert instruments.for_artifact(artifact)["count"] == expected, artifact
-    # Y no son todas iguales, que es lo que hacía plausible la constante escrita a mano.
-    assert instruments.count(GRAPH) != instruments.count(review.EXEMPLARS_PROFILE)
+
+
+def test_the_three_stages_ask_five_questions_on_the_same_axes():
+    """Cinco por etapa y los mismos cinco ejes (2026-09-03, explicit user request).
+
+    Pocas para no sobrecargar, y cada una con una conclusión detrás: precisión, cobertura,
+    la función propia del artefacto, el esfuerzo y la escala de conjunto. El mismo orden
+    en las tres, que es lo que deja ponerlas en una tabla lado a lado.
+    """
+    for artifact in review.ARTIFACTS:
+        assert instruments.count(artifact) == 5, artifact
+        axes = [instruments.AXES[q["key"]] for q in instruments.QUESTIONS[artifact]]
+        assert axes == ["precision", "recall", "function", "effort"], artifact
 
 
 def test_the_preamble_says_the_number_the_instrument_actually_asks():

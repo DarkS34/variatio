@@ -1,21 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Play, Scale, Wrench } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { revealOf, slideOf, type NavGroup, type Reveal } from "@/features/tutorial/reveal";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
-import {
-  COMPARE_PHASE,
-  GENERATE_PHASE,
-  STEPS,
-  stepBusy,
-  stepNumber,
-  stepStates,
-  type StepState,
-} from "@/lib/steps";
+import { STEPS, USES, stepBusy, stepNumber, stepStates, type StepState } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useHasWorkspace } from "@/state/auth";
@@ -73,18 +65,18 @@ const STATE_KEY: Record<StepState, Key> = {
  * graph is starting at a stage you cannot finish.
  */
 /**
- * The step's number, or a bare tick once it is behind you.
+ * The step's number, in a box whose stroke says where you stand.
  *
  * A square and not a circle, because `--radius` is 0 and the corner is where this grid
- * either holds or does not. The fills are the palette's own frontier and not a traffic
- * light: attention for where you act, an outline for what is not reachable yet.
+ * either holds or does not. The strokes are the palette's own frontier and not a traffic
+ * light: a fill in `--attention` where you act, a dashed outline on what is not reachable
+ * yet, and a solid outline in `--settled` on what is behind you.
  *
- * A DONE STEP CARRIES NO BOX AT ALL (2026-09-01, explicit user request). It used to be a
- * filled `--settled` square with a white tick, which drew the eye to the three stops
- * there is nothing left to do on — the loudest mark on the bar sat on the finished work.
- * The tick alone says the same thing and recedes, which is what «behind you, resolved» is
- * supposed to look like. The 22 px box stays as empty space so the four names still line
- * up on one column.
+ * A DONE STEP KEEPS ITS NUMBER AND CARRIES NO FILL (2026-09-02, explicit user request; it
+ * amends the bare tick of 2026-09-01). The filled `--settled` square drew the eye to the
+ * stops with nothing left to do on, and the bare tick that replaced it threw the number
+ * away, so a finished construction was four anonymous ticks. A solid, quiet outline keeps
+ * the identity and still recedes; the tick lives in the word under the name.
  *
  * A STEP WITH WORK RUNNING ON IT SPINS A WHEEL WHERE THE NUMBER WAS (2026-09-02, explicit
  * user request). «Building» is `--primary` plus motion — the palette's own rule — so the
@@ -102,41 +94,43 @@ export function StepCounter({
   n: string;
   busy?: boolean;
 }) {
-  // `min-w` and not a fixed square: «1.1» is wider than «1» and the height is what keeps
-  // the four names on one column.
-  const box = "flex h-[22px] min-w-[22px] shrink-0 items-center justify-center px-1";
   if (busy) {
     return (
-      <span className={cn(box, "text-primary")}>
+      <span className={cn(COUNTER_BOX, "text-primary")}>
         <Loader2 className="size-4 animate-spin" strokeWidth={2.5} />
-      </span>
-    );
-  }
-  if (state === "done") {
-    return (
-      <span className={cn(box, "text-settled")}>
-        <Check className="size-4" strokeWidth={3} />
       </span>
     );
   }
   return (
     <span
       className={cn(
-        box,
+        COUNTER_BOX,
         "nums font-condensed text-small font-semibold",
+        // THE NUMBER NEVER LEAVES (2026-09-02, explicit user request). A done step used to
+        // swap its number for a bare tick, so once the construction was finished the four
+        // stops that identify it had lost their identity and the only numbers left on the
+        // bar were the phases'. The state is said by the BORDER now — solid behind you,
+        // dashed ahead, filled where you act — which is the encoding the rail carried
+        // before the numbers replaced it; the tick moved to the word under the name.
+        state === "done" && "border border-settled text-settled",
         state === "now"
           // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
           // mode, so the literal put a near-white number on it. This is the same defect the
           // palette pass of 2026-09-01 found in two other places, and it is invisible to
           // `check:color`, which reads `index.css` and not a class in a component.
           ? "bg-attention text-attention-foreground"
-          : "border border-dashed border-input text-muted-foreground",
+          : null,
+        state === "later" && "border border-dashed border-input text-muted-foreground",
       )}
     >
       {n}
     </span>
   );
 }
+
+// `min-w` and not a fixed square: «1» and an icon are the same height, and the height is
+// what keeps the names of a row on one line.
+const COUNTER_BOX = "flex h-[22px] min-w-[20px] shrink-0 items-center justify-center px-1";
 
 /**
  * One stop of the path: its number, its name, and one word saying where you are.
@@ -175,14 +169,14 @@ function StepPill({
       title={title ?? t(step.labelKey)}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex shrink-0 flex-col gap-0.5 rounded-md px-2.5 py-1.5 transition-colors hover:bg-accent",
+        PILL,
         state === "now" && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         active && "bg-accent",
       )}
     >
       <span
         className={cn(
-          "flex items-center gap-2 whitespace-nowrap text-body",
+          PILL_NAME,
           state === "later" ? "text-muted-foreground" : "text-foreground",
           state === "now" ? "font-semibold" : "font-medium",
         )}
@@ -193,81 +187,191 @@ function StepPill({
       {demo ? null : (
         <span
           className={cn(
-            "pl-[30px] text-micro",
+            PILL_WORD,
             busy && "text-foreground",
             !busy && state === "done" && "text-settled",
             !busy && state === "now" && "text-attention",
             !busy && state === "later" && "text-muted-foreground",
           )}
         >
-          {busy
-            ? t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
-            : t(STATE_KEY[state])}
+          {busy ? (
+            t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
+          ) : state === "done" ? (
+            <>
+              <Check className="size-3" strokeWidth={3} aria-hidden />
+              {t(STATE_KEY.done)}
+            </>
+          ) : (
+            t(STATE_KEY[state])
+          )}
         </span>
       )}
     </Link>
   );
 }
 
+// The three pieces a step and a door share, so the two kinds of pill are one height and one
+// shape and differ only in the mark: a number for a stop, an icon for a door.
+// MEASURED AT 1280 (2026-09-02): the flanks leave the strip 881 px and, at `px-2.5`,
+// `gap-2` and `text-body`, the six pills asked for 951 — the two doors grew a box and a
+// word each. `px-2`, `gap-1.5` and `text-small` on the name bring it under; the word line
+// keeps the micro step, so the hierarchy inside a pill is unchanged.
+const PILL =
+  "flex shrink-0 flex-col gap-0.5 rounded-md px-2 py-1 transition-colors hover:bg-accent";
+const PILL_NAME = "flex items-center gap-1.5 whitespace-nowrap text-small";
+const PILL_WORD = "flex items-center gap-1 pl-[28px] text-micro";
 /**
- * What you do with the path once it is walked: ask for an exercise, or compare three.
- *
- * Both are gated on the whole chain being approved, which is why they sit after the rule
- * rather than among the steps — what gates them is the path as a whole, not the stop
- * before them. They stay reachable: the screens behind them explain what is missing,
- * which a dimmed link cannot.
- *
- * «Evaluar el sistema» carries `--study`, tinted even when it is not the current page: what the
- * tint says is «this is a different kind of thing», which is true from wherever you look
- * at it. It is the one place in the navigation that spends a colour on identity.
+ * The height a step pill reaches on its own: `py-1` twice, the 22 px counter box (taller
+ * than the small line beside it), the `gap-0.5`, and one micro line (0.6875rem × 1.35).
+ * A door with no word under its name is held to it, so the row never changes height.
  */
-function UsePill({
-  to,
-  label,
+const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_0.928125rem)]";
+
+/**
+ * One door of the second phase: what you do with the construction once it is closed.
+ *
+ * The same two-line pill as a step, with an ICON where the step has its number — the two
+ * doors have no order between them, and a number would have said they had one (2026-09-02,
+ * explicit user request; they were `2` and `3` until then). Both are gated on the whole
+ * construction being closed, which is why they sit under a caption of their own rather
+ * than among the steps: what gates them is the phase as a whole, not the stop before them.
+ *
+ * WHILE THE CONSTRUCTION IS OPEN A DOOR IS HALF OFF AND ANSWERS NO CLICK (2026-09-02,
+ * explicit user request: «el usuario no debería poder entrar a ninguna de las dos hasta
+ * que no termine de construir; déjalo medio apagado y sin respuesta a la pulsación»). It is
+ * a `span` and not a link, at half opacity, with the dashed box and «después» under the
+ * name saying why, and the reason in its `title`. This reverses the earlier «they stay
+ * reachable while locked»: a URL typed by hand still lands on `ChainGate`, which names the
+ * stage in the way, so nothing is lost by the bar refusing. Closed, it is a link with no
+ * word under the name at all — «cuando quieras» was tried there and rejected the same day
+ * — and the name is CENTRED in a pill of the steps' own height (`PILL_HEIGHT`), so the two
+ * doors stay level with the steps and nothing in the row moves when the construction
+ * closes (2026-09-02, explicit user request: «el texto tiene que estar centrado»). The
+ * two doors sit `gap-1` apart, the same 4 px the rule between the phases keeps on either
+ * side, where the steps sit 2 px apart.
+ *
+ * «Evaluar el sistema» carries `--study`, tinted whether locked or not: what the tint says
+ * is «this is a different kind of thing», which is true from wherever you look at it. It is
+ * the one place in the navigation that spends a colour on identity.
+ */
+function DoorPill({
+  door,
   icon: Icon,
   active,
-  study = false,
-  n,
+  open,
   disabledReason,
+  demo = false,
 }: {
-  to: string;
-  label: string;
-  icon: typeof Play;
+  door: (typeof USES)[number];
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   active: boolean;
-  study?: boolean;
-  /** Its number on the path. Both of these are phases: 2 and 3. */
-  n?: number;
+  /** Whether the whole construction is closed, which is what opens both doors at once. */
+  open: boolean;
   disabledReason?: string | null;
+  demo?: boolean;
 }) {
+  const { t } = useT();
+  const study = door.study;
+  const face = cn(
+    PILL,
+    PILL_HEIGHT,
+    "justify-center",
+    study &&
+      "text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]",
+  );
+  const body = (
+    <>
+      <span
+        className={cn(
+          PILL_NAME,
+          "font-medium",
+          !open && "text-muted-foreground",
+          open && !study && "text-foreground",
+        )}
+      >
+        <span
+          className={cn(
+            COUNTER_BOX,
+            !open && "border border-dashed border-input text-muted-foreground",
+          )}
+        >
+          <Icon className="size-4" strokeWidth={2.25} />
+        </span>
+        {t(door.labelKey)}
+      </span>
+      {demo || open ? null : (
+        <span className={cn(PILL_WORD, "text-muted-foreground")}>{t("nav.state.later")}</span>
+      )}
+    </>
+  );
+  if (!open) {
+    return (
+      <span
+        role="link"
+        aria-disabled="true"
+        title={disabledReason ?? t(door.labelKey)}
+        className={cn(face, "cursor-default opacity-50 hover:bg-transparent")}
+      >
+        {body}
+      </span>
+    );
+  }
   return (
     <Link
-      to={to}
-      title={disabledReason ?? label}
+      to={door.path}
+      title={t(door.labelKey)}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body font-medium transition-colors",
-        !study && "text-muted-foreground hover:bg-accent hover:text-foreground",
-        !study && active && "bg-accent text-foreground",
-        study &&
-          "text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)] hover:bg-[color-mix(in_oklch,var(--study)_16%,transparent)]",
+        face,
+        study && "hover:bg-[color-mix(in_oklch,var(--study)_16%,transparent)]",
         study && active && "bg-[color-mix(in_oklch,var(--study)_18%,transparent)]",
-        disabledReason && "opacity-45",
+        !study && active && "bg-accent",
       )}
     >
-      {n === undefined ? (
-        <Icon className="size-4" />
-      ) : (
-        // The number where the icon would be, so «2» lines up with the «1.1» of the stops
-        // and says what the four of them were for. Only the phase gets one.
-        <span className="nums font-condensed text-small font-semibold">{n}</span>
-      )}
-      {label}
+      {body}
     </Link>
   );
 }
 
+/**
+ * A phase: its name as a caption, and its pills under it in a row.
+ *
+ * The caption is what carries the phase now that its number is gone. It is micro, condensed
+ * and muted, so the row still reads as pills with a label over them and not as two rows of
+ * navigation; `dim` is the tutorial's, for a caption whose group the deck has not reached.
+ * Its `pl-2` is the pills' own `px-2`, so the caption starts exactly on the first pill's
+ * box edge (2026-09-02, explicit user request: it was 2 px ahead of it).
+ */
+function PhaseGroup({
+  label,
+  dim = false,
+  gap = "tight",
+  children,
+}: {
+  label: string;
+  dim?: boolean;
+  /** `wide` is the doors' 4 px, the rule's own margin; the steps keep 2 px. */
+  gap?: "tight" | "wide";
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col gap-0.5">
+      <span
+        aria-hidden
+        className={cn(
+          "pl-2 font-condensed text-micro uppercase text-muted-foreground transition-opacity duration-700",
+          dim && "opacity-30",
+        )}
+      >
+        {label}
+      </span>
+      <div className={cn("flex items-center", gap === "wide" ? "gap-1" : "gap-0.5")}>{children}</div>
+    </div>
+  );
+}
+
 function NavRule() {
-  return <span aria-hidden className="mx-1.5 h-8 w-px shrink-0 bg-border" />;
+  return <span aria-hidden className="mx-1 h-10 w-px shrink-0 self-end bg-border" />;
 }
 
 /**
@@ -394,48 +498,49 @@ function MainNav({
           : undefined
       }
       className={cn(
-        "min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "min-w-0 items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >
       <Unlock reveal={reveal("prepare")}>
-        {STEPS.map((step, index) => (
-          <StepPill
-            key={step.path}
-            step={step}
-            state={states[index]}
-            n={stepNumber(index)}
-            active={path === step.path}
-            title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
-            busy={busy[index]}
-            demo={demo}
-          />
-        ))}
+        <PhaseGroup label={t("nav.phase.build")}>
+          {STEPS.map((step, index) => (
+            <StepPill
+              key={step.path}
+              step={step}
+              state={states[index]}
+              n={stepNumber(index)}
+              active={path === step.path}
+              title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+              busy={busy[index]}
+              demo={demo}
+            />
+          ))}
+        </PhaseGroup>
       </Unlock>
 
       <NavRule />
 
-      <Unlock reveal={reveal("generate")}>
-        <UsePill
-          to="/generate"
-          label={t("nav.create")}
-          icon={Play}
-          n={GENERATE_PHASE}
-          active={path === "/generate"}
-          disabledReason={locked}
-        />
-      </Unlock>
-      <Unlock reveal={reveal("compare")}>
-        <UsePill
-          to="/evaluate"
-          label={t("nav.compare")}
-          icon={Scale}
-          n={COMPARE_PHASE}
-          active={path === "/evaluate"}
-          study
-          disabledReason={locked}
-        />
-      </Unlock>
+      {/* The second phase's caption unlocks with its first door: it names the pair, and the
+          deck reaches the pair one door at a time. */}
+      <PhaseGroup
+        label={t("nav.phase.test")}
+        dim={reveal("generate")?.unlocked === false}
+        gap="wide"
+      >
+        {USES.map((door) => (
+          <Unlock key={door.key} reveal={reveal(door.key)}>
+            <DoorPill
+              door={door}
+              icon={door.key === "generate" ? Play : Scale}
+              active={path === door.path}
+              open={locked === null}
+              disabledReason={locked}
+              demo={demo}
+            />
+          </Unlock>
+        ))}
+      </PhaseGroup>
     </nav>
   );
 }
@@ -541,7 +646,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             «Evaluar» on top of «Mis variantes». Letting `min-width: auto` stand holds each
             flank at its own min-content, which is bounded: the lockup is fixed, the
             switcher is `max-w-44` and truncates. */}
-        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
+        <div className="mx-auto flex h-[4.5rem] w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
           {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
               Side by side with only a gap between, the workspace name read as part of the
               product's own name. The lockup itself is `ui/logo.tsx`'s, and `compact` is

@@ -45,18 +45,23 @@ TRIAGE: dict[str, dict] = {
 }
 
 # The keys never change: renaming one strands every session already judged. What varies per
-# profile is only the prose.
-RATING_SCALES: tuple[str, ...] = ("originality", "complexity", "concept_fit", "soundness")
+# profile is only the prose. `prerequisites` REPLACED `originality` on 2026-09-03 (explicit
+# user request to review the instrument) with two rated sessions in the database, both
+# checked before the swap: what the syllabus buys the system is that an exercise leans only
+# on what comes before its concept, and the rubric never asked it — while «originality» was
+# the one scale with no clause of the prompt behind it. The two old rows keep their
+# `originality` in the JSON and the export no longer prints it.
+RATING_SCALES: tuple[str, ...] = ("prerequisites", "complexity", "concept_fit", "soundness")
 
 # `complexity` is the one scale whose best answer is the middle. Carried as data so the
 # person doing the scoring can read the rule, rather than only the arithmetic downstream.
 RATING_TARGET: dict[str, int] = {"complexity": 3}
 
 _TEACHER_RUBRIC = {
-    "originality": {
-        "label": "Originalidad",
-        "question": "¿El escenario es original, o es el típico de libro de texto?",
-        "ends": ["de libro de texto", "muy original"],
+    "prerequisites": {
+        "label": "Solo lo anterior",
+        "question": "¿Se resuelve con lo que va antes en el temario, o necesita cosas que vienen después?",
+        "ends": ["necesita lo posterior", "solo con lo anterior"],
     },
     "complexity": {
         "label": "Exigencia",
@@ -75,14 +80,15 @@ _TEACHER_RUBRIC = {
     },
 }
 
-# The same four scales, asked from the desk instead of the front of the room. Two of them a
-# student judges BETTER: whether the demand is right for where they actually are, and
-# whether the statement holds up once you sit down to solve it.
+# The same four scales, asked from the desk instead of the front of the room. Three of them a
+# student judges BETTER: whether it can be done with what has actually been seen, whether the
+# demand is right for where they are, and whether the statement holds up once you sit down
+# to solve it.
 _STUDENT_RUBRIC = {
-    "originality": {
-        "label": "Originalidad",
-        "question": "¿Habías visto ya un ejercicio así, o te sorprende?",
-        "ends": ["visto mil veces", "me sorprende"],
+    "prerequisites": {
+        "label": "Solo lo visto",
+        "question": "¿Se puede hacer con lo visto hasta ese tema, o hace falta algo de más adelante?",
+        "ends": ["hace falta lo de después", "con lo visto basta"],
     },
     "complexity": {
         "label": "Dificultad",

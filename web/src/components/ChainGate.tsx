@@ -33,8 +33,8 @@ export function ChainGate({ title, stages }: { title: string; stages: StageState
 
   const first = pending[0];
   const step = STEPS.find((s) => s.artifact === first.artifact);
-  // The number is `STEPS`' own, not a position: the four steps are 1.1–1.4 inside one
-  // phase, and an index+1 here promised «Paso 2» for what the bar calls 1.2.
+  // The number is `STEPS`' own and not computed here, so the button cannot promise a
+  // step the bar numbers differently.
   const at = stepNumberOf(first.artifact);
 
   return (

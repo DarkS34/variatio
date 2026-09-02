@@ -14,9 +14,11 @@ import { useT } from "@/lib/i18n";
  * Four questions about OUR variant, after the reveal, and deliberately OPTIONAL.
  *
  * Each dimension answers to a clause the system's prompt claims to enforce — «practicar
- * no es usar» becomes `concept_fit`, self-sufficiency becomes `soundness`, context
- * variation becomes `originality`, calibration becomes `complexity`. That is what
- * connects the numbers to the design chapter instead of to a generic quality survey.
+ * no es usar» becomes `concept_fit`, self-sufficiency becomes `soundness`, the
+ * prerequisite scaffolding (lean on what comes before, never on what comes after)
+ * becomes `prerequisites`, calibration becomes `complexity`. That is what connects the
+ * numbers to the design chapter instead of to a generic quality survey; `originality`
+ * was the one scale with no clause behind it and left on 2026-09-03.
  *
  * The WORDING comes from the server and is not written here: a teacher and a student are
  * asked the same four things in different words, and the wording is the instrument — one

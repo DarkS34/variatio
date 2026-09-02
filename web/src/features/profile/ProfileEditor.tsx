@@ -540,10 +540,11 @@ export function ProfileEditor() {
                 </div>
               )}
 
-              {/* THE LADDER IS SHARED AND THE CRITERION IS THE TYPE'S OWN, and the sentence
-                  saying so sits BETWEEN the two halves it is about: what is over it is the
-                  same in every type, what is under it belongs to this one alone. Read off
-                  the layout alone that relation takes a minute to work out.
+              {/* THE LADDER IS SHARED AND THE CRITERION IS THE TYPE'S OWN. The sentence
+                  that used to say so between the two halves went on 2026-09-02 (explicit
+                  user request): the rungs are drawn above and the criterion below, and a
+                  paragraph explaining that arrangement is one a person preparing a subject
+                  reads once and then steps over for ever.
 
                   The rungs are shown and not offered — that is what lets one level mean one
                   thing across the whole list and lets the list be ordered by it. The
@@ -560,9 +561,6 @@ export function ProfileEditor() {
                           </Badge>
                         ))}
                       </div>
-                      <p className="mb-1.5 text-small text-muted-foreground">
-                        {t("modality.difficulty.shared")}
-                      </p>
                       <Textarea
                         {...props}
                         autoGrow
@@ -577,9 +575,6 @@ export function ProfileEditor() {
               ) : (
                 <div className="space-y-1.5">
                   <Caption>{t("modality.difficulty")}</Caption>
-                  <p className="text-small text-muted-foreground">
-                    {t("modality.difficulty.shared")}
-                  </p>
                   <DifficultyRead
                     levels={difficultyLevels}
                     description={difficulty?.description}
@@ -806,10 +801,7 @@ function useProfileIntro(stage: StageState | undefined): ReactNode {
       {[
         plural("stage.what.profile.found", names.length, { names: listed }),
         t("stage.what.profile.why"),
-        names.length > 1 ? t("stage.what.profile.tabs") : null,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      ].join(" ")}
     </p>
   );
 }

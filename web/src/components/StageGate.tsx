@@ -22,16 +22,13 @@ import {
 
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GuideLink } from "@/components/GuideLink";
 import type { GuideSlug } from "@/features/guide/sections";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
-import { StatusMark } from "@/components/ui/status";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
-import { ARTIFACT_STATUS } from "@/lib/format";
 import { isQueued, waitOf, waitReason } from "@/lib/queue";
 import { slotLabelOf } from "@/lib/raw";
 import { Link, useRouter } from "@/lib/router";
@@ -195,23 +192,6 @@ export function useRegisterPendingEdit({ dirty, blocked, save, discard }: Pendin
     });
     return () => register?.(null);
   }, [register, dirty, blocked]);
-}
-
-export function StageBadge({ stage }: { stage: StageState }) {
-  const { t } = useT();
-  // A status the table does not know comes from an API newer than the bundle, and a badge
-  // showing the raw word is worth more than a crash: this is read on every stage screen.
-  const meta = ARTIFACT_STATUS[stage.status];
-  // The mark carries the shape, the text carries the name, and neither depends on the
-  // other: this was the third of the three different drawings the same concept had.
-  return (
-    <Badge
-      variant={meta?.tone ?? "outline"}
-      mark={<StatusMark status={stage.status} blocked={Boolean(stage.blocked_reason)} />}
-    >
-      {meta ? t(meta.labelKey) : stage.status}
-    </Badge>
-  );
 }
 
 /** How long the questionnaire takes to unfold, and therefore when the page may scroll to it. */
@@ -405,10 +385,13 @@ export function StageGate({
                 {t("nav.stepNumber", { n: stepNumberOf(stage.artifact)! })}
               </p>
             ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
-              <StageBadge stage={stage} />
-            </div>
+            {/* NO TAG OF ANY KIND BESIDE THE TITLE (2026-09-03, explicit user request).
+                The state badge — «Aprobado», «Borrador», «Obsoleto» — is gone from the
+                four steps' headers: the bar at the top already says the state under each
+                step's name, and what a state ASKS of the person is said by the notices
+                below (stale, blocked). A word that names a state a person cannot act on
+                from here was one more chip in the row. */}
+            <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
             {intro ?? (
               WHAT[stage.artifact] ? (
                 <p className="max-w-[74ch] text-body text-muted-foreground">
@@ -541,17 +524,11 @@ export function StageGate({
             {livePreview}
           </>
         ) : missing ? null : (
-          /* Bloqueada: con la etapa bloqueada por sus upstreams no hay nada construido que
-             juzgar, y atenuado junto al resto un formulario sería un control apagado sin
-             explicación, que es justo lo que esta pantalla existe para no hacer. */
-          <div
-            className={cn(
-              "min-w-0 space-y-5",
-              blocked && "pointer-events-none select-none opacity-45",
-            )}
-          >
-            {children}
-          </div>
+          /* Bloqueada y construida a la vez — el paso anterior se reabrió después — se lee
+             igual que abierta: lo que hay está en el disco y es lo que se valora. Se
+             atenuaba entera hasta el 2026-09-03, y con ella se escondía el cuestionario;
+             lo que la bloquea lo dice el aviso de arriba, y «Continuar» no se ofrece. */
+          <div className="min-w-0 space-y-5">{children}</div>
         )}
 
         {/* EL BOTÓN QUE ABRE LA VALORACIÓN, AL FINAL Y NO AL ENTRAR (explicit user
@@ -563,8 +540,12 @@ export function StageGate({
             Aquí es donde se gasta `--study`: es el token de la evaluación en toda la
             aplicación — la píldora «Comparar» del navbar se dibuja en él. Relleno mientras
             no se ha contestado y sobrio en cuanto se contesta, que es la única diferencia
-            que importa. No se dibuja con la etapa sin construir ni bloqueada — no habría
-            nada que juzgar. */}
+            que importa. No se dibuja con la etapa sin construir — no habría nada que
+            juzgar — pero SÍ con la etapa bloqueada (2026-09-03, explicit user request:
+            «los formularios tienen que aparecer en todos los constructores
+            independientemente de si se ha enviado el anterior o no»): un paso ya
+            construido cuyo anterior se reabrió sigue teniendo algo que valorar, y el
+            cuestionario es lo que se está midiendo. */}
         {/* Y EL CUESTIONARIO SE ABRE DEBAJO DEL BOTÓN, COMO UN ACORDEÓN (2026-09-02,
             explicit user request: «que se abran de manera natural y en la posición
             correcta; ahora mismo se abren al lado y rompe todo el flow»). Fue una columna a
@@ -578,7 +559,7 @@ export function StageGate({
             lleve escrito en el cuadro de texto cada vez que cierre. Un solo bloque para el
             botón y el panel, o el `space-y` del contenedor abriría un hueco bajo el botón
             con el panel cerrado. */}
-        {!missing && !blocked ? (
+        {!missing ? (
           <div ref={reviewPanel} className="scroll-mt-20">
             {review.data?.built ? (
           <button
@@ -821,7 +802,7 @@ export function ClosingSection({
   );
 }
 
-/** What «Continuar» says: the next step's number, or the way into phase 2 after the last. */
+/** What «Continuar» says: the next step's number, or the way into the testing phase after the last. */
 export function continueLabel(
   next: { number: string | null },
   t: (key: Key, vars?: Record<string, string | number>) => string,
