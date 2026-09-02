@@ -26,7 +26,7 @@
     "transcribe_temperature": 0.0,
     "transcribe_max_retries": 1,
     "transcribe_seam_chars": 1200,
-    "transcribe_prompt_version": 3,
+    "transcribe_prompt_version": 4,
     "exemplars_ocr": true,
     "ep_chunk_size": 12000,
     "ep_scan_excerpt_chars": 400,

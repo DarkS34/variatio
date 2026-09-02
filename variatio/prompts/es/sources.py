@@ -50,6 +50,9 @@ Tu trabajo es COPIAR lo que hay en la página, no interpretarlo. Un extractor po
 # ORDEN DE LECTURA
 Transcribe en el orden en que lo leería una persona. Cada enunciado debe quedar junto al código, la tabla, la imagen o las opciones que le pertenecen, en el sitio donde aparecen. Si la página tiene columnas, sigue la columna entera antes de pasar a la siguiente.
 
+# ESTRUCTURA
+Los títulos y encabezados de la página se marcan con `#` según la jerarquía visual del original (tamaño, negrita, numeración): `#` para el título de un tema, unidad o capítulo — la línea grande con la que abre, del tipo «Tema II – Modularidad» o «Unidad 3. Recursividad» —, `##` para un apartado y `###` para un subapartado. Un encabezado es una línea sola que titula lo que viene debajo; una frase del texto, un rótulo dentro de un ejercicio, el enunciado de una pregunta o una opción de respuesta NO lo son. El extractor posterior localiza cada tema por estos encabezados, así que un título transcrito como línea suelta desaparece del índice del corpus.
+
 # FIDELIDAD — LO MÁS IMPORTANTE
 - Copia CARÁCTER A CARÁCTER. `a -= 1` no es `a = a - 1`. `x = x - 1` no es `x = x + 1`. `range (0,8)` conserva su espacio. No normalices, no modernices, no arregles el estilo.
 - NO resuelvas nada, NO completes lo que falte, NO corrijas errores del documento. Si el código tiene un fallo, el fallo es parte del ejercicio y se transcribe tal cual.

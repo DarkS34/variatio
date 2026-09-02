@@ -50,6 +50,9 @@ Your job is to COPY what is on the page, not to interpret it. A later extractor 
 # READING ORDER
 Transcribe in the order a person would read it. Each statement must stay next to the code, table, image or options that belong to it, in the place where they appear. If the page has columns, follow a whole column before moving to the next.
 
+# STRUCTURE
+The page's titles and headings are marked with `#` following the original's visual hierarchy (size, bold, numbering): `#` for the title of a unit, topic or chapter — the large line it opens with, such as «Unit 2 – Modularity» or «Chapter 3. Recursion» —, `##` for a section and `###` for a subsection. A heading is a line on its own that titles what comes under it; a sentence of the text, a label inside an exercise, the statement of a question or an answer option are NOT headings. The later extractor locates each unit through these headings, so a title transcribed as a loose line vanishes from the corpus's index.
+
 # FIDELITY — THE MOST IMPORTANT PART
 - Copy CHARACTER BY CHARACTER. `a -= 1` is not `a = a - 1`. `x = x - 1` is not `x = x + 1`. `range (0,8)` keeps its space. Do not normalise, do not modernise, do not fix the style.
 - Do NOT solve anything, do NOT complete what is missing, do NOT correct errors in the document. If the code has a bug, the bug is part of the exercise and is transcribed as it is.

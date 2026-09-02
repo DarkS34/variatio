@@ -76,7 +76,7 @@ costuras.""",
         key="builders.transcribe_prompt_version",
         name="TRANSCRIBE_PROMPT_VERSION",
         kind="int",
-        default=3,
+        default=4,
         group="Constructores",
         impact=Impact.LOCKED,
         editable=False,
@@ -88,7 +88,12 @@ Lo sube quien edita el prompt, no quien mira una pantalla. 3 desde el 2026-09-02
 `IMAGE_RULES` que comparten los dos prompts (una imagen se transcribe por lo que contiene y
 solo se describe cuando no hay nada que copiar). OJO: `config.json` guarda este valor como
 cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo también en el
-fichero de la instalación no caduca nada.""",
+fichero de la instalación no caduca nada. 4 desde el 2026-09-03: el prompt de página pide los
+ENCABEZADOS con `#` según la jerarquía visual (sección `# ESTRUCTURA`). Hasta entonces no los
+pedía y quedaban al criterio del modelo; con la versión 3 dejó de marcar las portadas de tema
+(medido sobre `apuntes.pdf` de `cs0-examenes`, T=0, dos pasadas: v2 marcaba «# Tema I», «# Tema
+II» y «# Tema V», v3 solo «# Tema V»), y sin ellos `segment_syllabus` abría las unidades del
+grafo por apartados.""",
     ),
     Setting(
         key="builders.exemplars_ocr",
