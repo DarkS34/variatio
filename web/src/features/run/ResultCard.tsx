@@ -19,11 +19,27 @@ function isFenced(value: string): boolean {
   return /^\s{0,3}(```|~~~)/m.test(value);
 }
 
-function FieldValue({ field, value }: { field: string; value: string }) {
+/** The one size step the app allows above `body`: a reading surface rather than dense
+ *  chrome, which is what the evaluation's expanded proposal is. */
+const READING = "text-[15px] leading-[1.7]";
+
+function FieldValue({
+  field,
+  value,
+  reading,
+}: {
+  field: string;
+  value: string;
+  reading: boolean;
+}) {
   if (isCodeField(field) && !isFenced(value)) {
     return <CodeBlock code={value} maxHeight="18rem" />;
   }
-  return <Markdown className="text-muted-foreground" codeMaxHeight="18rem">{value}</Markdown>;
+  return (
+    <Markdown className={cn("text-muted-foreground", reading && READING)} codeMaxHeight="18rem">
+      {value}
+    </Markdown>
+  );
 }
 
 /**
@@ -31,27 +47,32 @@ function FieldValue({ field, value }: { field: string; value: string }) {
  *
  * Shared with the evaluation's proposal cards so the three arms are rendered by the same
  * code: a comparison where one card lays its fields out differently is measuring layout.
+ * `reading` steps the prose up one size and nothing else — the order and the labels are
+ * the same, so the expanded view is the card at a size a person can read, not a fourth
+ * rendering.
  */
 export function ItemFields({
   item,
   spec,
+  reading = false,
 }: {
   item: Record<string, unknown>;
   spec: ItemTypeSpec | null;
+  reading?: boolean;
 }) {
   const primary = spec ? fieldText(item[spec.primary_field]) : "";
   const others = Object.keys(spec?.fields ?? {}).filter((f) => f !== spec?.primary_field);
 
   return (
     <>
-      <Markdown>{primary}</Markdown>
+      <Markdown className={cn(reading && READING)}>{primary}</Markdown>
       {others.map((field) => {
         const value = item[field];
         if (isEmptyField(value)) return null;
         return (
           <div key={field} className="space-y-1">
             <Label>{spec?.fields?.[field]?.label || field}</Label>
-            <FieldValue field={field} value={fieldText(value)} />
+            <FieldValue field={field} value={fieldText(value)} reading={reading} />
           </div>
         );
       })}

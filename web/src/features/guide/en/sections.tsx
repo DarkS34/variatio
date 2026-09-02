@@ -1448,23 +1448,36 @@ function Evaluate() {
       <Block title="How a comparison goes">
         <Steps
           items={[
-            <>The three proposals appear, unlabelled and in an order that is yours alone.</>,
+            <>
+              The three proposals appear, unlabelled and in an order that is yours alone. Above
+              them, in one line, the commission: the type of exercise, the topics and the level
+              if one was pinned. It is the same for all three, so it gives nothing away.
+            </>,
+            <>
+              The three cards are the same height and do not scroll inside: the page moves,
+              they do not. A long exercise is read with the expand button in its header, at
+              reading size and with the question at the foot; ← and → move between them.
+            </>,
             <>
               <strong>You answer one question per card</strong>: whether you would set it in
               class — or, if you are a student, whether it would be useful to practise with. One
-              click, first impression, no dwelling on it.
+              click, first impression, no dwelling on it. The three steps above say which one
+              you are on.
             </>,
             <>
-              <strong>You choose one</strong>. The button does not activate until you have
-              answered all three, and you can always say that none of them convinces you.
+              <strong>You choose one</strong>. The choice bar stays pinned to the foot of the
+              window; it does not activate until you have answered all three, and you can
+              always say that none of them convinces you.
             </>,
             <>
-              Only then is it revealed which architecture wrote each one, with what you answered
-              about each card beside it.
+              Only then is it revealed which architecture wrote each one: a row per proposal,
+              with what you answered about it, the model and the time, and a
+              "{t("reveal.detail")}" that unfolds the technical detail.
             </>,
             <>
-              If you feel like it, you rate the system's one on four scales. It is{" "}
-              <strong>optional</strong>: the comparison was already recorded when you chose.
+              If you feel like it, you rate the system's one on four scales, with its exercise
+              beside them. It is <strong>optional</strong>: the comparison was already recorded
+              when you chose.
             </>,
             <>
               Below it, "{t("eval.backToList")}" closes the session and takes you back to your

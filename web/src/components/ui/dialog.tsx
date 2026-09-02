@@ -14,6 +14,7 @@ export function Dialog({
   description,
   children,
   footer,
+  actions,
   className,
 }: {
   open: boolean;
@@ -22,6 +23,9 @@ export function Dialog({
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** Controls drawn between the title and the close button, for a dialog that pages
+   *  through several things (the evaluation's reading view). */
+  actions?: ReactNode;
   className?: string;
 }) {
   const { t } = useT();
@@ -59,9 +63,12 @@ export function Dialog({
               <p className="mt-1 text-small text-muted-foreground">{description}</p>
             ) : null}
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t("common.close")}>
-            <X />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            {actions}
+            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t("common.close")}>
+              <X />
+            </Button>
+          </div>
         </header>
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">{children}</div>
         {footer ? (

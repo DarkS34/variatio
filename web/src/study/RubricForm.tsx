@@ -22,6 +22,10 @@ import { useT } from "@/lib/i18n";
  * asked the same four things in different words, and the wording is the instrument — one
  * edit in `study/api/instruments.py`, never two copies drifting apart.
  *
+ * ONE SCALE PER ROW, at full measure. They were a two-by-two grid in a half column, which
+ * put each question at a quarter of the window with its ends clipped; the form now has a
+ * track of its own beside the exercise it rates, and the four read top to bottom.
+ *
  * Optional is the point. Everything blind was collected before the reveal, so somebody in
  * a hurry has already left a complete datum and this is depth for whoever has the appetite
  * for it. The usability question is gone from here: it moved to the blind per-card triage,
@@ -51,7 +55,7 @@ function Scale({
             aria-label={t("rubric.scoreOf", { n: score })}
             aria-pressed={value === score}
             className={cn(
-              "h-8 flex-1 border text-body nums transition-colors",
+              "h-9 flex-1 border text-body nums transition-colors",
               value === score
                 ? "border-primary bg-primary text-primary-foreground font-medium"
                 : "border-input hover:bg-accent/60",
@@ -65,7 +69,7 @@ function Scale({
           </button>
         ))}
       </div>
-      <div className="flex justify-between text-[11px] text-muted-foreground">
+      <div className="flex justify-between text-micro text-muted-foreground">
         <span>{ends[0]}</span>
         {target ? <span className="text-attention">{t("rubric.target", { target })}</span> : null}
         <span>{ends[1]}</span>
@@ -95,32 +99,33 @@ export function RubricForm({
   const complete = instruments.rubric.every((scale) => draft[key(scale.key)] !== undefined);
 
   return (
-    <section className="space-y-3 border border-border bg-card p-3 shadow-sm">
-      <header className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-body font-semibold">
-          {t("rubric.title")}{" "}
-          <span style={{ color: ARM_META.system.colour }}>{t("rubric.system")}</span>
-        </h2>
-        <span className="bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-          {t("common.optional")}
-        </span>
-        {saved ? (
-          <span className="ml-auto flex items-center gap-1 text-small text-settled">
-            <Check className="size-3.5" />
-            {t("rubric.saved")}
+    <section className="space-y-4 border border-border bg-card p-5 shadow-sm">
+      <header className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="text-heading font-semibold">
+            {t("rubric.title")}{" "}
+            <span style={{ color: ARM_META.system.colour }}>{t("rubric.system")}</span>
+          </h2>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-micro font-condensed text-muted-foreground uppercase">
+            {t("common.optional")}
           </span>
-        ) : null}
+          {saved ? (
+            <span className="ml-auto flex items-center gap-1 text-small text-settled">
+              <Check className="size-3.5" />
+              {t("rubric.saved")}
+            </span>
+          ) : null}
+        </div>
+        <p className="text-small text-muted-foreground">{t("rubric.whicheverYouChose")}</p>
       </header>
 
-      <p className="text-small text-muted-foreground">
-        {t("rubric.whicheverYouChose")}
-      </p>
-
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-4">
         {instruments.rubric.map((scale) => (
-          <div key={scale.key} className="space-y-1.5">
-            <p className="text-small font-medium">{scale.label}</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">{scale.question}</p>
+          <div key={scale.key} className="space-y-2">
+            <div>
+              <p className="text-body font-semibold">{scale.label}</p>
+              <p className="text-small text-muted-foreground">{scale.question}</p>
+            </div>
             <Scale
               value={draft[key(scale.key)] as number | undefined}
               onChange={(next) =>
@@ -138,13 +143,11 @@ export function RubricForm({
         value={draft.comment ?? ""}
         onChange={(event) => patch({ comment: event.target.value })}
         placeholder={t("rubric.commentPlaceholder")}
-        className="min-h-16"
+        className="min-h-[4.5rem]"
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="flex-1 text-small text-muted-foreground">
-          {t("rubric.skippable")}
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="flex-1 text-small text-muted-foreground">{t("rubric.skippable")}</p>
         <Button variant="outline" onClick={onSkip}>
           {t("rubric.skip")}
         </Button>

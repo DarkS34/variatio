@@ -85,7 +85,7 @@ const STATE_KEY: Record<StepState, Key> = {
  * supposed to look like. The 22 px box stays as empty space so the four names still line
  * up on one column.
  */
-function StepCounter({ state, n }: { state: StepState; n: string }) {
+export function StepCounter({ state, n }: { state: StepState; n: string }) {
   // `min-w` and not a fixed square: «1.1» is wider than «1» and the height is what keeps
   // the four names on one column.
   const box = "flex h-[22px] min-w-[22px] shrink-0 items-center justify-center px-1";

@@ -26,13 +26,15 @@ import {
 } from "@/state/queries";
 
 import { toEvaluationParams } from "./commission";
+import { CommissionStrip } from "./CommissionStrip";
 import { ComparisonGrid } from "./ComparisonGrid";
 import { FairnessTable } from "./FairnessTable";
 import { CROSS_EVALUATION } from "./config";
+import { ProposalDialog } from "./ProposalDialog";
 import { QueueTab } from "./QueueTab";
 import { RevealPanel } from "./RevealPanel";
-import { RubricForm } from "./RubricForm";
 import { SessionsTable } from "./SessionsTable";
+import { TaskSteps } from "./TaskSteps";
 import { letterFor } from "./arms";
 import {
   useChooseProposal,
@@ -170,7 +172,14 @@ export function EvaluationScreen() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(CROSS_EVALUATION ? "queue" : "compose");
+  // Which proposal is open at reading size, by position; null while none is. It belongs
+  // to the session, so changing session closes it.
+  const [reading, setReading] = useState<number | null>(null);
   const detail = useEvaluation(sessionId);
+
+  useEffect(() => {
+    setReading(null);
+  }, [sessionId]);
 
   const profile = profileQuery.data?.profile ?? null;
   const unlocked = pipeline.data?.generation_unlocked ?? false;
@@ -385,50 +394,68 @@ export function EvaluationScreen() {
 
       {showComparison && profile && session && instruments ? (
         <div className="space-y-5">
-          <ComparisonGrid
+          <TaskSteps
+            session={session}
+            answered={positions.filter((p) => p.item && session.triage[String(p.position)]).length}
+            answerable={positions.filter((p) => p.item).length}
+          />
+
+          <CommissionStrip session={session} profile={profile} />
+
+          {session.revealed ? (
+            <RevealPanel
+              detail={detail.data!}
+              profile={profile}
+              instruments={instruments}
+              pending={rate.isPending}
+              onSave={(rating) => rate.mutate({ id: session.id, payload: rating })}
+              onSkip={openNext}
+              onRead={setReading}
+            />
+          ) : (
+            <ComparisonGrid
+              positions={positions}
+              profile={profile}
+              itemType={session.item_type}
+              triage={session.triage}
+              instruments={instruments}
+              onTriage={(position, value) =>
+                triage.mutate({ id: session.id, payload: { position, value } })
+              }
+              onChoose={(choice, comment) =>
+                choose.mutate({ id: session.id, payload: { choice, comment } })
+              }
+              onDecline={() => decline.mutate({ id: session.id, payload: {} })}
+              onRead={setReading}
+              pending={choose.isPending || triage.isPending || decline.isPending}
+            />
+          )}
+
+          {session.revealed ? (
+            <Button variant="outline" className="w-full" onClick={openNext}>
+              <Scale />
+              {queue && queue.pending > 0
+                ? t("eval.nextInQueue", {
+                    pending: plural("eval.pendingCount", queue.pending),
+                  })
+                : t("eval.backToList")}
+            </Button>
+          ) : null}
+
+          <ProposalDialog
+            position={positions.find((p) => p.position === reading) ?? null}
             positions={positions}
+            session={session}
             profile={profile}
-            itemType={session.item_type}
-            revealed={session.revealed}
-            choice={session.choice}
-            triage={session.triage}
             instruments={instruments}
+            triage={session.triage}
+            pending={triage.isPending}
             onTriage={(position, value) =>
               triage.mutate({ id: session.id, payload: { position, value } })
             }
-            onChoose={(choice, comment) =>
-              choose.mutate({ id: session.id, payload: { choice, comment } })
-            }
-            onDecline={() => decline.mutate({ id: session.id, payload: {} })}
-            pending={choose.isPending || triage.isPending || decline.isPending}
+            onMove={setReading}
+            onClose={() => setReading(null)}
           />
-
-          {session.revealed ? (
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-              <RevealPanel detail={detail.data!} />
-              <div className="space-y-4">
-                {/* The rubric is about the system's variant, so a session nobody could
-                    judge has nothing for it to describe. */}
-                {session.declined_at ? null : (
-                  <RubricForm
-                    rating={session.rating}
-                    instruments={instruments}
-                    pending={rate.isPending}
-                    onSave={(rating) => rate.mutate({ id: session.id, payload: rating })}
-                    onSkip={openNext}
-                  />
-                )}
-                <Button variant="outline" className="w-full" onClick={openNext}>
-                  <Scale />
-                  {queue && queue.pending > 0
-                    ? t("eval.nextInQueue", {
-                        pending: plural("eval.pendingCount", queue.pending),
-                      })
-                    : t("eval.backToList")}
-                </Button>
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>

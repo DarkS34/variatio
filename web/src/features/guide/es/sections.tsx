@@ -1439,23 +1439,32 @@ function Evaluate() {
           items={[
             <>
               Aparecen las tres propuestas, sin etiquetar y en un orden que es solo tuyo.
+              Encima, en una línea, el encargo: el tipo de ejercicio, los temas y el nivel si
+              se fijó uno. Es el mismo para las tres, así que no delata nada.
+            </>,
+            <>
+              Las tres tarjetas tienen la misma altura y no se desplazan por dentro: la
+              página baja, ellas no. Un ejercicio largo se lee con el botón de ampliar de su
+              cabecera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a otra.
             </>,
             <>
               <strong>Respondes una pregunta por tarjeta</strong>: si la pondrías en clase —
               o, si eres alumno, si te serviría para practicar. Un clic, primera impresión, sin
-              darle vueltas.
+              darle vueltas. Los tres pasos de arriba dicen en cuál estás.
             </>,
             <>
-              <strong>Eliges una</strong>. El botón no se activa hasta que has respondido a
-              las tres, y siempre puedes decir que ninguna te convence.
+              <strong>Eliges una</strong>. La barra de elección queda fija al pie de la ventana;
+              no se activa hasta que has respondido a las tres, y siempre puedes decir que
+              ninguna te convence.
             </>,
             <>
-              Solo entonces se revela qué arquitectura escribió cada una, con lo que
-              respondiste sobre cada tarjeta al lado.
+              Solo entonces se revela qué arquitectura escribió cada una: una fila por
+              propuesta, con lo que respondiste sobre ella, el modelo y el tiempo, y un
+              «{t("reveal.detail")}» que despliega el detalle técnico.
             </>,
             <>
-              Si te apetece, afinas la del sistema en cuatro escalas. Es{" "}
-              <strong>opcional</strong>: la comparación ya quedó registrada al elegir.
+              Si te apetece, afinas la del sistema en cuatro escalas, con su ejercicio al lado.
+              Es <strong>opcional</strong>: la comparación ya quedó registrada al elegir.
             </>,
             <>
               Debajo, «{t("eval.backToList")}» cierra la sesión y te devuelve a tu histórico,
