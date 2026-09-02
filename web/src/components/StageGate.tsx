@@ -210,6 +210,9 @@ export function StageBadge({ stage }: { stage: StageState }) {
   );
 }
 
+/** How long the questionnaire takes to unfold, and therefore when the page may scroll to it. */
+const REVIEW_UNFOLD_MS = 300;
+
 /**
  * A stage is visible before it is available, and says exactly why it is not.
  * A disabled control with no explanation is the thing this screen exists to avoid.
@@ -282,14 +285,26 @@ export function StageGate({
     setCurated(false);
     setReviewOpen(false);
   }, [stage?.artifact]);
-  // ASKED FOR AT THE FOOT, DRAWN BESIDE THE ARTIFACT. The two are far apart above `xl`,
-  // where the panel is a right-hand column starting at the top of the content while the
-  // button that opens it is below all of it — so a press could look like nothing happened.
+  // The panel opens directly under the button that asks for it, and the button is at the
+  // foot of the artifact, so what is under it is below the fold: the WRAPPER — button and
+  // panel — is brought to the top of the window, under the sticky header (`scroll-mt-20`),
+  // and the form unfolds beneath. Measured before: `block: "nearest"` on the panel alone
+  // scrolled nothing, because the panel is 0 px tall at the instant it is asked to open.
   useEffect(() => {
     if (!reviewOpen) return;
     // `scrollIntoView` does not honour the media query on its own, unlike a CSS transition.
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    reviewPanel.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "nearest" });
+    const scroll = () =>
+      reviewPanel.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+    // AFTER the unfold, not at the click: the panel grows over `REVIEW_UNFOLD_MS` and the
+    // page is only as tall as its content, so a scroll asked for at the click stops where
+    // the short page ends — measured, the button landed at y=630 instead of at the top.
+    if (still) {
+      scroll();
+      return;
+    }
+    const timer = window.setTimeout(scroll, REVIEW_UNFOLD_MS);
+    return () => window.clearTimeout(timer);
   }, [reviewOpen]);
   const review = useStageReview(stage?.artifact);
   const answeredReview = review.data?.mine?.answered ?? false;
@@ -557,69 +572,16 @@ export function StageGate({
             {livePreview}
           </>
         ) : missing ? null : (
-          /* REVISAR A LA IZQUIERDA, VALORAR A LA DERECHA. Una sola tarea partida en dos
-             mitades que se miran: el cuestionario pregunta por lo que está al lado, y
-             cobrarlo en otra pantalla sería preguntar por un recuerdo.
-
-             Una sola columna por debajo de `xl`, y no de `lg`: a 1024 las dos mitades
-             quedan en 560 y 400, y el listado de conceptos del temario no cabe en 560 sin
-             partir cada fila. Debajo de ese ancho el formulario baja entero, que es lo que
-             ya hace la barra con su propia franja.
-
-             Bloqueada no: con la etapa bloqueada por sus upstreams no hay nada construido
-             que juzgar, y el formulario lo diría él mismo — pero atenuado junto al resto
-             sería un control apagado sin explicación, que es justo lo que esta pantalla
-             existe para no hacer. */
-          /* UNA FILA, NO UNA REJILLA, porque lo que se anima es un ANCHO y una rejilla de
-             `fr` no interpola de forma fiable entre «hay columna» y «no la hay». El panel
-             es una columna de ancho fijo en `xl` que va de 0 a 26rem, con `overflow-hidden`
-             recortándolo mientras viaja, y su contenido entra desplazado desde la derecha:
-             eso es «que se abra de lado». Por debajo de `xl` no hay dos columnas que valgan,
-             así que lo que se abre es el alto.
-
-             Se monta siempre y sólo se recorta: desmontarlo perdería lo que la persona
-             lleve escrito en el cuadro de texto cada vez que cierre el cajón. */
-          <div className="flex flex-col items-start gap-5 xl:flex-row">
-            <div
-              className={cn(
-                "min-w-0 flex-1 space-y-5",
-                blocked && "pointer-events-none select-none opacity-45",
-              )}
-            >
-              {children}
-            </div>
-            {blocked ? null : (
-              <div
-                ref={reviewPanel}
-                // `inert` and not only `aria-hidden`: clipped to zero height the panel is
-                // still in the tab order, so tabbing off the last control of the screen
-                // walked into a form nobody can see. React 19 forwards it as the real
-                // attribute, which takes the subtree out of focus AND out of the
-                // accessibility tree, and unlike `visibility: hidden` it does not fight
-                // the closing transition.
-                inert={!reviewOpen}
-                className={cn(
-                  "w-full shrink-0 overflow-hidden",
-                  "transition-[max-height,width,opacity] duration-300 ease-out motion-reduce:transition-none",
-                  reviewOpen
-                    ? "max-h-[400rem] opacity-100 xl:w-[26rem]"
-                    : "max-h-0 opacity-0 xl:w-0",
-                )}
-              >
-                <div
-                  className={cn(
-                    "transition-transform duration-300 ease-out motion-reduce:transition-none",
-                    reviewOpen ? "translate-x-0" : "translate-x-8",
-                  )}
-                >
-                  <StageReview
-                    artifact={stage.artifact}
-                    curated={curated}
-                    onClose={() => setReviewOpen(false)}
-                  />
-                </div>
-              </div>
+          /* Bloqueada: con la etapa bloqueada por sus upstreams no hay nada construido que
+             juzgar, y atenuado junto al resto un formulario sería un control apagado sin
+             explicación, que es justo lo que esta pantalla existe para no hacer. */
+          <div
+            className={cn(
+              "min-w-0 space-y-5",
+              blocked && "pointer-events-none select-none opacity-45",
             )}
+          >
+            {children}
           </div>
         )}
 
@@ -634,7 +596,22 @@ export function StageGate({
             no se ha contestado y sobrio en cuanto se contesta, que es la única diferencia
             que importa. No se dibuja con la etapa sin construir ni bloqueada — no habría
             nada que juzgar. */}
-        {!missing && !blocked && review.data?.built ? (
+        {/* Y EL CUESTIONARIO SE ABRE DEBAJO DEL BOTÓN, COMO UN ACORDEÓN (2026-09-02,
+            explicit user request: «que se abran de manera natural y en la posición
+            correcta; ahora mismo se abren al lado y rompe todo el flow»). Fue una columna a
+            la derecha que arrancaba arriba del todo, así que pulsar al pie abría algo en
+            la otra punta de la pantalla y había que desplazar la página hasta ello. La
+            lectura de la etapa es vista → valoración → corrección, de arriba abajo, y el
+            formulario cae ahora donde está el botón que lo pide, con el ancho del botón.
+            El chevrón ya giraba hacia abajo al abrirse: prometía esto.
+
+            Se monta siempre y sólo se recorta: desmontarlo perdería lo que la persona
+            lleve escrito en el cuadro de texto cada vez que cierre. Un solo bloque para el
+            botón y el panel, o el `space-y` del contenedor abriría un hueco bajo el botón
+            con el panel cerrado. */}
+        {!missing && !blocked ? (
+          <div ref={reviewPanel} className="scroll-mt-20">
+            {review.data?.built ? (
           <button
             type="button"
             onClick={() => setReviewOpen((was) => !was)}
@@ -668,6 +645,33 @@ export function StageGate({
               )}
             />
           </button>
+            ) : null}
+            <div
+              // `inert` and not only `aria-hidden`: clipped to zero height the panel is
+              // still in the tab order, so tabbing off the button walked into a form nobody
+              // can see. React 19 forwards it as the real attribute, which takes the
+              // subtree out of focus AND out of the accessibility tree, and unlike
+              // `visibility: hidden` it does not fight the closing transition.
+              inert={!reviewOpen}
+              className={cn(
+                "overflow-hidden transition-[max-height,opacity] duration-300 ease-out motion-reduce:transition-none",
+                reviewOpen ? "max-h-[400rem] opacity-100" : "max-h-0 opacity-0",
+              )}
+            >
+              <div
+                className={cn(
+                  "pt-4 transition-transform duration-300 ease-out motion-reduce:transition-none",
+                  reviewOpen ? "translate-y-0" : "-translate-y-3",
+                )}
+              >
+                <StageReview
+                  artifact={stage.artifact}
+                  curated={curated}
+                  onClose={() => setReviewOpen(false)}
+                />
+              </div>
+            </div>
+          </div>
         ) : null}
 
         {/* LAS DOS SALIDAS, JUNTAS Y AL FINAL (explicit user request). «Pulsa aquí para

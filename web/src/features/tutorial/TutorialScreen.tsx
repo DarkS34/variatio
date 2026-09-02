@@ -35,7 +35,7 @@ import { SLIDE_COUNT, slidePath } from "./reveal";
  * slide of its own, and the closing pair — what the study asks, and where to start —
  * became one slide, because a slide whose whole content is «press the button below» says
  * what the button says. `COMPARE_PHASE` was added to `lib/steps.ts` in the same change:
- * the bar numbers «Comparar» 3, or this deck would be promising a shape the navigation
+ * the bar numbers «Evaluar el sistema» 3, or this deck would be promising a shape the navigation
  * does not have.
  *
  * IT RUNS UNDER THE REAL HEADER, AND THE HEADER IS PART OF THE DECK (2026-09-02, explicit

@@ -364,8 +364,8 @@ export const es = {
   "nav.state.done": "Hecho",
   "nav.state.now": "Te toca ahora",
   "nav.state.later": "Después",
-  "nav.create": "Crear ejercicios",
-  "nav.compare": "Comparar",
+  "nav.create": "Pedir ejercicios",
+  "nav.compare": "Evaluar el sistema",
   // DOS FASES: los cuatro pasos son 1.1–1.4 dentro de «preparar la asignatura», y generar
   // es la fase 2. Antes eran cuatro pasos al mismo nivel y pedir un ejercicio se quedaba
   // fuera de la numeración, como si no formara parte del recorrido.
@@ -446,7 +446,7 @@ export const es = {
   // las tres preguntas del encargo las dibuja la figura, así que aquí no se enumeran.
   "tutorial.s4.title": "Fase 2: pedir ejercicios",
   "tutorial.s4.body":
-    "Con los cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí, en «Crear ejercicios», le pides tantos como quieras y te quedas con los que te sirvan.",
+    "Con los cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí, en «Pedir ejercicios», le pides tantos como quieras y te quedas con los que te sirvan.",
   "tutorial.s4.b1":
     "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
@@ -454,14 +454,16 @@ export const es = {
   "tutorial.s4.b3":
     "Puedes volver a cualquier paso de la fase 1 cuando quieras. Si cambias algo, se te avisa de qué pasos posteriores se han quedado desfasados.",
 
-  "tutorial.s5.title": "Fase 3: comparar tres versiones a ciegas",
+  "tutorial.s5.title": "Fase 3: evaluar el sistema a ciegas",
   "tutorial.s5.body":
-    "En «Comparar» se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría y eliges la mejor. Solo al final se revela de dónde salía cada una.",
+    "En «Evaluar el sistema» se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría y eliges la mejor. Solo al final se revela de dónde salía cada una.",
   // LA DIFERENCIA CON LA FASE 2 ES EL PRIMER PUNTO: las dos escriben ejercicios, y sin
   // decirlo la 3 se lee como «la 2 con tres en vez de uno». Y es opcional y no depende de
-  // la 2 — el número dice dónde está, no que haga falta pasar por ella.
+  // la 2 — el número dice dónde está, no que haga falta pasar por ella. Los nombres de las
+  // dos píldoras cambiaron por lo mismo (2026-09-02): «Crear ejercicios → Comparar» se leía
+  // como una cadena, crear y luego comparar lo creado.
   "tutorial.s5.b1":
-    "No es la fase 2 con más ejercicios. En «Crear ejercicios» pides uno para usarlo en clase; en «Comparar» se escriben tres del mismo encargo para que digas cuál es mejor, y lo que se guarda es tu juicio. No necesita haber generado nada antes y es opcional: puedes usar la asignatura sin comparar nunca.",
+    "No se evalúan los ejercicios que pidas en la fase 2, y no hace falta haber pedido ninguno. En «Pedir ejercicios» pides uno para usarlo en clase; aquí se escriben tres del mismo encargo, con tres métodos distintos, para que digas cuál es mejor, y lo que se guarda es tu juicio. Es opcional: puedes usar la asignatura sin pasar nunca por aquí.",
   "tutorial.s5.b2":
     "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
   "tutorial.s5.b3":
@@ -472,7 +474,7 @@ export const es = {
   // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN, y de ahí a la puerta. La figura dibuja
   // los cuatro tiempos de cada paso, así que el texto no los vuelve a recorrer: dice lo que
   // la figura no puede, que corregir es opcional y que lo corregido a mano gana.
-  "tutorial.s6.title": "Y ahora, evaluar el sistema",
+  "tutorial.s6.title": "Y ahora, tu parte en el estudio",
   "tutorial.s6.body":
     "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre lo que ha salido: esas respuestas son lo que mide el estudio.",
   "tutorial.s6.b1":
@@ -1387,7 +1389,7 @@ export const es = {
   "eval.backToList": "Volver a la lista",
   "chain.pending": "Falta dar por bueno: {stages}",
   "chain.goFix": "Ir al Paso {n} · {label}",
-  "eval.blocked": "Comparación bloqueada",
+  "eval.blocked": "Evaluación bloqueada",
   "eval.failed": "La comparación falló",
   "eval.externalUnset": "La propuesta comercial no está configurada",
   "eval.externalUnset.body": "La sesión seguirá adelante y esa propuesta quedará registrada como no disponible, que es un dato en sí mismo.",

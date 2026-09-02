@@ -128,12 +128,19 @@ function StepPill({
   n,
   active,
   title,
+  demo = false,
 }: {
   step: (typeof STEPS)[number];
   state: StepState;
   n: string;
   active: boolean;
   title?: string;
+  /**
+   * Under the tutorial (2026-09-02, explicit user request): the number and the name, and
+   * NOT the state word. The bar is being explained there, and «Después» three times under
+   * a subject that may not exist yet is a tag on every element rather than a state.
+   */
+  demo?: boolean;
 }) {
   const { t } = useT();
   return (
@@ -157,16 +164,18 @@ function StepPill({
         <StepCounter state={state} n={n} />
         {t(step.labelKey)}
       </span>
-      <span
-        className={cn(
-          "pl-[30px] text-micro",
-          state === "done" && "text-settled",
-          state === "now" && "text-attention",
-          state === "later" && "text-muted-foreground",
-        )}
-      >
-        {t(STATE_KEY[state])}
-      </span>
+      {demo ? null : (
+        <span
+          className={cn(
+            "pl-[30px] text-micro",
+            state === "done" && "text-settled",
+            state === "now" && "text-attention",
+            state === "later" && "text-muted-foreground",
+          )}
+        >
+          {t(STATE_KEY[state])}
+        </span>
+      )}
     </Link>
   );
 }
@@ -179,7 +188,7 @@ function StepPill({
  * before them. They stay reachable: the screens behind them explain what is missing,
  * which a dimmed link cannot.
  *
- * «Comparar» carries `--study`, tinted even when it is not the current page: what the
+ * «Evaluar el sistema» carries `--study`, tinted even when it is not the current page: what the
  * tint says is «this is a different kind of thing», which is true from wherever you look
  * at it. It is the one place in the navigation that spends a colour on identity.
  */
@@ -239,9 +248,12 @@ function NavRule() {
  *
  * Outside the tutorial `reveal` is null and this is a plain group. Inside it, a part the
  * deck has not reached yet is a dim silhouette — there, so the reader sees the bar fill
- * in as they go, but `inert`, because a control that has not been explained is not on
- * offer — and the part the current slide is about carries a 2 px rule in `--attention`
- * under it. A rule and not a fill: the pointing is meant to be slight, and the step that
+ * in as they go — and the part the current slide is about carries a 2 px rule in
+ * `--attention` under it. NOTHING IN IT IS PRESSABLE WHILE THE DECK RUNS, unlocked or not
+ * (2026-09-02, explicit user request): the header is being explained, not offered, and a
+ * reader who clicks «El temario» halfway through leaves the explanation of what it is.
+ * `inert` covers the keyboard and assistive tech; `pointer-events-none` the mouse. The
+ * way out is «Saltar la explicación» or the last slide's rail. A rule and not a fill: the pointing is meant to be slight, and the step that
  * is «te toca ahora» already spends the tint.
  *
  * THE RULE IS AN INSET SHADOW AND THE WRAPPER PADS VERTICALLY ONLY (2026-09-02, measured
@@ -266,12 +278,12 @@ function Unlock({
   const locked = reveal !== null && !reveal.unlocked;
   return (
     <div
-      inert={locked}
+      inert={reveal !== null}
       aria-hidden={locked || undefined}
       className={cn(
         "flex shrink-0 items-center gap-0.5 rounded-md transition-[opacity,box-shadow] duration-700",
-        reveal !== null && "py-1",
-        locked && "pointer-events-none select-none opacity-30",
+        reveal !== null && "pointer-events-none select-none py-1",
+        locked && "opacity-30",
         reveal?.pointed && "shadow-[inset_0_-2px_0_0_var(--attention)]",
         className,
       )}
@@ -333,6 +345,7 @@ function MainNav({
   }, [stages.length, locked, rawWaiting, rawStocked]);
 
   const states = stepStates(stages, rawStocked);
+  const demo = reveal("prepare") !== null;
 
   return (
     <nav
@@ -362,6 +375,7 @@ function MainNav({
             n={stepNumber(index)}
             active={path === step.path}
             title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+            demo={demo}
           />
         ))}
       </Unlock>

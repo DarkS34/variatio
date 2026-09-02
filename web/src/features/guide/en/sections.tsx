@@ -53,7 +53,7 @@ function BuildPlanBar() {
  * One of the two things the path leads to, drawn as the bar draws it.
  *
  * `n` replaces the icon on the one that IS a phase, exactly as `UsePill` does: the number
- * beside "Create exercises" is what says the four stops before it were for something.
+ * beside "Ask for exercises" is what says the four stops before it were for something.
  */
 function Pill({
   icon: Icon,
@@ -1429,7 +1429,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Create exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version.',
+              body: 'Where the screen opens. You pick the topic and the type of exercise you want: the same "Ask for exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version.',
             },
             {
               key: "sesiones",

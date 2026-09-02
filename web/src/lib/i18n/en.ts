@@ -335,8 +335,8 @@ export const en: Catalogue = {
   "nav.state.done": "Done",
   "nav.state.now": "Your turn",
   "nav.state.later": "Later",
-  "nav.create": "Create exercises",
-  "nav.compare": "Compare",
+  "nav.create": "Ask for exercises",
+  "nav.compare": "Evaluate the system",
   "nav.stepNumber": "Step {n} · Preparing the subject",
   "tutorial.skip": "Skip the explanation",
   "tutorial.of": "{n} of {total}",
@@ -389,7 +389,7 @@ export const en: Catalogue = {
 
   "tutorial.s4.title": "Phase 2: asking for exercises",
   "tutorial.s4.body":
-    "With the four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on, under «Create exercises», you ask for as many as you want and keep the ones that serve you.",
+    "With the four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on, under «Ask for exercises», you ask for as many as you want and keep the ones that serve you.",
   "tutorial.s4.b1":
     "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
   "tutorial.s4.b2":
@@ -397,11 +397,11 @@ export const en: Catalogue = {
   "tutorial.s4.b3":
     "You can go back to any step of phase 1 whenever you like. If you change something, you are told which later steps have gone stale.",
 
-  "tutorial.s5.title": "Phase 3: comparing three versions blind",
+  "tutorial.s5.title": "Phase 3: evaluating the system, blind",
   "tutorial.s5.body":
-    "Under «Compare» you are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use and pick the best. Only at the end is it revealed where each came from.",
+    "Under «Evaluate the system» you are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use and pick the best. Only at the end is it revealed where each came from.",
   "tutorial.s5.b1":
-    "It is not phase 2 with more exercises. Under «Create exercises» you ask for one to use in class; under «Compare» three are written to the same request so you can say which is best, and what is kept is your judgement. It needs nothing generated beforehand and it is optional: you can use the subject without ever comparing.",
+    "The exercises you ask for in phase 2 are not what is evaluated, and you need not have asked for any. Under «Ask for exercises» you ask for one to use in class; here three are written to the same request, by three different methods, so you can say which is best, and what is kept is your judgement. It is optional: you can use the subject without ever coming here.",
   "tutorial.s5.b2":
     "The order changes every time, so that a position on screen does not sway what you pick.",
   "tutorial.s5.b3":
@@ -409,7 +409,7 @@ export const en: Catalogue = {
   "tutorial.s5.aside":
     "This is the part the study rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
 
-  "tutorial.s6.title": "And now, evaluating the system",
+  "tutorial.s6.title": "And now, your part in the study",
   "tutorial.s6.body":
     "So much for what it does and how it is used. What is asked of you now is to prepare it with a subject of your own and answer, at each step, a few short questions about what came out: those answers are what the study measures.",
   "tutorial.s6.b1":
@@ -1285,7 +1285,7 @@ export const en: Catalogue = {
   "eval.backToList": "Back to the list",
   "chain.pending": "Still to sign off: {stages}",
   "chain.goFix": "Go to Step {n} · {label}",
-  "eval.blocked": "Comparison blocked",
+  "eval.blocked": "Evaluation blocked",
   "eval.failed": "The comparison failed",
   "eval.externalUnset": "The commercial proposal is not configured",
   "eval.externalUnset.body": "The session will go ahead and that proposal will be recorded as unavailable, which is a datum in itself.",

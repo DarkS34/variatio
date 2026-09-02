@@ -185,11 +185,11 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
 # graph asked six, so the control contradicted the form it opened.
 PREAMBLE: dict[str, str] = {
     review.EXEMPLARS_PROFILE: (
-        "{n} preguntas sobre lo que tienes al lado. Es lo único que te pedimos a cambio, "
+        "{n} preguntas sobre lo que acabas de revisar. Es lo único que te pedimos a cambio, "
         "y es lo que se está midiendo en el estudio."
     ),
-    review.KNOWLEDGE_GRAPH: "{n} preguntas sobre el temario que tienes al lado.",
-    review.EXEMPLARS_BANK: "{n} preguntas sobre los ejercicios que tienes al lado.",
+    review.KNOWLEDGE_GRAPH: "{n} preguntas sobre el temario que acabas de revisar.",
+    review.EXEMPLARS_BANK: "{n} preguntas sobre los ejercicios que acabas de revisar.",
 }
 
 # Spelled out, because the preamble is prose and «5 preguntas» reads as a form field. Only
