@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { BuildPhase, Job, JobKind, RawKind, RawSlot } from "@/lib/types";
 import { useJobPhases, useStream } from "@/state/queries";
@@ -37,8 +37,24 @@ export function useTranscribePhases(): BuildPhase[] {
   return useJobPhases(TRANSCRIBE_JOB);
 }
 
+/**
+ * A slot's reading, refreshed while its job runs and read ONCE MORE the moment it stops.
+ *
+ * The poll is what draws the documents turning «leído» one by one; the last read is what
+ * makes the end of the job visible. `_meta.json` is written at the very end, so the last
+ * poll of the run can land before it and the poll stops with the job — without this the
+ * screen kept the state of that poll until somebody reloaded the page.
+ */
 export function useTranscription(kind: RawKind, enabled = true) {
   const live = useTranscribing(kind);
+  const client = useQueryClient();
+  const wasLive = useRef(live);
+  useEffect(() => {
+    if (wasLive.current && !live) {
+      client.invalidateQueries({ queryKey: rawKeys.transcription(kind) });
+    }
+    wasLive.current = live;
+  }, [live, kind, client]);
   return useQuery({
     queryKey: rawKeys.transcription(kind),
     queryFn: () => rawApi.transcription(kind),
