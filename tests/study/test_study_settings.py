@@ -5,10 +5,12 @@ from study import config as study_config
 
 def base():
     return {
-        "evaluation.providers": ["gemini", "groq"],
+        "evaluation.providers": ["gemini", "mistral", "groq"],
         "evaluation.models.gemini": "g-model",
+        "evaluation.models.mistral": "m-model",
         "evaluation.models.groq": "q-model",
         "evaluation.keys.gemini": "",
+        "evaluation.keys.mistral": "clave-mistral",
         "evaluation.keys.groq": "clave-groq",
         "evaluation.timeout": 60.0,
     }
@@ -31,6 +33,13 @@ def test_provider_chain_drops_none_and_duplicates():
     values["evaluation.providers"] = ["Gemini", "none", "groq", "gemini", ""]
     out = derive(values)
     assert out["EXTERNAL_PROVIDERS"] == ["gemini", "groq"]
+
+
+def test_a_provider_is_two_settings_and_nothing_else_to_declare():
+    """The maps are read off the registry, so a new name needs no third list."""
+    out = derive_ok()
+    assert out["PROVIDER_MODELS"]["mistral"] == "m-model"
+    assert out["PROVIDER_KEYS"]["mistral"] == "clave-mistral"
 
 
 def test_provider_models_and_keys_are_paired_by_provider():

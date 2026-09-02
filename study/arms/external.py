@@ -28,6 +28,7 @@ from .. import config as study_config
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 
 
 @dataclass(frozen=True)
@@ -158,14 +159,36 @@ def _gemini(prompt: str, model: str, key: str) -> str:
 
 
 def _groq(prompt: str, model: str, key: str) -> str:
-    """Call Groq's endpoint with no `response_format`, at the local arms' temperature.
+    """Call Groq, which serves OPEN weights and is therefore the tail of the chain.
+
+    The commercial arm exists to measure what somebody would get from a product they can
+    subscribe to, and a provider serving `gpt-oss` answers that only in the sense that
+    something answered. It stays because an item beats an `unavailable`, and the session
+    records who wrote it — but a COMMERCIAL model is tried before it.
+    """
+    return _openai_compatible(GROQ_URL, prompt, model, key)
+
+
+def _mistral(prompt: str, model: str, key: str) -> str:
+    """Call Mistral, the chain's second commercial model, for when Gemini's quota is spent.
+
+    Same shape as Groq's — both speak OpenAI's `/chat/completions` — and a different kind
+    of link: `mistral-medium-latest` is proprietary and sold by subscription, like Gemini,
+    so a session that falls back to it is still a measurement of the commercial baseline
+    and not of another way to serve open weights.
+    """
+    return _openai_compatible(MISTRAL_URL, prompt, model, key)
+
+
+def _openai_compatible(url: str, prompt: str, model: str, key: str) -> str:
+    """Post one message to an OpenAI-shaped `/chat/completions`, with no `response_format`.
 
     The rule is the chain's and not Gemini's: a fallback that constrained the decoder
     would smuggle back in, through the second provider, exactly what the first one stopped
     sending — and the session would be filed under whichever one happened to answer.
     """
     response = httpx.post(
-        GROQ_URL,
+        url,
         headers={"Authorization": f"Bearer {key}"},
         json={
             "model": model,
@@ -194,4 +217,4 @@ def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
 
 # Which names are callable at all; the ORDER of the attempts is
 # `study_config.EXTERNAL_PROVIDERS`, never this. Declared after the callers it names.
-_CALLERS = {"gemini": _gemini, "groq": _groq}
+_CALLERS = {"gemini": _gemini, "mistral": _mistral, "groq": _groq}

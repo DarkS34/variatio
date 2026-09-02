@@ -26,19 +26,23 @@ def _chain(declared) -> list[str]:
     return chain
 
 
+def _by_provider(values: dict[str, object], prefix: str) -> dict[str, str]:
+    """Index every `<prefix><provider>` setting by its provider name.
+
+    Read off the registry rather than listed here, so a fourth provider is two settings
+    and one caller in `arms/external.py` — never a third place holding the same names,
+    which is where a key and a model id from different providers would start to cross.
+    """
+    return {k[len(prefix) :]: str(v) for k, v in values.items() if k.startswith(prefix)}
+
+
 def derive(
     values: dict[str, object], environ: dict[str, str], few_shot: int
 ) -> dict[str, object]:
     """Compute the study's five resolved values from the registry, the environment and `k`."""
     providers = _chain(values["evaluation.providers"])
-    models = {
-        "gemini": values["evaluation.models.gemini"],
-        "groq": values["evaluation.models.groq"],
-    }
-    keys = {
-        "gemini": values["evaluation.keys.gemini"],
-        "groq": values["evaluation.keys.groq"],
-    }
+    models = _by_provider(values, "evaluation.models.")
+    keys = _by_provider(values, "evaluation.keys.")
 
     # The legacy single-provider pair moves TOGETHER onto the head of the chain: a key and
     # a model id from different providers is precisely the mix-up this prevents.

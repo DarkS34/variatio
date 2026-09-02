@@ -84,10 +84,12 @@
   "evaluation": {
     "providers": [
       "gemini",
+      "mistral",
       "groq"
     ],
     "models": {
       "gemini": "gemini-3.6-flash",
+      "mistral": "mistral-medium-latest",
       "groq": "openai/gpt-oss-120b"
     },
     "timeout": 60.0
@@ -135,8 +137,10 @@
       },
       "generation": {
         "models": [
-          "gemma-4-31b",
-          "qwen3.8:27b-q8_0"
+          "gemma-4-31b"
+        ],
+        "fixed_effort": [
+          "gemma-4-31b"
         ]
       },
       "reasoning": {

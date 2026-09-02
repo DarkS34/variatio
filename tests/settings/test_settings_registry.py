@@ -120,5 +120,10 @@ def test_the_registry_holds_what_this_work_transcribed():
     # the reasoning levels was a table in the browser's own source, so declaring it for a new
     # model was a code change — a measurement made by whoever administers the installation,
     # kept where only whoever deploys it could write it down.
-    assert len(REGISTRY) == 144
+    # 146 on 2026-09-02, when Mistral joined the study's external chain: Gemini's free tier
+    # answers 429 in the middle of a data-collection session, and the link behind it had to
+    # be another COMMERCIAL model rather than Groq serving open weights. Two settings, a
+    # model id and a key, and `BY_NAME` does not move — like the study's other six, they
+    # feed derived values and never become a `config` attribute.
+    assert len(REGISTRY) == 146
     assert len(BY_NAME) == 116
