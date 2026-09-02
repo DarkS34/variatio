@@ -304,7 +304,7 @@ class ExemplarsProfileBuilder:
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=file_path.name)
+                reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
                     content = _source_docs.document_markdown(
@@ -343,7 +343,7 @@ class ExemplarsProfileBuilder:
         ) as reporter:
             for idx, (location, body) in enumerate(chunks, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=location)
+                reporter.start(idx, detail=location)
                 progress.advance(
                     (idx - 1) / len(chunks),
                     f"{location} ({idx}/{len(chunks)}) · {len(found)} modalidad(es)",

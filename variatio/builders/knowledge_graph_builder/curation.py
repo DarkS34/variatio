@@ -494,7 +494,7 @@ def link_relations(
         for idx, domain in enumerate(domains, 1):
             progress.checkpoint()
             members = concepts_by_domains[domain]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
+            reporter.start(idx, detail=f"{domain} · {len(members)} concepto(s)")
             progress.advance((idx - 1) / total, f"{domain} ({idx}/{len(domains)})")
             known.update(
                 tuple(r)
@@ -510,7 +510,7 @@ def link_relations(
             )
 
         progress.checkpoint()
-        reporter.tick(total, detail="relaciones entre dominios")
+        reporter.start(total, detail="relaciones entre dominios")
         progress.advance((total - 1) / total, "relaciones entre dominios")
         known.update(
             tuple(r)

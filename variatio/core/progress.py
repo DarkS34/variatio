@@ -117,8 +117,19 @@ class _StepHandle:
         self.current = 0
 
     def tick(self, current: int | None = None, detail: str | None = None) -> None:
-        """Report one more unit done, or jump to `current`."""
+        """Report one more unit DONE, or jump to `current` done."""
         self.current = self.current + 1 if current is None else current
+        emit("step.progress", id=self.id, current=self.current, total=self.total, detail=detail)
+
+    def start(self, index: int, detail: str | None = None) -> None:
+        """Report that unit `index` (1-based) is in flight: `index - 1` are done.
+
+        The counter and the bar say what is FINISHED, exactly as the phase bar does, and
+        the detail names what is being worked on. Reporting `index` itself here made the
+        step bar cover the unit still running while the phase bar waited for it, so the
+        two bars of one build disagreed by one unit for the whole loop.
+        """
+        self.current = max(index - 1, 0)
         emit("step.progress", id=self.id, current=self.current, total=self.total, detail=detail)
 
     def total_is(self, total: int | None) -> None:

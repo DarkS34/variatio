@@ -373,7 +373,7 @@ class VariantGenerator:
                 already = list(avoid or []) + self._collect_already_generated(
                     target_type, accepted
                 )
-                reporter.tick(i + 1)
+                reporter.start(i + 1)
 
                 def attempt(correction: str | None) -> GeneratedVariant | None:
                     """Build the prompt for this slot and generate one candidate item."""

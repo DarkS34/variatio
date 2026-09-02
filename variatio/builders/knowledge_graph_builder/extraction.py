@@ -89,7 +89,7 @@ def convert_corpus(
     ) as reporter:
         for idx, file_path in enumerate(files, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=file_path.name)
+            reporter.start(idx, detail=file_path.name)
             progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
             try:
                 text = _source_docs.document_markdown(
@@ -174,7 +174,7 @@ def extract_documents(
                 done += 1
                 for heading in headings:
                     outline.append({"document": di, "heading": heading, "chunk": done})
-                reporter.tick(
+                reporter.start(
                     done,
                     detail=(
                         f"{name} · {location or f'fragmento {ci}'} · "

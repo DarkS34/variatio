@@ -207,7 +207,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         ) as reporter:
             for idx, source in enumerate(sources, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=source.name)
+                reporter.start(idx, detail=source.name)
                 progress.advance(
                     (idx - 1) / len(sources), f"{source.name} ({idx}/{len(sources)})"
                 )

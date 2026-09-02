@@ -451,7 +451,7 @@ def transcribe_pdf(
             reporter.tick(len(pages), detail=f"página {len(pages)}/{count}")
         for index, image in enumerate(images, len(pages) + 1):
             progress.checkpoint()
-            reporter.tick(index, detail=f"página {index}/{count}")
+            reporter.start(index, detail=f"página {index}/{count}")
             page = _transcribe_page(image, index, count, model, tag, prompts)
             pages.append(page)
             if fingerprint:
@@ -661,7 +661,7 @@ def transcribe_office(
     ) as reporter:
         for index, (ref, image) in enumerate(found, 1):
             progress.checkpoint()
-            reporter.tick(index, detail=f"imagen {index}/{len(found)}")
+            reporter.start(index, detail=f"imagen {index}/{len(found)}")
             if image is None:
                 readings[ref] = UNREADABLE_IMAGE_MARK
                 tally["images_unreadable"] += 1
@@ -1011,7 +1011,7 @@ def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> l
     ) as reporter:
         for done, (left, right, index) in enumerate(boundaries, 1):
             progress.checkpoint()
-            reporter.tick(done, detail=f"costura {index - 1}→{index}")
+            reporter.start(done, detail=f"costura {index - 1}→{index}")
             record = _review_seam(left, right, index, len(pages), model, tag, prompts)
             if record is not None:
                 records.append(record)

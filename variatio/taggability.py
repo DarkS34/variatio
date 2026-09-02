@@ -86,7 +86,7 @@ def review(
         for idx, domain in enumerate(domains, 1):
             progress.checkpoint()
             members = knowledge_graph.concepts_by_domains[domain]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
+            reporter.start(idx, detail=f"{domain} · {len(members)} concepto(s)")
             progress.advance((idx - 1) / len(domains), f"{domain} ({idx}/{len(domains)})")
             non_taggable.update(
                 _judge_domain(

@@ -308,7 +308,7 @@ class ConceptTagger:
                 progress.checkpoint()
                 content = exemplars_bank[c_id]
                 statement = self.embed_text(content)
-                reporter.tick(idx, detail=c_id)
+                reporter.start(idx, detail=c_id)
                 annotation = self.tag(statement)
                 annotated[c_id] = {**content, **annotation}
                 progress.emit(

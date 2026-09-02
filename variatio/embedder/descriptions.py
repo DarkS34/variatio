@@ -317,7 +317,7 @@ class ConceptDescriber:
             done = 0
             for domain, batch in groups.items():
                 progress.checkpoint()
-                reporter.tick(done + 1, detail=f"{domain} ({len(batch)})")
+                reporter.start(done + 1, detail=f"{domain} ({len(batch)})")
                 try:
                     descriptions.update(self.describe_domain(domain, batch, descriptions))
                 except progress.Cancelled:

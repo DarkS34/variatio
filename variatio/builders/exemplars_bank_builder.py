@@ -169,7 +169,7 @@ class ExemplarsBankBuilder:
                 for idx, file_path in enumerate(files, 1):
                     progress.checkpoint()
                     tag = f"[{idx}/{len(files)} {file_path.name}]"
-                    reporter.tick(idx, detail=file_path.name)
+                    reporter.start(idx, detail=file_path.name)
                     progress.advance(
                         (idx - 1) / len(files),
                         f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
@@ -241,7 +241,7 @@ class ExemplarsBankBuilder:
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=file_path.name)
+                reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
                     text_by_file[file_path] = _source_docs.document_markdown(
@@ -278,7 +278,7 @@ class ExemplarsBankBuilder:
             for b_idx, batch in enumerate(batches, 1):
                 progress.checkpoint()
                 b_tag = f"{tag} batch {b_idx}/{len(batches)}"
-                reporter.tick(b_idx)
+                reporter.start(b_idx)
                 try:
                     extracted = self._extract_batch(batch, b_tag)
                 except progress.Cancelled:

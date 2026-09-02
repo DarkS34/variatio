@@ -137,7 +137,7 @@ def propose_merges(
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=f"{len(batch)} grupo(s)")
+            reporter.start(idx, detail=f"{len(batch)} grupo(s)")
             progress.advance(
                 0.1 + 0.4 * (idx - 1) / len(batches), f"grupos {idx}/{len(batches)}"
             )
@@ -277,7 +277,7 @@ def propose_drops(
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=f"{len(batch)} nodo(s)")
+            reporter.start(idx, detail=f"{len(batch)} nodo(s)")
             progress.advance(
                 0.6 + 0.35 * (idx - 1) / len(batches), f"lote {idx}/{len(batches)}"
             )
