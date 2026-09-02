@@ -564,6 +564,18 @@ function Raw() {
           through pages first and through seams afterwards, within the same document.
         </p>
         <p>
+          A Word or PowerPoint file has no page to draw: it declares its own structure and is
+          read straight as text, in seconds. What that path does not see are the{" "}
+          <em>images</em> — and in an exercise workbook that is where the formulas and a
+          program's "expected output" tend to be — so each image is shown to the model on its
+          own, under the same rules as a figure on a page: a formula comes back as a formula, a
+          screenshot of code as code, and only what cannot be copied is noted as a figure. Each
+          image is remembered by its content, so the logo repeated in every document is read
+          once. An image in a format that cannot be opened (Office's WMF and EMF metafiles,
+          when the installation has no LibreOffice) leaves a visible mark in its place and a
+          badge on the document's row.
+        </p>
+        <p>
           The consequence shows in the phase bar explained in "{t("guide.sec.runs")}": the
           reading the notes is now the widest section of the graph build. Taking it out of there,
           and being able to watch it while it happens, is exactly what this screen exists for.

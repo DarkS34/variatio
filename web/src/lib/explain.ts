@@ -65,6 +65,7 @@ const STEP_IDS = [
   "convert",
   "transcribe_documents",
   "transcribe",
+  "transcribe_image",
   "transcribe_seam",
   "extract",
   "extract_batches",

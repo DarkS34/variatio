@@ -158,8 +158,11 @@ _TRANSCRIBE_DOC = """Transcripción de una página a partir de su imagen renderi
 constructores y por LOS DOS orígenes en bruto, así que hay una sola constante y no tres que
 pudieran divergir y producir dos markdowns distintos del mismo fichero. Desde el
 2026-08-27, por petición explícita del usuario, `raw/raw_corpus/` pasa también por esta
-ruta: la calidad pesa más que la velocidad, y a Docling le queda el `.docx`, que no tiene
-página que renderizar.
+ruta: la calidad pesa más que la velocidad, y a Docling le quedan el `.docx` y el `.pptx`,
+que no tienen página que renderizar. Desde el 2026-09-02 (petición explícita del usuario)
+las IMÁGENES de esos dos formatos también pasan por este modelo, una llamada por imagen y
+bajo el mismo bloque de reglas que la página (`IMAGE_RULES`), con caché por hash de contenido
+para que el logotipo repetido en cada documento se lea una vez por asignatura.
 
 Lo que sostiene la fidelidad aquí es el PROMPT, no el modelo. Medido sobre Prog1_PEC1 p.1:
 sin la cláusula de copia carácter a carácter de `transcribe_page_prompt`, gemma4:31b

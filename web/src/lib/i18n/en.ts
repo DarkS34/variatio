@@ -215,6 +215,7 @@ export const en: Catalogue = {
   "step.convert": "Transcribes the document into markdown, page by page, before extracting anything. If it was already transcribed from «Raw data», this hits the cache and goes straight past.",
   "step.transcribe_documents": "One document after another. Each is saved whole when it finishes, so stopping the transcription keeps what has already come out.",
   "step.transcribe": "One model call per page, with the page in front of it as an image. The prompt orders it to copy character by character and to complete or correct nothing: whatever the document has wrong is part of the exercise. A page that cannot be transcribed leaves a visible mark in its place, never a silent gap.",
+  "step.transcribe_image": "A Word or PowerPoint file is read as text, but its images are not: each one is a model call, under the same rules as a figure on a page. A formula comes back as a formula, a screenshot of code as code, and only what cannot be copied is noted as a figure. Each image is stored by its content, so a logo repeated in every document is read once.",
   "step.transcribe_seam": "An exercise can start on one page and continue on the next. This pass looks at each boundary — the end of one page and the start of the other — and decides whether it continues and how to join them. It only classifies the seam: it does not rewrite the text. If it fails, they are joined as the mechanical criterion says and it goes on.",
   "step.extract": "One document after another, saving the bank after each one.",
   "step.extract_batches": "The document is chunked and each chunk is extracted separately so it fits in context.",
@@ -369,7 +370,7 @@ export const en: Catalogue = {
 
   "tutorial.s2.title": "Before you start, gather your files",
   "tutorial.s2.body":
-    "The route has not begun yet. For now the only thing you have to do is find two things you already have, in PDF or Word, however they are.",
+    "The route has not begun yet. For now the only thing you have to do is find two things you already have, in PDF, Word or PowerPoint, however they are.",
   "tutorial.s2.b1":
     "A couple of topics is enough to try it out. Every document is read in full, page by page, and that takes time: uploading the whole subject only makes the wait longer for no reason.",
   "tutorial.s2.b2":
@@ -748,6 +749,7 @@ export const en: Catalogue = {
   "transcribe.reason.prompt": "the transcription prompt changed",
   "transcribe.reason.temperature": "the transcription temperature changed",
   "transcribe.reason.cleanup": "the converter cleanup changed",
+  "transcribe.reason.rasteriser": "the reader of Word and PowerPoint's EMF/WMF drawings changed",
   "transcribe.reason.config": "the transcription settings changed",
   "doc.onlyPage": "It is the document's only page.",
   "doc.deleteHint": "Deletes this page and renumbers the following ones.",
@@ -833,6 +835,7 @@ export const en: Catalogue = {
   "transcribe.staleCount": { one: "1 stale", other: "{n} stale" },
   "transcribe.pendingCount": { one: "1 pending", other: "{n} pending" },
   "transcribe.failedCount": { one: "1 failed", other: "{n} failed" },
+  "transcribe.unreadableImages": { one: "1 unreadable image", other: "{n} unreadable images" },
   "transcribe.failedPages": {
     one: "1 page the model could not transcribe.",
     other: "{n} pages the model could not transcribe.",

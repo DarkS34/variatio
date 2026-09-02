@@ -3,9 +3,12 @@
 import hashlib
 from pathlib import Path
 
-SUPPORTED_EXTS = (".pdf", ".docx", ".md", ".txt")
+SUPPORTED_EXTS = (".pdf", ".docx", ".pptx", ".md", ".txt")
 PLAIN_TEXT_EXTS = (".md", ".txt")
-CONVERTED_EXTS = (".pdf", ".docx")
+CONVERTED_EXTS = (".pdf", ".docx", ".pptx")
+# What Docling reads as a declared structure rather than as a page to render: the two
+# Office formats. Their pictures are read apart, one model call each — see `pages.py`.
+OFFICE_EXTS = (".docx", ".pptx")
 
 
 def source_hash(path: str | Path) -> str:
@@ -23,9 +26,11 @@ def source_hash(path: str | Path) -> str:
 
 
 def default_converter(ocr: bool = False, table_structure: bool = True):
-    """Build a Docling converter for PDF and DOCX.
+    """Build a Docling converter for PDF, DOCX and PPTX.
 
-    Raises ImportError naming the `builders` extra when Docling is not installed.
+    Raises ImportError naming the `builders` extra when Docling is not installed. The PDF
+    pipeline is what costs — the layout models, and `cv2` behind `table_structure` — and
+    Docling builds it on the first PDF it converts, so an Office file never pays for it.
     """
     # Imported here and NEVER at module scope: the runtime pipeline does not install the
     # `builders` extra, and these imports cost ~700 MB (torch, transformers, opencv).
@@ -48,7 +53,7 @@ def default_converter(ocr: bool = False, table_structure: bool = True):
     pdf_options.do_table_structure = table_structure
 
     return DocumentConverter(
-        allowed_formats=[InputFormat.PDF, InputFormat.DOCX],
+        allowed_formats=[InputFormat.PDF, InputFormat.DOCX, InputFormat.PPTX],
         format_options={
             InputFormat.PDF: PdfFormatOption(
                 pipeline_options=pdf_options, backend=PyPdfiumDocumentBackend

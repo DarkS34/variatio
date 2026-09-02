@@ -227,6 +227,7 @@ export const es = {
   "step.convert": "Transcribe el documento a markdown, página a página, antes de extraer nada. Si ya se transcribió desde «Datos en bruto», esto acierta en caché y pasa de largo.",
   "step.transcribe_documents": "Un documento tras otro. Cada uno se guarda entero al terminarlo, así que detener la transcripción conserva lo que ya salió.",
   "step.transcribe": "Una llamada al modelo por página, con la página delante como imagen. El prompt manda copiar carácter a carácter y no completar ni corregir nada: lo que el documento tenga mal es parte del ejercicio. Una página que no se pueda transcribir deja una marca visible en su sitio, nunca un hueco en silencio.",
+  "step.transcribe_image": "Un archivo de Word o de PowerPoint se lee como texto, pero sus imágenes no: cada una es una llamada al modelo, con las mismas reglas que una figura en una página. Una fórmula vuelve como fórmula, una captura de código como código, y solo lo que no se puede copiar se anota como figura. Cada imagen se guarda por su contenido, así que un logotipo repetido en todos los documentos se lee una sola vez.",
   "step.transcribe_seam": "Un ejercicio puede empezar en una página y seguir en la siguiente. Esta pasada mira cada frontera —el final de una página y el principio de la otra— y decide si continúa y cómo unirlas. Solo clasifica la costura: no reescribe el texto. Si falla, se une como diga el criterio mecánico y se sigue.",
   "step.extract": "Un documento tras otro, guardando el banco después de cada uno.",
   "step.extract_batches": "El documento se trocea y cada trozo se extrae por separado para que quepa en contexto.",
@@ -419,7 +420,7 @@ export const es = {
 
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
-    "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar dos cosas que ya tienes, en PDF o en Word, tal y como estén.",
+    "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar dos cosas que ya tienes, en PDF, en Word o en PowerPoint, tal y como estén.",
   // «Sube solo un par de temas» y «esto tarda» van aquí, justo antes de ir a buscar los
   // archivos, que es donde sirven de algo.
   "tutorial.s2.b1":
@@ -857,6 +858,7 @@ export const es = {
   "transcribe.reason.prompt": "el prompt de transcripción cambió",
   "transcribe.reason.temperature": "la temperatura de transcripción cambió",
   "transcribe.reason.cleanup": "la limpieza del conversor cambió",
+  "transcribe.reason.rasteriser": "cambió el lector de dibujos EMF/WMF de Word y PowerPoint",
   "transcribe.reason.config": "cambió la forma de leer los documentos",
   "doc.onlyPage": "Es la única página del documento.",
   "doc.deleteHint": "Borra esta página y renumera las siguientes.",
@@ -942,6 +944,7 @@ export const es = {
   "transcribe.staleCount": { one: "1 hay que releerlo", other: "{n} hay que releerlos" },
   "transcribe.pendingCount": { one: "1 sin leer", other: "{n} sin leer" },
   "transcribe.failedCount": { one: "1 fallida", other: "{n} fallidas" },
+  "transcribe.unreadableImages": { one: "1 imagen ilegible", other: "{n} imágenes ilegibles" },
   "transcribe.failedPages": {
     one: "1 página que el modelo no pudo transcribir.",
     other: "{n} páginas que el modelo no pudo transcribir.",

@@ -2,6 +2,7 @@ import type { RunView, StepView } from "@/state/runStore";
 
 export const DOCUMENTS_STEP = "transcribe_documents";
 export const PAGES_STEP = "transcribe";
+export const IMAGES_STEP = "transcribe_image";
 export const SEAMS_STEP = "transcribe_seam";
 
 export interface Loop {
@@ -39,13 +40,18 @@ export function documentLoop(run: RunView | null): Loop | null {
 /**
  * The per-unit loop running inside the current document.
  *
- * Two of them exist and they are sequential, not parallel: every page of a document is
- * transcribed and only then are its seams reviewed. So there is at most one to draw, and
- * asking for "the inner one" rather than for a fixed id is what keeps the second bar
- * meaningful for the whole of a document instead of going blank halfway through it.
+ * Three of them exist and they are sequential, not parallel: a PDF's pages are transcribed
+ * and only then are its seams reviewed, and a Word or PowerPoint file has no pages to draw
+ * but its pictures are read one by one. So there is at most one to draw, and asking for
+ * "the inner one" rather than for a fixed id is what keeps the second bar meaningful for
+ * the whole of a document instead of going blank halfway through it.
  */
 export function innerLoop(run: RunView | null): Loop | null {
-  return loop(lastOf(run, PAGES_STEP)) ?? loop(lastOf(run, SEAMS_STEP));
+  return (
+    loop(lastOf(run, PAGES_STEP)) ??
+    loop(lastOf(run, IMAGES_STEP)) ??
+    loop(lastOf(run, SEAMS_STEP))
+  );
 }
 
 /**

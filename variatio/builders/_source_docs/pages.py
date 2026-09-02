@@ -7,12 +7,19 @@ image is the honest source for this material.
 
 The unit of work and of caching is the PAGE: a real boundary in the document, one model call
 per bounded piece of work, and something small enough for a person to review and fix by hand.
+
+An Office document (`.docx`, `.pptx`) declares its structure and Docling translates it, so
+it has no page to render; its PICTURES are the part Docling cannot read, and they take the
+same route one at a time — each is one model call under `IMAGE_RULES`, keyed by its own
+content hash so the logo repeated on every document is read once for the whole workspace.
 """
 
 import base64
+import hashlib
 import io
 import json
 import re
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -22,9 +29,18 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.json_io import write_json
-from ...prompts.marks import EMPTY_PAGE_MARK, SEAM_SEPARATORS
-from .files import SUPPORTED_EXTS, required_cache_dir, source_hash
-from .markdown import page_mark, tidy_markdown, to_markdown
+from ...prompts.marks import EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
+from . import office
+from .files import PLAIN_TEXT_EXTS, SUPPORTED_EXTS, required_cache_dir, source_hash
+from .markdown import (
+    convert,
+    export_markdown,
+    page_mark,
+    picture_mark,
+    pictures,
+    splice_pictures,
+    tidy_markdown,
+)
 
 PAGE_FILE_RE = re.compile(r"^(\d{3})\.md$")
 META_NAME = "_meta.json"
@@ -36,9 +52,33 @@ MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 
 # What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
 # deciding whether the cached pages are still current.
-META_EXTRA = ("pages", "seams", "seams_merged", "seams_failed", "failed_pages")
+META_EXTRA = (
+    "pages",
+    "seams",
+    "seams_merged",
+    "seams_failed",
+    "failed_pages",
+    "images_total",
+    "images_unreadable",
+)
 
 FAILED_PAGE_PREFIX = "> [TRANSCRIPCIÓN FALLIDA"
+# Left where a picture stood when nothing could be read off it — a metafile Pillow cannot
+# open, or a call that failed after its retries. Visible on purpose, like the failed page:
+# a formula that silently vanished from an exercise is worse than one that says it is gone.
+UNREADABLE_IMAGE_MARK = "[IMAGEN NO LEGIBLE]"
+
+# Where the transcription of each picture is cached, keyed by the picture's content and
+# shared by every document of the workspace: one file per distinct image, so the header
+# logo six documents repeat costs one call and not six.
+IMAGES_DIR_NAME = "images"
+# A picture is upscaled before the call until its longer side reaches this many pixels.
+# Measured 2026-09-02 on `gemma-4-31b` over the five readable pictures of the two reference
+# banks (188×30 to 1366×768): native and upscaled answered byte for byte the same, so on
+# that model it buys nothing and costs a few hundred tokens. It stands for the local
+# transcription model, which is unmeasured, and because compositing onto white is needed
+# either way — a formula drawn in black on a transparent ground vanishes on a black pad.
+IMAGE_MIN_LONG_SIDE = 1024
 
 # The version of `markdown.undo_converter_escapes`, the cleanup applied to Docling's output
 # and to nothing else. It is written into the DOCLING fingerprint ONLY: bumping it expires
@@ -65,6 +105,8 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     workspace moves every timestamp and would throw away a whole corpus of transcriptions.
     `TRANSCRIBE_SEAM_CHARS` is deliberately absent — how much of a seam the model is shown
     does not change a single page, and the seam decisions live in `_meta.json` beside them.
+    The model and the temperature are recorded on BOTH routes: on the Docling one they are
+    what the pictures were read with, and a page carries those readings inline.
     """
     stat = source.stat()
     fingerprint = {
@@ -76,10 +118,13 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "dpi": dpi,
         "ocr": ocr,
         "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
-        "temperature": config.TRANSCRIBE_TEMPERATURE if mode == "vlm" else None,
+        "temperature": config.TRANSCRIBE_TEMPERATURE,
     }
     if mode == "docling":
         fingerprint["cleanup"] = CONVERTER_CLEANUP_VERSION
+        # Whether the metafiles could be rendered: installing LibreOffice has to expire
+        # every Office document read without it, or its equations stay unreadable for ever.
+        fingerprint["rasteriser"] = Path(office.rasteriser()).name if office.rasteriser() else ""
     return fingerprint
 
 
@@ -89,7 +134,7 @@ def fingerprint_for(source: Path, model: str, dpi: int, ocr: bool) -> dict:
     return _page_fingerprint(
         source,
         mode="vlm" if is_pdf else "docling",
-        model=model if is_pdf else "",
+        model=model,
         dpi=dpi if is_pdf else 0,
         ocr=False if is_pdf else ocr,
     )
@@ -212,6 +257,7 @@ def write_pages(
     pages: list[str],
     fingerprint: dict,
     seams: list[dict] | None = None,
+    images: dict | None = None,
 ) -> None:
     """Write a finished document's pages and its `_meta.json`, replacing what was there."""
     cache_dir = Path(cache_dir)
@@ -226,11 +272,11 @@ def write_pages(
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
-    _write_meta(cache_dir, fingerprint, pages, seams or [])
+    _write_meta(cache_dir, fingerprint, pages, seams or [], images or {})
 
 
 def _write_meta(
-    cache_dir: Path, fingerprint: dict, pages: list[str], seams: list[dict]
+    cache_dir: Path, fingerprint: dict, pages: list[str], seams: list[dict], images: dict
 ) -> None:
     """Write `_meta.json`: the fingerprint plus what the screens read off it."""
     write_json(
@@ -242,6 +288,8 @@ def _write_meta(
             "seams_merged": seams_merged(seams),
             "seams_failed": seams_failed(seams),
             "failed_pages": failed_pages(pages),
+            "images_total": int(images.get("images_total", 0)),
+            "images_unreadable": int(images.get("images_unreadable", 0)),
         },
     )
 
@@ -400,17 +448,27 @@ def _transcribe(
     prompts,
     cache_dir: str | Path | None = None,
     fingerprint: dict | None = None,
-) -> tuple[list[str], list[dict]]:
-    """Produce `(pages, seams)` for one document, by route: images for a PDF, else Docling."""
+    images_dir: str | Path | None = None,
+) -> tuple[list[str], list[dict], dict]:
+    """Produce `(pages, seams, images)` for one document, by route.
+
+    A PDF is rendered and read page by page; an Office file is Docling's, with its pictures
+    read one by one and spliced back in; plain text reads as itself.
+    """
+    if source.suffix.lower() in PLAIN_TEXT_EXTS:
+        return [tidy_markdown(source.read_text(encoding="utf-8"))], [], {}
     if not is_pdf:
-        return [to_markdown(converter, source, use_cache=False)], []
+        page, images = transcribe_office(
+            source, converter, model, prompts, tag=tag, images_dir=images_dir
+        )
+        return [page], [], images
     pages = [
         tidy_markdown(page) if page.strip() else ""
         for page in transcribe_pdf(
             source, model, dpi, prompts, tag=tag, cache_dir=cache_dir, fingerprint=fingerprint
         )
     ]
-    return pages, review_seams(pages, prompts, seam_model, tag=tag)
+    return pages, review_seams(pages, prompts, seam_model, tag=tag), {}
 
 
 def _document(
@@ -450,7 +508,7 @@ def _document(
             )
             return cached
 
-    pages, seams = _transcribe(
+    pages, seams, images = _transcribe(
         source,
         is_pdf,
         converter,
@@ -461,6 +519,7 @@ def _document(
         prompts,
         cache_dir=document_dir,
         fingerprint=fingerprint,
+        images_dir=Path(cache_dir) / IMAGES_DIR_NAME if use_cache else None,
     )
 
     if not pages:
@@ -469,7 +528,7 @@ def _document(
         logger.warning(f"{tag}{source.name}: produced no pages; not cached")
         return pages, seams
     if use_cache:
-        write_pages(document_dir, pages, fingerprint, seams)
+        write_pages(document_dir, pages, fingerprint, seams, images)
     return pages, seams
 
 
@@ -534,6 +593,185 @@ def document_markdown(
         seam_model=seam_model,
     )
     return join_pages(pages, seams)
+
+
+# THE PICTURES OF AN OFFICE DOCUMENT ---------------------------------------------------------------
+#
+# Docling translates a `.docx` or `.pptx` faithfully — it declares its structure, so there is
+# nothing to infer — and writes `<!-- image -->` for every picture, which is exactly the part
+# of these documents that carries the formulas and the expected outputs. Each picture is one
+# model call under the same rules a figure on a rendered page gets, and the answer is put
+# back where the picture stood.
+
+
+def transcribe_office(
+    source: Path,
+    converter,
+    model: str,
+    prompts,
+    tag: str = "",
+    images_dir: str | Path | None = None,
+) -> tuple[str, dict]:
+    """Convert an Office document with Docling and read its pictures, one call each.
+
+    Returns the page and a tally: how many pictures the body carried, and how many left the
+    unreadable mark.
+    """
+    # The metafiles are rendered into a copy that Docling reads in the original's place;
+    # the copy lives as long as the conversion and nothing keys on it.
+    with tempfile.TemporaryDirectory(prefix="variatio-office-") as workdir:
+        prepared = office.rasterised_copy(source, workdir) or source
+        document = convert(converter, prepared)
+    found = pictures(document)
+    tally = {"images_total": len(found), "images_unreadable": 0}
+    text = tidy_markdown(export_markdown(document, {}), converted=True)
+    if not found:
+        return text, tally
+
+    logger.info(f"{tag}{source.name}: {len(found)} picture(s) to read with '{model}'")
+    readings: dict[str, str] = {}
+    memo: dict[str, str] = {}
+    reused = 0
+    with progress.step(
+        "transcribe_image", f"{source.name}: transcribiendo imágenes", len(found)
+    ) as reporter:
+        for index, (ref, image) in enumerate(found, 1):
+            progress.checkpoint()
+            reporter.tick(index, detail=f"imagen {index}/{len(found)}")
+            if image is None:
+                readings[ref] = UNREADABLE_IMAGE_MARK
+                tally["images_unreadable"] += 1
+                continue
+            encoded = _encode_image(image)
+            digest = hashlib.sha256(encoded).hexdigest()
+            reading = memo.get(digest)
+            if reading is None:
+                reading = _read_image_cache(images_dir, digest, model)
+            if reading is None:
+                reading = _transcribe_image(
+                    base64.b64encode(encoded).decode(), index, len(found), model, tag, prompts
+                )
+                if reading is None:
+                    readings[ref] = UNREADABLE_IMAGE_MARK
+                    tally["images_unreadable"] += 1
+                    continue
+                _write_image_cache(images_dir, digest, model, reading)
+            else:
+                reused += 1
+            memo[digest] = reading
+            readings[ref] = reading
+    logger.info(
+        f"{tag}{source.name}: {len(found) - reused - tally['images_unreadable']} picture(s) "
+        f"read, {reused} reused, {tally['images_unreadable']} unreadable"
+    )
+    # Tidied with the marks still standing and the readings spliced in afterwards: the
+    # escape undo exists for Docling's output and must never touch what the model wrote.
+    marked = tidy_markdown(
+        export_markdown(document, {ref: picture_mark(ref) for ref, _ in found}),
+        converted=True,
+    )
+    return tidy_markdown(splice_pictures(marked, readings)), tally
+
+
+def _encode_image(image) -> bytes:
+    """Return the picture as PNG bytes, on white and no smaller than the model can read.
+
+    Transparency is composited onto white: a formula drawn in black on a transparent ground
+    is invisible on the black a preprocessor pads with. A small picture is upscaled by a
+    whole factor until its longer side reaches `IMAGE_MIN_LONG_SIDE`.
+    """
+    from PIL import Image
+
+    if image.mode in ("RGBA", "LA", "P"):
+        rgba = image.convert("RGBA")
+        flat = Image.new("RGB", rgba.size, "white")
+        flat.paste(rgba, mask=rgba.getchannel("A"))
+        image = flat
+    elif image.mode != "RGB":
+        image = image.convert("RGB")
+    longest = max(image.size)
+    if 0 < longest < IMAGE_MIN_LONG_SIDE:
+        factor = -(-IMAGE_MIN_LONG_SIDE // longest)
+        image = image.resize(
+            (image.width * factor, image.height * factor), Image.Resampling.LANCZOS
+        )
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _image_record_path(images_dir: Path, digest: str) -> Path:
+    """The file holding one picture's reading, named by the picture's content."""
+    return images_dir / f"{digest}.json"
+
+
+def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
+    """The cached reading of a picture, when it was made under the same model and prompt."""
+    if images_dir is None:
+        return None
+    path = _image_record_path(Path(images_dir), digest)
+    if not path.exists():
+        return None
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(record, dict) or not isinstance(record.get("text"), str):
+        return None
+    if (
+        record.get("model") != model
+        or record.get("prompt_version") != config.TRANSCRIBE_PROMPT_VERSION
+        or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE
+    ):
+        return None
+    return record["text"]
+
+
+def _write_image_cache(
+    images_dir: str | Path | None, digest: str, model: str, text: str
+) -> None:
+    """Record one picture's reading beside what it was read with."""
+    if images_dir is None:
+        return
+    write_json(
+        _image_record_path(Path(images_dir), digest),
+        {
+            "sha256": digest,
+            "model": model,
+            "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
+            "temperature": config.TRANSCRIBE_TEMPERATURE,
+            "text": text,
+        },
+    )
+
+
+def _transcribe_image(
+    image: str, index: int, count: int, model: str, tag: str, prompts
+) -> str | None:
+    """Read one picture, retrying; `""` for one with nothing on it, `None` when it failed."""
+    prompt = prompts.transcribe_image_prompt(index, count)
+    last_error: Exception | None = None
+    for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
+        try:
+            response = inference.generate(
+                model=model,
+                prompt=prompt,
+                think=config.THINK_TRANSCRIBE_IMAGE,
+                images=[image],
+                temperature=config.TRANSCRIBE_TEMPERATURE,
+            ).response
+            reading = _unwrap_markdown_fence(response)
+            stripped = reading.strip()
+            if not stripped or (
+                EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
+            ):
+                return ""
+            return stripped
+        except inference.InferenceError as e:
+            last_error = e
+            logger.warning(f"{tag}picture {index}/{count}: transcription failed ({e})")
+    logger.error(f"{tag}picture {index}/{count}: giving up after the retries ({last_error})")
+    return None
 
 
 # THE SEAM BETWEEN TWO PAGES ----------------------------------------------------------------------

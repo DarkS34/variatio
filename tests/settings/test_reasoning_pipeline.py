@@ -6,9 +6,9 @@ from variatio.settings.registry.reasoning import Phase
 
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
-# The two transcription nodes run in all three builders, so they are DRAWN three times and
+# The three transcription nodes run in all three builders, so they are DRAWN three times and
 # are still one setting each. Everything else belongs to one lane.
-SHARED = {"transcribe", "transcribe_seam"}
+SHARED = {"transcribe", "transcribe_image", "transcribe_seam"}
 
 
 def test_only_the_shared_transcription_is_drawn_in_more_than_one_lane():
@@ -65,6 +65,15 @@ def test_every_phase_names_a_model_the_registry_declares():
         assert phase.model in BY_KEY, phase.key
         if phase.model.startswith("models.phases."):
             assert phase.model in derived.PHASES
+
+
+def test_the_pictures_are_read_with_the_page_model():
+    # One model per document whichever route its pieces take: a second model setting for
+    # the pictures would be a second thing to keep equal to the first.
+    image = next(phase for phase in PHASES if phase.key == "transcribe_image")
+    page = next(phase for phase in PHASES if phase.key == "transcribe")
+    assert image.model == page.model
+    assert image.setting != page.setting and image.effort != page.effort
 
 
 def test_only_the_three_documented_exceptions_are_fixed():

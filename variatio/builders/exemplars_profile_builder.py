@@ -188,8 +188,8 @@ class ExemplarsProfileBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
-        # plain text needs no conversion, so on the usual corpus Docling is never built.
+        # Only `.docx` and `.pptx` ever reach it: a PDF goes through the page-transcription
+        # route and plain text needs no conversion, so on a PDF corpus Docling is never built.
         self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
 
     # PUBLIC API ----------------------------------------------------------------------------------

@@ -3,13 +3,14 @@
 Shared by all three builders — anything about reading a source file belongs here and is
 never duplicated into one of them. `pages` is the only module of the four that talks to a
 model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
-property the split exists to keep checkable.
+property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 """
 
-from . import chunking, files, markdown, pages
+from . import chunking, files, markdown, office, pages
 from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (
     CONVERTED_EXTS,
+    OFFICE_EXTS,
     PLAIN_TEXT_EXTS,
     SUPPORTED_EXTS,
     LazyConverter,
@@ -27,6 +28,7 @@ from .markdown import (
 )
 from .pages import (
     PARAGRAPH,
+    UNREADABLE_IMAGE_MARK,
     document_cache_dir,
     document_markdown,
     document_pages,
@@ -43,6 +45,7 @@ from .pages import (
     seam,
     seams_failed,
     seams_merged,
+    transcribe_office,
     transcribe_pdf,
     valid_seams,
     write_pages,
@@ -50,9 +53,11 @@ from .pages import (
 
 __all__ = [
     "CONVERTED_EXTS",
+    "OFFICE_EXTS",
     "PARAGRAPH",
     "PLAIN_TEXT_EXTS",
     "SUPPORTED_EXTS",
+    "UNREADABLE_IMAGE_MARK",
     "LazyConverter",
     "chunk_markdown",
     "chunk_sections",
@@ -71,6 +76,7 @@ __all__ = [
     "list_source_files",
     "markdown",
     "markdown_cache_path",
+    "office",
     "page_count",
     "page_images",
     "page_mark",
@@ -86,6 +92,7 @@ __all__ = [
     "strip_page_marks",
     "tidy_markdown",
     "to_markdown",
+    "transcribe_office",
     "transcribe_pdf",
     "valid_seams",
     "write_pages",

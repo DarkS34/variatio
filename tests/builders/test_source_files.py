@@ -21,6 +21,7 @@ def test_a_path_that_is_a_file_lists_nothing(tmp_path):
 def test_the_documents_of_a_real_directory_are_listed_in_order(tmp_path):
     (tmp_path / "b.pdf").write_bytes(b"%PDF-1.4")
     (tmp_path / "a.docx").write_bytes(b"PK")
+    (tmp_path / "c.pptx").write_bytes(b"PK")
     (tmp_path / "cover.png").write_bytes(b"\x89PNG")
 
-    assert [p.name for p in list_source_files(tmp_path)] == ["a.docx", "b.pdf"]
+    assert [p.name for p in list_source_files(tmp_path)] == ["a.docx", "b.pdf", "c.pptx"]

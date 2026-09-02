@@ -72,7 +72,8 @@ def convert_corpus(
     Up front and not per file, so the extraction bar knows its own total: a 40-chunk lecture
     and a 3-chunk one weigh the same in a per-file bar. The corpus takes the same
     page-transcription route as the two exemplars builders — one engine and one algorithm
-    for both raw slots — so Docling is left with the `.docx`, which has no page to render.
+    for both raw slots — so Docling is left with the Office files, which have no page to
+    render and whose pictures are read one by one with the same model.
     """
     files = _source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:

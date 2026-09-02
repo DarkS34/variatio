@@ -8,6 +8,7 @@ import {
   innerLoop,
   loopLabel,
   DOCUMENTS_STEP,
+  IMAGES_STEP,
   PAGES_STEP,
   SEAMS_STEP,
 } from "./progress";
@@ -53,6 +54,14 @@ describe("documentLoop", () => {
 });
 
 describe("innerLoop", () => {
+  it("draws the pictures of a Word file, which has no pages to draw", () => {
+    const view = run([
+      step(DOCUMENTS_STEP, { current: 1, total: 3, detail: "cuaderno.docx" }),
+      step(IMAGES_STEP, { current: 2, total: 5, detail: "imagen 2/5" }),
+    ]);
+    expect(innerLoop(view)).toMatchObject({ id: IMAGES_STEP, current: 2, total: 5 });
+  });
+
   it("draws the pages while they are being transcribed", () => {
     const view = run([
       step(DOCUMENTS_STEP, { current: 1, total: 3 }),

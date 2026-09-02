@@ -558,6 +558,18 @@ function Raw() {
           primero por páginas y después por costuras dentro del mismo documento.
         </p>
         <p>
+          Un archivo de Word o de PowerPoint no tiene página que dibujar: declara su propia
+          estructura y se lee como texto directamente, en segundos. Lo que ese camino no ve son
+          las <em>imágenes</em> — y en un cuaderno de ejercicios ahí suelen estar las fórmulas
+          y la «salida esperada» de un programa —, así que cada imagen se le enseña al modelo por
+          separado, con las mismas reglas que una figura en una página: una fórmula vuelve como
+          fórmula, una captura de código como código, y solo lo que no se puede copiar se anota
+          como figura. Cada imagen se recuerda por su contenido, de modo que el logotipo que se
+          repite en todos los documentos se lee una sola vez. Una imagen en un formato que no se
+          puede abrir (los metarchivos WMF y EMF de Office, si la instalación no tiene
+          LibreOffice) deja una marca visible en su sitio y una insignia en la fila del documento.
+        </p>
+        <p>
           La consecuencia se ve en la barra por fases que se explica en «
           {t("guide.sec.runs")}»: la lectura de los apuntes es hoy el tramo más ancho de la
           construcción del temario. Sacarla de ahí, y poder mirarla mientras tanto, es exactamente

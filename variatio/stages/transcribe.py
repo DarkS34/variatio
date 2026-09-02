@@ -40,6 +40,7 @@ _REASONS = {
     "prompt_version": "prompt",
     "temperature": "temperature",
     "cleanup": "cleanup",
+    "rasteriser": "rasteriser",
 }
 
 _UNKNOWN_REASON = "config"
@@ -129,6 +130,8 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
             "chars": 0,
             "seams_merged": 0,
             "failed_pages": 0,
+            "images": 0,
+            "images_unreadable": 0,
         }
 
     stored = _source_docs.fingerprint_of(meta)
@@ -141,7 +144,15 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
         "chars": sum(len(page) for page in pages),
         "seams_merged": _merged(meta),
         "failed_pages": len(meta.get("failed_pages") or []),
+        "images": _count(meta, "images_total"),
+        "images_unreadable": _count(meta, "images_unreadable"),
     }
+
+
+def _count(meta: dict, key: str) -> int:
+    """Read one of the tallies `_meta.json` carries, `0` for a meta written before it."""
+    value = meta.get(key)
+    return value if isinstance(value, int) and value > 0 else 0
 
 
 def _merged(meta: dict) -> int:
@@ -175,6 +186,8 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         "pages": 0,
         "seams_merged": 0,
         "failed_pages": 0,
+        "images": 0,
+        "images_unreadable": 0,
     }
     if not sources:
         logger.warning(f"No supported document in {slot_dir(ws, slot)}")
@@ -217,6 +230,8 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                 summary["pages"] += len(pages)
                 summary["seams_merged"] += _merged(meta)
                 summary["failed_pages"] += len(meta.get("failed_pages") or [])
+                summary["images"] += _count(meta, "images_total")
+                summary["images_unreadable"] += _count(meta, "images_unreadable")
                 progress.emit(
                     "artifact.progress", name=f"transcribe_{slot}", count=summary["pages"]
                 )
@@ -224,7 +239,8 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 
     logger.success(
         f"Transcription of «{slot}»: {summary['documents']} document(s), "
-        f"{summary['pages']} page(s), {summary['seams_merged']} seam(s) joined"
+        f"{summary['pages']} page(s), {summary['seams_merged']} seam(s) joined, "
+        f"{summary['images']} picture(s) of which {summary['images_unreadable']} unreadable"
     )
     return summary
 

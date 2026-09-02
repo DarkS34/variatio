@@ -32,6 +32,7 @@ EMBEDDING_MODELS: tuple[str, ...]
 LLM_CONTEXT: dict[str, int]
 
 THINK_TRANSCRIBE: bool | str
+THINK_TRANSCRIBE_IMAGE: bool | str
 THINK_TRANSCRIBE_SEAM: bool | str
 THINK_EP_SCAN: bool | str
 THINK_EP_CONSOLIDATE: bool | str

@@ -18,7 +18,9 @@ marca la opción correcta. Renderizar la página y leerla como imagen recupera l
 
 Desde el 2026-08-27, por petición explícita del usuario, el corpus del grafo va por esta
 misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
-Docling solo le queda el `.docx`, que no tiene página que renderizar.""",
+Docling le quedan el `.docx` y el `.pptx`, que no tienen página que renderizar — sus
+imágenes se leen aparte, una llamada por imagen, con el mismo modelo y las mismas reglas.
+No se renderizan, así que esta resolución no las afecta.""",
     ),
     Setting(
         key="builders.transcribe_temperature",
@@ -74,14 +76,19 @@ costuras.""",
         key="builders.transcribe_prompt_version",
         name="TRANSCRIBE_PROMPT_VERSION",
         kind="int",
-        default=2,
+        default=3,
         group="Constructores",
         impact=Impact.LOCKED,
         editable=False,
         minimum=1,
-        doc="""Súbelo al cambiar transcribe_page_prompt: forma parte de la huella de la caché de páginas.
+        doc="""Súbelo al cambiar transcribe_page_prompt o transcribe_image_prompt: forma parte de la
+huella de la caché de páginas y de la de imágenes, y subirlo caduca las dos.
 
-Lo sube quien edita el prompt, no quien mira una pantalla.""",
+Lo sube quien edita el prompt, no quien mira una pantalla. 3 desde el 2026-09-02: el bloque
+`IMAGE_RULES` que comparten los dos prompts (una imagen se transcribe por lo que contiene y
+solo se describe cuando no hay nada que copiar). OJO: `config.json` guarda este valor como
+cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo también en el
+fichero de la instalación no caduca nada.""",
     ),
     Setting(
         key="builders.exemplars_ocr",

@@ -25,6 +25,14 @@ fidelidad es la cláusula carácter a carácter del prompt, no la deliberación.
 defecto: cada página es una llamada, y razonar multiplica el coste de la fase más larga de
 los tres constructores sin nada que medir a cambio."""
 
+_TRANSCRIBE_IMAGE_DOC = """Leer una imagen de un documento de Word o de PowerPoint es la misma copia que leer una
+página, solo que la imagen llega sola: Docling se queda con el texto que la rodea y el modelo
+devuelve lo que la imagen CONTIENE —una fórmula en LaTeX, una captura de código como bloque,
+una tabla como tabla— y solo describe lo que no se puede copiar. Apagado por defecto, como la
+transcripción de páginas y por la misma razón: la fidelidad la sostiene el prompt, y cada
+imagen es una llamada. Comparte el modelo con la transcripción de páginas, que es la única
+constante que decide con qué se lee un documento."""
+
 _TRANSCRIBE_SEAM_DOC = """La revisión de la costura entre dos páginas contesta con gramática a una pregunta cerrada
 —con qué separador se pegan y cuántas líneas iniciales sobran— sobre unos 1.200 caracteres
 de cada lado. Apagado por defecto, como el resto de las llamadas acotadas del proyecto, y
@@ -118,6 +126,7 @@ falla abierto de todos modos. Apagado por defecto."""
 
 _DEFAULTS = {
     "transcribe": (False, _TRANSCRIBE_DOC),
+    "transcribe_image": (False, _TRANSCRIBE_IMAGE_DOC),
     "transcribe_seam": (False, _TRANSCRIBE_SEAM_DOC),
     "ep_scan": (False, _EP_SCAN_DOC),
     "ep_consolidate": (True, _EP_CONSOLIDATE_DOC),
@@ -261,15 +270,32 @@ def _switch(key: str, label: str, note: str = "") -> Phase:
 _SHARED_TRANSCRIBE_NOTE = (
     "Lee cada página como imagen; un solo ajuste compartido por los tres constructores."
 )
+_SHARED_IMAGE_NOTE = (
+    "Lee una a una las imágenes de un Word o un PowerPoint, con el modelo de la "
+    "transcripción; compartida con los otros dos."
+)
 _SHARED_SEAM_NOTE = (
     "Clasifica cómo se pega una página con la siguiente; compartida con los otros dos."
 )
 
 
 def _transcription() -> tuple[Phase, ...]:
-    """Return the two transcription phases, drawn in all three lanes from one setting."""
+    """Return the three transcription phases, drawn in all three lanes from one setting each.
+
+    The picture phase names the PAGE phase's model on purpose: a document is read with one
+    model whichever route its pieces take, so a second model setting there would be a
+    second thing to keep equal.
+    """
     return (
         _switch("transcribe", "Transcripción", _SHARED_TRANSCRIBE_NOTE),
+        Phase(
+            key="transcribe_image",
+            label="Imágenes",
+            model="models.phases.transcribe",
+            setting="reasoning.phases.transcribe_image",
+            effort="reasoning.effort.transcribe_image",
+            note=_SHARED_IMAGE_NOTE,
+        ),
         _switch("transcribe_seam", "Costura", _SHARED_SEAM_NOTE),
     )
 

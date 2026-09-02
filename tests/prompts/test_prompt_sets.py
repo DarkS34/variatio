@@ -68,7 +68,20 @@ def test_the_marks_are_shared_and_not_translated():
     for module in SETS.values():
         assert module.CORRECT_ANSWER_MARK is prompts.CORRECT_ANSWER_MARK
         assert module.EMPTY_PAGE_MARK is prompts.EMPTY_PAGE_MARK
+        assert module.EMPTY_IMAGE_MARK is prompts.EMPTY_IMAGE_MARK
         assert module.SEAM_SEPARATORS is prompts.SEAM_SEPARATORS
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_an_image_is_read_by_the_same_rules_on_both_routes(code):
+    # A figure on a rendered page and a picture pulled out of a Word file are the same
+    # question, so the two prompts that meet one carry ONE block: a rule changed in one and
+    # not the other would read the same formula two ways depending on the file it came in.
+    module = prompts.of(code)
+    assert module.IMAGE_RULES.strip()
+    assert module.IMAGE_RULES in module.transcribe_page_prompt(1, 2)
+    assert module.IMAGE_RULES in module.transcribe_image_prompt(1, 2)
+    assert module.EMPTY_IMAGE_MARK in module.transcribe_image_prompt(1, 2)
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)

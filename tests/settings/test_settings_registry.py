@@ -125,5 +125,9 @@ def test_the_registry_holds_what_this_work_transcribed():
     # be another COMMERCIAL model rather than Groq serving open weights. Two settings, a
     # model id and a key, and `BY_NAME` does not move — like the study's other six, they
     # feed derived values and never become a `config` attribute.
-    assert len(REGISTRY) == 146
-    assert len(BY_NAME) == 116
+    # 148 and 117 later on 2026-09-02, when the pictures of a Word or PowerPoint file
+    # started being read one by one: a reasoning switch of their own (named) and its effort
+    # (unnamed), and NO model setting — the picture phase reads with the page phase's model,
+    # so a document is read with one model whichever route its pieces take.
+    assert len(REGISTRY) == 148
+    assert len(BY_NAME) == 117

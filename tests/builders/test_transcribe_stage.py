@@ -119,6 +119,8 @@ def test_transcribing_reports_what_it_did(ws):
         "pages": 1,
         "seams_merged": 0,
         "failed_pages": 0,
+        "images": 0,
+        "images_unreadable": 0,
     }
 
 
@@ -255,3 +257,30 @@ def test_a_failed_page_is_reported_as_such(ws):
 def test_the_corpus_slot_never_asks_for_ocr(ws):
     assert transcribe._slot_ocr("corpus") is False
     assert transcribe._slot_ocr("exemplars") is config.EXEMPLARS_OCR
+
+
+# THE PICTURES OF AN OFFICE DOCUMENT ---------------------------------------------------------------
+
+
+def test_the_status_reports_the_pictures_a_document_lost(ws):
+    # A picture Docling could not open leaves a mark in the page and a count on the row:
+    # loss has to be visible, or it is not a state anyone can act on.
+    source = transcribed(ws, "corpus", "apuntes.md")
+    meta = pages.read_meta(cache_of(ws, source))
+    pages.write_pages(
+        cache_of(ws, source),
+        pages.read_pages(cache_of(ws, source)),
+        pages.fingerprint_of(meta),
+        images={"images_total": 3, "images_unreadable": 2},
+    )
+
+    row = transcribe.transcription_status(ws, "corpus")["documents"][0]
+    assert row["state"] == "done"
+    assert row["images"] == 3 and row["images_unreadable"] == 2
+
+
+def test_a_meta_written_before_the_pictures_reports_none(ws):
+    source = transcribed(ws, "corpus", "apuntes.md")
+    row = transcribe.transcription_status(ws, "corpus")["documents"][0]
+    assert row["images"] == 0 and row["images_unreadable"] == 0
+    assert transcribe.transcription_status(ws, "corpus")["documents"][0]["state"] == "done"

@@ -31,6 +31,7 @@ function DocumentRow({
   state,
   reasons,
   failedPages,
+  unreadableImages,
   busy,
   canEdit,
   onOpen,
@@ -40,6 +41,7 @@ function DocumentRow({
   state: DocumentState;
   reasons: string[];
   failedPages: number;
+  unreadableImages: number;
   busy: boolean;
   canEdit: boolean;
   onOpen: () => void;
@@ -77,6 +79,13 @@ function DocumentRow({
           )}
           {!busy && failedPages > 0 ? (
             <Badge variant="danger">{plural("transcribe.failedCount", failedPages)}</Badge>
+          ) : null}
+          {/* A picture of a Word or PowerPoint file nothing could read — a WMF or EMF
+              metafile, usually — leaves a mark in the page and this badge on the row, for
+              the same reason a failed page does: a formula that vanished in silence is
+              worse than one that says it is gone. */}
+          {!busy && unreadableImages > 0 ? (
+            <Badge variant="danger">{plural("transcribe.unreadableImages", unreadableImages)}</Badge>
           ) : null}
         </span>
 
@@ -147,6 +156,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
         state: entry?.state ?? ("pending" as DocumentState),
         reasons: entry?.reasons ?? [],
         failedPages: entry?.failed_pages ?? 0,
+        unreadableImages: entry?.images_unreadable ?? 0,
       };
     });
   }, [slot.files, state.data]);

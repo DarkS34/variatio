@@ -11,6 +11,9 @@ export interface TranscriptionDocument {
   chars: number;
   seams_merged: number;
   failed_pages: number;
+  /** Pictures a Word or PowerPoint file carried, and how many left the unreadable mark. */
+  images: number;
+  images_unreadable: number;
 }
 
 export interface TranscriptionState {

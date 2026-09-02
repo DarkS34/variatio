@@ -28,6 +28,10 @@ SEPARATOR_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
 FENCE_TOKEN_RE = re.compile(r"§§FENCE(\d+)§§")
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+# Where a PICTURE stood in a Docling export, one mark per picture and carrying the picture's
+# own reference, so that what the model read off it can be put back in exactly that place.
+# Docling's default `<!-- image -->` is the same for every picture and cannot be mapped.
+IMAGE_MARK_RE = re.compile(r"<!-- image:(#/pictures/\d+) -->")
 # Where a page ENDED, kept in the joined markdown so a transcription can still be read page
 # by page and removed before anything is chunked: a comment that survived into a chunk would
 # be quoted back as an item's statement or as a concept's corpus passage.
@@ -139,16 +143,89 @@ def to_markdown(
             )
         logger.info(f"[{input_path.name}] the document changed; reconverting")
 
-    # The one place a converter is ever used, and therefore the only place a lazy one has to
-    # be resolved: everything above returns without Docling — plain text, and a cache hit.
-    document = resolve_converter(converter).convert(str(input_path)).document
-    text = tidy_markdown(document.export_to_markdown(), converted=True)
+    text = tidy_markdown(convert(converter, input_path).export_to_markdown(), converted=True)
     if cached is not None:
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
         _record_source(cached, input_path, digest)
         logger.debug(f"[{input_path.name}] markdown written to {cached}")
     return text
+
+
+def convert(converter, path: str | Path):
+    """Run Docling over one document and return its document.
+
+    The one place a converter is ever used, and therefore the only place a lazy one has to
+    be resolved: every caller returns without Docling on plain text and on a cache hit.
+    """
+    return resolve_converter(converter).convert(str(path)).document
+
+
+def pictures(document) -> list[tuple[str, object]]:
+    """The body pictures of a Docling document in reading order, each with its raster.
+
+    `(self_ref, PIL image or None)` per picture. Only the BODY layer, which is the layer the
+    markdown export writes: a header logo lives in the furniture and is never serialised, so
+    reading it would spend a call on something the document does not carry. `None` is a
+    picture Docling could not open — a WMF or EMF metafile, which Pillow does not read
+    without LibreOffice — and it keeps its place so the document can say it lost something.
+    A document that is not Docling's (the tests' stubs) has no pictures.
+    """
+    iterate = getattr(document, "iterate_items", None)
+    if iterate is None:
+        return []
+    # Imported here and never at module scope: this module must stay importable without
+    # the `builders` extra, which is what `default_converter` already promises.
+    from docling_core.types.doc.document import ContentLayer, PictureItem
+
+    out: list[tuple[str, object]] = []
+    for item, _ in iterate(included_content_layers={ContentLayer.BODY}):
+        if isinstance(item, PictureItem):
+            out.append((item.self_ref, item.get_image(document)))
+    return out
+
+
+def export_markdown(document, replacements: dict[str, str]) -> str:
+    """Serialise a Docling document, putting `replacements[self_ref]` where each picture was.
+
+    A picture with no replacement leaves nothing behind — not Docling's `<!-- image -->`,
+    which used to survive into chunks and be quoted back as part of an item's statement.
+    Only a real Docling document is serialised through the marking serializer; a stub keeps
+    its own `export_to_markdown`.
+    """
+    if not hasattr(document, "iterate_items"):
+        return document.export_to_markdown()
+    from docling_core.transforms.serializer.common import create_ser_result
+    from docling_core.transforms.serializer.markdown import (
+        MarkdownDocSerializer,
+        MarkdownParams,
+        MarkdownPictureSerializer,
+    )
+    from docling_core.types.doc.document import ContentLayer
+
+    class _Marking(MarkdownPictureSerializer):
+        """Docling's picture serializer, writing the picture's reference as its placeholder."""
+
+        def _serialize_image_part(self, item, doc, image_mode, image_placeholder, **kwargs):
+            """Write the mark `IMAGE_MARK_RE` reads back, whatever the image mode."""
+            return create_ser_result(text=f"<!-- image:{item.self_ref} -->", span_source=item)
+
+    text = MarkdownDocSerializer(
+        doc=document,
+        picture_serializer=_Marking(),
+        params=MarkdownParams(layers={ContentLayer.BODY}),
+    ).serialize().text
+    return splice_pictures(text, replacements)
+
+
+def picture_mark(ref: str) -> str:
+    """The mark `export_markdown` leaves for one picture, for a caller that wants it kept."""
+    return f"<!-- image:{ref} -->"
+
+
+def splice_pictures(text: str, replacements: dict[str, str]) -> str:
+    """Put `replacements[self_ref]` where each picture mark stands; nothing where none is."""
+    return IMAGE_MARK_RE.sub(lambda match: replacements.get(match.group(1), ""), text)
 
 
 def _refresh(path: Path, text: str) -> str:
