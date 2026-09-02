@@ -4,7 +4,6 @@ import {
   ChevronsUpDown,
   Plus,
   Star,
-  TriangleAlert,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -20,7 +19,7 @@ import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
-import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -313,18 +312,21 @@ export function ProfileEditor() {
     },
   });
 
-  // THIS SCREEN HAS NO «Guardar» (2026-09-01, explicit user request): what writes the file
-  // is «Aprobar», which saves first and closes the stage after. What is offered upwards is
-  // the draft, so that button knows there is something pending and why it may not be
-  // written — the sentence is the pipeline validator's own, the same one the bar below
-  // shows, because refusing without saying why is what this screen exists to avoid.
-  // `draft` is null only before the first read, where `dirty` is false and `save` unreachable.
+  // THIS SCREEN HAS NO «Guardar» OF ITS OWN: what writes the file is `StageGate`'s
+  // correction bar — «Guardar los cambios», pinned to the foot of the window — and
+  // «Continuar», which saves first and closes the stage after. What is offered upwards is
+  // the draft, so those buttons know there is something pending and why it may not be
+  // written — the sentence is the pipeline validator's own, because refusing without saying
+  // why is what this screen exists to avoid. `discard` is what «Dejar de corregir» does once
+  // it has asked. `draft` is null only before the first read, where `dirty` is false and
+  // `save` unreachable.
   useRegisterPendingEdit({
     dirty,
     blocked: validation?.valid === false ? (validation.error ?? t("profileEditor.invalid")) : null,
     save: async () => {
       if (draft) await save.mutateAsync(draft);
     },
+    discard: () => setDraft(query.data?.profile ?? null),
   });
 
   if (query.isLoading) return <Skeleton className="h-96" />;
@@ -457,56 +459,14 @@ export function ProfileEditor() {
   };
 
   const allOpen = open.length === names.length && names.length > 0;
-  // With nothing to say the bar is a rule across an otherwise quiet screen, and in the
-  // static view it has nothing to say by construction: nothing there can be edited.
-  const invalid = Boolean(validation && !validation.valid);
-  const bar = invalid || save.isPending || dirty;
 
   return (
     <div className="space-y-4">
-      {bar ? (
-      <div className="sticky top-16 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
-        {/* NO RAW-JSON TAB, and therefore no «Formulario» tab either (2026-08-31, explicit
-            user request): with one view left there is nothing to switch between. What it
-            offered — pasting a whole profile in and applying it — is the one edit that can
-            put a shape on screen the form cannot express, and the validator's own sentence
-            is what this bar carries instead. */}
-        {/* SÓLO SE HABLA CUANDO ALGO VA MAL (2026-09-01, explicit user request). El
-            «carga correctamente» era una confirmación permanente de que nada pasa, en la
-            barra que sólo debería llevar el guardado; lo que sí tiene que estar es la
-            frase del validador cuando el perfil NO carga, porque es la razón por la que
-            el botón de guardar se niega. */}
-        {invalid ? (
-          <span className="flex min-w-0 items-center gap-1.5 text-small text-destructive">
-            <TriangleAlert className="size-3.5 shrink-0" />
-            <span className="truncate" title={validation?.error ?? undefined}>
-              {validation?.error}
-            </span>
-          </span>
-        ) : null}
-
-        {/* THE BADGE STAYS AND THE BUTTON GOES. With «Guardar» removed, saying only «sin
-            guardar» would be a trap — a state with no visible way out — so the sentence
-            beside it says where the way out is: up in «Aprobar». While the write is in
-            flight it says so here too, because the button that fired it is in the header
-            and is not always in view from down here. */}
-        <div className="ml-auto flex items-center gap-2">
-          {save.isPending ? (
-            <span className="flex items-center gap-1.5 text-small text-muted-foreground">
-              <Spinner /> {t("profileEditor.saving")}
-            </span>
-          ) : dirty ? (
-            <>
-              <Badge variant="attention">{t("profileEditor.unsaved")}</Badge>
-              <span className="text-small text-muted-foreground">
-                {t("profileEditor.savesOnApprove")}
-              </span>
-            </>
-          ) : null}
-        </div>
-      </div>
-      ) : null}
-
+      {/* THE STICKY BAR AT THE TOP IS GONE (2026-09-02): what it carried — the unsaved
+          badge, the validator's sentence, the saving spinner — is what `StageGate`'s
+          correction bar says at the foot of the window, beside the save button that acts on
+          it. Two bars saying one thing a screen apart is the rule about the (i) and the
+          visible text. */}
       {save.isError ? (
         <Alert tone="danger" title={t("profileEditor.saveFailed")}>
           <p>{(save.error as Error).message}</p>

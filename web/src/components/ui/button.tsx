@@ -31,6 +31,9 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-small",
         lg: "h-10 rounded-md px-6",
+        // The one move a screen leads to — «Continuar al Paso N», «Comenzar construcción»:
+        // a size for a button that is the decision, not one of several controls.
+        xl: "h-12 rounded-md px-7 text-heading [&_svg]:size-5",
         icon: "h-9 w-9",
         "icon-sm": "h-7 w-7 [&_svg]:size-3.5",
       },

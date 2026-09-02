@@ -152,9 +152,26 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   }, [slot.files, state.data]);
 
   const visible = expanded ? rows : rows.slice(0, VISIBLE);
+  // UP TO DATE TINTS THE WHOLE CARD (2026-09-02, explicit user request): the same 8 % of
+  // `--attention` the tick's badge used to carry, mixed INTO the card (`oklab`, so the hue
+  // does not drift through chroma zero) so the ground stays opaque, with the border at the
+  // tint every attention alert uses. Only the finished state — a card still owing something
+  // keeps the plain ground its rows are scanned against.
+  const upToDate =
+    !empty &&
+    !running &&
+    state.data !== undefined &&
+    state.data.pending === 0 &&
+    state.data.stale === 0;
 
   return (
-    <Card className="flex flex-col">
+    <Card
+      className={cn(
+        "flex flex-col transition-colors",
+        upToDate &&
+          "border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklab,var(--attention)_8%,var(--card))]",
+      )}
+    >
       <div className="flex flex-col gap-1.5 border-b border-border p-4">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <h2 className="min-w-0 flex-1 truncate text-heading">{slotLabel(slot, t)}</h2>

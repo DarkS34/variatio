@@ -57,8 +57,7 @@ import { useT } from "@/lib/i18n";
  *
  * Hidden — never greyed — while the stage is being looked at: nothing on screen is wrong,
  * and a dimmed button says otherwise. It comes back with «Quiero corregir algo» at the foot
- * of the page. `approved` is the other half and keeps drawing the control refused, because
- * that one IS a refusal and names its own way out in the header.
+ * of the page, closed stage or not (2026-09-02): the first write reopens it on the server.
  */
 function Correction({ children }: { children: ReactNode }) {
   return useStageLockReason() === "reviewing" ? null : <>{children}</>;
@@ -803,7 +802,7 @@ function SelectionActions({
 }
 
 export function BankScreen({ stage }: { stage: StageState | undefined }) {
-  const { t, plural } = useT();
+  const { t } = useT();
   const confirm = useConfirm();
   const kg = useKg();
   const coverage = useCoverage();
@@ -931,10 +930,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       return next;
     });
 
-  // Extracting and re-extracting are the same job with opposite consequences: with an empty
-  // bank it is the missing step, and with items inside it deletes everything tagged and
-  // corrected. The button says so and `BuildButton` asks for confirmation.
-  const hasItems = (listing?.totals.items ?? 0) > 0;
   // Whether the bank may be written to is NOT read here and cannot be: `reviewing` is
   // `StageGate`'s own state and this component is the one that renders it, so the hooks that
   // answer only work below. Every control that writes therefore reads it for itself.
@@ -948,21 +943,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const livePreview = tagging ? <TagLive run={tagRun} /> : null;
 
   return (
-    <StageGate
-      stage={stage}
-      livePreview={livePreview}
-      buildLabels={{
-        // «Extraer» the first time, because that is what the bank does and nothing else on
-        // the chain does it. «Reconstruir» after, which is the DEFAULT and the same word the
-        // other three steps use: it is the button you press again and again, so a name of
-        // its own here only made the bank the odd one out.
-        create: t("bank.extract"),
-        redo: t("build.redoDefault"),
-        confirmRedo: hasItems
-          ? plural("bank.confirmReextract", listing?.totals.items ?? 0)
-          : undefined,
-      }}
-    >
+    <StageGate stage={stage} livePreview={livePreview}>
       <div className="space-y-4">
         <BankMeters
           listing={listing}

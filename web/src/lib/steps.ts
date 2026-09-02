@@ -59,13 +59,20 @@ export function stepNumberOf(artifact: string): string | null {
   return index === -1 ? null : stepNumber(index);
 }
 
-/** Where the step AFTER this artifact's leads, and what to call it. */
-export function nextStepOf(artifact: string): { path: string; number: string | null } {
+/**
+ * Where the step AFTER this artifact's leads, and what to call it.
+ *
+ * `null` is the raw material — the one step with no artifact — so its screen can offer the
+ * same «Continuar» every stage ends with, read from the same list.
+ */
+export function nextStepOf(
+  artifact: string | null,
+): { path: string; number: string | null; labelKey: Key } {
   const index = STEPS.findIndex((step) => step.artifact === artifact);
   const next = index === -1 ? -1 : index + 1;
   return next > 0 && next < STEPS.length
-    ? { path: STEPS[next].path, number: stepNumber(next) }
-    : { path: "/generate", number: null };
+    ? { path: STEPS[next].path, number: stepNumber(next), labelKey: STEPS[next].labelKey }
+    : { path: "/generate", number: null, labelKey: "nav.create" };
 }
 
 export type StepState = "done" | "now" | "later";

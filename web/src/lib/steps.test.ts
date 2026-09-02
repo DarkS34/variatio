@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { STEPS, currentStepPath, stepStates } from "./steps";
+import { STEPS, currentStepPath, nextStepOf, stepStates } from "./steps";
 import type { ArtifactStatus, StageState } from "./types";
 
 const stage = (artifact: string, status: ArtifactStatus): StageState =>
@@ -75,5 +75,24 @@ describe("the order of the path", () => {
       "knowledge_graph",
       "exemplars_bank",
     ]);
+  });
+});
+
+describe("nextStepOf", () => {
+  it("leads the raw material to the first stage, numbered", () => {
+    // El paso sin artefacto ofrece el mismo «Continuar» que los demás, leído de la misma lista.
+    expect(nextStepOf(null)).toEqual({
+      path: "/prepare/profile",
+      number: "1.2",
+      labelKey: "nav.step.profile",
+    });
+  });
+
+  it("leads the last stage to generation, unnumbered", () => {
+    expect(nextStepOf("exemplars_bank")).toEqual({
+      path: "/generate",
+      number: null,
+      labelKey: "nav.create",
+    });
   });
 });

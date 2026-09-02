@@ -22,13 +22,13 @@ const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "mis
 
 const STATE_HINTS: Record<StatusKey, string> = {
   approved:
-    "Cerrado y dado por bueno. Se cierra al continuar al paso siguiente, y «Reabrir» es la única vuelta atrás.",
+    "Cerrado y dado por bueno. Se cierra al continuar al paso siguiente; corregirlo después lo vuelve a abrir con el primer cambio que guardes.",
   draft: "Construido y todavía sin cerrar. Se puede mirar y corregir; lo que viene detrás sigue esperando.",
   stale:
-    "Algo de lo que depende cambió después de cerrarlo. Hay que reconstruirlo, o repasarlo y volver a cerrarlo.",
+    "Algo de lo que depende cambió después de cerrarlo. Hay que repasarlo y volver a cerrarlo continuando.",
   building:
     "La pantalla dice cuál de tres cosas pasa: se construye por primera vez y no hay nada que reemplazar; se trabaja sobre lo que ya hay, que sigue guardado y solo deja de verse; o el trabajo sigue en cola y todavía no ha empezado, y entonces no hay barra.",
-  missing: "Todavía no existe. La pantalla enseña la cabecera y un único botón: construir.",
+  missing: "Todavía no existe. La pantalla enseña la cabecera y un único botón, grande y en el centro: comenzar la construcción.",
   blocked: "No es «no está hecho», es «no te toca todavía»: falta cerrar algo de lo que depende.",
 };
 
@@ -222,10 +222,10 @@ function Start() {
         <p>
           Cerrar un paso es lo que desbloquea el siguiente, y cerrar los tres que construyen
           algo es lo que abre «{t("nav.create")}». Lo que se da por bueno es el fichero{" "}
-          <em>tal como está</em>, así
-          que mientras el paso siga cerrado la pantalla no ofrece nada que lo reescriba: «
-          {t("stage.locked")}». El botón «{t("stage.reopen")}», arriba, es la única vuelta
-          atrás.
+          <em>tal como está</em>, así que un paso cerrado se abre en modo lectura como
+          cualquier otro. Corregirlo no necesita ningún botón aparte: «
+          {t("stage.curate.start")}» lo desbloquea igual, y el primer cambio que guardes lo
+          vuelve a abrir — habrá que cerrarlo otra vez continuando.
         </p>
         <p>
           Lo que <em>no</em> forma parte de ese fichero —la descripción de cada tema— se puede
@@ -467,6 +467,12 @@ function Raw() {
           un estado, y lo que hay debajo es una lista de páginas que la siguiente construcción
           iba a rehacer en silencio.
         </Paragraph>
+        <Paragraph>
+          Cuando un origen queda al día, su tarjeta entera se tiñe del azul de su marca y el
+          tick pasa a ser un círculo relleno. Y cuando los dos lo están, al final de la
+          pantalla aparece el mismo bloque con el que se cierra cada paso: «
+          {t("stage.continue", { n: stepNumber(1) })}».
+        </Paragraph>
       </Block>
 
       <Alert tone="settled" title="Detenerla no pierde nada">
@@ -592,8 +598,8 @@ function Verdict({ artifact }: { artifact: string }) {
           </>,
           <>
             <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
-            arriba. Mientras corriges, ese mismo botón guarda —«{t("stage.curate.save")}»— y,
-            cuando no queda nada por guardar, sirve para dejar de corregir.
+            arriba. Mientras corriges, una barra fija al borde de abajo dice cómo van los
+            cambios y lleva «{t("stage.curate.save")}» y «{t("stage.curate.stop")}».
           </>,
           <>
             <strong>
@@ -679,8 +685,9 @@ function Profile() {
               construir está apagado y dice por qué.
             </>,
             <>
-              Pulsa «Construir». Sale una <strong>primera versión</strong>, no un resultado
-              final.
+              Pulsa «{t("build.start")}», el botón grande del centro de la pantalla. Sale una{" "}
+              <strong>primera versión</strong>, no un resultado final, y no se ofrece
+              reconstruirla: una segunda pasada sobre los mismos documentos no da otra cosa.
             </>,
             <>
               Lee cada <strong>tipo de ejercicio</strong> —la tira de arriba los elige uno a
@@ -701,11 +708,11 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          No hay botón de guardar propio ni una pestaña con el fichero en crudo: lo que escribe
-          los cambios es el mismo botón con el que se deja de corregir, y también «continuar».
-          Mientras haya algo sin guardar aparece una barra arriba que lo dice, y ahí está
-          también el aviso de si el fichero <em>carga</em> — mientras no cargue no se puede
-          guardar, que es lo que impide dejar la asignatura con una plantilla rota.
+          No hay una pestaña con el fichero en crudo. Lo que escribe los cambios es «
+          {t("stage.curate.save")}», en la barra fija de abajo, y también «continuar». Esa
+          misma barra dice si hay algo sin guardar y, cuando el fichero no <em>carga</em>, la
+          frase del validador — mientras no cargue no se puede guardar, que es lo que impide
+          dejar la asignatura con una plantilla rota.
         </Paragraph>
       </Block>
 
@@ -811,7 +818,6 @@ function Profile() {
           material han llegado a producir conjuntos de partes <em>distintos</em>. Trátalo como
           un punto de partida: la versión que das por buena es tuya, no suya.
         </p>
-        <p>Si vuelves a construirlo, compáralo antes de sustituir el que ya tenías.</p>
       </Detail>
       <Verdict artifact="exemplars_profile" />
     </div>
@@ -1662,16 +1668,11 @@ function Runs() {
         </Paragraph>
       </Block>
 
-      <Alert tone="attention" title="Cancelar y reconstruir">
+      <Alert tone="attention" title="Cancelar">
         <p>
           Cancelar corta enseguida: no hay que esperar a que el modelo termine de escribir lo
           que estuviera escribiendo, se le corta a media frase y la máquina queda libre. Lo que
           ya hubiera salido en firme se conserva.
-        </p>
-        <p>
-          Y una reconstrucción <em>esconde</em> lo que va a reemplazar sin borrarlo —lo nuevo se
-          escribe al final—, por eso cancelar devuelve lo anterior intacto y sin ningún paso de
-          restauración.
         </p>
       </Alert>
 
@@ -2133,9 +2134,9 @@ const problems = (
     question: `Un paso dice «${t(STATUS.stale.labelKey)}»`,
     answer: (
       <p>
-        Algo de lo que depende cambió después de que lo cerraras. Ábrelo: o lo reconstruyes con
-        lo nuevo, o compruebas que sigue valiendo y lo vuelves a cerrar continuando al
-        siguiente. Mientras tanto, los pasos que dependen de él quedan bloqueados.
+        Algo de lo que depende cambió después de que lo cerraras. Ábrelo, comprueba que sigue
+        valiendo —o corrígelo— y vuélvelo a cerrar continuando al siguiente. Mientras tanto,
+        los pasos que dependen de él quedan bloqueados.
       </p>
     ),
   },
@@ -2161,11 +2162,11 @@ const problems = (
           final de la pantalla. Nada está mal — simplemente todavía no has pedido corregir.
         </p>
         <p>
-          Si el paso está <strong>cerrado</strong>, es una negativa de verdad: lo que se dio por
-          bueno es el fichero tal cual está, así que la pantalla no ofrece nada que lo reescriba
-          y lo dice —«{t("stage.locked")}»—. El camino de vuelta es «{t("stage.reopen")}», en la
-          cabecera. Reabrir no borra ni reconstruye nada, y volver a cerrarlo es continuar otra
-          vez al paso siguiente.
+          Si el paso está <strong>cerrado</strong>, la puerta es la misma: «
+          {t("stage.curate.start")}» al final de la pantalla. Lo que se dio por bueno es el
+          fichero tal cual está, así que el primer cambio que guardes lo vuelve a abrir —sin
+          borrar ni reconstruir nada— y volver a cerrarlo es continuar otra vez al paso
+          siguiente.
         </p>
         <p>
           La descripción de un tema se puede corregir con el paso cerrado: vive en un fichero

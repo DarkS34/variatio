@@ -19,7 +19,6 @@ import {
   StageGate,
   useStageLocked,
   useStageLockReason,
-  useStageLockedHint,
 } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -897,13 +896,12 @@ function GraphExplorer() {
  *
  * It is a child of `StageGate` rather than a block of `KgScreen` because that is the only
  * side of the boundary where the lock is readable: `curating` lives inside the header and
- * travels down as context. Out of the static view entirely, and merely refused once the
- * step is closed, where «Reabrir» is the way back and the tooltip names it.
+ * travels down as context. Out of the static view entirely: «Quiero corregir algo» at the
+ * foot is what brings it back, closed stage or not.
  */
 function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
   const reason = useStageLockReason();
-  const lockedHint = useStageLockedHint();
   const kg = useKg();
   const pipeline = usePipeline();
   const submitReview = useSubmitJob();
@@ -919,9 +917,7 @@ function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
       ? t("kg.review.buildFirst")
       : stage.status === "building"
         ? t("kg.review.rebuilding")
-        : reason === "approved"
-          ? t(lockedHint)
-          : offline
+        : offline
             ? offline
             : !profileReady
               ? t("kg.review.needsProfile")

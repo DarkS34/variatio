@@ -22,13 +22,13 @@ const STATE_ORDER: StatusKey[] = ["approved", "draft", "stale", "building", "mis
 
 const STATE_HINTS: Record<StatusKey, string> = {
   approved:
-    'Closed and taken as good. It is closed by moving on to the next step, and "Reopen" is the only way back.',
+    "Closed and taken as good. It is closed by moving on to the next step; correcting it afterwards opens it again with the first change you save.",
   draft: "Built and not closed yet. It can be looked at and corrected; what comes after it is still waiting.",
   stale:
-    "Something it depends on changed after it was closed. It has to be rebuilt, or looked over and closed again.",
+    "Something it depends on changed after it was closed. It has to be looked over and closed again by carrying on.",
   building:
     "The screen says which of three things is happening: it is being built for the first time and there is nothing to replace; it is being worked over what is already there, which stays saved and merely stops being shown; or the job is still queued and has not started, and then there is no bar.",
-  missing: "It does not exist yet. The screen shows the header and a single button: build.",
+  missing: "It does not exist yet. The screen shows the header and a single button, large and in the middle: start building.",
   blocked:
     'Not "it is not done", but "it is not your turn yet": something it depends on is not closed.',
 };
@@ -223,10 +223,11 @@ function Start() {
         </p>
         <p>
           Closing a step is what unlocks the next one, and closing the three that build
-          something is what opens "{t("nav.create")}".
-          What is taken as good is the file <em>as it stands</em>, so while the step stays
-          closed the screen offers nothing that rewrites it: "{t("stage.locked")}". The "
-          {t("stage.reopen")}" button, at the top, is the only way back.
+          something is what opens "{t("nav.create")}". What is taken as good is the file{" "}
+          <em>as it stands</em>, so a closed step opens read-only like any other. Correcting
+          it needs no separate button: "{t("stage.curate.start")}" unlocks it just the same,
+          and the first change you save opens it again — it will have to be closed once more
+          by carrying on.
         </p>
         <p>
           What is <em>not</em> part of that file — a topic's description — can still be
@@ -474,6 +475,11 @@ function Raw() {
           with no reason is not a state, and what is underneath is a list of pages the next build
           was about to redo in silence.
         </Paragraph>
+        <Paragraph>
+          Once an origin is up to date, its whole card takes the blue of its mark and the tick
+          becomes a filled circle. And once both are, the same block that closes every step
+          appears at the foot of the screen: "{t("stage.continue", { n: stepNumber(1) })}".
+        </Paragraph>
       </Block>
 
       <Alert tone="settled" title="Stopping it loses nothing">
@@ -597,8 +603,8 @@ function Verdict({ artifact }: { artifact: string }) {
           </>,
           <>
             <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what is above.
-            While you are correcting, that same button saves — "{t("stage.curate.save")}" — and
-            once there is nothing left to save it is the way back to just looking.
+            While you are correcting, a bar pinned to the bottom edge says how the changes
+            stand and carries "{t("stage.curate.save")}" and "{t("stage.curate.stop")}".
           </>,
           <>
             <strong>
@@ -687,8 +693,9 @@ function Profile() {
               and says why.
             </>,
             <>
-              Press "Build". What comes out is a <strong>first version</strong>, not a final
-              result.
+              Press "{t("build.start")}", the large button in the middle of the screen. What
+              comes out is a <strong>first version</strong>, not a final result, and no rebuild
+              is offered: a second pass over the same documents gives nothing different.
             </>,
             <>
               Read each <strong>exercise type</strong> — the strip at the top picks them one by
@@ -709,11 +716,11 @@ function Profile() {
           ]}
         />
         <Paragraph>
-          There is no save button of its own and no tab with the raw file: what writes the
-          changes is the same button you stop correcting with, and "carry on" too. While
-          something is unsaved a bar at the top says so, and that is also where the notice sits
-          saying whether the file <em>loads</em> — while it does not, nothing can be saved, which
-          is what keeps the subject from being left with a broken template.
+          There is no tab with the raw file. What writes the changes is "
+          {t("stage.curate.save")}", in the bar pinned to the bottom, and "carry on" too. That
+          same bar says whether something is unsaved and, when the file does not{" "}
+          <em>load</em>, the validator's own sentence — while it does not load, nothing can be
+          saved, which is what keeps the subject from being left with a broken template.
         </Paragraph>
       </Block>
 
@@ -819,7 +826,6 @@ function Profile() {
           material have gone as far as producing <em>different</em> sets of parts. Treat it as a
           starting point: the version you take as good is yours, not its.
         </p>
-        <p>If you rebuild it, compare before replacing the one you already had.</p>
       </Detail>
       <Verdict artifact="exemplars_profile" />
     </div>
@@ -1675,16 +1681,11 @@ function Runs() {
         </Paragraph>
       </Block>
 
-      <Alert tone="attention" title="Cancelling and rebuilding">
+      <Alert tone="attention" title="Cancelling">
         <p>
           Cancelling cuts off at once: there is no waiting for the model to finish whatever it
           was writing, it is cut off mid-sentence and the machine is handed back. Whatever had
           already come out for good is kept.
-        </p>
-        <p>
-          And a rebuild <em>hides</em> what it is about to replace without deleting it — the new
-          one is written at the end — which is why cancelling brings the previous one straight
-          back, untouched and with no restore step.
         </p>
       </Alert>
 
@@ -2148,9 +2149,9 @@ const problems = (
     question: `A step says "${t(STATUS.stale.labelKey)}"`,
     answer: (
       <p>
-        Something it depends on changed after you closed it. Open it: either rebuild with what is
-        new, or check that it still holds and close it again by carrying on to the next one.
-        Meanwhile, the steps that depend on it stay blocked.
+        Something it depends on changed after you closed it. Open it, check that it still holds
+        — or correct it — and close it again by carrying on to the next one. Meanwhile, the
+        steps that depend on it stay blocked.
       </p>
     ),
   },
@@ -2176,11 +2177,10 @@ const problems = (
           the foot of the screen. Nothing is wrong — you simply have not asked to correct yet.
         </p>
         <p>
-          If the step is <strong>closed</strong>, it is a real refusal: what was taken as good is
-          the file exactly as it stands, so the screen offers nothing that rewrites it and says
-          so — "{t("stage.locked")}". The way back is "{t("stage.reopen")}", in the header.
-          Reopening deletes nothing and rebuilds nothing, and closing it again is carrying on to
-          the next step once more.
+          If the step is <strong>closed</strong>, the door is the same: "
+          {t("stage.curate.start")}" at the foot of the screen. What was taken as good is the
+          file exactly as it stands, so the first change you save opens it again — deleting and
+          rebuilding nothing — and closing it again is carrying on to the next step once more.
         </p>
         <p>
           A topic's description can be corrected with the step closed: it lives in a file of its

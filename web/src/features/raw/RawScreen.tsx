@@ -1,9 +1,11 @@
-import { ScanText } from "lucide-react";
+import { ArrowRight, ScanText } from "lucide-react";
 
 import { GuideLink } from "@/components/GuideLink";
 import { Button } from "@/components/ui/button";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
+import { Link } from "@/lib/router";
+import { nextStepOf } from "@/lib/steps";
 import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
@@ -28,6 +30,11 @@ import { CancelButton } from "@/components/CancelButton";
  * What this screen must NOT become is a gate. Transcribing is an accelerator: every
  * builder keeps its own conversion phase, so nothing here is ever a precondition for
  * anything, and the copy says so where a person can read it before pressing.
+ *
+ * What it does say, at the foot and only once there is nothing left to do here, is WHERE
+ * TO GO (2026-09-02, explicit user request): the same block every stage closes with, with
+ * the same big «Continuar». It is not a «todo leído» notice — that was deleted and stays
+ * deleted — because what it reports is the next move, not the state.
  */
 export function RawScreen() {
   const { t, plural } = useT();
@@ -138,6 +145,34 @@ export function RawScreen() {
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}
       </div>
+
+      {/* `done` holds back until both readings have landed, so this does not flash during
+          the first second of a load and then vanish. */}
+      {summary.done ? <RawDone /> : null}
     </div>
+  );
+}
+
+/** The way on: both origins hold something and every document is read. */
+function RawDone() {
+  const { t } = useT();
+  const next = nextStepOf(null);
+  return (
+    <section className="border border-border bg-card p-4 sm:p-5">
+      <h2 className="text-heading font-semibold">{t("raw.done.title")}</h2>
+      <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">
+        {t("raw.done.body", { next: t(next.labelKey) })}
+      </p>
+      <div className="mt-4">
+        <Link to={next.path}>
+          <Button variant="attention" size="xl">
+            {next.number === null
+              ? t("stage.continueGenerate")
+              : t("stage.continue", { n: next.number })}
+            <ArrowRight />
+          </Button>
+        </Link>
+      </div>
+    </section>
   );
 }

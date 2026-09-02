@@ -490,7 +490,6 @@ export const es = {
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
   "shell.viewFullLog": "Ver el registro completo de la sesión",
-  "stage.lockedHint": "Aprobado: pulsa «Reabrir» para poder editarlo",
   // MIENTRAS SE MIRA, ESTO ES UNA VISTA. Ver y corregir son dos tareas y ahora son dos
   // momentos: la etapa se abre en solo lectura y corregir es lo que la desbloquea.
   "stage.viewHint":
@@ -502,16 +501,24 @@ export const es = {
     "Esto es una primera versión. Si corriges lo que no encaje, los ejercicios que se generen después se parecerán más a los tuyos. Si lo dejas como está, también puedes seguir.",
   "stage.curate.bodyBank":
     "Esto es una primera versión. De estos ejercicios se copian los nuevos, así que lo que corrijas aquí se nota en todo lo que venga después. Si lo dejas como está, puedes seguir igualmente, pero el resultado será peor.",
-  "stage.curate.editing":
-    "Estás corrigiendo. Guarda los cambios antes de dejarlo; al continuar al paso siguiente también se guardan.",
+  "stage.curate.editing": "Guarda los cambios en la barra de abajo. Al continuar al paso siguiente también se guardan, y el paso se cierra.",
   "stage.curate.start": "Quiero corregir algo",
+  // LA BARRA DE CORRECCIÓN, fija al borde de abajo mientras se corrige: cómo están los
+  // cambios, la salida y «Guardar los cambios» donde hay algo que guardar.
+  "stage.curate.editingTitle": "Cuando termines de corregir",
+  "stage.curate.bar": "Estás corrigiendo",
+  "stage.curate.unsaved": "Hay cambios sin guardar",
+  "stage.curate.noChanges": "Todavía no has cambiado nada",
+  "stage.curate.saved": "Cambios guardados",
+  "stage.curate.autosave": "Cada cambio se guarda en el momento",
+  "stage.curate.discardConfirm": "Hay cambios sin guardar. Si dejas de corregir ahora se pierden. ¿Seguir?",
+  "stage.curate.discard": "Descartarlos",
   "stage.curate.save": "Guardar los cambios",
   "stage.curate.saveFailed":
     "No se han podido guardar los cambios. Siguen aquí: vuelve a intentarlo.",
   "stage.curate.stop": "Dejar de corregir",
-  "stage.curate.closedTitle": "Este paso ya está dado por bueno",
-  "stage.curate.closed":
-    "Si quieres volver a corregirlo, ábrelo otra vez con «Reabrir», arriba.",
+  "stage.curate.closedTitle": "Este paso ya está cerrado",
+  "stage.curate.closed": "Puedes corregirlo igualmente. El primer cambio que guardes lo vuelve a abrir, y se cierra otra vez al continuar.",
   "stage.continue": "Continuar al Paso {n}",
   "stage.continueGenerate": "Ya está: crear mi primer ejercicio",
   "stage.continueFailed":
@@ -589,17 +596,12 @@ export const es = {
   "stage.what.bank":
     "Se han recogido uno a uno los ejercicios de tus documentos y a cada uno se le han puesto automáticamente uno o más conceptos del temario del paso anterior. Comprueba si los conceptos de cada ejercicio son los que de verdad practica: pulsa en uno para leerlo entero. Al final se te pide una valoración de este paso.",
   "stage.approved": "Aprobado",
-  "stage.reopened": "Reabierto",
   "stage.whatIs": "Qué es {title}",
-  "stage.reopenHint": "Quita la aprobación y vuelve a permitir editarlo",
-  "stage.reopenConfirm": "Vas a retirar la aprobación de «{stage}». Mientras esté reabierta no se podrá generar, y habrá que volver a aprobarla. ¿Sigues?",
-  "stage.reopen": "Reabrir",
-  "stage.locked": "Bloqueado para editar. Pulsa «Reabrir» si quieres cambiar algo.",
   "stage.stale": "Obsoleto",
   "stage.blocked": "Bloqueado",
   "stage.rawMissing": "Faltan los datos de partida",
   "stage.import": "Importar",
-  "stage.rawMissingBody": "«{slot}» no tiene ningún documento, y es la materia prima de {stage}. Impórtalos en «Datos en bruto» y vuelve aquí.",
+  "stage.rawMissingBody": "«{slot}» no tiene ningún documento, y es la materia prima de {stage}. Súbelos en «Apuntes y ejercicios» y vuelve aquí.",
   "stage.queued": "En cola",
   "stage.queuedBody": "{label} está esperando su turno; todavía no ha empezado.{reason} Puedes cancelarlo desde el registro de ejecución sin que nada se haya tocado.",
   "stage.buildingFirst": "Construyendo por primera vez",
@@ -612,16 +614,17 @@ export const es = {
   "route.notFound": "Esa página no existe",
   "route.backToPanel": "Volver al panel",
   "build.readOnly": "Tu permiso sobre esta instancia es de solo lectura.",
-  "build.approved":
-    "La etapa está aprobada. Pulsa «Reabrir» si quieres volver a construirla: reconstruir descarta lo que hay ahora.",
   "build.whyNot": "Por qué todavía no se puede construir",
-  "build.rawMissing": "Faltan documentos en «{slot}»: impórtalos en «Datos en bruto» antes de construir.",
+  "build.rawMissing": "Faltan documentos en «{slot}»: súbelos en «Apuntes y ejercicios» antes de construir.",
   "build.sending": "Enviando…",
   "build.alreadyQueued": "{label} ya está en cola.{reason}",
-  "build.create": "Construir {stage} desde los datos en bruto.{note}",
-  "build.createDefault": "Construir",
-  "build.redoDefault": "Reconstruir",
-  "build.redo": "Vuelve a ejecutar el constructor sobre los datos en bruto y sobrescribe {stage}.{note}",
+  "build.create": "Construye {stage} a partir de tus apuntes y ejercicios.{note}",
+  // EL BOTÓN DE CONSTRUIR, grande y en el centro de la pantalla vacía: es lo único que hay
+  // que hacer en un paso sin construir. Un solo nombre para los cuatro pasos, y no se
+  // ofrece reconstruir: una segunda pasada sobre los mismos documentos no da otra cosa.
+  "build.start": "Comenzar construcción",
+  "build.callTitle": "Este paso todavía no está construido",
+  "build.callBody": "Se construye {label} leyendo tus apuntes y ejercicios. Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "progress.building": "Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.running": "En marcha. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.preparing": "Preparando el proceso…",
@@ -691,6 +694,10 @@ export const es = {
   "raw.nothingYetBody":
     "Suelta los apuntes en «Apuntes de la asignatura» y los ejercicios en «Ejercicios de la asignatura». Hasta entonces no hay nada con lo que empezar.",
   "raw.dropHere": "Arrastra los documentos aquí",
+  // EL BLOQUE QUE LLEVA AL PASO SIGUIENTE, al pie, cuando los dos orígenes tienen algo y
+  // todo está leído. Es la misma salida con la que se cierra cada paso, no un aviso.
+  "raw.done.title": "Apuntes y ejercicios listos",
+  "raw.done.body": "Todos tus documentos están subidos y leídos. Ya puedes pasar al paso siguiente, «{next}».",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
   "raw.dropInto": "Importar documentos en {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the
@@ -957,8 +964,6 @@ export const es = {
   "bank.selectItem": "Seleccionar el ejercicio {id}",
   "bank.detail": "Detalle",
   "bank.delete": "Eliminar",
-  "bank.extract": "Extraer",
-  "bank.confirmReextract": { one: "Reconstruir descarta el ejercicio que hay ahora —con sus etiquetas y las correcciones hechas a mano— y lo vuelve a sacar de los documentos en bruto. ¿Continuar?", other: "Reconstruir descarta los {n} ejercicios que hay ahora —con sus etiquetas y las correcciones hechas a mano— y los vuelve a sacar de los documentos en bruto. ¿Continuar?" },
   "bank.taggedItems": "Ejercicios con concepto",
   "bank.retagUntaggedHint": { one: "Vuelve a pasar el etiquetador por el ejercicio sin concepto", other: "Vuelve a pasar el etiquetador por los {n} ejercicios sin concepto" },
   "bank.retagUntagged": { one: "Re-etiquetar el que falta", other: "Re-etiquetar los {n}" },
@@ -1785,9 +1790,6 @@ export const es = {
   "modality.removeConfirm": "¿Quitar el tipo «{key}» y todos sus campos?",
   "modality.newPlaceholder": "nuevo_tipo",
   "modality.add": "Añadir un tipo",
-  "profileEditor.unsaved": "sin guardar",
-  "profileEditor.savesOnApprove": "se guardan con «Guardar los cambios», al final de la página",
-  "profileEditor.saving": "Guardando…",
   "profileEditor.invalid": "El perfil no carga: hay que corregirlo antes de aprobarlo.",
   "profileEditor.saveFailed": "No se pudo guardar",
   "modality.identity": "Qué tipo es",

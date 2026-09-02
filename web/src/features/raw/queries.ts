@@ -68,15 +68,24 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   const stale = states.reduce((sum, entry) => sum + entry.stale, 0);
   const pending = states.reduce((sum, entry) => sum + entry.pending, 0);
 
-  // `done`, `files` and `known` went with the «todo leído» notice on 2026-09-01: `known`
-  // existed only to keep that notice from announcing completeness during the first second
-  // of a load, and with nothing announcing it there is nothing to hold back.
+  // `known` is back with `done` (2026-09-02, explicit user request): the foot of the screen
+  // offers the next step once everything is read, and it must not do so during the first
+  // second of a load, when a slot's reading has not landed and «nada pendiente» would be
+  // true by absence.
+  const known = (["corpus", "exemplars"] as const).every(
+    (kind) => !stocked(kind) || (kind === "corpus" ? corpus.data : exemplars.data) !== undefined,
+  );
+  const running = corpusRunning || exemplarsRunning;
+  const stockedAll = slots.length > 0 && slots.every((slot) => slot.files.length > 0);
   return {
-    running: corpusRunning || exemplarsRunning,
+    running,
     stale,
     pending,
     todo: stale + pending,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
+    // Both origins hold something, every document is read and nothing is running: what the
+    // next step actually wants, and not merely «no queda nada pendiente».
+    done: stockedAll && known && !running && stale + pending === 0,
   };
 }
 

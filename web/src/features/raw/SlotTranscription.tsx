@@ -68,21 +68,22 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
     return <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>;
   if (data.pending > 0)
     return <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>;
-  // A TICK AND NOT THE WORDS «al día» (2026-09-01, explicit user request). The state with
+  // A TICK AND NOT THE WORDS «al día» (2026-09-01, explicit user request), and since
+  // 2026-09-02 a FILLED one (also explicit user request: «más vistoso»). The state with
   // nothing left to do is the one a person scans past, and a mark reads faster than a word
-  // in a row of words. `Badge` is what draws it, so the circle carries the same measured
-  // 8 % tint as every other badge; `p-0` and a fixed size are what turn the pill into a
-  // circle. The word survives as the accessible name — colour and shape are not a channel
-  // for a screen reader.
+  // in a row of words. It was the 8 % badge tint; that tint is the whole card's now
+  // (`SlotCard`), so the mark on that ground has to be solid to be seen at all —
+  // `--attention` under its own foreground, the pair `check:color` measures. The word
+  // survives as the accessible name — colour and shape are not a channel for a screen
+  // reader.
   return (
-    <Badge
-      variant="attention"
-      className="size-6 justify-center p-0"
+    <span
+      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-attention text-attention-foreground"
       title={t("transcribe.upToDate")}
     >
-      <Check aria-hidden />
+      <Check aria-hidden className="size-4" strokeWidth={3} />
       <span className="sr-only">{t("transcribe.upToDate")}</span>
-    </Badge>
+    </span>
   );
 }
 
