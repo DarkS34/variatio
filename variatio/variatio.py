@@ -263,7 +263,16 @@ def generate_with_retries(
     result.checks = verify(result)
     while result.retried < max_retries and checks.needs_retry(result.checks):
         reasons = list(result.checks.get("reasons") or [])
-        progress.emit("item.retried", index=index, attempt=result.retried + 1, reasons=reasons)
+        # `max` travels with the event because the person waiting is told a retry is
+        # happening and why, on the run strip itself: «reintento 1 de 2» says how much
+        # patience is left, where a bare ordinal says only that something went wrong.
+        progress.emit(
+            "item.retried",
+            index=index,
+            attempt=result.retried + 1,
+            max=max_retries,
+            reasons=reasons,
+        )
         logger.info(
             f"[generate] Retry {result.retried + 1}/{max_retries} of variant {index}: "
             f"{'; '.join(reasons)}"

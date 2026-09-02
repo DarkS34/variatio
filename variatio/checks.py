@@ -127,8 +127,14 @@ def run(
     if checks["similarity"] and checks["similarity"]["high"]:
         reasons.append(f"muy parecida a {close[0]} ({close[1]:.2f})")
     flags = list(reasons)
-    if tagger is not None and not checks["tagger"]["on_target"]:
-        flags.append(f"el etiquetador no la reconoce como {' / '.join(targets)}")
+    # Whether a target is among the tags AT ALL, never whether it was made primary. Which
+    # of several targets an item practises is the generator's business — the prompt asks
+    # for one or two out of the set — so `on_target`, which this read until 2026-09-02,
+    # flagged a disagreement about ranking as if it were a miss.
+    if tagger is not None and targets and not checks["tagger"]["targets_found"]:
+        missed = f"el etiquetador no la reconoce como {' / '.join(targets)}"
+        seen = checks["tagger"]["primary"]
+        flags.append(f"{missed}; la etiqueta como «{seen}»" if seen else missed)
     checks["flags"] = flags
     checks["reasons"] = reasons
     checks["verdict"] = "retry" if reasons else "accept"
