@@ -344,7 +344,7 @@ export function TutorialScreen({ at }: { at: number }) {
                   {t("tutorial.skip")}
                 </button>
               </div>
-              <h1 className="mt-4 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
+              <h1 className="mt-6 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
                 {t(slide.title)}
               </h1>
             </div>
