@@ -1753,20 +1753,6 @@ function Account() {
         </Detail>
       </Block>
 
-      <Block title="Un variatio puede pasar a ser un ejercicio tuyo">
-        <Paragraph>
-          En «{t("tabs.variants")}», cada variatio ofrece «{t("generations.promote")}»:{" "}
-          {t("generations.promoteHint")}
-        </Paragraph>
-        <Paragraph>
-          Es la forma de que lo que salga bien deje de ser un resultado suelto y pase a ser un
-          ejemplo que el modelo imita la próxima vez. Lo que hay que tener presente es la
-          segunda mitad de esa frase: el Paso {stepNumberOf("exemplars_bank")} pasa a «
-          {t(STATUS.stale.labelKey)}» y hay que volver a cerrarlo, así que conviene pasar varias
-          de una vez y no de una en una.
-        </Paragraph>
-      </Block>
-
       <Block title="Dos cosas que sorprenden">
         <Alert tone="info" title="El usuario no se puede cambiar">
           <p>

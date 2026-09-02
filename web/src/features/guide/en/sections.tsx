@@ -1762,20 +1762,6 @@ function Account() {
         </Detail>
       </Block>
 
-      <Block title="A variatio can become an exercise of yours">
-        <Paragraph>
-          In "{t("tabs.variants")}", every variatio offers "{t("generations.promote")}":{" "}
-          {t("generations.promoteHint")}
-        </Paragraph>
-        <Paragraph>
-          It is how something that came out well stops being a loose result and becomes an
-          example the model imitates next time. What to keep in mind is the second half of that
-          sentence: Step {stepNumberOf("exemplars_bank")} goes to "{t(STATUS.stale.labelKey)}"
-          and has to be closed again, so it is worth moving several at once rather than one at a
-          time.
-        </Paragraph>
-      </Block>
-
       <Block title="Two things that come as a surprise">
         <Alert tone="info" title="The username cannot be changed">
           <p>

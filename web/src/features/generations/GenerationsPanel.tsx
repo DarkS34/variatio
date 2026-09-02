@@ -1,9 +1,6 @@
 import {
   Archive,
-  BookPlus,
-  Brain,
   Copy,
-  Cpu,
   Download,
   Library,
   Search,
@@ -21,20 +18,17 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/run/draft";
-import { modelLabel } from "@/features/run/models";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/run/ResultCard";
 import { fieldText } from "@/lib/fields";
-import { when } from "@/lib/format";
 import { useRouter } from "@/lib/router";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useCanEdit, useSession } from "@/state/auth";
+import { useSession } from "@/state/auth";
 import {
   useDeleteGeneration,
   useGenerations,
   useProfile,
-  usePromoteGeneration,
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 
@@ -64,8 +58,6 @@ export function GenerationsPanel() {
 
   const listing = useGenerations({ scope, q: search || undefined, limit: 60 });
   const remove = useDeleteGeneration();
-  const promote = usePromoteGeneration();
-  const canEdit = useCanEdit();
 
   const profile = profileQuery.data?.profile ?? null;
   const rows = listing.data?.generations ?? [];
@@ -191,9 +183,6 @@ export function GenerationsPanel() {
               onToggle={() => setOpen(open === row.id ? null : row.id)}
               canDelete={isOwner || row.author.id === me}
               onDelete={() => remove.mutate(row.id)}
-              canPromote={canEdit}
-              promoting={promote.isPending && promote.variables === row.id}
-              onPromote={() => promote.mutate(row.id)}
               showAuthor={scope === "workspace"}
             />
           ))}
@@ -235,9 +224,6 @@ function GenerationCard({
   onToggle,
   canDelete,
   onDelete,
-  canPromote,
-  promoting,
-  onPromote,
   showAuthor,
 }: {
   row: GenerationRow;
@@ -246,9 +232,6 @@ function GenerationCard({
   onToggle: () => void;
   canDelete: boolean;
   onDelete: () => void;
-  canPromote: boolean;
-  promoting: boolean;
-  onPromote: () => void;
   showAuthor: boolean;
 }) {
   const { t } = useT();
@@ -264,48 +247,27 @@ function GenerationCard({
           <CardTitle className="text-body">
             {row.concepts.length > 0 ? row.concepts.join(" · ") : t("generations.noConcepts")}
           </CardTitle>
+          {/* THE TITLE, THE MODALITY AND — ACROSS THE WHOLE SUBJECT — WHO ASKED (2026-09-02,
+              explicit user request). Three chips left this row: «razonó», the model that
+              wrote it and the date. All three are still on the row's data and in the
+              expanded commission, where somebody reproducing the variatio reads them; on
+              the header they were three tags beside a title that is itself a list. */}
           {manyTypes && profile ? (
             <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>
           ) : null}
-          {row.think ? (
-            <Badge variant="secondary" className="gap-1">
-              <Brain className="size-3" />
-              {t("generations.reasoned")}
-            </Badge>
-          ) : null}
-          {/* The model that WROTE it, and only when the row records one: a variant from
-              before the commission could choose carries null, and naming today's default
-              would be attributing it to a model that never saw the prompt. */}
-          {row.model ? (
-            <Badge variant="outline" className="gap-1" title={row.model}>
-              <Cpu className="size-3" />
-              {modelLabel(row.model)}
-            </Badge>
-          ) : null}
-          <span className="text-small text-muted-foreground">
-            {when(new Date(row.created_at * 1000).toISOString())}
-          </span>
           {showAuthor && row.author.name ? (
-            <span className="text-small text-muted-foreground">· {row.author.name}</span>
+            <span className="text-small text-muted-foreground">{row.author.name}</span>
           ) : null}
 
           <div className="ml-auto flex gap-1">
+            {/* A row promoted before the button went keeps saying so: that is data about
+                the bank, not a control. The promotion itself left the screen (2026-09-02,
+                explicit user request); the endpoint stays, screenless. */}
             {row.promoted_item_id ? (
               <Badge variant="secondary" className="gap-1 self-center">
                 <Library className="size-3" />
                 {t("generations.inBank", { id: row.promoted_item_id })}
               </Badge>
-            ) : canPromote ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={promoting}
-                title={t("generations.promoteHint")}
-                onClick={onPromote}
-              >
-                <BookPlus />
-                {promoting ? t("generations.promoting") : t("generations.promote")}
-              </Button>
             ) : null}
             <Button
               variant="ghost"
