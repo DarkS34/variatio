@@ -431,7 +431,7 @@ export const es = {
   "tutorial.s3.step1":
     "Subes tus documentos, los apuntes por un lado y los ejercicios por otro, y se leen página a página. Es el único paso en el que tienes que buscar archivos: todo lo demás sale de aquí.",
   "tutorial.s3.step2":
-    "De tus ejercicios se sacan los tipos que usas —tipo test, de problemas, de desarrollo…— y qué partes lleva cada uno. Los nuevos se escribirán con esa misma plantilla.",
+    "De tus ejercicios se sacan los tipos que usas —tipo test, de problemas, de desarrollo…— y qué partes lleva cada uno. Los nuevos se escribirán con esa misma plantilla. Va antes que el temario porque el paso siguiente lo necesita: para decidir qué temas sirven de etiqueta hay que saber qué ejercicios se ponen.",
   // La única vez que el tutorial dice «grafo», atada al nombre visible, como hace la
   // pantalla del paso: es lo que la persona va a ver dibujado.
   "tutorial.s3.step3":
@@ -455,9 +455,14 @@ export const es = {
   "tutorial.s5.title": "Fase 3: comparar tres versiones a ciegas",
   "tutorial.s5.body":
     "En «Comparar» se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría y eliges la mejor. Solo al final se revela de dónde salía cada una.",
+  // LA DIFERENCIA CON LA FASE 2 ES EL PRIMER PUNTO: las dos escriben ejercicios, y sin
+  // decirlo la 3 se lee como «la 2 con tres en vez de uno». Y es opcional y no depende de
+  // la 2 — el número dice dónde está, no que haga falta pasar por ella.
   "tutorial.s5.b1":
-    "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
+    "No es la fase 2 con más ejercicios. En «Crear ejercicios» pides uno para usarlo en clase; en «Comparar» se escriben tres del mismo encargo para que digas cuál es mejor, y lo que se guarda es tu juicio. No necesita haber generado nada antes y es opcional: puedes usar la asignatura sin comparar nunca.",
   "tutorial.s5.b2":
+    "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
+  "tutorial.s5.b3":
     "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
   "tutorial.s5.aside":
     "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",

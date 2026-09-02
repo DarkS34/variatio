@@ -116,7 +116,7 @@ const SLIDES: Slide[] = [
     title: "tutorial.s5.title",
     body: "tutorial.s5.body",
     figure: <BlindFigure />,
-    points: ["tutorial.s5.b1", "tutorial.s5.b2"],
+    points: ["tutorial.s5.b1", "tutorial.s5.b2", "tutorial.s5.b3"],
     aside: "tutorial.s5.aside",
   },
   {

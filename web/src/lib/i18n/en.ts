@@ -379,7 +379,7 @@ export const en: Catalogue = {
   "tutorial.s3.step1":
     "You upload your documents, the notes on one side and the exercises on the other, and they are read page by page. It is the only step where you have to go looking for files: everything else comes from here.",
   "tutorial.s3.step2":
-    "From your exercises it pulls out the types you use — multiple choice, problems, essay questions… — and what parts each one carries. New ones will be written to that same template.",
+    "From your exercises it pulls out the types you use — multiple choice, problems, essay questions… — and what parts each one carries. New ones will be written to that same template. It comes before the syllabus because the next step needs it: to decide which topics work as a label you have to know what exercises get set.",
   "tutorial.s3.step3":
     "From your notes it pulls out the subject's topics and which topic rests on which: a graph of topics, which you will see drawn. It is what says what can be taken as known in an exercise and what cannot yet.",
   "tutorial.s3.step4":
@@ -399,8 +399,10 @@ export const en: Catalogue = {
   "tutorial.s5.body":
     "Under «Compare» you are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use and pick the best. Only at the end is it revealed where each came from.",
   "tutorial.s5.b1":
-    "The order changes every time, so that a position on screen does not sway what you pick.",
+    "It is not phase 2 with more exercises. Under «Create exercises» you ask for one to use in class; under «Compare» three are written to the same request so you can say which is best, and what is kept is your judgement. It needs nothing generated beforehand and it is optional: you can use the subject without ever comparing.",
   "tutorial.s5.b2":
+    "The order changes every time, so that a position on screen does not sway what you pick.",
+  "tutorial.s5.b3":
     "«I am not in a position to judge this» is a valid answer and does not count as a preference. If the exercise is not in your area, saying so is worth more than picking at random.",
   "tutorial.s5.aside":
     "This is the part the study rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
