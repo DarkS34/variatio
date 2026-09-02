@@ -45,7 +45,14 @@ export function WorkspaceSwitcher() {
     setCreating(false);
     setOpen(false);
   };
-  if (listing.isLoading || workspaces.length === 0) return null;
+  if (listing.isLoading) return null;
+  // WITH NO INSTANCE THE CONTROL STILL STANDS (2026-09-02), reading «Sin asignatura», and
+  // its menu is the create form and nothing else. It used to render nothing at all, so the
+  // one reader the tutorial addresses — an account that has just accepted an invitation —
+  // was told to create a subject «arriba a la izquierda» where there was nothing. The
+  // panel's own form in the middle of the page is untouched: this is the same door, in the
+  // header, where the tutorial can point at it.
+  const empty = workspaces.length === 0;
 
   return (
     <div className="relative shrink-0" ref={holder}>
@@ -73,7 +80,9 @@ export function WorkspaceSwitcher() {
         title={
           active
             ? t("workspace.switcher.current", { name: active.name })
-            : t("workspace.switcher.choose")
+            : empty
+              ? t("ws.createOne")
+              : t("workspace.switcher.choose")
         }
         className={cn(
           "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-body transition-colors hover:bg-accent",
@@ -99,6 +108,7 @@ export function WorkspaceSwitcher() {
           role="menu"
           className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
+          {empty ? null : (
           <div className="max-h-72 overflow-y-auto p-1">
             {workspaces.map((workspace) => (
               <button
@@ -136,13 +146,14 @@ export function WorkspaceSwitcher() {
               </button>
             ))}
           </div>
+          )}
 
-          <Separator />
+          {empty ? null : <Separator />}
           {/* Creating is offered here and renaming is NOT, and there is no owner-facing
               route left for it either: a workspace is named when it is created, and after
               that only an administrator renames it, from «Administración». What the name is
               worth is that everybody means the same instance by it. */}
-          {creating ? (
+          {creating || empty ? (
             <CreateForm onDone={close} />
           ) : (
             <div className="p-1">

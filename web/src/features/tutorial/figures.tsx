@@ -1,18 +1,8 @@
-import {
-  ArrowRight,
-  Check,
-  ChevronDown,
-  FileText,
-  Sparkles,
-  User,
-  UserRound,
-} from "lucide-react";
+import { ArrowRight, Check, FileText, Sparkles, User } from "lucide-react";
 import { Fragment } from "react";
 
-import { Lockup, Logo } from "@/components/ui/logo";
+import { Logo } from "@/components/ui/logo";
 import { useT, type Key } from "@/lib/i18n";
-import { COMPARE_PHASE, GENERATE_PHASE, STEPS, stepNumber } from "@/lib/steps";
-import { useSession } from "@/state/auth";
 import { cn } from "@/lib/utils";
 
 /**
@@ -119,68 +109,6 @@ function Chain({ children }: { children: React.ReactNode[] }) {
           <div className="flex min-w-0 sm:flex-1">{box}</div>
         </Fragment>
       ))}
-    </div>
-  );
-}
-
-/**
- * THE BAR, WITH ONE STOP MARKED.
- *
- * It is doing the work of a sentence that would otherwise have to be written on every
- * slide: «this is where you will find it». The marked stop is the step the slide is
- * about; with `active` unset nothing is marked and it is the whole path at once, which is
- * the index slide's own picture.
- *
- * The numbers are `stepNumber`'s, so they read 1.1 to 1.4 — the four are one phase, and a
- * figure numbering them 1 to 4 would promise a shape the navigation does not have.
- */
-export function NavFigure({ active }: { active?: number }) {
-  const { t } = useT();
-  return (
-    <div
-      // A drawing of a control, not a control: nothing here is reachable, and a screen
-      // reader that walked it would announce four destinations that go nowhere.
-      aria-hidden
-      className="flex items-stretch gap-px overflow-hidden border border-border bg-card"
-    >
-      <div className="flex shrink-0 items-center gap-1.5 border-r border-border px-2.5 py-2">
-        <Logo className="size-3.5 text-foreground" />
-      </div>
-      {STEPS.map((step, index) => {
-        const marked = active === index + 1;
-        return (
-          <div
-            key={step.path}
-            className={cn(
-              "flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2.5",
-              marked && "bg-[color-mix(in_oklch,var(--attention)_10%,transparent)]",
-            )}
-          >
-            <span
-              className={cn(
-                // `min-w` and not a square: «1.1» is wider than «1», exactly as the real
-                // bar's own counter had to become.
-                "nums flex h-[18px] min-w-[18px] shrink-0 items-center justify-center px-1 font-condensed text-[10px] font-semibold",
-                marked
-                  ? "bg-attention text-attention-foreground"
-                  : "border border-dashed border-input text-muted-foreground",
-              )}
-            >
-              {stepNumber(index)}
-            </span>
-            <span
-              className={cn(
-                // Numbers only on a phone: four names truncated to their first letter say
-                // nothing, and the header figure already draws the row that way.
-                "hidden min-w-0 truncate text-small sm:inline",
-                marked ? "font-semibold text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {t(step.labelKey)}
-            </span>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -345,69 +273,3 @@ export function BlindFigure() {
   );
 }
 
-/**
- * THE HEADER, DRAWN AS IT ACTUALLY IS, with the one control the last slide asks for marked.
- *
- * It replaces two figures that each drew half of this row, and one of them had gone false:
- * «Mis variatios» was a pill in the right flank when it was drawn and is an entry of the
- * account menu now, so the tutorial was pointing at a button that is not there. Drawing
- * the whole row fixes that by construction — there is one picture of the header and it is
- * the header — and it answers the two questions the closing slide leaves: where the
- * subject is chosen, and where everything the reader will need afterwards lives.
- *
- * THE TWO NAMES ARE THE READER'S OWN, read out of the session the gate already filled.
- * Somebody who has just redeemed an invitation is being shown where their subject and
- * their account are, and a drawing of somebody else's is a worse picture than a drawing of
- * theirs. An account that is a member of nothing falls back to `workspace.none`, which is
- * the string its real header is showing at that very moment — so this is not an
- * illustration of the header, it is the header.
- *
- * ONE `--attention`, on the subject switcher: it is the only thing on the row the reader
- * has to act on now. The account pill is drawn in its own ink and named in the prose.
- */
-export function HeaderFigure() {
-  const { t } = useT();
-  const session = useSession().data;
-  const username = session?.user.username;
-  const workspace = session?.workspaces.find((row) => row.active)?.name;
-  return (
-    <div
-      aria-hidden
-      className="flex items-center gap-2 overflow-hidden border border-border bg-card px-2.5 py-2"
-    >
-      <Lockup compact className="shrink-0" />
-      <span className="h-6 w-px shrink-0 bg-border" />
-      <span className="flex min-w-0 shrink items-center gap-1.5 border border-attention bg-[color-mix(in_oklch,var(--attention)_10%,transparent)] px-2 py-1">
-        <span className="min-w-0 text-left">
-          <span className="block truncate text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
-            {t("workspace.switcher.label")}
-          </span>
-          <span className="mt-1 block truncate text-small font-medium leading-tight">
-            {workspace ?? t("workspace.none")}
-          </span>
-        </span>
-        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-      </span>
-      <span className="mx-auto hidden shrink items-center gap-2.5 md:flex">
-        {[...STEPS.map((_, index) => stepNumber(index)), `${GENERATE_PHASE}`, `${COMPARE_PHASE}`].map(
-          (label) => (
-            <span
-              key={label}
-              className="nums font-condensed text-small font-semibold text-muted-foreground"
-            >
-              {label}
-            </span>
-          ),
-        )}
-      </span>
-      <span className="ml-auto flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary pl-0.5 pr-0.5 sm:pr-3">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <UserRound aria-hidden className="size-4" />
-        </span>
-        <span className="hidden truncate text-small font-medium sm:block">
-          {username ?? t("tutorial.fig.you")}
-        </span>
-      </span>
-    </div>
-  );
-}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
+import { revealOf, slideOf, type NavGroup, type Reveal } from "@/features/tutorial/reveal";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
@@ -232,6 +233,47 @@ function NavRule() {
 }
 
 /**
+ * ONE PART OF THE HEADER, AS FAR AS THE TUTORIAL HAS GOT WITH IT (2026-09-02, explicit
+ * user request: «que se vayan desbloqueando los elementos de la navbar, y que el tutorial
+ * los vaya señalando ligeramente»).
+ *
+ * Outside the tutorial `reveal` is null and this is a plain group. Inside it, a part the
+ * deck has not reached yet is a dim silhouette — there, so the reader sees the bar fill
+ * in as they go, but `inert`, because a control that has not been explained is not on
+ * offer — and the part the current slide is about carries a thin ring in `--attention`.
+ * A ring and not a fill: the pointing is meant to be slight, and the step that is «te
+ * toca ahora» already spends the tint. The margin/padding pair is constant across slides
+ * so that unlocking moves nothing.
+ */
+function Unlock({
+  reveal,
+  children,
+  className,
+}: {
+  reveal: Reveal | null;
+  children: ReactNode;
+  className?: string;
+}) {
+  const locked = reveal !== null && !reveal.unlocked;
+  return (
+    <div
+      inert={locked}
+      aria-hidden={locked || undefined}
+      className={cn(
+        "flex shrink-0 items-center gap-0.5 rounded-md transition-[opacity,box-shadow] duration-700",
+        reveal !== null && "-m-1 p-1",
+        locked && "pointer-events-none select-none opacity-30",
+        reveal?.pointed &&
+          "ring-2 ring-[color-mix(in_oklch,var(--attention)_55%,transparent)]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
  * The path, once, rendered in one of two places.
  *
  * Above `xl` it sits on the header's centre line, between the two flanks. Below it, the
@@ -247,6 +289,7 @@ function MainNav({
   locked,
   rawStocked,
   rawWaiting,
+  reveal,
   className,
 }: {
   path: string;
@@ -256,6 +299,8 @@ function MainNav({
   rawStocked: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
+  /** How far the tutorial has got with each part, or null for every part outside it. */
+  reveal: (group: NavGroup) => Reveal | null;
   className?: string;
 }) {
   const { t } = useT();
@@ -300,36 +345,42 @@ function MainNav({
         className,
       )}
     >
-      {STEPS.map((step, index) => (
-        <StepPill
-          key={step.path}
-          step={step}
-          state={states[index]}
-          n={stepNumber(index)}
-          active={path === step.path}
-          title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
-        />
-      ))}
+      <Unlock reveal={reveal("prepare")}>
+        {STEPS.map((step, index) => (
+          <StepPill
+            key={step.path}
+            step={step}
+            state={states[index]}
+            n={stepNumber(index)}
+            active={path === step.path}
+            title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+          />
+        ))}
+      </Unlock>
 
       <NavRule />
 
-      <UsePill
-        to="/generate"
-        label={t("nav.create")}
-        icon={Play}
-        n={GENERATE_PHASE}
-        active={path === "/generate"}
-        disabledReason={locked}
-      />
-      <UsePill
-        to="/evaluate"
-        label={t("nav.compare")}
-        icon={Scale}
-        n={COMPARE_PHASE}
-        active={path === "/evaluate"}
-        study
-        disabledReason={locked}
-      />
+      <Unlock reveal={reveal("generate")}>
+        <UsePill
+          to="/generate"
+          label={t("nav.create")}
+          icon={Play}
+          n={GENERATE_PHASE}
+          active={path === "/generate"}
+          disabledReason={locked}
+        />
+      </Unlock>
+      <Unlock reveal={reveal("compare")}>
+        <UsePill
+          to="/evaluate"
+          label={t("nav.compare")}
+          icon={Scale}
+          n={COMPARE_PHASE}
+          active={path === "/evaluate"}
+          study
+          disabledReason={locked}
+        />
+      </Unlock>
     </nav>
   );
 }
@@ -345,6 +396,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
+
+  // The tutorial's slide, read from the path: which parts of this header it has explained
+  // so far, and therefore which are on offer. Null everywhere else.
+  const tutorialAt = slideOf(path);
+  const deck = tutorialAt !== null;
+  const reveal = (group: NavGroup) => (tutorialAt === null ? null : revealOf(tutorialAt, group));
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
   // like every route does, so it would only be refused — and a refusal reads as «la
@@ -401,7 +458,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     rawSlots.length > 0 && rawSlots.every((slot) => slot.files.length > 0);
 
   return (
-    <div className="flex min-h-full flex-col">
+    // The deck is the one screen that is a fixed layout — a head, a scrolling column and
+    // a foot — so under it the wrapper is a definite height and `main` a flex column with
+    // no padding, where the two rails can reach the edges.
+    <div className={cn("flex flex-col", deck ? "h-full" : "min-h-full")}>
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         {/* THREE COLUMNS, AND THE MIDDLE ONE IS THE CENTRE OF THE HEADER.
             The navigation used to be a `flex-1` sitting after the logo and the workspace
@@ -436,7 +496,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
 
-            <WorkspaceSwitcher />
+            <Unlock reveal={reveal("subject")}>
+              <WorkspaceSwitcher />
+            </Unlock>
           </div>
 
           {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
@@ -444,30 +506,34 @@ export function AppShell({ children }: { children: ReactNode }) {
               doors into one room — and to a student account, five of them are the
               teacher's preparation chain. `App` already gates the routes; this stops the
               navigation from advertising them. */}
-          {hasWorkspace ? (
+          {hasWorkspace || deck ? (
             <MainNav
               path={path}
               stages={stages}
               locked={locked}
               rawWaiting={rawWaiting}
               rawStocked={rawStocked}
+              reveal={reveal}
               className="hidden xl:flex"
             />
           ) : null}
 
           <div className="flex flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
-            <AccountMenu />
+            <Unlock reveal={reveal("account")}>
+              <AccountMenu />
+            </Unlock>
           </div>
         </div>
 
         {/* The same navigation, on its own line, for everything narrower than a laptop. */}
-        {hasWorkspace ? (
+        {hasWorkspace || deck ? (
           <MainNav
             path={path}
             stages={stages}
             locked={locked}
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}
+            reveal={reveal}
             className="flex border-t border-border px-3 py-1.5 xl:hidden"
           />
         ) : null}
@@ -499,7 +565,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         className={cn(
-          "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-8 pt-4 sm:px-4 sm:pt-6",
+          deck
+            ? "flex min-h-0 flex-1 flex-col"
+            : "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-8 pt-4 sm:px-4 sm:pt-6",
         )}
       >
         {children}

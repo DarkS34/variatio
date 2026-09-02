@@ -1,23 +1,21 @@
-import { ChevronRight } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/ui/logo";
 import { useT, type Key } from "@/lib/i18n";
-import { Link, useRouter } from "@/lib/router";
+import { useRouter } from "@/lib/router";
 import { STEPS, stepNumber } from "@/lib/steps";
 import { cn } from "@/lib/utils";
+import { useHasWorkspace } from "@/state/auth";
 
 import {
   AskFigure,
   BlindFigure,
   CloseFigure,
   FlowFigure,
-  HeaderFigure,
-  NavFigure,
   PROSE,
   SourcesFigure,
 } from "./figures";
+import { SLIDE_COUNT, slidePath } from "./reveal";
 
 /**
  * SIX SCREENS, AND THEY ARE THE MANUAL.
@@ -40,14 +38,20 @@ import {
  * the bar numbers «Comparar» 3, or this deck would be promising a shape the navigation
  * does not have.
  *
- * Every slide carries a FIGURE. They are in `figures.tsx`, drawn in the ink with a single
- * `--attention` on the one thing the slide is about, and the bar is built from `STEPS` and
- * numbered with `stepNumber` — the same list and the same numbering the navigation reads —
- * so the picture cannot promise an order the path does not have. Where a figure
- * enumerates, the prose beside it does not: a drawing and a paragraph listing the same two
- * things is one thing said twice. That rule was applied a second time on 2026-09-02, to
- * the two slides that still broke it — Fase 2's lead walked the three questions its own
- * figure draws as chips, and the closing slide walked the four beats of its own figure.
+ * IT RUNS UNDER THE REAL HEADER, AND THE HEADER IS PART OF THE DECK (2026-09-02, explicit
+ * user request). The screen used to sit outside the shell with a header of its own, and
+ * its two drawings of the bar and of the header were pictures of a thing one screen away.
+ * Now the shell's header is above it, and as the slides go by it unlocks what they have
+ * explained and points at what they are explaining — `reveal.ts` says which slide opens
+ * which part, and the slide is the path, so the shell reads it with no store between
+ * them. The two figures went with that: a drawing of the bar directly under the bar, lit
+ * up, is one thing said twice. The slide that names the four steps says they «se acaban
+ * de encender arriba», which is literally what happens.
+ *
+ * Every other slide carries a FIGURE. They are in `figures.tsx`, drawn in the ink with a
+ * single `--attention` on the one thing the slide is about. Where a figure enumerates, the
+ * prose beside it does not: a drawing and a paragraph listing the same two things is one
+ * thing said twice.
  *
  * IT IS READ, NOT OPERATED, SO IT IS SET LIKE SOMETHING TO READ (2026-09-02, explicit user
  * request). The reading face is Literata and it is declared in `index.css` for this screen
@@ -62,12 +66,11 @@ import {
  *
  * AND THE TITLE NEVER MOVES. It is its own row, outside the scrolling column, with a floor
  * of two lines — so the eyebrow, the title and the first line of prose land on the same
- * pixel of every slide, whatever is under them. Before this the whole column was centred
- * and the title rode up and down with the length of the slide. Two things follow from the
- * column being the only thing that scrolls (2026-09-02): it is SCROLLED BACK TO THE TOP on
- * every page turn, because the container outlives the slide and a reader who had scrolled
- * down slide 3 landed halfway into slide 4, mid-sentence; and its foot FADES, so a slide
- * taller than the window says «there is more» instead of cutting a heading in half.
+ * pixel of every slide, whatever is under them. The column is the only thing that
+ * scrolls: it is SCROLLED BACK TO THE TOP on every page turn, because the container
+ * outlives the slide and a reader who had scrolled down slide 3 landed halfway into slide
+ * 4, mid-sentence; and its foot FADES, so a slide taller than the window says «there is
+ * more» instead of cutting a heading in half.
  */
 
 interface Slide {
@@ -81,8 +84,12 @@ interface Slide {
   aside?: Key;
   /** Only the index slide: the four steps of the first phase, as a numbered list. */
   steps?: boolean;
-  /** Only the last slide: the door, drawn under a rule. */
-  outro?: Key;
+  /**
+   * Only the last slide: the door, drawn under a rule. Two sentences, because the reader
+   * either has a subject to pick or has none and must create one — and the one who has
+   * none is the reader this deck is written for.
+   */
+  outro?: { create: Key; choose: Key };
 }
 
 const STEP_BODIES: Key[] = [
@@ -100,12 +107,8 @@ const SLIDES: Slide[] = [
     figure: <SourcesFigure />,
     points: ["tutorial.s2.b1", "tutorial.s2.b2"],
   },
-  {
-    title: "tutorial.s3.title",
-    body: "tutorial.s3.body",
-    figure: <NavFigure />,
-    steps: true,
-  },
+  // No figure: the bar this slide is about is the real one, lit up above it.
+  { title: "tutorial.s3.title", body: "tutorial.s3.body", steps: true },
   {
     title: "tutorial.s4.title",
     body: "tutorial.s4.body",
@@ -124,9 +127,15 @@ const SLIDES: Slide[] = [
     body: "tutorial.s6.body",
     figure: <CloseFigure />,
     points: ["tutorial.s6.b1"],
-    outro: "tutorial.s6.outro",
+    outro: { create: "tutorial.s6.outro.create", choose: "tutorial.s6.outro.choose" },
   },
 ];
+
+// The shell unlocks the header by slide number, so the two counts have to agree, and a
+// deck that grew without telling `reveal.ts` would point at the wrong slide in silence.
+if (SLIDES.length !== SLIDE_COUNT) {
+  throw new Error(`tutorial: ${SLIDES.length} slides against SLIDE_COUNT = ${SLIDE_COUNT}`);
+}
 
 /**
  * The column the whole deck is set in, so the head and the body cannot drift apart.
@@ -141,7 +150,7 @@ const COLUMN = "mx-auto w-full max-w-[46rem]";
  * The index: the four steps of the first phase, numbered exactly as the bar numbers them.
  *
  * Each row is the number, the step's own name and one paragraph. The name is not prefixed
- * «Paso 1.1:» — the counter beside it already says so, and with the bar drawn just above
+ * «Paso 1.1:» — the counter beside it already says so, and with the bar lit up just above
  * that made four names read three times each.
  */
 function Steps() {
@@ -170,63 +179,89 @@ function Steps() {
 }
 
 /**
- * THE NEXT SLIDE, AS AN EDGE (2026-09-02, explicit user request).
+ * A SLIDE'S EDGE, ON EITHER SIDE (2026-09-02, explicit user request, twice: first the next
+ * one — «medio difuminado, estirado verticalmente para que se entienda bien que ese es el
+ * siguiente slide» — and then «el botón de atrás igual que el Siguiente»).
  *
- * «Que sea medio difuminado, estirado verticalmente para que se entienda bien que ese es
- * el siguiente slide.» It is a page edge, not a button in a toolbar: full height of the
- * slide, faded into the right margin, so what it says is «there is more over there» rather
- * than «here is a control». The word runs vertically for the same reason — the shape is
- * doing the explaining, and a horizontal label in a tall strip would be a button that
- * happens to be tall.
+ * It is a page edge, not a button in a toolbar: full height of the slide, faded into its
+ * margin, so what it says is «there is more over there» rather than «here is a control».
+ * The word runs vertically for the same reason — the shape is doing the explaining, and a
+ * horizontal label in a tall strip would be a button that happens to be tall. On the left
+ * the word is turned to read upwards, the way a spine does, so the two edges mirror.
  *
- * THE LAST ONE IS NOT FADED. Everywhere else the rail is the quiet continuation of a
- * sequence; on the last slide it is the one action of the whole screen — leaving for step
- * 1.1 — so it takes the `--attention` the palette spends on «act here», which no other
- * element of this deck is using. Its accessible name is the full sentence («Empezar por el
- * Paso 1.1»), never the vertical word alone.
+ * THE LAST FORWARD ONE IS NOT FADED. Everywhere else the rail is the quiet continuation of
+ * a sequence; on the last slide it is the one action of the whole screen — leaving for
+ * step 1.1, or for the form that creates a subject — so it takes the `--attention` the
+ * palette spends on «act here», which no other element of this deck is using. Its
+ * accessible name is the full sentence, never the vertical word alone.
+ *
+ * On the first slide the back rail is drawn for its width alone, invisible and unreachable:
+ * removing it would move the column sideways on one slide out of six.
  */
-function NextRail({ label, name, last, onClick }: {
+function Rail({
+  side,
+  label,
+  name,
+  tone,
+  hidden = false,
+  onClick,
+}: {
+  side: "left" | "right";
   label: string;
   name: string;
-  last: boolean;
+  tone: "quiet" | "attention";
+  hidden?: boolean;
   onClick: () => void;
 }) {
+  const left = side === "left";
+  const Chevron = left ? ChevronLeft : ChevronRight;
+  const attention = tone === "attention";
   return (
     <button
       onClick={onClick}
       title={name}
       aria-label={name}
-      className="group relative flex w-14 shrink-0 items-center justify-center border-l border-border sm:w-20 lg:w-24"
+      aria-hidden={hidden || undefined}
+      tabIndex={hidden ? -1 : undefined}
+      disabled={hidden}
+      className={cn(
+        "group relative flex w-14 shrink-0 items-center justify-center border-border sm:w-20 lg:w-24",
+        left ? "border-r" : "border-l",
+        hidden && "invisible",
+      )}
     >
       <span
         aria-hidden
         className={cn(
           "absolute inset-0 transition-opacity",
-          last ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+          attention ? "opacity-100" : "opacity-70 group-hover:opacity-100",
         )}
         style={{
-          background: last
-            ? "linear-gradient(to right, transparent, color-mix(in oklch, var(--attention) 30%, transparent))"
-            : "linear-gradient(to right, transparent, var(--accent))",
+          background: `linear-gradient(to ${left ? "left" : "right"}, transparent, ${
+            attention
+              ? "color-mix(in oklch, var(--attention) 30%, transparent)"
+              : "var(--accent)"
+          })`,
         }}
       />
       <span className="relative flex flex-col items-center gap-5">
         <span
-          style={{ writingMode: "vertical-rl" }}
+          style={{ writingMode: "vertical-rl", transform: left ? "rotate(180deg)" : undefined }}
           className={cn(
             "text-small uppercase tracking-[0.12em]",
-            last
+            attention
               ? "font-semibold text-attention"
               : "text-muted-foreground transition-colors group-hover:text-foreground",
           )}
         >
           {label}
         </span>
-        <ChevronRight
+        <Chevron
           aria-hidden
           className={cn(
-            "size-6 transition-transform group-hover:translate-x-0.5",
-            last ? "text-attention" : "text-muted-foreground group-hover:text-foreground",
+            "size-6 transition-transform",
+            left ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5",
+            attention ? "text-attention" : "text-muted-foreground group-hover:text-foreground",
           )}
         />
       </span>
@@ -234,25 +269,34 @@ function NextRail({ label, name, last, onClick }: {
   );
 }
 
-export function TutorialScreen() {
+export function TutorialScreen({ at }: { at: number }) {
   const { t } = useT();
   const { navigate } = useRouter();
-  const [at, setAt] = useState(0);
+  const hasWorkspace = useHasWorkspace();
   const column = useRef<HTMLDivElement>(null);
 
   const slide = SLIDES[at];
-  const last = at === SLIDES.length - 1;
+  const first = at === 0;
+  const last = at === SLIDE_COUNT - 1;
+  // Paging REPLACES the entry rather than pushing one: the deck is one screen, and the
+  // browser's back button leaving it is what a reader expects, not stepping through six
+  // slides they already turned.
+  const go = (index: number) => navigate(slidePath(index), { replace: true });
   // The path starts at step 1.1, which is the only one of the four that needs nothing built
-  // to be useful. Leaving lands there and so does finishing.
+  // to be useful. Leaving lands there and so does finishing — and with no subject yet, the
+  // same screen is the form that creates one.
   const leave = () => navigate("/raw");
-  const forward = () => (last ? leave() : setAt((n) => n + 1));
+  const forward = () => (last ? leave() : go(at + 1));
+  const back = () => {
+    if (!first) go(at - 1);
+  };
 
   // A deck is paged with the arrow keys by everybody who has ever seen one, and there is no
   // input on this screen for them to be stolen from.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight") forward();
-      if (event.key === "ArrowLeft") setAt((n) => Math.max(0, n - 1));
+      if (event.key === "ArrowLeft") back();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -266,38 +310,37 @@ export function TutorialScreen() {
   }, [at]);
 
   return (
-    // `h-full` and not `min-h-full`: the head and the footer are pinned and the column
-    // between them scrolls, which only works if this box has a height to divide.
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2.5 px-4 py-5 sm:px-6">
-        <Link
-          to="/raw"
-          aria-label="Variatio" // i18n-exempt: es el nombre del producto
-          className="flex items-center gap-2.5"
-        >
-          <Logo className="size-5 text-foreground" />
-          <span className="font-display font-expanded text-body font-bold tracking-tight">
-            Variatio
-          </span>
-        </Link>
-        <button
-          onClick={leave}
-          className="ml-auto text-small text-muted-foreground underline-offset-4 hover:underline"
-        >
-          {t("tutorial.skip")}
-        </button>
-      </div>
-
+    // A flex item of the shell's `main`, which is a padding-less column under the deck:
+    // this box takes the height and the column inside it is what scrolls.
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1">
+        <Rail
+          side="left"
+          label={t("tutorial.back")}
+          name={t("tutorial.back")}
+          tone="quiet"
+          hidden={first}
+          onClick={back}
+        />
+
         <div className="flex min-w-0 flex-1 flex-col">
           {/* LA CABECERA DE LA DIAPOSITIVA, FUERA DEL SCROLL. El suelo de dos líneas es lo
               que fija también el arranque del texto: sin él, una diapositiva de título
-              corto empieza a leerse cuarenta píxeles más arriba que la siguiente. */}
-          <div className="shrink-0 px-4 pt-2 sm:px-6 sm:pt-6">
+              corto empieza a leerse cuarenta píxeles más arriba que la siguiente. «Saltar»
+              vive en esta fila desde que la cabecera de arriba es la de la aplicación. */}
+          <div className="shrink-0 px-4 pt-5 sm:px-6 sm:pt-7">
             <div className={COLUMN}>
-              <p className="text-small text-muted-foreground">
-                {t("tutorial.of", { n: at + 1, total: SLIDES.length })}
-              </p>
+              <div className="flex items-baseline justify-between gap-4">
+                <p className="text-small text-muted-foreground">
+                  {t("tutorial.of", { n: at + 1, total: SLIDE_COUNT })}
+                </p>
+                <button
+                  onClick={leave}
+                  className="text-small text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  {t("tutorial.skip")}
+                </button>
+              </div>
               <h1 className="mt-4 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
                 {t(slide.title)}
               </h1>
@@ -340,9 +383,10 @@ export function TutorialScreen() {
                 ) : null}
 
                 {slide.outro ? (
-                  <div className="flex flex-col gap-6 border-t border-border pt-9">
-                    <HeaderFigure />
-                    <p className={PROSE}>{t(slide.outro)}</p>
+                  <div className="border-t border-border pt-9">
+                    <p className={PROSE}>
+                      {t(hasWorkspace ? slide.outro.choose : slide.outro.create)}
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -359,44 +403,49 @@ export function TutorialScreen() {
           </div>
         </div>
 
-        <NextRail
-          label={t(last ? "tutorial.railStart" : "tutorial.next")}
-          name={t(last ? "tutorial.start" : "tutorial.next")}
-          last={last}
+        <Rail
+          side="right"
+          label={t(
+            last ? (hasWorkspace ? "tutorial.railStart" : "tutorial.railCreate") : "tutorial.next",
+          )}
+          name={t(
+            last ? (hasWorkspace ? "tutorial.start" : "noWorkspace.createMine") : "tutorial.next",
+          )}
+          tone={last ? "attention" : "quiet"}
           onClick={forward}
         />
       </div>
 
-      {/* EL PIE, IGUAL EN TODAS. «Atrás» se dibuja siempre y sólo se vuelve invisible en la
-          primera: quitarlo movía de sitio lo único que queda en la fila. Las rayas son una
-          posición y no un control — ocho puntos pulsables convertirían esto en un menú, y
-          lo que es es una secuencia con un siguiente evidente, que además está dibujado a
-          la derecha a lo alto de la pantalla. */}
-      <div className="shrink-0 border-t border-border px-4 py-4 sm:px-6">
-        <div className={cn(COLUMN, "flex items-center gap-4")}>
-          <Button
-            variant="ghost"
-            className="min-w-[6rem]"
-            aria-hidden={at === 0}
-            tabIndex={at === 0 ? -1 : undefined}
-            disabled={at === 0}
-            onClick={() => setAt((n) => n - 1)}
-          >
-            <span className={cn(at === 0 && "invisible")}>{t("tutorial.back")}</span>
-          </Button>
-          <div aria-hidden className="flex flex-1 flex-wrap justify-end gap-1.5">
-            {SLIDES.map((_, index) => (
+      {/* EL PIE: LAS RAYAS, CENTRADAS, Y CADA UNA LLEVA A SU DIAPOSITIVA (2026-09-02,
+          explicit user request, reversing «las rayas son una posición y no un control»).
+          «Atrás» se fue al borde izquierdo, así que aquí no queda otra cosa que el índice.
+          La raya es de 3 px y el botón que la envuelve no: la zona pulsable es la fila
+          entera, que es lo que hace que seis marcas finas sean seis destinos. */}
+      <div className="shrink-0 border-t border-border px-4 py-2.5 sm:px-6">
+        <div
+          role="group"
+          aria-label={t("tutorial.slides")}
+          className="flex items-center justify-center gap-1"
+        >
+          {SLIDES.map((entry, index) => (
+            <button
+              key={entry.title}
+              onClick={() => go(index)}
+              title={t(entry.title)}
+              aria-label={t("tutorial.goTo", { n: index + 1 })}
+              aria-current={index === at ? "step" : undefined}
+              className="group px-1 py-2.5"
+            >
               <span
-                key={index}
                 className={cn(
-                  "h-[3px] w-6",
-                  index < at && "bg-settled",
+                  "block h-[3px] w-7 transition-colors",
+                  index < at && "bg-settled group-hover:bg-foreground",
                   index === at && "bg-attention",
-                  index > at && "bg-border",
+                  index > at && "bg-border group-hover:bg-muted-foreground",
                 )}
               />
-            ))}
-          </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

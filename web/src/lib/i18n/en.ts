@@ -345,6 +345,9 @@ export const en: Catalogue = {
   "tutorial.railStart": "Start",
   "tutorial.start": "Start with step 1.1",
   "tutorial.again": "See the explanation again",
+  "tutorial.railCreate": "Create",
+  "tutorial.slides": "Slides",
+  "tutorial.goTo": "Go to slide {n}",
 
   "tutorial.fig.yours": "You provide your notes and your exercises",
   "tutorial.fig.learns": "The system learns your subject",
@@ -359,7 +362,6 @@ export const en: Catalogue = {
   "tutorial.fig.review": "You read it",
   "tutorial.fig.rate": "You rate it",
   "tutorial.fig.next": "You correct or carry on",
-  "tutorial.fig.you": "Your account",
 
   "tutorial.s1.title": "Variatio is an application that writes exercises for your subject",
   "tutorial.s1.body":
@@ -375,7 +377,7 @@ export const en: Catalogue = {
 
   "tutorial.s3.title": "Phase 1: preparing the subject",
   "tutorial.s3.body":
-    "Before you can ask it for anything, the system has to learn the subject: it reads what you upload and pulls out of it what it needs. That is four steps, in this order, and they are the four buttons you carry along the top at all times: the bar tells you which one you are on and which is next.",
+    "Before you ask it for anything, the system has to learn the subject: it reads what you upload and pulls out of it what it needs. There are four steps, in this order, and they are the four buttons that have just lit up above: the bar tells you which one you are on and which is next.",
   "tutorial.s3.step1":
     "You upload your documents, the notes on one side and the exercises on the other, and they are read page by page. It is the only step where you have to go looking for files: everything else comes from here.",
   "tutorial.s3.step2":
@@ -387,7 +389,7 @@ export const en: Catalogue = {
 
   "tutorial.s4.title": "Phase 2: asking for exercises",
   "tutorial.s4.body":
-    "With the four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on you ask it for exercises, as many as you want, and keep the ones that serve you.",
+    "With the four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on, under «Create exercises», you ask for as many as you want and keep the ones that serve you.",
   "tutorial.s4.b1":
     "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
   "tutorial.s4.b2":
@@ -412,8 +414,10 @@ export const en: Catalogue = {
     "So much for what it does and how it is used. What is asked of you now is to prepare it with a subject of your own and answer, at each step, a few short questions about what came out: those answers are what the study measures.",
   "tutorial.s6.b1":
     "Correcting is optional, and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
-  "tutorial.s6.outro":
-    "Pick your subject at the top left — if you do not have one yet, you can create it right there — and start at step 1.1. In your account menu, on the right, are «My variatios», the guide and this explanation in case you want to see it again.",
+  "tutorial.s6.outro.create":
+    "You do not have a subject yet. Create it at the top left, where it says «No subject», and start at step 1.1: until it exists, the steps above lead nowhere. In your account menu, on the right, are «My variatios», the guide and this explanation in case you want to see it again.",
+  "tutorial.s6.outro.choose":
+    "Pick your subject at the top left — or create another one right there — and start at step 1.1. In your account menu, on the right, are «My variatios», the guide and this explanation in case you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",

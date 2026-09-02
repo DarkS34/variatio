@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
+import { slideOf } from "@/features/tutorial/reveal";
 import { useHasWorkspace } from "@/state/auth";
 import { currentStepPath } from "@/lib/steps";
 import { usePipeline, useRaw } from "@/state/queries";
@@ -66,6 +67,13 @@ export function App() {
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
+    // THE TUTORIAL RUNS INSIDE THE SHELL (2026-09-02, explicit user request; it used to be
+    // outside, with a header of its own). The header above it is the real one, and the
+    // deck unlocks its parts as it explains them — the shell reads the slide from the
+    // path, which is why one route per slide.
+    const slide = slideOf(path);
+    if (slide !== null) return <TutorialScreen at={slide} />;
+
     if (path === "/guide" || path.startsWith("/guide/")) {
       return <GuideScreen slug={path.slice("/guide/".length)} />;
     }
@@ -127,24 +135,6 @@ export function App() {
         );
     }
   };
-
-  // EL TUTORIAL VA FUERA DEL SHELL, como las pantallas de entrada. Lleva su propia
-  // cabecera — la marca y «saltar» — y dentro del shell salían dos: la barra del recorrido
-  // encima de una explicación de qué es el recorrido. Tampoco necesita instancia: explica,
-  // entre otras cosas, cómo llegar a tener una.
-  if (path === "/tutorial") {
-    return (
-      <Suspense
-        fallback={
-          <div className="flex justify-center py-16">
-            <Spinner className="size-5 text-muted-foreground" />
-          </div>
-        }
-      >
-        <TutorialScreen />
-      </Suspense>
-    );
-  }
 
   return (
     <AppShell>

@@ -390,6 +390,9 @@ export const es = {
   "tutorial.railStart": "Empezar",
   "tutorial.start": "Empezar por el Paso 1.1",
   "tutorial.again": "Ver la explicación otra vez",
+  "tutorial.railCreate": "Crear",
+  "tutorial.slides": "Diapositivas",
+  "tutorial.goTo": "Ir a la diapositiva {n}",
 
   // The figures' own labels, and whatever a figure says the prose beside it does not
   // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
@@ -409,7 +412,6 @@ export const es = {
   "tutorial.fig.review": "Lo lees",
   "tutorial.fig.rate": "Lo valoras",
   "tutorial.fig.next": "Corriges o continúas",
-  "tutorial.fig.you": "Tu cuenta",
 
   "tutorial.s1.title": "Variatio es una aplicación que escribe ejercicios para tu asignatura",
   "tutorial.s1.body":
@@ -427,7 +429,7 @@ export const es = {
 
   "tutorial.s3.title": "Fase 1: preparar la asignatura",
   "tutorial.s3.body":
-    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: lee lo que subes y saca de ahí lo que necesita. Son cuatro pasos, en este orden, y son los cuatro botones que llevas arriba en todo momento: la barra te dice en cuál vas y cuál te toca.",
+    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: lee lo que subes y saca de ahí lo que necesita. Son cuatro pasos, en este orden, y son los cuatro botones que se acaban de encender arriba: la barra te dice en cuál vas y cuál te toca.",
   "tutorial.s3.step1":
     "Subes tus documentos, los apuntes por un lado y los ejercicios por otro, y se leen página a página. Es el único paso en el que tienes que buscar archivos: todo lo demás sale de aquí.",
   "tutorial.s3.step2":
@@ -444,7 +446,7 @@ export const es = {
   // las tres preguntas del encargo las dibuja la figura, así que aquí no se enumeran.
   "tutorial.s4.title": "Fase 2: pedir ejercicios",
   "tutorial.s4.body":
-    "Con los cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí le pides ejercicios, tantos como quieras, y te quedas con los que te sirvan.",
+    "Con los cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí, en «Crear ejercicios», le pides tantos como quieras y te quedas con los que te sirvan.",
   "tutorial.s4.b1":
     "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
@@ -475,8 +477,13 @@ export const es = {
     "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre lo que ha salido: esas respuestas son lo que mide el estudio.",
   "tutorial.s6.b1":
     "Corregir es opcional, y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
-  "tutorial.s6.outro":
-    "Elige tu asignatura arriba a la izquierda —si todavía no tienes ninguna, ahí mismo puedes crearla— y empieza por el Paso 1.1. En el menú de tu cuenta, a la derecha, están «Mis variatios», la guía y esta explicación por si quieres volver a verla.",
+  // DOS SALIDAS, SEGÚN TENGA O NO ASIGNATURA quien lee (2026-09-02, explicit user request):
+  // a quien acaba de aceptar una invitación no se le puede decir «elige» — no hay nada que
+  // elegir — y el botón de arriba a la izquierda, que es al que apunta, dice «Sin asignatura».
+  "tutorial.s6.outro.create":
+    "Todavía no tienes ninguna asignatura. Créala arriba a la izquierda, donde pone «Sin asignatura», y empieza por el Paso 1.1: hasta que exista, los pasos de arriba no llevan a ningún sitio. En el menú de tu cuenta, a la derecha, están «Mis variatios», la guía y esta explicación por si quieres volver a verla.",
+  "tutorial.s6.outro.choose":
+    "Elige tu asignatura arriba a la izquierda —o crea otra ahí mismo— y empieza por el Paso 1.1. En el menú de tu cuenta, a la derecha, están «Mis variatios», la guía y esta explicación por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
