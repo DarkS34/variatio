@@ -584,33 +584,42 @@ body {
 
    The transparent border plus `background-clip: padding-box` is what gives the thumb
    its inset: it keeps the pill off the edge of the content without a track to sit in.
-   Firefox gets the two properties it has; everything else gets the pseudo-elements. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 32%, transparent) transparent;
-}
+   Firefox gets the two properties it has; everything else gets the pseudo-elements.
 
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-::-webkit-scrollbar-track,
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--muted-foreground) 32%, transparent);
-  border: 3px solid transparent;
-  background-clip: padding-box;
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklch, var(--muted-foreground) 52%, transparent);
-  background-clip: padding-box;
-}
-::-webkit-scrollbar-thumb:active {
-  background: color-mix(in oklch, var(--muted-foreground) 68%, transparent);
-  background-clip: padding-box;
+   IN `@layer base`, AND THAT IS NOT STYLE (2026-09-02): unlayered, `* { scrollbar-width:
+   thin }` beat every `[scrollbar-width:none]` utility in the application — the same cascade
+   defect the `border-color` rule had — so the navigation strip that hides its bar on
+   purpose drew a thin one in every browser, and a Chrome that honours the standard
+   property ignores the `::-webkit-scrollbar` rules once it is set. Measured: the strip's
+   computed `scrollbar-width` was `thin` with the utility applied. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 32%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--muted-foreground) 32%, transparent);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--muted-foreground) 52%, transparent);
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background: color-mix(in oklch, var(--muted-foreground) 68%, transparent);
+    background-clip: padding-box;
+  }
 }
 
 /* The token stream and the log console produce a lot of rows in a narrow panel, so

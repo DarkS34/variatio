@@ -240,10 +240,19 @@ function NavRule() {
  * Outside the tutorial `reveal` is null and this is a plain group. Inside it, a part the
  * deck has not reached yet is a dim silhouette — there, so the reader sees the bar fill
  * in as they go, but `inert`, because a control that has not been explained is not on
- * offer — and the part the current slide is about carries a thin ring in `--attention`.
- * A ring and not a fill: the pointing is meant to be slight, and the step that is «te
- * toca ahora» already spends the tint. The margin/padding pair is constant across slides
- * so that unlocking moves nothing.
+ * offer — and the part the current slide is about carries a 2 px rule in `--attention`
+ * under it. A rule and not a fill: the pointing is meant to be slight, and the step that
+ * is «te toca ahora» already spends the tint.
+ *
+ * THE RULE IS AN INSET SHADOW AND THE WRAPPER PADS VERTICALLY ONLY (2026-09-02, measured
+ * twice). The first version was an outside ring on a `-m-1 p-1` wrapper, and inside the
+ * nav — a scroller on both axes, because `overflow-x: auto` makes `overflow-y` auto too —
+ * it overflowed 4 px each way (834 against 830 wide, 55 against 51 tall) and was clipped
+ * top and bottom. An inset ring on a padded wrapper fixed the clipping but widened the
+ * strip by 12 px, so at a width where it fits on every other screen it scrolled on the
+ * tutorial alone. The rule needs no air at the sides, so the wrapper adds height only,
+ * constant across slides so that unlocking moves nothing, and under the deck the nav line
+ * gives the same height back.
  */
 function Unlock({
   reveal,
@@ -261,10 +270,9 @@ function Unlock({
       aria-hidden={locked || undefined}
       className={cn(
         "flex shrink-0 items-center gap-0.5 rounded-md transition-[opacity,box-shadow] duration-700",
-        reveal !== null && "-m-1 p-1",
+        reveal !== null && "py-1",
         locked && "pointer-events-none select-none opacity-30",
-        reveal?.pointed &&
-          "ring-2 ring-[color-mix(in_oklch,var(--attention)_55%,transparent)]",
+        reveal?.pointed && "shadow-[inset_0_-2px_0_0_var(--attention)]",
         className,
       )}
     >
@@ -534,7 +542,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}
             reveal={reveal}
-            className="flex border-t border-border px-3 py-1.5 xl:hidden"
+            className={cn(
+              "flex border-t border-border xl:hidden",
+              // The wrappers add 4 px of height under the deck; the line gives it back.
+              deck ? "px-3 py-0.5" : "px-3 py-1.5",
+            )}
           />
         ) : null}
 
