@@ -25,9 +25,14 @@ import { cn } from "@/lib/utils";
  * it is a picture of something the reader is about to go and look at; a SENTENCE WRITTEN
  * FOR THE READER is set in the reading face at the reading size, wherever it happens to
  * sit. Mixing those two up is what made slide 2 read as a diagram with a caption when it
- * is two answers to one question.
+ * is two answers to one question — and what made the first slide's three moments and the
+ * last slide's four beats read as footnotes to their own paragraph (2026-09-02): they
+ * were sentences for the reader drawn at 12 and 14 px under 21 px of prose.
  */
 export const PROSE = "font-reading text-[1.1875rem] leading-[1.65] sm:text-[1.3125rem]";
+
+/** A sentence inside a figure: the reading face, set a little tighter because it wraps in a box. */
+const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.3125rem]";
 
 /**
  * THE PICTURES THE TUTORIAL EXPLAINS ITSELF WITH.
@@ -75,13 +80,13 @@ function Box({
         // `justify-center` y no sólo `items-center`: las cajas de una fila se estiran a la
         // altura de la más alta, así que una con menos dentro dejaba su texto pegado
         // arriba. Es lo que se veía en la diapositiva de «los cuatro terminan igual».
-        "flex min-w-0 flex-col items-center justify-center gap-1.5 text-center",
-        !bare && "border px-3 py-2.5",
+        "flex min-w-0 flex-col items-center justify-center gap-2 text-center",
+        !bare && "border px-3 py-4",
         !bare && marked
           ? "border-attention bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]"
           : null,
         !bare && !marked && "border-border bg-card",
-        bare && "px-2 py-1",
+        bare && "px-2 py-2",
         className,
       )}
     >
@@ -100,14 +105,14 @@ function Box({
  */
 function Chain({ children }: { children: React.ReactNode[] }) {
   return (
-    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:gap-2.5">
+    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:gap-3">
       {children.map((box, index) => (
         <Fragment key={index}>
           {index > 0 ? (
             <span className="flex shrink-0 items-center justify-center">
               <ArrowRight
                 aria-hidden
-                className="size-4 rotate-90 text-muted-foreground sm:rotate-0"
+                className="size-5 rotate-90 text-muted-foreground sm:rotate-0"
               />
             </span>
           ) : null}
@@ -147,7 +152,7 @@ export function NavFigure({ active }: { active?: number }) {
           <div
             key={step.path}
             className={cn(
-              "flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2",
+              "flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2.5",
               marked && "bg-[color-mix(in_oklch,var(--attention)_10%,transparent)]",
             )}
           >
@@ -165,7 +170,9 @@ export function NavFigure({ active }: { active?: number }) {
             </span>
             <span
               className={cn(
-                "min-w-0 truncate text-small",
+                // Numbers only on a phone: four names truncated to their first letter say
+                // nothing, and the header figure already draws the row that way.
+                "hidden min-w-0 truncate text-small sm:inline",
                 marked ? "font-semibold text-foreground" : "text-muted-foreground",
               )}
             >
@@ -189,25 +196,33 @@ export function NavFigure({ active }: { active?: number }) {
 export function FlowFigure() {
   const { t } = useT();
   return (
-    <Chain>
-      {[
-        <Box key="yours" bare className="w-full gap-2.5">
-          <span aria-hidden className="flex items-center gap-1 text-muted-foreground">
-            <User className="size-5" />
-            <FileText className="size-5" />
-          </span>
-          <span className="text-body text-muted-foreground">{t("tutorial.fig.yours")}</span>
-        </Box>,
-        <Box key="learns" bare className="w-full gap-2.5">
-          <Logo className="size-5 text-foreground" />
-          <span className="text-body text-muted-foreground">{t("tutorial.fig.learns")}</span>
-        </Box>,
-        <Box key="new" bare marked className="w-full gap-2.5">
-          <Sparkles aria-hidden className="size-5 text-attention" />
-          <span className="text-body font-semibold text-foreground">{t("tutorial.fig.new")}</span>
-        </Box>,
-      ]}
-    </Chain>
+    <div className="py-4">
+      <Chain>
+        {[
+          <Box key="yours" bare className="w-full gap-3">
+            <span aria-hidden className="flex items-center gap-1.5 text-muted-foreground">
+              <User className="size-7" />
+              <FileText className="size-7" />
+            </span>
+            <span className={cn(FIGURE_PROSE, "text-muted-foreground")}>
+              {t("tutorial.fig.yours")}
+            </span>
+          </Box>,
+          <Box key="learns" bare className="w-full gap-3">
+            <Logo className="size-7 text-foreground" />
+            <span className={cn(FIGURE_PROSE, "text-muted-foreground")}>
+              {t("tutorial.fig.learns")}
+            </span>
+          </Box>,
+          <Box key="new" bare marked className="w-full gap-3">
+            <Sparkles aria-hidden className="size-7 text-attention" />
+            <span className={cn(FIGURE_PROSE, "font-semibold text-foreground")}>
+              {t("tutorial.fig.new")}
+            </span>
+          </Box>,
+        ]}
+      </Chain>
+    </div>
   );
 }
 
@@ -225,9 +240,9 @@ export function SourcesFigure() {
     { title: "raw.slot.exemplars", body: "tutorial.fig.exercises" },
   ];
   return (
-    <div className="grid gap-2.5 sm:grid-cols-2">
+    <div className="grid gap-3 sm:grid-cols-2">
       {piles.map(({ title, body }) => (
-        <Box key={title} className="items-start justify-start gap-2.5 p-4 text-left">
+        <Box key={title} className="items-start justify-start gap-3 p-4 text-left">
           <span className="flex items-center gap-1.5 text-small font-semibold uppercase tracking-wide text-muted-foreground">
             <FileText aria-hidden className="size-4 shrink-0" />
             {t(title)}
@@ -254,21 +269,21 @@ export function AskFigure() {
   return (
     <Chain>
       {[
-        <Box key="ask" className="w-full items-start gap-2 p-3.5 text-left">
+        <Box key="ask" className="w-full items-start gap-3 p-5 text-left">
           <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
             {t("tutorial.fig.youAsk")}
           </span>
-          <span className="flex flex-wrap gap-1.5">
+          <span className="flex flex-wrap gap-2">
             {asked.map((key) => (
-              <span key={key} className="border border-input px-2 py-1 text-small">
+              <span key={key} className="border border-input px-2.5 py-1.5 text-body">
                 {t(key)}
               </span>
             ))}
           </span>
         </Box>,
-        <Box key="item" marked className="w-full gap-2">
-          <Sparkles aria-hidden className="size-5 text-attention" />
-          <span className="text-small font-semibold">{t("tutorial.fig.written")}</span>
+        <Box key="item" marked className="w-full gap-3 p-5">
+          <Sparkles aria-hidden className="size-7 text-attention" />
+          <span className={cn(FIGURE_PROSE, "font-semibold")}>{t("tutorial.fig.written")}</span>
         </Box>,
       ]}
     </Chain>
@@ -281,6 +296,8 @@ export function AskFigure() {
  * The marked one is «lo valoras», which is the only beat the reader is being asked for:
  * the other three are what the step does around it. It is the contract the tutorial states
  * once — each step announces this before it happens — rather than repeating it four times.
+ * The prose beside it therefore does NOT walk the four beats again (2026-09-02): it says
+ * what the picture cannot, that correcting is optional and that a hand correction wins.
  */
 export function CloseFigure() {
   const { t } = useT();
@@ -293,29 +310,34 @@ export function CloseFigure() {
   return (
     <Chain>
       {beats.map(({ key, marked }) => (
-        <Box key={key} marked={marked} className="w-full px-2">
-          {marked ? <Check aria-hidden className="size-4 text-attention" /> : null}
-          <span className={cn("text-small", marked && "font-medium")}>{t(key)}</span>
+        <Box key={key} marked={marked} className="w-full px-3 py-5">
+          {marked ? <Check aria-hidden className="size-5 text-attention" /> : null}
+          <span className={cn(FIGURE_PROSE, marked && "font-semibold")}>{t(key)}</span>
         </Box>
       ))}
     </Chain>
   );
 }
 
-/** Three proposals, none of them named until you have chosen. */
+/**
+ * Three proposals, none of them named until you have chosen.
+ *
+ * The label is `grid.proposal`, the comparison screen's own, so the card the reader will
+ * see is headed with the very words drawn here.
+ */
 export function BlindFigure() {
   const { t } = useT();
   return (
-    <div className="grid gap-2.5 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-3">
       {["A", "B", "C"].map((letter) => (
-        <Box key={letter} className="items-start gap-2 text-left">
-          <span className="text-micro text-muted-foreground">
-            {t("tutorial.fig.proposal", { letter })}
+        <Box key={letter} className="items-start gap-3 p-4 text-left">
+          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("grid.proposal", { letter })}
           </span>
-          <span className="flex w-full flex-col gap-1" aria-hidden>
-            <span className="h-1 w-full bg-border" />
-            <span className="h-1 w-4/5 bg-border" />
-            <span className="h-1 w-2/3 bg-border" />
+          <span className="flex w-full flex-col gap-1.5" aria-hidden>
+            <span className="h-1.5 w-full bg-border" />
+            <span className="h-1.5 w-4/5 bg-border" />
+            <span className="h-1.5 w-2/3 bg-border" />
           </span>
         </Box>
       ))}

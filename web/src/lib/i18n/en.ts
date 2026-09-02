@@ -346,8 +346,6 @@ export const en: Catalogue = {
   "tutorial.start": "Start with step 1.1",
   "tutorial.again": "See the explanation again",
 
-  "tutorial.stepName": "Step {n}: {name}",
-
   "tutorial.fig.yours": "You provide your notes and your exercises",
   "tutorial.fig.learns": "The system learns your subject",
   "tutorial.fig.new": "You ask it for as many exercises as you want",
@@ -360,45 +358,46 @@ export const en: Catalogue = {
   "tutorial.fig.build": "It is built",
   "tutorial.fig.review": "You read it",
   "tutorial.fig.rate": "You rate it",
-  "tutorial.fig.next": "You carry on or correct",
+  "tutorial.fig.next": "You correct or carry on",
   "tutorial.fig.you": "Your account",
-  "tutorial.fig.proposal": "Proposal {letter}",
 
   "tutorial.s1.title": "Variatio is an application that writes exercises for your subject",
   "tutorial.s1.body":
-    "It runs on AI models, but it does not search the internet for the exercises or make them up from nothing: it writes them from your notes and from the subject's own exercises, imitating the way you pose them.",
+    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it writes them from your notes and from your own exercises, imitating the way you pose them. The subject is taught to it once.",
 
   "tutorial.s2.title": "Before you start, gather your files",
   "tutorial.s2.body":
     "The route has not begun yet. For now the only thing you have to do is find two things you already have, in PDF or Word, however they are.",
-  "tutorial.s2.aside":
-    "A couple of topics is enough to try it out: every document is read in full, page by page, so uploading the whole subject is keeping you waiting for no reason. There is no need to sit watching: it can be left working and come back to later.",
+  "tutorial.s2.b1":
+    "A couple of topics is enough to try it out. Every document is read in full, page by page, and that takes time: uploading the whole subject only makes the wait longer for no reason.",
+  "tutorial.s2.b2":
+    "There is no need to sit watching while it reads: you can leave it working and come back later.",
 
   "tutorial.s3.title": "Phase 1: preparing the subject",
   "tutorial.s3.body":
-    "Four steps, in this order and in one sitting. They are the four buttons you carry along the top at all times, numbered 1.1 to 1.4: the bar tells you which one you are on and which is next.",
+    "Before you can ask it for anything, the system has to learn the subject: it reads what you upload and pulls out of it what it needs. That is four steps, in this order, and they are the four buttons you carry along the top at all times: the bar tells you which one you are on and which is next.",
   "tutorial.s3.step1":
-    "You upload your documents: the notes on one side and the exercises on the other. It is the only step where you have to go looking for files, because everything else comes from here.",
+    "You upload your documents, the notes on one side and the exercises on the other, and they are read page by page. It is the only step where you have to go looking for files: everything else comes from here.",
   "tutorial.s3.step2":
-    "Your exercises are looked at and the different shapes they take are separated: code, multiple choice, tracing… and what parts each one carries. It is the template new ones are written with, so it is worth recognising.",
+    "From your exercises it pulls out the types you use — multiple choice, problems, essay questions… — and what parts each one carries. New ones will be written to that same template.",
   "tutorial.s3.step3":
-    "Your notes are read and the subject's topics are pulled out, along with the order they rest on one another. It is what says what can be taken as known in an exercise and what cannot yet.",
+    "From your notes it pulls out the subject's topics and which topic rests on which: a graph of topics, which you will see drawn. It is what says what can be taken as known in an exercise and what cannot yet.",
   "tutorial.s3.step4":
-    "The exercises in your documents are collected one by one and each is given the topic it practises. They are the examples imitated when writing a new one.",
+    "The exercises in your documents are collected one by one and each is tagged with the topic it practises. They are the examples imitated when writing a new one.",
 
   "tutorial.s4.title": "Phase 2: asking for exercises",
   "tutorial.s4.body":
-    "With those four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on you ask it for exercises: you say what type, on what topic and at what level, and it writes them. You can ask for several at once and keep the one you like best.",
+    "With the four steps given as good, the system knows everything it needs about your subject and none of it has to be prepared again. From here on you ask it for exercises, as many as you want, and keep the ones that serve you.",
   "tutorial.s4.b1":
-    "If you tell it what you have already covered in class, the exercise will rest on that alone and use nothing you have not explained yet.",
+    "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
   "tutorial.s4.b2":
-    "Every exercise that comes out is saved on its own under «My variatios», in your account menu, with the commission that produced it. You do not have to copy it anywhere.",
+    "Every exercise is saved automatically under «My variatios», in your account menu, together with what you asked for to get it. You do not have to copy it anywhere.",
   "tutorial.s4.b3":
-    "You can go back to any step of phase 1 whenever you like. If you change something in an earlier step, the later ones that have gone stale are named.",
+    "You can go back to any step of phase 1 whenever you like. If you change something, you are told which later steps have gone stale.",
 
   "tutorial.s5.title": "Phase 3: comparing three versions blind",
   "tutorial.s5.body":
-    "You are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use, and pick the best. Only at the end is it revealed where each came from.",
+    "Under «Compare» you are given three versions of the same exercise, written three different ways, without being told which is which. You read them, say of each whether it would be of use and pick the best. Only at the end is it revealed where each came from.",
   "tutorial.s5.b1":
     "The order changes every time, so that a position on screen does not sway what you pick.",
   "tutorial.s5.b2":
@@ -408,15 +407,11 @@ export const en: Catalogue = {
 
   "tutorial.s6.title": "And now, evaluating the system",
   "tutorial.s6.body":
-    "So much for what it does and how it is used. What is asked of you from here on is to set it up with a subject of your own and say, step by step, how it came out.",
+    "So much for what it does and how it is used. What is asked of you now is to prepare it with a subject of your own and answer, at each step, a few short questions about what came out: those answers are what the study measures.",
   "tutorial.s6.b1":
-    "No step takes anything as good on its own: first you see it, then you rate it, and at the foot there are always two ways out, correcting something or carrying on to the next one.",
-  "tutorial.s6.b2":
-    "Correct without fear: what you fix by hand always wins, over what was understood and over any later rebuild.",
-  "tutorial.s6.aside":
-    "Each step's questions are the only thing asked in return, and they are exactly what is being measured in the study.",
+    "Correcting is optional, and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
   "tutorial.s6.outro":
-    "Pick your subject at the top left and start at step 1.1; if you do not have one yet, you can create it right there. In your account menu, on the right, are your exercises, the guide and this explanation whenever you want to see it again.",
+    "Pick your subject at the top left — if you do not have one yet, you can create it right there — and start at step 1.1. In your account menu, on the right, are «My variatios», the guide and this explanation in case you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",

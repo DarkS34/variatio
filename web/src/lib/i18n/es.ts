@@ -374,14 +374,15 @@ export const es = {
   // has never seen this and does not even know what the thing is called, so the first
   // sentence is a definition — name, category, what it is for — and every negation comes
   // after it. Leaving here they have to be able to use the whole thing without asking
-  // anybody: what it is, what it wants from them before they start, the four steps of
-  // preparing a subject, what having finished them buys, how an exercise is asked for,
-  // how the blind comparison works, and what is being asked of them as an evaluator. The
-  // guide stays as the per-screen reference; this is the route end to end.
+  // anybody: what it is, what it wants from them before they start, and then the three
+  // phases in the order they happen — preparing a subject in four steps, asking for
+  // exercises, comparing three versions blind — and what is being asked of them as an
+  // evaluator. The guide stays as the per-screen reference; this is the route end to end.
   //
-  // The keys are numbered BY SLIDE, `s1` to `s8`, and the four steps live in `s3.step*`
+  // The keys are numbered BY SLIDE, `s1` to `s6`, and the four steps live in `s3.step*`
   // because the index is the only pass over them — a slide per step said the same thing
-  // again with one sentence added.
+  // again with one sentence added. Every sentence is short enough to be read on a slide:
+  // a lead of two or three lines, points of one or two, and nothing a figure already says.
   "tutorial.skip": "Saltar la explicación",
   "tutorial.of": "{n} de {total}",
   "tutorial.back": "Atrás",
@@ -390,12 +391,11 @@ export const es = {
   "tutorial.start": "Empezar por el Paso 1.1",
   "tutorial.again": "Ver la explicación otra vez",
 
-  "tutorial.stepName": "Paso {n}: {name}",
-
   // The figures' own labels, and whatever a figure says the prose beside it does not
   // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
   // thing said twice. The flow's three are full sentences with a subject, because the
-  // question they answer is who is expected to do what.
+  // question they answer is who is expected to do what. «Propuesta A» is not here: the
+  // blind figure reads `grid.proposal`, the comparison screen's own label.
   "tutorial.fig.yours": "Tú aportas tus apuntes y tus ejercicios",
   "tutorial.fig.learns": "El sistema aprende tu asignatura",
   "tutorial.fig.new": "Le pides todos los ejercicios que quieras",
@@ -408,50 +408,53 @@ export const es = {
   "tutorial.fig.build": "Se construye",
   "tutorial.fig.review": "Lo lees",
   "tutorial.fig.rate": "Lo valoras",
-  "tutorial.fig.next": "Sigues o corriges",
+  "tutorial.fig.next": "Corriges o continúas",
   "tutorial.fig.you": "Tu cuenta",
-  "tutorial.fig.proposal": "Propuesta {letter}",
 
   "tutorial.s1.title": "Variatio es una aplicación que escribe ejercicios para tu asignatura",
   "tutorial.s1.body":
-    "Funciona con modelos de inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de los ejercicios de la asignatura, imitando tu forma de plantearlos.",
+    "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los escribe a partir de tus apuntes y de tus propios ejercicios, imitando la forma en que los planteas. La asignatura se le enseña una sola vez.",
 
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
     "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar dos cosas que ya tienes, en PDF o en Word, tal y como estén.",
-  // Absorbe lo que era un punto de la última diapositiva: «sube solo un par de temas» y
-  // «cada documento se lee entero» decían lo mismo con cinco diapositivas de por medio, y
-  // el sitio donde sirve de algo es este, justo antes de ir a buscar los archivos.
-  "tutorial.s2.aside":
-    "Con un par de temas basta para probarlo: cada documento se lee entero, página a página, así que subir la asignatura completa es tenerte esperando sin necesidad. No hace falta que te quedes mirando: puedes dejarlo trabajando y volver más tarde.",
+  // «Sube solo un par de temas» y «esto tarda» van aquí, justo antes de ir a buscar los
+  // archivos, que es donde sirven de algo.
+  "tutorial.s2.b1":
+    "Con un par de temas basta para probarlo. Cada documento se lee entero, página a página, y eso lleva su tiempo: subir la asignatura completa es alargar la espera sin necesidad.",
+  "tutorial.s2.b2":
+    "No hace falta que te quedes mirando mientras lee: puedes dejarlo trabajando y volver más tarde.",
 
   "tutorial.s3.title": "Fase 1: preparar la asignatura",
   "tutorial.s3.body":
-    "Cuatro pasos, en este orden y de una sentada. Son los cuatro botones que llevas arriba en todo momento, numerados del 1.1 al 1.4: la barra te dice en cuál vas y cuál te toca.",
+    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: lee lo que subes y saca de ahí lo que necesita. Son cuatro pasos, en este orden, y son los cuatro botones que llevas arriba en todo momento: la barra te dice en cuál vas y cuál te toca.",
   "tutorial.s3.step1":
-    "Subes tus documentos: los apuntes por un lado y los ejercicios por otro. Es el único paso en el que tienes que buscar archivos, porque todo lo demás sale de aquí.",
+    "Subes tus documentos, los apuntes por un lado y los ejercicios por otro, y se leen página a página. Es el único paso en el que tienes que buscar archivos: todo lo demás sale de aquí.",
   "tutorial.s3.step2":
-    "Se miran tus ejercicios y se separan las formas distintas que tienen: de código, tipo test, de trazas… y qué partes lleva cada una. Es la plantilla con la que se escriben los nuevos, así que conviene que te suene.",
+    "De tus ejercicios se sacan los tipos que usas —tipo test, de problemas, de desarrollo…— y qué partes lleva cada uno. Los nuevos se escribirán con esa misma plantilla.",
+  // La única vez que el tutorial dice «grafo», atada al nombre visible, como hace la
+  // pantalla del paso: es lo que la persona va a ver dibujado.
   "tutorial.s3.step3":
-    "Se leen tus apuntes y se sacan los temas de la asignatura y en qué orden se apoyan unos en otros. Es lo que dice qué se puede dar por sabido en un ejercicio y qué todavía no.",
+    "De tus apuntes se sacan los temas de la asignatura y qué tema se apoya en cuál: un grafo de temas, que verás dibujado. Es lo que dice qué se puede dar por sabido en un ejercicio y qué todavía no.",
   "tutorial.s3.step4":
-    "Se recogen uno a uno los ejercicios de tus documentos y a cada uno se le pone el tema que practica. De ahí salen los ejemplos que se imitan al escribir uno nuevo.",
+    "Se recogen uno a uno los ejercicios de tus documentos y a cada uno se le pone la etiqueta del tema que practica. Son los ejemplos que se imitan al escribir uno nuevo.",
 
   // LA BISAGRA ES LA PRIMERA FRASE DE LA FASE 2, no una diapositiva aparte: «con esto ya
-  // está preparado» seguido de «pedir ejercicios» era el mismo giro contado dos veces.
+  // está preparado» seguido de «pedir ejercicios» era el mismo giro contado dos veces. Y
+  // las tres preguntas del encargo las dibuja la figura, así que aquí no se enumeran.
   "tutorial.s4.title": "Fase 2: pedir ejercicios",
   "tutorial.s4.body":
-    "Con esos cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí le pides ejercicios: le dices de qué tipo, sobre qué tema y de qué nivel, y te los escribe. Puedes pedir varios a la vez y quedarte con el que más te guste.",
+    "Con los cuatro pasos dados por buenos, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. A partir de aquí le pides ejercicios, tantos como quieras, y te quedas con los que te sirvan.",
   "tutorial.s4.b1":
-    "Si le dices lo que ya has dado en clase, el ejercicio se apoyará solo en eso y no usará nada que todavía no hayas explicado.",
+    "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
-    "Cada ejercicio que sale se guarda solo en «Mis variatios», en el menú de tu cuenta, con el encargo que lo produjo. No hace falta que lo copies a ningún sitio.",
+    "Cada ejercicio queda guardado automáticamente en «Mis variatios», en el menú de tu cuenta, junto con lo que pediste para obtenerlo. No hace falta copiarlo a ningún sitio.",
   "tutorial.s4.b3":
-    "Puedes volver a cualquier paso de la fase 1 cuando quieras. Si cambias algo de un paso anterior, se te avisa de qué pasos se han quedado desfasados.",
+    "Puedes volver a cualquier paso de la fase 1 cuando quieras. Si cambias algo, se te avisa de qué pasos posteriores se han quedado desfasados.",
 
   "tutorial.s5.title": "Fase 3: comparar tres versiones a ciegas",
   "tutorial.s5.body":
-    "Se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría, y eliges la mejor. Solo al final se revela de dónde salía cada una.",
+    "En «Comparar» se te dan tres versiones del mismo ejercicio, escritas de tres maneras distintas, sin decir cuál es cuál. Las lees, dices de cada una si te serviría y eliges la mejor. Solo al final se revela de dónde salía cada una.",
   "tutorial.s5.b1":
     "El orden cambia cada vez, para que la posición en la pantalla no influya en lo que elijas.",
   "tutorial.s5.b2":
@@ -459,19 +462,16 @@ export const es = {
   "tutorial.s5.aside":
     "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
 
-  // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN, y de ahí a la puerta. Eran dos
-  // diapositivas y la segunda decía lo que dice el botón: elige asignatura y empieza.
+  // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN, y de ahí a la puerta. La figura dibuja
+  // los cuatro tiempos de cada paso, así que el texto no los vuelve a recorrer: dice lo que
+  // la figura no puede, que corregir es opcional y que lo corregido a mano gana.
   "tutorial.s6.title": "Y ahora, evaluar el sistema",
   "tutorial.s6.body":
-    "Hasta aquí, qué hace y cómo se usa. Lo que se te pide a partir de ahora es que lo montes con una asignatura tuya y digas, paso a paso, qué tal ha salido.",
+    "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre lo que ha salido: esas respuestas son lo que mide el estudio.",
   "tutorial.s6.b1":
-    "Ningún paso da nada por bueno por su cuenta: primero lo ves, después lo valoras, y al pie tienes siempre dos salidas, corregir algo o continuar al siguiente.",
-  "tutorial.s6.b2":
-    "Corrige sin miedo: lo que arregles a mano gana siempre, sobre lo que se entendió y sobre cualquier reconstrucción posterior.",
-  "tutorial.s6.aside":
-    "Las preguntas de cada paso son lo único que se te pide a cambio, y son exactamente lo que se está midiendo en el estudio.",
+    "Corregir es opcional, y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
   "tutorial.s6.outro":
-    "Elige tu asignatura arriba a la izquierda y empieza por el Paso 1.1; si todavía no tienes ninguna, ahí mismo puedes crearla. En el menú de tu cuenta, a la derecha, están tus ejercicios, la guía y esta explicación cuando quieras volver a verla.",
+    "Elige tu asignatura arriba a la izquierda —si todavía no tienes ninguna, ahí mismo puedes crearla— y empieza por el Paso 1.1. En el menú de tu cuenta, a la derecha, están «Mis variatios», la guía y esta explicación por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",

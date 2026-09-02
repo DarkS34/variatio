@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -45,7 +45,9 @@ import {
  * numbered with `stepNumber` — the same list and the same numbering the navigation reads —
  * so the picture cannot promise an order the path does not have. Where a figure
  * enumerates, the prose beside it does not: a drawing and a paragraph listing the same two
- * things is one thing said twice.
+ * things is one thing said twice. That rule was applied a second time on 2026-09-02, to
+ * the two slides that still broke it — Fase 2's lead walked the three questions its own
+ * figure draws as chips, and the closing slide walked the four beats of its own figure.
  *
  * IT IS READ, NOT OPERATED, SO IT IS SET LIKE SOMETHING TO READ (2026-09-02, explicit user
  * request). The reading face is Literata and it is declared in `index.css` for this screen
@@ -61,7 +63,11 @@ import {
  * AND THE TITLE NEVER MOVES. It is its own row, outside the scrolling column, with a floor
  * of two lines — so the eyebrow, the title and the first line of prose land on the same
  * pixel of every slide, whatever is under them. Before this the whole column was centred
- * and the title rode up and down with the length of the slide.
+ * and the title rode up and down with the length of the slide. Two things follow from the
+ * column being the only thing that scrolls (2026-09-02): it is SCROLLED BACK TO THE TOP on
+ * every page turn, because the container outlives the slide and a reader who had scrolled
+ * down slide 3 landed halfway into slide 4, mid-sentence; and its foot FADES, so a slide
+ * taller than the window says «there is more» instead of cutting a heading in half.
  */
 
 interface Slide {
@@ -92,7 +98,7 @@ const SLIDES: Slide[] = [
     title: "tutorial.s2.title",
     body: "tutorial.s2.body",
     figure: <SourcesFigure />,
-    aside: "tutorial.s2.aside",
+    points: ["tutorial.s2.b1", "tutorial.s2.b2"],
   },
   {
     title: "tutorial.s3.title",
@@ -117,16 +123,27 @@ const SLIDES: Slide[] = [
     title: "tutorial.s6.title",
     body: "tutorial.s6.body",
     figure: <CloseFigure />,
-    points: ["tutorial.s6.b1", "tutorial.s6.b2"],
-    aside: "tutorial.s6.aside",
+    points: ["tutorial.s6.b1"],
     outro: "tutorial.s6.outro",
   },
 ];
 
-/** The column the whole deck is set in, so the head and the body cannot drift apart. */
+/**
+ * The column the whole deck is set in, so the head and the body cannot drift apart.
+ *
+ * The horizontal padding is applied OUTSIDE it, on the two wrappers, and never inside:
+ * with the head carrying its own `px` inside the column the title started 24 px to the
+ * right of the prose under it, on every slide (2026-09-02).
+ */
 const COLUMN = "mx-auto w-full max-w-[46rem]";
 
-/** The index: the four steps of the first phase, numbered exactly as the bar numbers them. */
+/**
+ * The index: the four steps of the first phase, numbered exactly as the bar numbers them.
+ *
+ * Each row is the number, the step's own name and one paragraph. The name is not prefixed
+ * «Paso 1.1:» — the counter beside it already says so, and with the bar drawn just above
+ * that made four names read three times each.
+ */
 function Steps() {
   const { t } = useT();
   return (
@@ -134,15 +151,16 @@ function Steps() {
       {STEPS.map((step, index) => (
         <li
           key={step.path}
-          className={cn("flex gap-4 p-4", index < STEPS.length - 1 && "border-b border-border")}
+          className={cn(
+            "flex gap-4 p-5",
+            index < STEPS.length - 1 && "border-b border-border",
+          )}
         >
-          <span className="nums flex h-[26px] min-w-[26px] shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+          <span className="nums mt-1 flex h-[26px] min-w-[26px] shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
             {stepNumber(index)}
           </span>
           <div className="min-w-0 space-y-1.5">
-            <p className="font-reading text-body font-semibold sm:text-[1.0625rem]">
-              {t("tutorial.stepName", { n: stepNumber(index), name: t(step.labelKey) })}
-            </p>
+            <p className={cn(PROSE, "font-semibold")}>{t(step.labelKey)}</p>
             <p className={cn(PROSE, "text-muted-foreground")}>{t(STEP_BODIES[index])}</p>
           </div>
         </li>
@@ -196,9 +214,9 @@ function NextRail({ label, name, last, onClick }: {
         <span
           style={{ writingMode: "vertical-rl" }}
           className={cn(
-            "text-micro uppercase",
+            "text-small uppercase tracking-[0.12em]",
             last
-              ? "text-attention"
+              ? "font-semibold text-attention"
               : "text-muted-foreground transition-colors group-hover:text-foreground",
           )}
         >
@@ -207,7 +225,7 @@ function NextRail({ label, name, last, onClick }: {
         <ChevronRight
           aria-hidden
           className={cn(
-            "size-5 transition-transform group-hover:translate-x-0.5",
+            "size-6 transition-transform group-hover:translate-x-0.5",
             last ? "text-attention" : "text-muted-foreground group-hover:text-foreground",
           )}
         />
@@ -220,6 +238,7 @@ export function TutorialScreen() {
   const { t } = useT();
   const { navigate } = useRouter();
   const [at, setAt] = useState(0);
+  const column = useRef<HTMLDivElement>(null);
 
   const slide = SLIDES[at];
   const last = at === SLIDES.length - 1;
@@ -238,6 +257,13 @@ export function TutorialScreen() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // The scrolling column is the same element on every slide, so a page turn keeps whatever
+  // scroll the previous slide left — measured: after reading slide 3 to the end, slide 4
+  // opened on its third line. Every slide starts at its first.
+  useEffect(() => {
+    column.current?.scrollTo({ top: 0 });
+  }, [at]);
 
   return (
     // `h-full` and not `min-h-full`: the head and the footer are pinned and the column
@@ -267,51 +293,69 @@ export function TutorialScreen() {
           {/* LA CABECERA DE LA DIAPOSITIVA, FUERA DEL SCROLL. El suelo de dos líneas es lo
               que fija también el arranque del texto: sin él, una diapositiva de título
               corto empieza a leerse cuarenta píxeles más arriba que la siguiente. */}
-          <div className={cn("shrink-0 px-4 pt-2 sm:px-6 sm:pt-6", COLUMN)}>
-            <p className="text-micro text-muted-foreground">
-              {t("tutorial.of", { n: at + 1, total: SLIDES.length })}
-            </p>
-            <h1 className="mt-4 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
-              {t(slide.title)}
-            </h1>
+          <div className="shrink-0 px-4 pt-2 sm:px-6 sm:pt-6">
+            <div className={COLUMN}>
+              <p className="text-small text-muted-foreground">
+                {t("tutorial.of", { n: at + 1, total: SLIDES.length })}
+              </p>
+              <h1 className="mt-4 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
+                {t(slide.title)}
+              </h1>
+            </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
-            <div className={cn(COLUMN, "flex flex-col gap-9 pb-12 pt-2")}>
-              <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.body)}</p>
+          <div className="relative min-h-0 flex-1">
+            <div ref={column} className="h-full overflow-y-auto px-4 sm:px-6">
+              <div className={cn(COLUMN, "flex flex-col gap-8 pb-12 pt-2")}>
+                {/* The lead is in the ink and the aside is not: the lead is the sentence of
+                    the slide, and greying it under points drawn in full ink inverted the
+                    emphasis (2026-09-02) — on the first slide, which is a lead and a figure,
+                    every word was grey. */}
+                <p className={PROSE}>{t(slide.body)}</p>
 
-              {slide.figure}
+                {slide.figure}
 
-              {slide.steps ? <Steps /> : null}
+                {slide.steps ? <Steps /> : null}
 
-              {/* The points are a ruled column and not a bulleted list: they are sentences,
-                  and a dot in front of a sentence makes it look like an item in an
-                  inventory rather than a thing that is true. The rule on the left is the
-                  same device the rest of the app uses to say «these belong together». */}
-              {slide.points ? (
-                <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
-                  {slide.points.map((point) => (
-                    <p key={point} className={PROSE}>
-                      {t(point)}
-                    </p>
-                  ))}
-                </div>
-              ) : null}
+                {/* The points are a ruled column and not a bulleted list: they are
+                    sentences, and a dot in front of a sentence makes it look like an item
+                    in an inventory rather than a thing that is true. The rule on the left
+                    is the same device the rest of the app uses to say «these belong
+                    together». */}
+                {slide.points ? (
+                  <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
+                    {slide.points.map((point) => (
+                      <p key={point} className={PROSE}>
+                        {t(point)}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
 
-              {/* No box (2026-09-02, explicit user request). What sets an aside apart is
-                  that it is not an instruction, and muted ink says that without drawing a
-                  container around one paragraph of a page made of paragraphs. */}
-              {slide.aside ? (
-                <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.aside)}</p>
-              ) : null}
+                {/* No box (2026-09-02, explicit user request). What sets an aside apart is
+                    that it is not an instruction, and muted ink says that without drawing
+                    a container around one paragraph of a page made of paragraphs. */}
+                {slide.aside ? (
+                  <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.aside)}</p>
+                ) : null}
 
-              {slide.outro ? (
-                <div className="flex flex-col gap-5 border-t border-border pt-9">
-                  <HeaderFigure />
-                  <p className={PROSE}>{t(slide.outro)}</p>
-                </div>
-              ) : null}
+                {slide.outro ? (
+                  <div className="flex flex-col gap-6 border-t border-border pt-9">
+                    <HeaderFigure />
+                    <p className={PROSE}>{t(slide.outro)}</p>
+                  </div>
+                ) : null}
+              </div>
             </div>
+            {/* The foot of the column fades into the page. On a slide that fits it covers
+                nothing but the column's own bottom padding, so it is invisible; on one
+                that does not it is what says «sigue abajo» instead of a heading cut in
+                half at the window's edge. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
+              style={{ background: "linear-gradient(to top, var(--background), transparent)" }}
+            />
           </div>
         </div>
 
