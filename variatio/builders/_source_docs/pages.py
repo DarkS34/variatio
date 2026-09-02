@@ -20,6 +20,7 @@ import io
 import json
 import re
 import tempfile
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -43,6 +44,12 @@ from .markdown import (
 )
 
 PAGE_FILE_RE = re.compile(r"^(\d{3})\.md$")
+# PDFium is not thread-safe and this process calls it from two threads at once: the job
+# thread rendering a page and the request thread counting pages for `/raw`. Interleaved,
+# the library's global state corrupts and EVERY later load in the process answers
+# «Data format error» until it is restarted. Every PDFium call goes through this lock,
+# and the lock is released between pages so a model call never holds it.
+_PDFIUM_LOCK = threading.RLock()
 META_NAME = "_meta.json"
 # Written after every page and removed when `_meta.json` lands: a directory holding one and
 # not the other is an interrupted transcription, and nothing reads it as a finished document
@@ -324,7 +331,12 @@ def page_count(pdf_path: str | Path) -> int:
     except ImportError:
         return 0
     try:
-        return len(pdfium.PdfDocument(str(pdf_path)))
+        with _PDFIUM_LOCK:
+            document = pdfium.PdfDocument(str(pdf_path))
+            try:
+                return len(document)
+            finally:
+                document.close()
     except Exception:
         return 0
 
@@ -341,18 +353,30 @@ def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator
             "Install it with: uv sync --extra builders"
         ) from e
 
-    document = pdfium.PdfDocument(str(pdf_path))
-    count = len(document)
+    with _PDFIUM_LOCK:
+        document = pdfium.PdfDocument(str(pdf_path))
+        count = len(document)
 
     def render():
-        """Yield each page from `first` on as a base64 PNG."""
-        for index in range(max(first - 1, 0), count):
-            # Colour is load-bearing: on these exam PDFs the correct option is marked by
-            # nothing but its colour. Never render these greyscale to save bytes.
-            bitmap = document[index].render(scale=dpi / 72)
-            buffer = io.BytesIO()
-            bitmap.to_pil().save(buffer, format="PNG")
-            yield base64.b64encode(buffer.getvalue()).decode()
+        """Yield each page from `first` on as a base64 PNG.
+
+        Each page is rendered whole under the lock — page, bitmap and PNG bytes — and only
+        the bytes cross the `yield`, so nothing PDFium owns is touched while the model reads.
+        """
+        try:
+            for index in range(max(first - 1, 0), count):
+                with _PDFIUM_LOCK:
+                    page = document[index]
+                    # Colour is load-bearing: on these exam PDFs the correct option is
+                    # marked by nothing but its colour. Never render greyscale to save bytes.
+                    bitmap = page.render(scale=dpi / 72)
+                    buffer = io.BytesIO()
+                    bitmap.to_pil().save(buffer, format="PNG")
+                    page.close()
+                yield base64.b64encode(buffer.getvalue()).decode()
+        finally:
+            with _PDFIUM_LOCK:
+                document.close()
 
     return count, render()
 
