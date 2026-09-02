@@ -429,8 +429,11 @@ export function StageGate({
               away corrections for nothing. */}
         </header>
 
+        {/* `attention` and not `danger`: stale is «lo de arriba cambió, vuelve a cerrarlo»,
+            a move to make — the same tone the badge, the status mark and a re-read document
+            on `/raw` already give it. Red here said information had been lost. */}
         {stage.stale_because.length > 0 ? (
-          <Alert tone="danger" title={t("stage.stale")}>
+          <Alert tone="attention" title={t("stage.stale")}>
             {stage.stale_because.map((cause) => (
               <p key={cause.artifact}>{cause.reason}</p>
             ))}
@@ -460,7 +463,7 @@ export function StageGate({
               // raw material was the panel's last card; now it is a screen of its own, and
               // sending somebody to the panel to look for it is sending them to look.
               <Link to="/raw">
-                <Button variant="attention">
+                <Button variant="attention" size="xl">
                   <UploadCloud />
                   {t("stage.import")}
                 </Button>
@@ -656,57 +659,50 @@ export function StageGate({
             «Quiero corregir algo», que no lleva a ninguno. Un paso CERRADO ofrece los dos
             igual: corregirlo lo vuelve a abrir con el primer cambio guardado. */}
         {ready && !blocked ? (
-          <section className="border border-border bg-card p-4 sm:p-5">
-            <h2 className="text-heading font-semibold">
-              {t(
-                curating
-                  ? "stage.curate.editingTitle"
-                  : approved
-                    ? "stage.curate.closedTitle"
-                    : "stage.curate.title",
-              )}
-            </h2>
-            <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">
-              {curating
+          <ClosingSection
+            title={t(
+              curating
+                ? "stage.curate.editingTitle"
+                : approved
+                  ? "stage.curate.closedTitle"
+                  : "stage.curate.title",
+            )}
+            body={
+              curating
                 ? t("stage.curate.editing")
                 : approved
                   ? t("stage.curate.closed")
-                  : t(CURATE_WHY[stage.artifact] ?? "stage.curate.body")}
-            </p>
-            {advanceFailed ? (
-              <p className="mt-2 text-body text-destructive">{t("stage.continueFailed")}</p>
-            ) : null}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              {curating ? null : (
-                <Button variant="outline" onClick={() => setCurating(true)}>
-                  <Pencil />
-                  {t("stage.curate.start")}
-                </Button>
-              )}
-              <Button
-                variant="attention"
-                size="xl"
-                disabled={advance.running || Boolean(advance.blocked)}
-                title={advance.blocked ?? undefined}
-                onClick={async () => {
-                  setAdvanceFailed(false);
-                  try {
-                    await advance.run();
-                  } catch {
-                    setAdvanceFailed(true);
-                    return;
-                  }
-                  navigate(next.path);
-                }}
-              >
-                {advance.running ? <Spinner /> : null}
-                {next.number === null
-                  ? t("stage.continueGenerate")
-                  : t("stage.continue", { n: next.number })}
-                {advance.running ? null : <ArrowRight />}
+                  : t(CURATE_WHY[stage.artifact] ?? "stage.curate.body")
+            }
+            error={advanceFailed ? t("stage.continueFailed") : null}
+          >
+            {curating ? null : (
+              <Button variant="outline" onClick={() => setCurating(true)}>
+                <Pencil />
+                {t("stage.curate.start")}
               </Button>
-            </div>
-          </section>
+            )}
+            <Button
+              variant="attention"
+              size="xl"
+              disabled={advance.running || Boolean(advance.blocked)}
+              title={advance.blocked ?? undefined}
+              onClick={async () => {
+                setAdvanceFailed(false);
+                try {
+                  await advance.run();
+                } catch {
+                  setAdvanceFailed(true);
+                  return;
+                }
+                navigate(next.path);
+              }}
+            >
+              {advance.running ? <Spinner /> : null}
+              {continueLabel(next, t)}
+              {advance.running ? null : <ArrowRight />}
+            </Button>
+          </ClosingSection>
         ) : null}
 
         {/* LA BARRA DE CORRECCIÓN, PEGADA AL BORDE DE ABAJO MIENTRAS SE CORRIGE (2026-09-02,
@@ -794,6 +790,45 @@ export function StageGate({
       </div>
     </StageScope>
   );
+}
+
+/**
+ * THE BLOCK EVERY STEP ENDS WITH, and the only shape it may have.
+ *
+ * A title, one sentence, the failure if the move failed, and the controls — with the big
+ * blue «Continuar» among them. `/raw` used to copy the markup by hand and had already
+ * drifted (no failure line, no spinner); one component is what keeps the foot of the four
+ * steps of the construction the same block (2026-09-02, explicit user request).
+ */
+export function ClosingSection({
+  title,
+  body,
+  error,
+  children,
+}: {
+  title: ReactNode;
+  body: ReactNode;
+  error?: ReactNode | null;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border border-border bg-card p-4 sm:p-5">
+      <h2 className="text-heading font-semibold">{title}</h2>
+      <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">{body}</p>
+      {error ? <p className="mt-2 text-body text-destructive">{error}</p> : null}
+      <div className="mt-4 flex flex-wrap items-center gap-3">{children}</div>
+    </section>
+  );
+}
+
+/** What «Continuar» says: the next step's number, or the way into phase 2 after the last. */
+export function continueLabel(
+  next: { number: string | null },
+  t: (key: Key, vars?: Record<string, string | number>) => string,
+): string {
+  return next.number === null
+    ? t("stage.continueGenerate")
+    : t("stage.continue", { n: next.number });
 }
 
 export function StaleWarning({ children }: { children: ReactNode }) {

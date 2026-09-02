@@ -424,8 +424,9 @@ function Raw() {
 
       <Block title="Un solo botón, y lo lanza todo">
         <Paragraph>
-          «{t("transcribe.startAll")}» está en el aviso de arriba de la pantalla y es el único
-          que hay: lanza de una vez los orígenes que tengan algo que hacer. Por dentro son{" "}
+          «{t("transcribe.startAll")}» está en el bloque de arriba de la pantalla —el mismo
+          bloque, con el mismo botón grande, con el que arranca cada paso— y es el único que
+          hay: lanza de una vez los orígenes que tengan algo que hacer. Por dentro son{" "}
           <strong>dos trabajos</strong>, uno por origen, así que en la cola se ven dos y hay que
           detener los dos si te arrepientes.
         </Paragraph>

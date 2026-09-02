@@ -78,6 +78,7 @@ export function JobProgress({
   className,
   waiting,
   compact = false,
+  cancel,
 }: {
   run: RunView | null;
   phases: BuildPhase[];
@@ -86,6 +87,15 @@ export function JobProgress({
   waiting?: string;
   /** See `BuildProgress`: no timeline and no stop button, for a caller that has both. */
   compact?: boolean;
+  /**
+   * What the stop button undoes, when that is not exactly this run.
+   *
+   * «Transcribir todo» starts one job per origin, and the card of either origin has to
+   * stop BOTH — a stop that reached one left the other running and the person pressed the
+   * button twice for one press of the launcher. `word` and `hint` are `CancelButton`'s
+   * own: «Detener», and what stopping costs, for a job chewing through a slot.
+   */
+  cancel?: { runs?: (RunView | null)[]; word?: "cancel" | "stop"; hint?: string };
 }) {
   const { t } = useT();
   const waitingText = waiting ?? t("progress.running");
@@ -147,7 +157,14 @@ export function JobProgress({
             <Hourglass className="size-3" />
             {duration(elapsed)}
           </span>
-          {active && !compact ? <CancelButton run={run} className="ml-auto" /> : null}
+          {active && !compact ? (
+            <CancelButton
+              run={cancel?.runs ?? run}
+              word={cancel?.word}
+              hint={cancel?.hint}
+              className="ml-auto"
+            />
+          ) : null}
         </div>
 
         {/* With no phase plan yet (start-up, or model loading) the bar is indeterminate on

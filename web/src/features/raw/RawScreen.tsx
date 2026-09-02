@@ -1,8 +1,9 @@
 import { ArrowRight, ScanText } from "lucide-react";
 
 import { GuideLink } from "@/components/GuideLink";
+import { ClosingSection, continueLabel } from "@/components/StageGate";
 import { Button } from "@/components/ui/button";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { nextStepOf } from "@/lib/steps";
@@ -10,9 +11,8 @@ import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
 
-import { useStartAllTranscriptions, useTranscribeRun, useTranscriptionSummary } from "./queries";
+import { useStartAllTranscriptions, useTranscriptionSummary } from "./queries";
 import { SlotCard } from "./SlotCard";
-import { CancelButton } from "@/components/CancelButton";
 
 /**
  * THE RAW MATERIAL, AS A DESTINATION OF ITS OWN.
@@ -24,17 +24,22 @@ import { CancelButton } from "@/components/CancelButton";
  * with its state and the two operations on it, and the transcription is a first-class step
  * rather than a disclosure inside a disclosure.
  *
- * The colour budget is one `--attention`, and it is the alert at the top: import, or
- * transcribe, or nothing. Everything else on the screen reports, achromatically.
+ * IT IS DRAWN LIKE THE OTHER THREE STEPS (2026-09-02, explicit user request: one
+ * convention for buttons, notices and blocks across the whole construction). The work of
+ * the step — reading the documents — used to be a small button in the corner of a notice,
+ * where a stage draws its «Comenzar construcción» as a big button in the middle of an
+ * empty block; it is that block now. The running state is a notice with no control plus
+ * the same progress card a build draws, with the stop button inside the card; and the
+ * foot is `ClosingSection`, the block every stage ends with. What has NO equivalent on a
+ * stage is not invented for it: the empty subject says so through the two dropzones, which
+ * are the only «Importar» this screen has.
  *
  * What this screen must NOT become is a gate. Transcribing is an accelerator: every
  * builder keeps its own conversion phase, so nothing here is ever a precondition for
- * anything, and the copy says so where a person can read it before pressing.
- *
- * What it does say, at the foot and only once there is nothing left to do here, is WHERE
- * TO GO (2026-09-02, explicit user request): the same block every stage closes with, with
- * the same big «Continuar». It is not a «todo leído» notice — that was deleted and stays
- * deleted — because what it reports is the next move, not the state.
+ * anything, and the copy says so where a person can read it before pressing. That is also
+ * why the foot offers «Continuar» with documents still unread — the way on is offered on a
+ * stage whatever its state, and hiding it here until everything was read made the foot
+ * behave like the gate the copy above it denies.
  */
 export function RawScreen() {
   const { t, plural } = useT();
@@ -45,8 +50,6 @@ export function RawScreen() {
 
   const slots = raw.data?.slots ?? [];
   const summary = useTranscriptionSummary(slots);
-  const corpusRun = useTranscribeRun("corpus");
-  const exemplarsRun = useTranscribeRun("exemplars");
 
   if (raw.isLoading) {
     return (
@@ -75,13 +78,6 @@ export function RawScreen() {
     .filter((slot) => slot.files.length > 0)
     .map((slot) => slot.kind);
 
-  // BOTH of them, not the first that is alive: «Transcribir todo» starts one job per
-  // origin, so a stop that reached one of the two left the other running and the person
-  // pressed «Detener» twice for one press of «Transcribir todo».
-  const live = [corpusRun, exemplarsRun].filter(
-    (run) => run?.job?.status === "running" || run?.job?.status === "queued",
-  );
-
   const blocked = !canEdit ? t("build.readOnly") : offline ? offline : null;
 
   return (
@@ -99,26 +95,23 @@ export function RawScreen() {
         <GuideLink slug="raw" />
       </header>
 
-      {/* THE ONE BLUE THING ON THE SCREEN, and only when there is something to press. */}
+      {/* THE ONE THING TO DO, IN THE SAME BLOCK A STAGE STARTS FROM. A notice with no
+          control while it runs — the stop button is in each origin's progress card, as a
+          build's is — and the big button in the middle of an empty block while there is
+          something to read. With the subject empty there is nothing here at all: the two
+          dropzones below are the action, and a block above them repeating «suelta los
+          documentos» said what they already say. */}
       {summary.running ? (
-        <Alert
-          tone="info"
-          title={t("transcribe.runningTitle")}
-          action={live.length > 0 ? <CancelButton run={live} word="stop" /> : undefined}
-        >
+        <Alert tone="info" title={t("transcribe.runningTitle")}>
           <p>{t("transcribe.runningNote")}</p>
         </Alert>
-      ) : summary.empty ? (
-        <Alert tone="attention" title={t("raw.nothingYet")}>
-          <p>{t("raw.nothingYetBody")}</p>
-        </Alert>
       ) : summary.todo > 0 ? (
-        <Alert
-          tone="attention"
+        <EmptyState
+          icon={<ScanText />}
           title={plural("transcribe.todoTitle", summary.todo)}
           action={
             <Button
-              size="sm"
+              size="xl"
               variant="attention"
               disabled={Boolean(blocked) || startAll.isPending}
               title={blocked ?? undefined}
@@ -129,8 +122,8 @@ export function RawScreen() {
             </Button>
           }
         >
-          <p>{t("transcribe.notAGate")}</p>
-        </Alert>
+          {t("transcribe.notAGate")}
+        </EmptyState>
       ) : null}
 
       {startAll.isError ? (
@@ -146,33 +139,38 @@ export function RawScreen() {
         ))}
       </div>
 
-      {/* `done` holds back until both readings have landed, so this does not flash during
-          the first second of a load and then vanish. */}
-      {summary.done ? <RawDone /> : null}
+      {/* `stocked` holds back until both readings have landed, so this does not flash during
+          the first second of a load and then change its mind. Not while something runs: a
+          building stage has no closing block either. */}
+      {summary.stocked && !summary.running ? <RawClosing done={summary.done} /> : null}
     </div>
   );
 }
 
-/** The way on: both origins hold something and every document is read. */
-function RawDone() {
+/**
+ * The way on, in the block every step closes with.
+ *
+ * Two sentences for two states — everything read, or something still unread — and the same
+ * «Continuar» under both, because reading is not a gate. There is no «Quiero corregir algo»
+ * here: a document is corrected on its own row, and the step as a whole has nothing to
+ * unlock.
+ */
+function RawClosing({ done }: { done: boolean }) {
   const { t } = useT();
   const next = nextStepOf(null);
   return (
-    <section className="border border-border bg-card p-4 sm:p-5">
-      <h2 className="text-heading font-semibold">{t("raw.done.title")}</h2>
-      <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">
-        {t("raw.done.body", { next: t(next.labelKey) })}
-      </p>
-      <div className="mt-4">
-        <Link to={next.path}>
-          <Button variant="attention" size="xl">
-            {next.number === null
-              ? t("stage.continueGenerate")
-              : t("stage.continue", { n: next.number })}
-            <ArrowRight />
-          </Button>
-        </Link>
-      </div>
-    </section>
+    <ClosingSection
+      title={t(done ? "raw.done.title" : "raw.next.title")}
+      body={
+        done ? t("raw.done.body", { next: t(next.labelKey) }) : t("raw.next.body")
+      }
+    >
+      <Link to={next.path}>
+        <Button variant="attention" size="xl">
+          {continueLabel(next, t)}
+          <ArrowRight />
+        </Button>
+      </Link>
+    </ClosingSection>
   );
 }

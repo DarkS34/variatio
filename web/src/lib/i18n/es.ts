@@ -695,14 +695,16 @@ export const es = {
   "raw.removed": "«{name}» eliminado",
   "raw.screenIntro":
     "Sube lo que ya tienes: los apuntes de la asignatura y los ejercicios. Es el único paso en el que hace falta que busques archivos, porque todo lo demás sale de aquí. Con un par de temas basta: cada documento se lee entero, y cuanto más subas, más se tarda.",
-  "raw.nothingYet": "Esta asignatura todavía no tiene nada",
-  "raw.nothingYetBody":
-    "Suelta los apuntes en «Apuntes de la asignatura» y los ejercicios en «Ejercicios de la asignatura». Hasta entonces no hay nada con lo que empezar.",
   "raw.dropHere": "Arrastra los documentos aquí",
   // EL BLOQUE QUE LLEVA AL PASO SIGUIENTE, al pie, cuando los dos orígenes tienen algo y
   // todo está leído. Es la misma salida con la que se cierra cada paso, no un aviso.
   "raw.done.title": "Apuntes y ejercicios listos",
   "raw.done.body": "Todos tus documentos están subidos y leídos. Ya puedes pasar al paso siguiente, «{next}».",
+  // EL MISMO BLOQUE CON DOCUMENTOS SIN LEER: la salida se ofrece igual, porque leerlos no es
+  // una puerta — cada paso lee lo suyo por su cuenta — y el pie de cada etapa ofrece
+  // «Continuar» esté como esté la etapa.
+  "raw.next.title": "Puedes pasar al paso siguiente",
+  "raw.next.body": "Quedan documentos por leer, pero no hace falta esperar: cada paso los lee por su cuenta cuando le hacen falta. Si prefieres adelantarlo, léelos desde el bloque de arriba.",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
   "raw.dropInto": "Importar documentos en {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the

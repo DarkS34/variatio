@@ -82,6 +82,9 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     stale,
     pending,
     todo: stale + pending,
+    // Both origins hold something and both readings have landed: what the foot of the
+    // screen needs before it may say anything at all about the way on.
+    stocked: stockedAll && known,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
     // Both origins hold something, every document is read and nothing is running: what the
     // next step actually wants, and not merely «no queda nada pendiente».

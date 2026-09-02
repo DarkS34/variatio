@@ -1,18 +1,11 @@
-import { Check, Hourglass } from "lucide-react";
+import { Check } from "lucide-react";
 
+import { JobProgress } from "@/components/BuildProgress";
 import { Badge } from "@/components/ui/badge";
-import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
-import { phaseName, stepName } from "@/lib/names";
+import { Spinner } from "@/components/ui/misc";
 import type { RawSlot } from "@/lib/types";
 
-import { documentLoop, innerLoop, loopLabel } from "./progress";
-import {
-  TRANSCRIBE_JOB,
-  useTranscribePhases,
-  useTranscribeRun,
-  useTranscribing,
-  useTranscription,
-} from "./queries";
+import { useTranscribePhases, useTranscribeRun, useTranscribing, useTranscription } from "./queries";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -23,7 +16,7 @@ import { useT } from "@/lib/i18n";
  * place them where it needs them without threading state through props.
  *
  * There is no per-origin BUTTON any more (2026-09-01, explicit user request). Reading the
- * documents is one press for the whole screen, in the alert at the top, and two buttons
+ * documents is one press for the whole screen, in the block at the top, and two buttons
  * doing the same work on two halves of one action is exactly the kind of choice this
  * branch exists to remove. Nothing is lost with it: the global one appears under the same
  * condition the two used to, and it fans out per slot.
@@ -87,73 +80,37 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
   );
 }
 
+/**
+ * The slot's transcription while it runs, drawn as EVERY OTHER JOB IS.
+ *
+ * It was a bordered block of its own — two bars, no clock, no percentage, no job name —
+ * and the stop button sat in the alert at the top of the screen under the word «Detener»,
+ * while a building stage draws a `JobProgress` card with «Cancelar» inside it. One card
+ * for the four steps now (2026-09-02, explicit user request: the same convention for every
+ * step of the construction). Nothing is lost by it: the step timeline the card draws
+ * already groups the document loop and the inner one (pages, pictures, seams) as one row
+ * each, with the counter and the bar the old block drew by hand.
+ *
+ * The stop button takes BOTH live runs, not this slot's alone: «Leerlos todos ahora» starts
+ * one job per origin, and a stop on one card that left the other running is what had the
+ * button pressed twice for one press of the launcher.
+ */
 export function RunningBlock({ slot }: { slot: RawSlot }) {
   const { t } = useT();
   const run = useTranscribeRun(slot.kind);
   const phases = useTranscribePhases();
-  const overall = run?.overall ?? null;
-  const queued = run?.job?.status === "queued";
-  // Two nested loops, drawn as two bars: which document of how many, and how far into that
-  // document's pages (or, once they are done, into its seams).
-  const docs = documentLoop(run);
-  const inner = innerLoop(run);
+  const corpus = useTranscribeRun("corpus");
+  const exemplars = useTranscribeRun("exemplars");
+  const live = [corpus, exemplars].filter(
+    (entry) => entry?.job?.status === "running" || entry?.job?.status === "queued",
+  );
 
   return (
-    <div className="space-y-2 rounded-md border border-border p-2.5">
-      <div className="flex items-center gap-2">
-        {queued ? (
-          <Hourglass className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <Spinner className="shrink-0" />
-        )}
-        <span className="min-w-0 flex-1 truncate text-small">
-          {/* The phase, or the outer loop's step when the plan has not arrived: both come
-              with the API's own sentence. This job's plan is filed under its kind, since
-              it writes no artifact. */}
-          {queued
-            ? t("transcribe.queued")
-            : ((overall?.label
-                ? phaseName(TRANSCRIBE_JOB, overall.key, t, overall.label)
-                : null) ??
-              (docs ? stepName(docs.id, t, docs.label) : null) ??
-              t("transcribe.preparing"))}
-        </span>
-        {docs ? (
-          <span className="shrink-0 text-small font-medium nums">
-            {t("transcribe.docCounter", { n: loopLabel(docs) })}
-          </span>
-        ) : null}
-      </div>
-
-      {queued ? null : (
-        <>
-          {overall && phases.length > 0 ? (
-            <PhaseBar phases={phases} percent={overall.percent} activeKey={overall.key} />
-          ) : (
-            <Progress value={overall?.percent ?? 0} max={100} />
-          )}
-          {overall?.detail ? (
-            <p className="truncate text-small text-muted-foreground">{overall.detail}</p>
-          ) : null}
-
-          {/* The inner loop, drawn as its own bar: the outer one moves once per document,
-              so on a corpus of long PDFs it would sit still for as long as it takes to read
-              one — which reads as a stall and is not. */}
-          {inner ? (
-            <div className="space-y-1 border-l-2 border-border pl-2.5">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate text-small text-muted-foreground">
-                  {inner.detail ?? stepName(inner.id, t, inner.label)}
-                </span>
-                <span className="shrink-0 nums text-small text-muted-foreground">
-                  {loopLabel(inner)}
-                </span>
-              </div>
-              <Progress value={inner.current} max={inner.total} />
-            </div>
-          ) : null}
-        </>
-      )}
-    </div>
+    <JobProgress
+      run={run}
+      phases={phases}
+      waiting={t("transcribe.preparing")}
+      cancel={{ runs: live, word: "stop", hint: t("transcribe.stopHint") }}
+    />
   );
 }

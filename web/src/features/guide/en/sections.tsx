@@ -432,8 +432,9 @@ function Raw() {
 
       <Block title="One button, and it launches everything">
         <Paragraph>
-          "{t("transcribe.startAll")}" is in the notice at the top of the screen and it is the
-          only one there is: it launches in one go whichever origins have something to do.
+          "{t("transcribe.startAll")}" is in the block at the top of the screen — the same
+          block, with the same big button, every step starts from — and it is the only one
+          there is: it launches in one go whichever origins have something to do.
           Underneath it is <strong>two jobs</strong>, one per origin, so two show up in the queue
           and both have to be stopped if you change your mind.
         </Paragraph>

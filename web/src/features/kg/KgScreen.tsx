@@ -770,18 +770,6 @@ function GraphExplorer() {
         ) : null}
       </div>
 
-      {/* The flag is absent from every graph written before it existed, so it reads `false`
-          even on one whose exclusion list proves the old in-build pass ran. The second half
-          is what tells those apart, and it mirrors `stages/initialize.py`. */}
-      {/* No button of its own: the header's is the only one, with its reason in the tooltip and
-          its progress bar below. What stays here is what the header cannot say — what it means
-          that the review has not been done. */}
-      {!totals.taggability_reviewed && totals.taggable === totals.concepts ? (
-        <Alert tone="attention" title={t("kg.unreviewed")}>
-          <p>{plural("kg.unreviewed.body", totals.concepts)}</p>
-        </Alert>
-      ) : null}
-
       {/* The expanded map carries the inspector with it. Without it, choosing a concept here
           answered with a card in the rail underneath — behind the scrim, invisible — so the
           big view was the one place you could see the whole graph and change nothing in it. */}
@@ -899,8 +887,23 @@ function GraphExplorer() {
  * travels down as context. Out of the static view entirely: «Quiero corregir algo» at the
  * foot is what brings it back, closed stage or not.
  */
+/**
+ * THE JOB THAT PATCHES THE GRAPH, BESIDE THE NOTICE THAT EXPLAINS IT.
+ *
+ * The notice («falta decidir qué conceptos sirven de etiqueta») sat at the FOOT of the
+ * explorer and the button at its head, so the two halves of one thing were a screen apart.
+ * One block now (2026-09-02, explicit user request: one convention for the four steps),
+ * shaped like every other secondary job of the construction — the bank's re-tag beside its
+ * meter: a small outline button beside the number it acts on. While the graph is only
+ * being looked at the notice still reports and the button is not drawn, which is the same
+ * rule the bank's re-tag follows.
+ *
+ * The flag is absent from every graph written before it existed, so it reads `false` even
+ * on one whose exclusion list proves the old in-build pass ran; the second half of the
+ * condition is what tells those apart, and it mirrors `stages/initialize.py`.
+ */
 function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const reason = useStageLockReason();
   const kg = useKg();
   const pipeline = usePipeline();
@@ -925,22 +928,34 @@ function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
                 ? t("kg.review.running")
                 : null;
 
-  if (reason === "reviewing") return null;
+  const unreviewed =
+    Boolean(totals) && !totals!.taggability_reviewed && totals!.taggable === totals!.concepts;
+  const curating = reason !== "reviewing";
 
-  return (
-    <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-      <Button
-        size="sm"
-        variant={reviewed ? "ghost" : "attention"}
-        disabled={Boolean(reviewReason) || submitReview.isPending}
-        title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
-        onClick={() => submitReview.mutate({ kind: "review_taggability" })}
-      >
-        {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
-        {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
-      </Button>
-    </div>
-  );
+  const button = curating ? (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={Boolean(reviewReason) || submitReview.isPending}
+      title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
+      onClick={() => submitReview.mutate({ kind: "review_taggability" })}
+    >
+      {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
+      {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
+    </Button>
+  ) : null;
+
+  if (unreviewed) {
+    return (
+      <Alert tone="attention" className="mb-4" title={t("kg.unreviewed")} action={button}>
+        <p>{plural("kg.unreviewed.body", totals!.concepts)}</p>
+      </Alert>
+    );
+  }
+
+  if (!button) return null;
+
+  return <div className="mb-4 flex flex-wrap items-center justify-end gap-2">{button}</div>;
 }
 
 export function KgScreen({ stage }: { stage: StageState | undefined }) {

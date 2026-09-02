@@ -224,7 +224,7 @@ export function StageReview({
             />
           </div>
 
-          {save.isError ? <Alert tone="danger">{t("stageReview.failed")}</Alert> : null}
+          {save.isError ? <Alert tone="danger" title={t("stageReview.failed")} /> : null}
 
           <div className="space-y-1.5">
             <Button
