@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Play, Scale, Wrench } from "lucide-react";
+import { Check, Loader2, Play, Scale, Wrench } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
@@ -11,6 +11,7 @@ import {
   COMPARE_PHASE,
   GENERATE_PHASE,
   STEPS,
+  stepBusy,
   stepNumber,
   stepStates,
   type StepState,
@@ -84,11 +85,33 @@ const STATE_KEY: Record<StepState, Key> = {
  * The tick alone says the same thing and recedes, which is what «behind you, resolved» is
  * supposed to look like. The 22 px box stays as empty space so the four names still line
  * up on one column.
+ *
+ * A STEP WITH WORK RUNNING ON IT SPINS A WHEEL WHERE THE NUMBER WAS (2026-09-02, explicit
+ * user request). «Building» is `--primary` plus motion — the palette's own rule — so the
+ * wheel is ink and the box loses its tint while it turns: the frontier has not moved, only
+ * the work has started. The animation is deliberately not switched off under
+ * `prefers-reduced-motion`, for the reason the pulse is not: it is the one sign in the bar
+ * that a build running for an hour is still alive.
  */
-export function StepCounter({ state, n }: { state: StepState; n: string }) {
+export function StepCounter({
+  state,
+  n,
+  busy = false,
+}: {
+  state: StepState;
+  n: string;
+  busy?: boolean;
+}) {
   // `min-w` and not a fixed square: «1.1» is wider than «1» and the height is what keeps
   // the four names on one column.
   const box = "flex h-[22px] min-w-[22px] shrink-0 items-center justify-center px-1";
+  if (busy) {
+    return (
+      <span className={cn(box, "text-primary")}>
+        <Loader2 className="size-4 animate-spin" strokeWidth={2.5} />
+      </span>
+    );
+  }
   if (state === "done") {
     return (
       <span className={cn(box, "text-settled")}>
@@ -128,6 +151,7 @@ function StepPill({
   n,
   active,
   title,
+  busy = false,
   demo = false,
 }: {
   step: (typeof STEPS)[number];
@@ -135,6 +159,8 @@ function StepPill({
   n: string;
   active: boolean;
   title?: string;
+  /** Work running on this step right now: the wheel, and «Construyendo» / «Leyendo» under the name. */
+  busy?: boolean;
   /**
    * Under the tutorial (2026-09-02, explicit user request): the number and the name, and
    * NOT the state word. The bar is being explained there, and «Después» three times under
@@ -161,19 +187,22 @@ function StepPill({
           state === "now" ? "font-semibold" : "font-medium",
         )}
       >
-        <StepCounter state={state} n={n} />
+        <StepCounter state={state} n={n} busy={busy} />
         {t(step.labelKey)}
       </span>
       {demo ? null : (
         <span
           className={cn(
             "pl-[30px] text-micro",
-            state === "done" && "text-settled",
-            state === "now" && "text-attention",
-            state === "later" && "text-muted-foreground",
+            busy && "text-foreground",
+            !busy && state === "done" && "text-settled",
+            !busy && state === "now" && "text-attention",
+            !busy && state === "later" && "text-muted-foreground",
           )}
         >
-          {t(STATE_KEY[state])}
+          {busy
+            ? t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
+            : t(STATE_KEY[state])}
         </span>
       )}
     </Link>
@@ -306,6 +335,7 @@ function Unlock({
 function MainNav({
   path,
   stages,
+  busy,
   locked,
   rawStocked,
   rawWaiting,
@@ -314,6 +344,8 @@ function MainNav({
 }: {
   path: string;
   stages: StageState[];
+  /** One flag per step of `STEPS`: whether work is running on it right now. */
+  busy: boolean[];
   locked: string | null;
   /** Whether both origins hold documents, which is what «paso 1 hecho» means. */
   rawStocked: boolean;
@@ -375,6 +407,7 @@ function MainNav({
             n={stepNumber(index)}
             active={path === step.path}
             title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+            busy={busy[index]}
             demo={demo}
           />
         ))}
@@ -442,6 +475,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [stream.currentJobId]);
 
   const stages = pipeline.data?.stages ?? [];
+  // Where work is running right now, for the wheel on the bar. The stream's jobs are what
+  // separate a build that is running from one still in the queue.
+  const busy = stepBusy(
+    stages,
+    Object.values(stream.runs).flatMap((run) => (run.job ? [run.job] : [])),
+  );
 
   // WHETHER THE FLOATING PILL EXISTS AT ALL, and it is not a nicety: it made a real button
   // unreachable. «Ver ejecución» is anchored to the bottom-right corner, and the CSV export
@@ -532,6 +571,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <MainNav
               path={path}
               stages={stages}
+              busy={busy}
               locked={locked}
               rawWaiting={rawWaiting}
               rawStocked={rawStocked}
@@ -552,6 +592,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <MainNav
             path={path}
             stages={stages}
+            busy={busy}
             locked={locked}
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}

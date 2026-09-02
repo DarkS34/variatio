@@ -365,6 +365,10 @@ export const es = {
   "nav.state.done": "Hecho",
   "nav.state.now": "Te toca ahora",
   "nav.state.later": "Después",
+  // Mientras hay trabajo EN MARCHA en un paso, la rueda sustituye al número y esta es la
+  // palabra de debajo: construir una etapa, o leer los documentos del paso 1.
+  "nav.state.building": "Construyendo",
+  "nav.state.reading": "Leyendo",
   "nav.create": "Pedir ejercicios",
   "nav.compare": "Evaluar el sistema",
   // DOS FASES: los cuatro pasos son 1.1–1.4 dentro de «preparar la asignatura», y generar

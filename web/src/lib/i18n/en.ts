@@ -336,6 +336,8 @@ export const en: Catalogue = {
   "nav.state.done": "Done",
   "nav.state.now": "Your turn",
   "nav.state.later": "Later",
+  "nav.state.building": "Building",
+  "nav.state.reading": "Reading",
   "nav.create": "Ask for exercises",
   "nav.compare": "Evaluate the system",
   "nav.stepNumber": "Step {n} · Preparing the subject",

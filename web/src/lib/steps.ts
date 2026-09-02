@@ -1,5 +1,6 @@
-import type { StageState } from "@/lib/types";
+import type { Job, StageState } from "@/lib/types";
 import type { Key } from "@/lib/i18n";
+import { isQueued } from "@/lib/queue";
 
 /**
  * THE PATH, AS DATA. One home, because two places read it and they must not disagree.
@@ -108,4 +109,29 @@ export function currentStepPath(stages: StageState[], rawStocked: boolean): stri
   const states = stepStates(stages, rawStocked);
   const now = states.indexOf("now");
   return now === -1 ? "/generate" : STEPS[now].path;
+}
+
+/**
+ * Which steps have work RUNNING on them right now — a build of a stage, or the reading of
+ * the documents for step 1 — so the bar can spin a wheel where the number was.
+ *
+ * Running and not queued: a queued job is not a running one and no screen may draw
+ * activity over it (the register's own rule), and a wheel is a claim that something is
+ * happening. `building` is the pipeline's word and covers both, so the stream's own jobs
+ * are what tell the two apart; with no job known for the artifact the pipeline is
+ * believed, which is the state a reload lands in.
+ */
+export function stepBusy(stages: StageState[], jobs: Job[]): boolean[] {
+  return STEPS.map((step) => {
+    if (step.artifact === null) {
+      return jobs.some((job) => job.kind === "transcribe" && job.status === "running");
+    }
+    const building = stages.some(
+      (stage) => stage.artifact === step.artifact && stage.status === "building",
+    );
+    const queued = jobs.some(
+      (job) => job.artifact === step.artifact && job.status !== "running" && isQueued(job),
+    );
+    return building && !queued;
+  });
 }

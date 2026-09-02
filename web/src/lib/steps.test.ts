@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { STEPS, currentStepPath, nextStepOf, stepStates } from "./steps";
-import type { ArtifactStatus, StageState } from "./types";
+import { STEPS, currentStepPath, nextStepOf, stepBusy, stepStates } from "./steps";
+import type { ArtifactStatus, Job, StageState } from "./types";
 
 const stage = (artifact: string, status: ArtifactStatus): StageState =>
   ({ artifact, status, stale_because: [] }) as unknown as StageState;
@@ -94,5 +94,34 @@ describe("nextStepOf", () => {
       number: null,
       labelKey: "nav.create",
     });
+  });
+});
+
+describe("stepBusy", () => {
+  const job = (over: Partial<Job>): Job =>
+    ({ kind: "build_kg", artifact: "knowledge_graph", status: "running", ...over }) as Job;
+
+  it("spins a stage that is building and not queued", () => {
+    const busy = stepBusy(chain("approved", "building", "missing"), [job({})]);
+    expect(busy).toEqual([false, false, true, false]);
+  });
+
+  it("does not spin over a build still waiting in the queue", () => {
+    // Un trabajo en cola no está en marcha, y la rueda afirma que algo está pasando.
+    const busy = stepBusy(chain("approved", "building", "missing"), [
+      job({ status: "queued", queue_position: 2 }),
+    ]);
+    expect(busy[2]).toBe(false);
+  });
+
+  it("believes the pipeline when the stream knows no job for the artifact", () => {
+    expect(stepBusy(chain("approved", "building", "missing"), [])[2]).toBe(true);
+  });
+
+  it("spins step 1 while the documents are being read, and only then", () => {
+    const reading = job({ kind: "transcribe", artifact: null, status: "running" });
+    expect(stepBusy(chain("missing", "missing", "missing"), [reading])[0]).toBe(true);
+    const queued = job({ kind: "transcribe", artifact: null, status: "queued", queue_position: 1 });
+    expect(stepBusy(chain("missing", "missing", "missing"), [queued])[0]).toBe(false);
   });
 });
