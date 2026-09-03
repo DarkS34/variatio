@@ -55,6 +55,18 @@ def _isolated_cerebras_ledger(tmp_path):
     cerebras_budget.use(None)
 
 
+# The fourth (2026-09-03) stops a test reading Cerebras' catalogue over the network. Since
+# routing asks the catalogue — every model the API lists is served remotely — a hybrid
+# engine built by any test would call `/models` with the installation's own key, and the
+# lane tests then measured the real catalogue instead of the routing list they set up.
+# The two tests of `known_models` itself restore the real method on their own instance.
+@pytest.fixture(autouse=True)
+def _no_cerebras_catalogue(monkeypatch):
+    from variatio.core import cerebras
+
+    monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
+
+
 # The second stops a test writing to the production database. `session.database_url()` reads
 # `DATABASE_URL`, `.env` supplies a real one, and nothing under `tests/` overrode it — so a
 # test reaching `session_scope()` without meaning to opened a transaction against the live

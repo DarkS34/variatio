@@ -2022,7 +2022,7 @@ export const en: Catalogue = {
   "cfg.commaSeparated": "Separate them with commas.",
   "cfg.routeTo": "Route {model} to Cerebras",
   "cfg.offCatalog": "not in the catalogue",
-  "cfg.cerebrasNote": "The list comes from Cerebras' own API. What is ticked is served remotely; everything else stays on Ollama.",
+  "cfg.cerebrasNote": "The list comes from Cerebras' own API, and every model on it is served remotely whether ticked or not. Ticking one keeps it routed there even when the catalogue cannot be read; everything the catalogue does not list stays on Ollama.",
   "cfg.configured": "Set",
   "cfg.absent": "Absent",
   "cfg.unset": "— unset —",

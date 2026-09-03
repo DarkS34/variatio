@@ -34,10 +34,15 @@ _NOISE_KEYWORDS = ("title",)
 _DROPPED_KEYWORDS = _UNSUPPORTED_KEYWORDS + _NOISE_KEYWORDS
 _SUBSCHEMA_KEYS = ("items", "prefixItems", "anyOf", "allOf", "oneOf", "additionalProperties")
 _SCHEMA_MAPS = ("properties", "$defs", "definitions")
-_VISION_PREFIXES = ("gemma-4",)
+# Cerebras' catalogue page (read 2026-09-03) lists image input for both families, ten per
+# request; gpt-oss does not take images.
+_VISION_PREFIXES = ("gemma-4", "qwen-3.8")
 _RETRY_STATUSES = (429, 503)
 _MAX_ATTEMPTS = 5
 _CATALOG_TTL_SECONDS = 300.0
+# How long a failed catalogue read stands before the next attempt: routing asks for the
+# catalogue on every call, and a dead API must not cost every one of them a round trip.
+_CATALOG_RETRY_SECONDS = 60.0
 
 
 def strict_schema(schema: dict) -> dict:
@@ -225,6 +230,7 @@ class CerebrasEngine:
             timeout=httpx.Timeout(600.0, connect=10.0),
         )
         self._catalog: tuple[float, list[str]] | None = None
+        self._catalog_failed_at: float | None = None
 
     def is_available(self) -> bool:
         """Whether the API answers at all."""
@@ -253,7 +259,25 @@ class CerebrasEngine:
         models = sorted(str(row.get("id", "")) for row in response.json().get("data", []))
         models = [model for model in models if model]
         self._catalog = (time.monotonic(), models)
+        self._catalog_failed_at = None
         return models
+
+    def known_models(self) -> frozenset[str]:
+        """The catalogue as far as this process knows it, never raising.
+
+        A fresh read when the cache has expired; the LAST read when the API does not
+        answer, so a blip mid-build never reroutes a model to Ollama; an empty set when
+        nothing was ever read. A failure is remembered for `_CATALOG_RETRY_SECONDS`.
+        """
+        failed = self._catalog_failed_at
+        if failed is not None and time.monotonic() - failed < _CATALOG_RETRY_SECONDS:
+            return frozenset(self._catalog[1]) if self._catalog else frozenset()
+        try:
+            return frozenset(self.catalog())
+        except InferenceError as e:
+            self._catalog_failed_at = time.monotonic()
+            logger.debug(f"[cerebras] Catalogue unavailable, keeping what was read: {e}")
+            return frozenset(self._catalog[1]) if self._catalog else frozenset()
 
     def supports_thinking(self, model: str) -> bool:
         """Every model Cerebras serves takes a `reasoning_effort`."""
@@ -583,8 +607,13 @@ class HybridEngine:
         self._cerebras = CerebrasEngine()
 
     def _remote(self, model: str) -> bool:
-        """Whether `model` is routed to Cerebras."""
-        return model in config.CEREBRAS_MODELS
+        """Whether `model` is routed to Cerebras: in its catalogue, or declared as such.
+
+        The catalogue is what makes every model Cerebras serves usable without editing
+        anything; `CEREBRAS_MODELS` is what stands when the catalogue cannot be read, and
+        it also names a model the catalogue does not list.
+        """
+        return model in config.CEREBRAS_MODELS or model in self._cerebras.known_models()
 
     def _backend(self, model: str):
         """The backend that serves `model`."""
@@ -599,8 +628,8 @@ class HybridEngine:
         return self._ollama.is_available()
 
     def remote_models(self) -> frozenset[str]:
-        """Which models this engine serves remotely."""
-        return frozenset(config.CEREBRAS_MODELS)
+        """Which models this engine serves remotely: the catalogue plus the declared list."""
+        return frozenset(config.CEREBRAS_MODELS) | self._cerebras.known_models()
 
     def generate(self, model: str, prompt: str, **kwargs) -> GenerationResponse:
         """Ask the backend that serves `model` for one answer."""
@@ -637,16 +666,12 @@ class HybridEngine:
     def installed_models_detail(self) -> list[dict]:
         """Every model this engine can serve, marked with which half serves it.
 
-        The remote half lists Cerebras' whole catalogue, so the panel can point a phase at
-        any of it. When the catalogue is unreachable the declared routing list stands in,
-        which keeps a required remote model from reading as «sin instalar» during a blip.
+        The remote half is exactly what `remote_models` routes — Cerebras' whole catalogue,
+        so the panel can point a phase at any of it, plus the declared list, which is what
+        keeps a required remote model from reading as «sin instalar» during a blip.
         """
         local = self._ollama.installed_models_detail()
-        try:
-            remote = self._cerebras.catalog()
-        except InferenceError as e:
-            logger.debug(f"[cerebras] Catalogue unavailable: {e}")
-            remote = sorted(config.CEREBRAS_MODELS)
+        remote = sorted(self.remote_models())
         return local + [{"model": model, "size": None, "remote": True} for model in remote]
 
     def running_models(self) -> list[dict]:

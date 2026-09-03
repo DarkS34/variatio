@@ -369,9 +369,13 @@ la necesitan.""",
         default=["gemma-4-31b"],
         group="Motor",
         impact=Impact.ENGINE,
-        doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama'; todo lo que no esté aquí va a
-Ollama. La pertenencia a esta lista ES la decisión de enrutado — explícita a propósito, en
-vez de adivinar por la forma del nombre («gemma-4-31b» contra «qwen3.8:27b-q8_0»).
+        doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama' ADEMÁS de su catálogo. Desde el
+2026-09-03 todo modelo que la API de Cerebras lista en `/models` se sirve allí sin declararlo
+aquí — el panel ya ofrecía el catálogo entero en cada selector de fase, pero el enrutado solo
+miraba esta lista, así que elegir `qwen-3.8-27b` lo mandaba a Ollama, que no lo tiene. Esta
+lista es lo que manda cuando el catálogo no se puede leer (se recuerda la última lectura, y
+sin ninguna vale esto), y lo que nombra un modelo que el catálogo no lista. Todo lo demás va
+a Ollama.
 
 `gemma-4-31b` por defecto: es el id exacto del catálogo de Cerebras (~1.850 tok/s medidos
 por Artificial Analysis, ventana de 131.072, salida máxima 40.000, structured outputs con

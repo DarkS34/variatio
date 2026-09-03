@@ -131,15 +131,16 @@ def cerebras_state() -> dict:
     `server.jobs.build_worker`, a separate process — the half of the work that actually
     empties a daily budget — and reading it here is what shows a build's spending live.
 
-    `routed` and `usage` are two keys on purpose: the first is what the configuration
-    sends to Cerebras, the second what has actually been spent. A model can be in one and
+    `routed` and `usage` are two keys on purpose: the first is what the engine sends to
+    Cerebras — its catalogue as last read plus the declared list, asked of the engine so
+    it is the same answer routing gives — the second what has actually been spent. A model can be in one and
     not the other, and collapsing them into one «models» loses exactly that difference.
     """
     budget = cerebras_budget.shared().snapshot()
     return {
         "active": inference.engine_name() == "cerebras+ollama",
         "configured": bool(config.CEREBRAS_API_KEY),
-        "routed": sorted(config.CEREBRAS_MODELS),
+        "routed": sorted(inference.remote_models()),
         "max_wait": config.CEREBRAS_MAX_WAIT_SECONDS,
         "usage": budget["models"],
         # One call and how many there are: the strip draws the one worth acting on — a

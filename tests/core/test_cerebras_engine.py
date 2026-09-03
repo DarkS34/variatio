@@ -8,6 +8,9 @@ from variatio.core import cerebras, cerebras_budget, progress
 from variatio.core.cerebras import CerebrasEngine, HybridEngine
 from variatio.core.inference import InferenceError
 
+# Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
+_REAL_KNOWN_MODELS = CerebrasEngine.known_models
+
 
 def test_strict_schema_closes_every_object():
     schema = {
@@ -214,6 +217,48 @@ def test_the_hybrid_routes_by_membership(hybrid):
     assert hybrid.remote_models() == frozenset({"gemma-4-31b"})
 
 
+def test_every_model_of_the_catalogue_is_routed_remote(monkeypatch):
+    monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
+    engine = HybridEngine()
+    engine._cerebras.known_models = lambda: frozenset({"gemma-4-31b", "qwen-3.8-27b"})
+    assert engine._backend("qwen-3.8-27b") is engine._cerebras
+    assert engine._backend("qwen3.8:27b-q8_0") is engine._ollama
+    assert engine.remote_models() == frozenset({"gemma-4-31b", "qwen-3.8-27b"})
+    assert {"model": "qwen-3.8-27b", "size": None, "remote": True} in [
+        info for info in _with_local(engine).installed_models_detail() if info.get("remote")
+    ]
+
+
+def _with_local(engine: HybridEngine) -> HybridEngine:
+    engine._ollama.installed_models_detail = lambda: [{"model": "qwen3.8:27b-q8_0", "size": 1}]
+    return engine
+
+
+def test_known_models_keeps_the_last_catalogue_through_a_blip(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, json={"data": [{"id": "qwen-3.8-27b"}]})
+        return httpx.Response(503, text="down")
+
+    engine = _engine_with(handler)
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    engine._catalog = (engine._catalog[0] - 10_000, engine._catalog[1])
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    assert len(calls) == 2
+    # The failure is remembered: the next reading costs no round trip.
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    assert len(calls) == 2
+
+
+def test_known_models_is_empty_when_nothing_was_ever_read():
+    engine = _engine_with(lambda request: httpx.Response(503, text="down"))
+    assert engine.known_models() == frozenset()
+    assert engine.known_models() == frozenset()
+
+
 def test_a_remote_model_cannot_embed(hybrid):
     with pytest.raises(InferenceError, match="embedding"):
         hybrid.embed("gemma-4-31b", "texto")
@@ -234,10 +279,12 @@ def test_the_remote_capabilities_are_declared_not_asked(hybrid):
     assert hybrid.supports_thinking("gemma-4-31b") is True
     assert hybrid.supports_vision("gemma-4-31b") is True
     assert hybrid._cerebras.supports_vision("otro-modelo-31b") is False
+    assert hybrid._cerebras.supports_vision("qwen-3.8-27b") is True
 
 
 def _engine_with(handler) -> CerebrasEngine:
     engine = CerebrasEngine()
+    engine.known_models = _REAL_KNOWN_MODELS.__get__(engine)
     engine._client = httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.cerebras.ai/v1"
     )

@@ -137,7 +137,8 @@
       },
       "generation": {
         "models": [
-          "gemma-4-31b"
+          "gemma-4-31b",
+          "qwen-3.8-27b"
         ],
         "fixed_effort": [
           "gemma-4-31b"

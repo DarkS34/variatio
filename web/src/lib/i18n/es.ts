@@ -2159,7 +2159,7 @@ export const es = {
   "cfg.commaSeparated": "Sepáralos con comas.",
   "cfg.routeTo": "Enrutar {model} a Cerebras",
   "cfg.offCatalog": "fuera del catálogo",
-  "cfg.cerebrasNote": "La lista viene de la propia API de Cerebras. Lo marcado se sirve en remoto; todo lo demás sigue en Ollama.",
+  "cfg.cerebrasNote": "La lista viene de la propia API de Cerebras, y todo modelo que aparece en ella se sirve en remoto, marcado o no. Marcar uno lo deja enrutado allí aunque el catálogo no se pueda leer; lo que el catálogo no lista sigue en Ollama.",
   "cfg.configured": "Configurada",
   "cfg.absent": "Ausente",
   "cfg.unset": "— sin fijar —",
