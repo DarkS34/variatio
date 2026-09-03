@@ -132,3 +132,36 @@ def all_rows(session: Session) -> list[tuple[StageEvaluation, str, str | None]]:
         .order_by(StageEvaluation.created_at.asc())
     ).all()
     return [(row, slug, username) for row, slug, username in rows]
+
+
+def everything(
+    session: Session, workspace_id: int | None = None
+) -> list[tuple[StageEvaluation, Workspace, User | None]]:
+    """Every row with its workspace and its author, for the panel's aggregates.
+
+    Unlike `all_rows` it hands over the USER and not only a username, because the panel
+    groups by evaluator profile and that is a property of the account; and it takes the
+    optional workspace the panel filters on, so the narrowing happens in the query.
+    """
+    statement = (
+        select(StageEvaluation, Workspace, User)
+        .join(Workspace, StageEvaluation.workspace_id == Workspace.id)
+        .outerjoin(User, StageEvaluation.user_id == User.id)
+        .order_by(StageEvaluation.created_at.asc())
+    )
+    if workspace_id is not None:
+        statement = statement.where(StageEvaluation.workspace_id == workspace_id)
+    return [(row, workspace, user) for row, workspace, user in session.execute(statement).all()]
+
+
+def delete_for_accounts(session: Session, account_ids: list[int]) -> int:
+    """Delete every form these accounts answered or opened, and count them."""
+    if not account_ids:
+        return 0
+    rows = list(
+        session.scalars(select(StageEvaluation).where(StageEvaluation.user_id.in_(account_ids)))
+    )
+    for row in rows:
+        session.delete(row)
+    session.flush()
+    return len(rows)

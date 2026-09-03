@@ -473,8 +473,12 @@ class StageEvaluation(Base):
     `EvalSession` splits the same way — the aggregates group by the single ordinal scale,
     and everything else is read one row at a time.
 
-    `user_id` is `SET NULL` like the other two tables that record what a person produced:
-    deleting an account must not delete the measurements the study counted.
+    `user_id` CASCADES, unlike the other two tables that record what a person produced
+    (2026-09-03, explicit user request). A generated exercise and a blind comparison are
+    material a course was built on or a session the study counted; a form is one person's
+    verdict on a build and means nothing with nobody behind it — a row with no evaluator
+    cannot be filtered, grouped or withdrawn from the panel, which is how six of them were
+    found stranded in production. Deleting the account takes its forms with it.
     """
 
     __tablename__ = "stage_evaluations"
@@ -494,7 +498,7 @@ class StageEvaluation(Base):
         ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
     )
     user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
+        ForeignKey("users.id", ondelete="CASCADE"), default=None, index=True
     )
 
     artifact: Mapped[str] = mapped_column(String(32), index=True)

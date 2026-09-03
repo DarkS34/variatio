@@ -10,7 +10,7 @@ import { useSession } from "@/state/auth";
 import { useAdminOverview } from "@/state/queries";
 
 import { StudyTab } from "@/study/AdminStudyTab";
-import { useAdminEvaluations } from "@/study/queries";
+import type { StudyFilters } from "@/study/types";
 
 import { AccountsTab } from "./AccountsTab";
 import { StatTile } from "./charts";
@@ -34,11 +34,11 @@ export function AdminScreen() {
   const { t } = useT();
   const session = useSession();
   const [tab, setTab] = useState("estudio");
-  const [workspace, setWorkspace] = useState<string | null>(null);
-  const [account, setAccount] = useState<number | null>(null);
+  // The study's reading filter lives here and not in its tab, because «Cuentas» sets it
+  // («ver sus sesiones») before switching over.
+  const [filters, setFilters] = useState<StudyFilters>({});
 
   const overview = useAdminOverview();
-  const study = useAdminEvaluations({ workspace, account });
 
   if (!session.data?.user.is_admin) {
     return (
@@ -86,22 +86,13 @@ export function AdminScreen() {
         onChange={setTab}
       />
 
-      {tab === "estudio" ? (
-        <StudyTab
-          data={study.data}
-          loading={study.isLoading}
-          workspace={workspace}
-          account={account}
-          onWorkspace={setWorkspace}
-          onAccount={setAccount}
-        />
-      ) : null}
+      {tab === "estudio" ? <StudyTab filters={filters} onFilters={setFilters} /> : null}
 
       {tab === "cuentas" && overview.data ? (
         <AccountsTab
           overview={overview.data}
           onInspect={(id) => {
-            setAccount(id);
+            setFilters({ account: id });
             setTab("estudio");
           }}
         />

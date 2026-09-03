@@ -327,3 +327,49 @@ def test_a_question_of_another_artifact_does_not_travel():
 def test_options_for_an_unknown_question_is_empty():
     assert instruments.options_for(GRAPH, "no_existe") == ()
     assert instruments.options_for("no_existe", "effort") == ()
+
+
+def test_everything_carries_the_author_and_narrows_to_a_workspace(db, ws):
+    from study.api import stage_store
+
+    other = repository.ensure_workspace(db, "other")
+    db.commit()
+    _save(db, ws, "h1", 4)
+    _save(db, other, "h2", 2)
+
+    rows = queries.everything(db)
+    assert len(rows) == 2
+    assert {workspace.slug for _, workspace, _ in rows} == {"default", "other"}
+
+    only = stage_store.headers(db, ws.id)
+    assert [h["workspace"] for h in only] == ["default"]
+    assert only[0]["overall"] == 4 and only[0]["answered"] is True
+
+
+def test_deleting_the_account_takes_its_forms_with_it():
+    # SQLite enforces nothing unless told to, and this is exactly a test of enforcement.
+    from sqlalchemy import event
+
+    from server.db import identity
+    from server.db.models import User
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    event.listen(engine, "connect", lambda con, _: con.execute("PRAGMA foreign_keys=ON"))
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine, expire_on_commit=False)()
+    ws = repository.ensure_workspace(db, "default")
+    keeper = User(id=1, username="ana", name="ana", password_hash="x")
+    leaver = User(id=2, username="bea", name="bea", password_hash="x")
+    db.add_all([keeper, leaver])
+    db.flush()
+    _save(db, ws, "h", 4, user=1)
+    _save(db, ws, "h", 2, user=2)
+    db.commit()
+
+    identity.delete_user(db, leaver)
+    db.commit()
+
+    rows = db.query(StageEvaluation).all()
+    assert [(r.user_id, r.overall) for r in rows] == [(1, 4)]

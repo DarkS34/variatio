@@ -85,6 +85,21 @@ def delete_evaluations(session: Session, session_ids: list[str]) -> list[str]:
     return [row.id for row in rows]
 
 
+def delete_for_accounts(session: Session, account_ids: list[int]) -> int:
+    """Delete every session these accounts hold, across the installation, and count them.
+
+    The evaluator's RECORDS and not the evaluator: the account stays, and so does
+    everything else it produced. Stock nobody holds has no `user_id` and is untouched.
+    """
+    if not account_ids:
+        return 0
+    rows = list(session.scalars(select(EvalSession).where(EvalSession.user_id.in_(account_ids))))
+    for row in rows:
+        session.delete(row)
+    session.flush()
+    return len(rows)
+
+
 def list_evaluations(
     session: Session,
     workspace_id: int | None = None,

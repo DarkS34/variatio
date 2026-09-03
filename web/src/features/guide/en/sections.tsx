@@ -1884,8 +1884,12 @@ function Admin() {
           sees it.
         </p>
         <p>
-          Five tabs, and this section covers all of them. "{t("admin.tab.study")}" gathers the
-          comparisons people have judged, with their tallies and their contrasts.
+          Five tabs, and this section covers all of them. "{t("admin.tab.study")}" gathers what
+          people have answered, in two blocks: the blind comparisons of the testing phase, with
+          their tallies and their contrasts, and the forms that close each step of the
+          construction phase, summarised step by step. Above both sits one filter — an account,
+          a kind of account (teachers or students) and a subject — that narrows both blocks at
+          once, and each block downloads as CSV exactly what it shows.
         </p>
       </SectionHead>
 

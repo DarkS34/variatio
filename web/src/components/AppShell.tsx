@@ -106,12 +106,10 @@ export function StepCounter({
       className={cn(
         COUNTER_BOX,
         "nums font-condensed text-small font-semibold",
-        // THE NUMBER NEVER LEAVES (2026-09-02, explicit user request). A done step used to
-        // swap its number for a bare tick, so once the construction was finished the four
-        // stops that identify it had lost their identity and the only numbers left on the
-        // bar were the phases'. The state is said by the BORDER now — solid behind you,
-        // dashed ahead, filled where you act — which is the encoding the rail carried
-        // before the numbers replaced it; the tick moved to the word under the name.
+        // A DONE STEP SHOWS A TICK WHERE ITS NUMBER WAS (2026-09-03, explicit user
+        // request, reversing the previous day's «the number never leaves»). The box and its
+        // `--settled` stroke stay, so the four stops keep one shape and one height; only
+        // the glyph changes, and the word under the name still says «Hecho».
         state === "done" && "border border-settled text-settled",
         state === "now"
           // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
@@ -123,7 +121,7 @@ export function StepCounter({
         state === "later" && "border border-dashed border-input text-muted-foreground",
       )}
     >
-      {n}
+      {state === "done" ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : n}
     </span>
   );
 }
@@ -196,11 +194,6 @@ function StepPill({
         >
           {busy ? (
             t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
-          ) : state === "done" ? (
-            <>
-              <Check className="size-3" strokeWidth={3} aria-hidden />
-              {t(STATE_KEY.done)}
-            </>
           ) : (
             t(STATE_KEY[state])
           )}

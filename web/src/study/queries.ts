@@ -8,14 +8,15 @@ import type {
   EvaluationParams,
   EvaluationRating,
   StageReview,
+  StudyFilters,
   TriageValue,
 } from "./types";
 
 export const studyKeys = {
   evaluations: ["evaluations"] as const,
   evaluation: (id: string) => ["evaluations", id] as const,
-  adminEvaluations: (filters: Record<string, unknown>) =>
-    ["admin", "evaluations", filters] as const,
+  adminEvaluations: (filters: StudyFilters) => ["admin", "evaluations", filters] as const,
+  adminStages: (filters: StudyFilters) => ["admin", "evaluations", "stages", filters] as const,
   adminSets: (workspace: string) => ["admin", "evaluations", "sets", workspace] as const,
 };
 
@@ -75,13 +76,19 @@ export function useRateSession() {
   );
 }
 
-export function useAdminEvaluations(filters: {
-  workspace?: string | null;
-  account?: number | null;
-}) {
+export function useAdminEvaluations(filters: StudyFilters) {
   return useQuery({
     queryKey: studyKeys.adminEvaluations(filters),
     queryFn: () => studyApi.adminEvaluations(filters),
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** The construction forms under the same filters as the comparisons. */
+export function useAdminStageEvaluations(filters: StudyFilters) {
+  return useQuery({
+    queryKey: studyKeys.adminStages(filters),
+    queryFn: () => studyApi.adminStageEvaluations(filters),
     placeholderData: (previous) => previous,
   });
 }
@@ -100,6 +107,18 @@ function useDeletion(call: (ids: string[]) => Promise<{ deleted: string[] }>) {
 
 export const useDeleteOwnEvaluations = () => useDeletion(studyApi.deleteEvaluations);
 export const useDeleteEvaluations = () => useDeletion(studyApi.adminDeleteEvaluations);
+
+/** Withdraw evaluators from the study: both instruments go, the accounts stay. */
+export function useDeleteEvaluatorRecords() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (accounts: number[]) => studyApi.adminDeleteEvaluatorRecords(accounts),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["admin", "evaluations"] });
+      client.invalidateQueries({ queryKey: studyKeys.evaluations });
+    },
+  });
+}
 
 export function useAssignableAccounts() {
   return useQuery({

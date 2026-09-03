@@ -1869,8 +1869,12 @@ function Admin() {
         </p>
         <p>
           Son cinco pestañas, y esta sección las cubre todas. La de «
-          {t("admin.tab.study")}» reúne las comparaciones que ha juzgado la gente, con sus
-          recuentos y sus contrastes.
+          {t("admin.tab.study")}» reúne lo que ha contestado la gente, en dos bloques: las
+          comparaciones a ciegas de la fase de pruebas, con sus recuentos y sus contrastes, y los
+          formularios que cierran cada paso de la fase de construcción, resumidos paso a paso.
+          Arriba de los dos va un solo filtro —una cuenta, un tipo de cuenta (docentes o
+          alumnos) y una asignatura— que acota ambos bloques a la vez, y cada bloque descarga
+          en CSV exactamente lo que muestra.
         </p>
       </SectionHead>
 

@@ -281,3 +281,70 @@ export function ShareMeter({
     </span>
   );
 }
+
+/* One ordinal variable, as a segmented bar --------------------------------------------- */
+
+export interface Segment {
+  key: string;
+  label: string;
+  value: number;
+}
+
+/**
+ * The distribution of ONE ordinal answer — «ninguno / alguno / muchos», 1 to 5 — as a
+ * single bar cut into its rungs, with the legend under it.
+ *
+ * Steps of one hue and not the arm palette: the rungs are one thing at several degrees,
+ * not several entities, so the identity channel stays free. The `best` end is the full
+ * ink and the rest fade from it, which is what lets a card of six such bars be read at
+ * a glance — the darker the bar, the better the verdict. Touching segments are separated
+ * by 2 px of surface, and every segment is named in the legend with its count.
+ */
+export function Segments({
+  segments,
+  best = "first",
+}: {
+  segments: Segment[];
+  best?: "first" | "last";
+}) {
+  const { t } = useT();
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+  if (total <= 0) {
+    return <p className="text-small text-muted-foreground">{t("charts.nothingToSummarise")}</p>;
+  }
+
+  const steps = segments.length;
+  const opacity = (index: number) => {
+    const rank = best === "first" ? index : steps - 1 - index;
+    return steps > 1 ? 1 - (rank / (steps - 1)) * 0.78 : 1;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-2.5 w-full gap-[2px] overflow-hidden rounded-[2px] bg-muted">
+        {segments.map((segment, index) =>
+          segment.value > 0 ? (
+            <div
+              key={segment.key}
+              className="h-full bg-primary"
+              style={{ width: `${(segment.value / total) * 100}%`, opacity: opacity(index) }}
+              title={t("charts.segmentTitle", { label: segment.label, n: segment.value })}
+            />
+          ) : null,
+        )}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-micro text-muted-foreground">
+        {segments.map((segment, index) => (
+          <span key={segment.key} className="flex items-center gap-1.5">
+            <span
+              className="size-2 shrink-0 rounded-[2px] bg-primary"
+              style={{ opacity: opacity(index) }}
+            />
+            {segment.label}
+            <span className="nums text-foreground">{segment.value}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}

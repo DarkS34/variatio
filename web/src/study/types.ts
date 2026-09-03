@@ -265,6 +265,8 @@ export interface AdminGroup extends EvaluationAggregates {
   key: string | number;
   label: string;
   name: string | null;
+  /** Optional because an API older than the bundle does not send it. */
+  evaluator_profile?: EvaluatorProfile | null;
   last_at: number;
 }
 
@@ -308,7 +310,12 @@ export interface AdminEvaluations {
   filters: {
     workspace: string | null;
     account: number | null;
+    profile?: EvaluatorProfile | null;
     workspaces: string[];
+    /** Every active account of the installation, for the WHO selector. Optional because
+     *  an API older than the bundle does not send it, and the selector then only offers
+     *  the account already in the filter. */
+    accounts?: FilterAccount[];
   };
   sessions: AdminSessionRow[];
 }
@@ -443,4 +450,97 @@ export interface StageReview {
   hash: string | null;
   instrument: StageInstrument;
   mine: StageAnswers | null;
+}
+
+// THE CONSTRUCTION FORMS, READ FROM THE PANEL ---------------------------------------------
+// The shapes `study/api/stage_store.py` serves over `/api/admin/evaluations/stages`: one
+// summary per stage of the chain, one row per evaluator, and every form.
+
+/** One question of a stage's form, with what everybody answered to it. The wording and
+ *  the option labels travel from the server: they ARE the instrument. */
+export interface StageQuestionSummary {
+  key: string;
+  axis: string;
+  question: string;
+  options: StageQuestionOption[];
+  counts: Record<string, number>;
+  n: number;
+}
+
+export interface StageCurationSlice {
+  n: number;
+  overall_mean: number | null;
+}
+
+export interface StageArtifactSummary {
+  artifact: string;
+  opened: number;
+  answered: number;
+  overall: { n: number; mean: number | null; counts: Record<string, number> };
+  questions: StageQuestionSummary[];
+  /** «Nada» and «algún retoque» together: the share that leaves the artifact usable. */
+  usable: number | null;
+  /** The contrast the `curated` column exists for; `unknown` predates the question. */
+  curation: Record<"yes" | "no" | "unknown", StageCurationSlice>;
+  seconds: { n: number; median: number | null };
+  instruments: Record<string, number>;
+  notes: number;
+}
+
+export interface StageAccountGroup {
+  key: string | number;
+  label: string;
+  name: string | null;
+  evaluator_profile: EvaluatorProfile | null;
+  opened: number;
+  answered: number;
+  overall_mean: number | null;
+  per_artifact: Record<string, number>;
+  curated: number;
+  last_at: number;
+}
+
+export interface AdminStageRow {
+  id: number;
+  created_at: number;
+  updated_at: number | null;
+  seconds: number | null;
+  workspace: string | null;
+  account: string | null;
+  account_id: number | null;
+  evaluator_profile: EvaluatorProfile | null;
+  artifact: string;
+  instrument: string;
+  answers: Record<string, string>;
+  overall: number | null;
+  curated: boolean | null;
+  answered: boolean;
+  note: string | null;
+}
+
+export interface AdminStageEvaluations {
+  aggregates: {
+    rows: number;
+    answered: number;
+    opened_only: number;
+    overall_mean: number | null;
+    by_artifact: StageArtifactSummary[];
+  };
+  by_account: StageAccountGroup[];
+  rows: AdminStageRow[];
+}
+
+/** One account the panel can narrow the reading to. */
+export interface FilterAccount {
+  id: number;
+  username: string;
+  name: string;
+  evaluator_profile: EvaluatorProfile | null;
+}
+
+/** The three ways the panel narrows a reading: WHO, which kind of who, and WHERE. */
+export interface StudyFilters {
+  workspace?: string | null;
+  account?: number | null;
+  profile?: EvaluatorProfile | null;
 }

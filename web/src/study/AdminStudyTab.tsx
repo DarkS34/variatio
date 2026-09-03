@@ -3,20 +3,38 @@ import { useMemo } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
-import { Checkbox, Skeleton } from "@/components/ui/misc";
+import { Checkbox, LoadError, Skeleton } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
-import { BarRows, DayColumns, ShareMeter, type BarRow } from "@/features/admin/charts";
+import { BarRows, Segments, ShareMeter, StatTile, type BarRow } from "@/features/admin/charts";
+import { PROFILES, profileLabel } from "@/lib/evaluator";
 import { duration, when } from "@/lib/format";
+import { artifactName } from "@/lib/names";
+import { STEPS } from "@/lib/steps";
+import type { EvaluatorProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { AdminSetsPanel } from "./AdminSetsPanel";
 import { CROSS_EVALUATION } from "./config";
 import { ARM_META } from "./arms";
-import { useAdminEvaluations, useDeleteEvaluations } from "./queries";
+import {
+  useAdminEvaluations,
+  useAdminStageEvaluations,
+  useDeleteEvaluations,
+  useDeleteEvaluatorRecords,
+} from "./queries";
 import { studyApi } from "./api";
-import type { AdminEvaluations, AdminGroup, EvaluationAggregates, EvaluationArm } from "./types";
+import type {
+  AdminEvaluations,
+  AdminGroup,
+  AdminStageEvaluations,
+  EvaluationAggregates,
+  EvaluationArm,
+  StageAccountGroup,
+  StageArtifactSummary,
+  StudyFilters,
+} from "./types";
 import { useSelection } from "./useSelection";
 import { useT, type Key, type Language } from "@/lib/i18n";
 
@@ -35,36 +53,48 @@ const RUBRIC_LABELS: Record<string, Key> = {
   soundness: "rubricScale.soundness",
 };
 
+/** The two kinds of account as the FILTER names them — plural, because the button names a
+ *  group of people, where `profileLabel` names one person's own profile. */
+const PROFILE_FILTER_LABELS: Record<EvaluatorProfile, Key> = {
+  teacher: "adminStudy.profile.teachers",
+  student: "adminStudy.profile.students",
+};
+
+/** The three stages of the chain in the order the bar numbers them, so the forms are
+ *  read in the order they were answered. */
+const STAGE_ARTIFACTS = STEPS.flatMap((step) => (step.artifact ? [step.artifact] : []));
+
+/**
+ * The study's tab: WHO first, then the two instruments, each with its own CSV.
+ *
+ * The filter is one and it sits above both blocks, because the two instruments describe
+ * the same people: a teacher who judged three comparisons also answered the forms at the
+ * foot of each stage, and reading the two apart by different filters would be reading two
+ * studies. The order of the selectors is the order of the question — which person, which
+ * kind of person, which subject — and the account list narrows with the profile.
+ */
 export function StudyTab({
-  data,
-  loading,
-  workspace,
-  account,
-  onWorkspace,
-  onAccount,
+  filters,
+  onFilters,
 }: {
-  data: ReturnType<typeof useAdminEvaluations>["data"];
-  loading: boolean;
-  workspace: string | null;
-  account: number | null;
-  onWorkspace: (slug: string | null) => void;
-  onAccount: (id: number | null) => void;
+  filters: StudyFilters;
+  onFilters: (next: StudyFilters) => void;
 }) {
   const { t, plural } = useT();
-  if (loading && !data) return <Skeleton className="h-96" />;
-  if (!data) return null;
+  const study = useAdminEvaluations(filters);
+  const stages = useAdminStageEvaluations(filters);
 
-  const filtered = Boolean(workspace || account !== null);
-  const csv = studyApi.adminEvaluationCsvUrl({ workspace, account });
+  if (study.isLoading && !study.data) return <Skeleton className="h-96" />;
+  if (!study.data) {
+    return (
+      <LoadError title={t("adminStudy.unreadable")} error={study.error} onRetry={study.refetch} />
+    );
+  }
+  const data = study.data;
+  const filtered = Boolean(filters.workspace || filters.account != null || filters.profile);
 
   return (
     <div className="space-y-8">
-      {/* Handing comparisons out comes FIRST, before any number: it is the only thing on
-          this screen that is work rather than a reading, and it is what makes the numbers
-          below exist at all. It carries its own person-and-workspace choice, and the
-          filter that now sits BELOW it does not reach it — the two used to run together
-          in one column, with the reading filter on top, where it read as if it governed
-          the reparto as well. */}
       {/* Repartir comparaciones entre evaluadores es la mitad CRUZADA del estudio, apagada
           en esta rama (`study/config.ts`). Se va la sección entera y no solo su contenido:
           un encabezado sobre una tarjeta vacía dice que la función está rota, que es
@@ -81,54 +111,77 @@ export function StudyTab({
         </Section>
       ) : null}
 
-      <Section
-        eyebrow={t("adminStudy.results.eyebrow")}
-        title={t("adminStudy.results.title")}
-        description={t("adminStudy.results.description")}
-      >
-        {/* The filter stays above the numbers inside its own section, so what is being
-            looked at is stated before the numbers rather than inferred from them. */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            aria-label={t("adminStudy.filterByWorkspace")}
-            value={workspace ?? ""}
-            onChange={(event) => onWorkspace(event.target.value || null)}
-            className="w-56"
-          >
-            <option value="">{t("adminStudy.allWorkspaces")}</option>
-            {data.filters.workspaces.map((slug) => (
-              <option key={slug} value={slug}>
-                {slug}
-              </option>
-            ))}
-          </Select>
+      <FilterBar
+        data={data}
+        filters={filters}
+        onFilters={onFilters}
+        summary={
+          filtered
+            ? `${plural("adminStudy.comparisonCount", data.aggregates.sessions)} · ${plural(
+                "adminStudy.formCount",
+                stages.data?.aggregates.answered ?? 0,
+              )}`
+            : null
+        }
+      />
 
-          {account !== null ? (
-            <Button variant="outline" size="sm" onClick={() => onAccount(null)}>
-              {t("adminStudy.clearAccountFilter")}
+      {/* The evaluators come FIRST, before either instrument: the reading starts from a
+          person, and this table is what turns «este evaluador» into a filter over the
+          whole tab. It carries both instruments in one row, because the same person
+          answered both. */}
+      <Card
+        title={t("adminStudy.card.byAccount")}
+        aside={
+          filters.account != null ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFilters({ ...filters, account: null })}
+            >
+              {t("adminStudy.backToAll")}
             </Button>
-          ) : null}
+          ) : null
+        }
+      >
+        <EvaluatorsTable
+          study={data}
+          stages={stages.data ?? null}
+          selectedAccount={filters.account ?? null}
+          onSelect={(id) => onFilters({ ...filters, account: id })}
+        />
+      </Card>
 
-          {filtered ? (
-            <span className="text-small text-muted-foreground">
-              {plural("adminStudy.sessionsInFilter", data.aggregates.sessions)}
-            </span>
-          ) : null}
+      <Section
+        title={t("adminStudy.build.title")}
+        description={t("adminStudy.build.description")}
+        action={<CsvLink href={studyApi.adminStageCsvUrl(filters)} filtered={filtered} />}
+      >
+        {stages.data ? (
+          stages.data.aggregates.rows === 0 ? (
+            <Card>
+              <p className="text-small text-muted-foreground">
+                {filtered ? t("adminStudy.stages.filteredEmpty") : t("adminStudy.stages.empty")}
+              </p>
+            </Card>
+          ) : (
+            <StageForms data={stages.data} />
+          )
+        ) : stages.isLoading ? (
+          <Skeleton className="h-48" />
+        ) : (
+          <LoadError
+            title={t("adminStudy.stages.unreadable")}
+            error={stages.error}
+            onRetry={stages.refetch}
+          />
+        )}
+      </Section>
 
-          <a
-            href={csv}
-            download
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}
-          >
-            <Download />
-            CSV{filtered ? t("adminStudy.csvFiltered") : ""}
-          </a>
-        </div>
-
-        {/* Not an `EmptyState`: its title sits at the same type step as the section
-            heading right above it, and two titles of one level nested inside each other
-            is the hierarchy this split exists to fix. Here it is a state of the section,
-            so it is written at the level of what it replaces — the cards. */}
+      <Section
+        title={t("adminStudy.tests.title")}
+        description={t("adminStudy.tests.description")}
+        action={<CsvLink href={studyApi.adminEvaluationCsvUrl(filters)} filtered={filtered} />}
+      >
         {data.aggregates.sessions === 0 ? (
           <Card>
             <p className="text-small text-muted-foreground">
@@ -136,98 +189,230 @@ export function StudyTab({
             </p>
           </Card>
         ) : (
-          <>
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-              <Card title={t("adminStudy.card.wins")}>
-                <Preferences aggregates={data.aggregates} />
-              </Card>
-              <Card title={t("adminStudy.card.pace")}>
-                <DayColumns points={data.per_day} />
-              </Card>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <Card title={t("adminStudy.card.triage")}>
-                <Triage aggregates={data.aggregates} />
-              </Card>
-              <Card title={t("adminStudy.card.measurement")}>
-                <Measurement data={data} />
-              </Card>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <Card title={t("adminStudy.card.rubric")}>
-                <Rubric aggregates={data.aggregates} />
-              </Card>
-              <Card title={t("adminStudy.card.think")}>
-                <ThinkEffect aggregates={data.aggregates} />
-              </Card>
-            </div>
-
-            <Card title={t("adminStudy.card.byProfile")}>
-              <GroupTable groups={data.by_profile} firstHeader={t("adminStudy.col.profile")} />
-            </Card>
-
-            <Card title={t("adminStudy.card.byAccount")}>
-              <GroupTable
-                groups={data.by_account}
-                firstHeader={t("adminStudy.col.evaluator")}
-                onSelect={(group) => onAccount(Number(group.key) || null)}
-              />
-            </Card>
-
-            <Card title={t("adminStudy.card.byWorkspace")}>
-              <GroupTable
-                groups={data.by_workspace}
-                firstHeader={t("adminStudy.col.workspace")}
-                onSelect={(group) => onWorkspace(String(group.key) || null)}
-              />
-            </Card>
-
-            <Card title={t("adminStudy.card.sessions", { n: data.sessions.length })}>
-              <SessionsTable rows={data.sessions} />
-            </Card>
-          </>
+          <Comparisons data={data} />
         )}
       </Section>
     </div>
   );
 }
 
+/* The filter ------------------------------------------------------------------------- */
+
+/**
+ * WHO → which KIND of who → WHERE. Three selects on one line, each with its caption.
+ *
+ * The account list follows the profile: with «Docentes» chosen it offers teachers only,
+ * and choosing a profile the chosen account does not have drops the account rather than
+ * keeping a filter that matches nobody. An account already in the filter but absent
+ * from the list — set from «Cuentas» on an API older than the bundle — is still offered,
+ * by its id, so the filter can always be seen and cleared.
+ */
+function FilterBar({
+  data,
+  filters,
+  onFilters,
+  summary,
+}: {
+  data: AdminEvaluations;
+  filters: StudyFilters;
+  onFilters: (next: StudyFilters) => void;
+  summary: string | null;
+}) {
+  const { t } = useT();
+  const accounts = data.filters.accounts ?? [];
+  const offered = filters.profile
+    ? accounts.filter((account) => account.evaluator_profile === filters.profile)
+    : accounts;
+  const current = accounts.find((account) => account.id === filters.account);
+  const filtered = Boolean(filters.workspace || filters.account != null || filters.profile);
+
+  const setProfile = (profile: EvaluatorProfile | null) => {
+    const keep = !profile || !current || current.evaluator_profile === profile;
+    onFilters({ ...filters, profile, account: keep ? filters.account : null });
+  };
+
+  return (
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+      <Field label={t("adminStudy.filter.profile")}>
+        {/* Three buttons and not a select: which KIND of person is the first question
+            of the reading, and a control with all its options in view is one that gets
+            found. `aria-pressed` says which is on. */}
+        <div role="group" aria-label={t("adminStudy.filter.profile")} className="flex gap-1">
+          {([null, ...PROFILES] as (EvaluatorProfile | null)[]).map((profile) => (
+            <Button
+              key={profile ?? "all"}
+              type="button"
+              size="sm"
+              variant={(filters.profile ?? null) === profile ? "default" : "outline"}
+              aria-pressed={(filters.profile ?? null) === profile}
+              onClick={() => setProfile(profile)}
+            >
+              {profile ? t(PROFILE_FILTER_LABELS[profile]) : t("adminStudy.allProfiles")}
+            </Button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label={t("adminStudy.filter.account")}>
+        <Select
+          aria-label={t("adminStudy.filter.account")}
+          value={filters.account ?? ""}
+          onChange={(event) =>
+            onFilters({ ...filters, account: event.target.value ? Number(event.target.value) : null })
+          }
+          className="w-56"
+        >
+          <option value="">{t("adminStudy.allAccounts")}</option>
+          {filters.account != null && !current ? (
+            <option value={filters.account}>#{filters.account}</option>
+          ) : null}
+          {offered.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.username}
+              {account.name && account.name !== account.username ? ` · ${account.name}` : ""}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label={t("adminStudy.filter.workspace")}>
+        <Select
+          aria-label={t("adminStudy.filterByWorkspace")}
+          value={filters.workspace ?? ""}
+          onChange={(event) => onFilters({ ...filters, workspace: event.target.value || null })}
+          className="w-52"
+        >
+          <option value="">{t("adminStudy.allWorkspaces")}</option>
+          {data.filters.workspaces.map((slug) => (
+            <option key={slug} value={slug}>
+              {slug}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      {summary ? <span className="pb-2 text-small text-muted-foreground">{summary}</span> : null}
+
+      {filtered ? (
+        <Button variant="outline" size="sm" className="ml-auto" onClick={() => onFilters({})}>
+          {t("adminStudy.backToTotal")}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-micro font-condensed uppercase text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function CsvLink({ href, filtered }: { href: string; filtered: boolean }) {
+  const { t } = useT();
+  return (
+    <a href={href} download className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+      <Download />
+      CSV{filtered ? t("adminStudy.csvFiltered") : ""}
+    </a>
+  );
+}
+
+/* The blind comparisons ---------------------------------------------------------------- */
+
+/**
+ * The most important readings of the comparisons and nothing more: who won and whether
+ * that beats chance, whether the proposals would be used, the rubric on the system's own
+ * exercise, whether the instrument can be trusted, and the sessions themselves. The pace,
+ * the reasoning draw and the per-subject and per-profile tables left the screen — the
+ * profile is a filter now, the evaluators are the table at the top, and the rest is in
+ * the CSV.
+ */
+function Comparisons({ data }: { data: AdminEvaluations }) {
+  const { t } = useT();
+  return (
+    <>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <Card title={t("adminStudy.card.wins")}>
+          <Preferences aggregates={data.aggregates} />
+        </Card>
+        <Card title={t("adminStudy.card.triage")}>
+          <Triage aggregates={data.aggregates} />
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card title={t("adminStudy.card.rubric")}>
+          <Rubric aggregates={data.aggregates} />
+        </Card>
+        <Card title={t("adminStudy.card.measurement")}>
+          <Measurement data={data} />
+        </Card>
+      </div>
+
+      <Card title={t("adminStudy.card.sessions", { n: data.sessions.length })}>
+        <SessionsTable rows={data.sessions} />
+      </Card>
+    </>
+  );
+}
+
 /**
  * The two halves of this screen, told apart by structure rather than by colour: an
  * eyebrow at the condensed micro step, a title two steps above the cards' own, and a rule
- * under both. What separates them is the verb — the first WRITES (it generates and hands
- * out), the second only READS — and that is what the description line says, because the
- * mistake it exists to stop is reading the reparto as something the filter governs.
+ * under both. The action slot holds the block's own CSV, on the title's line, because a
+ * download is scoped to what the block shows and belongs beside its name.
  */
 function Section({
   eyebrow,
   title,
   description,
+  action,
   children,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="space-y-4">
-      <header className="space-y-1 border-b border-border pb-2">
-        <p className="text-micro font-condensed uppercase text-muted-foreground">{eyebrow}</p>
-        <h2 className="font-display font-expanded text-title">{title}</h2>
-        <p className="text-small text-muted-foreground">{description}</p>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
+        <div className="space-y-1">
+          {eyebrow ? (
+            <p className="text-micro font-condensed uppercase text-muted-foreground">{eyebrow}</p>
+          ) : null}
+          <h2 className="font-display font-expanded text-title">{title}</h2>
+          <p className="text-small text-muted-foreground">{description}</p>
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </header>
       {children}
     </section>
   );
 }
 
-function Card({ title, children }: { title?: string; children: React.ReactNode }) {
+function Card({
+  title,
+  aside,
+  children,
+}: {
+  title?: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
-      {title ? <h3 className="text-small font-medium">{title}</h3> : null}
+      {title ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-small font-medium">{title}</h3>
+          {aside}
+        </div>
+      ) : null}
       {children}
     </section>
   );
@@ -235,6 +420,13 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
 
 const percent = (value: number | null | undefined) =>
   value == null ? "—" : `${Math.round(value * 100)} %`;
+
+/** A mean on a 1-5 scale, one decimal, with the reader's own decimal mark. */
+function fixed1(value: number | null | undefined, language: Language): string {
+  if (value == null) return "—";
+  const text = value.toFixed(1);
+  return language === "es" ? text.replace(".", ",") : text;
+}
 
 /** A p-value is written as a threshold, not as a verdict: the panel reports, it does not
  *  conclude. `< 0.001` rather than a wall of zeros, and never a "significativo" label. */
@@ -567,161 +759,222 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
 }
 
 /**
- * The other question the sessions can answer, and a table rather than a chart on purpose:
- * six rows of unrelated units — counts, percentages, seconds and 1-5 means — is exactly
- * the case where a chart would have to invent a shared axis it does not have.
- */
-function ThinkEffect({ aggregates }: { aggregates: EvaluationAggregates }) {
-  const { t } = useT();
-  const think = aggregates.think;
-  if (!think) return null;
-  const total = think.on.decided + think.off.decided;
-  if (total === 0) {
-    return (
-      <p className="text-small text-muted-foreground">
-        {t("adminStudy.think.none")}
-      </p>
-    );
-  }
-
-  const share = (slice: typeof think.on) =>
-    slice.decided
-      ? `${slice.preferences?.system ?? 0} · ${Math.round(((slice.preferences?.system ?? 0) / slice.decided) * 100)} %`
-      : "—";
-  const mean = (slice: typeof think.on, key: string) => {
-    const entry = slice.rubric?.[key];
-    return entry?.mean !== undefined ? entry.mean.toFixed(1) : "—";
-  };
-
-  const rows: { label: string; on: string; off: string }[] = [
-    {
-      label: t("adminStudy.think.decided"),
-      on: String(think.on.decided),
-      off: String(think.off.decided),
-    },
-    { label: t("adminStudy.think.systemWon"), on: share(think.on), off: share(think.off) },
-    {
-      label: t("adminStudy.think.systemTime"),
-      on: think.on.elapsed_ms?.system ? duration(think.on.elapsed_ms.system) : "—",
-      off: think.off.elapsed_ms?.system ? duration(think.off.elapsed_ms.system) : "—",
-    },
-    ...Object.entries(RUBRIC_LABELS)
-      .map(([key, label]) => ({
-        label: t(label),
-        on: mean(think.on, key),
-        off: mean(think.off, key),
-      }))
-      .filter((row) => row.on !== "—" || row.off !== "—"),
-  ];
-
-  return (
-    <div className="space-y-2">
-      <p className="text-micro text-muted-foreground">
-        {t("adminStudy.think.drawn")}
-      </p>
-      <div>
-        <Table minWidth="22rem">
-          <THead>
-            <TR>
-              <TH />
-              <TH align="num">{t("adminStudy.think.on")}</TH>
-              <TH align="num">{t("adminStudy.think.off")}</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {rows.map((row) => (
-              <TR key={row.label}>
-                <TD className="py-1.5 pr-3 text-muted-foreground">{row.label}</TD>
-                <TD align="num" className="px-3 py-1.5  nums">{row.on}</TD>
-                <TD align="num" className="py-1.5 pl-3  nums">{row.off}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      </div>
-      {think.on.decided === 0 || think.off.decided === 0 ? (
-        <p className="text-micro text-muted-foreground">
-          {t("adminStudy.think.oneSided")}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * The study grouped, as a table.
+ * One row per person, both instruments side by side: how far down the construction they
+ * went and how they judged it, then how many comparisons they decided and how often the
+ * system won. Sorted by who did most. A row is a filter over the whole tab, and the
+ * selected one is drawn as such; the way back is the button in the card's header.
  *
- * `sesiones` and `decididas` are separate columns on purpose: somebody who launched
- * twenty comparisons and judged three has contributed three data points, and a single
- * count would say the opposite.
+ * `sessions` and `decided` stay separate on purpose: somebody who launched twenty
+ * comparisons and judged three has contributed three data points.
  */
-/** `onSelect` is optional because not every grouping is a filter: the panel filters by
- *  workspace and by account, and there is nothing to narrow to when the rows are the two
- *  evaluator profiles. A row that is not a filter must not look clickable. */
-function GroupTable({
-  groups,
-  firstHeader,
+function EvaluatorsTable({
+  study,
+  stages,
+  selectedAccount,
   onSelect,
 }: {
-  groups: AdminGroup[];
-  firstHeader: string;
-  onSelect?: (group: AdminGroup) => void;
+  study: AdminEvaluations;
+  stages: AdminStageEvaluations | null;
+  /** The account the tab is filtered by, drawn as the selected row. */
+  selectedAccount: number | null;
+  onSelect: (id: number | null) => void;
 }) {
-  const { t } = useT();
-  if (groups.length === 0) {
+  const { t, plural, language } = useT();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const remove = useDeleteEvaluatorRecords();
+
+  const rows = useMemo(() => {
+    const merged = new Map<string, EvaluatorRow>();
+    const row = (key: string, label: string, name: string | null, profile: EvaluatorProfile | null | undefined) => {
+      let entry = merged.get(key);
+      if (!entry) {
+        entry = { key, label, name, profile: profile ?? null, forms: null, comparisons: null, last_at: 0 };
+        merged.set(key, entry);
+      }
+      return entry;
+    };
+    for (const group of stages?.by_account ?? []) {
+      const entry = row(String(group.key), group.label, group.name, group.evaluator_profile);
+      entry.forms = group;
+      entry.last_at = Math.max(entry.last_at, group.last_at);
+    }
+    for (const group of study.by_account) {
+      const entry = row(String(group.key), group.label, group.name, group.evaluator_profile);
+      entry.comparisons = group;
+      entry.last_at = Math.max(entry.last_at, group.last_at);
+    }
+    return [...merged.values()].sort(
+      (a, b) =>
+        (b.forms?.answered ?? 0) + (b.comparisons?.decided ?? 0) -
+          ((a.forms?.answered ?? 0) + (a.comparisons?.decided ?? 0)) ||
+        b.last_at - a.last_at ||
+        a.label.localeCompare(b.label),
+    );
+  }, [study.by_account, stages?.by_account]);
+
+  // Only a row with an account can be withdrawn: stock nobody holds has no evaluator.
+  const ids = useMemo(() => rows.map((r) => r.key).filter((key) => Number(key) > 0), [rows]);
+  const { selected, all: allSelected, some: someSelected, toggle, toggleAll, clear } =
+    useSelection(ids);
+
+  const confirmDelete = async () => {
+    const accounts = [...selected].map(Number);
+    const names = rows.filter((r) => selected.has(r.key)).map((r) => r.label);
+    const forms = rows
+      .filter((r) => selected.has(r.key))
+      .reduce((sum, r) => sum + (r.forms?.opened ?? 0), 0);
+    const sessions = rows
+      .filter((r) => selected.has(r.key))
+      .reduce((sum, r) => sum + (r.comparisons?.sessions ?? 0), 0);
+    const message =
+      t("adminStudy.records.confirmHead", { names: names.join(", ") }) +
+      t("adminStudy.records.confirmBody", {
+        sessions: plural("adminStudy.comparisons", sessions),
+        forms: plural("adminStudy.formCount", forms),
+      });
+    if (!(await confirm({ title: message, tone: "danger" }))) return;
+    remove.mutate(accounts, {
+      onSuccess: (result) => {
+        clear();
+        if (selectedAccount !== null && accounts.includes(selectedAccount)) onSelect(null);
+        toast({
+          title: t("adminStudy.records.deleted"),
+          description: t("adminStudy.records.deletedBody", {
+            sessions: plural("adminStudy.comparisons", result.sessions),
+            forms: plural("adminStudy.formCount", result.forms),
+          }),
+          tone: "attention",
+        });
+      },
+      onError: (error: Error) =>
+        toast({ title: t("adminStudy.records.failed"), description: error.message, tone: "danger" }),
+    });
+  };
+
+  if (rows.length === 0) {
     return <p className="text-small text-muted-foreground">{t("adminStudy.nothingToGroup")}</p>;
   }
 
   return (
-    <div>
-      <Table minWidth="42rem">
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-small text-muted-foreground">
+          {selected.size > 0
+            ? plural("adminStudy.records.selected", selected.size)
+            : t("adminStudy.records.selectHint")}
+        </span>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="ml-auto"
+          disabled={selected.size === 0 || remove.isPending}
+          onClick={confirmDelete}
+        >
+          <Trash2 />
+          {t("adminStudy.records.delete")}
+        </Button>
+      </div>
+      <Table minWidth="64rem">
         <THead>
           <TR>
-            <TH>{firstHeader}</TH>
+            <TH className="w-8">
+              <Checkbox
+                checked={allSelected}
+                indeterminate={someSelected}
+                onCheckedChange={toggleAll}
+                label={allSelected ? t("adminStudy.records.deselectAll") : t("adminStudy.records.selectAll")}
+              />
+            </TH>
+            <TH>{t("adminStudy.col.evaluator")}</TH>
+            <TH>{t("adminStudy.col.profile")}</TH>
+            {STAGE_ARTIFACTS.map((artifact) => (
+              <TH key={artifact} align="num">
+                {artifactName(artifact, t)}
+              </TH>
+            ))}
+            <TH align="num">{t("adminStudy.stages.col.mean")}</TH>
+            <TH align="num">{t("adminStudy.stages.col.curated")}</TH>
             <TH align="num">{t("adminStudy.col.sessions")}</TH>
             <TH align="num">{t("adminStudy.col.decided")}</TH>
             <TH>{t("adminStudy.col.systemWon")}</TH>
-            <TH align="num">{t("adminStudy.col.rated")}</TH>
             <TH align="num">{t("adminStudy.col.last")}</TH>
           </TR>
         </THead>
         <TBody>
-          {groups.map((group) => (
-            <TR key={String(group.key)} onSelect={onSelect ? () => onSelect(group) : undefined}>
-              <TD className="max-w-56 truncate py-1.5 pr-3">
-                {group.label}
-                {group.name && group.name !== group.label ? (
-                  <span className="ml-1 text-muted-foreground">· {group.name}</span>
-                ) : null}
-              </TD>
-              <TD align="num" className="px-3 py-1.5  nums">{group.sessions}</TD>
-              <TD align="num" className="px-3 py-1.5  nums">{group.decided}</TD>
-              <TD className="px-3 py-1.5">
-                <ShareMeter
-                  value={group.preferences?.system ?? 0}
-                  total={group.decided}
-                  reference={CHANCE}
-                  title={t("adminStudy.shareTitle", {
-                    system: group.preferences?.system ?? 0,
-                    decided: group.decided,
-                  })}
-                />
-              </TD>
-              <TD align="num" className="px-3 py-1.5  nums">{group.rated}</TD>
-              <TD align="num" className="whitespace-nowrap py-1.5 pl-3  text-muted-foreground">
-                {group.last_at
-                  ? when(new Date(group.last_at * 1000).toISOString())
-                  : "—"}
-              </TD>
-            </TR>
-          ))}
+          {rows.map((entry) => {
+            const id = Number(entry.key) || null;
+            return (
+              <TR
+                key={entry.key}
+                selected={selectedAccount !== null && selectedAccount === id}
+                onSelect={() => onSelect(id)}
+              >
+                {/* The checkbox cell swallows the click, or ticking a box would also filter
+                    the whole tab by that person. */}
+                <TD className="py-1.5 pl-3" onClick={(event) => event.stopPropagation()}>
+                  {id !== null ? (
+                    <Checkbox
+                      checked={selected.has(entry.key)}
+                      onCheckedChange={(next) => toggle(entry.key, next)}
+                      label={t("adminStudy.records.select", { name: entry.label })}
+                    />
+                  ) : null}
+                </TD>
+                <TD className="max-w-56 truncate py-1.5 pr-3">
+                  {entry.label}
+                  {entry.name && entry.name !== entry.label ? (
+                    <span className="ml-1 text-muted-foreground">· {entry.name}</span>
+                  ) : null}
+                </TD>
+                <TD className="px-3 py-1.5 text-muted-foreground">
+                  {profileLabel(entry.profile, t)}
+                </TD>
+                {STAGE_ARTIFACTS.map((artifact) => (
+                  <TD key={artifact} align="num" className="px-3 py-1.5 nums">
+                    {entry.forms?.per_artifact[artifact] ?? 0}
+                  </TD>
+                ))}
+                <TD align="num" className="px-3 py-1.5 nums">
+                  {fixed1(entry.forms?.overall_mean, language)}
+                </TD>
+                <TD align="num" className="px-3 py-1.5 nums">{entry.forms?.curated ?? 0}</TD>
+                <TD align="num" className="px-3 py-1.5 nums">{entry.comparisons?.sessions ?? 0}</TD>
+                <TD align="num" className="px-3 py-1.5 nums">{entry.comparisons?.decided ?? 0}</TD>
+                <TD className="px-3 py-1.5">
+                  <ShareMeter
+                    value={entry.comparisons?.preferences?.system ?? 0}
+                    total={entry.comparisons?.decided ?? 0}
+                    reference={CHANCE}
+                    title={t("adminStudy.shareTitle", {
+                      system: entry.comparisons?.preferences?.system ?? 0,
+                      decided: entry.comparisons?.decided ?? 0,
+                    })}
+                  />
+                </TD>
+                <TD align="num" className="whitespace-nowrap py-1.5 pl-3 text-muted-foreground">
+                  {entry.last_at ? when(new Date(entry.last_at * 1000).toISOString()) : "—"}
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
     </div>
   );
 }
 
-type SessionRow = NonNullable<ReturnType<typeof useAdminEvaluations>["data"]>["sessions"][number];
+interface EvaluatorRow {
+  key: string;
+  label: string;
+  name: string | null;
+  profile: EvaluatorProfile | null;
+  forms: StageAccountGroup | null;
+  comparisons: AdminGroup | null;
+  last_at: number;
+}
+
+type SessionRow = AdminEvaluations["sessions"][number];
 
 function SessionsTable({ rows }: { rows: SessionRow[] }) {
   const { plural, t } = useT();
@@ -850,3 +1103,174 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
     </div>
   );
 }
+
+/* The construction forms --------------------------------------------------------------- */
+
+/**
+ * What the teachers said about the chain itself, stage by stage.
+ *
+ * Four figures first, then one card per stage in the order the bar numbers them. Every
+ * distribution is one ordinal answer, so every one is the same segmented bar: darker is
+ * better, and the card can be read top to bottom as a column of verdicts without reading
+ * a single legend. The forms themselves are the CSV's; a log of who filled what in when
+ * was drawn here for a day and taken out — nobody reads a study that way.
+ */
+function StageForms({ data }: { data: AdminStageEvaluations }) {
+  const { t, language } = useT();
+  const { aggregates, by_account } = data;
+  const curated = by_account.reduce((sum, group) => sum + group.curated, 0);
+  const byArtifact = new Map(aggregates.by_artifact.map((entry) => [entry.artifact, entry]));
+
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label={t("adminStudy.stages.stat.answered")}
+          value={aggregates.answered}
+          hint={t("adminStudy.stages.stat.opened", { n: aggregates.rows })}
+        />
+        <StatTile
+          label={t("adminStudy.stages.stat.mean")}
+          value={fixed1(aggregates.overall_mean, language)}
+          hint={t("adminStudy.stages.stat.outOf")}
+        />
+        <StatTile
+          label={t("adminStudy.stages.stat.people")}
+          value={by_account.filter((group) => group.answered > 0).length}
+        />
+        <StatTile
+          label={t("adminStudy.stages.stat.curated")}
+          value={curated}
+          hint={t("adminStudy.stages.stat.curatedHint", {
+            pct: percent(aggregates.answered ? curated / aggregates.answered : null),
+          })}
+        />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        {STAGE_ARTIFACTS.map((artifact) => {
+          const summary = byArtifact.get(artifact);
+          return summary ? <StageCard key={artifact} summary={summary} /> : null;
+        })}
+      </div>
+    </>
+  );
+}
+
+/**
+ * One stage: the 1-5 scale first, then the five questions in the order asked, then the
+ * two facts a mean hides — whether the person had corrected the artifact first, and how
+ * long they took.
+ */
+function StageCard({ summary }: { summary: StageArtifactSummary }) {
+  const { t, plural, language } = useT();
+  const stepIndex = STEPS.findIndex((step) => step.artifact === summary.artifact);
+
+  return (
+    <Card
+      title={
+        stepIndex >= 0
+          ? t("adminStudy.stages.cardTitle", { n: stepIndex + 1, name: artifactName(summary.artifact, t) })
+          : artifactName(summary.artifact, t)
+      }
+      aside={
+        <span className="text-micro text-muted-foreground">
+          {plural("adminStudy.stages.answers", summary.answered)}
+          {summary.opened > summary.answered
+            ? ` · ${plural("adminStudy.stages.openedOnly", summary.opened - summary.answered)}`
+            : ""}
+        </span>
+      }
+    >
+      {summary.answered === 0 ? (
+        <p className="text-small text-muted-foreground">{t("adminStudy.stages.noAnswers")}</p>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-small text-muted-foreground">{t("adminStudy.stages.overall")}</p>
+              <p className="text-title nums">
+                {fixed1(summary.overall.mean, language)}
+                <span className="ml-1 text-small text-muted-foreground">/ 5</span>
+              </p>
+            </div>
+            <Segments
+              best="last"
+              segments={Object.entries(summary.overall.counts).map(([value, count]) => ({
+                key: value,
+                label: value,
+                value: count,
+              }))}
+            />
+          </div>
+
+          <div className="space-y-3 border-t border-border pt-3">
+            {summary.questions.map((question) => (
+              <div key={question.key} className="space-y-1.5">
+                <p className="text-small">{question.question}</p>
+                <Segments
+                  best="first"
+                  segments={question.options.map((option) => ({
+                    key: option.value,
+                    label: option.label,
+                    value: question.counts[option.value] ?? 0,
+                  }))}
+                />
+              </div>
+            ))}
+            {summary.usable != null ? (
+              <p className="text-micro text-muted-foreground">
+                {t("adminStudy.stages.usable", { pct: percent(summary.usable) })}
+              </p>
+            ) : null}
+          </div>
+
+          <dl className="space-y-1 border-t border-border pt-2 text-micro text-muted-foreground">
+            <div className="flex flex-wrap gap-x-2">
+              <dt>{t("adminStudy.stages.curation")}</dt>
+              <dd className="nums">
+                {(["yes", "no", "unknown"] as const)
+                  .map((state) => {
+                    const slice = summary.curation[state];
+                    const mean =
+                      slice.overall_mean != null
+                        ? ` (${t("adminStudy.stages.meanShort", {
+                            mean: fixed1(slice.overall_mean, language),
+                          })})`
+                        : "";
+                    return `${slice.n} ${t(CURATION_LABELS[state])}${mean}`;
+                  })
+                  .join(" · ")}
+              </dd>
+            </div>
+            {/* A median of zero is a form saved the instant it opened — a clock that
+                measured nothing — and «0 ms» would report it as a speed. */}
+            {summary.seconds.median ? (
+              <div className="flex flex-wrap gap-x-2">
+                <dt>{t("adminStudy.stages.time")}</dt>
+                <dd className="nums">
+                  {t("adminStudy.stages.median", {
+                    time: duration(summary.seconds.median * 1000),
+                    n: plural("adminStudy.formCount", summary.seconds.n),
+                  })}
+                </dd>
+              </div>
+            ) : null}
+            {summary.notes > 0 ? (
+              <div className="flex flex-wrap gap-x-2">
+                <dt>{t("adminStudy.stages.notes")}</dt>
+                <dd className="nums">{summary.notes}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+const CURATION_LABELS: Record<"yes" | "no" | "unknown", Key> = {
+  yes: "adminStudy.stages.curatedYes",
+  no: "adminStudy.stages.curatedNo",
+  unknown: "adminStudy.stages.curatedUnknown",
+};

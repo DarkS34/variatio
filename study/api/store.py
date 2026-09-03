@@ -694,6 +694,9 @@ def _grouped(headers: list[dict], key: str, label_of) -> list[dict]:
                 "key": value if value is not None else "",
                 "label": label_of(rows[0]),
                 "name": rows[0].get("account_name"),
+                # The profile of the group's first row: exact when grouping by account,
+                # and what the panel's evaluator table reads beside the name.
+                "evaluator_profile": rows[0].get("evaluator_profile"),
                 "last_at": max(r.get("created_at") or 0 for r in rows),
                 **summary,
             }

@@ -4,12 +4,14 @@ import type { Job } from "@/lib/types";
 import type {
   AdminEvaluations,
   AdminSets,
+  AdminStageEvaluations,
   AssignableAccount,
   EvaluationDetail,
   EvaluationListing,
   EvaluationParams,
   EvaluationRating,
   StageReview,
+  StudyFilters,
   TriageValue,
 } from "./types";
 
@@ -19,10 +21,11 @@ export interface AdminGenerateParams extends EvaluationParams {
   n: number;
 }
 
-const filterQuery = (filters: { workspace?: string | null; account?: number | null }) => {
+const filterQuery = (filters: StudyFilters) => {
   const search = new URLSearchParams();
   if (filters.workspace) search.set("workspace", filters.workspace);
   if (filters.account != null) search.set("account", String(filters.account));
+  if (filters.profile) search.set("profile", filters.profile);
   const query = search.toString();
   return query ? `?${query}` : "";
 };
@@ -73,10 +76,22 @@ export const studyApi = {
       body: JSON.stringify({ ids }),
     }),
 
-  adminEvaluations: (filters: { workspace?: string | null; account?: number | null }) =>
+  adminEvaluations: (filters: StudyFilters) =>
     request<AdminEvaluations>(`/api/admin/evaluations${filterQuery(filters)}`),
-  adminEvaluationCsvUrl: (filters: { workspace?: string | null; account?: number | null }) =>
+  adminEvaluationCsvUrl: (filters: StudyFilters) =>
     `/api/admin/evaluations/export.csv${filterQuery(filters)}`,
+  // The other instrument, under the same three filters, so the two blocks of the panel
+  // always describe the same people.
+  adminStageEvaluations: (filters: StudyFilters) =>
+    request<AdminStageEvaluations>(`/api/admin/evaluations/stages${filterQuery(filters)}`),
+  adminStageCsvUrl: (filters: StudyFilters) =>
+    `/api/admin/evaluations/stages/export.csv${filterQuery(filters)}`,
+  /** Everything these evaluators contributed, both instruments; the accounts stay. */
+  adminDeleteEvaluatorRecords: (accounts: number[]) =>
+    request<{ accounts: number[]; sessions: number; forms: number }>(
+      "/api/admin/evaluations/records",
+      { method: "DELETE", body: JSON.stringify({ accounts }) },
+    ),
   adminDeleteEvaluations: (ids: string[]) =>
     request<{ deleted: string[]; missing: string[] }>("/api/admin/evaluations", {
       method: "DELETE",
