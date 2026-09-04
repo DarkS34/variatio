@@ -38,6 +38,8 @@ function accepts(name: string, extensions: string[]) {
 export interface SlotIntake {
   send: (list: FileList | File[] | null) => Promise<void>;
   remove: (name: string) => Promise<void>;
+  removeMany: (names: string[]) => Promise<void>;
+  removing: boolean;
   progress: number | null;
   error: string | null;
   notice: string | null;
@@ -49,6 +51,7 @@ export function useSlotIntake(slot: RawSlot, extensions: string[]): SlotIntake {
   const confirm = useConfirm();
   const client = useQueryClient();
   const [progress, setProgress] = useState<number | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -107,7 +110,52 @@ export function useSlotIntake(slot: RawSlot, extensions: string[]): SlotIntake {
     }
   };
 
-  return { send, remove, progress, error, notice };
+  /**
+   * The same delete, over a selection: ONE question and ONE refresh.
+   *
+   * There is no bulk endpoint and this does not invent one — it is still a `DELETE` per
+   * document. What made emptying a slot take minutes is everything AROUND the request: a
+   * confirmation dialog per file, and a `refresh()` per file that refetched the listing,
+   * the health and the transcription state before the next one could be pressed. Asked
+   * once and refreshed once, twenty files cost twenty requests and nothing else.
+   *
+   * Sequential and not `Promise.all`: they write into one directory, and a failure has to
+   * name the document it happened on rather than one of twenty at random. What has already
+   * gone is kept — the listing is refreshed even when it stops halfway, or the screen would
+   * keep offering files that are no longer there.
+   */
+  const removeMany = async (names: string[]) => {
+    if (names.length === 0) return;
+    if (names.length === 1) return remove(names[0]);
+    if (
+      !(await confirm({
+        title: t("raw.confirmDeleteMany", {
+          n: names.length,
+          slot: slotLabel(slot, t).toLowerCase(),
+        }),
+        tone: "danger",
+      }))
+    )
+      return;
+    setError(null);
+    setNotice(null);
+    setRemoving(true);
+    let done = 0;
+    try {
+      for (const name of names) {
+        await api.deleteRaw(slot.kind, name);
+        done += 1;
+      }
+      setNotice(plural("raw.removedMany", done));
+    } catch (exception) {
+      setError((exception as Error).message);
+    } finally {
+      setRemoving(false);
+      refresh();
+    }
+  };
+
+  return { send, remove, removeMany, removing, progress, error, notice };
 }
 
 /**

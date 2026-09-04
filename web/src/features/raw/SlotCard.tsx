@@ -1,10 +1,10 @@
 import { Check, FileText, PenLine, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert, Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT, type Key } from "@/lib/i18n";
 import { slotLabel, slotPurpose, staleReasons } from "@/lib/raw";
 import type { RawSlot } from "@/lib/types";
@@ -34,6 +34,8 @@ function DocumentRow({
   unreadableImages,
   busy,
   canEdit,
+  selected,
+  onSelect,
   onOpen,
   onRemove,
 }: {
@@ -44,6 +46,8 @@ function DocumentRow({
   unreadableImages: number;
   busy: boolean;
   canEdit: boolean;
+  selected: boolean | null;
+  onSelect: (next: boolean) => void;
   onOpen: () => void;
   onRemove: () => void;
 }) {
@@ -54,6 +58,17 @@ function DocumentRow({
   return (
     <li className="border-t border-border first:border-t-0">
       <div className="group flex items-center gap-2 px-2 py-1.5 text-small">
+        {/* The box goes where the eye starts the row, and it is drawn only for somebody
+            who can actually delete: for a reader it would be a control down every row
+            that does nothing at all. The icon beside it stays — it is what carries the
+            spinner while a document is being re-read. */}
+        {selected === null ? null : (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onSelect}
+            label={t("raw.selectFile", { name })}
+          />
+        )}
         {busy ? (
           <Spinner className="size-3.5 shrink-0" />
         ) : (
@@ -145,7 +160,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
 
   const [opened, setOpened] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-
+  const [picked, setPicked] = useState<string[]>([]);
 
   const rows = useMemo(() => {
     const read = new Map((state.data?.documents ?? []).map((entry) => [entry.name, entry]));
@@ -162,6 +177,38 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   }, [slot.files, state.data]);
 
   const visible = expanded ? rows : rows.slice(0, VISIBLE);
+
+  /**
+   * WHAT IS PICKED, AND HOW IT STOPS EXISTING.
+   *
+   * Deleting was one document at a time, with its own question and its own refetch of
+   * three queries, so emptying a slot of twenty took minutes of clicking (2026-09-04,
+   * explicit user request). A box per row and one «Eliminar» over the lot is what that
+   * costs instead: one question, one pass, one refresh.
+   *
+   * The picks are held as NAMES and are intersected with the listing after every write,
+   * because that listing is what the delete changes underneath them — a stale name would
+   * keep a count alive over a file that is already gone. The delete drops the whole
+   * selection itself, so this only ever catches what somebody else removed.
+   *
+   * A document being re-read cannot be picked at all: `_write_pages` rewrites its whole
+   * directory at the end, and the row already says so with its spinner.
+   */
+  const deletable = rows.filter((row) => busy !== row.name).map((row) => row.name);
+  const selected = picked.filter((name) => deletable.includes(name));
+  const allPicked = deletable.length > 0 && selected.length === deletable.length;
+
+  useEffect(() => {
+    setPicked((was) => {
+      const kept = was.filter((name) => rows.some((row) => row.name === name));
+      return kept.length === was.length ? was : kept;
+    });
+  }, [rows]);
+
+  // The boxes are for somebody who can delete, and only where there is more than one thing
+  // to pick: over a single document the column would be a control that says «choose which
+  // of the one».
+  const picking = canEdit && rows.length > 1;
   // UP TO DATE TINTS THE WHOLE CARD (2026-09-02, explicit user request): the same 8 % of
   // `--attention` the tick's badge used to carry, mixed INTO the card (`oklab`, so the hue
   // does not drift through chroma zero) so the ground stays opaque, with the border at the
@@ -208,12 +255,52 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
           </Alert>
         ) : (
           <ul className="rounded-md border border-border">
+            {/* One strip over the list rather than a bar under it: what it carries is the
+                select-all box, which has to sit in the column its rows' boxes are in, and
+                the one action that acts on the picks. It only exists while the boxes do. */}
+            {picking ? (
+              <li className="flex items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5 text-small">
+                <Checkbox
+                  checked={allPicked}
+                  indeterminate={selected.length > 0 && !allPicked}
+                  onCheckedChange={(next) => setPicked(next ? deletable : [])}
+                  label={t("raw.selectAll")}
+                  disabled={deletable.length === 0}
+                />
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {selected.length > 0
+                    ? plural("raw.selectedCount", selected.length)
+                    : t("raw.selectAll")}
+                </span>
+                {selected.length > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={intake.removing}
+                    onClick={async () => {
+                      await intake.removeMany(selected);
+                      setPicked([]);
+                    }}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {intake.removing ? <Spinner /> : <Trash2 />}
+                    {t("raw.deleteSelected")}
+                  </Button>
+                ) : null}
+              </li>
+            ) : null}
             {visible.map((row) => (
               <DocumentRow
                 key={row.name}
                 {...row}
                 busy={busy === row.name}
                 canEdit={canEdit}
+                selected={picking && busy !== row.name ? selected.includes(row.name) : null}
+                onSelect={(next) =>
+                  setPicked((was) =>
+                    next ? [...was, row.name] : was.filter((name) => name !== row.name),
+                  )
+                }
                 onOpen={() => setOpened(row.name)}
                 onRemove={() => void intake.remove(row.name)}
               />

@@ -668,6 +668,12 @@ export const es = {
   "raw.screenIntro":
     "Sube lo que ya tienes: los apuntes de la asignatura y los ejercicios. Es el único paso en el que hace falta que busques archivos, porque todo lo demás sale de aquí. Con un par de temas basta: cada documento se lee entero, y cuanto más subas, más se tarda.",
   "raw.dropHere": "Arrastra los documentos aquí",
+  // ELEGIR VARIOS Y BORRARLOS DE GOLPE (2026-09-04, petición explícita): uno a uno son una
+  // pregunta y tres refrescos por documento, y vaciar un origen de veinte era una tarde.
+  "raw.confirmDeleteMany": "¿Eliminar los {n} documentos seleccionados de {slot}?",
+  "raw.selectFile": "Seleccionar {name}",
+  "raw.selectAll": "Seleccionar todos",
+  "raw.deleteSelected": "Eliminar",
   // EL BLOQUE QUE LLEVA AL PASO SIGUIENTE, al pie, cuando los dos orígenes tienen algo y
   // todo está leído. Es la misma salida con la que se cierra cada paso, no un aviso.
   "raw.done.title": "Apuntes y ejercicios listos",
@@ -678,6 +684,8 @@ export const es = {
   "raw.next.title": "Puedes pasar al paso siguiente",
   "raw.next.body": "Quedan documentos por leer, pero no hace falta esperar: cada paso los lee por su cuenta cuando le hacen falta. Si prefieres adelantarlo, léelos desde el bloque de arriba.",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
+  "raw.removedMany": { one: "1 documento eliminado", other: "{n} documentos eliminados" },
+  "raw.selectedCount": { one: "1 seleccionado", other: "{n} seleccionados" },
   "raw.dropInto": "Importar documentos en {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the
   // API's vocabulary is one language and the reader's is another, so what travels is
