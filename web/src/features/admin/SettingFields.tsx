@@ -136,8 +136,15 @@ export function GroupCard({
 // shows keeps its row below; what the nodes do show never gets a second row.
 
 export function isModelSetting(setting: ConfigSetting): boolean {
-  return setting.key.startsWith("models.") && setting.kind === "str";
+  return (
+    (setting.key.startsWith("models.") || setting.key === EVALUATION_WRITER) &&
+    setting.kind === "str"
+  );
 }
+
+/** The study's own model setting: the writer of a comparison's two local proposals. Its
+ *  null reads «the same model that writes a generation», not «follow the main». */
+const EVALUATION_WRITER = "evaluation.local_model";
 
 const OTHER = "__other__";
 
@@ -196,7 +203,11 @@ export function ModelSelect({
           onChange(next === "" ? null : next);
         }}
       >
-        {setting.nullable ? <option value="">{t("cfg.followMain")}</option> : null}
+        {setting.nullable ? (
+          <option value="">
+            {t(setting.key === EVALUATION_WRITER ? "cfg.sameAsGeneration" : "cfg.followMain")}
+          </option>
+        ) : null}
         {value && !known && !other ? (
           <option value={value}>{t("cfg.notInstalled", { model: value })}</option>
         ) : null}

@@ -37,12 +37,19 @@ class FlatIndex:
         cache_path: str | Path,
         model: str | None = None,
         label: str = "Indexando los documentos para la propuesta comparativa",
+        step_id: str = "eval_rag_index",
     ):
-        """Hold the texts and where their index lives; nothing is embedded until `ensure`."""
+        """Hold the texts and where their index lives; nothing is embedded until `ensure`.
+
+        `step_id` is the caller's for the same reason `label` is: two indices built one
+        after the other under one id are two rows of one name in the run's timeline, and
+        the client translates by id, so the slot has to be in the id to reach the screen.
+        """
         self.entries = dict(entries)
         self.model = model or config.EMBEDDING_LLM
         self.cache_path = Path(cache_path)
         self.label = label
+        self.step_id = step_id
 
         self.ids: list[str] = []
         self.matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
@@ -73,7 +80,7 @@ class FlatIndex:
     def _build(self) -> None:
         """Embed every text and keep the matrix and the keys."""
         self.ids = list(self.entries)
-        with progress.step("eval_rag_index", self.label, total=len(self.ids)) as reporter:
+        with progress.step(self.step_id, self.label, total=len(self.ids)) as reporter:
             vectors = self._embed([self.entries[key] for key in self.ids], reporter)
         self.matrix = np.stack(vectors) if vectors else np.zeros((0, 0), dtype=np.float32)
 

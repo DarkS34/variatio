@@ -74,7 +74,9 @@ const STEP_IDS = [
   "eval.arms",
   "eval.guardrail",
   "eval.admissibility",
-  "eval_rag_index",
+  "eval.tagging",
+  "eval_rag_index_corpus",
+  "eval_rag_index_exemplars",
 ];
 
 // Derived rather than written out: a step id and its key differ by a prefix, and two lists

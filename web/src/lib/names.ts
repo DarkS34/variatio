@@ -157,7 +157,9 @@ const STEP_KEYS: Record<string, Key> = {
   "eval.arms": "step.eval.arms.label",
   "eval.guardrail": "step.eval.guardrail.label",
   "eval.admissibility": "step.eval.admissibility.label",
-  eval_rag_index: "step.eval_rag_index.label",
+  "eval.tagging": "step.eval.tagging.label",
+  eval_rag_index_corpus: "step.eval_rag_index_corpus.label",
+  eval_rag_index_exemplars: "step.eval_rag_index_exemplars.label",
 };
 
 /**

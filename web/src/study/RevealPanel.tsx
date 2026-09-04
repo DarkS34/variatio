@@ -9,6 +9,7 @@ import type { ExemplarsProfile } from "@/lib/types";
 
 import { ARM_META, letterFor } from "./arms";
 import { RubricForm } from "./RubricForm";
+import { TaggedConcepts } from "./TaggedConcepts";
 import type {
   EvaluationDetail,
   EvaluationPosition,
@@ -109,6 +110,21 @@ function OriginCard({
           </Button>
         </div>
       </div>
+
+      {/* THE GRAPH'S OWN READING OF THIS PROPOSAL, at the foot of the card it is about. It
+          is the third thing the reveal uncovers, after which arm wrote the exercise and
+          with which model: what the exercise turned out to be ABOUT, and whether it went
+          where the commission said not to.
+
+          A rule and NOT the muted band the system's checks sit on: `--secondary` and
+          `--muted` are the same value, so a `secondary` badge — the one the bank draws a
+          non-primary concept with — paints itself invisible on it. On the card's own
+          ground the three variants read as the bank's three. */}
+      {position.tagging ? (
+        <div className="mt-auto border-t border-border px-3 py-2.5">
+          <TaggedConcepts tagging={position.tagging} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -212,8 +228,12 @@ export function RevealPanel({
           to the question the cards above just asked, so it comes first and the verdict
           comes after — it was the other way round until 2026-09-04 (explicit user
           request), which put the result of the choice above the things it was a choice
-          between. */}
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+          between.
+
+          They STRETCH to one height, and that is what puts the three tagging feet on one
+          line: with `items-start` a card carrying four concepts pushed its own foot down
+          and the row read as three unrelated blocks rather than as one comparison. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {positions.map((position) => (
           <OriginCard
             key={position.position}

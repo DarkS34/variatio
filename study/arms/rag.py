@@ -11,9 +11,10 @@ What it retrieves over is `study.raw_text`: the raw slots read with a plain extr
 `RAG_CHUNK_CHARS`, embedded flat, searched by cosine, `RAG_TOP_K_THEORY` pieces of the
 notes and `RAG_TOP_K_EXERCISES` of the exercise sheets handed over verbatim under a heading.
 
-Same local model as the system arm (`VARIANT_GENERATION_LLM`) and the same reasoning mode
-(`commission.think`, drawn per session), so neither the model nor whether it deliberated is
-a loose variable between them. Of the exemplars profile it receives the OUTPUT SHAPE and
+Same local model as the system arm (`commission.model`, the installation's
+`evaluation.local_model`, defaulting to `VARIANT_GENERATION_LLM`) and the same reasoning
+mode (`commission.effort`, drawn per session), so neither the model nor whether it
+deliberated is a loose variable between them. Of the exemplars profile it receives the OUTPUT SHAPE and
 nothing else (`output_schema`): no field descriptions, no difficulty criterion, no
 `guidance`, no writing rules.
 """
@@ -44,6 +45,14 @@ _LABELS = {
     EXEMPLARS: "Indexando los ejercicios para la propuesta comparativa",
 }
 
+# One step id per slot, because the client names a step by its id (`lib/names.ts`) and
+# not by the label the server sends: under a shared id both indices read as one and the
+# same row, and until 2026-09-04 that row still said «el banco».
+_STEP_IDS = {
+    CORPUS: "eval_rag_index_corpus",
+    EXEMPLARS: "eval_rag_index_exemplars",
+}
+
 
 def index_for(ws, slot: str) -> FlatIndex:
     """One index per slot of a workspace, kept warm for the life of the process.
@@ -58,9 +67,23 @@ def index_for(ws, slot: str) -> FlatIndex:
     existing = _indices.get(key)
     if existing is None or existing.entries != entries:
         _indices[key] = FlatIndex(
-            entries, cache_path=rag_index_path(ws, slot), label=_LABELS[slot]
+            entries,
+            cache_path=rag_index_path(ws, slot),
+            label=_LABELS[slot],
+            step_id=_STEP_IDS[slot],
         )
     return _indices[key]
+
+
+def warm(ws) -> None:
+    """Read and index both slots before anything is timed.
+
+    Built inside the arm, this one-off cost would land in the RAG baseline's `elapsed_ms`
+    and its step would be swallowed by the blind filter, so the evaluation job calls it
+    before the blind section starts.
+    """
+    for slot in (CORPUS, EXEMPLARS):
+        index_for(ws, slot).ensure()
 
 
 def build_query(commission: Commission) -> str:
@@ -113,9 +136,9 @@ def run(commission: Commission, context) -> ArmResult:
     )
 
     resp = inference.generate_stream(
-        model=config.VARIANT_GENERATION_LLM,
+        model=commission.model or config.VARIANT_GENERATION_LLM,
         prompt=prompt,
-        think=commission.think,
+        think=commission.effort,
         on_token=progress.token_sink("eval"),
         temperature=config.TEMPERATURE_GENERATION,
     )
@@ -140,7 +163,7 @@ def run(commission: Commission, context) -> ArmResult:
         item=item.model_dump(mode="json") if item is not None else None,
         raw_response=raw,
         prompt=prompt,
-        model=config.VARIANT_GENERATION_LLM,
+        model=commission.model or config.VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
         exemplar_ids=[key for key, _text, _score in retrieved],
         elapsed_ms=round((time.perf_counter() - started) * 1000),

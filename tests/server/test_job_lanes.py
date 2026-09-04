@@ -142,3 +142,13 @@ def test_an_unoffered_model_falls_back_instead_of_raising(ollama, monkeypatch):
 def test_transcribing_reserves_the_lane_of_the_model_that_reads_the_pages(ollama):
     assert lanes.models_for("transcribe")[0] == config.TRANSCRIBE_MODEL
     assert lanes.backends_for("transcribe") == frozenset({lanes.LOCAL})
+
+
+# An evaluation's two local proposals are written by the installation's own setting since
+# 2026-09-04 (`evaluation.local_model`), so the lane it reserves is that model's and never
+# the generation default's alone.
+def test_an_evaluate_job_reserves_the_lane_of_the_installations_writer(hybrid, monkeypatch):
+    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
+    monkeypatch.setattr(lanes, "_evaluation_writer", lambda: "local-escritor")
+    assert lanes.models_for("evaluate")[0] == "local-escritor"
+    assert lanes.backends_for("evaluate") >= frozenset({lanes.LOCAL})

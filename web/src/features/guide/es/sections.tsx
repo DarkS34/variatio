@@ -1481,7 +1481,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión.",
+              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión. El modelo que escribe las dos propuestas locales no se elige aquí: lo fija quien administra en «Configuración → Evaluación», y la comercial usa el suyo.",
             },
             {
               key: "sesiones",
@@ -1513,7 +1513,7 @@ function Evaluate() {
             <>
               <strong>Respondes una pregunta por tarjeta</strong>: si la pondrías en clase —
               o, si eres alumno, si te serviría para practicar. Un clic, primera impresión, sin
-              darle vueltas. Los tres pasos de arriba dicen en cuál estás.
+              darle vueltas.
             </>,
             <>
               <strong>Eliges una</strong>. La barra de elección queda fija al pie de la ventana;
@@ -1524,6 +1524,15 @@ function Evaluate() {
               Solo entonces se revela qué arquitectura escribió cada una: una columna por
               propuesta, con lo que respondiste sobre ella, el modelo y el tiempo, y un
               «{t("reveal.read")}» que la abre entera junto con de dónde salió.
+            </>,
+            <>
+              Con ella se destapan también <strong>los conceptos de cada propuesta</strong>,
+              leídos con el mismo etiquetador que el banco, y una línea que dice si el
+              ejercicio se ha metido en algo que va después en el temario. La regla es la
+              misma para las tres y es la que el sistema lleva en su prompt, solo que
+              únicamente una de las tres la conoce. Con currículo, cuenta cualquier mención
+              de lo que la clase no ha dado; sin él, solo cuenta que la propuesta practique
+              un concepto posterior a lo pedido.
             </>,
             <>
               Si te apetece, afinas la del sistema en cuatro escalas, con su ejercicio al lado.

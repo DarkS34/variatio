@@ -37,7 +37,8 @@ export interface FormState {
    * Null is «el de por defecto», the first of `generation.models`. The form does not know
    * that list well enough to resolve it — the server does, and what a run RECORDS is the
    * model that actually wrote it, never the one a browser guessed. Only the "generate"
-   * variant sets it: a comparison measures architectures, and its three arms are fixed.
+   * variant sets it: a comparison's two local proposals are written by the installation's
+   * own `evaluation.local_model`, and `study/commission.ts` strips the field on the way.
    *
    * IT WENT AWAY ON 2026-09-01 AND CAME BACK THE SAME DAY, both by explicit user request.
    * What the removal was for survives in the offer: an installation that wants to decide

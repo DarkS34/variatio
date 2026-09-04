@@ -72,9 +72,10 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
         "REPAIR_LLM",
     ),
     # The three arms together: the two baselines generate and repair, and the system arm is
-    # the whole generator, admissibility judge included.
+    # the whole generator, admissibility judge included. The writer of the two local arms
+    # is absent for the generate kind's reason: since 2026-09-04 it is the study's own
+    # setting (`evaluation.local_model`), which `models_for` puts at the head of this list.
     "evaluate": (
-        "VARIANT_GENERATION_LLM",
         "ADMISSIBILITY_LLM",
         "CONCEPT_TAGGER_LLM",
         "DESCRIPTION_GENERATION_LLM",
@@ -97,6 +98,8 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
 
     if kind == "generate":
         models = [_writer(params), *models]
+    elif kind == "evaluate":
+        models = [_evaluation_writer(), *models]
 
     excluded = _excluded()
     return [m for m in dict.fromkeys(models) if m and m not in excluded]
@@ -114,6 +117,18 @@ def _writer(params: dict | None) -> str:
         return stages.resolve_generation_model(requested if isinstance(requested, str) else None)
     except stages.UnofferedModelError:
         return config.VARIANT_GENERATION_LLM
+
+
+def _evaluation_writer() -> str:
+    """Return the model an evaluation's two local proposals are written with.
+
+    The study's own setting, read through `study.config` at dispatch time like everything
+    else here — the panel edits it hot. Imported inside the function: the study is mounted
+    from `server/app.py` and nothing else under `server/` names it at module scope.
+    """
+    from study import config as study_config
+
+    return study_config.LOCAL_MODEL
 
 
 def _remote_models() -> frozenset[str]:

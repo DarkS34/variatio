@@ -133,5 +133,8 @@ def test_the_registry_holds_what_this_work_transcribed():
     # model's effort said only that the requester does not choose it, and the level was then
     # whatever the browser's own slider happened to hold — so the installation could bar the
     # decision without being able to take it.
-    assert len(REGISTRY) == 149
+    # 150 on 2026-09-04, when `evaluation.local_model` joined the study's settings: the
+    # writer of a comparison's two local proposals is the installation's, unnamed like the
+    # study's other eight, so `BY_NAME` does not move.
+    assert len(REGISTRY) == 150
     assert len(BY_NAME) == 118

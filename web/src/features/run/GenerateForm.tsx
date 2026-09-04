@@ -916,7 +916,12 @@ export function GenerateForm({
           {/* BEFORE THE EFFORT AND NOT AFTER IT: which levels exist, which of them is worth
               a warning, and whether the slider is drawn at all are properties of the model
               that was just chosen, so choosing it afterwards would silently re-clamp what
-              was just set. It draws nothing with a single model on offer. */}
+              was just set. It draws nothing with a single model on offer.
+
+              NOT in the evaluation variant: the writer of a comparison's two local proposals
+              is the installation's (`evaluation.local_model`, «Configuración → Evaluación»),
+              never the evaluator's — 2026-09-04, explicit user request, reversing the
+              chooser drawn there for an hour the same day. */}
           {variant === "generate" ? (
             <ModelChoice
               offered={offered}
@@ -989,12 +994,7 @@ export function GenerateForm({
                 </Alert>
               ) : null}
             </div>
-          ) : (
-            <p className="flex items-start gap-1.5 text-small text-muted-foreground">
-              <Brain className="mt-0.5 size-3.5 shrink-0" />
-              {t("form.think.comparison")}
-            </p>
-          )}
+          ) : null}
 
           {footnote}
 

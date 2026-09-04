@@ -1,4 +1,4 @@
-"""The study's eight settings, declared beside the code that reads them.
+"""The study's nine settings, declared beside the code that reads them.
 
 `variatio/settings/registry/__init__.py` picks these up through an optional import — the
 one place the pipeline names the study, and the single exception to the boundary.
@@ -7,6 +7,35 @@ one place the pipeline names the study, and the single exception to the boundary
 from variatio.settings.types import Impact, Setting
 
 SETTINGS: list[Setting] = [
+    Setting(
+        key="evaluation.local_model",
+        name="",
+        kind="str",
+        default=None,
+        nullable=True,
+        group="Evaluación",
+        scope="engine",
+        impact=Impact.NONE,
+        doc="""QUÉ MODELO ESCRIBE LAS DOS PROPUESTAS LOCALES de una comparación (la de solo RAG y la del
+sistema). Lo fija la instalación, no quien encarga la evaluación: el formulario de
+«Evaluar el sistema» no ofrece ningún selector (2026-09-04, petición explícita del
+usuario, que revocó la elección por encargo del mismo día).
+
+Es UN modelo para las dos, y eso no es un detalle: lo que se compara son arquitecturas, y
+un modelo distinto en cada propuesta lo convertiría en una comparación de modelos. La
+propuesta comercial usa su propia cadena (`evaluation.providers`).
+
+Vacío significa «el mismo que genera ejercicios»: el primero de `generation.models`, que es
+con lo que corrieron todas las sesiones anteriores a este ajuste. Un nombre que no esté
+entre los ofrecidos vale igual — es una decisión de quien administra, no del encargo — y
+si el motor no lo tiene instalado la sesión falla en la primera llamada. Si el modelo tiene
+el esfuerzo bloqueado en «Modelos generadores», las dos propuestas corren al nivel
+declarado, exactamente como una generación.
+
+Con ámbito de motor, como toda elección de modelo: los nombres son del motor, y cambiar de
+motor cambia el perfil entero. `ArmResult.model` guarda por propuesta con qué se escribió,
+así que la memoria puede decirlo sesión a sesión.""",
+    ),
     Setting(
         key="evaluation.providers",
         name="",

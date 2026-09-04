@@ -52,6 +52,14 @@ class Commission:
     `ruling` is the scope verdict, screened ONCE for the session so the `system` arm reuses
     it instead of paying the judge a second time. Untyped on purpose: naming
     `admissibility.Ruling` would put a pipeline type in the study's own contract.
+
+    `model` is the writer of the TWO LOCAL arms — the installation's own setting
+    (`evaluation.local_model`, resolved by `run.evaluate` through `study.config`), never
+    the evaluator's choice. It is one model for both, which is what keeps the comparison
+    about architectures; the commercial arm keeps its own chain. `effort` is what those two
+    arms pass as `think`: the drawn boolean, or the level the installation declared when
+    that model's effort is locked (`stages.resolve_generation_effort`). The boolean stays
+    the recorded condition; the level is the installation's.
     """
 
     concepts: list[str]
@@ -61,11 +69,23 @@ class Commission:
     instructions: str = ""
     think: bool = True
     ruling: object | None = None
+    model: str = ""
+    effort: bool | str = True
 
 
 @dataclass
 class ArmResult:
-    """What one architecture produced, and what it cost, in the shape all three share."""
+    """What one architecture produced, and what it cost, in the shape all three share.
+
+    `tagging` is the graph's reading of the proposal, run over the three alike once they
+    are all in: `concepts`, the `primary` one it practises, `rule` and `off_limits` —
+    whatever it brought in from the set the commission put out of bounds. Under the
+    `mentions` rule (a curriculum was given) that is whether the tagger says the exercise
+    is ABOUT it or the text merely NAMES it; under `practises` (no curriculum) only the
+    primary concept can be there. A record without `rule` was written under `mentions`.
+    It is `None` on a record written before the pass existed and on an arm that produced
+    no item.
+    """
 
     arm: str
     status: str
@@ -79,6 +99,7 @@ class ArmResult:
     error: str | None = None
     checks: dict | None = None
     retried: int = 0
+    tagging: dict | None = None
 
     def to_dict(self) -> dict:
         """Render the result as the JSON the session's trace stores."""
@@ -95,6 +116,7 @@ class ArmResult:
             "error": self.error,
             "checks": self.checks,
             "retried": self.retried,
+            "tagging": self.tagging,
         }
 
 

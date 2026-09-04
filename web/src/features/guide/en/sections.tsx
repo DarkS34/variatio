@@ -1492,7 +1492,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version.',
+              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version. The model that writes the two local proposals is not chosen here: the administrator sets it in "Settings → Evaluation", and the commercial one uses its own.',
             },
             {
               key: "sesiones",
@@ -1524,8 +1524,7 @@ function Evaluate() {
             <>
               <strong>You answer one question per card</strong>: whether you would set it in
               class — or, if you are a student, whether it would be useful to practise with. One
-              click, first impression, no dwelling on it. The three steps above say which one
-              you are on.
+              click, first impression, no dwelling on it.
             </>,
             <>
               <strong>You choose one</strong>. The choice bar stays pinned to the foot of the
@@ -1536,6 +1535,15 @@ function Evaluate() {
               Only then is it revealed which architecture wrote each one: a column per
               proposal, with what you answered about it, the model and the time, and a
               "{t("reveal.read")}" that opens it in full along with where it came from.
+            </>,
+            <>
+              It also uncovers <strong>each proposal's concepts</strong>, read with the same
+              tagger the bank is read with, and a line saying whether the exercise strayed
+              into something that comes later in the syllabus. The rule is the same for all
+              three and it is the one the system carries in its prompt, except that only one
+              of the three knows about it. With a curriculum, any mention of what the class
+              has not covered counts; without one, only the proposal practising a concept
+              that comes after what was asked for.
             </>,
             <>
               If you feel like it, you rate the system's one on four scales, with its exercise

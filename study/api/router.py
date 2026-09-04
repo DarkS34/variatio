@@ -422,4 +422,8 @@ def _position(session: EvaluationSession, position: int, revealed: bool) -> dict
         "error": result.error,
         "checks": result.checks,
         "retried": result.retried,
+        # Revealed-only, like everything else here: what a proposal is ABOUT, and whether
+        # it uses something the commission put out of bounds, is a quality signal, and
+        # handing it over while the cards are blind is judging them for the evaluator.
+        "tagging": result.tagging,
     }

@@ -33,6 +33,32 @@ export interface EvaluationPosition {
   error?: string | null;
   checks?: ItemChecks | null;
   retried?: number;
+  /** Revealed-only, like everything past `item`: what a proposal is about is a quality
+   *  signal, and handing it over while the cards are blind judges them for the evaluator. */
+  tagging?: ProposalTagging | null;
+}
+
+/**
+ * What the graph makes of one proposal, run over the three alike after they are all in.
+ *
+ * `off_limits` is not a second opinion about the exercise: it is what the proposal brought
+ * in from the set the commission put out of bounds — `forbidden` over the dependent
+ * closure, the very block the system arm's prompt carries — so the same rule is applied to
+ * the three even though only one of them was told about it. Under `rule: "mentions"` (the
+ * commission carried a curriculum, so the closure is «no impartido») a concept counts
+ * whether the tagger says the exercise is ABOUT it or the text merely NAMES it, so it may
+ * not be among `concepts`; under `"practises"` (no curriculum, so the closure is only
+ * «viene después») nothing but the primary concept can be there. A session recorded before
+ * the rule existed carries no `rule` and was read as `"mentions"`. Absent on a session
+ * recorded before the pass existed and on an arm that produced no item.
+ */
+export type ClosureRule = "mentions" | "practises";
+
+export interface ProposalTagging {
+  concepts: string[];
+  primary: string | null;
+  rule?: ClosureRule;
+  off_limits: string[];
 }
 
 export type Usability = "as_is" | "with_edits" | "no";

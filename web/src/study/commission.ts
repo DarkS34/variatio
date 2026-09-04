@@ -9,10 +9,12 @@ import type { EvaluationParams } from "./types";
  * `n` goes because one item per arm is what makes the session the statistical unit, and
  * `think` goes because the session draws it: sending the form's value would hand the
  * evaluator control of the very condition being measured. The server ignores both fields
- * too — this is the second lock, not the only one.
+ * too — this is the second lock, not the only one. `model` goes for the same reason: the
+ * writer of the two local proposals is the installation's (`evaluation.local_model`), so
+ * a value the form happened to hold must not reach the request.
  */
 export function toEvaluationParams(form: FormState): EvaluationParams {
-  const { n: _n, think: _think, ...rest } = toParams(form);
+  const { n: _n, think: _think, model: _model, ...rest } = toParams(form);
   return rest;
 }
 

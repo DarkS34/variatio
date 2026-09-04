@@ -6,9 +6,11 @@ values are declared in `study/settings.py` and derived here.
 
 import os
 
+from variatio import config as pipeline_config
 from variatio import settings
 
 EXTERNAL_PROVIDERS: list[str]
+LOCAL_MODEL: str
 PROVIDER_MODELS: dict[str, str]
 PROVIDER_KEYS: dict[str, str]
 EXTERNAL_TIMEOUT: float
@@ -43,7 +45,7 @@ def _by_provider(values: dict[str, object], prefix: str) -> dict[str, str]:
 
 
 def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, object]:
-    """Compute the study's four resolved values from the registry and the environment."""
+    """Compute the study's five resolved values from the registry and the environment."""
     providers = _chain(values["evaluation.providers"])
     models = _by_provider(values, "evaluation.models.")
     keys = _by_provider(values, "evaluation.keys.")
@@ -57,6 +59,11 @@ def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, obje
         models[first] = environ.get("EVAL_EXTERNAL_MODEL_ID", "") or models[first]
 
     return {
+        # The writer of the two local arms: the installation's own choice, or — with none —
+        # the same model that writes a generation, which is what every session before the
+        # setting existed ran with.
+        "LOCAL_MODEL": str(values.get("evaluation.local_model") or "")
+        or pipeline_config.VARIANT_GENERATION_LLM,
         "EXTERNAL_PROVIDERS": providers,
         "PROVIDER_MODELS": models,
         "PROVIDER_KEYS": keys,

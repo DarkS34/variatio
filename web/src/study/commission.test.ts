@@ -18,6 +18,11 @@ describe("what an evaluation commission carries", () => {
     expect(toEvaluationParams({ ...EMPTY_FORM, n: 7 })).not.toHaveProperty("n");
   });
 
+  it("never carries a model, because the installation fixes the local writer", () => {
+    const params = toEvaluationParams({ ...EMPTY_FORM, concepts: ["Función"], model: "gemma-4-31b" });
+    expect("model" in params).toBe(false);
+  });
+
   it("never carries the reasoning switch, because the session draws it", () => {
     expect(toEvaluationParams({ ...EMPTY_FORM, think: false })).not.toHaveProperty("think");
   });

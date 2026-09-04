@@ -11,6 +11,7 @@ import { useT } from "@/lib/i18n";
 
 import { ARM_META, letterFor } from "./arms";
 import { CommissionStrip } from "./CommissionStrip";
+import { TaggedConcepts } from "./TaggedConcepts";
 import type { EvaluationPosition, EvaluationSessionHead, Instruments, TriageValue } from "./types";
 
 /**
@@ -184,6 +185,7 @@ export function ProposalDialog({
               <p className="text-small leading-relaxed text-muted-foreground">
                 {t(meta.descriptionKey)}
               </p>
+              {position.tagging ? <TaggedConcepts tagging={position.tagging} /> : null}
               {position.error ? <p className="text-small text-attention">{position.error}</p> : null}
               {position.checks ? <ItemChecks checks={position.checks} /> : null}
               {position.exemplar_ids && position.exemplar_ids.length > 0 ? (
