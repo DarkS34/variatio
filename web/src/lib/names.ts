@@ -26,6 +26,29 @@ const ARTIFACT_KEYS: Record<string, Key> = {
   exemplars_bank: "artifact.bank",
 };
 
+/**
+ * THE CALL TO BUILD, ONE PER STEP (2026-09-04, explicit user request).
+ *
+ * It used to be one sentence with the step's name interpolated into it — «Este paso
+ * todavía no está construido. Se construye Tipos de ejercicio leyendo tus apuntes y
+ * ejercicios.» — which said the same thing twice and never said the one thing somebody
+ * needs before pressing: what is going to come out. Each step now says what does not
+ * exist yet and what is read to make it; the sentence about how long it takes is shared,
+ * because it is the same sentence.
+ *
+ * Same fallback as every other table here: an artifact this bundle has never heard of
+ * still gets the generic pair rather than nothing.
+ */
+const BUILD_CALL: Record<string, { title: Key; body: Key }> = {
+  exemplars_profile: { title: "build.call.profile.title", body: "build.call.profile.body" },
+  knowledge_graph: { title: "build.call.graph.title", body: "build.call.graph.body" },
+  exemplars_bank: { title: "build.call.bank.title", body: "build.call.bank.body" },
+};
+
+export function buildCall(artifact: string): { title: Key; body: Key } | null {
+  return BUILD_CALL[artifact] ?? null;
+}
+
 const JOB_KEYS: Record<string, Key> = {
   build_profile: "job.build_profile.label",
   build_kg: "job.build_kg.label",

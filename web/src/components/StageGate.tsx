@@ -48,7 +48,7 @@ import { StageReview } from "@/study/StageReview";
 import { useStageReview } from "@/study/queries";
 import { questionCount } from "@/study/types";
 import { useT, type Key } from "@/lib/i18n";
-import { artifactName } from "@/lib/names";
+import { artifactName, buildCall } from "@/lib/names";
 
 // What the stage IS, in two sentences and without naming a single piece of the system.
 // Visible under the title and not behind a glyph: the sentence that says what a screen is
@@ -466,15 +466,7 @@ export function StageGate({
             the button is the size of the decision. With the raw material missing the block
             above takes its place, because «Importar» is the only way to make this one
             pressable — still one control per unbuilt stage. */}
-        {missing && !rawMissing ? (
-          <EmptyState
-            icon={<Hammer />}
-            title={t("build.callTitle")}
-            action={<BuildButton stage={stage} />}
-          >
-            {t("build.callBody", { label: artifactName(stage.artifact, t, stage.label) })}
-          </EmptyState>
-        ) : null}
+        {missing && !rawMissing ? <BuildCall stage={stage} /> : null}
 
         {/* A stage that is not built has no content, and asking the screen for it is asking it to
             read a file that does not exist: the bank answered with a 404 and painted it as a red
@@ -820,5 +812,36 @@ export function StaleWarning({ children }: { children: ReactNode }) {
         <span>{children}</span>
       </p>
     </Alert>
+  );
+}
+
+/**
+ * WHAT THIS STEP WOULD BUILD, IN THE MIDDLE OF THE EMPTY SCREEN.
+ *
+ * The block is the same one every unbuilt stage has opened with since 2026-09-02 — a
+ * dashed frame, the hammer, the `xl` button — and what changed is the sentence: it is the
+ * step's own now (`lib/names.buildCall`), so it says what does not exist yet and what is
+ * read to make it instead of interpolating the step's name into one generic line. The
+ * trailing sentence about how long it takes is shared by the three and is the only reason
+ * this is two keys rather than one.
+ */
+function BuildCall({ stage }: { stage: StageState }) {
+  const { t } = useT();
+  const call = buildCall(stage.artifact);
+  return (
+    <EmptyState
+      icon={<Hammer />}
+      title={call ? t(call.title) : t("build.callTitle")}
+      action={<BuildButton stage={stage} />}
+    >
+      {call ? (
+        <>
+          <p>{t(call.body)}</p>
+          <p className="mt-2">{t("build.callTakesTime")}</p>
+        </>
+      ) : (
+        t("build.callBody", { label: artifactName(stage.artifact, t, stage.label) })
+      )}
+    </EmptyState>
   );
 }

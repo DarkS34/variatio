@@ -392,28 +392,28 @@ export const es = {
   // «Sube solo un par de temas» y «esto tarda» van aquí, justo antes de ir a buscar los
   // archivos, que es donde sirven de algo.
   "tutorial.s2.b1":
-    "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para probarlo: recuerda que estamos simplemente probándolo. El sistema lee cada documento entero, página a página, y eso lleva su tiempo.",
+    "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para probarlo: recuerda que estamos simplemente probándolo.",
   "tutorial.s2.b2":
-    "No hace falta que te quedes mirando mientras procesa tus contenidos: puedes dejarlo trabajando y volver más tarde.",
+    "El sistema lee cada documento entero, página a página, y eso lleva su tiempo, sobre todo si son PDF. No hace falta que te quedes mirando mientras procesa tus contenidos: puedes dejarlo trabajando y volver más tarde.",
 
   "tutorial.s3.title": "Fase de construcción: preparar la asignatura",
   "tutorial.s3.body":
     "Antes de pedirle nada, el sistema tiene que aprender la asignatura: procesa los materiales que aportes y extrae lo que necesita. Son cuatro pasos y van en este orden, cada uno apoyado en el anterior.",
   "tutorial.s3.step1":
-    "Subes tus documentos, los apuntes por un lado y los ejercicios por otro, para que el sistema los procese. Internamente crea un grafo de conocimiento con los conceptos y sus relaciones, entre otras cosas.",
+    "Subes tus documentos: los apuntes de la asignatura por un lado y los ejercicios por otro.",
   "tutorial.s3.step2":
-    "El sistema analiza la estructura de tus ejercicios y los clasifica para poder crear después ejercicios similares: tipo test, de problemas, de desarrollo…",
+    "Con los ejercicios, el sistema analiza su estructura y los clasifica por tipo —de test, de problemas, de desarrollo…— para poder escribir después ejercicios parecidos.",
   "tutorial.s3.step3":
-    "De tus apuntes se extrae el grafo de conocimiento del temario: los conceptos que aborda, con sus dependencias y relaciones. Permite determinar, llegado el caso, qué se puede dar por sabido y qué no (por ejemplo, a la hora de crear un ejercicio nuevo).",
+    "Con los apuntes, internamente crea el grafo de conocimiento del temario: los conceptos que aborda, con sus dependencias y relaciones. Permite determinar, llegado el caso, qué se puede dar por sabido y qué no (por ejemplo, a la hora de crear un ejercicio nuevo).",
   "tutorial.s3.step4":
-    "Se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
+    "Con lo que sale de los dos pasos anteriores, se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
 
   // LA BISAGRA ES LA PRIMERA FRASE DE LA FASE DE PRUEBAS, no una diapositiva aparte: «con esto ya
   // está preparado» seguido de «pedir ejercicios» era el mismo giro contado dos veces. Y
   // las tres preguntas del encargo las dibuja la figura, así que aquí no se enumeran.
   "tutorial.s4.title": "Fase de pruebas: generar ejercicios",
   "tutorial.s4.body":
-    "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, que son dos cosas que puedes hacer en el orden que quieras, y ninguna necesita a la otra. La primera: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan.",
+    "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, formada por dos tareas (puedes hacerlas en el orden que quieras, y ninguna necesita a la otra): generar ejercicios y evaluar el sistema. La primera: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan.",
   "tutorial.s4.b1":
     "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
@@ -429,7 +429,7 @@ export const es = {
   // depende de haber generado nada. Los nombres de las dos píldoras cambiaron por lo mismo
   // (2026-09-02): «Crear ejercicios → Comparar» se leía como una cadena.
   "tutorial.s5.b1":
-    "Esta evaluación es independiente de si has generado ejercicios o no: eso no lo evaluaremos, y da igual que no hayas generado ninguno. En «Generar ejercicios» pides uno para usarlo en clase; aquí se escriben tres del mismo encargo, con tres métodos distintos, para que digas cuál es mejor, y lo que se guarda es tu juicio. Es opcional: puedes usar la asignatura sin pasar nunca por aquí.",
+    "Esta evaluación es independiente de si has generado ejercicios o no: eso no lo evaluaremos, y da igual que no hayas generado ninguno. En «Generar ejercicios» pides uno para usarlo en clase; aquí se escriben tres del mismo encargo, con tres métodos distintos, para que digas cuál te gusta más o consideras mejor, y lo que se guarda es tu juicio.",
   "tutorial.s5.b3":
     "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
   "tutorial.s5.aside":
@@ -465,7 +465,7 @@ export const es = {
   "stage.curate.body":
     "Esto es una primera versión. Si corriges lo que no encaje, los ejercicios que se generen después se parecerán más a los tuyos. Si lo dejas como está, también puedes seguir.",
   "stage.curate.bodyBank":
-    "Esto es una primera versión. De estos ejercicios se copian los nuevos, así que lo que corrijas aquí se nota en todo lo que venga después. Si lo dejas como está, puedes seguir igualmente, pero el resultado será peor.",
+    "A partir de estos ejercicios se generan los nuevos, así que lo que corrijas aquí se nota en todo lo que venga después. Si lo dejas como está, puedes seguir igualmente, pero el resultado no será tan bueno, posiblemente.",
   "stage.curate.editing": "Guarda los cambios en la barra de abajo. Al continuar al paso siguiente también se guardan, y el paso se cierra.",
   "stage.curate.start": "Quiero corregir algo",
   // LA BARRA DE CORRECCIÓN, fija al borde de abajo mientras se corrige: cómo están los
@@ -554,7 +554,7 @@ export const es = {
   // decía «grafo de temas»), y «grafo» se reserva para hablar de la estructura —niveles,
   // ciclos, el dibujo—, nunca para nombrar el paso.
   "stage.what.graph":
-    "Este es el grafo de conocimiento del temario tal como se ha extraído de tus apuntes: sus conceptos, agrupados en unidades y unidos por lo que hace falta saber antes de cada cosa. Repasa los conceptos, mira con qué otros se relaciona cada uno y pulsa en cualquiera para leer su descripción. Al final se te pide una valoración de este paso.",
+    "Este es el grafo de conocimiento del temario tal como se ha extraído de tus apuntes: sus conceptos, agrupados en unidades y relacionados por dependencias, si las hay. Repasa los conceptos, mira con qué otros se relaciona cada uno y pulsa en cualquiera para leer su descripción. Al final se te pide una valoración de este paso.",
   // DE DÓNDE SALEN LOS CONCEPTOS: del paso anterior. «El tema que practica» escondía justo
   // eso —el único sitio donde se ve por qué los conceptos van antes que los ejercicios— y
   // además decía uno donde hay varios. Lo demás es el mismo orden que en los otros pasos:
@@ -589,8 +589,21 @@ export const es = {
   // que hacer en un paso sin construir. Un solo nombre para los cuatro pasos, y no se
   // ofrece reconstruir: una segunda pasada sobre los mismos documentos no da otra cosa.
   "build.start": "Comenzar construcción",
+  // LA LLAMADA A CONSTRUIR, UNA POR PASO (2026-09-04, petición explícita). Era una sola
+  // frase con el nombre del paso interpolado — «Este paso todavía no está construido. Se
+  // construye Tipos de ejercicio leyendo tus apuntes y ejercicios.» — que decía dos veces
+  // lo mismo y no decía lo único que hace falta saber antes de pulsar: qué va a salir de
+  // ahí. Cada paso dice ahora qué es lo que todavía no existe y qué lee para hacerlo; la
+  // última frase, la del rato que tarda, es la misma en los tres porque es la misma.
   "build.callTitle": "Este paso todavía no está construido",
   "build.callBody": "Se construye {label} leyendo tus apuntes y ejercicios. Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
+  "build.call.profile.title": "Todavía no hay una clasificación de tus tipos de ejercicio",
+  "build.call.profile.body": "Al construir, el sistema lee los ejercicios que has subido y los agrupa por tipo, con la descripción y las reglas de redacción de cada uno.",
+  "build.call.graph.title": "Todavía no hay un temario extraído de tus apuntes",
+  "build.call.graph.body": "Al construir, el sistema lee tus apuntes y saca los conceptos de la asignatura, agrupados en unidades y con las dependencias que haya entre ellos.",
+  "build.call.bank.title": "Todavía no hay ejercicios recogidos ni etiquetados",
+  "build.call.bank.body": "Al construir, el sistema recoge uno a uno los ejercicios de tus documentos y le pone a cada uno los conceptos del temario que practica.",
+  "build.callTakesTime": "Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "progress.building": "Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.running": "En marcha. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.preparing": "Preparando el proceso…",
@@ -634,17 +647,17 @@ export const es = {
   "concept.prerequisiteLevels": "Niveles de prerrequisito",
   "tray.chosenOf": { one: "de {n} concepto elegido", other: "de {n} conceptos elegidos" },
   "tray.hiddenNoExemplars": { one: "{n} oculto sin ejemplos", other: "{n} ocultos sin ejemplos" },
-  "tray.byPrerequisite": " · {n} por prerrequisito",
-  "tray.byPrerequisiteLabel": "Por prerrequisito",
-  "concept.clearAll": "Quitar todos los conceptos elegidos",
-  "concept.noneChosen": "Ningún concepto elegido",
-  "concept.remove": "Quitar {name}",
   "tray.showAll": "Mostrar todos",
   "concept.scope.label": "Qué conceptos se muestran",
   "concept.scope.exemplars": "Solo conceptos con ejemplos",
   "concept.scope.exemplarsHint": "Solo los conceptos con algún ejercicio tuyo que imitar. Los prerrequisitos sin ejemplo tampoco se muestran.",
   "concept.scope.all": "Todos los conceptos",
   "concept.scope.allHint": "Todo el temario, también los conceptos sin ningún ejercicio tuyo: el ejercicio se escribirá sin ejemplo que imitar.",
+  "tray.byPrerequisite": " · {n} por prerrequisito",
+  "tray.byPrerequisiteLabel": "Por prerrequisito",
+  "concept.clearAll": "Quitar todos los conceptos elegidos",
+  "concept.noneChosen": "Ningún concepto elegido",
+  "concept.remove": "Quitar {name}",
   "concept.noneSelected": "Ningún concepto seleccionado",
   "concept.markPrimary": "Marcar como principal",
   "concept.isPrimary": "Concepto principal",
@@ -655,6 +668,12 @@ export const es = {
   "raw.renamed": { one: "1 renombrado por nombre repetido", other: "{n} renombrados por nombre repetido" },
   "raw.invalid": { one: "1 descartado por extensión", other: "{n} descartados por extensión" },
   "raw.confirmDelete": "¿Eliminar «{name}» de {slot}?",
+  // ELEGIR VARIOS Y BORRARLOS DE GOLPE (2026-09-04, petición explícita): uno a uno son una
+  // pregunta y tres refrescos por documento, y vaciar un origen de veinte era una tarde.
+  "raw.confirmDeleteMany": "¿Eliminar los {n} documentos seleccionados de {slot}?",
+  "raw.selectFile": "Seleccionar {name}",
+  "raw.selectAll": "Seleccionar todos",
+  "raw.deleteSelected": "Eliminar",
   "raw.drop": "Suelta aquí los documentos",
   "raw.deleteFile": "Eliminar {name}",
   "raw.deleteFromSlot": "Quitar de aquí",
@@ -665,15 +684,11 @@ export const es = {
   "raw.uploading": "Subiendo… {pct} %",
   "raw.imported": { one: "1 archivo importado", other: "{n} archivos importados" },
   "raw.removed": "«{name}» eliminado",
+  "raw.removedMany": { one: "1 documento eliminado", other: "{n} documentos eliminados" },
+  "raw.selectedCount": { one: "1 seleccionado", other: "{n} seleccionados" },
   "raw.screenIntro":
     "Sube lo que ya tienes: los apuntes de la asignatura y los ejercicios. Es el único paso en el que hace falta que busques archivos, porque todo lo demás sale de aquí. Con un par de temas basta: cada documento se lee entero, y cuanto más subas, más se tarda.",
   "raw.dropHere": "Arrastra los documentos aquí",
-  // ELEGIR VARIOS Y BORRARLOS DE GOLPE (2026-09-04, petición explícita): uno a uno son una
-  // pregunta y tres refrescos por documento, y vaciar un origen de veinte era una tarde.
-  "raw.confirmDeleteMany": "¿Eliminar los {n} documentos seleccionados de {slot}?",
-  "raw.selectFile": "Seleccionar {name}",
-  "raw.selectAll": "Seleccionar todos",
-  "raw.deleteSelected": "Eliminar",
   // EL BLOQUE QUE LLEVA AL PASO SIGUIENTE, al pie, cuando los dos orígenes tienen algo y
   // todo está leído. Es la misma salida con la que se cierra cada paso, no un aviso.
   "raw.done.title": "Apuntes y ejercicios listos",
@@ -684,8 +699,6 @@ export const es = {
   "raw.next.title": "Puedes pasar al paso siguiente",
   "raw.next.body": "Quedan documentos por leer, pero no hace falta esperar: cada paso los lee por su cuenta cuando le hacen falta. Si prefieres adelantarlo, léelos desde el bloque de arriba.",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
-  "raw.removedMany": { one: "1 documento eliminado", other: "{n} documentos eliminados" },
-  "raw.selectedCount": { one: "1 seleccionado", other: "{n} seleccionados" },
   "raw.dropInto": "Importar documentos en {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the
   // API's vocabulary is one language and the reader's is another, so what travels is
@@ -825,7 +838,7 @@ export const es = {
   "transcribe.unreadable": "No se pudo saber qué documentos están leídos",
   "transcribe.queued": "En cola: esperando a que se libere la máquina",
   "transcribe.preparing": "Preparando la lectura…",
-  "transcribe.notAGate": "Leerlos ahora solo adelanta trabajo: si sigues sin hacerlo, cada paso los leerá por su cuenta cuando le hagan falta. Lo que corrijas a mano gana sobre lo que se entendió, y sobrevive a todo lo que venga después.",
+  "transcribe.notAGate": "Procesarlos ahora solo adelanta trabajo: si sigues sin hacerlo, cada paso los leerá por su cuenta cuando le hagan falta. Recuerda que lo que corrijas a mano gana sobre lo que el sistema dedujo automáticamente, y sobrevive a todo lo que venga después.",
   "transcribe.runningNote":
     "Pararlo no pierde nada: cada página se guarda en cuanto sale, y al volver a lanzarlo sigue por donde iba.",
   "transcribe.reviewPages": "Ver y corregir las páginas",
@@ -935,8 +948,8 @@ export const es = {
   "transcribe.stopHint":
     "Para la lectura donde vaya. Las páginas ya guardadas se conservan, y al volver a lanzarla sigue por donde quedó.",
   "transcribe.todoTitle": {
-    one: "Falta 1 documento por leer",
-    other: "Faltan {n} documentos por leer",
+    one: "Falta 1 documento por procesar",
+    other: "Faltan {n} documentos por procesar",
   },
   "transcribe.startAll": "Leerlos todos ahora",
   "transcribe.runningTitle": "Leyendo tus documentos",
@@ -1002,13 +1015,9 @@ export const es = {
   "effort.label": "Esfuerzo de razonamiento",
   "fewshot.noStatement": "(sin enunciado)",
   "run.uncheckedInstructions": "instrucciones sin revisar",
-  "result.noTagger": "sin etiquetador",
   "result.retried": "Reintentado ×{n}",
   "result.itemHeading": "Ejercicio {n}",
   "result.saved": "guardado",
-  "result.noFlags": "Sin señales: el etiquetador lo reconoce, nada prohibido, escenario propio.",
-  "result.taggedAs": "etiquetado como {concept}",
-  "result.closestTo": "· más cercano a {to} ({score})",
   "result.generatedItems": "# Ejercicios generados",
   "result.itemN": "## Ejercicio {n}",
   // WHAT THE BLOCK RULE FOUND -------------------------------------------------------------
@@ -1299,29 +1308,17 @@ export const es = {
   "grid.whyAria": "Por qué, en una línea",
   "grid.whyPlaceholder": "Por qué, en una línea (opcional)",
   "grid.noneConvinces": "Ninguna me convence",
-  "commission.label": "El encargo",
+  "commission.label": "Tipo de ejercicio",
   "commission.topics": "Conceptos",
   "commission.level": "Nivel",
-  "steps.aria": "Pasos de la comparación",
-  "steps.triage.todo": "Valora cada propuesta",
-  "steps.triage.done": "Valoradas",
-  "steps.choose.todo": "Elige una",
-  "steps.choose.done": "Elegida la {letter}",
-  "steps.choose.none": "Ninguna te convenció",
-  "steps.choose.declined": "No era de lo tuyo",
-  "steps.reveal.todo": "Se revela quién escribió cada una",
-  "steps.reveal.done": "Revelado",
   "focus.read": "Leer en grande la propuesta {letter}",
   "focus.of": "{n} de {total}",
   "reveal.choseLetter": "Elegiste la {letter}",
-  "reveal.read": "Leer",
-  "reveal.detail": "Detalle",
-  "reveal.systemWrote": "Lo que escribió el sistema",
+  "reveal.read": "Ver completo",
+  "reveal.systemWrote": "El ejercicio que se valora",
   "rubric.scoreOf": "{n} de 5",
-  "rubric.title": "Si te apetece afinar la del",
-  "rubric.system": "sistema",
+  "rubric.title": "Puntúalo",
   "rubric.saved": "guardada",
-  "rubric.whicheverYouChose": "Da igual cuál elegiste: esto describe lo que produjo el sistema.",
   "rubric.commentAria": "Qué le sobra o le falta",
   "rubric.commentPlaceholder": "Qué le sobra o le falta (opcional)",
   "rubric.skippable": "Puedes saltarte esto: la comparación ya está registrada.",
@@ -1369,10 +1366,10 @@ export const es = {
   "sessions.selectAll": "Seleccionar todas las comparaciones",
   "sessions.selectOne": "Seleccionar la comparación {id}",
   "sessions.col.when": "Cuándo",
+  "sessions.col.type": "Tipo",
   "sessions.col.concepts": "Conceptos",
   "sessions.col.choice": "Elección",
   "sessions.col.reasoned": "Razonó",
-  "sessions.col.rubric": "Rúbrica",
   "sessions.undecided": "sin decidir",
   "sessions.none": "ninguna",
   "sessions.open": "Abrir",
@@ -1380,8 +1377,8 @@ export const es = {
   "eval.doneOf3": "{n} de 3",
   "eval.blindNotice": "Durante una comparación se ocultan el registro y el detalle técnico: dirían de qué arquitectura sale cada propuesta antes de que la leas.",
   "eval.tab.queue": "Asignadas",
-  "eval.tab.compose": "Encargo propio",
-  "eval.tab.history": "Mis sesiones",
+  "eval.tab.compose": "Encargar evaluación",
+  "eval.tab.history": "Mis evaluaciones",
   "eval.title": "Evaluación",
   "eval.whatFor": "Para qué sirve",
   "eval.whatFor.body": "El mismo encargo se resuelve de tres formas: un modelo comercial con un prompt corriente, una búsqueda por similitud sobre el banco, y este sistema con el temario. Eliges a ciegas y solo después se revela cuál era cuál.",
@@ -1559,24 +1556,12 @@ export const es = {
   "reveal.chosen": "elegida",
   "reveal.unavailable": "no disponible",
   "reveal.noValidItem": "sin ejercicio válido",
-  "reveal.noExamples": "sin fragmentos",
-  "reveal.seePrompt": "Ver el prompt exacto que recibió",
   "reveal.examplesFromBank": { one: "1 fragmento recuperado", other: "{n} fragmentos recuperados" },
-  "reveal.seed": "semilla {seed}",
   "grid.missing": "te falta",
   "queue.alreadyJudged": "Ya juzgadas · {n}",
-  "reveal.noPrompt": "(sin prompt registrado)",
-  "reveal.title": "De dónde salió cada propuesta",
   "reveal.choseNone": "No elegiste ninguna.",
-  "reveal.withReasoning": "con razonamiento",
-  "reveal.withoutReasoning": "sin razonamiento",
-  "reveal.reasoningBody": "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir.",
-  "reveal.noReasoningBody": "Esta sesión salió sorteada sin razonamiento previo: las dos propuestas locales respondieron directamente.",
-  "kg.flow.heading": "Relaciones de «{name}»",
-  "kg.flow.order": "· a la izquierda, lo que hay que saber antes de llegar a este concepto; a la derecha, lo que se aprende después apoyándose en él",
-  "kg.flow.reads": "· cada flecha se lee «izquierda {verb} derecha»",
-  "kg.flow.none": "Ningún concepto va antes ni después de este en el temario.",
-  "kg.flow.aria": "Progresión de «{name}»: lo que va antes y lo que se apoya en él",
+  "reveal.rubricSection.title": "Ahora, unas preguntas sobre el ejercicio del sistema",
+  "reveal.rubricSection.body": "Da igual cuál eligieras: lo que sigue describe únicamente ese ejercicio, no la comparación.",
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Guardar cambios",
@@ -1588,6 +1573,11 @@ export const es = {
   "kg.taggable.hintLabel": "Qué significa esto",
   "kg.taggable.hint": "Un concepto que no sirve de etiqueta no se usa para clasificar ejercicios ni para pedir uno: sigue en el temario, porque sostiene el orden de lo demás, pero ningún ejercicio se le asigna. «Recursividad» sirve; «Buenas prácticas» le vale a cualquiera, así que no dice de qué es.",
   "kg.description": "Descripción",
+  "kg.flow.heading": "Relaciones de «{name}»",
+  "kg.flow.order": "· a la izquierda, lo que hay que saber antes de llegar a este concepto; a la derecha, lo que se aprende después apoyándose en él",
+  "kg.flow.reads": "· cada flecha se lee «izquierda {verb} derecha»",
+  "kg.flow.none": "Ningún concepto va antes ni después de este en el temario.",
+  "kg.flow.aria": "Progresión de «{name}»: lo que va antes y lo que se apoya en él",
   "kg.relations": "Relaciones",
   "kg.removeEdge": "Quitar {name}",
   "kg.relationType": "Tipo de relación",

@@ -83,7 +83,7 @@ interface Slide {
   body: Key;
   figure?: ReactNode;
   /** Short paragraphs under the figure, each its own point. */
-  points?: Key[];
+  points?: Point[];
   /** One aside, set apart: the thing that is true but is not an instruction. */
   aside?: Key;
   /** Only the index slide: the four steps of the construction, as a numbered list. */
@@ -95,6 +95,27 @@ interface Slide {
    */
   outro?: { create: Key; choose: Key };
 }
+
+/**
+ * A point, and the one that is MARKED.
+ *
+ * The deck spends no colour on anything: every slide is ink on paper, and a figure's one
+ * `--attention` is the loudest thing on it. The exception is asked for and it is one
+ * sentence (2026-09-04, explicit user request) — «con un par de temas basta» is the only
+ * line of the whole tutorial that a reader who skims it will get WRONG, and getting it
+ * wrong costs them an afternoon of transcription. So it is drawn on a red ground, which
+ * is the one thing this material does not use for anything else.
+ *
+ * The tint is `--destructive` at 12 % mixed INTO the page (`oklab`, never `oklch`: the
+ * background's chroma is ~0 with a hue of 265, and mixing round the hue circle from there
+ * lands on a blue — measured when the study block was tinted). The ink stays the ink:
+ * what is marked is the sentence, not a warning label, so the text is not repainted and
+ * keeps its measured contrast against the paper.
+ */
+type Point = Key | { key: Key; mark: true };
+
+const keyOf = (point: Point) => (typeof point === "string" ? point : point.key);
+const marked = (point: Point) => typeof point !== "string";
 
 const STEP_BODIES: Key[] = [
   "tutorial.s3.step1",
@@ -109,7 +130,7 @@ const SLIDES: Slide[] = [
     title: "tutorial.s2.title",
     body: "tutorial.s2.body",
     figure: <SourcesFigure />,
-    points: ["tutorial.s2.b1", "tutorial.s2.b2"],
+    points: [{ key: "tutorial.s2.b1", mark: true }, "tutorial.s2.b2"],
   },
   // No figure: the bar this slide is about is the real one, lit up above it.
   { title: "tutorial.s3.title", body: "tutorial.s3.body", steps: true },
@@ -377,8 +398,20 @@ export function TutorialScreen({ at }: { at: number }) {
                   {slide.points ? (
                     <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
                       {slide.points.map((point) => (
-                        <p key={point} className={PROSE}>
-                          {t(point)}
+                        <p
+                          key={keyOf(point)}
+                          // `box-decoration-clone` is what makes the ground a highlight and
+                          // not a rectangle: without it a marked sentence that wraps paints
+                          // one box across every line, corners and all, over the gap between
+                          // them. The padding is negative on the sides so the ink still
+                          // starts on the column's own left edge.
+                          className={cn(
+                            PROSE,
+                            marked(point) &&
+                              "box-decoration-clone -mx-1.5 rounded-sm bg-[color-mix(in_oklab,var(--destructive)_12%,var(--background))] px-1.5 py-0.5",
+                          )}
+                        >
+                          {t(keyOf(point))}
                         </p>
                       ))}
                     </div>
