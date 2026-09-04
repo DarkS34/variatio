@@ -1,4 +1,4 @@
-import { LayoutGrid, Search, Waypoints, X } from "lucide-react";
+import { LayoutGrid, LayoutList, ListFilter, Search, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
@@ -30,6 +30,12 @@ export interface ConceptSelectorProps {
   implied?: Set<string>;
   /** When given, only these are offered. It is the active curriculum. */
   restrictTo?: string[] | null;
+  /**
+   * Offer the exemplar SCOPE, and open in it. The selector then owns a two-way switch in
+   * its header — «Con ejemplos», the default, keeps to the concepts the bank can
+   * illustrate, prerequisites that come in locked included; «Todos los conceptos» lifts it
+   * — and goes back to the default every time it opens.
+   */
   onlyWithExemplars?: boolean;
   /**
    * The modality being generated. Given, every exemplar count on screen is the count of
@@ -56,6 +62,7 @@ export interface ConceptSelectorProps {
 }
 
 type ViewMode = "board" | "graph";
+type Scope = "exemplars" | "all";
 
 export function ConceptSelector({
   concepts,
@@ -77,7 +84,15 @@ export function ConceptSelector({
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("board");
   const [cursor, setCursor] = useState(0);
+  const [scope, setScope] = useState<Scope>("exemplars");
   const panel = useRef<HTMLDivElement>(null);
+
+  // THE DEFAULT IS THE BANK'S SIDE, EVERY TIME (2026-09-04, explicit user request): what a
+  // person opens onto is the concepts with something to imitate, and lifting the scope is a
+  // decision for one visit, not a setting.
+  useEffect(() => {
+    if (open) setScope("exemplars");
+  }, [open]);
 
   const chosen = useMemo(() => new Set(selected), [selected]);
   const colours = useMemo(() => domainColours(concepts), [concepts]);
@@ -86,13 +101,11 @@ export function ConceptSelector({
     [concepts],
   );
 
-  // A FILTER THAT WOULD LEAVE NOTHING FILTERS NOTHING. The exemplar filter stopped being
-  // a question and became fixed, which is right — it was a control nobody could read — but
-  // fixed it can also empty the board outright, on a bank whose items are all untagged or
-  // whose modality has no example yet. An empty selector is a dead end with no lever left
-  // to lift, so the filter stands down instead: everything the caller's OWN restrictions
-  // allow is offered, and `hiddenByExemplars` then counts nothing, which is true.
-  const filterByExemplars = useMemo(() => {
+  // A FILTER THAT WOULD LEAVE NOTHING FILTERS NOTHING. On a bank whose items are all
+  // untagged, or whose modality has no example yet, the exemplar scope would empty the
+  // board outright; there it is not offered at all — no switch, no count — and everything
+  // the caller's OWN restrictions allow is on the board, which is what «all» would show.
+  const scopeOffered = useMemo(() => {
     if (!onlyWithExemplars) return false;
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     return concepts.some((concept) => {
@@ -101,12 +114,20 @@ export function ConceptSelector({
       return hasExemplars(concept, exemplarType);
     });
   }, [concepts, onlyWithExemplars, restrictTo, allowNonTaggable, exemplarType]);
+  const filterByExemplars = scopeOffered && scope === "exemplars";
 
-  // The one place that decides what state a concept is in. `implied` is shown always,
-  // `selected` is shown always, and every filter only decides what ELSE is offered —
-  // otherwise a prerequisite pulled in from outside the curriculum, or a concept a filter
-  // stopped matching after it was chosen, silently disappears from the screen while still
-  // counting. Neither mode nor the tray may re-derive any part of this.
+  // The one place that decides what state a concept is in. `selected` is shown always,
+  // and every filter only decides what ELSE is offered — otherwise a concept a filter
+  // stopped matching after it was chosen silently disappears from the screen while still
+  // counting. `implied` is shown whatever the curriculum says, because a prerequisite
+  // pulled in from outside it is still locked; the EXEMPLAR scope does hide it (2026-09-04,
+  // explicit user request): a locked concept with nothing to imitate is, in the default
+  // scope, one more concept from outside the bank, and it comes back with «all». The lock
+  // itself is the caller's and does not move — what is hidden is the chip, not the rule.
+  // A NON-TAGGABLE prerequisite is not drawn either where targets are being chosen
+  // (2026-09-04, explicit user request): «Todos los conceptos» means every concept that
+  // could be a target, and a concept that serves as no label never could.
+  // Neither mode nor the tray may re-derive any part of this.
   const state = useMemo(() => {
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     const visible: KgConcept[] = [];
@@ -115,6 +136,8 @@ export function ConceptSelector({
     for (const concept of concepts) {
       const name = concept.name;
       if (implied?.has(name)) {
+        if (!concept.taggable && !allowNonTaggable) continue;
+        if (filterByExemplars && !hasExemplars(concept, exemplarType)) continue;
         visible.push(concept);
         impliedNames.push(name);
         continue;
@@ -138,18 +161,22 @@ export function ConceptSelector({
     implied,
   ]);
 
-  // Concepts the EXEMPLAR filter alone is keeping out — not the curriculum and not
-  // taggability, which are the caller's own restrictions and have their own wording.
+  // Concepts the EXEMPLAR scope alone is keeping out — not the curriculum and not
+  // taggability, which are the caller's own restrictions and have their own wording. A
+  // locked prerequisite it hides counts too: it is on the board under «all».
   const hiddenByExemplars = useMemo(() => {
     if (!filterByExemplars) return 0;
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     return concepts.filter((concept) => {
-      if (chosen.has(concept.name) || implied?.has(concept.name)) return false;
-      if (allowed && !allowed.has(concept.name)) return false;
+      if (chosen.has(concept.name)) return false;
+      if (hasExemplars(concept, exemplarType)) return false;
       if (!concept.taggable && !allowNonTaggable) return false;
-      return !hasExemplars(concept, exemplarType);
+      if (implied?.has(concept.name)) return true;
+      return !allowed || allowed.has(concept.name);
     }).length;
   }, [concepts, filterByExemplars, restrictTo, allowNonTaggable, exemplarType, chosen, implied]);
+
+  const impliedVisible = useMemo(() => new Set(state.impliedNames), [state]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -259,6 +286,52 @@ export function ConceptSelector({
             </div>
           ) : null}
 
+          {/* THE SCOPE IS A VISIBLE SWITCH, NOT A SETTING (2026-09-04, explicit user
+              request). It sits beside the view switch because it is the same kind of
+              control — how the syllabus is shown — and it is drawn only where the bank can
+              illustrate something at all. */}
+          {scopeOffered ? (
+            <div
+              role="group"
+              aria-label={t("concept.scope.label")}
+              className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5"
+            >
+              {(
+                [
+                  {
+                    value: "exemplars",
+                    label: t("concept.scope.exemplars"),
+                    icon: ListFilter,
+                    hint: t("concept.scope.exemplarsHint"),
+                  },
+                  {
+                    value: "all",
+                    label: t("concept.scope.all"),
+                    icon: LayoutList,
+                    hint: t("concept.scope.allHint"),
+                  },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  title={option.hint}
+                  aria-pressed={scope === option.value}
+                  onClick={() => setScope(option.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded px-2.5 py-1 text-small font-medium transition-colors",
+                    scope === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  <option.icon className="size-3.5" />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5">
             {(
               [
@@ -316,7 +389,7 @@ export function ConceptSelector({
             graph={graph}
             selectable={state.selectable}
             chosen={chosen}
-            implied={implied}
+            implied={impliedVisible}
             onToggle={toggle}
             onAdd={addMany}
           />
@@ -327,6 +400,8 @@ export function ConceptSelector({
             selectable={state.selectable}
             colours={colours}
             activeName={flat[cursor] ?? null}
+            exemplarType={exemplarType}
+            markMissingExemplars={onlyWithExemplars}
             onToggle={toggle}
             onToggleDomain={toggleDomain}
           />
@@ -343,6 +418,7 @@ export function ConceptSelector({
         onConfirm={onConfirm ?? onClose}
         confirmLabel={confirmLabel ?? t("concept.done")}
         hidden={hiddenByExemplars}
+        onShowAll={() => setScope("all")}
       />
     </div>,
     document.body,

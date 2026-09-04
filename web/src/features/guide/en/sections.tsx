@@ -1288,9 +1288,10 @@ function Generate() {
         <Paragraph>
           The same box warns about <strong>concepts with no example</strong>: if a chosen concept has
           no exercise of yours — or none of the type asked for — the batch is written with no
-          example to imitate and quality usually drops. The list only offers concepts your exercises
-          can illustrate, and the selector itself says how many it is leaving out. It can show up
-          anyway when you restore an old commission, if the material has changed since.
+          example to imitate and quality usually drops. By default the list only offers concepts your
+          exercises can illustrate — locked prerequisites with no example are not drawn either —
+          and its foot says how many it is leaving out; «All concepts», in the selector's header,
+          brings out the whole syllabus, with the concepts lacking an example drawn dashed.
         </Paragraph>
       </Block>
 

@@ -14,12 +14,15 @@ export function SelectionTray({
   onConfirm,
   confirmLabel,
   hidden = 0,
+  onShowAll,
 }: {
   selected: string[];
   implied: string[];
   total: number;
-  /** How many concepts the exemplar filter is keeping out of the board. */
+  /** How many concepts the exemplar scope is keeping out of the board. */
   hidden?: number;
+  /** Lifts that scope. Drawn beside the count, where the absence is felt. */
+  onShowAll?: () => void;
   colourFor: (concept: string) => string | undefined;
   onRemove: (concept: string) => void;
   onClear: () => void;
@@ -44,11 +47,27 @@ export function SelectionTray({
               <span className="text-primary">{t("tray.byPrerequisite", { n: implied.length })}</span>
             ) : null}
             {/* WHAT IS NOT ON THE BOARD, SAID ON THE BOARD. Without it «0 de 42» is the
-                whole truth a person has, over a graph of 162 concepts. It is a statement
-                and no longer a lever: the filter is fixed at the caller, so this is the
-                only thing left saying why a concept of the syllabus is not here. */}
+                whole truth a person has, over a graph of 162 concepts. The count is the
+                statement and the link beside it is the lever — the same one the header's
+                scope switch holds, repeated here because this is where the absence is
+                felt. */}
             {hidden > 0 ? (
-              <span>{" · "}{plural("tray.hiddenNoExemplars", hidden)}</span>
+              <span>
+                {" · "}
+                {plural("tray.hiddenNoExemplars", hidden)}
+                {onShowAll ? (
+                  <>
+                    {" · "}
+                    <button
+                      type="button"
+                      onClick={onShowAll}
+                      className="font-medium text-attention underline-offset-2 hover:underline"
+                    >
+                      {t("tray.showAll")}
+                    </button>
+                  </>
+                ) : null}
+              </span>
             ) : null}
           </p>
           <div className="ml-auto flex items-center gap-2">

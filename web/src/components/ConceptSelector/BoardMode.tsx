@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { hasExemplars } from "@/lib/concepts";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -11,6 +12,8 @@ export function BoardMode({
   selectable,
   colours,
   activeName,
+  exemplarType = null,
+  markMissingExemplars = false,
   onToggle,
   onToggleDomain,
 }: {
@@ -20,6 +23,13 @@ export function BoardMode({
   selectable: Set<string>;
   colours: Map<string, string>;
   activeName: string | null;
+  exemplarType?: string | null;
+  /**
+   * Draw a concept with nothing to imitate as such — dashed, muted, its title saying so.
+   * Under the «all» scope it is what tells a concept the bank illustrates from one it
+   * does not; a chosen concept whose exemplars have gone since is marked the same way.
+   */
+  markMissingExemplars?: boolean;
   onToggle: (concept: string) => void;
   onToggleDomain: (items: KgConcept[], allChosen: boolean) => void;
 }) {
@@ -68,7 +78,7 @@ export function BoardMode({
               </h3>
               <span
                 className={cn(
-                  "shrink-0 text-micro nums",
+                  "shrink-0 text-small nums",
                   picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                 )}
               >
@@ -78,7 +88,7 @@ export function BoardMode({
                 type="button"
                 disabled={free.length === 0}
                 onClick={() => onToggleDomain(free, allChosen)}
-                className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                className="shrink-0 rounded px-1.5 py-0.5 text-small text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {allChosen ? "ninguno" : "todos"}
               </button>
@@ -92,6 +102,16 @@ export function BoardMode({
                     ? "selected"
                     : "free";
                 const isActive = activeName === concept.name;
+                const noExemplar =
+                  markMissingExemplars && !hasExemplars(concept, exemplarType);
+                const title =
+                  state === "implied"
+                    ? t("concept.byPrerequisite")
+                    : noExemplar
+                      ? exemplarType
+                        ? t("concept.noExemplarsOfType")
+                        : t("concept.noExemplars")
+                      : undefined;
                 return (
                   <button
                     key={concept.name}
@@ -99,18 +119,30 @@ export function BoardMode({
                     type="button"
                     disabled={state === "implied"}
                     onClick={() => onToggle(concept.name)}
-                    title={state === "implied" ? t("concept.byPrerequisite") : undefined}
+                    title={title}
                     className={cn(
-                      "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-small transition-colors",
+                      "relative inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-small transition-colors",
                       state === "selected" && "border-primary bg-primary text-primary-foreground",
                       state === "implied" &&
                         "cursor-not-allowed border-dashed border-primary/40 bg-primary/10 text-primary/70",
                       state === "free" &&
                         "border-border bg-background hover:border-primary/50 hover:bg-accent",
+                      state === "free" && noExemplar && "border-dashed text-muted-foreground",
                       isActive && "ring-2 ring-ring ring-offset-1 ring-offset-background",
                     )}
                   >
-                    {state === "implied" ? <Lock className="size-3 shrink-0" /> : null}
+                    {/* A CHIP NEVER CHANGES WIDTH (2026-09-04, explicit user request:
+                        «que se quede donde está en el momento de bloquearse»). The lock
+                        used to sit inline and widened the chip by 18 px, so every chip
+                        after it in the flex-wrap slid — measured: a locked «except» pushed
+                        «try» and «while» 18 px right, and under «Todos» five locks re-wrapped
+                        nineteen chips. On the corner it takes no inline space at all. */}
+                    {state === "implied" ? (
+                      <Lock
+                        aria-hidden
+                        className="absolute -left-1.5 -top-1.5 size-4 rounded-full border border-primary/40 bg-background p-[3px] text-primary"
+                      />
+                    ) : null}
                     <span className="truncate">{concept.name}</span>
                   </button>
                 );

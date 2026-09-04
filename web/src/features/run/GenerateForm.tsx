@@ -562,11 +562,11 @@ export function GenerateForm({
                     {active ? <Check className="size-3.5 text-primary" /> : null}
                     <span className="text-body font-medium">{spec.label || key}</span>
                   </span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                  <span className="mt-0.5 block font-mono text-[12px] text-muted-foreground">
                     {key}
                   </span>
                   {spec.description ? (
-                    <span className="mt-1 block text-small text-muted-foreground">
+                    <span className="mt-1 block text-body text-muted-foreground">
                       {spec.description}
                     </span>
                   ) : null}
@@ -931,7 +931,7 @@ export function GenerateForm({
                     {t("form.think.short")}
                   </span>
                 </Switch>
-                <span className="ml-auto text-[11px] nums text-muted-foreground">
+                <span className="ml-auto text-[12px] nums text-muted-foreground">
                   {state.think
                     ? adjustable
                       ? t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
@@ -1005,13 +1005,13 @@ export function GenerateForm({
         </div>
       ) : null}
 
-      {/* ONLY TOPICS THE BANK CAN ILLUSTRATE ARE OFFERED AS TARGETS, AND IT IS NO LONGER A
-          QUESTION (2026-09-01, explicit user request, revoking the switch that used to
-          offer it in the step above and the lever the tray offered beside its count). The
-          value is the one the switch defaulted to, so what is on offer has not moved. What
-          the tray still says is how many topics it is keeping out — with no way to lift it,
-          that count is the only thing left explaining why a topic of the syllabus is not on
-          the board, and it is said where the absence is felt. */}
+      {/* THE CONCEPTS THE BANK CAN ILLUSTRATE ARE WHAT THE SELECTOR OPENS ONTO, AND THE
+          REST IS ONE SWITCH AWAY (2026-09-04, explicit user request, reversing the fixed
+          filter of 2026-09-01). The scope lives in the selector's own header — «Con
+          ejemplos» / «Todos los conceptos» — and resets to the bank's side on every opening;
+          in the default scope a prerequisite that comes in locked but has nothing to
+          imitate is not drawn either. A concept chosen without an example is what the
+          zero-shot notice in this step is about. */}
       <ConceptSelector
         title={t("form.practise.title")}
         concepts={concepts}

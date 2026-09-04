@@ -1276,10 +1276,11 @@ function Generate() {
         <Paragraph>
           Ahí mismo se avisa de <strong>los conceptos sin ejemplo</strong>: si algún concepto elegido no
           tiene ningún ejercicio tuyo —o ninguno del tipo pedido—, la tanda se escribe sin
-          ejemplo que imitar y la calidad suele bajar. La lista solo ofrece conceptos que tus
-          ejercicios puedan ilustrar, y el propio selector dice cuántos se está dejando fuera.
-          Puede aparecer de todos modos al recuperar un encargo antiguo, si el material ha
-          cambiado desde entonces.
+          ejemplo que imitar y la calidad suele bajar. Por defecto la lista solo ofrece conceptos que
+          tus ejercicios puedan ilustrar —tampoco muestra los prerrequisitos bloqueados que no
+          tengan ejemplo— y el pie dice cuántos se está dejando fuera; «Todos los conceptos», en
+          la cabecera del selector, saca el temario entero, con los conceptos sin ejemplo
+          marcados en punteado.
         </Paragraph>
       </Block>
 
