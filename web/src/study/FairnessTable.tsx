@@ -16,8 +16,19 @@ const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: b
   { fieldKey: "fair.row.concepts", naive: true, rag: true, system: true },
   { fieldKey: "fair.row.descriptions", naive: false, rag: false, system: true },
   { fieldKey: "fair.row.instructions", naive: true, rag: true, system: true },
-  { fieldKey: "fair.row.decisions", naive: "fair.v.asText", rag: true, system: true },
-  { fieldKey: "fair.row.context", naive: true, rag: true, system: true },
+  // The rag arm's prompt IS the naive one plus its sections, so the pinned fields reach it
+  // spoken in prose exactly as they reach the commercial model; only the system pins them.
+  { fieldKey: "fair.row.decisions", naive: "fair.v.asText", rag: "fair.v.asText", system: true },
+  // SINCE 2026-09-04 ALL THREE GET `content_context.prompt_block()` WHOLE (explicit user
+  // request): `naive.build_prompt` still speaks the three facts by name and pastes the
+  // prose under them, and the rag prompt is built on it. Until then the two baselines had
+  // the facts alone and invented the rest — the programming language included.
+  {
+    fieldKey: "fair.row.context",
+    naive: "fair.v.fullProse",
+    rag: "fair.v.fullProse",
+    system: "fair.v.fullProse",
+  },
   {
     fieldKey: "fair.row.outputKeys",
     naive: "fair.v.oneLine",
@@ -25,16 +36,24 @@ const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: b
     system: "fair.v.schemaGuide",
   },
   { fieldKey: "fair.row.noGreetings", naive: true, rag: true, system: true },
-  { fieldKey: "fair.row.rules", naive: false, rag: true, system: true },
-  {
-    fieldKey: "fair.row.examples",
-    naive: false,
-    rag: "fair.v.flatCosine",
-    system: "fair.v.byLabel",
-  },
+  // THE PROFILE'S PROSE IS THE SYSTEM'S ALONE since 2026-09-04: the rules block left
+  // `rag_generation_prompt` with the field descriptions and the difficulty criterion, and
+  // the modality's own description was never in it. Without these two rows the table would
+  // still be claiming the `naive → rag` step measures «bank + profile».
+  { fieldKey: "fair.row.modality", naive: false, rag: false, system: true },
+  { fieldKey: "fair.row.rules", naive: false, rag: false, system: true },
+  // WHAT THE RAG ARM RETRIEVES OVER IS THE RAW DOCUMENTS, not the bank (2026-09-04): the
+  // slots read with a plain extractor, cut, embedded flat and searched by cosine. The bank
+  // is the system's few-shot and nobody else's.
+  { fieldKey: "fair.row.rawDocs", naive: false, rag: "fair.v.flatCosine", system: false },
+  { fieldKey: "fair.row.examples", naive: false, rag: false, system: "fair.v.byLabel" },
   { fieldKey: "fair.row.prerequisites", naive: false, rag: false, system: true },
   { fieldKey: "fair.row.curriculum", naive: false, rag: false, system: true },
-  { fieldKey: "fair.row.admissibility", naive: true, rag: true, system: true },
+  // The guardrail and the admissibility judge screen the commission ONCE for the session,
+  // but only `system` is handed the ruling: `run._screen` stores it and `arms/system`
+  // forwards it, so the other two get the free text untyped. The typing is a capability of
+  // the system under test, not a condition the three share.
+  { fieldKey: "fair.row.admissibility", naive: false, rag: false, system: true },
   {
     fieldKey: "fair.row.reasoning",
     naive: "fair.v.providers",

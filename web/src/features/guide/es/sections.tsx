@@ -1601,8 +1601,8 @@ function Evaluate() {
         <p>
           Qué recibe exactamente cada una está escrito, fila a fila, bajo el formulario de «
           {t("eval.tab.compose")}»: es la tabla «{t("fair.title")}», y dice quién ve los
-          conceptos, quién las descripciones, quién tus ejercicios como ejemplo, quién los
-          prerrequisitos. {t("fair.footnote")}
+          conceptos, quién las descripciones, quién trozos de tus documentos, quién tus
+          ejercicios del banco como ejemplo, quién los prerrequisitos. {t("fair.footnote")}
         </p>
       </Detail>
 

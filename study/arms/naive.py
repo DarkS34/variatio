@@ -35,16 +35,20 @@ def _spoken_fixed(commission: Commission, item_type) -> dict[str, object]:
 
 
 def build_prompt(commission: Commission, context) -> str:
-    """Render the baseline prompt from the context's three canonical facts.
+    """Render the baseline prompt: the three canonical facts plus the subject's context.
 
-    The narrative block is deliberately not used: handing this arm synthesised prose would
-    change what the baseline measures. The rag arm builds on this same prompt.
+    The context block is `content_context.prompt_block()`, the same prose every prompt of
+    the pipeline interpolates. It reaches this arm since 2026-09-04 because without it the
+    two baselines invented the material — a programming course's exercises came back in
+    whatever language the model favoured — and what was being measured was then the absence
+    of a paragraph, not the absence of the system. The rag arm builds on this same prompt.
     """
     item_type = context.exemplars_profile.item_type(commission.item_type)
     return study_prompts.of(context.language).naive_generation_prompt(
         subject=context.content_context.subject,
         educational_level=context.content_context.educational_level,
         language_of_instruction=context.content_context.language_of_instruction,
+        context_block=context.content_context.prompt_block(),
         concepts=commission.concepts,
         keys=list(item_type.field_specs),
         fixed=_spoken_fixed(commission, item_type),

@@ -1613,8 +1613,8 @@ function Evaluate() {
         <p>
           Exactly what each one receives is written out, row by row, under the "
           {t("eval.tab.compose")}" form: it is the "{t("fair.title")}" table, and it says who
-          sees the concepts, who the descriptions, who the bank's examples, who the
-          prerequisites. {t("fair.footnote")}
+          sees the concepts, who the descriptions, who pieces of your documents, who the
+          bank's exercises as examples, who the prerequisites. {t("fair.footnote")}
         </p>
       </Detail>
 

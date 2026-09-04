@@ -13,12 +13,11 @@ def naive_generation_prompt(
     keys: list[str],
     fixed: dict[str, object] | None = None,
     instructions: str = "",
+    context_block: str = "",
 ) -> str:
     """Compose the sentence a person who had never seen this system would type.
 
-    The one prompt that does NOT take the context's rendered block: it reads the three
-    canonical facts by name, and handing it the synthesised narrative instead would change
-    a measured baseline and make recorded sessions incomparable.
+    Same shape as the Spanish one; `es.py` says why the subject's context is pasted in.
     """
     subject = subject or "the subject"
     level = educational_level
@@ -32,6 +31,8 @@ def naive_generation_prompt(
     lines = [opening]
     if language:
         lines.append(f"In {language}.")
+    if context_block.strip():
+        lines.append(f"So you know what the course is about:\n{context_block.strip()}")
     for name, value in (fixed or {}).items():
         lines.append(f"{name}: {value}.")
     if instructions.strip():

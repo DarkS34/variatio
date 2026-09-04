@@ -22,12 +22,15 @@ def naive_generation_prompt(
     keys: list[str],
     fixed: dict[str, object] | None = None,
     instructions: str = "",
+    context_block: str = "",
 ) -> str:
     """Compose the sentence a person who had never seen this system would type.
 
-    The one prompt that does NOT take the context's rendered block: it reads the three
-    canonical facts by name, and handing it the synthesised narrative instead would change
-    a measured baseline and make recorded sessions incomparable.
+    It reads the three canonical facts by name AND, since 2026-09-04, pastes the subject's
+    own context under them (`context_block`, the same prose the pipeline's prompts carry):
+    without it the two baselines had to guess what the course is about — the programming
+    language included — and a session then measured that guess rather than the system.
+    Sessions recorded before that date ran without the block; the memoria has to say so.
 
     It reads as somebody thinking out loud because that is what it is measuring. The pinned
     fields arrive already spoken (`naive._spoken_fixed`), so no field identifier is named,
@@ -46,6 +49,8 @@ def naive_generation_prompt(
     lines = [opening]
     if language:
         lines.append(f"En {language}.")
+    if context_block.strip():
+        lines.append(f"Para que sepas de qué va la asignatura:\n{context_block.strip()}")
     for name, value in (fixed or {}).items():
         lines.append(f"{name}: {value}.")
     if instructions.strip():
