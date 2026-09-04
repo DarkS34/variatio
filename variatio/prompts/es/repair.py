@@ -23,6 +23,7 @@ Tu tarea: produce un {shape} JSON corregido que (1) parsee como JSON válido, y 
 - Devuelve un único {shape} JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
 - Escapa correctamente saltos de línea (`\\n`) y comillas internas (`\\"`) dentro de strings.
+- Los caracteres que no son ASCII (tildes, «ñ», «→») se escriben tal cual, nunca como secuencias `\\uXXXX`.
 - Si la salida rota es irrecuperable, devuelve `{{}}`.
 
 JSON:"""

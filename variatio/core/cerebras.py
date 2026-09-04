@@ -399,8 +399,9 @@ class CerebrasEngine:
             )
         content: object = prompt
         if images:
+            # The pictures go BEFORE the text: Gemma 4's model card asks for image content
+            # ahead of the prompt, and Qwen's own examples order the parts the same way.
             content = [
-                {"type": "text", "text": prompt},
                 *(
                     {
                         "type": "image_url",
@@ -408,6 +409,7 @@ class CerebrasEngine:
                     }
                     for image in images
                 ),
+                {"type": "text", "text": prompt},
             ]
         messages: list[dict] = []
         if system is not None:

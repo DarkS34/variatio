@@ -198,6 +198,7 @@ Choose the modality by what the item ASKS OF THE STUDENT, not by its topic or it
 - The material may come from a transcription that marks the correct option of a closed question with `{CORRECT_ANSWER_MARK}`. That mark is NOT part of the text: use it to know which answer is correct and remove it from the value you extract.
 - Remove leading enumeration markers (`1.`, `2)`, `Exercise 3:`, `Ejercicio 4.`, `Problem 5 -`, `Part 6:`, `Section 7 –`, etc.) from the text fields. Values must start with the first real character of the content, not with a number or a label.
 - For multiline strings (code, prose with paragraphs): escape line breaks as `\\n` and inner quotes as `\\"`.
+- Non-ASCII characters — accents, «ñ», «→», «≤», typographic quotes — are written as themselves, as text, and NEVER as `\\uXXXX` escape sequences: a mis-escaped accent is not a formatting error, it is a letter lost from the material.
 - Respect the schema's constraints (`minLength`, `maxLength`, `pattern`, etc.).
 
 # OUTPUT RULES

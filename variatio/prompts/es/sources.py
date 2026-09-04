@@ -198,6 +198,7 @@ Elige la modalidad por lo que el item PIDE AL ALUMNO, no por su tema ni por su d
 - El material puede venir de una transcripción que marca con `{CORRECT_ANSWER_MARK}` la opción correcta de una pregunta cerrada. Esa marca NO es parte del texto: úsala para saber cuál es la respuesta correcta y quítala del valor que extraigas.
 - Elimina marcadores de enumeración inicial (`1.`, `2)`, `Ejercicio 3:`, `Exercise 4.`, `Problema 5 -`, `Apartado 6:`, `Sección 7 –`, etc.) en los campos de texto. Los valores deben empezar con el primer carácter real del contenido, no con un número o etiqueta.
 - Para strings multilínea (código, prosa con párrafos): escapa saltos como `\\n` y comillas internas como `\\"`.
+- Los caracteres que no son ASCII —tildes, «ñ», «→», «≤», comillas tipográficas— se escriben tal cual, como texto, y NUNCA como secuencias `\\uXXXX`: una tilde mal escapada no es un error de formato, es una letra perdida del material.
 - Respeta los constraints del schema (`minLength`, `maxLength`, `pattern`, etc.).
 
 # REGLAS DE SALIDA

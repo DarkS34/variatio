@@ -317,6 +317,23 @@ def test_generate_sends_the_translated_call_and_splits_the_reasoning():
     assert resp.thinking == "pensando…"
 
 
+def test_the_pictures_travel_ahead_of_the_text():
+    # Gemma 4's model card asks for image content BEFORE the text of the prompt, and Qwen's
+    # examples order the parts the same way; a text-first body was our own habit.
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    engine = _engine_with(handler)
+    engine.generate("gemma-4-31b", "transcribe", images=["AAAA", "BBBB"])
+    parts = seen["messages"][-1]["content"]
+    assert [part["type"] for part in parts] == ["image_url", "image_url", "text"]
+    assert parts[0]["image_url"]["url"] == "data:image/png;base64,AAAA"
+    assert parts[-1]["text"] == "transcribe"
+
+
 def test_generate_unwraps_the_reply_to_a_wrapped_array_schema():
     def handler(request: httpx.Request) -> httpx.Response:
         sent = json.loads(request.content)

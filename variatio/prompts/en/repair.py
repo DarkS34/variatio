@@ -23,6 +23,7 @@ Your task: produce a corrected JSON {shape} that (1) parses as valid JSON, and (
 - Return a single JSON {shape}. Nothing before, nothing after.
 - No ```json, no backticks, no comments, no explanations.
 - Escape line breaks (`\\n`) and inner quotes (`\\"`) properly inside strings.
+- Non-ASCII characters (accents, «ñ», «→») are written as themselves, never as `\\uXXXX` escape sequences.
 - If the broken output is beyond recovery, return `{{}}`.
 
 JSON:"""
