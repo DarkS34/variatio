@@ -297,6 +297,46 @@ las fases que leen documentos nombran un modelo distinto del que juzga y genera.
 
 """ + _RESIDENT_MODELS_DOC
 
+_GUARDRAIL_DOC = """NO SE CAMBIA DESDE EL PANEL, desde el 2026-09-05 y por petición explícita del usuario: es
+uno de los dos modelos que no sirven a ninguna fase del pipeline, y los dos son decisiones
+cerradas con una medición detrás. El guardarraíl es un clasificador que lee como mucho
+`GENERATION_INSTRUCTIONS_MAX_CHARS` (600 caracteres, ~200 tokens), así que su
+`context_window.guardrail` está en 4096 —un margen de diez veces— y es parte de lo que hace
+que los tres modelos residentes quepan a la vez. Cambiarlo desde un navegador es cambiar esa
+aritmética sin volver a medirla.
+
+Hay una segunda razón, y es del reparto de carriles: el guardarraíl está EXCLUIDO del cálculo
+de `server/jobs/lanes.py` porque es pequeño, es local y convive con los demás. Ponerle un
+nombre que `CEREBRAS_MODELS` enrute mandaría cada llamada del guardarraíl a la API remota sin
+reservar el carril remoto — hoy es contrafáctico, porque la familia granite no está en el
+catálogo de Cerebras, y deja de serlo en cuanto alguien escribe aquí otro nombre.
+
+Sigue siendo un ajuste normal en todo lo demás: se lee de `config.json` como cualquier otro,
+y editarlo a mano en el fichero (y reiniciar) sigue funcionando. Lo que se ha quitado es la
+casilla.
+
+""" + _RESIDENT_MODELS_DOC
+
+_EMBEDDING_DOC = """NO SE CAMBIA DESDE EL PANEL, desde el 2026-09-05 y por petición explícita del usuario, por
+la misma razón que el guardarraíl: el modelo de embebido es una decisión cerrada y medida.
+`qwen3-embedding:4b` sustituyó a `embeddinggemma` después de una sonda de 18 consultas sobre
+14 conceptos en la que pasó de 15/18 a 18/18 en top-1 y más que dobló el margen entre el
+acierto y el mejor fallo (0,069 → 0,152); el 8b se midió y se DESCARTÓ —mismo top-1, margen
+algo peor, el doble de disco y de latencia—.
+
+Lo que cuelga del nombre no es solo el índice. `EMBEDDER_SIMILARITY_THRESHOLD` está calibrado
+sobre la escala de coseno de ESTE modelo (la mediana de todos los pares concepto-ítem es
+0,382, y por eso el umbral subió de 0,3 a 0,40), y `EMBEDDING_QUERY_PREFIX` es una afirmación
+por modelo: el mismo mecanismo se midió como INÚTIL en embeddinggemma. Cambiar el modelo sin
+tocar ninguno de los dos deja un umbral y un prefijo que ya no describen nada, y el síntoma
+—ítems que dejan de etiquetarse— aparece lejos de la causa. Además reembebe los dos índices
+enteros, que es lo que dice su `Impact.REINDEX`.
+
+Sigue leyéndose de `config.json` como cualquier otro ajuste; lo que se ha quitado es la
+casilla.
+
+""" + _RESIDENT_MODELS_DOC
+
 _KG_DOMAINS_DOC = """La única fase cuya llamada tuvo que renunciar del todo al razonamiento cuando el modelo que
 comparte con las demás pasó a ser uno que razona: pedirle que particionase el inventario entero hacía que
 respondiera dentro del canal de razonamiento y no devolviera nada. Ahora solo nombra los
@@ -591,7 +631,8 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         group="Modelos",
         impact=Impact.CONTEXTS,
         scope="engine",
-        doc=_RESIDENT_MODELS_DOC,
+        editable=False,
+        doc=_GUARDRAIL_DOC,
     ),
     Setting(
         key="models.embedding",
@@ -601,7 +642,8 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         group="Modelos",
         impact=Impact.REINDEX,
         scope="engine",
-        doc=_RESIDENT_MODELS_DOC,
+        editable=False,
+        doc=_EMBEDDING_DOC,
     ),
     Setting(
         key="sampling.temperature_deterministic",

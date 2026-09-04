@@ -248,11 +248,17 @@ class Phase:
 
 @dataclass(frozen=True)
 class Lane:
-    """One column of the pipeline: the phases of a build, or of a run."""
+    """One column of the pipeline: the phases of a build, or of a run.
+
+    A `shared` lane is not a builder's own: it is the step every builder runs before its
+    own work, so the panel draws it ONCE and ACROSS, above the columns, instead of
+    repeating it at the head of each of them.
+    """
 
     key: str
     label: str
     phases: tuple[Phase, ...]
+    shared: bool = False
 
 
 def _switch(key: str, label: str, note: str = "") -> Phase:
@@ -267,45 +273,44 @@ def _switch(key: str, label: str, note: str = "") -> Phase:
     )
 
 
-_SHARED_TRANSCRIBE_NOTE = (
-    "Lee cada página como imagen; un solo ajuste compartido por los tres constructores."
+_PAGE_NOTE = "Lee cada página del documento como imagen, una llamada por página."
+_IMAGE_NOTE = (
+    "Lee una a una las imágenes de un Word o un PowerPoint, con el modelo de la página: "
+    "un documento se lee con un solo modelo tome la ruta que tome."
 )
-_SHARED_IMAGE_NOTE = (
-    "Lee una a una las imágenes de un Word o un PowerPoint, con el modelo de la "
-    "transcripción; compartida con los otros dos."
-)
-_SHARED_SEAM_NOTE = (
-    "Clasifica cómo se pega una página con la siguiente; compartida con los otros dos."
-)
+_SEAM_NOTE = "Clasifica cómo se pega una página con la siguiente, una llamada por costura."
 
-
-def _transcription() -> tuple[Phase, ...]:
-    """Return the three transcription phases, drawn in all three lanes from one setting each.
-
-    The picture phase names the PAGE phase's model on purpose: a document is read with one
-    model whichever route its pieces take, so a second model setting there would be a
-    second thing to keep equal.
-    """
-    return (
-        _switch("transcribe", "Transcripción", _SHARED_TRANSCRIBE_NOTE),
+# LA LECTURA DE LOS DOCUMENTOS ES UN PASO APARTE, y desde el 2026-09-05 se dibuja como tal
+# (petición explícita del usuario). Las tres fases son las mismas para los tres
+# constructores —un ajuste cada una, no tres— y estaban repetidas a la cabeza de cada
+# carril, así que la pantalla enseñaba nueve nodos para tres decisiones y ninguna de las
+# tres columnas empezaba por lo suyo. Ahora es un carril `shared`, dibujado una vez y en
+# horizontal encima de los demás; lo que cambia es el dibujo, no lo que corre.
+_TRANSCRIPTION = Lane(
+    "transcription",
+    "Transcripción",
+    (
+        _switch("transcribe", "Páginas", _PAGE_NOTE),
         Phase(
             key="transcribe_image",
             label="Imágenes",
             model="models.phases.transcribe",
             setting="reasoning.phases.transcribe_image",
             effort="reasoning.effort.transcribe_image",
-            note=_SHARED_IMAGE_NOTE,
+            note=_IMAGE_NOTE,
         ),
-        _switch("transcribe_seam", "Costura", _SHARED_SEAM_NOTE),
-    )
+        _switch("transcribe_seam", "Costura", _SEAM_NOTE),
+    ),
+    shared=True,
+)
 
 
 PIPELINE: tuple[Lane, ...] = (
+    _TRANSCRIPTION,
     Lane(
         "profile",
         "Perfil de ejemplares",
         (
-            *_transcription(),
             _switch("ep_scan", "Escaneo"),
             _switch("ep_consolidate", "Consolidación"),
             _switch("ep_context", "Contexto"),
@@ -315,7 +320,6 @@ PIPELINE: tuple[Lane, ...] = (
         "graph",
         "Grafo de conocimiento",
         (
-            *_transcription(),
             _switch("kg_extract", "Extracción"),
             _switch("kg_clean_merge", "Fusión"),
             _switch("kg_clean_drop", "Descarte"),
@@ -346,7 +350,6 @@ PIPELINE: tuple[Lane, ...] = (
         "bank",
         "Banco de ejemplares",
         (
-            *_transcription(),
             _switch("eb_extract", "Extracción"),
             _switch(
                 "concept_tagger",

@@ -641,9 +641,14 @@ export function SettingRow({
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   // Only a value that actually left the default has anything to go back to; a file value
-  // equal to the default is the same number with a different badge.
+  // equal to the default is the same number with a different badge. A row that cannot be
+  // edited cannot be reset either — `settings.reset` refuses a locked key — so offering the
+  // button there would be offering a call that answers 400.
   const resettable =
-    setting.source === "file" && !setting.secret && !sameValue(setting.value, setting.default);
+    setting.editable &&
+    setting.source === "file" &&
+    !setting.secret &&
+    !sameValue(setting.value, setting.default);
 
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
@@ -794,10 +799,15 @@ export function SettingRow({
         </div>
       </div>
 
+      {/* A disabled control with nothing beside it reads as a bug. The environment already
+          said why; a setting the registry marks as not editable has to say so too, and
+          where it IS changed — the file, and a restart. */}
       {lockedByEnv ? (
         <p className="text-small text-muted-foreground">
           {t("cfg.fixedBy", { env: setting.env ?? "" })}
         </p>
+      ) : !setting.editable ? (
+        <p className="text-small text-muted-foreground">{t("cfg.notEditable")}</p>
       ) : null}
 
       {setting.doc ? (

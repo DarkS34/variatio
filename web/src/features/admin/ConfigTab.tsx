@@ -567,7 +567,6 @@ function PipelineCard({
   return (
     <Card>
       <CardContent className="space-y-4 pt-4">
-        {residents.map(row)}
         <ReasoningPipeline
           lanes={lanes}
           settings={settings}
@@ -592,6 +591,13 @@ function PipelineCard({
           </details>
         ) : null}
         {rest.map(row)}
+        {/* THE TWO RESIDENT MODELS GO LAST, AND THEY ARE READ-ONLY (2026-09-05, explicit
+            user request). They led the card, which put the two rows nobody may edit above
+            the pipeline the whole section is about. Neither serves a phase — the guardrail
+            screens the free text, the embedder writes the index — so they are what is left
+            over once the drawing has said everything, and that is where they now sit. The
+            rows still READ: the value, its source and the measurement behind it. */}
+        {residents.map(row)}
       </CardContent>
     </Card>
   );

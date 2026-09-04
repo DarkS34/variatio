@@ -41,45 +41,73 @@ export function ReasoningPipeline({
   models: Models | null;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { t } = useT();
   const byKey = new Map(settings.map((setting) => [setting.key, setting]));
+  const node = (phase: ReasoningPhase, last: boolean) => (
+    <PhaseNode
+      key={phase.key}
+      phase={phase}
+      setting={phase.setting ? byKey.get(phase.setting) ?? null : null}
+      effortSetting={phase.effort ? byKey.get(phase.effort) ?? null : null}
+      modelSetting={byKey.get(phase.model) ?? null}
+      draft={draft}
+      models={models}
+      last={last}
+      onChange={onChange}
+    />
+  );
+  const shared = lanes.filter((lane) => lane.shared);
+  const own = lanes.filter((lane) => !lane.shared);
+
   return (
-    <ol className="grid items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-4">
-      {lanes.map((lane) => (
-        <li key={lane.key} className="min-w-0">
+    <div className="space-y-6">
+      {/* The step that comes BEFORE the three builders, drawn once and across. It is the
+          same three settings for all of them, so repeating it at the head of each column
+          was nine nodes for three decisions and no column started with its own work. */}
+      {shared.map((lane) => (
+        <section key={lane.key} className="rounded-md border border-border bg-muted/25 p-3">
           <p className="border-b border-border pb-1.5 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
             {lane.label}
           </p>
-          <ol className="pt-3">
-            {lane.phases.map((phase, index) => (
-              <PhaseNode
-                key={phase.key}
-                phase={phase}
-                setting={phase.setting ? byKey.get(phase.setting) ?? null : null}
-                effortSetting={phase.effort ? byKey.get(phase.effort) ?? null : null}
-                modelSetting={byKey.get(phase.model) ?? null}
-                draft={draft}
-                models={models}
-                last={index === lane.phases.length - 1}
-                onChange={onChange}
-              />
-            ))}
+          <p className="pt-2 text-small text-muted-foreground">{t("pipe.sharedNote")}</p>
+          {/* No connector between these three: the pages and the Office pictures are two
+              ROUTES for one document, not one stop after another, and a rule between them
+              would draw an order that does not exist. */}
+          <ol className="grid gap-x-5 gap-y-1 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+            {lane.phases.map((phase) => node(phase, true))}
           </ol>
-        </li>
+        </section>
       ))}
-    </ol>
+      <ol className="grid items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-4">
+        {own.map((lane) => (
+          <li key={lane.key} className="min-w-0">
+            <p className="border-b border-border pb-1.5 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
+              {lane.label}
+            </p>
+            <ol className="pt-3">
+              {lane.phases.map((phase, index) => node(phase, index === lane.phases.length - 1))}
+            </ol>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
 /**
  * One call to the model, drawn as a stop on its lane.
  *
- * The lane runs DOWN and not across, and that is the whole of the layout. Across, the mark
- * was a fixed width and the spacing between marks was elastic, so how the drawing looked
- * was a function of how many stops a lane happened to have — and they have 5, 13, 4 and 4.
- * The long one overflowed into a scroller with every label clipped to «TRANSCRIPCI» and
- * every select to «gemm», and the short ones were left with holes. Down the page each stop
- * is the width of its column whatever its neighbours do, a model name fits without being
- * cut, and nothing has to scroll sideways to be read.
+ * A BUILDER's lane runs DOWN and not across, and that is the whole of the layout. Across,
+ * the mark was a fixed width and the spacing between marks was elastic, so how the drawing
+ * looked was a function of how many stops a lane happened to have — and they have 3, 11, 2
+ * and 4. The long one overflowed into a scroller with every label clipped to «TRANSCRIPCI»
+ * and every select to «gemm», and the short ones were left with holes. Down the page each
+ * stop is the width of its column whatever its neighbours do, a model name fits without
+ * being cut, and nothing has to scroll sideways to be read.
+ *
+ * The transcription band above them is the one exception and does not reopen that: it is a
+ * grid of THREE fixed cells, so nothing is elastic and no lane's length can stretch it.
+ * The same node is drawn in both, with `last` withholding the connector in the band.
  */
 function PhaseNode({
   phase,
@@ -115,7 +143,11 @@ function PhaseNode({
   const residentName = Array.isArray(modelValue)
     ? modelValue.map(String).join(" · ")
     : String(modelValue ?? "");
-  const ownModel = Boolean(modelSetting?.key.startsWith("models.phases."));
+  // A node owns its model when the setting is ITS OWN phase's, not merely some phase's:
+  // `transcribe_image` names the PAGE phase's key on purpose, and the two are now side by
+  // side in the transcription band, where a second select for one setting reads as two
+  // controls. It shows the name instead, like every other node that does not own its model.
+  const ownModel = modelSetting?.key === `models.phases.${phase.key}`;
 
   return (
     <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2.5 pb-3">

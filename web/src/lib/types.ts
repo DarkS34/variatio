@@ -830,7 +830,20 @@ export type ReasoningPhase = {
   note: string;
 };
 
-export type ReasoningLane = { key: string; label: string; phases: ReasoningPhase[] };
+/**
+ * One column of the pipeline — or, when `shared`, the step above them all.
+ *
+ * A shared lane is not a builder's own: the transcription is the same three calls for the
+ * three of them, so it is drawn once and across instead of at the head of each column.
+ * Optional because an API older than this bundle sends no such flag and repeats those
+ * phases inside every lane, which is exactly the drawing this replaces.
+ */
+export type ReasoningLane = {
+  key: string;
+  label: string;
+  shared?: boolean;
+  phases: ReasoningPhase[];
+};
 
 export type ConfigPayload = {
   groups: string[];

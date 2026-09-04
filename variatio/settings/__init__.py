@@ -203,6 +203,7 @@ def pipeline() -> list[dict]:
         {
             "key": lane.key,
             "label": lane.label,
+            "shared": lane.shared,
             "phases": [
                 {
                     "key": phase.key,
