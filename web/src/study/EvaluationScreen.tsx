@@ -34,7 +34,6 @@ import { ProposalDialog } from "./ProposalDialog";
 import { QueueTab } from "./QueueTab";
 import { RevealPanel } from "./RevealPanel";
 import { SessionsTable } from "./SessionsTable";
-import { TaskSteps } from "./TaskSteps";
 import { letterFor } from "./arms";
 import {
   useChooseProposal,
@@ -269,9 +268,17 @@ export function EvaluationScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <h1 className="w-full font-display font-expanded text-display">{t("eval.title")}</h1>
+        {/* The (i) rides on the TITLE and the guide link comes after it (2026-09-04,
+            explicit user request). What the hint holds is one sentence about this screen;
+            the link is a destination, and a destination reads as the end of a line rather
+            than as something with a glyph hanging off it. */}
+        <h1 className="w-full font-display font-expanded text-display">
+          {t("eval.title")}
+          <InfoHint className="ml-2 align-middle" label={t("eval.whatFor")}>
+            {t("eval.whatFor.body")}
+          </InfoHint>
+        </h1>
         <GuideLink slug="evaluate" />
-        <InfoHint label={t("eval.whatFor")}>{t("eval.whatFor.body")}</InfoHint>
         {showComparison ? (
           <Button variant="outline" size="sm" className="ml-auto" onClick={closeSession}>
             <Plus />
@@ -303,7 +310,7 @@ export function EvaluationScreen() {
               {entry.count ? (
                 <span
                   className={cn(
-                    "inline-grid h-[18px] min-w-5 place-items-center px-1.5 text-[11px] font-semibold nums",
+                    "inline-grid h-[18px] min-w-5 place-items-center px-1.5 text-[12px] font-semibold nums",
                     // A count is a fact, not an action: it wears the ink. The one "act
                     // here" colour is spent on the button that opens the next comparison.
                     "bg-primary text-primary-foreground",
@@ -383,6 +390,7 @@ export function EvaluationScreen() {
         <SessionsTable
           sessions={listing.data.sessions}
           total={listing.data.total}
+          typeLabel={typeLabel}
           onOpen={(id) => {
             setSessionId(id);
           }}
@@ -394,12 +402,6 @@ export function EvaluationScreen() {
 
       {showComparison && profile && session && instruments ? (
         <div className="space-y-5">
-          <TaskSteps
-            session={session}
-            answered={positions.filter((p) => p.item && session.triage[String(p.position)]).length}
-            answerable={positions.filter((p) => p.item).length}
-          />
-
           <CommissionStrip session={session} profile={profile} />
 
           {session.revealed ? (

@@ -1525,9 +1525,9 @@ function Evaluate() {
               always say that none of them convinces you.
             </>,
             <>
-              Only then is it revealed which architecture wrote each one: a row per proposal,
-              with what you answered about it, the model and the time, and a
-              "{t("reveal.detail")}" that unfolds the technical detail.
+              Only then is it revealed which architecture wrote each one: a column per
+              proposal, with what you answered about it, the model and the time, and a
+              "{t("reveal.read")}" that opens it in full along with where it came from.
             </>,
             <>
               If you feel like it, you rate the system's one on four scales, with its exercise

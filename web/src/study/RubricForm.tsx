@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
-import { ARM_META } from "./arms";
 import type { EvaluationRating, Instruments } from "./types";
 import { useT } from "@/lib/i18n";
 
@@ -71,7 +70,7 @@ function Scale({
           </button>
         ))}
       </div>
-      <div className="flex justify-between text-micro text-muted-foreground">
+      <div className="flex justify-between text-small text-muted-foreground">
         <span>{ends[0]}</span>
         {target ? <span className="text-attention">{t("rubric.target", { target })}</span> : null}
         <span>{ends[1]}</span>
@@ -104,10 +103,7 @@ export function RubricForm({
     <section className="space-y-4 border border-border bg-card p-5 shadow-sm">
       <header className="space-y-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="text-heading font-semibold">
-            {t("rubric.title")}{" "}
-            <span style={{ color: ARM_META.system.colour }}>{t("rubric.system")}</span>
-          </h2>
+          <h2 className="text-heading font-semibold">{t("rubric.title")}</h2>
           <span className="rounded-full bg-muted px-2 py-0.5 text-micro font-condensed text-muted-foreground uppercase">
             {t("common.optional")}
           </span>
@@ -118,7 +114,6 @@ export function RubricForm({
             </span>
           ) : null}
         </div>
-        <p className="text-small text-muted-foreground">{t("rubric.whicheverYouChose")}</p>
       </header>
 
       <div className="space-y-4">

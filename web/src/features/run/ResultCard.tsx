@@ -20,7 +20,7 @@ function isFenced(value: string): boolean {
 
 /** The one size step the app allows above `body`: a reading surface rather than dense
  *  chrome, which is what the evaluation's expanded proposal is. */
-const READING = "text-[15px] leading-[1.7]";
+const READING = "text-[16px] leading-[1.7]";
 
 function FieldValue({
   field,
@@ -91,23 +91,22 @@ export function ItemFields({
  * nobody preparing a subject decides anything with. A flag is worth a line because it
  * names something to look at; its absence is not.
  *
- * `detail` puts both back, and has exactly one caller: the study's reveal panel, where
- * the technical half of a proposal is the point of the fold it sits in.
+ * `detail` used to put both back for the study's reveal panel, and that caller went on
+ * 2026-09-04 (explicit user request: the reveal reads exactly as «Generar» does). With no
+ * caller left the parameter is gone rather than kept for a reader that might return, and
+ * so are the four strings only it drew.
  */
 export function ItemChecks({
   checks,
   retried,
-  detail = false,
 }: {
   checks?: ItemChecks | null;
   retried?: number;
-  detail?: boolean;
 }) {
   const { t } = useT();
   if (!checks) return null;
   const flagged = checks.flags.length > 0;
-  const tagger = checks.tagger;
-  if (!detail && !flagged && !retried) return null;
+  if (!flagged && !retried) return null;
   return (
     <div
       className={cn(
@@ -123,20 +122,6 @@ export function ItemChecks({
           </span>
         ) : null}
         {flagged ? checks.flags.map((flag) => <span key={flag}>{flag}</span>) : null}
-        {!flagged && detail ? <span>{t("result.noFlags")}</span> : null}
-        {detail ? (
-          <span className="text-micro text-muted-foreground">
-            {tagger
-              ? t("result.taggedAs", { concept: tagger.primary ?? t("common.none").toLowerCase() })
-              : t("result.noTagger")}
-            {checks.similarity
-              ? ` ${t("result.closestTo", {
-                  to: checks.similarity.to,
-                  score: checks.similarity.score.toFixed(2),
-                })}`
-              : ""}
-          </span>
-        ) : null}
       </div>
     </div>
   );

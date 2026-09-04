@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { ItemFields } from "@/features/run/ResultCard";
+import { ItemChecks, ItemFields } from "@/features/run/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,11 @@ import type { EvaluationPosition, EvaluationSessionHead, Instruments, TriageValu
  * other and closing to open the next one is three clicks per comparison.
  *
  * Before the reveal it knows nothing the card did not: a letter, the commission, the
- * fields. After it the header names the arm, in its colour, and the footer shows the
- * answer back instead of asking again.
+ * fields. After it the header names the arm, in its colour, the footer shows the answer
+ * back instead of asking again, and a foot under the exercise says where it came from —
+ * the arm's own description, what the checks raised and the fragments it was handed. That
+ * foot is what the card's «Detalle» used to unfold (2026-09-04, explicit user request:
+ * one button per card), minus the exact prompt and the retry count, which went with it.
  */
 export function ProposalDialog({
   position,
@@ -53,7 +56,7 @@ export function ProposalDialog({
   onMove: (position: number) => void;
   onClose: () => void;
 }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const open = position !== null;
   const index = position ? positions.findIndex((p) => p.position === position.position) : -1;
   const previous = index > 0 ? positions[index - 1] : null;
@@ -176,6 +179,21 @@ export function ProposalDialog({
             spec={itemTypeOf(profile, { item_type: session.item_type })}
             reading
           />
+          {meta ? (
+            <div className="space-y-3 border-t border-border pt-4">
+              <p className="text-small leading-relaxed text-muted-foreground">
+                {t(meta.descriptionKey)}
+              </p>
+              {position.error ? <p className="text-small text-attention">{position.error}</p> : null}
+              {position.checks ? <ItemChecks checks={position.checks} /> : null}
+              {position.exemplar_ids && position.exemplar_ids.length > 0 ? (
+                <p className="font-mono text-small text-muted-foreground">
+                  {plural("reveal.examplesFromBank", position.exemplar_ids.length)} ·{" "}
+                  {position.exemplar_ids.join(" · ")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="flex min-h-40 flex-col items-center justify-center gap-2 text-center">

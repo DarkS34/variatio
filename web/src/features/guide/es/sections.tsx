@@ -1513,9 +1513,9 @@ function Evaluate() {
               ninguna te convence.
             </>,
             <>
-              Solo entonces se revela qué arquitectura escribió cada una: una fila por
+              Solo entonces se revela qué arquitectura escribió cada una: una columna por
               propuesta, con lo que respondiste sobre ella, el modelo y el tiempo, y un
-              «{t("reveal.detail")}» que despliega el detalle técnico.
+              «{t("reveal.read")}» que la abre entera junto con de dónde salió.
             </>,
             <>
               Si te apetece, afinas la del sistema en cuatro escalas, con su ejercicio al lado.

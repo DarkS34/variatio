@@ -29,11 +29,15 @@ import { useT } from "@/lib/i18n";
 export function SessionsTable({
   sessions,
   total,
+  typeLabel,
   onOpen,
   onDeleted,
 }: {
   sessions: EvaluationSummary[];
   total: number;
+  /** The modality's own label, resolved from the profile by the screen: this table has no
+   *  business looking up how a workspace spells its own item types. */
+  typeLabel: (key: string) => string;
   onOpen: (id: string) => void;
   onDeleted?: (ids: string[]) => void;
 }) {
@@ -116,10 +120,9 @@ export function SessionsTable({
                   />
                 </TH>
                 <TH>{t("sessions.col.when")}</TH>
+                <TH>{t("sessions.col.type")}</TH>
                 <TH>{t("sessions.col.concepts")}</TH>
                 <TH>{t("sessions.col.choice")}</TH>
-                <TH>{t("sessions.col.reasoned")}</TH>
-                <TH align="num">{t("sessions.col.rubric")}</TH>
                 <TH />
               </TR>
             </THead>
@@ -138,6 +141,16 @@ export function SessionsTable({
                     <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                       {when(new Date(session.created_at * 1000).toISOString())}
                     </TD>
+                    {/* WHAT KIND OF EXERCISE WAS ASKED FOR (2026-09-04, explicit user
+                        request). A row said when and about what, and never what: two
+                        sessions over the same concepts are different comparisons when one
+                        asked for a four-option question and the other for a whole
+                        program. */}
+                    <TD className="whitespace-nowrap px-3 py-2">
+                      <span className="border border-border px-2 py-0.5 text-small">
+                        {typeLabel(session.item_type)}
+                      </span>
+                    </TD>
                     <TD className="max-w-64 truncate px-3 py-2">
                       {session.concepts.join(" · ")}
                     </TD>
@@ -149,7 +162,7 @@ export function SessionsTable({
                       ) : (
                         <span className="flex items-center gap-1.5">
                           <span
-                            className="flex size-5 items-center justify-center rounded font-mono text-[11px]"
+                            className="flex size-5 items-center justify-center rounded font-mono text-[12px]"
                             style={{
                               backgroundColor: meta?.colour,
                               color: "var(--background)",
@@ -160,12 +173,6 @@ export function SessionsTable({
                           {meta ? t(meta.shortKey) : null}
                         </span>
                       )}
-                    </TD>
-                    <TD className="px-3 py-2 text-small text-muted-foreground">
-                      {session.think === null ? "—" : session.think ? t("fair.yes") : t("fair.no")}
-                    </TD>
-                    <TD className="px-3 py-2 text-small text-muted-foreground">
-                      {session.rated ? t("fair.yes") : "—"}
                     </TD>
                     <TD className="px-3 py-2 text-right">
                       <Button variant="ghost" size="sm" onClick={() => onOpen(session.id)}>
