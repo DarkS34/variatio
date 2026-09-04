@@ -10,7 +10,7 @@ import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 import { useOpenStageReview, useSaveStageReview, useStageReview } from "./queries";
-import { questionCount, type StageInstrument, type StageQuestion } from "./types";
+import { questionCount, type StageInstrument, type StageScale } from "./types";
 
 /**
  * WHAT THE TEACHER SAYS ABOUT THE BUILD THEY ARE LOOKING AT.
@@ -21,10 +21,17 @@ import { questionCount, type StageInstrument, type StageQuestion } from "./types
  * it is a column and not a page: what is being scored has to be on screen while the
  * scoring happens.
  *
- * NOTHING IN THE WORDING LIVES IN THIS FILE. The questions, their options and their order
- * come from `study/api/stage_instruments.py`, because rewording one changes what was
- * measured and that has to be one edit in one place. What is here is the frame: the title,
- * the state, the button, and what to do next.
+ * NOTHING IN THE WORDING LIVES IN THIS FILE. The statements, the scale's rungs and their
+ * order come from `study/api/stage_instruments.py`, because rewording one changes what
+ * was measured and that has to be one edit in one place. What is here is the frame: the
+ * title, the state, the button, and what to do next.
+ *
+ * IT IS A LIKERT FORM (2026-09-04, explicit user request): every item is a statement and
+ * the answer is how far the person agrees, on ONE five-rung scale shared by all of them,
+ * «en conjunto» included. The rungs are named once, in a header row aligned to the same
+ * five columns every row of buttons uses, and each button carries its rung as its
+ * accessible name — five labels under every statement would not fit and would not be
+ * read. The number is the score, 5 being best, so the columns read upwards left to right.
  *
  * `--attention` is spent once and on the last thing: the button while there is something
  * to save, and then the step that follows. A form whose every row shouts is a form nobody
@@ -54,7 +61,7 @@ export function StageReview({
   const open = useOpenStageReview();
 
   const mine = review.data?.mine ?? null;
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [overall, setOverall] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [touched, setTouched] = useState(false);
@@ -122,7 +129,7 @@ export function StageReview({
       overall !== (mine?.overall ?? null) ||
       note !== (mine?.note ?? ""));
 
-  const pick = (key: string, value: string) => {
+  const pick = (key: string, value: number) => {
     setTouched(true);
     setAnswers((current) => ({ ...current, [key]: value }));
   };
@@ -154,56 +161,30 @@ export function StageReview({
         </CardHeader>
 
         <CardContent className="space-y-5">
+          <ScaleHeader scale={instrument.scale} />
+
           {instrument.questions.map((question) => (
-            <Choice
+            <Statement
               key={question.key}
-              question={question}
+              statement={question.statement}
+              hint={question.hint}
+              scale={instrument.scale}
               value={answers[question.key]}
               onPick={(value) => pick(question.key, value)}
             />
           ))}
 
-          {/* The one scale shared with the rest of the study, and the last question: with
-              it set, the person reached the end of the form. */}
-          <fieldset className="space-y-2">
-            <legend className="text-small font-medium">{instrument.overall.question}</legend>
-            <div
-              role="radiogroup"
-              aria-label={instrument.overall.question}
-              className="grid grid-cols-5 gap-1.5"
-            >
-              {Array.from(
-                { length: instrument.overall.scale.max - instrument.overall.scale.min + 1 },
-                (_, i) => instrument.overall.scale.min + i,
-              ).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={overall === value}
-                  onClick={() => {
-                    setTouched(true);
-                    setOverall(value);
-                  }}
-                  className={cn(
-                    "nums border px-2 py-1.5 text-small transition-colors",
-                    overall === value
-                      ? "border-primary bg-accent font-medium"
-                      : "border-border bg-card hover:bg-accent",
-                  )}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-between">
-              {instrument.overall.scale.ends.map((end) => (
-                <span key={end} className="text-micro text-muted-foreground">
-                  {end}
-                </span>
-              ))}
-            </div>
-          </fieldset>
+          {/* The one column shared with the rest of the study, and the last statement:
+              with it set, the person reached the end of the form. */}
+          <Statement
+            statement={instrument.overall.statement}
+            scale={instrument.scale}
+            value={overall ?? undefined}
+            onPick={(value) => {
+              setTouched(true);
+              setOverall(value);
+            }}
+          />
 
           <div className="space-y-2">
             <label htmlFor="stage-review-note" className="block text-small font-medium">
@@ -267,54 +248,76 @@ export function StageReview({
 }
 
 
+/** The rungs of the scale, in order, from what the instrument declares. */
+function rungs(scale: StageScale): number[] {
+  return Array.from({ length: scale.max - scale.min + 1 }, (_, i) => scale.min + i);
+}
+
 /**
- * One question, its options stacked, best first.
+ * The five rungs named once, over the same five columns every statement's buttons use.
  *
- * A row and not a chip row: the options are sentences («Falta alguna secundaria»), and a
- * wrapped chip row makes three sentences look like six. The selected one is marked with
- * the ink and not with a colour — this palette spends colour on evidence, and a preference
- * somebody has just expressed is not evidence of anything yet.
+ * `aria-hidden`, because each button below already carries its rung's name: read aloud
+ * this row would be the same five labels a second time before the first statement.
  */
-function Choice({
-  question,
+function ScaleHeader({ scale }: { scale: StageScale }) {
+  return (
+    <div aria-hidden className="grid grid-cols-5 gap-1.5 border-b border-border pb-2">
+      {rungs(scale).map((value, i) => (
+        <div key={value} className="text-center">
+          <span className="nums block text-small font-medium">{value}</span>
+          <span className="block text-small leading-tight text-muted-foreground">
+            {scale.labels[i]}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One statement and the five rungs under it.
+ *
+ * The selected rung is marked with the ink and not with a colour — this palette spends
+ * colour on evidence, and a degree of agreement somebody has just expressed is not
+ * evidence of anything yet.
+ */
+function Statement({
+  statement,
+  hint,
+  scale,
   value,
   onPick,
 }: {
-  question: StageQuestion;
-  value: string | undefined;
-  onPick: (value: string) => void;
+  statement: string;
+  hint?: string;
+  scale: StageScale;
+  value: number | undefined;
+  onPick: (value: number) => void;
 }) {
+  const { t } = useT();
   return (
     <fieldset className="space-y-2">
-      <legend className="text-small font-medium">{question.question}</legend>
-      {question.hint ? (
-        <p className="-mt-1 text-small text-muted-foreground">{question.hint}</p>
-      ) : null}
-      <div role="radiogroup" aria-label={question.question} className="space-y-1.5">
-        {(question.options ?? []).map((option) => {
-          const on = value === option.value;
+      <legend className="text-body font-medium">{statement}</legend>
+      {hint ? <p className="-mt-1 text-small text-muted-foreground">{hint}</p> : null}
+      <div role="radiogroup" aria-label={statement} className="grid grid-cols-5 gap-1.5">
+        {rungs(scale).map((rung, i) => {
+          const on = value === rung;
+          const name = t("stageReview.rung", { n: rung, label: scale.labels[i] ?? "" });
           return (
             <button
-              key={option.value}
+              key={rung}
               type="button"
               role="radio"
               aria-checked={on}
-              onClick={() => onPick(option.value)}
+              aria-label={name}
+              title={name}
+              onClick={() => onPick(rung)}
               className={cn(
-                "flex w-full items-center gap-2.5 border px-2.5 py-2 text-left text-small transition-colors",
-                on
-                  ? "border-primary bg-accent font-medium"
-                  : "border-border bg-card hover:bg-accent",
+                "nums border px-2 py-1.5 text-small transition-colors",
+                on ? "border-primary bg-accent font-medium" : "border-border bg-card hover:bg-accent",
               )}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  "size-3 shrink-0 rounded-full",
-                  on ? "border-[3px] border-primary bg-card" : "border border-input",
-                )}
-              />
-              {option.label}
+              {rung}
             </button>
           );
         })}

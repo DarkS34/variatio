@@ -504,8 +504,8 @@ export const es = {
   // mientras el grafo preguntaba seis, así que el botón contradecía al formulario que
   // abre. Lo cuenta `study/api/stage_instruments.count()` y llega en el payload.
   "stageReview.openPending": {
-    one: "1 pregunta corta sobre lo que acabas de revisar",
-    other: "{n} preguntas cortas sobre lo que acabas de revisar",
+    one: "1 afirmación corta sobre lo que acabas de revisar: di cuánto estás de acuerdo",
+    other: "{n} afirmaciones cortas sobre lo que acabas de revisar: di cuánto estás de acuerdo con cada una",
   },
   "stageReview.openAnswered": "Ya la contestaste. Ábrela si quieres cambiar algo",
   "stageReview.saved": "Guardada",
@@ -514,14 +514,18 @@ export const es = {
   "stageReview.saveAgain": "Guardar los cambios",
   "stageReview.optional": "Opcional",
   "stageReview.remaining": {
-    one: "Falta 1 pregunta",
-    other: "Faltan {n} preguntas",
+    one: "Falta 1 afirmación por valorar",
+    other: "Faltan {n} afirmaciones por valorar",
   },
   "stageReview.notBuilt": {
-    one: "Cuando esté construido se te preguntará aquí qué tal ha salido. Es 1 pregunta corta.",
+    one: "Cuando esté construido se te preguntará aquí qué tal ha salido. Es 1 afirmación corta, del 1 al 5.",
     other:
-      "Cuando esté construido se te preguntará aquí qué tal ha salido. Son {n} preguntas cortas.",
+      "Cuando esté construido se te preguntará aquí qué tal ha salido. Son {n} afirmaciones cortas, del 1 al 5.",
   },
+  // LA ESCALA SE NOMBRA UNA VEZ, sobre todas las afirmaciones: cada botón lleva su
+  // peldaño como nombre accesible («3 · Ni de acuerdo ni en desacuerdo»), pero el texto
+  // visible es el número, porque cinco etiquetas por fila no caben y no se leerían.
+  "stageReview.rung": "{n} · {label}",
   "stageReview.failed": "No se ha podido guardar. Vuelve a intentarlo.",
   "stageReview.done.title": "Valoración guardada. Gracias.",
   // CONTINUAR CIERRA EL PASO. Antes solo navegaba, y el paso siguiente se negaba a
@@ -1536,8 +1540,7 @@ export const es = {
   "adminStudy.stages.answers": { one: "1 respuesta", other: "{n} respuestas" },
   "adminStudy.stages.openedOnly": { one: "1 abierto sin contestar", other: "{n} abiertos sin contestar" },
   "adminStudy.stages.noAnswers": "Nadie ha contestado este paso todavía.",
-  "adminStudy.stages.overall": "En conjunto, ¿cómo ha salido?",
-  "adminStudy.stages.usable": "{pct} lo usarían sin corregir o con algún retoque.",
+  "adminStudy.stages.usable": "{pct} están de acuerdo o totalmente de acuerdo en que lo usarían tal cual.",
   "adminStudy.stages.curation": "Antes de contestar:",
   "adminStudy.stages.curatedYes": "corrigieron",
   "adminStudy.stages.curatedNo": "no corrigieron",

@@ -1,12 +1,13 @@
 """The arithmetic over what teachers answered about each build, for the panel and the CSV.
 
 The blind comparison has `store.py`; this is its twin for the OTHER instrument, the five
-questions asked at the foot of every stage of the construction. It reads `stage_evaluations`
-into flat headers and then only ever computes over those, so the aggregates can be pinned
-against hand-computed values without a database in the way — exactly as `store.py` does.
+Likert statements asked at the foot of every stage of the construction. It reads
+`stage_evaluations` into flat headers and then only ever computes over those, so the
+aggregates can be pinned against hand-computed values without a database in the way —
+exactly as `store.py` does.
 
-Nothing here needs scipy: the questions are ordinal with three or four rungs and the one
-scale is 1-5, so what the memoria needs is counts, shares, a mean and a median.
+Nothing here needs scipy: every statement is the same 1-5 agreement scale, so what the
+memoria needs is counts per rung, a mean per statement, a share of agreement and a median.
 """
 
 import csv
@@ -20,8 +21,9 @@ from server import csv_safe, review
 from . import stage_instruments, stage_queries
 
 # The rungs of `effort` that leave the artifact usable, which is the reading the panel
-# gives beside the raw counts: «nada» and «algún retoque» together are «lo usaría».
-USABLE_EFFORT = ("none", "touch_up")
+# gives beside the raw counts: «de acuerdo» and «totalmente de acuerdo» with «lo podría
+# usar tal cual» together are «lo usaría».
+USABLE_EFFORT = tuple(range(stage_instruments.AGREE_FROM, stage_instruments.SCALE_MAX + 1))
 
 # The three states of the curation mark, named so a CSV column and a card agree.
 CURATION = ("yes", "no", "unknown")
@@ -96,39 +98,49 @@ def _median(values: list[float]) -> float | None:
     return round((ordered[middle - 1] + ordered[middle]) / 2, 1)
 
 
-def _question_summary(question: dict, rows: list[dict]) -> dict:
-    """Count the answers to one question over these rows, in the instrument's own order.
+def _scale_counts(values: list) -> dict[str, int]:
+    """Count answers per rung, every rung present and in order, an earlier wording's after.
 
-    The options carry their labels, so the panel can name a rung without a copy of the
-    instrument in the browser; a value the current wording no longer offers — an earlier
-    version's — is kept under its raw key rather than dropped, because it was answered.
+    Keyed by the rung as a STRING, like `overall`'s counts, so a JSON reader sees one
+    shape for the six scales of a stage. A value the current instrument does not offer —
+    an option of a version before the scale — is kept under its raw key rather than
+    dropped, because it was answered.
     """
-    key = question["key"]
-    counts: dict[str, int] = {option["value"]: 0 for option in question.get("options", ())}
-    for row in rows:
-        value = row["answers"].get(key)
+    counts: dict[str, int] = {str(value): 0 for value in stage_instruments.SCALE_VALUES}
+    for value in values:
         if value is None:
             continue
-        counts[value] = counts.get(value, 0) + 1
+        score = stage_instruments.as_score(value)
+        key = str(score) if score is not None else str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _scale_options(counts: dict[str, int]) -> list[dict]:
+    """Name every rung the counts hold: the scale's own labels, and the raw value otherwise."""
+    labels = dict(zip(map(str, stage_instruments.SCALE_VALUES), stage_instruments.SCALE_LABELS))
+    return [{"value": value, "label": labels.get(value, value)} for value in counts]
+
+
+def _scores(values: list) -> list[int]:
+    """The answers that are on the scale, as numbers, for a mean."""
+    return [s for s in (stage_instruments.as_score(v) for v in values) if s is not None]
+
+
+def _question_summary(question: dict, rows: list[dict]) -> dict:
+    """Count the answers to one statement over these rows, rung by rung, with their mean."""
+    key = question["key"]
+    values = [row["answers"].get(key) for row in rows]
+    counts = _scale_counts(values)
     return {
         "key": key,
-        "axis": stage_instruments.AXES.get(key, ""),
-        "question": question["question"],
-        "options": [
-            {"value": value, "label": _option_label(question, value)}
-            for value in counts
-        ],
+        "axis": question.get("axis") or stage_instruments.AXES.get(key, ""),
+        "statement": question["statement"],
+        "options": _scale_options(counts),
         "counts": counts,
         "n": sum(counts.values()),
+        "mean": _mean(_scores(values)),
     }
-
-
-def _option_label(question: dict, value: str) -> str:
-    """The wording of one option, or the raw value when this wording does not offer it."""
-    for option in question.get("options", ()):
-        if option["value"] == value:
-            return option["label"]
-    return value
 
 
 def _curation_summary(answered: list[dict]) -> dict:
@@ -149,26 +161,25 @@ def _curation_summary(answered: list[dict]) -> dict:
 
 
 def artifact_summary(artifact: str, rows: list[dict]) -> dict:
-    """Summarise one stage: how many answered, the 1-5 scale, and every question's counts."""
+    """Summarise one stage: how many answered, `overall`, and every statement's rungs."""
     answered = [row for row in rows if row["answered"]]
     overall = [row["overall"] for row in answered]
-    overall_counts = {
-        str(value): 0
-        for value in range(stage_instruments.OVERALL_MIN, stage_instruments.OVERALL_MAX + 1)
-    }
-    for value in overall:
-        overall_counts[str(value)] = overall_counts.get(str(value), 0) + 1
 
     questions = [
         _question_summary(question, answered)
         for question in stage_instruments.QUESTIONS.get(artifact, ())
     ]
+    # Over the answers ON THE SCALE only: a row from before the scale keeps its raw value
+    # in the counts, but «none» was that wording's best rung and reading it as
+    # disagreement would pull the share down for a verdict that said the opposite.
     effort = next((q for q in questions if q["key"] == "effort"), None)
     usable = None
-    if effort and effort["n"]:
-        usable = round(
-            sum(effort["counts"].get(value, 0) for value in USABLE_EFFORT) / effort["n"], 3
-        )
+    if effort:
+        scored = sum(effort["counts"].get(str(value), 0) for value in stage_instruments.SCALE_VALUES)
+        if scored:
+            usable = round(
+                sum(effort["counts"].get(str(value), 0) for value in USABLE_EFFORT) / scored, 3
+            )
 
     instruments: dict[str, int] = {}
     for row in answered:
@@ -178,7 +189,12 @@ def artifact_summary(artifact: str, rows: list[dict]) -> dict:
         "artifact": artifact,
         "opened": len(rows),
         "answered": len(answered),
-        "overall": {"n": len(overall), "mean": _mean(overall), "counts": overall_counts},
+        "overall": {
+            "statement": stage_instruments.for_artifact(artifact)["overall"]["statement"],
+            "n": len(overall),
+            "mean": _mean(overall),
+            "counts": _scale_counts(overall),
+        },
         "questions": questions,
         # The one reading the panel gives beside the raw effort counts.
         "usable": usable,
@@ -248,8 +264,9 @@ def by_account(headers: list[dict]) -> list[dict]:
 
 # EXPORT ----------------------------------------------------------------------------------------
 
-# One column per question key the instrument has ever asked, in the order asked, so a
-# spreadsheet reads the same across the three stages: a key a stage does not ask is blank.
+# One column per axis, in the order asked — the same four keys on the three stages, so a
+# spreadsheet reads the same across them. An answer under an earlier wording's key lands
+# in `other_answers`, exactly as before.
 ANSWER_COLUMNS: tuple[str, ...] = tuple(stage_instruments.AXES)
 
 

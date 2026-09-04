@@ -189,7 +189,7 @@ export function useSaveStageReview(artifact: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: {
-      answers: Record<string, string>;
+      answers: Record<string, number>;
       overall: number | null;
       note: string | null;
       curated?: boolean;

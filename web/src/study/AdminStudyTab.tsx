@@ -1158,8 +1158,9 @@ function StageForms({ data }: { data: AdminStageEvaluations }) {
 }
 
 /**
- * One stage: the 1-5 scale first, then the five questions in the order asked, then the
- * two facts a mean hides — whether the person had corrected the artifact first, and how
+ * One stage: «en conjunto» first, then the four statements in the order asked — each a
+ * mean over the one agreement scale and its rungs as a bar, best rung darkest — then the
+ * two facts a mean hides: whether the person had corrected the artifact first, and how
  * long they took.
  */
 function StageCard({ summary }: { summary: StageArtifactSummary }) {
@@ -1188,7 +1189,7 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-small text-muted-foreground">{t("adminStudy.stages.overall")}</p>
+              <p className="text-small text-muted-foreground">{summary.overall.statement}</p>
               <p className="text-title nums">
                 {fixed1(summary.overall.mean, language)}
                 <span className="ml-1 text-small text-muted-foreground">/ 5</span>
@@ -1207,9 +1208,19 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
           <div className="space-y-3 border-t border-border pt-3">
             {summary.questions.map((question) => (
               <div key={question.key} className="space-y-1.5">
-                <p className="text-small">{question.question}</p>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-small">{question.statement}</p>
+                  {question.mean != null ? (
+                    <p className="nums shrink-0 text-small">
+                      {fixed1(question.mean, language)}
+                      <span className="ml-1 text-muted-foreground">/ 5</span>
+                    </p>
+                  ) : null}
+                </div>
+                {/* The scale reads upwards — 5 is «totalmente de acuerdo» and the best
+                    rung — so the darkest segment is the LAST, exactly as «en conjunto». */}
                 <Segments
-                  best="first"
+                  best="last"
                   segments={question.options.map((option) => ({
                     key: option.value,
                     label: option.label,

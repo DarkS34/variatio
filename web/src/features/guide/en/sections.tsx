@@ -649,10 +649,12 @@ function Verdict({ artifact }: { artifact: string }) {
           </>,
           <>
             <strong>"{t("stageReview.openTitle")}"</strong>, the button at the foot, unfolds a
-            short questionnaire beneath it: five questions, the same five ideas on all three
-            steps. You can leave it half done and come back, because half an answer is a datum
-            too, and once you have saved you can close it without losing anything. It is there
-            even when the previous step has been reopened: what is judged is what is built.
+            short questionnaire beneath it: five statements, and for each you say how far you
+            agree, from 1 ("strongly disagree") to 5 ("strongly agree"). They are the same
+            five ideas on all three steps. You can leave it half done and come back, because
+            half an answer is a datum too, and once you have saved you can close it without
+            losing anything. It is there even when the previous step has been reopened: what
+            is judged is what is built.
           </>,
           <>
             <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what is above.
@@ -692,13 +694,14 @@ function Verdict({ artifact }: { artifact: string }) {
           and without telling them apart the two are mixed into the same average.
         </p>
         <p>
-          There are five questions on every step and they follow the same order on all three:
-          whether something is there that should not be, whether something is missing, whether
-          the step does what it is for — the parts of each type, the order of the syllabus,
-          the concept on each exercise — how much you would have to correct before you could
-          use it, and 1 to 5 overall. The last two are identical on all three, and those are
-          the ones that let one step be compared with another. At the end there is an optional
-          box for whatever does not fit the options.
+          There are five statements on every step, all on the same agreement scale, and they
+          follow the same order on all three: that everything there is yours, that nothing is
+          missing, that the step does what it is for — the parts of each type, the order of
+          the syllabus, the concept on each exercise — that you could use it as it is, and
+          that all in all it came out well. They are worded so that agreeing is always the
+          good news, so the number is the mark: 5 is best. The last two are identical on all
+          three, and those are the ones that let one step be compared with another. At the
+          end there is an optional box for whatever does not fit the scale.
         </p>
         <p>
           It is the only thing asked in return for using this, and it is what is being

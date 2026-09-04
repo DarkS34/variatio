@@ -419,11 +419,21 @@ export interface StageQuestionOption {
   label: string;
 }
 
+/** One Likert statement: the person says how far they agree with it, on the one scale the
+ *  instrument carries. There are no options of its own — the scale is drawn once. */
 export interface StageQuestion {
   key: string;
-  question: string;
+  axis: string;
+  statement: string;
   hint?: string;
-  options?: StageQuestionOption[];
+}
+
+/** The one agreement scale, shared by every statement and by `overall`: `labels[i]` is
+ *  the wording of rung `min + i`, and the index IS the score, 5 being best. */
+export interface StageScale {
+  min: number;
+  max: number;
+  labels: string[];
 }
 
 export interface StageInstrument {
@@ -435,12 +445,9 @@ export interface StageInstrument {
    *  while the graph asked six. Optional because an API older than the bundle does not
    *  send it — `questionCount()` derives exactly the same number from `questions`. */
   count?: number;
+  scale: StageScale;
   questions: StageQuestion[];
-  overall: {
-    key: string;
-    question: string;
-    scale: { min: number; max: number; ends: string[] };
-  };
+  overall: { key: string; axis: string; statement: string };
   note: { key: string; question: string; hint: string };
 }
 
@@ -456,7 +463,8 @@ export function questionCount(instrument: StageInstrument): number {
 }
 
 export interface StageAnswers {
-  answers: Record<string, string>;
+  /** One rung of the scale per statement key. */
+  answers: Record<string, number>;
   overall: number | null;
   note: string | null;
   /** `overall` is set, which is the last question: the person reached the end. */
@@ -482,15 +490,17 @@ export interface StageReview {
 // The shapes `study/api/stage_store.py` serves over `/api/admin/evaluations/stages`: one
 // summary per stage of the chain, one row per evaluator, and every form.
 
-/** One question of a stage's form, with what everybody answered to it. The wording and
- *  the option labels travel from the server: they ARE the instrument. */
+/** One statement of a stage's form, with what everybody answered to it: a count per rung
+ *  of the scale, in order, plus any value from an earlier wording under its raw key. The
+ *  wording and the rung labels travel from the server: they ARE the instrument. */
 export interface StageQuestionSummary {
   key: string;
   axis: string;
-  question: string;
+  statement: string;
   options: StageQuestionOption[];
   counts: Record<string, number>;
   n: number;
+  mean: number | null;
 }
 
 export interface StageCurationSlice {
@@ -502,7 +512,8 @@ export interface StageArtifactSummary {
   artifact: string;
   opened: number;
   answered: number;
-  overall: { n: number; mean: number | null; counts: Record<string, number> };
+  /** The «en conjunto» statement, its mean and a count per rung. */
+  overall: { statement: string; n: number; mean: number | null; counts: Record<string, number> };
   questions: StageQuestionSummary[];
   /** «Nada» and «algún retoque» together: the share that leaves the artifact usable. */
   usable: number | null;

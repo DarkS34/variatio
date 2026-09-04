@@ -645,10 +645,12 @@ function Verdict({ artifact }: { artifact: string }) {
           </>,
           <>
             <strong>«{t("stageReview.openTitle")}»</strong>, el botón del final, despliega
-            debajo un cuestionario corto: cinco preguntas, las mismas cinco ideas en los
-            tres pasos. Puedes dejarlo a medias y volver, porque media respuesta también es
-            un dato, y en cuanto guardas puedes cerrarlo sin perder nada. Está ahí aunque el
-            paso anterior se haya vuelto a abrir: lo que se valora es lo que hay construido.
+            debajo un cuestionario corto: cinco afirmaciones, y para cada una dices cuánto
+            estás de acuerdo, del 1 («totalmente en desacuerdo») al 5 («totalmente de
+            acuerdo»). Son las mismas cinco ideas en los tres pasos. Puedes dejarlo a medias
+            y volver, porque media respuesta también es un dato, y en cuanto guardas puedes
+            cerrarlo sin perder nada. Está ahí aunque el paso anterior se haya vuelto a
+            abrir: lo que se valora es lo que hay construido.
           </>,
           <>
             <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
@@ -688,12 +690,14 @@ function Verdict({ artifact }: { artifact: string }) {
           distinguirlas las dos se mezclan en el mismo promedio.
         </p>
         <p>
-          Son cinco preguntas en cada paso y siguen el mismo orden en los tres: si sobra
-          algo, si falta algo, si lo que ese paso tiene que hacer lo hace —las partes de cada
-          tipo, el orden del temario, el concepto de cada ejercicio—, cuánto tendrías que
-          corregir para poder usarlo, y del 1 al 5 en conjunto. Las dos últimas son idénticas
-          en los tres, y son las que permiten comparar un paso con otro. Al final hay una
-          caja opcional para lo que no quepa en las opciones.
+          Son cinco afirmaciones en cada paso, todas sobre la misma escala de acuerdo, y
+          siguen el mismo orden en los tres: que todo lo que hay es tuyo, que no falta nada,
+          que lo que ese paso tiene que hacer lo hace —las partes de cada tipo, el orden del
+          temario, el concepto de cada ejercicio—, que lo podrías usar tal cual, y que en
+          conjunto ha salido bien. Están redactadas para que estar de acuerdo sea siempre la
+          buena noticia, así que el número es la nota: 5 es lo mejor. Las dos últimas son
+          idénticas en los tres, y son las que permiten comparar un paso con otro. Al final
+          hay una caja opcional para lo que no quepa en la escala.
         </p>
         <p>
           Es lo único que se te pide a cambio de usar esto, y es lo que se está midiendo:

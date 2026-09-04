@@ -45,7 +45,7 @@ def _form(
         "artifact_hash": "abc",
         "job_id": None,
         "instrument": instruments.VERSION,
-        "answers": answers if answers is not None else {"effort": "touch_up"},
+        "answers": answers if answers is not None else {"effort": 4},
         "overall": overall,
         "note": None,
         "curated": curated,
@@ -83,31 +83,56 @@ def test_every_stage_is_reported_even_with_nothing_answered():
     assert all(a["answered"] == 0 and a["overall"]["mean"] is None for a in summary["by_artifact"])
 
 
-def test_the_questions_are_counted_in_the_instruments_own_order_with_their_wording():
+def test_the_statements_are_counted_rung_by_rung_in_the_instruments_own_order():
     rows = [
-        _form(answers={"surplus": "none", "effort": "none"}, id=1),
-        _form(answers={"surplus": "many", "effort": "touch_up"}, id=2),
-        _form(answers={"surplus": "none", "effort": "redo"}, id=3),
+        _form(answers={"precision": 5, "effort": 5}, id=1),
+        _form(answers={"precision": 2, "effort": 4}, id=2),
+        _form(answers={"precision": 5, "effort": 1}, id=3),
     ]
     graph = store.aggregates(rows)["by_artifact"][1]
 
     keys = [q["key"] for q in graph["questions"]]
     assert keys == [q["key"] for q in instruments.QUESTIONS[GRAPH]]
-    surplus = graph["questions"][0]
-    assert surplus["axis"] == "precision"
-    assert surplus["counts"] == {"none": 2, "some": 0, "many": 1}
-    assert surplus["n"] == 3
-    assert [o["label"] for o in surplus["options"]] == ["Ninguno", "Alguno suelto", "Muchos"]
-    # «nada» and «algún retoque» leave the artifact usable: 2 of 3.
+    precision = graph["questions"][0]
+    assert precision["axis"] == "precision"
+    assert precision["counts"] == {"1": 0, "2": 1, "3": 0, "4": 0, "5": 2}
+    assert precision["n"] == 3
+    assert precision["mean"] == 4.0
+    assert [o["label"] for o in precision["options"]] == list(instruments.SCALE_LABELS)
+    assert precision["statement"] == instruments.QUESTIONS[GRAPH][0]["statement"]
+    # «de acuerdo» y «totalmente de acuerdo» con «lo podría usar tal cual»: 2 de 3.
     assert graph["usable"] == round(2 / 3, 3)
+    assert graph["overall"]["statement"] == "En conjunto, ha salido bien."
+
+
+def test_the_usable_share_is_over_answers_on_the_scale_only():
+    """«none» was the best rung of the wording before the scale: it must not read as a no."""
+    rows = [
+        _form(answers={"effort": 5}, id=1),
+        _form(answers={"effort": "none"}, id=2),
+        _form(answers={"effort": 2}, id=3),
+    ]
+    graph = store.aggregates(rows)["by_artifact"][1]
+
+    assert graph["usable"] == 0.5
+    assert graph["questions"][3]["counts"]["none"] == 1
+    assert store.aggregates([_form(answers={"effort": "redo"})])["by_artifact"][1]["usable"] is None
+
+
+def test_a_digit_stored_as_a_string_still_counts_as_its_rung():
+    graph = store.aggregates([_form(answers={"precision": "4"})])["by_artifact"][1]
+    precision = graph["questions"][0]
+
+    assert precision["counts"]["4"] == 1 and precision["mean"] == 4.0
 
 
 def test_an_answer_under_an_earlier_wording_is_kept_under_its_raw_value():
-    graph = store.aggregates([_form(answers={"surplus": "old_value"})])["by_artifact"][1]
-    surplus = graph["questions"][0]
+    graph = store.aggregates([_form(answers={"precision": "old_value"})])["by_artifact"][1]
+    precision = graph["questions"][0]
 
-    assert surplus["counts"]["old_value"] == 1
-    assert {"value": "old_value", "label": "old_value"} in surplus["options"]
+    assert precision["counts"]["old_value"] == 1
+    assert precision["mean"] is None
+    assert {"value": "old_value", "label": "old_value"} in precision["options"]
 
 
 def test_the_curation_contrast_has_three_buckets_and_null_is_not_a_no():
@@ -178,12 +203,13 @@ def _csv(rows):
 
 
 def test_the_export_has_one_column_per_question_key_and_keeps_the_rest():
-    line = _csv([_form(answers={"surplus": "none", "effort": "redo", "legacy": "x"})])[0]
+    line = _csv([_form(answers={"precision": 5, "effort": 2, "surplus": "none"})])[0]
 
-    assert line["surplus"] == "none"
-    assert line["effort"] == "redo"
-    assert line["tagging"] == ""
-    assert line["other_answers"] == "legacy=x"
+    assert line["precision"] == "5"
+    assert line["effort"] == "2"
+    assert line["function"] == ""
+    # An answer from the version before the scale keeps travelling, in its own column.
+    assert line["other_answers"] == "surplus=none"
     assert line["overall"] == "4"
     assert line["answered"] == "1"
     assert line["artifact"] == GRAPH
