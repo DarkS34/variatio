@@ -959,7 +959,7 @@ export const es = {
     one: "Falta 1 documento por procesar",
     other: "Faltan {n} documentos por procesar",
   },
-  "transcribe.startAll": "Leerlos todos ahora",
+  "transcribe.startAll": "Procesarlos todos ahora",
   "transcribe.runningTitle": "Leyendo tus documentos",
   "transcribe.reviewPagesOf": "Ver y corregir las páginas de {name}",
   "transcribe.beingRewritten": "Se está releyendo ahora mismo; lo que corrigieras aquí se perdería al terminar",

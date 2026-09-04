@@ -826,7 +826,7 @@ export const en: Catalogue = {
     one: "1 document still to process",
     other: "{n} documents still to process",
   },
-  "transcribe.startAll": "Read them all now",
+  "transcribe.startAll": "Process them all now",
   "transcribe.runningTitle": "Transcribing the raw data",
   "transcribe.reviewPagesOf": "See and correct the pages of {name}",
   "transcribe.beingRewritten": "It is being rewritten right now; anything you corrected here would be lost when it finishes",
