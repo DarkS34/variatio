@@ -1,8 +1,9 @@
 """Generating a new item: few-shot from the bank, the curriculum, and the checks.
 
 The prompt is built around the knowledge frontier — the target concepts, the
-prerequisites the item may lean on, and what has not been taught yet and is therefore
-forbidden. `parse_item` and `build_few_shot_block` live at module level rather than on
+prerequisites the item may lean on, and what comes after the targets — forbidden outright
+when a curriculum says it is untaught, merely not the thing to practise when nobody said
+where the class stands. `parse_item` and `build_few_shot_block` live at module level rather than on
 the generator because the study's evaluation arms have to present and parse EXACTLY as
 this does; otherwise the comparison measures the layout and the parsing, not the graph.
 """
@@ -213,7 +214,12 @@ def assumed_known(closure: list[str], curriculum: list[str] | None) -> list[str]
 
 
 def forbidden(closure: list[str], curriculum: list[str] | None) -> list[str]:
-    """Subtract the curriculum from a dependent closure; no curriculum keeps it whole."""
+    """Subtract the curriculum from a dependent closure; no curriculum keeps it whole.
+
+    What the whole closure MEANS differs by that condition, and the prompt and the checks
+    both read it: with a curriculum it is «no impartido», without one it is «viene
+    después» — usable as scaffolding, never the thing practised (`checks.closure_rule`).
+    """
     if not curriculum:
         return list(closure)
     covered = set(curriculum)
@@ -414,6 +420,7 @@ class VariantGenerator:
                             target_type,
                             targets=concepts,
                             forbidden=posteriors,
+                            rule=checks.closure_rule(curriculum),
                             embedder=self.embedder,
                             tagger=self.tagger,
                             few_shot=few_shot,

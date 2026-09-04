@@ -116,8 +116,13 @@ def generate_content_prompt(
             f"{prerequisites_block}\n"
         )
 
+    # ONE LIST, TWO READINGS. With a curriculum the concepts after the objective are a
+    # FACT about the class — not taught — and a mention is a defect. Without one they are
+    # the graph's own guess about where the class stands, and the only claim that holds is
+    # that the exercise must not PRACTISE them: practising ≠ using, on the far side of the
+    # scaffolding. `checks.closure_rule` keeps the same condition.
     excluded_section = ""
-    if excluded_concepts_block.strip():
+    if excluded_concepts_block.strip() and curriculum_block.strip():
         excluded_section = (
             "\n# NOT YET TAUGHT: FORBIDDEN\n"
             "The curriculum graph places these concepts after the objective: the student has not seen "
@@ -125,6 +130,16 @@ def generate_content_prompt(
             "first idea needs them, change it. If one of them is inseparable from the objective itself "
             "(a curriculum may contradict itself), the objective wins: use it to the minimum extent the "
             "objective demands and no further:\n"
+            f"{excluded_concepts_block}\n"
+        )
+    elif excluded_concepts_block.strip():
+        excluded_section = (
+            "\n# COMES AFTER THE OBJECTIVE: NOT THE CHALLENGE\n"
+            "The curriculum graph places these concepts after the objective. Nobody has said how far "
+            "the class has got, so they may appear as scaffolding if the exercise needs them, but the "
+            "exercise is not about them: none of them may be what is practised or the difficulty. If "
+            "one is superfluous, drop it; the difficulty comes from the objective and from nothing "
+            "later:\n"
             f"{excluded_concepts_block}\n"
         )
 

@@ -349,10 +349,18 @@ function Workspace() {
           en la que eliges qué practicar y justo encima de ella, y vale para esa tanda — no se
           guarda en la asignatura.
         </Paragraph>
+        <Paragraph>
+          Marcar un concepto marca también todo lo que va antes de él: en el selector esos
+          prerrequisitos aparecen señalados, cuentan como dados y no hace falta buscarlos uno a
+          uno. Es la misma señal que ves al elegir qué practicar.
+        </Paragraph>
         <Alert tone="info" title="Sin marcar nada no significa «nada impartido»">
           <p>
-            Significa «sin restricción». Leerlo al pie de la letra prohibiría el temario entero,
-            que es justo el estado en el que arranca una instancia nueva.
+            Nadie ha dicho hasta dónde ha llegado la clase, así que lo que va después de lo
+            pedido no está prohibido: el ejercicio puede apoyarse en ello como andamiaje, y lo
+            único que se le exige es que practique lo que elegiste y no algo posterior. Con el
+            currículo marcado, en cambio, lo que queda fuera de él sí está prohibido, y basta
+            con que aparezca para que el sistema pida otro intento.
           </p>
         </Alert>
       </Block>

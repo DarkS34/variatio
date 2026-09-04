@@ -357,10 +357,18 @@ function Workspace() {
           same question where you choose what to practise and directly above it, and holds for
           that batch — it is not stored on the subject.
         </Paragraph>
+        <Paragraph>
+          Ticking a concept also ticks everything that comes before it: in the selector those
+          prerequisites are marked, count as covered and need not be hunted down one by one.
+          It is the same mark you see when choosing what to practise.
+        </Paragraph>
         <Alert tone="info" title="Marking nothing does not mean nothing covered">
           <p>
-            It means no restriction. Reading it literally would forbid the whole syllabus, which
-            is exactly the state a new instance starts in.
+            Nobody has said how far the class has got, so what comes after what was asked for
+            is not forbidden: the exercise may lean on it as scaffolding, and all it is held to
+            is practising what you chose and nothing later. With the curriculum marked, on the
+            other hand, whatever falls outside it is forbidden, and its mere appearance makes
+            the system ask for another attempt.
           </p>
         </Alert>
       </Block>

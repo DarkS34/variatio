@@ -1727,7 +1727,7 @@ export const en: Catalogue = {
   "form.type.hint": "The type decides what parts the exercise carries, its writing rules and which of your exercises the examples are taken from: only those of this same type get in.",
   "form.type.none": "No type chosen yet",
   "form.taught.title": "How far has the class got?",
-  "form.taught.hint": "Leave it alone and exercises may build on any concept in the syllabus. Turn it on if the class is only halfway through: then only what you tick counts as already known, and anything later stays out.",
+  "form.taught.hint": "Leave it alone and the exercise may build on any concept in the syllabus; all it is held to is practising what you choose and nothing later. Turn it on if the class is only halfway through: then only what you tick counts as already known, and anything later is forbidden. Ticking a concept also ticks what comes before it.",
   "form.taught.restrict": "Only what I have already taught",
   "form.taught.pick": "Mark how far the class has got ({n})",
   "form.practise.title": "What has to be practised?",

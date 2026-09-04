@@ -1865,7 +1865,7 @@ export const es = {
   "form.type.hint": "El tipo decide qué partes lleva el ejercicio, sus reglas de redacción y de cuáles de tus ejercicios se toman los ejemplos: solo entran los de este mismo tipo.",
   "form.type.none": "Ningún tipo elegido todavía",
   "form.taught.title": "¿Hasta dónde ha llegado la clase?",
-  "form.taught.hint": "Si no lo tocas, los ejercicios pueden apoyarse en cualquier concepto del temario. Actívalo si la clase va por la mitad: entonces solo se da por sabido lo que marques, y lo de más adelante se queda fuera.",
+  "form.taught.hint": "Si no lo tocas, el ejercicio puede apoyarse en cualquier concepto del temario; solo se le exige que practique lo que elijas y no algo posterior. Actívalo si la clase va por la mitad: entonces solo se da por sabido lo que marques, y lo de más adelante queda prohibido. Marcar un concepto marca también lo que va antes de él.",
   // DOS CONTROLES EN EL MISMO PASO NO PUEDEN LLAMARSE CASI IGUAL (2026-09-02, petición
   // explícita). «Elegir los conceptos cubiertos» estaba a un centímetro de «Elegir
   // conceptos» y hacían cosas distintas: uno acota el terreno, el otro elige el objetivo

@@ -84,3 +84,16 @@ export function priors(adj: Adjacency, concepts: string[]): string[] {
 export function posteriors(adj: Adjacency, concepts: string[]): string[] {
   return closure(adj, concepts, adj.in);
 }
+
+/**
+ * A coverage closed downwards: what was ticked plus everything it rests on.
+ *
+ * Mirrors `server/curriculum.resolve`, which closes the commission's list before the
+ * generator reads it, so the count on the button and the list `restrictTo` bounds the
+ * targets with are the list that will actually run. Sorted like `priors`, so a stored row
+ * restores byte for byte.
+ */
+export function covered(adj: Adjacency | null, picks: string[]): string[] {
+  if (!adj || picks.length === 0) return picks;
+  return [...new Set([...picks, ...priors(adj, picks)])].sort((a, b) => a.localeCompare(b, "es"));
+}

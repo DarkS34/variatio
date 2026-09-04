@@ -114,14 +114,28 @@ def generate_content_prompt(
             f"{prerequisites_block}\n"
         )
 
+    # ONE LIST, TWO READINGS. With a curriculum the concepts after the objective are a
+    # FACT about the class — not taught — and a mention is a defect. Without one they are
+    # the graph's own guess about where the class stands, and the only claim that holds is
+    # that the exercise must not PRACTISE them: practicar ≠ usar, on the far side of the
+    # scaffolding. `checks.closure_rule` keeps the same condition.
     excluded_section = ""
-    if excluded_concepts_block.strip():
+    if excluded_concepts_block.strip() and curriculum_block.strip():
         excluded_section = (
             "\n# TODAVÍA NO IMPARTIDO: PROHIBIDO\n"
             "El grafo del currículo sitúa estos conceptos después del objetivo: el alumno aún no los ha visto. "
             "No aparecen en el enunciado ni hacen falta para resolverlo; si tu primera idea los necesita, "
             "cámbiala. Si uno de ellos es inseparable del propio objetivo (el currículo puede contradecirse), "
             "el objetivo manda: úsalo en la medida mínima que el objetivo exige y nada más:\n"
+            f"{excluded_concepts_block}\n"
+        )
+    elif excluded_concepts_block.strip():
+        excluded_section = (
+            "\n# VIENE DESPUÉS DEL OBJETIVO: NO ES EL RETO\n"
+            "El grafo del currículo sitúa estos conceptos después del objetivo. Nadie ha dicho hasta dónde "
+            "ha llegado la clase, así que pueden aparecer como andamiaje si el ejercicio los necesita, "
+            "pero el ejercicio no trata de ellos: ninguno puede ser lo que se practica ni la dificultad. "
+            "Si te sobra uno, quítalo; la dificultad viene del objetivo y de nada posterior:\n"
             f"{excluded_concepts_block}\n"
         )
 

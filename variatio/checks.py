@@ -3,6 +3,12 @@
 `run` collects every signal and decides. A FLAG is reported to whoever reviews the item;
 only a REASON forces another attempt — which is why the tagger's disagreement is flagged
 and never retried on: it is an opinion about the index, not a defect in the item.
+
+The one rule with two readings is the downstream closure. WITH a curriculum it is a fact —
+these concepts have not been taught — and a bare mention is a defect (`RULE_MENTIONS`).
+WITHOUT one it is a guess about where the class stands, and the only thing that can be
+held against the item is that it PRACTISES something after the target
+(`RULE_PRACTISES`): what it merely uses as scaffolding nobody said was untaught.
 """
 
 import numpy as np
@@ -16,6 +22,24 @@ from .embedder import Embedder
 from .instance.exemplars_profile import ItemType
 
 MIN_PRIMARY_CHARS = 20
+
+RULE_MENTIONS = "mentions"
+RULE_PRACTISES = "practises"
+
+
+def closure_rule(curriculum: list[str] | None) -> str:
+    """Return which reading of the downstream closure a commission is held to.
+
+    A curriculum turns «viene después» into «no impartido», so any mention counts. Without
+    one the closure is the generator's own guess and only the practised concept counts —
+    practicar ≠ usar, applied to the other side of the scaffolding.
+    """
+    return RULE_MENTIONS if curriculum else RULE_PRACTISES
+
+
+def practised_later(primary: str | None, forbidden: list[str]) -> list[str]:
+    """Return the primary concept when it lies after the target, else nothing."""
+    return [primary] if primary and primary in forbidden else []
 
 
 def content_floor(item: BaseModel, item_type: ItemType) -> str | None:
@@ -44,13 +68,18 @@ def _nullable(spec: dict) -> bool:
     return any(option.get("type") == "null" for option in spec.get("anyOf", []))
 
 
-def _texts(item: BaseModel) -> list[str]:
+def _texts(item: dict) -> list[str]:
     """Every string-valued field of the item."""
-    return [value for value in item.model_dump(mode="json").values() if isinstance(value, str)]
+    return [value for value in item.values() if isinstance(value, str)]
 
 
-def forbidden_mentions(item: BaseModel, forbidden: list[str]) -> list[str]:
-    """Return the not-yet-taught concepts the item actually mentions."""
+def forbidden_mentions(item: dict, forbidden: list[str]) -> list[str]:
+    """Return the not-yet-taught concepts the item actually mentions.
+
+    It takes the DUMPED item rather than the model so that the study can hold its three
+    proposals to this very rule instead of keeping a second copy of it: two readings of
+    «lo no impartido» a boundary apart is one that drifts.
+    """
     texts = _texts(item)
     return [c for c in forbidden if any(mentions(text, c) for text in texts)]
 
@@ -90,6 +119,7 @@ def run(
     *,
     targets: list[str],
     forbidden: list[str],
+    rule: str = RULE_MENTIONS,
     embedder: Embedder,
     tagger: ConceptTagger | None,
     few_shot: list[tuple[str, dict]],
@@ -99,11 +129,16 @@ def run(
 
     Similarity is measured against the few-shot exemplars AND the batch produced so far,
     so a run that repeats itself is caught as well as one that copies its examples.
-    """
-    text = item_type.embed_text(item.model_dump(mode="json"))
-    checks: dict = {}
 
-    hits = forbidden_mentions(item, forbidden)
+    `rule` is `closure_rule(curriculum)`: under `RULE_MENTIONS` a named forbidden concept is
+    a reason to retry; under `RULE_PRACTISES` the mentions are neither reason nor flag, and
+    what is held against the item is the tagger's primary concept lying after the target.
+    """
+    data = item.model_dump(mode="json")
+    text = item_type.embed_text(data)
+    checks: dict = {"rule": rule}
+
+    hits = forbidden_mentions(data, forbidden) if rule == RULE_MENTIONS else []
     checks["forbidden"] = hits
 
     others = [(ex_id, item_type.embed_text(ex)) for ex_id, ex in few_shot]
@@ -121,9 +156,18 @@ def run(
     if tagger is not None:
         checks["tagger"] = tagger_roundtrip(tagger, text, targets)
 
+    later = (
+        practised_later(checks["tagger"]["primary"], forbidden)
+        if tagger is not None and rule == RULE_PRACTISES
+        else []
+    )
+    checks["practised_later"] = later
+
     reasons = []
     if hits:
         reasons.append(f"menciona lo no impartido: {', '.join(hits)}")
+    if later:
+        reasons.append(f"practica lo que va después del objetivo: {', '.join(later)}")
     if checks["similarity"] and checks["similarity"]["high"]:
         reasons.append(f"muy parecida a {close[0]} ({close[1]:.2f})")
     flags = list(reasons)

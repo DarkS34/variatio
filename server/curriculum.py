@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timezone
 
 from variatio.core.workspace import Workspace
+from variatio.instance import locale
 from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from . import storage
@@ -55,21 +56,30 @@ def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:
     return load(ws, graph)
 
 
-def closure(concepts: list[str], graph: KnowledgeGraph, relation: str) -> list[str]:
+def closure(concepts: list[str], graph: KnowledgeGraph, relation: str | None) -> list[str]:
     """Grow a selection with everything it depends on.
 
-    An opt-in on the WRITE path only, materialised at save time: applied on read, the file
-    would stop meaning what it says.
+    On the FILE it is an opt-in of the write path, materialised at save time: applied to
+    what is read back, the file would stop meaning what it says. On a COMMISSION it is the
+    reading itself (`resolve`): a coverage that names «if» and not «Condición lógica» is not
+    a coverage, and the generator's `assumed_known` intersects with exactly this list.
     """
+    if not relation:
+        return sorted(set(concepts))
     return sorted(set(concepts) | set(graph.prerequisite_closure(concepts, relation)))
 
 
 def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> list[str] | None:
-    """Choose between a commission's own curriculum and the workspace's.
+    """Choose between a commission's own curriculum and the workspace's, closed downwards.
 
     Absent and `[]` are different requests and only absent falls back: an empty list is how
-    a single commission says «sin restricción».
+    a single commission says «sin restricción». A non-empty list is closed under the
+    prerequisite relation (2026-09-04): what the class has covered includes what that rests
+    on, which is what the selector marks on screen and what the row must record as having
+    run. The file's own list was closed when it was saved with the option, so closing it
+    again changes nothing.
     """
     if param is not None:
-        return param
-    return load(ws, graph)["concepts"] or None
+        return closure(param, graph, locale.prerequisite_relation(ws)) if param else param
+    stored = load(ws, graph)["concepts"]
+    return closure(stored, graph, locale.prerequisite_relation(ws)) if stored else None

@@ -63,6 +63,19 @@ def test_an_explicit_curriculum_replaces_the_stored_one(tmp_path):
     assert curriculum.resolve(ws, graph, ["Variable"]) == ["Variable"]
 
 
+def test_the_curriculum_in_force_is_closed_under_prerequisites(tmp_path):
+    """Covering «Recursividad» covers what it rests on (2026-09-04).
+
+    The selector marks the prerequisites of what is picked, and the row records what ran,
+    so the list in force is the closed one on both doors — the commission's own and the
+    file's, which the old editor closed at save time and closing again leaves alone.
+    """
+    ws, graph = workspace(tmp_path)
+    assert curriculum.resolve(ws, graph, ["Recursividad"]) == ["Función", "Recursividad", "Variable"]
+    curriculum.save(ws, ["Recursividad"], graph)
+    assert curriculum.resolve(ws, graph, None) == ["Función", "Recursividad", "Variable"]
+
+
 def test_a_non_taggable_concept_can_still_be_covered(tmp_path):
     ws, graph = workspace(tmp_path)
     assert "Notación asintótica" not in graph.taggable_concepts

@@ -28,6 +28,7 @@ import {
 import { EMPTY_FORM, fromParams, toParams, type FormState } from "./commission";
 import { takeDraft } from "./draft";
 import { GenerateForm, summarize } from "./GenerateForm";
+import { adjacency, covered } from "./prerequisites";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 import { RunStrip, useRunDetail } from "./RunStrip";
@@ -154,7 +155,16 @@ export function GenerateScreen() {
     return <Skeleton className="h-96" />;
   }
 
-  const launch = () => submit.mutate({ kind: "generate", params: { ...toParams(form) } });
+  // The coverage travels CLOSED, as the form counts it and as `server/curriculum.resolve`
+  // would close it anyway: this way the bar under the result, which reads the request back,
+  // says the same number the button said before launching.
+  const launch = () =>
+    submit.mutate({
+      kind: "generate",
+      params: {
+        ...toParams({ ...form, curriculum: covered(adjacency(kgGraph.data), form.curriculum) }),
+      },
+    });
 
   // The bar describes the commission that ran; only with no job to read it from does it
   // fall back to the form.

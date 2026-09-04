@@ -57,7 +57,7 @@ import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
 import { ModelChoice } from "./ModelChoice";
 import { modelLabel } from "./models";
-import { adjacency, posteriors, priors } from "./prerequisites";
+import { adjacency, covered, posteriors, priors } from "./prerequisites";
 import { CancelButton } from "@/components/CancelButton";
 import type { RunView } from "@/state/runStore";
 
@@ -378,11 +378,22 @@ export function GenerateForm({
   // The curriculum that will actually be in force, resolved exactly as the server resolves
   // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
   // so it is collapsed to null now rather than at each of the three places that read it.
+  //
+  // WHAT IS TICKED IS CLOSED DOWNWARDS (2026-09-04, explicit user request): covering «if»
+  // covers «Condición lógica» and what that rests on, exactly as the target selector marks
+  // a chosen concept's prerequisites. `server/curriculum.resolve` closes the same list
+  // before the generator reads it, so what this form counts, bounds the targets with and
+  // draws as given is what will run; `state.curriculum` keeps only the picks, which is
+  // what lets the selector MARK the rest instead of drawing it as chosen.
+  const coveredCurriculum = useMemo(
+    () => covered(graphAdjacency, state.curriculum),
+    [graphAdjacency, state.curriculum],
+  );
   const activeCurriculum = useMemo(() => {
     if (!state.useCurriculum) return null;
-    const list = state.usePresetCurriculum ? [] : state.curriculum;
+    const list = state.usePresetCurriculum ? [] : coveredCurriculum;
     return list.length > 0 ? list : null;
-  }, [state.useCurriculum, state.usePresetCurriculum, state.curriculum]);
+  }, [state.useCurriculum, state.usePresetCurriculum, coveredCurriculum]);
 
   const priorClosure = useMemo(
     () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
@@ -399,6 +410,12 @@ export function GenerateForm({
   // chosen as a target is a commission the generator already computes, because
   // `KnowledgeGraph._closure` subtracts the targets from what it returns.
   const implied = useMemo(() => new Set(priorClosure), [priorClosure]);
+  // The same mark on the curriculum selector: what the ticked coverage rests on. Here the
+  // mark also COUNTS — see `coveredCurriculum` — where on the targets it only reports.
+  const impliedCurriculum = useMemo(
+    () => new Set(graphAdjacency ? priors(graphAdjacency, state.curriculum) : []),
+    [graphAdjacency, state.curriculum],
+  );
 
   const given = useMemo(
     () => assumedKnown(priorClosure, activeCurriculum),
@@ -613,7 +630,7 @@ export function GenerateForm({
           {state.useCurriculum ? (
             <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
               <ListChecks />
-              {t("form.taught.pick", { n: state.curriculum.length })}
+              {t("form.taught.pick", { n: coveredCurriculum.length })}
             </Button>
           ) : null}
         </div>
@@ -1038,16 +1055,19 @@ export function GenerateForm({
         confirmLabel={t("form.confirmContinue")}
       />
 
-      {/* Neither `implied` nor `restrictTo`: a curriculum is declared whole and nothing
-          narrows it. `allowNonTaggable` because a non-taggable concept can perfectly well
-          have been taught, which is what a curriculum states — a target, being what an item
-          is ABOUT, is the one that must stay taggable. */}
+      {/* No `restrictTo`: a curriculum is declared whole and nothing narrows it. `implied`
+          marks what the ticked coverage rests on, and here the mark counts — the list in
+          force is `coveredCurriculum` (2026-09-04, explicit user request). `allowNonTaggable`
+          because a non-taggable concept can perfectly well have been taught, which is what
+          a curriculum states — a target, being what an item is ABOUT, is the one that must
+          stay taggable. */}
       <ConceptSelector
         title={t("form.taught.title")}
         concepts={concepts}
         graph={graph}
         selected={state.curriculum}
         onChange={(next) => patch({ curriculum: next })}
+        implied={impliedCurriculum}
         allowNonTaggable
         open={picking === "curriculum"}
         onClose={() => setPicking(null)}

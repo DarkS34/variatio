@@ -330,3 +330,31 @@ def test_the_fallback_carries_the_same_markers_as_a_written_criterion(code):
     module = prompts.of(code)
     for level in module.DIFFICULTY_LEVELS:
         assert f"«{level}»:" in module.DIFFICULTY_FALLBACK_DESCRIPTION
+
+
+HEADINGS = {
+    "es": ("# TODAVÍA NO IMPARTIDO: PROHIBIDO", "# VIENE DESPUÉS DEL OBJETIVO: NO ES EL RETO"),
+    "en": ("# NOT YET TAUGHT: FORBIDDEN", "# COMES AFTER THE OBJECTIVE: NOT THE CHALLENGE"),
+}
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_closure_is_forbidden_only_when_a_curriculum_says_it_is_untaught(code):
+    """One list, two readings (2026-09-04): `checks.closure_rule` keeps the same condition."""
+    function = prompts.of(code).generate_content_prompt
+    kwargs = {
+        name: "x"
+        for name, parameter in inspect.signature(function).parameters.items()
+        if parameter.default is inspect.Parameter.empty
+    }
+    kwargs["already_generated"] = []
+    forbidden, later = HEADINGS[code]
+
+    with_curriculum = function(**{**kwargs, "excluded_concepts_block": "- Bucle for"})
+    assert forbidden in with_curriculum and later not in with_curriculum
+
+    without = function(**{**kwargs, "excluded_concepts_block": "- Bucle for", "curriculum_block": ""})
+    assert later in without and forbidden not in without
+
+    nothing_after = function(**{**kwargs, "excluded_concepts_block": "", "curriculum_block": ""})
+    assert forbidden not in nothing_after and later not in nothing_after
