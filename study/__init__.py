@@ -1,7 +1,8 @@
 """The three generation architectures under comparison, behind one contract.
 
 `naive` (a commercial model with an average user's prompt), `rag` (a flat vector index
-over the bank, no graph at all) and `system` (this pipeline, untouched). They receive the
+over the raw documents read with a plain extractor, no graph, no bank) and `system` (this
+pipeline, untouched). They receive the
 same commission and return the same shape, so a fourth arm is one more file.
 
 The boundary is the point, and `tests/study/test_study_boundary.py` pins both halves of
@@ -17,13 +18,17 @@ ARMS: tuple[str, ...] = ("naive", "rag", "system")
 
 ARM_LABELS: dict[str, str] = {
     "naive": "Modelo comercial",
-    "rag": "Solo RAG sobre el banco",
+    "rag": "Solo RAG sobre los documentos",
     "system": "Este sistema",
 }
 
-def rag_index_path(ws) -> Path:
-    """Where the rag arm's flat index over the bank is cached, inside the workspace."""
-    return ws.cache_dir / "embeddings" / "eval_rag_bank.npz"
+def rag_index_path(ws, slot: str) -> Path:
+    """Where the rag arm's flat index over one raw slot is cached, inside the workspace.
+
+    Under `embeddings/` so the panel's «vaciar la caché» takes it with the pipeline's own;
+    the plain readings it is built from live under `rag_text/` and stay, being seconds.
+    """
+    return ws.cache_dir / "embeddings" / f"eval_rag_{slot}.npz"
 
 
 OK = "ok"

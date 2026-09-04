@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from study.arms.vector_store import FlatBankIndex
+from study.arms.vector_store import FlatIndex
 from variatio.embedder import cache
 
 FINGERPRINT = "0123456789abcdef0123456789abcdef"
@@ -86,14 +86,13 @@ def test_a_hostile_bank_cache_is_refused_instead_of_executed(tmp_path, marker):
 
 def test_a_hostile_rag_index_is_refused_instead_of_executed(tmp_path, marker):
     path = _hostile(
-        tmp_path / "eval_rag_bank",
+        tmp_path / "eval_rag_corpus",
         marker,
         "fingerprint",
-        keys=["C001"],
-        types=["escritura_codigo"],
+        keys=["apuntes.pdf#1"],
         vectors=np.zeros((1, 4), dtype=np.float32),
     )
-    store = FlatBankIndex({}, lambda item: "", lambda item: None, cache_path=path, model="m")
+    store = FlatIndex({"apuntes.pdf#1": "texto"}, cache_path=path, model="m")
 
     assert store._load_cache() is False
     assert not marker.exists()
@@ -126,27 +125,13 @@ def test_a_real_bank_cache_still_round_trips(tmp_path):
 
 
 def test_a_real_rag_index_still_round_trips(tmp_path):
-    path = tmp_path / "eval_rag_bank.npz"
-    bank = {"C001": {"enunciado": "Escribe una función"}}
-    store = FlatBankIndex(
-        bank,
-        lambda item: item["enunciado"],
-        lambda item: "escritura_codigo",
-        cache_path=path,
-        model="m",
-    )
-    store.ids = ["C001"]
-    store.types = ["escritura_codigo"]
+    path = tmp_path / "eval_rag_exemplars.npz"
+    pieces = {"hoja1.pdf#1": "Escribe una función"}
+    store = FlatIndex(pieces, cache_path=path, model="m")
+    store.ids = ["hoja1.pdf#1"]
     store.matrix = np.zeros((1, 4), dtype=np.float32)
     store._save_cache()
 
-    reader = FlatBankIndex(
-        bank,
-        lambda item: item["enunciado"],
-        lambda item: "escritura_codigo",
-        cache_path=path,
-        model="m",
-    )
+    reader = FlatIndex(pieces, cache_path=path, model="m")
     assert reader._load_cache() is True
-    assert reader.ids == ["C001"]
-    assert reader.types == ["escritura_codigo"]
+    assert reader.ids == ["hoja1.pdf#1"]

@@ -7,7 +7,10 @@ model that greets and comments would have the comparison measure politeness.
 
 What they may NEVER carry: concept descriptions, prerequisites, posteriors, curriculum, or
 any didactic section of `generate_content_prompt`. All of that exists thanks to the graph,
-which is precisely what is being measured.
+which is precisely what is being measured. Nor the bank, nor the profile's prose — a
+field's description, the difficulty criterion, `guidance`, the writing rules: the RAG arm
+gets pieces of the raw documents, read with a plain extractor, and the bare output schema,
+and nothing this system wrote.
 """
 
 
@@ -56,27 +59,39 @@ def naive_generation_prompt(
 
 def rag_generation_prompt(
     naive_prompt: str,
-    exemplars_block: str,
-    rules_block: str,
+    theory_block: str,
+    exercises_block: str,
     schema: str,
 ) -> str:
-    """Wrap the naive prompt with the retrieved exemplars, the writing rules and a schema."""
-    exemplars_section = ""
-    if exemplars_block.strip():
-        exemplars_section = (
-            "\n# EJEMPLOS DEL BANCO DE LA ASIGNATURA\n"
-            "Ejercicios reales de la asignatura, recuperados por similitud con el encargo. "
-            "Úsalos como referencia de forma y registro:\n"
-            f"{exemplars_block}\n"
+    """Wrap the naive prompt with retrieved pieces of the documents and the bare output schema.
+
+    Two sections, one per raw slot, each holding the pieces `study.raw_text` cut and the
+    index ranked — verbatim, under the document and position they came from, with no
+    cleaning and no formatting. The schema is the item type's shape and nothing more: no
+    field descriptions, no difficulty criterion, no writing rules, since those are the
+    profile builder's prose and this arm measures what the documents alone are worth.
+    """
+    theory_section = ""
+    if theory_block.strip():
+        theory_section = (
+            "\n# APUNTES DE LA ASIGNATURA (fragmentos recuperados)\n"
+            "Fragmentos de los apuntes, recuperados por similitud con el encargo. Apóyate en "
+            "ellos para la materia y la terminología:\n"
+            f"{theory_block}\n"
         )
 
-    rules_section = ""
-    if rules_block.strip():
-        rules_section = f"\n# REGLAS DE REDACCIÓN DE LA ASIGNATURA\n{rules_block}\n"
+    exercises_section = ""
+    if exercises_block.strip():
+        exercises_section = (
+            "\n# EJERCICIOS DE LA ASIGNATURA (fragmentos recuperados)\n"
+            "Fragmentos de las hojas de ejercicios, recuperados por similitud con el encargo. "
+            "Úsalos como referencia de forma y registro:\n"
+            f"{exercises_block}\n"
+        )
 
     return f"""\
 {naive_prompt}
-{exemplars_section}{rules_section}
+{theory_section}{exercises_section}
 # SCHEMA DE SALIDA
 {schema}
 

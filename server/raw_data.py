@@ -172,8 +172,25 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
             _stage().adopt_transcriptions(ws, kind)
         except Exception as exc:  # noqa: BLE001 - the upload matters more than the shortcut
             logger.warning(f"[raw] No se pudo reaprovechar una transcripción conocida: {exc}")
+        _prepare_raw_text(ws, kind)
 
     return {"added": added, "rejected": rejected}
+
+
+def _prepare_raw_text(ws: Workspace, kind: str) -> None:
+    """Bring the study's plain reading of the slot in line with its files, best effort.
+
+    The RAG arm of the evaluation retrieves over the documents read with a plain extractor,
+    and that reading is prepared here, inside step 1, with no step and no badge: it is
+    seconds, it is keyed by the bytes of each file, and nothing on the screen depends on
+    it. An upload or a deletion must not fail because it did.
+    """
+    try:
+        from study import raw_text
+
+        raw_text.prepare_slot(ws, kind)
+    except Exception as exc:  # noqa: BLE001 - the request matters more than the reading
+        logger.warning(f"[raw] No se pudo preparar la lectura en crudo de «{kind}»: {exc}")
 
 
 def _slot_bytes(path: Path) -> int:
@@ -236,6 +253,7 @@ def delete(ws: Workspace, kind: str, name: str) -> dict:
     if not safe or not target.is_file():
         raise RawError(f"No existe '{name}' en {path.name}")
     target.unlink()
+    _prepare_raw_text(ws, kind)
     return {"deleted": safe}
 
 

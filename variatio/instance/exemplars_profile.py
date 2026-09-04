@@ -186,6 +186,21 @@ class ItemType:
         """Return the stripped schema rendered for a prompt."""
         return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
 
+    def output_schema(self) -> dict:
+        """Return the bare shape of an item: keys, types, enums, what is required.
+
+        Every `description` and every `title` is dropped, at every depth. The stripped schema
+        still carries the profile's own prose — a field's description, and under the
+        difficulty field the whole criterion the consolidator wrote — and the study's RAG arm
+        must see none of it: what that arm measures is the bank alone, and a sentence
+        written by this system's profile builder is not the bank.
+        """
+        return _bare(self.stripped_schema())
+
+    def output_schema_str(self) -> str:
+        """Return the bare output schema rendered for a prompt."""
+        return json.dumps(self.output_schema(), indent=2, ensure_ascii=False)
+
     def field_guidance(self, task: str) -> dict[str, str]:
         """Return the per-field guidance declared for one task."""
         if task not in ExemplarsProfile._GUIDANCE_KEYS:
@@ -653,3 +668,12 @@ class ExemplarsProfile:
         if t not in cls._SCALAR_TYPES:
             raise ValueError(f"Unsupported scalar type: '{t}'")
         return cls._SCALAR_TYPES[t]
+
+
+def _bare(node):
+    """Strip `description` and `title` from a JSON schema, recursively."""
+    if isinstance(node, dict):
+        return {k: _bare(v) for k, v in node.items() if k not in ("description", "title")}
+    if isinstance(node, list):
+        return [_bare(v) for v in node]
+    return node

@@ -16,16 +16,20 @@ def base():
     }
 
 
-def derive(values, few_shot: int = 4):
-    return study_config.derive(values, dict(os.environ), few_shot)
+def derive(values):
+    return study_config.derive(values, dict(os.environ))
 
 
 def derive_ok():
     return derive(base())
 
 
-def test_rag_top_k_follows_the_few_shot_budget():
-    assert derive_ok()["RAG_TOP_K"] == 4
+def test_the_rag_arm_reads_three_pieces_of_each_slot():
+    """The retrieval budget is the study's own design, not a setting anybody tunes."""
+    assert study_config.RAG_TOP_K_THEORY == 3
+    assert study_config.RAG_TOP_K_EXERCISES == 3
+    assert study_config.RAG_CHUNK_CHARS == 1500
+    assert "RAG_TOP_K" not in derive_ok()
 
 
 def test_provider_chain_drops_none_and_duplicates():

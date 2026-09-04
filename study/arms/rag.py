@@ -1,14 +1,21 @@
-"""Arm 2 — the bank of the subject and a normal RAG. No graph anywhere.
+"""Arm 2 — the subject's own documents and a normal RAG. No graph, no bank, no profile.
 
-This is the honest baseline: what a competent engineer builds with the same exercise
-bank and none of this TFM. The `naive → rag` step measures what having a bank is worth;
-the `rag → system` step measures what the GRAPH is worth, and that second one is the
-contribution being defended.
+This is the honest baseline: what a competent engineer builds with the teacher's PDFs and
+none of this TFM. The `naive → rag` step measures what retrieving from the documents is
+worth; the `rag → system` step measures what THE SYSTEM is worth on top of that — the
+extraction of the bank, the profile, the tagging and the graph together — and that second
+one is the contribution being defended.
 
-Same local model as the system arm (`VARIANT_GENERATION_LLM`), the same number of examples
-(`study.config.RAG_TOP_K`) and the same reasoning mode (`commission.think`, drawn per session), so
-neither the model, nor the prompt budget, nor whether it deliberated is a loose variable
-between them.
+What it retrieves over is `study.raw_text`: the raw slots read with a plain extractor
+(pypdf and its Office twins), never the pipeline's vision transcription. Cut into pieces of
+`RAG_CHUNK_CHARS`, embedded flat, searched by cosine, `RAG_TOP_K_THEORY` pieces of the
+notes and `RAG_TOP_K_EXERCISES` of the exercise sheets handed over verbatim under a heading.
+
+Same local model as the system arm (`VARIANT_GENERATION_LLM`) and the same reasoning mode
+(`commission.think`, drawn per session), so neither the model nor whether it deliberated is
+a loose variable between them. Of the exemplars profile it receives the OUTPUT SHAPE and
+nothing else (`output_schema`): no field descriptions, no difficulty criterion, no
+`guidance`, no writing rules.
 """
 
 import time
@@ -18,32 +25,42 @@ from loguru import logger
 from variatio import config
 from variatio.core import inference, progress
 from variatio.core.repair import parse_with_repair
-from variatio.variatio import build_few_shot_block, parse_item
+from variatio.stages.transcribe import CORPUS, EXEMPLARS
+from variatio.variatio import parse_item
 
-from .. import FAILED, OK, ArmResult, Commission, rag_index_path
+from .. import FAILED, OK, ArmResult, Commission, rag_index_path, raw_text
 from .. import config as study_config
 from .. import prompts as study_prompts
 from .naive import build_prompt as build_naive_prompt
-from .vector_store import FlatBankIndex
+from .vector_store import FlatIndex
 
-# Keyed by workspace, not one global: with two instances in one process a single slot means
-# one subject's bank answering the other's queries. The bank identity check stays inside the
-# slot, because a bank also changes while a workspace is alive (tagging, manual edits).
-_indices: dict[str, FlatBankIndex] = {}
+# Keyed by workspace and slot, not one global: with two instances in one process a single
+# slot means one subject's documents answering the other's queries. The entries are compared
+# inside the slot, because the documents also change while a workspace is alive.
+_indices: dict[tuple[str, str], FlatIndex] = {}
+
+_LABELS = {
+    CORPUS: "Indexando los apuntes para la propuesta comparativa",
+    EXEMPLARS: "Indexando los ejercicios para la propuesta comparativa",
+}
 
 
-def index_for(context) -> FlatBankIndex:
-    """One index per bank, kept warm for the life of the process, like the pipeline's."""
-    slug = context.workspace.slug
-    existing = _indices.get(slug)
-    if existing is None or existing.bank is not context.exemplars_bank:
-        _indices[slug] = FlatBankIndex(
-            bank=context.exemplars_bank,
-            primary_text=context.exemplars_profile.primary_text,
-            type_key_of=context.exemplars_profile.type_key_of_safe,
-            cache_path=rag_index_path(context.workspace),
+def index_for(ws, slot: str) -> FlatIndex:
+    """One index per slot of a workspace, kept warm for the life of the process.
+
+    The plain reading is reconciled first: it is idempotent and costs nothing when the
+    files did not change, and it is what catches up a subject whose documents were
+    uploaded before the reading existed.
+    """
+    raw_text.prepare_slot(ws, slot)
+    entries = raw_text.chunks(ws, slot, study_config.RAG_CHUNK_CHARS)
+    key = (ws.slug, slot)
+    existing = _indices.get(key)
+    if existing is None or existing.entries != entries:
+        _indices[key] = FlatIndex(
+            entries, cache_path=rag_index_path(ws, slot), label=_LABELS[slot]
         )
-    return _indices[slug]
+    return _indices[key]
 
 
 def build_query(commission: Commission) -> str:
@@ -58,25 +75,41 @@ def build_query(commission: Commission) -> str:
     return "\n".join(parts)
 
 
+def retrieve(ws, slot: str, query: str, k: int) -> list[tuple[str, str, float]]:
+    """Return the top-k pieces of one slot as `(key, text, score)`."""
+    index = index_for(ws, slot)
+    return [(key, index.entries[key], score) for key, score in index.search(query, k)]
+
+
+def render_pieces(pieces: list[tuple[str, str, float]]) -> str:
+    """Lay the retrieved pieces out verbatim, each under the document and position it came from."""
+    blocks = []
+    for key, text, _score in pieces:
+        name, _, position = key.rpartition("#")
+        blocks.append(f"--- «{name}», fragmento {position}\n{text}")
+    return "\n".join(blocks)
+
+
 def run(commission: Commission, context) -> ArmResult:
-    """Retrieve exemplars by plain cosine and generate one item from them."""
+    """Retrieve pieces of the notes and of the exercises by plain cosine and generate one item."""
     item_type = context.exemplars_profile.item_type(commission.item_type)
+    ws = context.workspace
     started = time.perf_counter()
 
     query = build_query(commission)
-    retrieved = index_for(context).search(query, study_config.RAG_TOP_K, item_type.key)
-    exemplar_ids = [item_id for item_id, _ in retrieved]
+    theory = retrieve(ws, CORPUS, query, study_config.RAG_TOP_K_THEORY)
+    exercises = retrieve(ws, EXEMPLARS, query, study_config.RAG_TOP_K_EXERCISES)
+    retrieved = theory + exercises
     logger.info(
-        f"RAG plano: {len(exemplar_ids)} ejemplar(es) por coseno — "
-        + ", ".join(f"{item_id} ({score:.3f})" for item_id, score in retrieved)
+        f"RAG plano: {len(theory)} fragmento(s) de apuntes y {len(exercises)} de ejercicios "
+        "por coseno — " + ", ".join(f"{key} ({score:.3f})" for key, _text, score in retrieved)
     )
 
-    exemplars = [context.exemplars_bank[item_id] for item_id in exemplar_ids]
     prompt = study_prompts.of(context.language).rag_generation_prompt(
         naive_prompt=build_naive_prompt(commission, context),
-        exemplars_block=build_few_shot_block(item_type, exemplars),
-        rules_block="\n".join(f"- {rule}" for rule in item_type.general_generation_rules),
-        schema=item_type.schema_str(),
+        theory_block=render_pieces(theory),
+        exercises_block=render_pieces(exercises),
+        schema=item_type.output_schema_str(),
     )
 
     resp = inference.generate_stream(
@@ -109,7 +142,7 @@ def run(commission: Commission, context) -> ArmResult:
         prompt=prompt,
         model=config.VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
-        exemplar_ids=exemplar_ids,
+        exemplar_ids=[key for key, _text, _score in retrieved],
         elapsed_ms=round((time.perf_counter() - started) * 1000),
         error=None if item is not None else str(error),
     )

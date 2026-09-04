@@ -21,15 +21,6 @@ from variatio.core.workspace import Workspace
 from . import storage
 from .db import mirror
 
-# The study is optional to this module the way it is to the settings registry: it is
-# reached by name, never by import direction, and its absence costs one derived file.
-try:
-    from study import rag_index_path
-
-    _STUDY_DERIVED: tuple[Callable[[Workspace], Path], ...] = (rag_index_path,)
-except ImportError:
-    _STUDY_DERIVED = ()
-
 EXEMPLARS_PROFILE = stages.EXEMPLARS_PROFILE
 KNOWLEDGE_GRAPH = stages.KNOWLEDGE_GRAPH
 EXEMPLARS_BANK = stages.EXEMPLARS_BANK
@@ -107,8 +98,8 @@ def current_path(ws: Workspace, artifact: str) -> Path | None:
 
 # What stops making sense once the artifact is gone: regenerable derivations, not user
 # data, deleted so the next build does not start on the cache of a graph that no longer
-# exists. Resolvers and not attribute names, because the rag arm's index is the study's
-# file and `Workspace` does not name it.
+# exists. The study's RAG index is not here: since 2026-09-04 it derives from the raw
+# documents and not from the bank, so emptying a stage leaves it alone.
 DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
     KNOWLEDGE_GRAPH: (
         attrgetter("concept_descriptions_path"),
@@ -116,7 +107,7 @@ DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
         attrgetter("concepts_embeddings_path"),
     ),
     EXEMPLARS_PROFILE: (),
-    EXEMPLARS_BANK: (attrgetter("exemplars_bank_embeddings_path"),) + _STUDY_DERIVED,
+    EXEMPLARS_BANK: (attrgetter("exemplars_bank_embeddings_path"),),
 }
 
 

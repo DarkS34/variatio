@@ -6,14 +6,20 @@ values are declared in `study/settings.py` and derived here.
 
 import os
 
-from variatio import config as pipeline
 from variatio import settings
 
 EXTERNAL_PROVIDERS: list[str]
 PROVIDER_MODELS: dict[str, str]
 PROVIDER_KEYS: dict[str, str]
 EXTERNAL_TIMEOUT: float
-RAG_TOP_K: int
+
+# The rag arm's own design, not a knob: how the raw documents are cut and how many pieces of
+# each slot the prompt carries. Three and three — six pieces of ~1 500 characters — is the
+# order of what the system's few-shot block costs (`MAX_FEW_SHOT_EXAMPLES` whole exemplars),
+# so the two arms differ by what they were given and not by how much.
+RAG_CHUNK_CHARS = 1500
+RAG_TOP_K_THEORY = 3
+RAG_TOP_K_EXERCISES = 3
 
 
 def _chain(declared) -> list[str]:
@@ -36,10 +42,8 @@ def _by_provider(values: dict[str, object], prefix: str) -> dict[str, str]:
     return {k[len(prefix) :]: str(v) for k, v in values.items() if k.startswith(prefix)}
 
 
-def derive(
-    values: dict[str, object], environ: dict[str, str], few_shot: int
-) -> dict[str, object]:
-    """Compute the study's five resolved values from the registry, the environment and `k`."""
+def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, object]:
+    """Compute the study's four resolved values from the registry and the environment."""
     providers = _chain(values["evaluation.providers"])
     models = _by_provider(values, "evaluation.models.")
     keys = _by_provider(values, "evaluation.keys.")
@@ -57,9 +61,6 @@ def derive(
         "PROVIDER_MODELS": models,
         "PROVIDER_KEYS": keys,
         "EXTERNAL_TIMEOUT": values["evaluation.timeout"],
-        # The rag arm retrieves as many exemplars as the system's few-shot budget allows,
-        # so the two differ by the graph and not by how much of the bank they saw.
-        "RAG_TOP_K": few_shot,
     }
 
 
@@ -70,7 +71,7 @@ def __getattr__(name: str):
     handed and this module is not that namespace, so caching here would serve the value the
     panel just replaced.
     """
-    values = derive(settings.values(), dict(os.environ), pipeline.MAX_FEW_SHOT_EXAMPLES)
+    values = derive(settings.values(), dict(os.environ))
     if name in values:
         return values[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

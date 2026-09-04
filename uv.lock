@@ -2472,6 +2472,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pypdf"
+version = "6.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5d/dc/34857a5e31cf708c163929f61a9ba4bd357a8850e49fc4e846ced527b51f/pypdf-6.17.0.tar.gz", hash = "sha256:097ad0d829778ec5b615aeaa5c6da4b6cac4992f8fd80b56f98a1a8c006573bb", size = 7018352, upload-time = "2026-09-04T11:30:44.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/08/1e9731038124a9127e1d27848952b86fb32b2f45f8f1b94adc7f0817a6ac/pypdf-6.17.0-py3-none-any.whl", hash = "sha256:5bd827266a21553b74d910e350131a6227b72f2ab4209bf372814b8195fa11c5", size = 388051, upload-time = "2026-09-04T11:30:42.681Z" },
+]
+
+[[package]]
 name = "pypdfium2"
 version = "5.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3847,7 +3859,7 @@ wheels = [
 
 [[package]]
 name = "variatio"
-version = "1.80.0"
+version = "1.81.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -3874,6 +3886,7 @@ server = [
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pypdf" },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
@@ -3889,6 +3902,7 @@ dev = [
     { name = "fastapi" },
     { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pypdf" },
     { name = "pypdfium2" },
     { name = "pytest" },
     { name = "python-multipart" },
@@ -3913,6 +3927,7 @@ requires-dist = [
     { name = "pillow", marker = "extra == 'builders'", specifier = ">=10.0.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'server'", specifier = ">=3.2.0" },
     { name = "pydantic", specifier = ">=2.11.2" },
+    { name = "pypdf", marker = "extra == 'server'", specifier = ">=5.0.0" },
     { name = "pypdfium2", marker = "extra == 'builders'", specifier = ">=4.30.0" },
     { name = "python-multipart", marker = "extra == 'server'", specifier = ">=0.0.20" },
     { name = "sqlalchemy", marker = "extra == 'server'", specifier = ">=2.0.36" },
@@ -3931,6 +3946,7 @@ dev = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
+    { name = "pypdf", specifier = ">=5.0.0" },
     { name = "pypdfium2", specifier = ">=4.30.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },

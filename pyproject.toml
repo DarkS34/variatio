@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.80.0"
+version = "1.81.0"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [
@@ -42,6 +42,9 @@ server = [
     "psycopg[binary]>=3.2.0",
     "argon2-cffi>=23.1.0",
     "email-validator>=2.2.0",
+    # The study's RAG arm reads the raw PDFs with a plain text extractor, deliberately not
+    # the pipeline's VLM transcription: a baseline built without this system.
+    "pypdf>=5.0.0",
 ]
 
 # uv has no `default-extras`, so the extras are repeated here to keep a plain
@@ -61,6 +64,7 @@ dev = [
     "psycopg[binary]>=3.2.0",
     "argon2-cffi>=23.1.0",
     "email-validator>=2.2.0",
+    "pypdf>=5.0.0",
     "pytest>=8.3.0",
 ]
 

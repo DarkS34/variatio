@@ -1,13 +1,11 @@
-"""A flat vector index over the bank: what a competent engineer builds without a graph.
+"""A flat vector index over plain text pieces: what a competent engineer builds without a graph.
 
 Deliberately NOT the pipeline's index. That one already contains the graph — concept
 descriptions fused into weighted centroids, a kNN leg restricted to `primary_concept` —
 so reusing it would measure the system against itself.
 
-What this one is allowed to know: the statement of each item and which modality it is.
-Both come from the exemplars profile, not from the knowledge graph. What it must not touch:
-`concepts` and `primary_concept`, which sit in the very same JSON and are the tagger's
-output, i.e. the graph's.
+What this one knows is a text per key and nothing else: the pieces of the raw documents
+`study.raw_text` cut, keyed by document and position. No modality, no tag, no concept.
 
 Same embedding model as the pipeline on purpose: the variable under test is the graph,
 not the quality of the embedder.
@@ -15,7 +13,6 @@ not the quality of the embedder.
 
 import hashlib
 import json
-from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -24,11 +21,11 @@ from loguru import logger
 from variatio import config
 from variatio.core import inference, progress
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 
 
-class FlatBankIndex:
-    """The bank as a plain matrix of L2-normalised vectors, cached to one `.npz`.
+class FlatIndex:
+    """Texts as one matrix of L2-normalised vectors, cached to one `.npz`.
 
     `cache_path` is required and never defaulted: the fingerprint deliberately does not
     name the workspace, so the PATH is the only thing separating two instances' indices.
@@ -36,64 +33,48 @@ class FlatBankIndex:
 
     def __init__(
         self,
-        bank: dict,
-        primary_text: Callable[[dict], str],
-        type_key_of: Callable[[dict], str | None],
+        entries: dict[str, str],
         cache_path: str | Path,
         model: str | None = None,
+        label: str = "Indexando los documentos para la propuesta comparativa",
     ):
-        """Hold the bank and where its index lives; nothing is embedded until `ensure`."""
-        self.bank = bank
-        self.primary_text = primary_text
-        self.type_key_of = type_key_of
+        """Hold the texts and where their index lives; nothing is embedded until `ensure`."""
+        self.entries = dict(entries)
         self.model = model or config.EMBEDDING_LLM
         self.cache_path = Path(cache_path)
+        self.label = label
 
         self.ids: list[str] = []
-        self.types: list[str] = []
         self.matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
 
     def ensure(self) -> None:
         """Load the index from cache or build it, once per process."""
-        if self.ids:
+        if self.ids or not self.entries:
             return
         if self._load_cache():
-            logger.info(f"Índice RAG reutilizado de la caché ({len(self.ids)} ítem(s))")
+            logger.info(f"Índice RAG reutilizado de la caché ({len(self.ids)} fragmento(s))")
             return
         self._build()
         self._save_cache()
-        logger.info(f"Índice RAG construido y guardado ({len(self.ids)} ítem(s))")
+        logger.info(f"Índice RAG construido y guardado ({len(self.ids)} fragmento(s))")
 
-    def search(self, query: str, k: int, item_type: str | None = None) -> list[tuple[str, float]]:
+    def search(self, query: str, k: int) -> list[tuple[str, float]]:
         """Plain cosine, top-k. No threshold, no relative band, no query prefix."""
         self.ensure()
-        if not self.ids:
+        if not self.ids or k <= 0:
             return []
-
-        rows = [i for i, key in enumerate(self.types) if item_type is None or key == item_type]
-        if not rows:
-            return []
-
         vector = self._embed([query])[0]
-        scores = self.matrix[rows] @ vector
+        scores = self.matrix @ vector
         order = np.argsort(-scores)[:k]
-        return [(self.ids[rows[int(i)]], float(scores[int(i)])) for i in order]
+        return [(self.ids[int(i)], float(scores[int(i)])) for i in order]
 
     # BUILD -----------------------------------------------------------------------------------
 
-    def _texts(self) -> dict[str, str]:
-        """Return the primary field of every item in the bank, keyed by id."""
-        return {item_id: self.primary_text(item) for item_id, item in self.bank.items()}
-
     def _build(self) -> None:
-        """Embed the whole bank and keep the matrix, the ids and the modalities."""
-        texts = self._texts()
-        self.ids = list(texts)
-        self.types = [self.type_key_of(self.bank[item_id]) or "" for item_id in self.ids]
-        with progress.step(
-            "eval_rag_index", "Indexando el banco para la propuesta comparativa", total=len(self.ids)
-        ) as reporter:
-            vectors = self._embed([texts[item_id] for item_id in self.ids], reporter)
+        """Embed every text and keep the matrix and the keys."""
+        self.ids = list(self.entries)
+        with progress.step("eval_rag_index", self.label, total=len(self.ids)) as reporter:
+            vectors = self._embed([self.entries[key] for key in self.ids], reporter)
         self.matrix = np.stack(vectors) if vectors else np.zeros((0, 0), dtype=np.float32)
 
     def _embed(self, texts: list[str], reporter=None) -> list[np.ndarray]:
@@ -111,12 +92,12 @@ class FlatBankIndex:
     # CACHE -----------------------------------------------------------------------------------
 
     def _fingerprint(self) -> str:
-        """Hash the model and every item's text, which is what invalidates the cache."""
-        entries = sorted(
-            (item_id, hashlib.md5(text.encode("utf-8")).hexdigest())
-            for item_id, text in self._texts().items()
+        """Hash the model and every text, which is what invalidates the cache."""
+        digest = sorted(
+            (key, hashlib.md5(text.encode("utf-8")).hexdigest())
+            for key, text in self.entries.items()
         )
-        payload = json.dumps(entries, ensure_ascii=False)
+        payload = json.dumps(digest, ensure_ascii=False)
         return hashlib.md5(f"{CACHE_VERSION}::{self.model}::{payload}".encode()).hexdigest()
 
     def _load_cache(self) -> bool:
@@ -128,7 +109,6 @@ class FlatBankIndex:
             if str(data["fingerprint"]) != self._fingerprint():
                 return False
             self.ids = [str(key) for key in data["keys"]]
-            self.types = [str(key) for key in data["types"]]
             self.matrix = np.array(data["vectors"], dtype=np.float32)
         except Exception:
             return False
@@ -140,7 +120,6 @@ class FlatBankIndex:
         np.savez(
             self.cache_path,
             keys=self.ids,
-            types=self.types,
             vectors=self.matrix,
             fingerprint=self._fingerprint(),
         )
