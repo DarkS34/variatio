@@ -10,7 +10,6 @@ export function GraphMode({
   graph,
   selectable,
   chosen,
-  implied,
   onToggle,
   onAdd,
 }: {
@@ -19,7 +18,6 @@ export function GraphMode({
    *  bands would count concepts the board does not offer. */
   selectable: Set<string>;
   chosen: Set<string>;
-  implied?: Set<string>;
   onToggle: (concept: string) => void;
   onAdd: (concepts: string[]) => void;
 }) {
@@ -45,12 +43,10 @@ export function GraphMode({
     return rows;
   }, [graph, model, selectable, chosen]);
 
-  const picked = useMemo(() => {
-    const names = new Set(chosen);
-    if (implied) for (const name of implied) names.add(name);
-    return names;
-  }, [chosen, implied]);
-
+  // Only what is actually chosen. The prerequisites used to be painted here as well, which
+  // was legible while they were locked and became a lie the moment they were not: a node
+  // drawn as picked that a click still has to pick is a control contradicting itself.
+  // Where a concept sits in the prerequisite order is what the bands above already say.
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0 border-b border-border px-4 py-2 sm:px-6">
@@ -91,7 +87,7 @@ export function GraphMode({
           graph={graph}
           selected={null}
           onSelect={() => {}}
-          picked={picked}
+          picked={chosen}
           onPick={onToggle}
           initialMode={model.curriculumEdges > 0 ? "curriculum" : "force"}
           highlight={selectable}

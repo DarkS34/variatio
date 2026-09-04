@@ -516,7 +516,7 @@ export const en: Catalogue = {
   "concept.tab.graphHint": "The syllabus ordered by prerequisite levels",
   "concept.noGraph": "This subject has no syllabus to show",
   "concept.noResults": "No results",
-  "concept.byPrerequisite": "It comes included as a prerequisite of what you have already chosen",
+  "concept.byPrerequisite": "It comes before what you have chosen, so it is taken as known. You can choose it too: then it becomes something to practise.",
   "concept.noExemplarsOfType": "No examples of this modality in the bank",
   "concept.noExemplars": "No exercises of yours in the bank: it will be written with no example to imitate",
   "concept.exemplarsOfType": { one: "1 example of this modality in the bank", other: "{n} examples of this modality in the bank" },

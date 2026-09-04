@@ -20,12 +20,20 @@ export interface ConceptSelectorProps {
   selected: string[];
   onChange: (next: string[]) => void;
   /**
-   * Marked, dimmed and NOT selectable. They come in by prerequisite.
+   * Concepts the graph places BEFORE what is already chosen. They are MARKED and remain
+   * fully selectable (2026-09-04, explicit user request, reversing the lock of the same
+   * week).
    *
-   * It must be disjoint from `selected` — `priors()` subtracts its own seeds, which is what
-   * makes it so for both current callers — because the counts are taken over the selectable
-   * set, and a name in both would be subtracted from the total while still being counted as
-   * chosen.
+   * The lock was a UI invention with nothing behind it: `KnowledgeGraph._closure` subtracts
+   * the targets from the closure it returns, so choosing a prerequisite as a target is
+   * exactly the commission the generator already computes — it stops being «se da por
+   * sabido» and becomes one more objective. What the lock actually did was refuse ordinary
+   * commissions («if» with «elif», «Recursividad» with «Función») and, being TRANSITIVE, do
+   * it to concepts several hops away whose connection to the chosen one is invisible on the
+   * board.
+   *
+   * It is disjoint from `selected` — `priors()` subtracts its own seeds — so a chosen
+   * concept never draws the mark.
    */
   implied?: Set<string>;
   /** When given, only these are offered. It is the active curriculum. */
@@ -33,8 +41,8 @@ export interface ConceptSelectorProps {
   /**
    * Offer the exemplar SCOPE, and open in it. The selector then owns a two-way switch in
    * its header — «Con ejemplos», the default, keeps to the concepts the bank can
-   * illustrate, prerequisites that come in locked included; «Todos los conceptos» lifts it
-   * — and goes back to the default every time it opens.
+   * illustrate, prerequisites included; «Todos los conceptos» lifts it — and goes back to
+   * the default every time it opens.
    */
   onlyWithExemplars?: boolean;
   /**
@@ -119,29 +127,20 @@ export function ConceptSelector({
   // The one place that decides what state a concept is in. `selected` is shown always,
   // and every filter only decides what ELSE is offered — otherwise a concept a filter
   // stopped matching after it was chosen silently disappears from the screen while still
-  // counting. `implied` is shown whatever the curriculum says, because a prerequisite
-  // pulled in from outside it is still locked; the EXEMPLAR scope does hide it (2026-09-04,
-  // explicit user request): a locked concept with nothing to imitate is, in the default
-  // scope, one more concept from outside the bank, and it comes back with «all». The lock
-  // itself is the caller's and does not move — what is hidden is the chip, not the rule.
-  // A NON-TAGGABLE prerequisite is not drawn either where targets are being chosen
-  // (2026-09-04, explicit user request): «Todos los conceptos» means every concept that
-  // could be a target, and a concept that serves as no label never could.
-  // Neither mode nor the tray may re-derive any part of this.
+  // counting. Neither mode nor the tray may re-derive any part of this.
+  //
+  // A PREREQUISITE IS ONE MORE CONCEPT HERE (2026-09-04, explicit user request). It used to
+  // have a branch of its own — drawn whatever the curriculum said, and never selectable —
+  // and the whole branch existed to explain a lock that has no business existing (see
+  // `implied` above). With the lock gone it follows the ordinary rules: the curriculum
+  // bounds what may be a TARGET, and a prerequisite outside it is no more legitimate a
+  // target than any other concept outside it.
   const state = useMemo(() => {
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     const visible: KgConcept[] = [];
     const selectable = new Set<string>();
-    const impliedNames: string[] = [];
     for (const concept of concepts) {
       const name = concept.name;
-      if (implied?.has(name)) {
-        if (!concept.taggable && !allowNonTaggable) continue;
-        if (filterByExemplars && !hasExemplars(concept, exemplarType)) continue;
-        visible.push(concept);
-        impliedNames.push(name);
-        continue;
-      }
       if (!chosen.has(name)) {
         if (allowed && !allowed.has(name)) continue;
         if (!concept.taggable && !allowNonTaggable) continue;
@@ -150,20 +149,21 @@ export function ConceptSelector({
       visible.push(concept);
       selectable.add(name);
     }
-    return { visible, selectable, impliedNames };
-  }, [
-    concepts,
-    restrictTo,
-    filterByExemplars,
-    exemplarType,
-    allowNonTaggable,
-    chosen,
-    implied,
-  ]);
+    return { visible, selectable };
+  }, [concepts, restrictTo, filterByExemplars, exemplarType, allowNonTaggable, chosen]);
+
+  // What the tray lists under «Vienen antes». Derived from the graph and NOT from the
+  // board, because it states a fact about the choice — these come before what you picked —
+  // and not about what happens to be on screen: a prerequisite the exemplar scope is
+  // hiding is still one, and the tray is where somebody sees it without scrolling.
+  const impliedNames = useMemo(
+    () => (implied ? concepts.map((c) => c.name).filter((name) => implied.has(name)) : []),
+    [concepts, implied],
+  );
+  const impliedSet = useMemo(() => new Set(impliedNames), [impliedNames]);
 
   // Concepts the EXEMPLAR scope alone is keeping out — not the curriculum and not
-  // taggability, which are the caller's own restrictions and have their own wording. A
-  // locked prerequisite it hides counts too: it is on the board under «all».
+  // taggability, which are the caller's own restrictions and have their own wording.
   const hiddenByExemplars = useMemo(() => {
     if (!filterByExemplars) return 0;
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
@@ -171,12 +171,9 @@ export function ConceptSelector({
       if (chosen.has(concept.name)) return false;
       if (hasExemplars(concept, exemplarType)) return false;
       if (!concept.taggable && !allowNonTaggable) return false;
-      if (implied?.has(concept.name)) return true;
       return !allowed || allowed.has(concept.name);
     }).length;
-  }, [concepts, filterByExemplars, restrictTo, allowNonTaggable, exemplarType, chosen, implied]);
-
-  const impliedVisible = useMemo(() => new Set(state.impliedNames), [state]);
+  }, [concepts, filterByExemplars, restrictTo, allowNonTaggable, exemplarType, chosen]);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -389,7 +386,6 @@ export function ConceptSelector({
             graph={graph}
             selectable={state.selectable}
             chosen={chosen}
-            implied={impliedVisible}
             onToggle={toggle}
             onAdd={addMany}
           />
@@ -398,6 +394,7 @@ export function ConceptSelector({
             groups={grouped}
             chosen={chosen}
             selectable={state.selectable}
+            implied={impliedSet}
             colours={colours}
             activeName={flat[cursor] ?? null}
             exemplarType={exemplarType}
@@ -410,7 +407,7 @@ export function ConceptSelector({
 
       <SelectionTray
         selected={selected}
-        implied={state.impliedNames}
+        implied={impliedNames}
         total={state.selectable.size}
         colourFor={(name) => colours.get(domainOf.get(name) ?? "")}
         onRemove={toggle}

@@ -1,4 +1,3 @@
-import { Lock } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { hasExemplars } from "@/lib/concepts";
@@ -10,6 +9,7 @@ export function BoardMode({
   groups,
   chosen,
   selectable,
+  implied,
   colours,
   activeName,
   exemplarType = null,
@@ -19,8 +19,14 @@ export function BoardMode({
 }: {
   groups: [string, KgConcept[]][];
   chosen: Set<string>;
-  /** Everything the selector is showing minus what came in by prerequisite. */
+  /** Everything the selector is showing. Since 2026-09-04 a prerequisite is in it too. */
   selectable: Set<string>;
+  /**
+   * Concepts the graph places before what is already chosen. They are MARKED — dashed and
+   * tinted, with a title saying so — and remain pickable: choosing one turns it into a
+   * target, which is exactly what the generator computes for it (see `ConceptSelector`).
+   */
+  implied?: Set<string>;
   colours: Map<string, string>;
   activeName: string | null;
   exemplarType?: string | null;
@@ -49,9 +55,9 @@ export function BoardMode({
   return (
     <div className="mx-auto grid max-w-[110rem] gap-4 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {groups.map(([domain, items]) => {
-        // Over the free chips, never over `items`: a locked prerequisite is neither pickable
-        // nor countable, so including it in the denominator made «todos» stop short of the
-        // total it had just claimed, and disagreed with the tray's own count.
+        // Over the selectable chips. Since a prerequisite became pickable (2026-09-04) that
+        // is every chip on the board, but the filter stays: it is what keeps «todos» from
+        // claiming a total it cannot reach if anything ever stops being selectable again.
         const picked = items.filter((concept) => chosen.has(concept.name)).length;
         const free = items.filter((concept) => selectable.has(concept.name));
         const allChosen = free.length > 0 && free.every((concept) => chosen.has(concept.name));
@@ -96,53 +102,54 @@ export function BoardMode({
 
             <div className="flex flex-wrap content-start gap-1.5 p-3">
               {items.map((concept) => {
-                const state = !selectable.has(concept.name)
-                  ? "implied"
-                  : chosen.has(concept.name)
-                    ? "selected"
+                const state = chosen.has(concept.name)
+                  ? "selected"
+                  : implied?.has(concept.name)
+                    ? "prerequisite"
                     : "free";
                 const isActive = activeName === concept.name;
                 const noExemplar =
                   markMissingExemplars && !hasExemplars(concept, exemplarType);
+                // TWO INDEPENDENT MARKS ON TWO CHANNELS, so a chip can carry both: the
+                // GROUND says where the concept sits relative to what is chosen, the
+                // BORDER STYLE says whether the bank can illustrate it. They used to share
+                // one branch, so a prerequisite with no example reported only the first and
+                // a CHOSEN concept whose exemplars had gone reported neither — which is
+                // what this component's own `markMissingExemplars` already promised.
                 const title =
-                  state === "implied"
-                    ? t("concept.byPrerequisite")
-                    : noExemplar
+                  [
+                    state === "prerequisite" ? t("concept.byPrerequisite") : null,
+                    noExemplar
                       ? exemplarType
                         ? t("concept.noExemplarsOfType")
                         : t("concept.noExemplars")
-                      : undefined;
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined;
                 return (
                   <button
                     key={concept.name}
                     ref={isActive ? activeRef : undefined}
                     type="button"
-                    disabled={state === "implied"}
                     onClick={() => onToggle(concept.name)}
                     title={title}
                     className={cn(
                       "relative inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-small transition-colors",
+                      // A CHIP NEVER CHANGES WIDTH (2026-09-04, explicit user request:
+                      // «que se quede donde está»). Both marks are the border and the
+                      // ground and cost no inline space; a glyph used to sit in the corner
+                      // and widened the chip by 18 px, re-wrapping nineteen of them.
                       state === "selected" && "border-primary bg-primary text-primary-foreground",
-                      state === "implied" &&
-                        "cursor-not-allowed border-dashed border-primary/40 bg-primary/10 text-primary/70",
+                      state === "prerequisite" &&
+                        "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20",
                       state === "free" &&
                         "border-border bg-background hover:border-primary/50 hover:bg-accent",
-                      state === "free" && noExemplar && "border-dashed text-muted-foreground",
+                      noExemplar && "border-dashed",
+                      state === "free" && noExemplar && "text-muted-foreground",
                       isActive && "ring-2 ring-ring ring-offset-1 ring-offset-background",
                     )}
                   >
-                    {/* A CHIP NEVER CHANGES WIDTH (2026-09-04, explicit user request:
-                        «que se quede donde está en el momento de bloquearse»). The lock
-                        used to sit inline and widened the chip by 18 px, so every chip
-                        after it in the flex-wrap slid — measured: a locked «except» pushed
-                        «try» and «while» 18 px right, and under «Todos» five locks re-wrapped
-                        nineteen chips. On the corner it takes no inline space at all. */}
-                    {state === "implied" ? (
-                      <Lock
-                        aria-hidden
-                        className="absolute -left-1.5 -top-1.5 size-4 rounded-full border border-primary/40 bg-background p-[3px] text-primary"
-                      />
-                    ) : null}
                     <span className="truncate">{concept.name}</span>
                   </button>
                 );

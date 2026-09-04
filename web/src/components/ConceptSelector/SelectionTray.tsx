@@ -1,4 +1,4 @@
-import { Check, Lock, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,11 @@ export function SelectionTray({
   onShowAll,
 }: {
   selected: string[];
+  /**
+   * What the graph places before the chosen concepts. Reported, never withheld: since
+   * 2026-09-04 these are pickable like any other, so this is a statement about the choice
+   * and not the explanation of a refusal.
+   */
   implied: string[];
   total: number;
   /** How many concepts the exemplar scope is keeping out of the board. */
@@ -122,10 +127,9 @@ export function SelectionTray({
               {implied.map((name) => (
                 <Badge
                   key={name}
-                  className="border-dashed border-primary/40 bg-primary/10 text-primary/80"
+                  className="border-dashed border-primary/50 bg-primary/10 text-primary"
                   title={t("concept.byPrerequisite")}
                 >
-                  <Lock className="size-3 shrink-0" />
                   <span className="max-w-64 truncate">{name}</span>
                 </Badge>
               ))}

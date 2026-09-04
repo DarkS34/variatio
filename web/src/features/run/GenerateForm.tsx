@@ -393,9 +393,11 @@ export function GenerateForm({
     [graphAdjacency, state.concepts, chosen],
   );
 
-  // The lock is the bare closure on purpose, and independent of both switches: it says a
-  // prerequisite of a target cannot itself be a target, which is a statement about targets
-  // and not about coverage.
+  // The MARK is the bare closure, and independent of both switches: it says where a concept
+  // sits relative to the targets, which is a statement about the graph and not about
+  // coverage. It stopped being a LOCK on 2026-09-04 (explicit user request) — a prerequisite
+  // chosen as a target is a commission the generator already computes, because
+  // `KnowledgeGraph._closure` subtracts the targets from what it returns.
   const implied = useMemo(() => new Set(priorClosure), [priorClosure]);
 
   const given = useMemo(

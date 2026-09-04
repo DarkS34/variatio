@@ -637,7 +637,7 @@ export const es = {
   "concept.tab.graphHint": "El temario ordenado por niveles de prerrequisito",
   "concept.noGraph": "Esta asignatura no tiene temario que mostrar",
   "concept.noResults": "Sin resultados",
-  "concept.byPrerequisite": "Viene incluido por prerrequisito de lo que ya has elegido",
+  "concept.byPrerequisite": "Va antes de lo que has elegido, así que se da por sabido. Puedes elegirlo también: entonces pasa a practicarse.",
   "concept.noExemplarsOfType": "Sin ejemplos de este tipo entre tus ejercicios",
   "concept.noExemplars": "Sin ejercicios tuyos en el banco: se escribirá sin ningún ejemplo que imitar",
   "concept.exemplarsOfType": { one: "1 ejemplo de este tipo entre tus ejercicios", other: "{n} ejemplos de este tipo entre tus ejercicios" },
