@@ -14,7 +14,7 @@ import { familyOf, MODEL_FAMILIES, modelLabel } from "./models";
    matching rule: a family is served under several names — `qwen3.8:27b-q8_0` here and
    `qwen3.8:27b-q5_K_M` on another installation are the same choice with the same
    trade-off — so the table is keyed by the START of the name, and a model it does not
-   recognise is still offered, with its bare name and no note. */
+   recognise is still offered, with its bare name. */
 
 describe("familyOf", () => {
   it("matches a family by the start of the name, whatever the tag", () => {
@@ -29,12 +29,6 @@ describe("familyOf", () => {
   it("tells a family's two halves apart by the engine that serves it", () => {
     expect(familyOf("qwen-3.8-27b").label).toBe("Qwen3.8 (Cerebras)");
     expect(familyOf("gemma4:31b-it-q4_K_M").label).toBe("Gemma 4 (local)");
-    expect(familyOf("qwen-3.8-27b").blurbKey).not.toBe(
-      familyOf("qwen3.8:27b-q8_0").blurbKey,
-    );
-    expect(familyOf("gemma4:31b-it-q4_K_M").blurbKey).not.toBe(
-      familyOf("gemma-4-31b").blurbKey,
-    );
   });
 
   /* The local half's warning quotes a measurement taken on Ollama, so it may not travel
@@ -48,7 +42,6 @@ describe("familyOf", () => {
     const family = familyOf("un-modelo-de-otra-instalacion:9b");
     expect(family.label).toBe("un-modelo-de-otra-instalacion:9b");
     expect(family.url).toBeNull();
-    expect(family.blurbKey).toBeNull();
     expect(family.speed).toBeNull();
     // It still gets the full effort scale: nothing is known about it, so nothing is denied.
     expect(family.levels).toEqual(EFFORT_ORDER);

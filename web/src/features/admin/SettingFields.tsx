@@ -414,11 +414,6 @@ export function GenerationModelsField({
                   <span className="text-body font-medium">{family.label || model}</span>
                   <span className="font-mono text-[12px] text-muted-foreground">{model}</span>
                 </span>
-                {family.blurbKey ? (
-                  <span className="mt-0.5 block text-small text-muted-foreground">
-                    {t(family.blurbKey)}
-                  </span>
-                ) : null}
               </span>
               {chosen && model === selected[0] ? (
                 <Badge variant="secondary">{t("cfg.offered.default")}</Badge>

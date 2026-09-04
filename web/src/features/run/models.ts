@@ -7,13 +7,13 @@ import type { EffortLevel } from "./effort";
  *
  * WHICH models are offered is the installation's (`generation.models`, «Configuración →
  * Modelos generadores»); this table is what turns one of those names into something a person
- * can choose between — a name, one sentence about what the choice costs, a link to read
- * the rest, and the effort levels that model actually accepts.
+ * can choose between — a name, a link to read the rest, and the effort levels that model
+ * actually accepts.
  *
  * Keyed by the START of the model name and not by the whole of it, because a family is
  * served under several names: `qwen3.8:27b-q8_0` locally and `qwen3.8:27b-q5_K_M` on
  * another installation are the same choice with the same trade-off. A model no entry
- * matches is offered all the same, with its bare name and no note — a catalogue that
+ * matches is offered all the same, with its bare name alone — a catalogue that
  * refused what it does not recognise would make adding a model a code change.
  */
 export interface ModelFamily {
@@ -23,8 +23,6 @@ export interface ModelFamily {
   label: string;
   /** Where the model itself is documented — Ollama's library, or its weights. */
   url: string | null;
-  /** The one sentence somebody needs in order to choose. */
-  blurbKey: Key | null;
   /** Drives the icon beside the name; nothing else reads it. */
   speed: "fast" | "slow" | null;
   levels: EffortLevel[];
@@ -52,7 +50,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     match: "qwen3.8",
     label: "Qwen3.8 (local)", // i18n-exempt
     url: "https://huggingface.co/Qwen/Qwen3.8-27B",
-    blurbKey: "model.blurb.qwen38",
     speed: "slow",
     // THREE and not four: `max` is not a level of this model, it is `high` under another
     // name. Measured 2026-08-29 against Ollama 0.32.13 on `qwen3.8:27b-q8_0`, temperature 0
@@ -67,7 +64,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     match: "gemma-4",
     label: "Gemma 4 (Cerebras)", // i18n-exempt
     url: "https://huggingface.co/google/gemma-4-31B-it",
-    blurbKey: "model.blurb.gemma4",
     speed: "fast",
     // Measured: on this family the three levels answer the same, which is why it is the
     // one name «Modelos generadores» ships in `generation.fixed_effort`. The switch stays
@@ -80,8 +76,8 @@ export const MODEL_FAMILIES: ModelFamily[] = [
    * Ollama calls `qwen3.8:27b-q8_0`, and `gemma4:31b-it-q4_K_M` is Ollama's for what
    * Cerebras calls `gemma-4-31b` — and on `cerebras+ollama` an installation may offer all
    * four at once. Until now the two absent halves fell through to the unknown family, so
-   * they were listed by their bare id with no sentence beside them, which is exactly the
-   * state this table exists to fix.
+   * they were listed by their bare id rather than by the family's own name, which is
+   * exactly the state this table exists to fix.
    *
    * The prefixes cannot collide: `qwen3.8` and `qwen-3.8` differ at the fifth character,
    * `gemma-4` and `gemma4` at the sixth. The LABEL now says which engine serves each,
@@ -92,7 +88,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     match: "qwen-3.8",
     label: "Qwen3.8 (Cerebras)", // i18n-exempt
     url: "https://huggingface.co/Qwen/Qwen3.8-27B",
-    blurbKey: "model.blurb.qwen38Cerebras",
     speed: "fast",
     // Three, because Cerebras has no `max` at all and floors it at `high` — the same
     // ceiling the local half reaches for a different reason. NO WARNING: what
@@ -105,7 +100,6 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     match: "gemma4",
     label: "Gemma 4 (local)", // i18n-exempt
     url: "https://ollama.com/library/gemma4",
-    blurbKey: "model.blurb.gemma4Ollama",
     speed: "slow",
     // Declared, not measured. The «los tres niveles responden igual» of the Cerebras half
     // was measured against Cerebras and says nothing about Ollama's renderer, so the three
@@ -119,7 +113,6 @@ const UNKNOWN: ModelFamily = {
   match: "",
   label: "",
   url: null,
-  blurbKey: null,
   speed: null,
   // An unrecognised model is offered whole, slider included: refusing a control because
   // nobody has measured the model yet would make adding one a code change. Measure it and
@@ -127,7 +120,7 @@ const UNKNOWN: ModelFamily = {
   levels: ["low", "medium", "high", "max"],
 };
 
-/** The family a model belongs to; an unrecognised one keeps its own name and no note. */
+/** The family a model belongs to; an unrecognised one keeps its own name. */
 export function familyOf(model: string | undefined): ModelFamily {
   if (!model) return UNKNOWN;
   return (

@@ -123,12 +123,6 @@ function ModelCard({
           {remote ? <Badge variant="outline">{t("form.model.remote")}</Badge> : null}
         </span>
 
-        {family.blurbKey ? (
-          <span className="mt-1 block text-small text-muted-foreground">
-            {t(family.blurbKey)}
-          </span>
-        ) : null}
-
         {/* Offering a model does not download it: the installation names it and the engine
             may simply not have it, in which case the first call is where one would find
             out. Said here instead. */}
