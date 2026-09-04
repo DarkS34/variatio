@@ -449,6 +449,21 @@ function Raw() {
         </Paragraph>
       </Block>
 
+      <Block title="Un documento que ya se ha leído aquí llega leído">
+        <Paragraph>
+          Un documento se identifica por su contenido, no por su nombre ni por la asignatura en
+          la que esté. Si subes uno que esta instalación ya ha leído —el mismo boletín en dos
+          asignaturas, o el mismo fichero otra vez con otro nombre—, sus páginas se copian en el
+          momento de subirlo y la fila aparece ya al día, sin gastar ni una llamada al modelo.
+        </Paragraph>
+        <Paragraph>
+          Solo ocurre cuando coincide todo: el contenido del fichero y los ajustes con los que se
+          leyó. Si algo de eso ha cambiado desde entonces, el documento sale «{"pendiente"}» y se
+          lee como cualquier otro. Las páginas se <strong>copian</strong>, así que corregir una
+          aquí no toca la de la otra asignatura.
+        </Paragraph>
+      </Block>
+
       <Block title="Cómo va cada documento">
         <Rows
           items={[
@@ -1747,7 +1762,7 @@ function Account() {
           {
             key: "variantes",
             head: t("tabs.variants"),
-            body: "Todo lo que has generado, con el encargo que lo produjo: se puede buscar, ver solo lo tuyo o lo de toda la asignatura, relanzar «más como esta» y borrar.",
+            body: "Todo lo que TÚ has generado, con el encargo que lo produjo: se puede buscar, relanzar «más como este» y borrar. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo.",
           },
         ]}
       />
@@ -1910,7 +1925,7 @@ function Admin() {
             {
               key: "reset",
               head: <>«{t("acc.resetLink")}»</>,
-              body: "El mismo enlace que enviaría el correo de «he olvidado la contraseña», generado aquí para pasárselo a mano. Vale unos minutos y una sola vez.",
+              body: "Un enlace para poner una contraseña nueva, generado aquí para pasárselo a mano: la pantalla de entrada no ofrece ninguna forma de pedirlo. Vale unos minutos y una sola vez.",
             },
             {
               key: "unlock",

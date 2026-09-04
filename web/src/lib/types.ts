@@ -549,7 +549,6 @@ export interface GenerationListing {
   total: number;
   limit: number;
   offset: number;
-  scope: "mine" | "workspace";
 }
 
 export interface GenerationDetail {

@@ -406,7 +406,7 @@ export const es = {
 
   "tutorial.s3.title": "Fase de construcción: preparar la asignatura",
   "tutorial.s3.body":
-    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: procesa los materiales que aportes y extrae lo que necesita. Son cuatro pasos, en este orden, y son los cuatro botones que se acaban de encender arriba: la barra de progreso te indica en qué punto te encuentras en cada momento.",
+    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: procesa los materiales que aportes y extrae lo que necesita. Son cuatro pasos y van en este orden, cada uno apoyado en el anterior.",
   "tutorial.s3.step1":
     "Subes tus documentos, los apuntes por un lado y los ejercicios por otro, para que el sistema los procese. Internamente crea un grafo de conocimiento con los conceptos y sus relaciones, entre otras cosas.",
   "tutorial.s3.step2":
@@ -452,12 +452,13 @@ export const es = {
   "tutorial.s6.b1":
     "Siempre que el sistema genera algo —el temario, los tipos de ejercicio…— te da la opción de corregirlo o modificarlo. Es totalmente opcional y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
   // DOS SALIDAS, SEGÚN TENGA O NO ASIGNATURA quien lee (2026-09-02, explicit user request):
-  // a quien acaba de aceptar una invitación no se le puede decir «elige» — no hay nada que
-  // elegir — y el botón de arriba a la izquierda, que es al que apunta, dice «Sin asignatura».
+  // a quien acaba de aceptar una invitación no se le puede decir «elige», que no hay nada
+  // que elegir. Desde el 2026-09-04 ninguna de las dos señala un sitio de la pantalla: bajo
+  // el mazo no se dibuja la cabecera, así que se dice qué hay que hacer y no dónde pulsar.
   "tutorial.s6.outro.create":
-    "Todavía no tienes ninguna asignatura. Créala arriba a la izquierda, donde pone «Sin asignatura», y empieza por el Paso 1: hasta que exista, los pasos de arriba no llevan a ningún sitio. En el menú de tu cuenta, a la derecha, están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
+    "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y las dos pruebas a mano; en el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "tutorial.s6.outro.choose":
-    "Elige tu asignatura arriba a la izquierda —o crea otra ahí mismo— y empieza por el Paso 1. En el menú de tu cuenta, a la derecha, están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
+    "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
@@ -697,11 +698,11 @@ export const es = {
   "chips.alreadyThere": "Ya estaba en la lista: {values}",
   "ui.closeNotice": "Cerrar aviso",
   "ui.moreInfo": "Más información",
+  "generations.noSubject": "Todavía no tienes ninguna asignatura",
+  "generations.noSubjectHint": "Aquí se guarda lo que generes dentro de una asignatura. Crea la tuya, o pide acceso a una existente a quien administra la instalación.",
   "generations.title": "Ejercicios generados",
   "generations.whatIsHere": "Qué hay aquí",
   "generations.inBank": "en el banco · {id}",
-  "generations.mine": "Mías",
-  "generations.wholeWorkspace": "De toda la asignatura",
   "generations.search": "Buscar en el enunciado, el concepto o las instrucciones",
   "generations.search.placeholder": "Buscar en el enunciado, el concepto o las instrucciones…",
   "generations.noMatch": "Nada coincide con esa búsqueda",
@@ -740,7 +741,6 @@ export const es = {
   "invite.createAccount": "Crear la cuenta",
   "auth.kindInvite": "invitación",
   "auth.kindLink": "enlace",
-  "login.requestLink": "Pedir el enlace",
   "invite.toWorkspace": "Te han invitado a «{workspace}» con permiso de {role}.",
   "invite.toApp": "Te han invitado a Variatio.",
   "invite.teachOrStudy": "¿Eres estudiante o docente?",
@@ -763,8 +763,6 @@ export const es = {
   "auth.missingCodeBody": "Abre el enlace completo tal y como lo recibiste.",
   "auth.login": "Entra",
   "auth.byInvitation": "El acceso es por invitación: no hay registro abierto.",
-  "auth.recover": "Recuperar el acceso",
-  "auth.recoverBody": "Se genera un enlace de un solo uso para poner una contraseña nueva.",
   "reset.done": "Contraseña cambiada",
   "reset.doneBody": "Has entrado con la nueva. Se ha cerrado la sesión en los demás dispositivos.",
   "reset.newPassword": "Nueva contraseña",
@@ -1015,9 +1013,7 @@ export const es = {
   "run.taggedCount": { one: "1 etiquetado", other: "{n} etiquetados" },
   "run.nothingRun": "Nada ejecutado en esta sesión.",
   "auth.username": "Usuario",
-  "auth.forgot": "He olvidado la contraseña",
   "auth.backToLogin": "Ir a la pantalla de entrada",
-  "auth.forgotSent": "Si esa cuenta existe, el enlace ya está emitido y caduca en 45 minutos. Llega por correo solo si la cuenta tiene una dirección asociada; si no, pídeselo a quien administra la instalación.",
   "invite.usernameHelp": "Con esto entrarás. Minúsculas, cifras, punto, guion o guion bajo.",
   "invite.visibleName": "Nombre visible",
   "account.identity.name": "Nombre",
@@ -1955,6 +1951,8 @@ export const es = {
   "effort.medium": "Medio",
   "effort.high": "Alto",
   "effort.max": "Máximo",
+  "model.blurb.qwen38Cerebras": "El mismo modelo que razona, pero servido por Cerebras en lugar de por la GPU de aquí: delibera igual y la deliberación se paga en segundos. A cambio, el enunciado y el contexto salen de esta máquina.",
+  "model.blurb.gemma4Ollama": "Gemma 4 en la GPU de aquí: nada sale de la máquina, y a cambio se espera más y se comparte la GPU con lo que esté construyéndose.",
   "effort.warn.qwen38": "Por encima de «Medio», qwen3.8 delibera durante miles de palabras en la GPU local: cada ejercicio puede tardar muchos minutos, y en el nivel alto se ha medido que llega a devolver una respuesta vacía.",
   // COUNTS ------------------------------------------------------------------------------
   "count.items": { one: "{n} ejercicio", other: "{n} ejercicios" },

@@ -47,11 +47,12 @@ export function WorkspaceSwitcher() {
   };
   if (listing.isLoading) return null;
   // WITH NO INSTANCE THE CONTROL STILL STANDS (2026-09-02), reading «Sin asignatura», and
-  // its menu is the create form and nothing else. It used to render nothing at all, so the
-  // one reader the tutorial addresses — an account that has just accepted an invitation —
-  // was told to create a subject «arriba a la izquierda» where there was nothing. The
-  // panel's own form in the middle of the page is untouched: this is the same door, in the
-  // header, where the tutorial can point at it.
+  // its menu is the create form and nothing else. It used to render nothing at all, so an
+  // account that has just accepted an invitation — which is the state somebody arrives in
+  // — found no door in the header at all, only the panel's form in the middle of the page.
+  // The tutorial no longer points at it (2026-09-04, the header is not drawn under the
+  // deck), but the reason it stands has nothing to do with the deck: it is the one place
+  // that is in the same spot on every screen.
   const empty = workspaces.length === 0;
 
   return (

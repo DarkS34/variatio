@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 from fastapi import UploadFile
+from loguru import logger
 
 from variatio.builders._source_docs import SUPPORTED_EXTS
 from variatio.core.workspace import Workspace
@@ -158,6 +159,19 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
         request_left -= written
         slot_left -= written
         added.append({"name": target.name, "bytes": written, "renamed": target.name != name})
+
+    # A DOCUMENT THIS INSTALLATION HAS ALREADY READ ARRIVES READ (2026-09-04, explicit user
+    # request). Identity is the file's bytes, so the same PDF uploaded into another subject
+    # — or into this one under a different name — carries its pages over instead of paying
+    # for one model call per page a second time. It is a filesystem copy and it happens
+    # here, in the request, so the screen shows «al día» the moment the drop lands.
+    #
+    # Best effort, and deliberately so: an upload must not fail because a shortcut did.
+    if added:
+        try:
+            _stage().adopt_transcriptions(ws, kind)
+        except Exception as exc:  # noqa: BLE001 - the upload matters more than the shortcut
+            logger.warning(f"[raw] No se pudo reaprovechar una transcripción conocida: {exc}")
 
     return {"added": added, "rejected": rejected}
 

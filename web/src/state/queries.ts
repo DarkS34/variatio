@@ -546,7 +546,6 @@ export function useDeleteWorkspace() {
 /* Saved variants -------------------------------------------------------------------- */
 
 export function useGenerations(params: {
-  scope?: "mine" | "workspace";
   concept?: string;
   q?: string;
   limit?: number;

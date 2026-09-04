@@ -319,9 +319,12 @@ def handle_generate(job: Job, control: JobControl) -> dict:
 
 
 def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[str]:
-    """Read the statements of the last saved variants, so the prompt can avoid repeating them.
+    """Read the statements of this account's last saved variants, so the prompt can avoid them.
 
-    A reminder and nothing more: an unreadable database costs the run nothing but this.
+    Its OWN, never the instance's: a generated exercise is private to whoever asked for it,
+    and reading a colleague's statement into somebody's prompt is that same reading through
+    another door. A reminder and nothing more, so an unreadable database costs the run
+    nothing but this.
     """
     limit = int(config.GENERATION_AVOID_RECENT)
     if limit < 1:
@@ -337,6 +340,7 @@ def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[s
                 item_type=item_type.key,
                 concepts=concepts,
                 limit=limit,
+                author=job.user_id,
             )
     except Exception as exc:  # noqa: BLE001 - the run matters more than the reminder
         logger.warning(f"No se pudieron leer las variantes guardadas recientes: {exc}")

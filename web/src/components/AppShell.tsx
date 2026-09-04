@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 
 
 import { Lockup } from "@/components/ui/logo";
 import { AccountMenu } from "@/features/auth/AccountMenu";
-import { revealOf, slideOf, type NavGroup, type Reveal } from "@/features/tutorial/reveal";
+import { slideOf } from "@/features/tutorial/slides";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import { STEPS, USES, stepBusy, stepNumber, stepStates, type StepState } from "@/lib/steps";
@@ -106,11 +106,13 @@ export function StepCounter({
       className={cn(
         COUNTER_BOX,
         "nums font-condensed text-small font-semibold",
-        // A DONE STEP SHOWS A TICK WHERE ITS NUMBER WAS (2026-09-03, explicit user
-        // request, reversing the previous day's «the number never leaves»). The box and its
-        // `--settled` stroke stay, so the four stops keep one shape and one height; only
-        // the glyph changes, and the word under the name still says «Hecho».
-        state === "done" && "border border-settled text-settled",
+        // A DONE STEP IS A BARE TICK, WITH NO BOX AROUND IT (2026-09-04, explicit user
+        // request; the tick itself is 2026-09-03's, and the box it sat in was that entry's
+        // other half). A box is what says «there is something here to reach»: the number
+        // needs one and keeps it, in both its states, and what is behind you needs nothing
+        // drawn around it. `COUNTER_BOX` stays, so the glyph keeps its 22 px of height and
+        // 20 px of width and the four stops still line up — only the stroke goes.
+        state === "done" && "text-settled",
         state === "now"
           // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
           // mode, so the literal put a near-white number on it. This is the same defect the
@@ -144,7 +146,6 @@ function StepPill({
   active,
   title,
   busy = false,
-  demo = false,
 }: {
   step: (typeof STEPS)[number];
   state: StepState;
@@ -153,12 +154,6 @@ function StepPill({
   title?: string;
   /** Work running on this step right now: the wheel, and «Construyendo» / «Leyendo» under the name. */
   busy?: boolean;
-  /**
-   * Under the tutorial (2026-09-02, explicit user request): the number and the name, and
-   * NOT the state word. The bar is being explained there, and «Después» three times under
-   * a subject that may not exist yet is a tag on every element rather than a state.
-   */
-  demo?: boolean;
 }) {
   const { t } = useT();
   return (
@@ -182,23 +177,19 @@ function StepPill({
         <StepCounter state={state} n={n} busy={busy} />
         {t(step.labelKey)}
       </span>
-      {demo ? null : (
-        <span
-          className={cn(
-            PILL_WORD,
-            busy && "text-foreground",
-            !busy && state === "done" && "text-settled",
-            !busy && state === "now" && "text-attention",
-            !busy && state === "later" && "text-muted-foreground",
-          )}
-        >
-          {busy ? (
-            t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
-          ) : (
-            t(STATE_KEY[state])
-          )}
-        </span>
-      )}
+      <span
+        className={cn(
+          PILL_WORD,
+          busy && "text-foreground",
+          !busy && state === "done" && "text-settled",
+          !busy && state === "now" && "text-attention",
+          !busy && state === "later" && "text-muted-foreground",
+        )}
+      >
+        {busy
+          ? t(step.artifact === null ? "nav.state.reading" : "nav.state.building")
+          : t(STATE_KEY[state])}
+      </span>
     </Link>
   );
 }
@@ -253,7 +244,6 @@ function DoorPill({
   active,
   open,
   disabledReason,
-  demo = false,
 }: {
   door: (typeof USES)[number];
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -261,7 +251,6 @@ function DoorPill({
   /** Whether the whole construction is closed, which is what opens both doors at once. */
   open: boolean;
   disabledReason?: string | null;
-  demo?: boolean;
 }) {
   const { t } = useT();
   const study = door.study;
@@ -292,7 +281,7 @@ function DoorPill({
         </span>
         {t(door.labelKey)}
       </span>
-      {demo || open ? null : (
+      {open ? null : (
         <span className={cn(PILL_WORD, "text-muted-foreground")}>{t("nav.state.later")}</span>
       )}
     </>
@@ -331,18 +320,15 @@ function DoorPill({
  *
  * The caption is what carries the phase now that its number is gone. It is micro, condensed
  * and muted, so the row still reads as pills with a label over them and not as two rows of
- * navigation; `dim` is the tutorial's, for a caption whose group the deck has not reached.
- * Its `pl-2` is the pills' own `px-2`, so the caption starts exactly on the first pill's
- * box edge (2026-09-02, explicit user request: it was 2 px ahead of it).
+ * navigation. Its `pl-2` is the pills' own `px-2`, so the caption starts exactly on the
+ * first pill's box edge (2026-09-02, explicit user request: it was 2 px ahead of it).
  */
 function PhaseGroup({
   label,
-  dim = false,
   gap = "tight",
   children,
 }: {
   label: string;
-  dim?: boolean;
   /** `wide` is the doors' 4 px, the rule's own margin; the steps keep 2 px. */
   gap?: "tight" | "wide";
   children: ReactNode;
@@ -351,10 +337,7 @@ function PhaseGroup({
     <div className="flex shrink-0 flex-col gap-0.5">
       <span
         aria-hidden
-        className={cn(
-          "pl-2 font-condensed text-micro uppercase text-muted-foreground transition-opacity duration-700",
-          dim && "opacity-30",
-        )}
+        className="pl-2 font-condensed text-micro uppercase text-muted-foreground"
       >
         {label}
       </span>
@@ -365,58 +348,6 @@ function PhaseGroup({
 
 function NavRule() {
   return <span aria-hidden className="mx-1 h-10 w-px shrink-0 self-end bg-border" />;
-}
-
-/**
- * ONE PART OF THE HEADER, AS FAR AS THE TUTORIAL HAS GOT WITH IT (2026-09-02, explicit
- * user request: «que se vayan desbloqueando los elementos de la navbar, y que el tutorial
- * los vaya señalando ligeramente»).
- *
- * Outside the tutorial `reveal` is null and this is a plain group. Inside it, a part the
- * deck has not reached yet is a dim silhouette — there, so the reader sees the bar fill
- * in as they go — and the part the current slide is about carries a 2 px rule in
- * `--attention` under it. NOTHING IN IT IS PRESSABLE WHILE THE DECK RUNS, unlocked or not
- * (2026-09-02, explicit user request): the header is being explained, not offered, and a
- * reader who clicks «El temario» halfway through leaves the explanation of what it is.
- * `inert` covers the keyboard and assistive tech; `pointer-events-none` the mouse. The
- * way out is «Saltar la explicación» or the last slide's rail. A rule and not a fill: the pointing is meant to be slight, and the step that
- * is «te toca ahora» already spends the tint.
- *
- * THE RULE IS AN INSET SHADOW AND THE WRAPPER PADS VERTICALLY ONLY (2026-09-02, measured
- * twice). The first version was an outside ring on a `-m-1 p-1` wrapper, and inside the
- * nav — a scroller on both axes, because `overflow-x: auto` makes `overflow-y` auto too —
- * it overflowed 4 px each way (834 against 830 wide, 55 against 51 tall) and was clipped
- * top and bottom. An inset ring on a padded wrapper fixed the clipping but widened the
- * strip by 12 px, so at a width where it fits on every other screen it scrolled on the
- * tutorial alone. The rule needs no air at the sides, so the wrapper adds height only,
- * constant across slides so that unlocking moves nothing, and under the deck the nav line
- * gives the same height back.
- */
-function Unlock({
-  reveal,
-  children,
-  className,
-}: {
-  reveal: Reveal | null;
-  children: ReactNode;
-  className?: string;
-}) {
-  const locked = reveal !== null && !reveal.unlocked;
-  return (
-    <div
-      inert={reveal !== null}
-      aria-hidden={locked || undefined}
-      className={cn(
-        "flex shrink-0 items-center gap-0.5 rounded-md transition-[opacity,box-shadow] duration-700",
-        reveal !== null && "pointer-events-none select-none py-1",
-        locked && "opacity-30",
-        reveal?.pointed && "shadow-[inset_0_-2px_0_0_var(--attention)]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
 }
 
 /**
@@ -436,7 +367,6 @@ function MainNav({
   locked,
   rawStocked,
   rawWaiting,
-  reveal,
   className,
 }: {
   path: string;
@@ -448,8 +378,6 @@ function MainNav({
   rawStocked: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
-  /** How far the tutorial has got with each part, or null for every part outside it. */
-  reveal: (group: NavGroup) => Reveal | null;
   className?: string;
 }) {
   const { t } = useT();
@@ -474,7 +402,6 @@ function MainNav({
   }, [stages.length, locked, rawWaiting, rawStocked]);
 
   const states = stepStates(stages, rawStocked);
-  const demo = reveal("prepare") !== null;
 
   return (
     <nav
@@ -495,43 +422,32 @@ function MainNav({
         className,
       )}
     >
-      <Unlock reveal={reveal("prepare")}>
-        <PhaseGroup label={t("nav.phase.build")}>
-          {STEPS.map((step, index) => (
-            <StepPill
-              key={step.path}
-              step={step}
-              state={states[index]}
-              n={stepNumber(index)}
-              active={path === step.path}
-              title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
-              busy={busy[index]}
-              demo={demo}
-            />
-          ))}
-        </PhaseGroup>
-      </Unlock>
+      <PhaseGroup label={t("nav.phase.build")}>
+        {STEPS.map((step, index) => (
+          <StepPill
+            key={step.path}
+            step={step}
+            state={states[index]}
+            n={stepNumber(index)}
+            active={path === step.path}
+            title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+            busy={busy[index]}
+          />
+        ))}
+      </PhaseGroup>
 
       <NavRule />
 
-      {/* The second phase's caption unlocks with its first door: it names the pair, and the
-          deck reaches the pair one door at a time. */}
-      <PhaseGroup
-        label={t("nav.phase.test")}
-        dim={reveal("generate")?.unlocked === false}
-        gap="wide"
-      >
+      <PhaseGroup label={t("nav.phase.test")} gap="wide">
         {USES.map((door) => (
-          <Unlock key={door.key} reveal={reveal(door.key)}>
-            <DoorPill
-              door={door}
-              icon={door.key === "generate" ? Play : Scale}
-              active={path === door.path}
-              open={locked === null}
-              disabledReason={locked}
-              demo={demo}
-            />
-          </Unlock>
+          <DoorPill
+            key={door.key}
+            door={door}
+            icon={door.key === "generate" ? Play : Scale}
+            active={path === door.path}
+            open={locked === null}
+            disabledReason={locked}
+          />
         ))}
       </PhaseGroup>
     </nav>
@@ -554,7 +470,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   // so far, and therefore which are on offer. Null everywhere else.
   const tutorialAt = slideOf(path);
   const deck = tutorialAt !== null;
-  const reveal = (group: NavGroup) => (tutorialAt === null ? null : revealOf(tutorialAt, group));
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
   // like every route does, so it would only be refused — and a refusal reads as «la
@@ -621,6 +536,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     // a foot — so under it the wrapper is a definite height and `main` a flex column with
     // no padding, where the two rails can reach the edges.
     <div className={cn("flex flex-col", deck ? "h-full" : "min-h-full")}>
+      {/* NOTHING BUT THE SLIDES UNDER THE DECK (2026-09-04, explicit user request: «borra
+          toda referencia del navbar del tutorial; borra las animaciones y oculta el
+          navbar»). The header is not drawn at all while the tutorial runs, which reverses
+          «the deck runs under the real header and the header unlocks as the deck goes» of
+          2026-09-02: the silhouettes, the `--attention` rule under the group being
+          explained and the `inert` that made the whole strip unpressable are gone with it,
+          and so is `reveal.ts`. What the tutorial explains, it explains in words and in
+          its own figures. */}
+      {deck ? null : (
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         {/* THREE COLUMNS, AND THE MIDDLE ONE IS THE CENTRE OF THE HEADER.
             The navigation used to be a `flex-1` sitting after the logo and the workspace
@@ -655,9 +579,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
 
-            <Unlock reveal={reveal("subject")}>
-              <WorkspaceSwitcher />
-            </Unlock>
+            <WorkspaceSwitcher />
           </div>
 
           {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
@@ -665,7 +587,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               doors into one room — and to a student account, five of them are the
               teacher's preparation chain. `App` already gates the routes; this stops the
               navigation from advertising them. */}
-          {hasWorkspace || deck ? (
+          {hasWorkspace ? (
             <MainNav
               path={path}
               stages={stages}
@@ -673,20 +595,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               locked={locked}
               rawWaiting={rawWaiting}
               rawStocked={rawStocked}
-              reveal={reveal}
               className="hidden xl:flex"
             />
           ) : null}
 
           <div className="flex flex-1 basis-0 items-center justify-end gap-1 sm:gap-3">
-            <Unlock reveal={reveal("account")}>
-              <AccountMenu />
-            </Unlock>
+            <AccountMenu />
           </div>
         </div>
 
         {/* The same navigation, on its own line, for everything narrower than a laptop. */}
-        {hasWorkspace || deck ? (
+        {hasWorkspace ? (
           <MainNav
             path={path}
             stages={stages}
@@ -694,12 +613,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             locked={locked}
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}
-            reveal={reveal}
-            className={cn(
-              "flex border-t border-border xl:hidden",
-              // The wrappers add 4 px of height under the deck; the line gives it back.
-              deck ? "px-3 py-0.5" : "px-3 py-1.5",
-            )}
+            className="flex border-t border-border px-3 py-1.5 xl:hidden"
           />
         ) : null}
 
@@ -727,6 +641,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </header>
+      )}
 
       <main
         className={cn(

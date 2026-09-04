@@ -12,7 +12,8 @@ from loguru import logger
 from .. import config
 from .. import prompts as prompts_pkg
 from ..builders import _source_docs
-from ..core import progress
+from ..builders._source_docs.pages import META_NAME
+from ..core import paths, progress
 from ..core.workspace import Workspace
 from ..instance import locale
 
@@ -173,6 +174,92 @@ def transcription_status(ws: Workspace, slot: str) -> dict:
     }
 
 
+# ADOPTING A TRANSCRIPTION ALREADY IN THE INSTALLATION -----------------------------------------
+#
+# The same PDF reaches two subjects all the time — a department's exercise sheet, a shared
+# set of notes, the same workbook uploaded again after a slug was renamed — and transcribing
+# it a second time is one model call per page for an answer that is already on this disk.
+# A document is its BYTES here, exactly as `_page_fingerprint` already says, so two copies
+# under two names in two workspaces are one document and the pages carry over whole.
+#
+# It is a shortcut and never a source of truth: nothing is adopted unless every field the
+# pages were produced under agrees, and a document nothing matches is simply transcribed.
+
+
+def _transcribed_documents() -> list[tuple[Path, dict]]:
+    """Every finished transcription of the installation, as `(directory, fingerprint)`.
+
+    One pass over `workspaces/*/cache/markdown/*/*/_meta.json` and no index file beside it:
+    the meta is small, the count is one entry per document the installation has ever read,
+    and an index would be a second writer of state that could disagree with the pages.
+    """
+    found: list[tuple[Path, dict]] = []
+    for meta_path in sorted(paths.WORKSPACES_DIR.glob("*/cache/markdown/*/*/" + META_NAME)):
+        meta = _source_docs.read_meta(meta_path.parent)
+        if meta:
+            found.append((meta_path.parent, _source_docs.fingerprint_of(meta)))
+    return found
+
+
+def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
+    """Give every unread document of a slot a transcription the installation already holds.
+
+    Reports `{"adopted": n, "pages": m}`. A document that is already current is left alone;
+    a stale one is adopted like a pending one, since what makes it stale is precisely that
+    its pages were produced under settings that no longer apply and the donor's were not.
+
+    Best effort by design: it opens no model, and anything it cannot do it does not do —
+    the transcription job is still there and still reads the same cache.
+    """
+    pending = [
+        source
+        for source in _sources(ws, slot)
+        if _document_status(source, ws, slot)["state"] != DONE
+    ]
+    summary = {"adopted": 0, "pages": 0}
+    if not pending:
+        return summary
+
+    wanted = {}
+    for source in pending:
+        try:
+            fingerprint = _expected_fingerprint(source, slot)
+        except OSError:
+            continue
+        wanted[source] = fingerprint
+
+    if not wanted:
+        return summary
+    keys = {_source_docs.reuse_key(f) for f in wanted.values()}
+    donors: dict[tuple, Path] = {}
+    for directory, fingerprint in _transcribed_documents():
+        key = _source_docs.reuse_key(fingerprint)
+        if key in keys and key not in donors:
+            donors[key] = directory
+    if not donors:
+        return summary
+
+    for source, fingerprint in wanted.items():
+        cache_dir = _cache_dir_for(ws, source)
+        donor = donors.get(_source_docs.reuse_key(fingerprint))
+        if donor is None or donor == cache_dir:
+            continue
+        try:
+            pages = _source_docs.adopt_pages(donor, cache_dir, fingerprint)
+        except OSError as exc:
+            logger.warning(f"[{source.name}] could not adopt a known transcription: {exc}")
+            continue
+        if not pages:
+            continue
+        summary["adopted"] += 1
+        summary["pages"] += pages
+        logger.info(
+            f"[{source.name}] {pages} page(s) taken from '{donor}': "
+            "the same document was already transcribed here"
+        )
+    return summary
+
+
 def transcribe_slot(ws: Workspace, slot: str) -> dict:
     """Transcribe every document of one slot, page by page, and report what came out.
 
@@ -192,6 +279,16 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
     if not sources:
         logger.warning(f"No supported document in {slot_dir(ws, slot)}")
         return summary
+
+    # Before the first model call: whatever this installation has already read is copied in,
+    # and the loop below then finds it cached. It costs one pass over the meta files and it
+    # is what makes re-uploading a document somebody else already transcribed instantaneous.
+    adopted = adopt_transcriptions(ws, slot)
+    if adopted["adopted"]:
+        logger.success(
+            f"{adopted['adopted']} document(s) of «{slot}» reused a transcription already "
+            f"in this installation: {adopted['pages']} page(s) with no model call"
+        )
 
     converter = _slot_converter(slot)
     ocr = _slot_ocr(slot)

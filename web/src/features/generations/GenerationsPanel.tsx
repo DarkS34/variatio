@@ -6,8 +6,6 @@ import {
   Search,
   Sparkles,
   Trash2,
-  User,
-  Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -23,13 +21,12 @@ import { fieldText } from "@/lib/fields";
 import { useRouter } from "@/lib/router";
 import { itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import { useSession } from "@/state/auth";
 import {
   useDeleteGeneration,
   useGenerations,
   useProfile,
 } from "@/state/queries";
+import { useHasWorkspace } from "@/state/auth";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -41,29 +38,51 @@ import { useT } from "@/lib/i18n";
  * modelo razonó — because a statement without its parameters can be read but not judged
  * and not reproduced.
  *
- * Two scopes, and «mías» is the default: someone looking for the exercise they wrote
- * yesterday means their own, and a shared subject is the other question, not the same one.
+ * YOURS AND NOBODY ELSE'S (2026-09-04, explicit user request). There were two scopes and
+ * a pair of tabs to flip between them; the endpoint now answers your own rows and only
+ * those, so there is nothing left to flip and no author to print on a row — every row here
+ * is yours. What went with the tabs is the count of the whole instance, which reported how
+ * much other people had produced.
  *
  * A panel and not a screen: it is a tab of «Mi perfil», which already carries the page's
  * title, so this one heads its own section and does not claim to be the page.
+ *
+ * WITH NO SUBJECT IT ASKS FOR NONE (2026-09-04, explicit user request). «Mi perfil» is
+ * reachable without belonging to an instance — that is the whole point of `NO_WORKSPACE`
+ * being a state the app can express — so this tab used to fire two reads that could only
+ * answer 403, and what a person read was the SERVER's sentence, in Spanish whatever their
+ * interface language. The list is a child component so that its hooks do not run at all in
+ * that state, and what is drawn instead is this application's own copy.
  */
 export function GenerationsPanel() {
   const { t } = useT();
-  const session = useSession();
+  const hasWorkspace = useHasWorkspace();
+  if (!hasWorkspace) {
+    return (
+      <div className="space-y-5">
+        <h2 className="text-heading">{t("generations.title")}</h2>
+        <EmptyState icon={<Archive className="size-6" />} title={t("generations.noSubject")}>
+          {t("generations.noSubjectHint")}
+        </EmptyState>
+      </div>
+    );
+  }
+  return <GenerationsList />;
+}
+
+function GenerationsList() {
+  const { t } = useT();
   const profileQuery = useProfile();
-  const [scope, setScope] = useState<"mine" | "workspace">("mine");
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<number | null>(null);
 
-  const listing = useGenerations({ scope, q: search || undefined, limit: 60 });
+  const listing = useGenerations({ q: search || undefined, limit: 60 });
   const remove = useDeleteGeneration();
 
   const profile = profileQuery.data?.profile ?? null;
   const rows = listing.data?.generations ?? [];
   const total = listing.data?.total ?? 0;
-  const isOwner = session.data?.role === "owner";
-  const me = session.data?.user.id ?? null;
 
   const asMarkdown = useMemo(
     () =>
@@ -125,21 +144,6 @@ export function GenerationsPanel() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex overflow-hidden rounded-md border border-border">
-          <ScopeTab
-            active={scope === "mine"}
-            onClick={() => setScope("mine")}
-            icon={<User className="size-3.5" />}
-            label={t("generations.mine")}
-          />
-          <ScopeTab
-            active={scope === "workspace"}
-            onClick={() => setScope("workspace")}
-            icon={<Users className="size-3.5" />}
-            label={t("generations.wholeWorkspace")}
-          />
-        </div>
-
         <form
           className="flex min-w-56 flex-1 items-center gap-2"
           onSubmit={(event) => {
@@ -181,9 +185,7 @@ export function GenerationsPanel() {
               profile={profile}
               expanded={open === row.id}
               onToggle={() => setOpen(open === row.id ? null : row.id)}
-              canDelete={isOwner || row.author.id === me}
               onDelete={() => remove.mutate(row.id)}
-              showAuthor={scope === "workspace"}
             />
           ))}
         </div>
@@ -192,47 +194,18 @@ export function GenerationsPanel() {
   );
 }
 
-function ScopeTab({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 text-body transition-colors",
-        active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
 function GenerationCard({
   row,
   profile,
   expanded,
   onToggle,
-  canDelete,
   onDelete,
-  showAuthor,
 }: {
   row: GenerationRow;
   profile: ExemplarsProfile | null;
   expanded: boolean;
   onToggle: () => void;
-  canDelete: boolean;
   onDelete: () => void;
-  showAuthor: boolean;
 }) {
   const { t } = useT();
   const { navigate } = useRouter();
@@ -244,20 +217,23 @@ function GenerationCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-body">
-            {row.concepts.length > 0 ? row.concepts.join(" · ") : t("generations.noConcepts")}
-          </CardTitle>
-          {/* THE TITLE, THE MODALITY AND — ACROSS THE WHOLE SUBJECT — WHO ASKED (2026-09-02,
-              explicit user request). Three chips left this row: «razonó», the model that
-              wrote it and the date. All three are still on the row's data and in the
-              expanded commission, where somebody reproducing the exercise reads them; on
-              the header they were three tags beside a title that is itself a list. */}
+          {/* THE MODALITY FIRST, THEN THE CONCEPTS (2026-09-04, explicit user request).
+              The row reads as an answer to «¿qué clase de ejercicio es, y sobre qué?», and
+              that is the order those two are asked in: the modality is one word from a
+              closed list and the concepts are a list of names, so a badge after them
+              landed at whatever width the names happened to end at.
+
+              Three chips left this row on 2026-09-02 (also by request): «razonó», the
+              model that wrote it and the date. All three are still on the row's data and
+              in the expanded commission, where somebody reproducing the exercise reads
+              them. Who asked left with them on 2026-09-04, when the list became private:
+              it is always you. */}
           {manyTypes && profile ? (
             <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>
           ) : null}
-          {showAuthor && row.author.name ? (
-            <span className="text-small text-muted-foreground">{row.author.name}</span>
-          ) : null}
+          <CardTitle className="text-body">
+            {row.concepts.length > 0 ? row.concepts.join(" · ") : t("generations.noConcepts")}
+          </CardTitle>
 
           <div className="ml-auto flex gap-1">
             {/* A row promoted before the button went keeps saying so: that is data about
@@ -289,11 +265,11 @@ function GenerationCard({
             >
               <Copy />
             </Button>
-            {canDelete ? (
-              <Button variant="ghost" size="icon-sm" aria-label={t("generations.delete")} onClick={onDelete}>
-                <Trash2 />
-              </Button>
-            ) : null}
+            {/* Always offered: every row here is this account's own, and the endpoint
+                refuses anybody else's before this screen could draw one. */}
+            <Button variant="ghost" size="icon-sm" aria-label={t("generations.delete")} onClick={onDelete}>
+              <Trash2 />
+            </Button>
           </div>
         </div>
       </CardHeader>

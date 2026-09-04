@@ -3,22 +3,23 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
-import { api } from "@/lib/api";
 import { useLogin } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
 import { useT } from "@/lib/i18n";
 
+/**
+ * The one door in: a username, a password, and nothing else.
+ *
+ * NO «HE OLVIDADO MI CONTRASEÑA» (2026-09-04, explicit user request). The link opened a
+ * second form on this same screen that asked for a username and always answered the same
+ * sentence — most accounts here have no address at all, so what it usually did was promise
+ * a mail that nobody could receive. The way back in is the one this installation actually
+ * uses: an administrator hands over a reset link from «Cuentas y accesos». `/reset` and
+ * `POST /api/auth/forgot` are untouched — the endpoint is screenless now, not gone — so a
+ * link already issued still works and nothing about the enumeration defences moved.
+ */
 export function LoginScreen() {
-  const [forgotting, setForgotting] = useState(false);
-  return forgotting ? (
-    <ForgotForm onBack={() => setForgotting(false)} />
-  ) : (
-    <LoginForm onForgot={() => setForgotting(true)} />
-  );
-}
-
-function LoginForm({ onForgot }: { onForgot: () => void }) {
   const { t } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,15 +31,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
   };
 
   return (
-    <AuthLayout
-      title={t("auth.login")}
-      description={t("auth.byInvitation")}
-      footer={
-        <button type="button" onClick={onForgot} className="text-muted-foreground hover:underline">
-          {t("auth.forgot")}
-        </button>
-      }
-    >
+    <AuthLayout title={t("auth.login")} description={t("auth.byInvitation")}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="username">{t("auth.username")}</Label>
@@ -73,67 +66,6 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
           {t("common.enter")}
         </Button>
       </form>
-    </AuthLayout>
-  );
-}
-
-function ForgotForm({ onBack }: { onBack: () => void }) {
-  const { t } = useT();
-  const [username, setUsername] = useState("");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await api.forgotPassword(username.trim());
-    } catch {
-      /* The server answers the same either way; so does this screen. */
-    }
-    setBusy(false);
-    setSent(true);
-  };
-
-  return (
-    <AuthLayout
-      title={t("auth.recover")}
-      description={t("auth.recoverBody")}
-      footer={
-        <button type="button" onClick={onBack} className="text-muted-foreground hover:underline">
-          {t("auth.backToLogin")}
-        </button>
-      }
-    >
-      {sent ? (
-        // Never "that account does not exist": this screen is the easiest place to find
-        // out which names have an account, so it declines to say. The second sentence is
-        // not a hedge either — most accounts here have no address at all, and the link
-        // reaches its owner through whoever administra la instalación.
-        <p className="text-body text-muted-foreground">
-          {t("auth.forgotSent")}
-        </p>
-      ) : (
-        <form onSubmit={submit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="forgot-username">{t("auth.username")}</Label>
-            <Input
-              id="forgot-username"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              required
-              autoFocus
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={busy}>
-            {busy ? <Spinner /> : null}
-            {t("login.requestLink")}
-          </Button>
-        </form>
-      )}
     </AuthLayout>
   );
 }

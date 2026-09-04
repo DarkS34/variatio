@@ -339,8 +339,8 @@ export const api = {
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
 
+  // No `scope`: the endpoint answers your own and nothing else (2026-09-04).
   generations: (params: {
-    scope?: "mine" | "workspace";
     concept?: string;
     item_type?: string;
     q?: string;

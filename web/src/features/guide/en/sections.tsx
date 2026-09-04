@@ -456,6 +456,21 @@ function Raw() {
         </Paragraph>
       </Block>
 
+      <Block title="A document this installation has already read arrives read">
+        <Paragraph>
+          A document is identified by its content, not by its name or by the subject it sits in.
+          Upload one this installation has already read — the same exercise sheet in two
+          subjects, or the same file again under another name — and its pages are copied across
+          as you upload it, so the row shows up already up to date, with no model call spent.
+        </Paragraph>
+        <Paragraph>
+          It only happens when everything matches: the file's content and the settings it was
+          read under. If any of that has moved since, the document comes up pending and is read
+          like any other. The pages are <strong>copied</strong>, so correcting one here does not
+          touch the other subject's.
+        </Paragraph>
+      </Block>
+
       <Block title="How each document is doing">
         <Rows
           items={[
@@ -1761,7 +1776,7 @@ function Account() {
           {
             key: "variantes",
             head: t("tabs.variants"),
-            body: 'Everything you have generated, with the commission that produced it: it can be searched, narrowed to yours or widened to the whole subject, relaunched as "more like this one", and deleted.',
+            body: 'Everything YOU have generated, with the commission that produced it: it can be searched, relaunched as "more like this one", and deleted. It is private: even in a subject you share with other people, each of you sees only their own.',
           },
         ]}
       />
@@ -1925,7 +1940,7 @@ function Admin() {
             {
               key: "reset",
               head: <>"{t("acc.resetLink")}"</>,
-              body: "The same link the \"I have forgotten my password\" mail would send, generated here so it can be handed over by hand. It lasts a few minutes and works once.",
+              body: "A link for setting a new password, generated here so it can be handed over by hand: the sign-in screen offers no way to ask for one. It lasts a few minutes and works once.",
             },
             {
               key: "unlock",

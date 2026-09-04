@@ -99,6 +99,13 @@ export function AccountMenu() {
 
           <Separator />
 
+          {/* THE ORDER IS WHERE EACH ENTRY REACHES (2026-09-04, explicit user request:
+              «mueve Theme justo antes de Salir; el botón de administración, justo antes de
+              theme»). The account's own pages first, then what is only to be read, then
+              the one entry that reaches beyond this account, then the screen's own
+              setting, and leaving last. The theme sits by the exit because it is the only
+              row of the menu that is not a destination: it changes the page you are
+              already on. */}
           <div className="p-1">
             <MenuItem
               icon={<UserRound className="size-4" />}
@@ -110,20 +117,10 @@ export function AccountMenu() {
               label={t("nav.myVariants")}
               onClick={() => go("/account/variants")}
             />
-
-            {user.is_admin ? (
-              <MenuItem
-                icon={<ShieldCheck className="size-4" />}
-                label={t("menu.admin")}
-                onClick={() => go("/admin")}
-                tone="admin"
-              />
-            ) : null}
           </div>
 
           <Separator />
-          <ThemeRow />
-          <Separator />
+
           <div className="p-1">
             <MenuItem
               icon={<Compass className="size-4" />}
@@ -135,8 +132,25 @@ export function AccountMenu() {
               label={t("menu.guide")}
               onClick={() => go("/guide")}
             />
-            <Separator />
           </div>
+
+          {user.is_admin ? (
+            <>
+              <Separator />
+              <div className="p-1">
+                <MenuItem
+                  icon={<ShieldCheck className="size-4" />}
+                  label={t("menu.admin")}
+                  onClick={() => go("/admin")}
+                  tone="admin"
+                />
+              </div>
+            </>
+          ) : null}
+
+          <Separator />
+          <ThemeRow />
+          <Separator />
           <div className="p-1">
             <MenuItem
               icon={<LogOut className="size-4" />}

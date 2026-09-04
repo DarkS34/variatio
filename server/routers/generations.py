@@ -7,10 +7,15 @@ curriculum, fixed fields, extra instructions, which model wrote it and whether i
 deliberated — because a variant without its parameters can be read but neither judged nor
 reproduced.
 
-Two scopes, and the default is the narrow one: `mine` is what somebody looking for the
-exercise they wrote yesterday means, `workspace` is what a shared instance is for.
-Neither crosses a workspace boundary — `require_member` resolved that before this module
-ran.
+EVERY ROUTE HERE IS SCOPED TO THE ACCOUNT THAT ASKS (2026-09-04, explicit user request:
+«un único usuario puede ver solamente sus ejercicios generados en su workspace, todo
+privado»). There was a second scope — `workspace`, everything the instance had produced —
+and it is gone rather than defaulted away: a filter somebody can flip is not privacy. The
+membership still bounds the workspace, and the author now bounds the rows inside it, so
+two accounts preparing one subject no longer read each other's exercises. The owner is not
+an exception and neither is the administrator: `_require` answers 404 for a row that is
+not yours, exactly as it does for a row of another instance, because «existe pero no es
+tuya» is itself something this refuses to say.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,7 +23,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from .. import auth
 from ..db import generations as db_generations
-from ..db.models import OWNER, Generation
+from ..db.models import Generation
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
 from .pipeline import pipeline_payload
@@ -56,7 +61,6 @@ def _view(row: Generation, user, include_item: bool = True) -> dict:
 
 @router.get("")
 def listing(
-    scope: str = Query("mine", pattern="^(mine|workspace)$"),
     concept: str | None = None,
     item_type: str | None = None,
     q: str | None = None,
@@ -65,16 +69,15 @@ def listing(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Answer one page of stored variants, yours by default.
+    """Answer one page of your own stored variants.
 
-    `total` is what the current scope and filters match; `workspace_total` is the whole
-    instance, so «mías: 3» can be read against «aquí hay 40» without a second request.
+    `total` is what the filters match over everything you have generated here; there is no
+    count of the instance's, which would report how much other people have produced.
     """
-    author = access.user.id if scope == "mine" else None
     rows, total = db_generations.list_generations(
         db,
         access.workspace.id,
-        author=author,
+        author=access.user.id,
         concept=concept,
         item_type=item_type,
         query=q,
@@ -84,10 +87,8 @@ def listing(
     return {
         "generations": [_view(row, user) for row, user in rows],
         "total": total,
-        "workspace_total": db_generations.count_generations(db, access.workspace.id),
         "limit": limit,
         "offset": offset,
-        "scope": scope,
     }
 
 
@@ -140,21 +141,28 @@ def remove(
     access: auth.Access = auth.VIEW,
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Delete one stored variant, for its author or for the workspace's owner.
+    """Delete one of your own stored variants.
 
-    `auth.EDIT` is not enough on its own: an editor deleting a colleague's variant would
-    be a silent loss of somebody else's work with no way to notice it.
+    `auth.EDIT` is not enough on its own and neither is being the owner: `_require` already
+    refuses a row that is not yours, so nobody can delete somebody else's work — which was
+    the rule before, arrived at now by the same door that hides it.
     """
-    row = _require(db, generation_id, access)
-    if row.user_id != access.user.id and access.role != OWNER:
-        raise HTTPException(403, "Solo quien la generó, o el propietario, puede borrarla.")
-    db_generations.delete_generation(db, row)
+    db_generations.delete_generation(db, _require(db, generation_id, access))
     return {"deleted": generation_id}
 
 
 def _require(db: DbSession, generation_id: int, access: auth.Access) -> Generation:
-    """Load a variant of this workspace, or 404 — a row of another instance is unknown."""
+    """Load one of YOUR variants of this workspace, or 404.
+
+    A row of another instance and a row of another account are both simply unknown: the
+    404 is the same sentence for both, because a 403 would confirm that the id names
+    something.
+    """
     row = db_generations.get_generation(db, generation_id)
-    if row is None or row.workspace_id != access.workspace.id:
-        raise HTTPException(404, "Esa variante no existe.")
+    if (
+        row is None
+        or row.workspace_id != access.workspace.id
+        or row.user_id != access.user.id
+    ):
+        raise HTTPException(404, "Ese ejercicio no existe.")
     return row

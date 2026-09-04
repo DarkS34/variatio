@@ -162,6 +162,64 @@ def same_document(stored: dict, fingerprint: dict) -> bool:
     return {**adopted, "source_sha256": fingerprint["source_sha256"]} == fingerprint
 
 
+# What a fingerprint says about the document's LOCATION rather than about its content. Two
+# copies of one file under two names, in two slots or in two workspaces, differ here and
+# nowhere else, so this is exactly what `reuse_key` drops.
+_PLACEMENT_FIELDS = ("source",)
+
+
+def reuse_key(fingerprint: dict) -> tuple:
+    """What identifies a transcription that another document could adopt whole.
+
+    The fingerprint minus the file's NAME: everything left is either the bytes
+    (`source_sha256`, `source_bytes`) or the settings the pages were produced under, so two
+    documents agreeing on this key would be transcribed into the same pages, one model call
+    at a time, for nothing. The name is dropped and not compared because it is the one field
+    that says where a copy sits rather than what it holds.
+    """
+    return tuple(
+        sorted(
+            (key, _hashable(value))
+            for key, value in fingerprint.items()
+            if key not in _PLACEMENT_FIELDS
+        )
+    )
+
+
+def _hashable(value):
+    """Make one fingerprint value usable inside a key; every one of them is already flat."""
+    return tuple(sorted(value.items())) if isinstance(value, dict) else value
+
+
+def adopt_pages(donor_dir: str | Path, cache_dir: str | Path, fingerprint: dict) -> int:
+    """Copy a finished transcription onto another document, under its own fingerprint.
+
+    Returns how many pages were written, or 0 when the donor turns out not to hold a
+    finished document after all — the caller checked its `_meta.json`, but the pages are
+    read back from disk here and the two are separate files.
+
+    The pages are COPIED and not linked: a hand correction on either side must not rewrite
+    the other, and a workspace that is later deleted must not take somebody else's
+    transcription with it. Only the name in the fingerprint differs from the donor's, so
+    what lands is what the model would have written.
+    """
+    pages = read_pages(donor_dir)
+    if not pages:
+        return 0
+    meta = read_meta(donor_dir)
+    write_pages(
+        cache_dir,
+        pages,
+        fingerprint,
+        valid_seams(meta.get("seams")),
+        {
+            "images_total": meta.get("images_total", 0),
+            "images_unreadable": meta.get("images_unreadable", 0),
+        },
+    )
+    return len(pages)
+
+
 def read_meta(cache_dir: str | Path) -> dict:
     """Read `_meta.json`, answering `{}` for anything unreadable."""
     meta_path = Path(cache_dir) / META_NAME

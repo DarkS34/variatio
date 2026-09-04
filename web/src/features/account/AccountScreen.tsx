@@ -176,12 +176,25 @@ function LanguageCard() {
   );
 }
 
+/**
+ * The three cards of «Cuenta», in two columns that are each their own stack.
+ *
+ * TWO COLUMNS, NOT THREE CELLS OF A GRID (2026-09-04, explicit user request). Three cards
+ * in a two-column grid put the third on a row of its own, and a grid row is as tall as its
+ * tallest cell — so «Idioma» started below the FOOT of «Contraseña» and left a hand's
+ * width of nothing under «Identidad», which is the hole this closes. Each column is a flex
+ * stack now, so a card begins where the one above it ended. The pairing is by size and not
+ * by subject: the password card is the tall one on its own, the two short ones share the
+ * other track, and below `lg` all three stack in this same order.
+ */
 function AccountTabView() {
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
-      <IdentityCard />
+      <div className="flex flex-col gap-4">
+        <IdentityCard />
+        <LanguageCard />
+      </div>
       <PasswordCard />
-      <LanguageCard />
     </div>
   );
 }

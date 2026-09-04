@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
-import { slideOf } from "@/features/tutorial/reveal";
+import { slideOf } from "@/features/tutorial/slides";
 import { useHasWorkspace } from "@/state/auth";
 import { currentStepPath } from "@/lib/steps";
 import { usePipeline, useRaw } from "@/state/queries";

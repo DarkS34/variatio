@@ -80,9 +80,10 @@ def list_generations(
 ) -> tuple[list[tuple[Generation, User | None]], int]:
     """Return one page of this workspace's generations with their authors, and the total.
 
-    `author` narrows to one account and `None` means the whole workspace: «mine» and
-    «everything here» are two legitimate readings of a shared instance, and neither can
-    be inferred from the row, so the caller decides.
+    `author` narrows to one account and `None` means the whole workspace. Every reader of
+    this that answers a request passes an account: a generated exercise is private to
+    whoever asked for it, even inside a shared instance. `None` survives for the callers
+    that count rather than show.
     """
     conditions = [Generation.workspace_id == workspace_id]
     if author is not None:
@@ -126,9 +127,17 @@ def recent_items(
     item_type: str | None = None,
     concepts: list[str] | None = None,
     limit: int = 12,
+    author: int | None = None,
 ) -> list[dict]:
-    """Return the most recent items of this workspace, by modality and by concept."""
+    """Return the most recent items of this workspace, by modality and by concept.
+
+    `author` narrows it to one account, and the caller passes one: what this feeds is the
+    «no repitas estos» block of somebody's prompt, so reading a colleague's statement here
+    would put it in front of them by another door than the one that was closed.
+    """
     conditions = [Generation.workspace_id == workspace_id]
+    if author is not None:
+        conditions.append(Generation.user_id == author)
     if item_type:
         conditions.append(Generation.item_type == item_type)
     rows = session.scalars(

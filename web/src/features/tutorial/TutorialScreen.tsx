@@ -15,7 +15,7 @@ import {
   PROSE,
   SourcesFigure,
 } from "./figures";
-import { SLIDE_COUNT, slidePath } from "./reveal";
+import { SLIDE_COUNT, slidePath } from "./slides";
 
 /**
  * SIX SCREENS, AND THEY ARE THE MANUAL.
@@ -41,15 +41,16 @@ import { SLIDE_COUNT, slidePath } from "./reveal";
  * the same two names (`lib/steps.ts`), or this deck would be promising a shape the
  * navigation does not have.
  *
- * IT RUNS UNDER THE REAL HEADER, AND THE HEADER IS PART OF THE DECK (2026-09-02, explicit
- * user request). The screen used to sit outside the shell with a header of its own, and
- * its two drawings of the bar and of the header were pictures of a thing one screen away.
- * Now the shell's header is above it, and as the slides go by it unlocks what they have
- * explained and points at what they are explaining — `reveal.ts` says which slide opens
- * which part, and the slide is the path, so the shell reads it with no store between
- * them. The two figures went with that: a drawing of the bar directly under the bar, lit
- * up, is one thing said twice. The slide that names the four steps says they «se acaban
- * de encender arriba», which is literally what happens.
+ * NOTHING BUT THE SLIDES (2026-09-04, explicit user request: «borra toda referencia del
+ * navbar del tutorial; borra las animaciones y oculta el navbar»). It is still a route
+ * inside the shell — the slide is the path, which is what lets the browser's back button
+ * leave rather than step through six slides — but the shell draws NO header under it, so
+ * the deck is the whole window. This reverses the arrangement of 2026-09-02, where the
+ * real bar sat above the deck and unlocked its parts one slide at a time: the silhouettes,
+ * the `--attention` rule and `reveal.ts` are gone, and so is every sentence that pointed
+ * at the bar («los cuatro botones que se acaban de encender arriba», «arriba a la
+ * izquierda»). What the deck explains it explains in its own words and its own figures,
+ * which is what makes it readable before the header exists to be pointed at.
  *
  * Every other slide carries a FIGURE. They are in `figures.tsx`, drawn in the ink with a
  * single `--attention` on the one thing the slide is about. Where a figure enumerates, the
@@ -134,8 +135,8 @@ const SLIDES: Slide[] = [
   },
 ];
 
-// The shell unlocks the header by slide number, so the two counts have to agree, and a
-// deck that grew without telling `reveal.ts` would point at the wrong slide in silence.
+// `slides.ts` owns the count, because the routes are one per slide: a deck that grew
+// without telling it would leave its last slide unreachable by URL, in silence.
 if (SLIDES.length !== SLIDE_COUNT) {
   throw new Error(`tutorial: ${SLIDES.length} slides against SLIDE_COUNT = ${SLIDE_COUNT}`);
 }
@@ -327,71 +328,77 @@ export function TutorialScreen({ at }: { at: number }) {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* LA CABECERA DE LA DIAPOSITIVA, FUERA DEL SCROLL. El suelo de dos líneas es lo
-              que fija también el arranque del texto: sin él, una diapositiva de título
-              corto empieza a leerse cuarenta píxeles más arriba que la siguiente. «Saltar»
-              vive en esta fila desde que la cabecera de arriba es la de la aplicación. */}
+          {/* EL CONTADOR Y «SALTAR» SE QUEDAN ARRIBA (2026-09-04, explicit user request).
+              Son la posición en el mazo y la salida: no son la diapositiva, así que no se
+              mueven con ella. Todo lo demás — el título incluido — está centrado en la
+              ventana, lo que revierte «el título nunca se mueve»: centrar es exactamente
+              que el bloque encuentre su sitio según lo que ocupa. El suelo de dos líneas
+              se queda, que es lo que mantiene el mismo ritmo entre título y texto en las
+              diapositivas de una línea y en las de dos. */}
           <div className="shrink-0 px-4 pt-5 sm:px-6 sm:pt-7">
-            <div className={COLUMN}>
-              <div className="flex items-baseline justify-between gap-4">
-                <p className="text-small text-muted-foreground">
-                  {t("tutorial.of", { n: at + 1, total: SLIDE_COUNT })}
-                </p>
-                <button
-                  onClick={leave}
-                  className="text-small text-muted-foreground underline-offset-4 hover:underline"
-                >
-                  {t("tutorial.skip")}
-                </button>
-              </div>
-              <h1 className="mt-6 flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
-                {t(slide.title)}
-              </h1>
+            <div className={cn(COLUMN, "flex items-baseline justify-between gap-4")}>
+              <p className="text-small text-muted-foreground">
+                {t("tutorial.of", { n: at + 1, total: SLIDE_COUNT })}
+              </p>
+              <button
+                onClick={leave}
+                className="text-small text-muted-foreground underline-offset-4 hover:underline"
+              >
+                {t("tutorial.skip")}
+              </button>
             </div>
           </div>
 
           <div className="relative min-h-0 flex-1">
-            <div ref={column} className="h-full overflow-y-auto px-4 sm:px-6">
-              <div className={cn(COLUMN, "flex flex-col gap-8 pb-12 pt-2")}>
-                {/* The lead is in the ink and the aside is not: the lead is the sentence of
-                    the slide, and greying it under points drawn in full ink inverted the
-                    emphasis (2026-09-02) — on the first slide, which is a lead and a figure,
-                    every word was grey. */}
-                <p className={PROSE}>{t(slide.body)}</p>
+            {/* `m-auto` y no `justify-center`: los márgenes automáticos centran el bloque
+                cuando cabe y no recortan por arriba cuando no cabe, que es lo que hace un
+                contenedor con `justify-center` en cuanto el contenido pasa de alto. */}
+            <div ref={column} className="flex h-full flex-col overflow-y-auto px-4 sm:px-6">
+              <div className={cn(COLUMN, "m-auto flex flex-col gap-2 py-6")}>
+                <h1 className="flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
+                  {t(slide.title)}
+                </h1>
+                <div className="flex flex-col gap-8">
+                  {/* The lead is in the ink and the aside is not: the lead is the sentence of
+                      the slide, and greying it under points drawn in full ink inverted the
+                      emphasis (2026-09-02) — on the first slide, which is a lead and a figure,
+                      every word was grey. */}
+                  <p className={PROSE}>{t(slide.body)}</p>
 
-                {slide.figure}
+                  {slide.figure}
 
-                {slide.steps ? <Steps /> : null}
+                  {slide.steps ? <Steps /> : null}
 
-                {/* The points are a ruled column and not a bulleted list: they are
-                    sentences, and a dot in front of a sentence makes it look like an item
-                    in an inventory rather than a thing that is true. The rule on the left
-                    is the same device the rest of the app uses to say «these belong
-                    together». */}
-                {slide.points ? (
-                  <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
-                    {slide.points.map((point) => (
-                      <p key={point} className={PROSE}>
-                        {t(point)}
+                  {/* The points are a ruled column and not a bulleted list: they are
+                      sentences, and a dot in front of a sentence makes it look like an item
+                      in an inventory rather than a thing that is true. The rule on the left
+                      is the same device the rest of the app uses to say «these belong
+                      together». */}
+                  {slide.points ? (
+                    <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
+                      {slide.points.map((point) => (
+                        <p key={point} className={PROSE}>
+                          {t(point)}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {/* No box (2026-09-02, explicit user request). What sets an aside apart is
+                      that it is not an instruction, and muted ink says that without drawing
+                      a container around one paragraph of a page made of paragraphs. */}
+                  {slide.aside ? (
+                    <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.aside)}</p>
+                  ) : null}
+
+                  {slide.outro ? (
+                    <div className="border-t border-border pt-9">
+                      <p className={PROSE}>
+                        {t(hasWorkspace ? slide.outro.choose : slide.outro.create)}
                       </p>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* No box (2026-09-02, explicit user request). What sets an aside apart is
-                    that it is not an instruction, and muted ink says that without drawing
-                    a container around one paragraph of a page made of paragraphs. */}
-                {slide.aside ? (
-                  <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.aside)}</p>
-                ) : null}
-
-                {slide.outro ? (
-                  <div className="border-t border-border pt-9">
-                    <p className={PROSE}>
-                      {t(hasWorkspace ? slide.outro.choose : slide.outro.create)}
-                    </p>
-                  </div>
-                ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             {/* The foot of the column fades into the page. On a slide that fits it covers

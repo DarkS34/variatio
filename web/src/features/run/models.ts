@@ -50,8 +50,8 @@ export interface ModelFamily {
 export const MODEL_FAMILIES: ModelFamily[] = [
   {
     match: "qwen3.8",
-    label: "Qwen3.8", // i18n-exempt
-    url: "https://ollama.com/library/qwen3.8:27b-q8_0",
+    label: "Qwen3.8 (local)", // i18n-exempt
+    url: "https://huggingface.co/Qwen/Qwen3.8-27B",
     blurbKey: "model.blurb.qwen38",
     speed: "slow",
     // THREE and not four: `max` is not a level of this model, it is `high` under another
@@ -65,13 +65,52 @@ export const MODEL_FAMILIES: ModelFamily[] = [
   },
   {
     match: "gemma-4",
-    label: "Gemma 4", // i18n-exempt
+    label: "Gemma 4 (Cerebras)", // i18n-exempt
     url: "https://huggingface.co/google/gemma-4-31B-it",
     blurbKey: "model.blurb.gemma4",
     speed: "fast",
     // Measured: on this family the three levels answer the same, which is why it is the
     // one name «Modelos generadores» ships in `generation.fixed_effort`. The switch stays
     // there — reasoning on or off is a real choice, and it is what the run records.
+    levels: ["low", "medium", "high"],
+  },
+  /*
+   * THE OTHER HALF OF EACH FAMILY (2026-09-04, explicit user request). Both families are
+   * served on BOTH engines under different names — `qwen-3.8-27b` is Cerebras' id for what
+   * Ollama calls `qwen3.8:27b-q8_0`, and `gemma4:31b-it-q4_K_M` is Ollama's for what
+   * Cerebras calls `gemma-4-31b` — and on `cerebras+ollama` an installation may offer all
+   * four at once. Until now the two absent halves fell through to the unknown family, so
+   * they were listed by their bare id with no sentence beside them, which is exactly the
+   * state this table exists to fix.
+   *
+   * The prefixes cannot collide: `qwen3.8` and `qwen-3.8` differ at the fifth character,
+   * `gemma-4` and `gemma4` at the sixth. The LABEL now says which engine serves each,
+   * because that is the whole difference between a family's two halves and the raw name is
+   * not always beside it.
+   */
+  {
+    match: "qwen-3.8",
+    label: "Qwen3.8 (Cerebras)", // i18n-exempt
+    url: "https://huggingface.co/Qwen/Qwen3.8-27B",
+    blurbKey: "model.blurb.qwen38Cerebras",
+    speed: "fast",
+    // Three, because Cerebras has no `max` at all and floors it at `high` — the same
+    // ceiling the local half reaches for a different reason. NO WARNING: what
+    // `effort.warn.qwen38` reports was measured on Ollama and is about the local GPU
+    // («devuelve una respuesta vacía» at `high`), so repeating it here would be quoting a
+    // measurement of another serving stack. This half is unmeasured at every level.
+    levels: ["low", "medium", "high"],
+  },
+  {
+    match: "gemma4",
+    label: "Gemma 4 (local)", // i18n-exempt
+    url: "https://ollama.com/library/gemma4",
+    blurbKey: "model.blurb.gemma4Ollama",
+    speed: "slow",
+    // Declared, not measured. The «los tres niveles responden igual» of the Cerebras half
+    // was measured against Cerebras and says nothing about Ollama's renderer, so the three
+    // stops are drawn and none is locked; `max` is left out because nothing has been seen
+    // to implement it and a stop that changes nothing is a stop that lies.
     levels: ["low", "medium", "high"],
   },
 ];

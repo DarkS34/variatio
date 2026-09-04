@@ -17,9 +17,30 @@ import { familyOf, MODEL_FAMILIES, modelLabel } from "./models";
 
 describe("familyOf", () => {
   it("matches a family by the start of the name, whatever the tag", () => {
-    expect(familyOf("qwen3.8:27b-q8_0").label).toBe("Qwen3.8");
-    expect(familyOf("qwen3.8:27b-q5_K_M").label).toBe("Qwen3.8");
-    expect(familyOf("gemma-4-31b").label).toBe("Gemma 4");
+    expect(familyOf("qwen3.8:27b-q8_0").label).toBe("Qwen3.8 (local)");
+    expect(familyOf("qwen3.8:27b-q5_K_M").label).toBe("Qwen3.8 (local)");
+    expect(familyOf("gemma-4-31b").label).toBe("Gemma 4 (Cerebras)");
+  });
+
+  /* Each family is served on both engines under a different name, and the two prefixes
+     have to stay apart under a rule that only looks at the start of the string: they
+     differ by one hyphen, in opposite places. */
+  it("tells a family's two halves apart by the engine that serves it", () => {
+    expect(familyOf("qwen-3.8-27b").label).toBe("Qwen3.8 (Cerebras)");
+    expect(familyOf("gemma4:31b-it-q4_K_M").label).toBe("Gemma 4 (local)");
+    expect(familyOf("qwen-3.8-27b").blurbKey).not.toBe(
+      familyOf("qwen3.8:27b-q8_0").blurbKey,
+    );
+    expect(familyOf("gemma4:31b-it-q4_K_M").blurbKey).not.toBe(
+      familyOf("gemma-4-31b").blurbKey,
+    );
+  });
+
+  /* The local half's warning quotes a measurement taken on Ollama, so it may not travel
+     to the half Cerebras serves. */
+  it("does not lend the local half's warning to the remote one", () => {
+    expect(familyOf("qwen3.8:27b-q8_0").warningKey).toBe("effort.warn.qwen38");
+    expect(familyOf("qwen-3.8-27b").warningKey).toBeUndefined();
   });
 
   it("keeps an unrecognised model offerable, with its own name and nothing else", () => {

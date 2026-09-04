@@ -349,7 +349,7 @@ export const en: Catalogue = {
 
   "tutorial.s3.title": "Construction phase: preparing the subject",
   "tutorial.s3.body":
-    "Before you ask it for anything, the system has to learn the subject: it works through the material you provide and pulls out what it needs. There are four steps, in this order, and they are the four buttons that have just lit up above: the progress bar tells you where you are at any moment.",
+    "Before you ask it for anything, the system has to learn the subject: it works through the material you provide and pulls out what it needs. There are four steps and they go in this order, each one resting on the one before it.",
   "tutorial.s3.step1":
     "You upload your documents, the notes on one side and the exercises on the other, for the system to work through. Internally it builds a knowledge graph of the concepts and their relations, among other things.",
   "tutorial.s3.step2":
@@ -385,9 +385,9 @@ export const en: Catalogue = {
   "tutorial.s6.b1":
     "Whenever the system produces something — the syllabus, the exercise types… — you are offered the chance to correct or change it. It is entirely optional and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
   "tutorial.s6.outro.create":
-    "You do not have a subject yet. Create it at the top left, where it says «No subject», and start at step 1: until it exists, the steps above lead nowhere. In your account menu, on the right, are «My exercises», the guide and this explanation in case you want to see it again.",
+    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and the two tests to hand; in your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
   "tutorial.s6.outro.choose":
-    "Pick your subject at the top left — or create another one right there — and start at step 1. In your account menu, on the right, are «My exercises», the guide and this explanation in case you want to see it again.",
+    "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -578,11 +578,11 @@ export const en: Catalogue = {
   "chips.alreadyThere": "Already in the list: {values}",
   "ui.closeNotice": "Close notice",
   "ui.moreInfo": "More information",
+  "generations.noSubject": "You do not have a subject yet",
+  "generations.noSubjectHint": "What you generate inside a subject is kept here. Create your own, or ask whoever administers the installation for access to an existing one.",
   "generations.title": "Generated exercises",
   "generations.whatIsHere": "What is here",
   "generations.inBank": "in the bank · {id}",
-  "generations.mine": "Mine",
-  "generations.wholeWorkspace": "From the whole subject",
   "generations.search": "Search the statement, the concept or the instructions",
   "generations.search.placeholder": "Search the statement, the concept or the instructions…",
   "generations.noMatch": "Nothing matches that search",
@@ -621,7 +621,6 @@ export const en: Catalogue = {
   "invite.createAccount": "Create the account",
   "auth.kindInvite": "invitation",
   "auth.kindLink": "link",
-  "login.requestLink": "Request the link",
   "invite.toWorkspace": "You have been invited to «{workspace}» with {role} permission.",
   "invite.toApp": "You have been invited to Variatio.",
   "invite.teachOrStudy": "Do you study or do you teach?",
@@ -644,8 +643,6 @@ export const en: Catalogue = {
   "auth.missingCodeBody": "Open the whole link exactly as you received it.",
   "auth.login": "Sign in",
   "auth.byInvitation": "Access is by invitation: there is no open registration.",
-  "auth.recover": "Recover access",
-  "auth.recoverBody": "A single-use link is generated for setting a new password.",
   "reset.done": "Password changed",
   "reset.doneBody": "You have signed in with the new one. You have been signed out on every other device.",
   "reset.newPassword": "New password",
@@ -894,9 +891,7 @@ export const en: Catalogue = {
   "run.taggedCount": { one: "1 tagged", other: "{n} tagged" },
   "run.nothingRun": "Nothing has run in this session.",
   "auth.username": "Username",
-  "auth.forgot": "I have forgotten my password",
   "auth.backToLogin": "Go to the sign-in screen",
-  "auth.forgotSent": "If that account exists, the link has been issued and expires in 45 minutes. It arrives by email only if the account has an address; if not, ask whoever administers the installation for it.",
   "invite.usernameHelp": "This is what you will sign in with. Lowercase, digits, dot, hyphen or underscore.",
   "invite.visibleName": "Display name",
   "account.identity.name": "Name",
@@ -1818,6 +1813,8 @@ export const en: Catalogue = {
   "effort.medium": "Medium",
   "effort.high": "High",
   "effort.max": "Maximum",
+  "model.blurb.qwen38Cerebras": "The same model that reasons, served by Cerebras instead of by the GPU here: it deliberates just the same, and the deliberation is paid for in seconds. In exchange, the statement and the context leave this machine.",
+  "model.blurb.gemma4Ollama": "Gemma 4 on the GPU here: nothing leaves the machine, and in exchange there is more waiting and the GPU is shared with whatever is being built.",
   "effort.warn.qwen38": "Above «Medium», qwen3.8 deliberates for thousands of words on the local GPU: every exercise can take many minutes, and at the high level it has been measured returning an empty answer.",
   // COUNTS ------------------------------------------------------------------------------
   "count.items": { one: "{n} exercise", other: "{n} exercises" },
