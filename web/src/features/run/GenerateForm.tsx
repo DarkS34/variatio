@@ -52,6 +52,7 @@ import {
   effortAdjustable,
   effortPolicy,
   effortWarning,
+  fixedEffort,
 } from "./effort";
 import { EffortSlider } from "./EffortSlider";
 import { FormStep } from "./FormStep";
@@ -352,18 +353,24 @@ export function GenerateForm({
   const offered = health.data?.models.offered ?? NONE;
   const remoteModels = health.data?.models.remote ?? NONE;
   const missingModels = health.data?.models.missing ?? NONE;
-  const fixedEffort = health.data?.models.fixed_effort ?? NONE;
+  const fixedModels = health.data?.models.fixed_effort ?? NONE;
+  const fixedLevels = health.data?.models.fixed_effort_levels;
   // The first offered one is what the server resolves an absent `model` to, so it is what
   // the screen has to name while nobody has chosen. A stored choice the installation has
   // stopped offering is not one: the panel edits that list while this form is open.
   const generationModel =
     state.model && offered.includes(state.model) ? state.model : offered[0];
   const policy = effortPolicy(generationModel);
-  const effort = clampEffort(state.effort, policy);
-  const warning = effortWarning(effort, policy);
   // Whether the slider is offered for THIS model. A measurement, and the installation's to
   // record: see `generation.fixed_effort`.
-  const adjustable = effortAdjustable(generationModel, fixedEffort);
+  const adjustable = effortAdjustable(generationModel, fixedModels);
+  // And with which level a locked one is called: the installation's declaration, or — with
+  // none — the engine's own default, which travels as a bare `true` rather than as a level
+  // this form picked. Until 2026-09-04 the slider was merely HIDDEN and the last level it
+  // held was sent anyway, so «lo fija la instalación» was fixed by the browser.
+  const locked = adjustable ? null : fixedEffort(generationModel, fixedLevels, policy);
+  const effort = adjustable ? clampEffort(state.effort, policy) : (locked ?? "low");
+  const warning = adjustable ? effortWarning(effort, policy) : null;
 
   // Same reconciliation the curriculum preset gets, and for the same reason: a value the
   // form can no longer show must not be what the request carries. The panel edits the
@@ -951,8 +958,12 @@ export function GenerateForm({
                   </span>
                 </Switch>
                 <span className="ml-auto text-[12px] nums text-muted-foreground">
+                  {/* The level is named whenever anybody has decided it — the slider here,
+                      or «Modelos generadores» for a locked model. What reads plain is the
+                      one state where nothing has: locked with no level declared, which the
+                      engine resolves. */}
                   {state.think
-                    ? adjustable
+                    ? adjustable || locked
                       ? t("form.think.on", { level: t(EFFORT_LABELS[effort]).toLowerCase() })
                       : t("form.think.onPlain")
                     : t("form.think.off")}
@@ -961,8 +972,10 @@ export function GenerateForm({
               {/* The slider only where it changes the answer, and WHICH models those are is
                   the installation's since 2026-09-01 (`generation.fixed_effort`). On a
                   model measured to answer the same at every level, drawing it offers a
-                  decision and then explains that it makes no difference. `effort` is still
-                  sent — clamped to a level the engine accepts — it just stops being asked. */}
+                  decision and then explains that it makes no difference. What is sent is
+                  whatever the form holds and the server has the last word on it — the same
+                  rule the model's own name follows, because the panel edits both lists
+                  while a job sits in the queue. */}
               {state.think && adjustable ? (
                 <EffortSlider
                   levels={policy.levels}

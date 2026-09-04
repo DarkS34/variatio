@@ -169,6 +169,9 @@ export interface Health {
      *  to answer the same at every level. Read defensively: an API older than this bundle
      *  sends none, and every model is then adjustable, which is the safe half. */
     fixed_effort?: string[];
+    /** With which level each of those is called, declared by the installation. A locked
+     *  model absent from the map is called with whatever the engine resolves. */
+    fixed_effort_levels?: Record<string, string>;
     installed: string[];
     missing: string[];
     /** Required models a remote provider serves: never on this disk, never «sin instalar». */

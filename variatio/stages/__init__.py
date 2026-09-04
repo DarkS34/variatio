@@ -37,8 +37,10 @@ from .build import (
 from .generate import (
     UnofferedModelError,
     generate,
+    fixed_effort_levels,
     fixed_effort_models,
     generation_models,
+    resolve_generation_effort,
     resolve_generation_model,
 )
 from .index import (
@@ -87,6 +89,7 @@ __all__ = [
     "document_pages_listing",
     "exemplars_profile_path",
     "generate",
+    "fixed_effort_levels",
     "fixed_effort_models",
     "generation_models",
     "initialize",
@@ -96,6 +99,7 @@ __all__ = [
     "load_concept_sources",
     "load_content_context",
     "missing_artifacts",
+    "resolve_generation_effort",
     "resolve_generation_model",
     "restamp_descriptions",
     "save_bank",

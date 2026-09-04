@@ -91,3 +91,57 @@ def test_a_fixed_effort_value_reads_as_a_comma_list_or_is_refused():
     assert coerce(setting, []) == []
     with pytest.raises(SettingError):
         coerce(setting, {"gemma-4-31b": True})
+
+
+# WITH WHICH LEVEL a locked model is called is the other half of the same decision, and a
+# setting since 2026-09-04: the lock said the requester does not choose the effort, and the
+# level was then whatever the browser's slider happened to hold.
+@pytest.fixture
+def locked(monkeypatch):
+    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
+    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
+
+
+def test_a_locked_model_is_called_with_the_declared_level(locked):
+    assert stages.resolve_generation_effort("el-rapido", "low") == "high"
+    assert stages.resolve_generation_effort("el-rapido", True) == "high"
+
+
+def test_resolving_the_effort_twice_says_the_same_thing(locked):
+    once = stages.resolve_generation_effort("el-rapido", "low")
+    assert stages.resolve_generation_effort("el-rapido", once) == once
+
+
+def test_a_model_whose_effort_is_not_locked_keeps_what_arrived(locked):
+    assert stages.resolve_generation_effort("el-que-delibera", "max") == "max"
+    assert stages.resolve_generation_effort("el-que-delibera", True) is True
+
+
+def test_a_locked_model_with_no_level_declared_is_left_to_the_engine(monkeypatch):
+    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
+    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {})
+    # `True`, and not a level this layer picked: `inference._think_option` is the one place
+    # that turns it into `DEFAULT_THINK_EFFORT`, which is what the lock has always promised.
+    assert stages.resolve_generation_effort("el-rapido", "max") is True
+
+
+def test_reasoning_switched_off_is_never_turned_back_on(locked):
+    # The lock is about how much a model deliberates, never about whether it does.
+    assert stages.resolve_generation_effort("el-rapido", False) is False
+
+
+def test_the_level_of_a_model_nobody_locked_is_kept_and_not_read(monkeypatch):
+    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", [])
+    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
+    assert stages.fixed_effort_levels() == {"el-rapido": "high"}
+    assert stages.resolve_generation_effort("el-rapido", "low") == "low"
+
+
+def test_a_level_outside_the_scale_is_refused_by_the_setting():
+    setting = BY_KEY["generation.fixed_effort_levels"]
+    assert coerce(setting, {"gemma-4-31b": "HIGH"}) == {"gemma-4-31b": "high"}
+    assert coerce(setting, {}) == {}
+    with pytest.raises(SettingError):
+        coerce(setting, {"gemma-4-31b": "altísimo"})
+    with pytest.raises(SettingError):
+        coerce(setting, ["gemma-4-31b"])

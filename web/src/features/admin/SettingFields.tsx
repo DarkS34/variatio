@@ -10,6 +10,7 @@ import { Alert, Checkbox, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
+import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/features/run/effort";
 import { familyOf } from "@/features/run/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
 import type {
@@ -67,6 +68,12 @@ export function formatValue(value: unknown, t: Translate["t"]): string {
   if (value === null || value === undefined) return "—";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
   if (typeof value === "boolean") return t(value ? "cfg.on" : "cfg.off");
+  // A map reads as its pairs: the one setting shaped like this is the effort each locked
+  // model is called with, and `String()` on it says «[object Object]» in the save bar.
+  if (typeof value === "object") {
+    const pairs = Object.entries(value as Record<string, unknown>);
+    return pairs.length ? pairs.map(([key, item]) => `${key}: ${String(item)}`).join(", ") : "—";
+  }
   return String(value);
 }
 
@@ -79,6 +86,8 @@ export function GroupCard({
   onReset,
   models,
   offered,
+  levels,
+  onLevels,
 }: {
   title: string | null;
   settings: ConfigSetting[];
@@ -88,6 +97,9 @@ export function GroupCard({
   models: ConfigPayload["models"] | null;
   /** Forwarded to `SettingRow` for the one field whose rows ARE the offered models. */
   offered?: string[];
+  /** The same field's other half: with which level each locked model is called. */
+  levels?: Record<string, string>;
+  onLevels?: (next: Record<string, string>) => void;
 }) {
   const current = (setting: ConfigSetting) =>
     setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
@@ -109,6 +121,8 @@ export function GroupCard({
             onReset={() => onReset(setting.key)}
             models={models}
             offered={offered}
+            levels={levels}
+            onLevels={onLevels}
           />
         ))}
       </CardContent>
@@ -474,6 +488,12 @@ export function GenerationModelsField({
  * A name in the setting that is no longer offered keeps its row, at the foot and marked:
  * dropping it silently would throw away a measurement the next save could not recover, and
  * the setting deliberately does not validate against the offer for the same reason.
+ *
+ * A LOCKED ROW ALSO SAYS WITH WHICH LEVEL IT IS CALLED (2026-09-04, explicit user request),
+ * which is the other half of the same decision and therefore the same row rather than a
+ * field of its own further down. It writes into a SECOND setting, `generation.fixed_effort_
+ * levels`, so the level survives taking the lock off for an afternoon — the level is kept
+ * when the switch goes back on, and it is simply not read.
  */
 export function FixedEffortField({
   id,
@@ -481,14 +501,19 @@ export function FixedEffortField({
   value,
   disabled,
   offered,
+  levels,
   onChange,
+  onLevels,
 }: {
   id: string;
   label: string;
   value: unknown;
   disabled: boolean;
   offered: string[];
+  /** `generation.fixed_effort_levels` as it stands in the draft, model to level. */
+  levels: Record<string, string>;
   onChange: (next: unknown) => void;
+  onLevels: (next: Record<string, string>) => void;
 }) {
   const { t } = useT();
   const fixed = Array.isArray(value) ? value.map(String) : [];
@@ -497,6 +522,17 @@ export function FixedEffortField({
 
   const set = (model: string, adjustable: boolean) =>
     onChange(adjustable ? fixed.filter((name) => name !== model) : [...fixed, model]);
+
+  // An empty choice is «the one the engine resolves», which is an absence and not a value:
+  // it is what the setting means by a locked model it does not name.
+  const setLevel = (model: string, level: string) => {
+    if (level) {
+      onLevels({ ...levels, [model]: level });
+      return;
+    }
+    const { [model]: _dropped, ...rest } = levels;
+    onLevels(rest);
+  };
 
   return (
     <div className="space-y-1.5">
@@ -510,6 +546,9 @@ export function FixedEffortField({
           {rows.map((model) => {
             const adjustable = !fixed.includes(model);
             const family = familyOf(model);
+            // Read exactly as the generate screen reads it, through the same function, so
+            // the note here cannot claim a level the form does not draw.
+            const declared = adjustable ? null : fixedEffort(model, levels, family);
             return (
               <li
                 key={model}
@@ -523,12 +562,32 @@ export function FixedEffortField({
                   <span className="mt-0.5 block text-small text-muted-foreground">
                     {adjustable
                       ? t("cfg.effort.adjustableNote", { levels: family.levels.length })
-                      : t("cfg.effort.fixedNote")}
+                      : declared
+                        ? t("cfg.effort.fixedNoteLevel", {
+                            level: t(EFFORT_LABELS[declared]).toLowerCase(),
+                          })
+                        : t("cfg.effort.fixedNote")}
                   </span>
                 </span>
                 {!offered.includes(model) ? (
                   <Badge variant="outline">{t("cfg.effort.notOffered")}</Badge>
                 ) : null}
+                {adjustable ? null : (
+                  <Select
+                    className="w-auto"
+                    aria-label={t("cfg.effort.levelFor", { model })}
+                    value={levels[model] ?? ""}
+                    disabled={disabled}
+                    onChange={(event) => setLevel(model, event.target.value)}
+                  >
+                    <option value="">{t("cfg.effort.engineLevel")}</option>
+                    {family.levels.map((level: EffortLevel) => (
+                      <option key={level} value={level}>
+                        {t(EFFORT_LABELS[level])}
+                      </option>
+                    ))}
+                  </Select>
+                )}
                 <Switch
                   checked={adjustable}
                   disabled={disabled}
@@ -541,6 +600,7 @@ export function FixedEffortField({
         </ul>
       )}
       <p className="text-small text-muted-foreground">{t("cfg.effort.hint")}</p>
+      <p className="text-small text-muted-foreground">{t("cfg.effort.hintLevel")}</p>
     </div>
   );
 }
@@ -553,6 +613,8 @@ export function SettingRow({
   onReset,
   models,
   offered,
+  levels,
+  onLevels,
 }: {
   setting: ConfigSetting;
   value: unknown;
@@ -562,6 +624,10 @@ export function SettingRow({
   /** The offered models as they stand in the draft. Only `generation.fixed_effort` reads
    *  it: its rows ARE that list, and it has to follow an edit made in the same visit. */
   offered?: string[];
+  /** `generation.fixed_effort_levels` and its setter, for that same row: locking a model
+   *  and saying at which level it is then called are one decision with two settings. */
+  levels?: Record<string, string>;
+  onLevels?: (next: Record<string, string>) => void;
 }) {
   const { t } = useT();
   const label = setting.name || setting.key;
@@ -610,7 +676,9 @@ export function SettingRow({
               value={value}
               disabled={disabled}
               offered={offered ?? []}
+              levels={levels ?? {}}
               onChange={onChange}
+              onLevels={onLevels ?? (() => undefined)}
             />
           ) : setting.key === "engine.cerebras_models" ? (
             <CerebrasModelsField

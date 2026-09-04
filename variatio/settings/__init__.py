@@ -23,11 +23,21 @@ def sources() -> dict[str, str]:
     return dict(_sources)
 
 
+# The keys whose value is a map, so `read_file` stops walking at them rather than turning
+# one setting into one undeclared key per entry. Computed once: the registry is a constant.
+_MAP_KEYS = store.map_keys(list(REGISTRY))
+
+
+def _read_file() -> dict[str, object]:
+    """Read `config.json` knowing which of its objects are values and not namespaces."""
+    return store.read_file(store.CONFIG_PATH, _MAP_KEYS)
+
+
 def load() -> None:
     """Resolve every setting from the registry, `config.json` and the environment."""
     global _values, _sources
     _values, _sources = store.resolve(
-        list(REGISTRY), store.read_file(store.CONFIG_PATH), dict(os.environ)
+        list(REGISTRY), _read_file(), dict(os.environ)
     )
 
 
@@ -109,7 +119,7 @@ def update(patch: dict[str, object]) -> set[Impact]:
     active, and only there: the other profiles travel through the write untouched.
     """
     coerced = store.validate_patch(list(REGISTRY), patch)
-    flat = store.read_file(store.CONFIG_PATH)
+    flat = _read_file()
     profiles = _stored_profiles(flat, active_engine())
     target = str(coerced.get(store.ENGINE_KEY) or active_engine() or "") or None
     scoped = {key: value for key, value in coerced.items() if BY_KEY[key].scope == "engine"}
@@ -138,7 +148,7 @@ def reset(keys: list[str]) -> set[Impact]:
     """Remove keys from `config.json`, which is the only way a row reads «por defecto» again."""
     _refuse_unresettable(keys)
     engine = active_engine()
-    flat = store.read_file(store.CONFIG_PATH)
+    flat = _read_file()
     profiles = _stored_profiles(flat, engine)
     for key in keys:
         if BY_KEY[key].scope == "engine" and engine:

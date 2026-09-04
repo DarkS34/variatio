@@ -260,6 +260,10 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     # raises and the job fails with it said in one sentence — the submit route refused it
     # already, so getting here means the offered list changed under a queued job.
     model = stages.resolve_generation_model(params.get("model"))
+    # And with it the effort, because a model whose level the installation has locked is
+    # not the requester's to adjust. Resolved here as well as inside `stages.generate` —
+    # the call is idempotent — so the log line and the row say what actually ran.
+    think = stages.resolve_generation_effort(model, think)
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     detail = _commission_detail(fixed, curriculum, instructions, think)

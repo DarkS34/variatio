@@ -5,6 +5,7 @@ import {
   EFFORT_ORDER,
   effortAdjustable,
   effortWarning,
+  fixedEffort,
   type EffortLevel,
 } from "./effort";
 import { familyOf, MODEL_FAMILIES, modelLabel } from "./models";
@@ -141,5 +142,32 @@ describe("effortAdjustable", () => {
   it("degrades to adjustable with no list at all", () => {
     expect(effortAdjustable("gemma-4-31b", [])).toBe(true);
     expect(effortAdjustable(undefined, ["gemma-4-31b"])).toBe(true);
+  });
+});
+
+/* WITH WHICH LEVEL a locked model is called is the other half of it, and the installation's
+   too since 2026-09-04 (`generation.fixed_effort_levels`). Absent means the engine resolves
+   it, which is what the lock did silently before there was anywhere to say otherwise. */
+describe("fixedEffort", () => {
+  const gemma = familyOf("gemma-4-31b");
+
+  it("returns the level the installation declared for that model", () => {
+    expect(fixedEffort("gemma-4-31b", { "gemma-4-31b": "high" }, gemma)).toBe("high");
+  });
+
+  it("is null when nothing is declared for it", () => {
+    expect(fixedEffort("gemma-4-31b", { otro: "high" }, gemma)).toBeNull();
+    expect(fixedEffort("gemma-4-31b", {}, gemma)).toBeNull();
+    expect(fixedEffort("gemma-4-31b", undefined, gemma)).toBeNull();
+    expect(fixedEffort(undefined, { "gemma-4-31b": "high" }, gemma)).toBeNull();
+  });
+
+  it("clamps to a level the family actually implements", () => {
+    // Cerebras has no `max` at all, so gemma's declared scale stops at `high`.
+    expect(fixedEffort("gemma-4-31b", { "gemma-4-31b": "max" }, gemma)).toBe("high");
+  });
+
+  it("ignores a level outside the scale rather than passing it on", () => {
+    expect(fixedEffort("gemma-4-31b", { "gemma-4-31b": "altísimo" }, gemma)).toBeNull();
   });
 });

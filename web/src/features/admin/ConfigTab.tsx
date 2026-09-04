@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Save,
   ScanSearch,
-  ScrollText,
   SlidersHorizontal,
   Tags,
   Wrench,
@@ -43,14 +42,38 @@ const OFFERED_GROUP = "Modelos generadores"; // i18n-exempt
 const PHASE_MODEL_PREFIX = "models.phases.";
 const OTHERS_KEY = "__otros__";
 export const ENGINE_GROUPS = ["Motor", "Túnel SSH"]; // i18n-exempt
+// Claimed and given NO section, exactly as the engine's two are: the level the process
+// logs at is read from `VARIATIO_LOG_LEVEL` by whoever is reading the log, and it was a
+// whole page of the panel for three rows nobody edits from a browser. Claiming it is what
+// stops the unclaimed-group fallback from handing it a page again in silence.
+const UNLISTED_GROUPS = ["Registro"]; // i18n-exempt
 const CEREBRAS_KEYS = [
   "engine.cerebras_base_url",
   "engine.cerebras_api_key",
   "engine.cerebras_models",
 ];
 
+// Drawn INSIDE another setting's field and therefore never as a row of its own: the level a
+// locked model is called with is asked on that model's own line, in `generation.fixed_
+// effort`. A row of its own would offer one level for a map keyed by model — the generic
+// `choices` control has no idea it is looking at a map. It still travels in the save bar's
+// list of pending changes, which reads `payload.settings` unfiltered.
+const DRAWN_ON_ANOTHER_ROW = ["generation.fixed_effort_levels"];
+
+// The two halves of the nav: what MODEL answers, and what the pipeline does with it.
+// A section declares which half it belongs to and the nav draws them as two lists with a
+// rule between them — eight destinations in one column is a list to be read rather than a
+// place to be found.
+type Family = "models" | "pipeline";
+
+const FAMILIES: { key: Family; labelKey: Key }[] = [
+  { key: "models", labelKey: "cfg.family.models" },
+  { key: "pipeline", labelKey: "cfg.family.pipeline" },
+];
+
 type Section = {
   key: string;
+  family: Family;
   // A section built from a group the table below does not claim carries the server's own
   // name, which has no key: `labelKey` is null there and the raw string is drawn instead.
   label: string | null;
@@ -70,6 +93,7 @@ const SECTIONS: Section[] = [
   // beside them are keys.
   {
     key: "modelos",
+    family: "models",
     label: null,
     labelKey: "cfg.section.models",
     icon: Brain,
@@ -78,6 +102,7 @@ const SECTIONS: Section[] = [
   },
   {
     key: "ofrecidos",
+    family: "models",
     label: null,
     labelKey: "cfg.section.offered",
     icon: Cpu,
@@ -85,7 +110,17 @@ const SECTIONS: Section[] = [
     groups: [OFFERED_GROUP],
   },
   {
+    key: "evaluacion",
+    family: "models",
+    label: null,
+    labelKey: "cfg.section.evaluation",
+    icon: FlaskConical,
+    descriptionKey: "cfg.section.evaluationDesc",
+    groups: ["Evaluación"], // i18n-exempt
+  },
+  {
     key: "muestreo",
+    family: "pipeline",
     label: null,
     labelKey: "cfg.section.sampling",
     icon: SlidersHorizontal,
@@ -94,6 +129,7 @@ const SECTIONS: Section[] = [
   },
   {
     key: "constructores",
+    family: "pipeline",
     label: null,
     labelKey: "cfg.section.builders",
     icon: Hammer,
@@ -102,6 +138,7 @@ const SECTIONS: Section[] = [
   },
   {
     key: "recuperacion",
+    family: "pipeline",
     label: null,
     labelKey: "cfg.section.retrieval",
     icon: ScanSearch,
@@ -110,27 +147,12 @@ const SECTIONS: Section[] = [
   },
   {
     key: "generacion",
+    family: "pipeline",
     label: null,
     labelKey: "cfg.section.generation",
     icon: Tags,
     descriptionKey: "cfg.section.generationDesc",
     groups: ["Etiquetado y generación"], // i18n-exempt
-  },
-  {
-    key: "evaluacion",
-    label: null,
-    labelKey: "cfg.section.evaluation",
-    icon: FlaskConical,
-    descriptionKey: "cfg.section.evaluationDesc",
-    groups: ["Evaluación"], // i18n-exempt
-  },
-  {
-    key: "registro",
-    label: null,
-    labelKey: "cfg.section.logging",
-    icon: ScrollText,
-    descriptionKey: "cfg.section.loggingDesc",
-    groups: ["Registro"],
   },
 ];
 
@@ -194,10 +216,16 @@ export function ConfigTab() {
   const engineName = String(
     ("engine.name" in draft ? draft["engine.name"] : stored.get("engine.name")) ?? "ollama",
   );
-  const hidden = new Set(engineName === "cerebras+ollama" ? [] : CEREBRAS_KEYS);
+  const hidden = new Set([
+    ...(engineName === "cerebras+ollama" ? [] : CEREBRAS_KEYS),
+    ...DRAWN_ON_ANOTHER_ROW,
+  ]);
   const named = new Set(payload.groups);
   const orphans = payload.settings.filter(
-    (setting) => !named.has(setting.group) && !ENGINE_GROUPS.includes(setting.group),
+    (setting) =>
+      !named.has(setting.group) &&
+      !ENGINE_GROUPS.includes(setting.group) &&
+      !UNLISTED_GROUPS.includes(setting.group),
   );
   const byGroup = (group: string) =>
     payload.settings.filter((setting) => setting.group === group && !hidden.has(setting.key));
@@ -205,13 +233,18 @@ export function ConfigTab() {
   // setting sits beside the thing it governs. They are claimed here WITHOUT a section, or
   // the unclaimed-group fallback below would helpfully hand them a page of their own again
   // and the move would silently undo itself.
-  const claimed = new Set([...SECTIONS.flatMap((section) => section.groups), ...ENGINE_GROUPS]);
+  const claimed = new Set([
+    ...SECTIONS.flatMap((section) => section.groups),
+    ...ENGINE_GROUPS,
+    ...UNLISTED_GROUPS,
+  ]);
   const sections: Section[] = [
     ...SECTIONS,
     ...payload.groups
       .filter((group) => !claimed.has(group))
       .map((group) => ({
         key: `grupo:${group}`,
+        family: "pipeline" as Family,
         label: group,
         labelKey: null,
         icon: Wrench,
@@ -222,6 +255,7 @@ export function ConfigTab() {
       ? [
           {
             key: OTHERS_KEY,
+            family: "pipeline" as Family,
             label: null,
             labelKey: "cfg.section.others" as Key,
             icon: Wrench,
@@ -255,8 +289,10 @@ export function ConfigTab() {
   const activeSection = sections.find((section) => section.key === active) ?? sections[0];
   const term = search.trim().toLowerCase();
   const matches = term
-    ? payload.settings.filter((setting) =>
-        `${setting.name} ${setting.key} ${setting.group}`.toLowerCase().includes(term),
+    ? payload.settings.filter(
+        (setting) =>
+          !hidden.has(setting.key) &&
+          `${setting.name} ${setting.key} ${setting.group}`.toLowerCase().includes(term),
       )
     : null;
 
@@ -272,6 +308,24 @@ export function ConfigTab() {
     return Array.isArray(value) ? value.map(String) : [];
   })();
 
+  // And the level declared for each locked one, read from the draft for the same reason:
+  // the two settings are edited on one row and saved in one request.
+  const levelsNow = (() => {
+    const setting = payload.settings.find(
+      (entry) => entry.key === "generation.fixed_effort_levels",
+    );
+    const value = setting
+      ? setting.key in draft
+        ? draft[setting.key]
+        : (setting.value ?? setting.default)
+      : null;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, string>)
+      : {};
+  })();
+  const setLevels = (next: Record<string, string>) =>
+    setValue("generation.fixed_effort_levels", next);
+
   const row = (setting: ConfigSetting) => (
     <SettingRow
       key={setting.key}
@@ -281,6 +335,8 @@ export function ConfigTab() {
       onReset={() => reset.mutate(setting.key)}
       models={payload.models ?? null}
       offered={offeredNow}
+      levels={levelsNow}
+      onLevels={setLevels}
     />
   );
 
@@ -315,36 +371,51 @@ export function ConfigTab() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {sections.map((section) => {
-              const pending = pendingOf(section);
-              const current = !matches && section.key === activeSection.key;
-              return (
-                <li key={section.key} className="shrink-0 lg:shrink">
-                  <button
-                    type="button"
-                    aria-current={current ? "true" : undefined}
-                    onClick={() => {
-                      setSearch("");
-                      setActive(section.key);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
-                      current
-                        ? "border-border bg-card text-foreground shadow-raised"
-                        : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                    )}
-                  >
-                    <section.icon className="size-4 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {section.labelKey ? t(section.labelKey) : section.label}
-                    </span>
-                    {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Two lists with a rule between them rather than one of eight: the caption
+              says what its half is about, and the rule is what makes the second half read
+              as another kind of question instead of as more of the first. */}
+          {FAMILIES.map(({ key, labelKey }, index) => {
+            const family = sections.filter((section) => section.family === key);
+            if (family.length === 0) return null;
+            return (
+              <div
+                key={key}
+                className={cn("space-y-1", index > 0 && "border-t border-border pt-3")}
+              >
+                <p className="px-1 text-micro text-muted-foreground">{t(labelKey)}</p>
+                <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+                  {family.map((section) => {
+                    const pending = pendingOf(section);
+                    const current = !matches && section.key === activeSection.key;
+                    return (
+                      <li key={section.key} className="shrink-0 lg:shrink">
+                        <button
+                          type="button"
+                          aria-current={current ? "true" : undefined}
+                          onClick={() => {
+                            setSearch("");
+                            setActive(section.key);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
+                            current
+                              ? "border-border bg-card text-foreground shadow-raised"
+                              : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                          )}
+                        >
+                          <section.icon className="size-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {section.labelKey ? t(section.labelKey) : section.label}
+                          </span>
+                          {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
 
         <div className="min-w-0 space-y-4">
@@ -391,6 +462,8 @@ export function ConfigTab() {
                   onReset={(key) => reset.mutate(key)}
                   models={payload.models ?? null}
                   offered={offeredNow}
+                  levels={levelsNow}
+                  onLevels={setLevels}
                 />
               ) : (
                 activeSection.groups
@@ -405,6 +478,8 @@ export function ConfigTab() {
                       onReset={(key) => reset.mutate(key)}
                       models={payload.models ?? null}
                       offered={offeredNow}
+                      levels={levelsNow}
+                      onLevels={setLevels}
                     />
                   ))
               )}
@@ -493,9 +568,6 @@ function PipelineCard({
     <Card>
       <CardContent className="space-y-4 pt-4">
         {residents.map(row)}
-        <p className="max-w-2xl text-small text-muted-foreground">
-          {t("cfg.pipelineNote")}
-        </p>
         <ReasoningPipeline
           lanes={lanes}
           settings={settings}

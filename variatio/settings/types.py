@@ -20,7 +20,7 @@ class Impact(str, Enum):
     LOCKED = "locked"
 
 
-KINDS = ("str", "int", "float", "bool", "list[str]", "dict[str,int]")
+KINDS = ("str", "int", "float", "bool", "list[str]", "dict[str,int]", "dict[str,str]")
 
 SCOPES = ("global", "engine")
 
@@ -88,11 +88,22 @@ def _canonical(setting: Setting, value: object) -> object:
     """Return the declared spelling of a `choices` value, matched without regard to case.
 
     A closed vocabulary is matched case-insensitively so `VARIATIO_LOG_LEVEL=debug` resolves,
-    and what comes back is the spelling the registry declared.
+    and what comes back is the spelling the registry declared. On a map, a closed vocabulary
+    constrains the VALUES — the keys are whatever the setting is keyed by, a model name in
+    the only one that declares both.
     """
-    if not setting.choices or not isinstance(value, str):
+    if not setting.choices:
         return value
-    for choice in setting.choices:
+    if isinstance(value, dict):
+        return {key: _one_canonical(setting, item) for key, item in value.items()}
+    return _one_canonical(setting, value)
+
+
+def _one_canonical(setting: Setting, value: object) -> object:
+    """Return the declared spelling of one `choices` value, or the value untouched."""
+    if not isinstance(value, str):
+        return value
+    for choice in setting.choices or ():
         if isinstance(choice, str) and choice.lower() == value.lower():
             return choice
     return value
@@ -113,6 +124,8 @@ def _convert(setting: Setting, raw: object) -> object:
         return _string_list(setting, raw)
     if kind == "dict[str,int]":
         return _int_map(setting, raw)
+    if kind == "dict[str,str]":
+        return _string_map(setting, raw)
     if isinstance(raw, (dict, list, tuple, bool)):
         label = setting.name or setting.key
         raise SettingError(f"'{label}' espera un texto, no {type(raw).__name__}")
@@ -137,6 +150,14 @@ def _int_map(setting: Setting, raw: object) -> dict[str, int]:
     return {str(key): _number(setting, item, int) for key, item in raw.items()}
 
 
+def _string_map(setting: Setting, raw: object) -> dict[str, str]:
+    """Cast to a mapping of strings to strings, dropping an entry with no value."""
+    if not isinstance(raw, dict):
+        label = setting.name or setting.key
+        raise SettingError(f"'{label}' espera un objeto, no {type(raw).__name__}")
+    return {str(key): str(item) for key, item in raw.items() if item not in (None, "")}
+
+
 def _number(setting: Setting, raw: object, cast):
     """Cast to a number, refusing a bool — which Python would otherwise accept as 0 or 1."""
     if isinstance(raw, bool):
@@ -152,9 +173,12 @@ def _number(setting: Setting, raw: object, cast):
 def _check(setting: Setting, value: object) -> None:
     """Raise SettingError when the converted value falls outside what was declared."""
     label = setting.name or setting.key
-    if setting.choices and value not in setting.choices:
-        options = ", ".join(str(choice) for choice in setting.choices)
-        raise SettingError(f"'{label}': «{value}» no está entre {options}")
+    if setting.choices:
+        offered = value.values() if isinstance(value, dict) else [value]
+        for item in offered:
+            if item not in setting.choices:
+                options = ", ".join(str(choice) for choice in setting.choices)
+                raise SettingError(f"'{label}': «{item}» no está entre {options}")
     if setting.min_items is not None and len(value) < setting.min_items:
         raise SettingError(
             f"'{label}': hacen falta al menos {setting.min_items}, y llegan {len(value)}"

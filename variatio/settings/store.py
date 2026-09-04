@@ -29,14 +29,34 @@ def nest(flat: dict[str, object]) -> dict:
     return out
 
 
-def _flatten(node: object, prefix: str = "") -> dict[str, object]:
+def map_keys(settings: list[Setting]) -> frozenset[str]:
+    """Return the keys whose value IS a map, so the walk down the file stops at them.
+
+    A setting shaped like `{"gemma-4-31b": "high"}` is indistinguishable from a namespace
+    once it is on disk, and flattening it turns one declared key into as many undeclared
+    ones as it has entries — the setting then reads as absent and every entry warns.
+    """
+    return frozenset(setting.key for setting in settings if setting.kind.startswith("dict["))
+
+
+def _is_map(prefix: str, maps: frozenset[str]) -> bool:
+    """Whether this dotted key names a map setting, inside a profile or at the top level."""
+    if prefix in maps:
+        return True
+    parts = prefix.split(".", 2)
+    return len(parts) == 3 and parts[0] == PROFILES_KEY and parts[2] in maps
+
+
+def _flatten(
+    node: object, prefix: str = "", maps: frozenset[str] = frozenset()
+) -> dict[str, object]:
     """Turn a nested object back into the dotted keys the registry declares."""
-    if not isinstance(node, dict):
+    if not isinstance(node, dict) or _is_map(prefix, maps):
         return {prefix: node}
     out: dict[str, object] = {}
     for key, value in node.items():
         child = f"{prefix}.{key}" if prefix else str(key)
-        out.update(_flatten(value, child))
+        out.update(_flatten(value, child, maps))
     return out
 
 
@@ -69,7 +89,7 @@ def _rename_legacy(flat: dict[str, object]) -> dict[str, object]:
     return out
 
 
-def read_file(path: str | Path) -> dict[str, object]:
+def read_file(path: str | Path, maps: frozenset[str] = frozenset()) -> dict[str, object]:
     """Read `config.json` into flat keys; an unreadable or malformed file is no file."""
     path = Path(path)
     if not path.is_file():
@@ -82,7 +102,7 @@ def read_file(path: str | Path) -> dict[str, object]:
     if not isinstance(raw, dict):
         logger.error(f"[config] '{path}' does not hold an object")
         return {}
-    return _rename_legacy(_flatten(raw))
+    return _rename_legacy(_flatten(raw, maps=maps))
 
 
 ENGINE_KEY = "engine.name"

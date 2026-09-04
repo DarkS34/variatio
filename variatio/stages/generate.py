@@ -26,6 +26,30 @@ def fixed_effort_models() -> list[str]:
     return [str(model) for model in config.FIXED_EFFORT_MODELS]
 
 
+def fixed_effort_levels() -> dict[str, str]:
+    """Return the level each locked model is called with, by model name.
+
+    Only the names in `fixed_effort_models()` are read from it; one that is not locked is
+    kept and ignored, so taking the lock off for an afternoon does not lose the level.
+    """
+    return {str(model): str(level) for model, level in config.FIXED_EFFORT_LEVELS.items()}
+
+
+def resolve_generation_effort(model: str, think: bool | str) -> bool | str:
+    """Return the reasoning a commission actually runs with, once the model is known.
+
+    A model whose effort the installation has locked is not the requester's to adjust, so
+    whatever arrived is replaced by the declared level — and by `True` when none is
+    declared, which is the engine's own default and what the lock has always promised. It
+    is idempotent, so the handler may resolve it for its log line and `generate` again for
+    the call without the two being able to disagree. Reasoning switched OFF is left alone:
+    the lock is about how much, never about whether.
+    """
+    if not think or model not in fixed_effort_models():
+        return think
+    return fixed_effort_levels().get(model) or True
+
+
 def resolve_generation_model(requested: str | None) -> str:
     """Return the model a commission will be written with, or raise if it is not offered.
 
@@ -70,6 +94,7 @@ def generate(
         raise ValueError(
             "No target concepts: none were given and the exemplars bank has no tagged concepts"
         )
+    writer = resolve_generation_model(model)
     return context.generator.generate(
         concepts=targets,
         item_type=item_type,
@@ -77,8 +102,8 @@ def generate(
         fixed=fixed,
         curriculum=curriculum,
         instructions=instructions,
-        think=think,
-        model=resolve_generation_model(model),
+        think=resolve_generation_effort(writer, think),
+        model=writer,
         avoid=avoid,
         on_accepted=on_accepted,
     )

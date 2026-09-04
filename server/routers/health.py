@@ -82,6 +82,9 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             # Which of those may not have their effort adjusted per commission. It rides
             # here for the same reason `offered` does: the form already polls this route.
             "fixed_effort": stages.fixed_effort_models(),
+            # And with which level each of those is called, so the form shows the one the
+            # installation declared instead of the last one its own slider held.
+            "fixed_effort_levels": stages.fixed_effort_levels(),
             "installed": installed,
             "missing": _missing_models(required, installed, remote),
             "remote": sorted(remote & set(required.values())),

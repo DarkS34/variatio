@@ -40,6 +40,24 @@ export function effortAdjustable(model: string | undefined, fixed: string[]): bo
   return !model || !fixed.includes(model);
 }
 
+/**
+ * The level a locked model is called with, or null when the installation declared none.
+ *
+ * `generation.fixed_effort_levels`, beside the list of locked names on `/api/health`. It is
+ * clamped to the levels the family implements for the same reason the slider's value is —
+ * a level the model does not have is a level it will not answer at — and read defensively:
+ * an API older than this bundle sends no map at all, and the engine resolves it as before.
+ */
+export function fixedEffort(
+  model: string | undefined,
+  levels: Record<string, string> | undefined,
+  policy: ModelFamily,
+): EffortLevel | null {
+  const declared = model ? levels?.[model] : undefined;
+  if (!declared || !EFFORT_ORDER.includes(declared as EffortLevel)) return null;
+  return clampEffort(declared as EffortLevel, policy);
+}
+
 export function effortWarning(level: EffortLevel, policy: ModelFamily): Key | null {
   if (!policy.warnAbove || !policy.warningKey) return null;
   return EFFORT_ORDER.indexOf(level) > EFFORT_ORDER.indexOf(policy.warnAbove)

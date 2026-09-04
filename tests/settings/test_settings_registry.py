@@ -129,5 +129,9 @@ def test_the_registry_holds_what_this_work_transcribed():
     # started being read one by one: a reasoning switch of their own (named) and its effort
     # (unnamed), and NO model setting — the picture phase reads with the page phase's model,
     # so a document is read with one model whichever route its pieces take.
-    assert len(REGISTRY) == 148
-    assert len(BY_NAME) == 117
+    # 149 and 118 on 2026-09-04, when `generation.fixed_effort_levels` arrived: locking a
+    # model's effort said only that the requester does not choose it, and the level was then
+    # whatever the browser's own slider happened to hold — so the installation could bar the
+    # decision without being able to take it.
+    assert len(REGISTRY) == 149
+    assert len(BY_NAME) == 118

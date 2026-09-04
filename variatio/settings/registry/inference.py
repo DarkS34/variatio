@@ -228,7 +228,29 @@ también lo son, y el panel escribe aquí exactamente el nombre de la fila que s
 
 NOMBRAR AQUÍ UN MODELO QUE NO SE OFREZCA no es un error y no se rechaza: se ofrece y se
 retira un modelo mucho más a menudo de lo que se vuelve a medir su razonamiento, y perder la
-medición al quitarlo de la lista un rato obligaría a repetirla."""
+medición al quitarlo de la lista un rato obligaría a repetirla.
+
+CON QUÉ NIVEL SE LE LLAMA lo dice `generation.fixed_effort_levels`, que es el otro lado de
+esta misma decisión: aquí se dice que el encargo no lo elige y allí, con cuál se llama."""
+
+
+_FIXED_LEVEL_DOC = """CON QUÉ NIVEL SE LLAMA A UN MODELO DE ESFUERZO FIJO. Un mapa de nombre de modelo a nivel
+(`low`, `medium`, `high`, `max`), vacío por defecto. Solo se lee para los nombres que están
+en `generation.fixed_effort`: bloquear el deslizador y decidir con qué nivel se llama son la
+misma decisión vista por sus dos caras, y quien la toma es quien administra la instalación.
+
+UN MODELO BLOQUEADO SIN NIVEL DECLARADO se llama con el que resuelva el motor
+(`inference.DEFAULT_THINK_EFFORT`, «low» en los dos), que es lo que la documentación de
+`generation.fixed_effort` ha prometido siempre y lo que el encargo hacía sin decirlo: hasta
+el 2026-09-04 el navegador escondía el deslizador pero seguía mandando el último nivel que
+tuviera puesto, así que el bloqueo decía «lo fija la instalación» y lo fijaba el navegador.
+
+ES UN AJUSTE APARTE de la lista de bloqueados, y no un mapa que sustituya a la lista, por la
+misma razón que la lista es aparte de la de ofrecidos: quitar el candado un rato no debe
+tirar la medición de con qué nivel conviene llamar a ese modelo.
+
+UN NOMBRE QUE NO ESTÉ BLOQUEADO no es un error y no se rechaza — se guarda y no se lee. De
+ámbito `engine`, como las otras dos listas, porque los nombres son los del motor."""
 
 
 _OFFERED_DOC = """QUÉ MODELOS PUEDE ELEGIR QUIEN PIDE UN ÍTEM, y en qué orden se le ofrecen. Sustituye desde
@@ -903,6 +925,20 @@ entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
         scope="engine",
         engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
         doc=_FIXED_EFFORT_DOC,
+    ),
+    Setting(
+        key="generation.fixed_effort_levels",
+        name="FIXED_EFFORT_LEVELS",
+        kind="dict[str,str]",
+        default={},
+        group=OFFERED_GROUP,
+        # Read by the same two readers as the list it accompanies — the generate screen and
+        # the handler that resolves a commission. No context to rebuild, no index to
+        # re-embed.
+        impact=Impact.NONE,
+        scope="engine",
+        choices=("low", "medium", "high", "max"),
+        doc=_FIXED_LEVEL_DOC,
     ),
     Setting(
         key="models.phases.admissibility",
