@@ -238,14 +238,28 @@ export function EvaluationScreen() {
     setSessionId(null);
   };
 
+  // A comparison that is over has one honest way on: ordering the next one. Landing on
+  // «Mis evaluaciones» left somebody looking at a table of what they had already judged,
+  // one more click away from the only thing there is to do here.
+  const orderAnother = () => {
+    setSessionId(null);
+    setTab("compose");
+  };
+
   // Straight on to the next thing somebody handed over, which is what keeps a queue a
-  // queue. Falls back to the list when there is nothing left.
+  // queue. With nothing left it lands on the form — or, for an evaluator who is not
+  // offered one, on the list.
   const openNext = () => {
     const next = (queue?.items ?? []).find(
       (item) => !item.decided && !item.declined && item.id !== sessionId,
     );
-    setSessionId(next ? next.id : null);
-    if (!next) setTab(CROSS_EVALUATION ? "queue" : "history");
+    if (next) {
+      setSessionId(next.id);
+      return;
+    }
+    setSessionId(null);
+    if (CROSS_EVALUATION) setTab("queue");
+    else setTab(canCompose ? "compose" : "history");
   };
 
   const typeLabel = (key: string) => profile?.item_types?.[key]?.label || key;
@@ -279,10 +293,18 @@ export function EvaluationScreen() {
           </InfoHint>
         </h1>
         <GuideLink slug="evaluate" />
+        {/* The button is named after where it LANDS: closing a session leaves you on the
+            tab you came from, and with the form as the default that was the one control on
+            the screen reading «Volver a la lista» while returning to the form. */}
         {showComparison ? (
-          <Button variant="outline" size="sm" className="ml-auto" onClick={closeSession}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={tab === "compose" && canCompose ? orderAnother : closeSession}
+          >
             <Plus />
-            {t("eval.backToList")}
+            {tab === "compose" && canCompose ? t("eval.orderAnother") : t("eval.backToList")}
           </Button>
         ) : null}
       </header>
@@ -435,12 +457,14 @@ export function EvaluationScreen() {
 
           {session.revealed ? (
             <Button variant="outline" className="w-full" onClick={openNext}>
-              <Scale />
+              {queue && queue.pending > 0 ? <Scale /> : <Plus />}
               {queue && queue.pending > 0
                 ? t("eval.nextInQueue", {
                     pending: plural("eval.pendingCount", queue.pending),
                   })
-                : t("eval.backToList")}
+                : canCompose
+                  ? t("eval.orderAnother")
+                  : t("eval.backToList")}
             </Button>
           ) : null}
 

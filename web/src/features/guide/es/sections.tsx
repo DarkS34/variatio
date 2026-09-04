@@ -1543,8 +1543,9 @@ function Evaluate() {
               Es <strong>opcional</strong>: la comparación ya quedó registrada al elegir.
             </>,
             <>
-              Debajo, «{t("eval.backToList")}» cierra la sesión y te devuelve a tu histórico,
-              desde donde se pide la siguiente.
+              Debajo, «{t("eval.orderAnother")}» cierra la sesión y te deja en el formulario,
+              listo para pedir la siguiente. Si alguien te ha dejado comparaciones en la cola,
+              ese mismo botón abre la que viene.
             </>,
           ]}
         />

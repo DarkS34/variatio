@@ -897,7 +897,7 @@ export const en: Catalogue = {
   "result.itemN": "## Exercise {n}",
   // WHAT THE BLOCK RULE FOUND -------------------------------------------------------------
   "shell.reopen": "Reopen it",
-  "run.steps": "Steps",
+  "run.steps": "Construction details",
   "run.untitled": "Run",
   "run.itemCount": { one: "1 exercise", other: "{n} exercises" },
   "run.taggedCount": { one: "1 tagged", other: "{n} tagged" },
@@ -1261,6 +1261,7 @@ export const en: Catalogue = {
   "eval.whatFor": "What it is for",
   "eval.whatFor.body": "The same commission is solved three ways: a commercial model with an ordinary prompt, a similarity search over the bank, and this system with the syllabus. You choose blind and only afterwards is it revealed which was which.",
   "eval.backToList": "Back to the list",
+  "eval.orderAnother": "Order another evaluation",
   "chain.pending": "Still to sign off: {stages}",
   "chain.goFix": "Go to Step {n} · {label}",
   "eval.blocked": "Evaluation blocked",

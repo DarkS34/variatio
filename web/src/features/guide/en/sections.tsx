@@ -1554,8 +1554,9 @@ function Evaluate() {
               when you chose.
             </>,
             <>
-              Below it, "{t("eval.backToList")}" closes the session and takes you back to your
-              history, which is where the next one is asked for.
+              Below it, "{t("eval.orderAnother")}" closes the session and leaves you on the
+              form, ready to ask for the next one. If somebody has left comparisons in your
+              queue, that same button opens the one that comes next.
             </>,
           ]}
         />

@@ -1030,7 +1030,7 @@ export const es = {
   "result.itemN": "## Ejercicio {n}",
   // WHAT THE BLOCK RULE FOUND -------------------------------------------------------------
   "shell.reopen": "Reabrirla",
-  "run.steps": "Pasos",
+  "run.steps": "Detalles de la construcción",
   "run.untitled": "Ejecución",
   "run.itemCount": { one: "1 ejercicio", other: "{n} ejercicios" },
   "run.taggedCount": { one: "1 etiquetado", other: "{n} etiquetados" },
@@ -1394,6 +1394,7 @@ export const es = {
   "eval.whatFor": "Para qué sirve",
   "eval.whatFor.body": "El mismo encargo se resuelve de tres formas: un modelo comercial con un prompt corriente, una búsqueda por similitud sobre el banco, y este sistema con el temario. Eliges a ciegas y solo después se revela cuál era cuál.",
   "eval.backToList": "Volver a la lista",
+  "eval.orderAnother": "Encargar otra evaluación",
   "chain.pending": "Falta dar por bueno: {stages}",
   "chain.goFix": "Ir al Paso {n} · {label}",
   "eval.blocked": "Evaluación bloqueada",
