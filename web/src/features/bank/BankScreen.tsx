@@ -28,7 +28,7 @@ import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/u
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
-import { TAGGING_METHOD_KEYS, truncate } from "@/lib/format";
+import { truncate } from "@/lib/format";
 import { readableValue } from "@/lib/text";
 import type {
   BankItem,
@@ -37,7 +37,6 @@ import type {
   Coverage,
   KgConcept,
   StageState,
-  TaggingTrace,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -71,41 +70,6 @@ function orderedConcepts(item: BankItem): string[] {
     .sort((a, b) => Number(b === item.primary_concept) - Number(a === item.primary_concept));
 }
 
-/** How the tagger reached its answer and what else it weighed. Information and not a
- *  control, so it is drawn the same whether the stage may be corrected or only read. */
-function TaggingPanel({ trace }: { trace: TaggingTrace }) {
-  const { t } = useT();
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <p className="mb-2 text-small font-medium text-muted-foreground">
-        {t("bank.taggingMethod", {
-          method: TAGGING_METHOD_KEYS[trace.method]
-            ? t(TAGGING_METHOD_KEYS[trace.method])
-            : trace.method,
-        })}
-      </p>
-      {trace.candidates.length === 0 ? (
-        <p className="text-small text-[var(--attention)]">{t("bank.noCandidates")}</p>
-      ) : (
-        <ul className="space-y-1">
-          {trace.candidates.map(([name, score]) => (
-            <li key={name} className="flex items-center gap-2 text-small">
-              <span className="w-12 shrink-0 nums text-muted-foreground">{score.toFixed(3)}</span>
-              <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary"
-                  style={{ width: `${Math.min(100, score * 100)}%` }}
-                />
-              </div>
-              <span className="min-w-0 truncate">{name}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 interface ItemDialogProps {
   item: BankItem;
   fields: string[];
@@ -127,6 +91,26 @@ interface ItemDialogProps {
  * the only place an exercise can be read entire with everything it was tagged with. Reading
  * one is precisely what this step asks of the person.
  */
+/** One field as it is READ: the key as its label, code in a block, prose as prose. The
+ *  dialog and the expanded row both draw fields with it, so opening an exercise one way or
+ *  the other cannot show the same field two ways. */
+function FieldBlock({ field, value, primary = false }: { field: string; value: unknown; primary?: boolean }) {
+  const { t } = useT();
+  return (
+    <div className="space-y-1">
+      <Label>
+        {field}
+        {primary ? t("bank.primaryField") : ""}
+      </Label>
+      {isCodeField(field) ? (
+        <CodeBlock code={fieldText(value)} maxHeight="16rem" />
+      ) : (
+        <p className="whitespace-pre-wrap text-body">{fieldText(value)}</p>
+      )}
+    </div>
+  );
+}
+
 function ItemDialog(props: ItemDialogProps) {
   return useStageLocked() ? <ItemReading {...props} /> : <ItemEditor {...props} />;
 }
@@ -148,56 +132,35 @@ function ItemReading({ item, fields, primaryField, onClose }: ItemDialogProps) {
         </Button>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="space-y-3">
-          {fields.map((field) => {
-            const value = item[field];
-            // An empty field is skipped rather than drawn empty: here it is nothing to
-            // read, where in the form it is a gap somebody may want to fill.
-            if (isEmptyField(value)) return null;
-            return (
-              <div key={field} className="space-y-1">
-                <Label>
-                  {field}
-                  {field === primaryField ? t("bank.primaryField") : ""}
-                </Label>
-                {isCodeField(field) ? (
-                  <CodeBlock code={fieldText(value)} maxHeight="16rem" />
-                ) : (
-                  <p className="whitespace-pre-wrap text-body">{fieldText(value)}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <div className="mb-2 flex items-center gap-1.5">
-              <Label>{t("bank.concepts")}</Label>
-              <InfoHint label={t("bank.howTagged")}>{t("bank.howTaggedBody")}</InfoHint>
-            </div>
-            {concepts.length === 0 ? (
-              <Badge variant="attention">
-                <TriangleAlert />
-                {t("bank.noConcept")}
+      {/* ONE COLUMN, THE CONCEPTS FIRST (2026-09-04, explicit user request to fix how an
+          exercise looks when opened). The right column used to hold the tagger's trace
+          beside the concepts; with the trace gone it held three badges and a hand's width
+          of nothing, while the exercise was read through half the dialog. The concepts
+          are the answer of this step, so they lead, and the fields take the width. */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
+          <Label>{t("bank.concepts")}</Label>
+          <InfoHint label={t("bank.howTagged")}>{t("bank.howTaggedBody")}</InfoHint>
+          {concepts.length === 0 ? (
+            <Badge variant="attention">
+              <TriangleAlert />
+              {t("bank.noConcept")}
+            </Badge>
+          ) : (
+            concepts.map((concept) => (
+              <Badge key={concept} variant={concept === item.primary_concept ? "default" : "secondary"}>
+                {concept}
               </Badge>
-            ) : (
-              <div className="flex flex-wrap gap-1">
-                {concepts.map((concept) => (
-                  <Badge
-                    key={concept}
-                    variant={concept === item.primary_concept ? "default" : "secondary"}
-                  >
-                    {concept}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {item._tagging ? <TaggingPanel trace={item._tagging} /> : null}
+            ))
+          )}
         </div>
+        {/* An empty field is skipped rather than drawn empty: here it is nothing to read,
+            where in the form it is a gap somebody may want to fill. */}
+        {fields.map((field) =>
+          isEmptyField(item[field]) ? null : (
+            <FieldBlock key={field} field={field} value={item[field]} primary={field === primaryField} />
+          ),
+        )}
       </div>
     </Dialog>
   );
@@ -310,7 +273,6 @@ function ItemEditor({
             />
           </div>
 
-          {item._tagging ? <TaggingPanel trace={item._tagging} /> : null}
         </div>
       </div>
 
@@ -365,21 +327,39 @@ function ItemRow({
   // holds control characters where its accents used to be. Nothing here can repair it —
   // only a re-extraction can — but until this the row looked exactly like a sound one.
   const broken = hasBrokenText(item);
+  // A CHEVRON THAT OPENS ONTO NOTHING IS NOT DRAWN. What the fold holds is the fields the
+  // modality declares beside the statement, and an item may carry none of them — on the
+  // reference bank `solucion` and `explicacion` came back null for every exercise, so with
+  // the tagger's trace gone (2026-09-04, explicit user request) the control would have been
+  // a button down forty rows that answers with an empty box. The whole item is still one
+  // click away: the statement itself opens it.
   const ordered = orderedConcepts(item);
   const shownConcepts = ordered.slice(0, MAX_ROW_CONCEPTS);
   const restConcepts = ordered.slice(MAX_ROW_CONCEPTS);
+  const hasDetail = secondaryFields.some((field) => !isEmptyField(item[field]));
 
   return (
     <>
-      {/* `group` is what lets the row's own actions appear on hover. They are two icons
-          repeated on every one of forty rows, so at rest they are forty pieces of furniture
-          that say the same thing; on the row you are pointing at they are the two things
-          there are to do with it. `focus-within` is the other half and is not optional: a
-          control that only exists under a mouse pointer does not exist for a keyboard. */}
+      {/* `group` is what lets the row's BIN appear on hover: it is one icon repeated on
+          every one of forty rows, so at rest it is forty pieces of furniture saying the
+          same thing, and on the row you are pointing at it is the thing there is to do
+          with it. `focus-within` is the other half and is not optional: a control that
+          only exists under a mouse pointer does not exist for a keyboard. The chevron is
+          NOT in that group — see the cell at the end of the row. */}
       <TR
         selected={selected && !reviewing}
         className={cn(
-          "group align-top",
+          // THE CHEVRON MAY NOT MOVE WHEN IT IS PRESSED (2026-09-04, explicit user request:
+          // «se abre y luego no se puede cerrar o abrir otro»). `TR`'s own `align-top` never
+          // reached a cell — `vertical-align` is not inherited, and `TD` sets `align-middle`
+          // itself — so every cell was centred in a row that GROWS on opening: measured, the
+          // chevron slid 48 px down on a 176 px row, out from under the pointer that had
+          // just clicked it, and a second click landed on the empty top of the same cell and
+          // did nothing. With a code field in the detail the row is several hundred pixels
+          // tall and the control ends up in the middle of nowhere. `[&>td]` is what actually
+          // reaches the cells: `.row > td` outranks `.align-middle` on specificity, so it
+          // wins wherever the two meet.
+          "group align-top [&>td]:align-top",
           // EVERY COLLAPSED ROW IS THE SAME HEIGHT (2026-09-01, explicit user request).
           // A table whose rows breathe with the length of a statement cannot be scanned
           // down a column, and the two cells that made them breathe are bounded rather
@@ -387,10 +367,12 @@ function ItemRow({
           // rows of badges. `height` on a table row is a MINIMUM, so it only does half the
           // work — the clamping is the other half, and without it a long statement would
           // still push past. An open row drops it: the detail it reveals is the point.
-          // 5rem is the MEASURED ceiling of a full one: the id's line box is the table's
-          // own 21.7px and not micro's 14.85 (an inline in a block sits on the parent's
-          // strut), plus two clamped lines at 21.7 and `py-2` either side.
-          !open && "h-20",
+          // 5.5rem is the MEASURED ceiling of a full one since the scale moved on
+          // 2026-09-04 (5rem before it): the id's line box is the table's own 21px and
+          // not micro's 16.2 (an inline in a block sits on the parent's strut), plus two
+          // clamped lines at 23.25, `py-2` either side and the border — 84.5 measured,
+          // and at 5rem a one-line statement sat at 80 beside them.
+          !open && "h-[5.5rem]",
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         )}
       >
@@ -418,52 +400,26 @@ function ItemRow({
             // NOT `block`: `line-clamp-2` works by setting `display: -webkit-box`, and a
             // `block` beside it wins in the cascade and switches the clamp off in silence
             // — measured, `display` computed `block` and a long statement ran to a third
-            // line. `-webkit-box` is block-level anyway, so nothing else needed it.
-            className="line-clamp-2 text-left text-body hover:underline"
+            // line. `-webkit-box` is block-level anyway, so nothing else needed it. An
+            // OPEN row drops both the clamp and the 200-character cut: the fold is where
+            // the exercise is read, and a statement cut at «…» over its own solution was
+            // the row saying less in the state that exists to say more.
+            className={cn(
+              "text-left text-body whitespace-pre-wrap hover:underline",
+              // `block` only when the clamp is off: clamped, `-webkit-box` is already
+              // block-level; open, an inline button lands on the id's own line.
+              open ? "block" : "line-clamp-2",
+            )}
           >
-            {truncate(text, 200)}
+            {open ? text : truncate(text, 200)}
           </button>
-          {open ? (
-            <div className="mt-2 space-y-2">
-              {secondaryFields.map((field) => {
-                const value = item[field];
-                if (isEmptyField(value)) return null;
-                return isCodeField(field) ? (
-                  <CodeBlock key={field} code={fieldText(value)} maxHeight="16rem" />
-                ) : (
-                  <div key={field} className="space-y-0.5">
-                    <Label>{field}</Label>
-                    <p className="whitespace-pre-wrap text-small text-muted-foreground">
-                      {fieldText(value)}
-                    </p>
-                  </div>
-                );
-              })}
-              {item._tagging ? (
-                <div className="rounded-md border border-border p-2">
-                  <p className="mb-1 text-small text-muted-foreground">
-                    {TAGGING_METHOD_KEYS[item._tagging.method]
-                      ? t(TAGGING_METHOD_KEYS[item._tagging.method])
-                      : item._tagging.method}
-                    {item._tagging.model ? ` · ${item._tagging.model}` : ""}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {item._tagging.candidates.map(([name, score]) => (
-                      <span key={name} className="text-small">
-                        <span className="nums text-muted-foreground">
-                          {score.toFixed(3)}
-                        </span>{" "}
-                        {name}
-                      </span>
-                    ))}
-                    {item._tagging.candidates.length === 0 ? (
-                      <span className="text-small text-[var(--attention)]">
-                        {t("tagging.no_candidates")}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+          {open && hasDetail ? (
+            <div className="mt-3 space-y-3">
+              {secondaryFields.map((field) =>
+                isEmptyField(item[field]) ? null : (
+                  <FieldBlock key={field} field={field} value={item[field]} />
+                ),
+              )}
             </div>
           ) : null}
         </TD>
@@ -476,8 +432,9 @@ function ItemRow({
           {/* Two rows of badges and no more, so the row keeps its height. What is cut is
               named rather than hidden: `+N` carries the rest in its title, and the primary
               concept is drawn FIRST so the one the tagger settled on is never the one that
-              falls off the end. */}
-          <div className="flex max-h-[2.875rem] max-w-64 flex-wrap gap-1 overflow-hidden">
+              falls off the end. Two rows measure 48 px with micro at 12 (a badge is 22.2
+              plus the 4 of `gap-1`), and at 2.875rem the second row lost its last 2 px. */}
+          <div className="flex max-h-[3.125rem] max-w-64 flex-wrap gap-1 overflow-hidden">
             {broken ? (
               <Badge variant="danger" title={t("bank.brokenTextHint")}>
                 <TriangleAlert />
@@ -519,24 +476,35 @@ function ItemRow({
           </TD>
         ) : null}
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
-          <div
-            className={cn(
-              "inline-flex transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
-              // The expanded row keeps its chevron visible: the control that opened it is
-              // the control that closes it, and hiding it would leave the detail with no
-              // visible way back.
-              open ? "opacity-100" : "opacity-0",
-            )}
-          >
-            {/* Opening the row is not a correction and stays in both states: it is how the
-                rest of an exercise is read, which is the whole task of this step. */}
-            <Button variant="ghost" size="icon-sm" onClick={() => setOpen((value) => !value)} aria-label={t("bank.detail")}>
-              <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
-            </Button>
+          <div className="inline-flex">
+            {/* THE CHEVRON IS ALWAYS DRAWN, AND THE DELETE IS NOT (2026-09-04, explicit user
+                request: «se abre y luego no se puede cerrar o abrir cualquier otro»). The
+                row's two controls were one `group-hover` block together, on the rule that
+                per-row chrome repeated forty times is furniture — true of the bin, and
+                false of this one. Opening a row is how the rest of an exercise is read,
+                which is the task of the whole step, and a control that only exists under a
+                pointer is a control nobody can find: measured in the lab, with no hover
+                every one of the seven chevrons computes `opacity: 0`, so after opening one
+                row there is visibly nothing to press on any other — and on a touch screen
+                there is no hover to recover them with. It is `--muted-foreground` at rest
+                and full ink on hover, so a column of forty still reads as chrome. */}
+            {hasDetail ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setOpen((value) => !value)}
+                aria-expanded={open}
+                aria-label={t("bank.detail")}
+              >
+                <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
+              </Button>
+            ) : null}
             <Correction>
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                 onClick={onDelete}
                 disabled={locked}
                 title={locked ? t(lockedHint) : t("bank.delete")}
@@ -1056,7 +1024,14 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
         {listing ? (
           <div className="overflow-hidden rounded-lg border border-border">
-            <Table minWidth="44rem">
+            {/* FIXED LAYOUT, or an open row widens the table. Under the auto algorithm a
+                cell is never narrower than its longest unbreakable line, and a code block
+                with one such line in it — measured: 376 characters — pushed the table to
+                3 419 px inside a 1 406 px wrapper, with the chevron that closes the row
+                two screens to the right. Fixed, the columns are the header's widths, the
+                statement takes what is left, and the `<pre>` scrolls inside its own cell
+                as it was always meant to. */}
+            <Table minWidth="44rem" className="table-fixed">
               <THead>
                 <TR>
                   <Correction>

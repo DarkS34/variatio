@@ -74,16 +74,6 @@ export const JOB_STATUS: Record<JobStatus, { labelKey: Key; tone: string }> = {
   cancelled: { labelKey: "job.cancelled", tone: "text-muted-foreground" },
 };
 
-export const TAGGING_METHOD_KEYS: Record<string, Key> = {
-  single_dominant: "tagging.single_dominant",
-  llm: "tagging.llm",
-  llm_thinking: "tagging.llm_thinking",
-  rejected: "tagging.rejected",
-  failed: "tagging.failed",
-  no_candidates: "tagging.no_candidates",
-  manual: "tagging.manual",
-};
-
 export function truncate(text: string, limit: number): string {
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
