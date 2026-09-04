@@ -927,10 +927,19 @@ function Graph() {
           turns from a "{t("common.yes")}" into a switch.
         </Paragraph>
         <Paragraph>
-          The map is folded under the list, because the first thing you see of a syllabus has to
-          be the syllabus and not its drawing. {t("kg.mapDescription")} The enlarge button opens
-          it full screen <em>with the card beside it</em>, so you can change what you pick
-          without going back.
+          The knowledge graph sits to the right of the list, and the chosen concept's card
+          opens between the two, so a click on the list or on the graph answers beside both.{" "}
+          {t("kg.mapDescription")} The enlarge button opens it full screen{" "}
+          <em>with the card beside it</em>, so you can change what you pick without going back.
+        </Paragraph>
+        <Paragraph>
+          Choosing a concept adds, under the three columns and at full width, a block with
+          its relations drawn: one horizontal band per relation type, with the concept in the
+          same column in all of them. The "has as prerequisite" band is the order of learning — what
+          has to be known before on the left, down to the starting concepts; what leans on it
+          on the right — and in the others every arrow reads as the sentence "left VERB right".
+          It is the quick way to see whether the order makes sense for one concept without
+          reading the whole graph; clicking a concept in a band moves the card to it.
         </Paragraph>
         <Paragraph>
           The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which puts

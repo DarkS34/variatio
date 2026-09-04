@@ -919,10 +919,20 @@ function Graph() {
           cada fila pasa de ser un «{t("common.yes")}» a ser un interruptor.
         </Paragraph>
         <Paragraph>
-          El mapa va plegado bajo la lista, porque lo primero que se ve del temario tiene que
-          ser el temario y no su dibujo. {t("kg.mapDescription")} Con el botón de ampliar se abre
-          a pantalla completa <em>con la ficha al lado</em>, para poder cambiar lo que elijas sin
-          volver atrás.
+          El grafo de conocimiento va a la derecha de la lista, y la ficha del concepto elegido
+          se abre entre los dos, así que un clic en la lista o en el grafo responde al lado
+          de ambos. {t("kg.mapDescription")} Con el botón de ampliar se abre a pantalla completa{" "}
+          <em>con la ficha al lado</em>, para poder cambiar lo que elijas sin volver atrás.
+        </Paragraph>
+        <Paragraph>
+          Al elegir un concepto aparece, debajo de las tres columnas y a todo lo ancho, un
+          bloque con sus relaciones dibujadas: una banda horizontal por tipo de relación, con
+          el concepto en la misma columna en todas. La de «tiene como prerrequisito» es el orden
+          de aprendizaje —a la izquierda lo que hace falta saber antes, hasta los conceptos de
+          partida; a la derecha lo que se apoya en él— y en las demás cada flecha se lee como
+          la frase «izquierda VERBO derecha». Es la forma rápida de ver si el orden tiene
+          sentido para un concepto concreto sin leer el grafo entero; pulsando un concepto de
+          una banda la ficha pasa a ese.
         </Paragraph>
         <Paragraph>
           El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que

@@ -67,6 +67,13 @@ const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
 const SETTLED = 0.4;
 const COOLING = 0.975;
+// Force steps per animation frame. One per frame cooled from width/10 to SETTLED in ~200
+// frames — 3.3 s of visible drifting on a 630 px canvas, which read as «tarda en
+// renderizarse» once the graph stopped being folded (2026-09-04, explicit user request).
+// Four per frame is the same relaxation in ~0.8 s; the drawing is still one per frame.
+const STEPS_PER_FRAME = 4;
+// Upper bound on the synchronous relaxation; the cooling reaches SETTLED in ~200.
+const MAX_PRESETTLE_STEPS = 260;
 const MINIMAP = { width: 150, height: 104, margin: 10 };
 
 export function GraphCanvas({
@@ -200,6 +207,33 @@ export function GraphCanvas({
     [wake],
   );
 
+  // THE FIRST FRAME IS A SETTLED GRAPH, NOT A SEED (2026-09-04, explicit user request:
+  // «el bloque aparece en blanco, se empieza a estirar y como en 2 s aparece el grafo»).
+  // The bodies used to be seeded, drawn, and relaxed over ~200 animation frames, so what a
+  // person saw was a dot in the middle swelling into the graph. The relaxation is cheap —
+  // 162 bodies, ~200 steps, a few tens of milliseconds — so it runs here, synchronously,
+  // and the loop is left with nothing to animate. Returns false while the frame is still
+  // unmeasured, which is what happens on the first render: the mount effect runs it again
+  // the moment the size is known.
+  const settleNow = useCallback(() => {
+    const { width } = size.current;
+    if (width === 0 || bodies.current.length === 0) return false;
+    let temp = Math.max(400, width) / 10;
+    for (let step = 0; temp > SETTLED && step < MAX_PRESETTLE_STEPS; step += 1) {
+      forceStep(
+        bodies.current,
+        graphRef.current.links,
+        modelRef.current,
+        size.current,
+        temp,
+        viewProps.current.hiddenRelations,
+      );
+      temp *= COOLING;
+    }
+    temperature.current = 0;
+    return true;
+  }, []);
+
   const applyFit = useCallback(() => {
     const list = bodies.current;
     const { width, height } = size.current;
@@ -260,9 +294,14 @@ export function GraphCanvas({
     bodies.current = seedBodies(graph, model, size.current);
     pendingFit.current = true;
     settling.current = false;
-    reheat();
+    if (viewProps.current.mode === "force" && settleNow()) {
+      applyParking(bodies.current, model, size.current);
+      wake();
+    } else {
+      reheat();
+    }
     repaint();
-  }, [graph, model, reheat, repaint]);
+  }, [graph, model, reheat, repaint, settleNow, wake]);
 
   // Switching layout never rebuilds the bodies: each one is given a target and eased
   // into it, so the same node stays the same dot and you can watch the cloud fold into
@@ -349,15 +388,17 @@ export function GraphCanvas({
         moving = settleTowardTargets(bodies.current);
         settling.current = moving;
       } else if (!curriculum && temperature.current > SETTLED) {
-        forceStep(
-          bodies.current,
-          graphRef.current.links,
-          modelRef.current,
-          size.current,
-          temperature.current,
-          viewProps.current.hiddenRelations,
-        );
-        temperature.current *= COOLING;
+        for (let k = 0; k < STEPS_PER_FRAME && temperature.current > SETTLED; k += 1) {
+          forceStep(
+            bodies.current,
+            graphRef.current.links,
+            modelRef.current,
+            size.current,
+            temperature.current,
+            viewProps.current.hiddenRelations,
+          );
+          temperature.current *= COOLING;
+        }
         moving = true;
       }
       if (moving) dirty.current = true;
@@ -406,17 +447,20 @@ export function GraphCanvas({
     observer.observe(wrap);
     syncSize();
     known = { ...size.current };
-    if (bodies.current.length === 0) {
-      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
-    } else if (viewProps.current.mode === "force") {
+    if (viewProps.current.mode === "force") {
       // The layout effects above ran before the element had ever been measured, so they
-      // sized the isolated lane against a 0x0 frame and put it through the middle of the
-      // cloud. This is the first moment the real frame is known.
+      // seeded against a 0x0 frame and could not settle. This is the first moment the real
+      // frame is known: seed again against it, relax synchronously, park the isolated lane.
       //
       // Only in the force view, which is the only one that draws the lane: parking in the
       // layered one would drag every isolated body into an undrawn column AND move it out
       // of its band, which `drawLevels` measures from the bodies themselves.
+      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
+      settleNow();
       applyParking(bodies.current, modelRef.current, size.current);
+      pendingFit.current = true;
+    } else if (bodies.current.length === 0) {
+      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
     }
 
     // The stylesheet keys the dark tokens on `data-theme`, which `state/theme.ts` stamps
@@ -454,7 +498,7 @@ export function GraphCanvas({
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
     };
-  }, [applyFit, reheat, repaint, takeCamera, wake]);
+  }, [applyFit, reheat, repaint, settleNow, takeCamera, wake]);
 
   const zoom = (factor: number) => {
     takeCamera();
@@ -667,11 +711,11 @@ export function GraphCanvas({
         <button
           type="button"
           onClick={() => setArrows(!arrows)}
-          className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+          className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
         >
           {arrows ? t("canvas.hideArrows") : t("canvas.showArrows")}
         </button>
-        <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+        <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
           {plural("canvas.conceptCount", graph.nodes.length)} ·{" "}
           {plural("canvas.relations", graph.links.length)}
           {graph.meta.isolated > 0 ? plural("canvas.isolatedCount", graph.meta.isolated) : ""}
@@ -679,7 +723,7 @@ export function GraphCanvas({
 
         {/* Without a key, three colours on a canvas are three colours. */}
         {mode === "curriculum" && curriculumIndices ? (
-          <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+          <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
             {(
               [
                 [t("canvas.legend.covered"), "var(--settled)", curriculumIndices.size],
@@ -703,7 +747,7 @@ export function GraphCanvas({
       {/* A graph with few prerequisites piles almost everything on level 0. That is a fact about
           the graph, not a failure of the view: saying so keeps it from looking like the latter. */}
       {mode === "curriculum" && model.levelCount < 3 ? (
-        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[11px] shadow-sm">
+        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[12px] shadow-sm">
           {t("canvas.flatWarning", {
             edges: plural("canvas.relations", model.curriculumEdges),
             concepts: plural("canvas.conceptCount", graph.nodes.length),

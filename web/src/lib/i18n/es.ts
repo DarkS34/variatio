@@ -1573,6 +1573,11 @@ export const es = {
   "reveal.withoutReasoning": "sin razonamiento",
   "reveal.reasoningBody": "Esta sesión salió sorteada con razonamiento previo: las dos propuestas locales deliberaron antes de escribir.",
   "reveal.noReasoningBody": "Esta sesión salió sorteada sin razonamiento previo: las dos propuestas locales respondieron directamente.",
+  "kg.flow.heading": "Relaciones de «{name}»",
+  "kg.flow.order": "· a la izquierda, lo que hay que saber antes de llegar a este concepto; a la derecha, lo que se aprende después apoyándose en él",
+  "kg.flow.reads": "· cada flecha se lee «izquierda {verb} derecha»",
+  "kg.flow.none": "Ningún concepto va antes ni después de este en el temario.",
+  "kg.flow.aria": "Progresión de «{name}»: lo que va antes y lo que se apoya en él",
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Guardar cambios",
@@ -1600,7 +1605,7 @@ export const es = {
   "kg.editError": "Error al editar el temario",
   // Sin prefijo: la cuenta ya dice «conceptos» y el título de arriba dice «El temario», así que
   // «Conceptos · 162 conceptos» era la misma palabra dos veces en la misma línea.
-  "kg.outlineHeader": "{concepts} · {taggable} sirven de etiqueta",
+  "kg.outlineHeader": "{concepts} · {taggable} se usan para etiquetar los ejercicios que has subido",
   "kg.search": "Buscar concepto",
   "kg.searchPlaceholder": "Buscar concepto",
   "kg.newUnitTitle": "Nueva unidad",
@@ -1612,20 +1617,18 @@ export const es = {
   "kg.unitButton": "Unidad",
   "kg.conceptButton": "Concepto",
   "kg.backToMap": "Volver al mapa",
-  "kg.mapFold": "Ver el mapa del temario",
   "kg.noDescriptionBadge": "Sin describir",
   "kg.descriptionPlaceholder": "Qué se practica cuando un ejercicio va de este concepto.",
   "kg.descriptionNote": "Es lo que se usa para decidir de qué va cada ejercicio. Corrígela si no describe lo que enseñas.",
   // La misma frase sin la mitad que manda corregir: mientras el paso se está mirando, la
   // descripción se lee, y ofrecer la corrección es la tarea del otro momento.
-  "kg.descriptionRole": "Es lo que se usa para decidir de qué va cada ejercicio.",
   "kg.noDescription": "Este concepto todavía no tiene descripción.",
   "kg.descriptionSaved": "Descripción guardada",
   "kg.noRelations": "Este concepto no apunta a ningún otro.",
   "kg.finishing": "Rematando el temario",
   "kg.finishing.describing": "Escribiendo una descripción de cada concepto. Es lo que se usa después para decidir de qué va cada ejercicio. Puedes seguir revisando la lista mientras tanto.",
   "kg.finishing.taggable": "Decidiendo qué conceptos sirven de etiqueta para clasificar un ejercicio. Puedes seguir revisando la lista mientras tanto.",
-  "kg.map": "Mapa",
+  "kg.map": "Grafo de conocimiento",
   "kg.enlarge": "Ampliar",
   "kg.showRelation": "Mostrar esta relación",
   "kg.hideRelation": "Ocultar esta relación del mapa",
@@ -1634,10 +1637,10 @@ export const es = {
   "kg.frontier": "Frontera del currículo",
   "kg.unreviewed": "Falta decidir qué conceptos sirven de etiqueta",
   "kg.unreviewed.body": { one: "El único concepto se trata como si sirviera de etiqueta, aunque no identifique nada. Marcarlos decide cuáles descartar, y necesita el Paso 2 dado: qué sirve de etiqueta depende de qué forma tienen tus ejercicios.", other: "Los {n} conceptos se tratan como si todos sirvieran de etiqueta, incluidos los que no identifican nada. Marcarlos decide cuáles descartar, y necesita el Paso 2 dado: qué sirve de etiqueta depende de qué forma tienen tus ejercicios." },
-  "kg.mapTitle": "Mapa del temario",
+  "kg.mapTitle": "Grafo de conocimiento del temario",
   "kg.mapDescription": "Arrastra para mover, rueda para acercar. Al elegir un concepto se edita aquí mismo.",
   "kg.clearSelection": "Quitar la selección",
-  "kg.pickOnMap": "Elige un concepto en el mapa y aparecerá aquí para editarlo.",
+  "kg.pickOnMap": "Elige un concepto en el grafo y aparecerá aquí para editarlo.",
   "kg.review.buildFirst": "Antes hay que sacar el temario.",
   "kg.review.rebuilding": "El temario se está reconstruyendo.",
   "kg.review.needsProfile":

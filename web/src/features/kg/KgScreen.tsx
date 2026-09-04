@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  ChevronRight,
   FolderPlus,
   Link2,
   ListChecks,
@@ -12,7 +11,7 @@ import {
   Waypoints,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
 import {
@@ -44,6 +43,7 @@ import {
   usePipeline,
   useSubmitJob,
 } from "@/state/queries";
+import { ConceptFlow } from "./ConceptFlow";
 import { ConceptOutline } from "./ConceptOutline";
 import { GraphCanvas } from "./GraphCanvas";
 import { useT } from "@/lib/i18n";
@@ -190,7 +190,6 @@ function ConceptDetail({
             ) : (
               <p className="text-small text-muted-foreground">{t("kg.noDescription")}</p>
             )}
-            <p className="text-small text-muted-foreground">{t("kg.descriptionRole")}</p>
           </>
         ) : (
           <>
@@ -465,6 +464,11 @@ function GraphExplorer() {
   const [deletingUnit, setDeletingUnit] = useState<{ name: string; count: number } | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const flowCard = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selected) flowCard.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected]);
 
   const refresh = () => {
     invalidate();
@@ -569,34 +573,31 @@ function GraphExplorer() {
         </Alert>
       ) : null}
 
-      {/* The list is the work and the map is the reference, so the list gets the width.
-          `grid-cols-1` is not redundant with the single implicit track it replaces: an
-          undeclared track is sized `auto`, i.e. to its item's MAX-content, and every row in
-          the outline truncates — `white-space: nowrap` — so below `xl` the card grew to the
-          width of the longest concept name and scrolled the whole page sideways. `grid-cols-1`
-          is `minmax(0, 1fr)`, which is the cap, and `min-w-0` on the card is what then lets
-          it take it. */}
-      {/* EL CONCEPTO SE ABRE A LA DERECHA DE LA LISTA (2026-09-01, explicit user request),
-          que es donde estaba antes de volverse un diálogo unas horas antes ese mismo día.
-          Lo que hacía imposible la columna era el cuestionario de la etapa ocupando la
-          mitad derecha de forma permanente; se convirtió en un cajón esa misma tarde, así
-          que ese ancho ha vuelto y la respuesta a un clic puede estar al lado de la fila
-          que se ha pulsado. La segunda pista solo existe mientras hay concepto elegido: sin
-          él la lista se queda con la pantalla entera, que es lo que pide una fila que
-          trunca. Por debajo de `xl` la ficha se apila bajo la lista — es el único ancho en
-          el que no cabe al lado. El mapa sigue plegado bajo la lista: lo que estaba plegado
-          sigue estando, y la leyenda de la frontera no vive en ningún otro sitio. */}
+      {/* THREE COLUMNS: THE LIST, THE MAP, AND THE CONCEPT (2026-09-04, explicit user
+          request: «posiciona el grafo a la derecha de la lista de conceptos y a la izquierda
+          del menú de un concepto; ahora mismo hay mucho espacio desaprovechado»). The map
+          used to be folded under the list, on the argument that the first thing seen of a
+          syllabus should be the syllabus — true, and the list still leads and still takes
+          the wider track — but on a wide screen the fold left the right half of the page
+          empty until a concept was chosen. The graph is a permanent column now, the same
+          height as the list, at the RIGHT edge; the concept's card opens BETWEEN the two
+          (same day, explicit user request), so it sits beside the row that was clicked and
+          the drawing keeps the edge, where its size costs nothing. The concept's card is a
+          fixed `26rem` (it took everything the list could spare for an hour the same day, and
+          was asked back down: «reduce el ancho de la ficha»), and the list keeps the rest. Below `xl` the three
+          stack, list first, which is the one width where nothing fits beside anything.
+
+          `minmax(0, …)` on every fr track is load-bearing, not tidiness: a grid item
+          defaults to `min-width: auto`, and every row in the outline truncates — which means
+          `white-space: nowrap`, which means a min-content width of the longest concept name
+          in the graph. Without it the card grew to 2 940 px and put a horizontal scrollbar
+          on the whole page. */}
       <div
         className={cn(
-          "grid gap-4",
-          selectedConcept && "xl:grid-cols-[minmax(0,1fr)_23rem]",
+          "grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]",
+          selectedConcept && "xl:grid-cols-[minmax(0,1fr)_26rem_24rem]",
         )}
       >
-      <div className="min-w-0 space-y-4">
-        {/* `min-w-0` is load-bearing, not tidiness: a grid item defaults to `min-width: auto`,
-            and every row in here truncates — which means `white-space: nowrap`, which means a
-            min-content width of the longest concept name in the graph. Without it the card
-            grew to 2 940 px and put a horizontal scrollbar on the whole page. */}
         <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 p-3">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
@@ -661,85 +662,6 @@ function GraphExplorer() {
           </div>
         </Card>
 
-        {/* Plegado por defecto: lo primero que se ve del temario es el temario, no su
-            dibujo. */}
-        <details className="group border border-border bg-card open:pb-1">
-          <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-small font-medium hover:bg-accent">
-            <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" />
-            {t("kg.mapFold")}
-          </summary>
-          {/* ONE CARD, NOT THREE. The map, the curriculum and the frontier key were three
-             stacked boxes down the right-hand side, each with its own border and its own
-             micro heading — and the second and third are three lines and a legend that only
-             mean anything ABOUT the map beside them. They are its footer now, so the column
-             reads as one object: here is the graph, here is how far the course has got
-             through it, here is what the colours on it mean. */}
-          <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 flex-col overflow-hidden border-0">
-            <div className="flex items-center justify-between gap-2 p-3 pb-2">
-              <span className="text-micro font-condensed uppercase text-muted-foreground">
-                {t("kg.map")}
-              </span>
-              <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
-                <Maximize2 />
-                {t("kg.enlarge")}
-              </Button>
-            </div>
-            <div className="h-72 shrink-0 border-y border-border">{canvas(true)}</div>
-
-            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-
-              {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
-              <div className="p-1">
-                {graph.data.relations.map((relation, index) => {
-                  const hidden = hiddenRelations.has(index);
-                  return (
-                    <button
-                      key={relation.key}
-                      title={hidden ? t("kg.showRelation") : t("kg.hideRelation")}
-                      onClick={() =>
-                        setHiddenRelations((current) => {
-                          const next = new Set(current);
-                          if (next.has(index)) next.delete(index);
-                          else next.add(index);
-                          return next;
-                        })
-                      }
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors hover:bg-accent",
-                        hidden && "opacity-45",
-                      )}
-                    >
-                      <span
-                        className="h-0.5 w-3.5 shrink-0 rounded-full"
-                        style={{ background: relationColour(relation.type ?? relation.key, index) }}
-                      />
-                      <span
-                        className={cn(
-                          "min-w-0 flex-1 truncate text-small",
-                          hidden && "line-through",
-                        )}
-                      >
-                        {relation.verbose ?? relation.key}
-                      </span>
-                      {relation.prerequisite ? (
-                        <Waypoints
-                          className="size-3 shrink-0 text-muted-foreground"
-                          aria-label={t("kg.ordersCurriculum")}
-                        />
-                      ) : null}
-                      <span className="nums shrink-0 text-small text-muted-foreground">
-                        {relation.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-          </Card>
-        </details>
-      </div>
-
         {/* `sticky` and not a second scroller for the page: the list scrolls inside its own
             card, so the panel would otherwise sit at the top of a column as tall as the map
             fold and drift off screen. `self-start` is what lets a sticky grid item be
@@ -768,7 +690,97 @@ function GraphExplorer() {
             </Card>
           </aside>
         ) : null}
+        {/* ONE CARD, NOT THREE. The map and the key to its edges were separate boxes once,
+            each with its own border and its own micro heading — and the key is a legend that
+            only means anything ABOUT the drawing beside it. It is the map's foot, as a wrap
+            of chips rather than a column of rows, so the drawing keeps the height. THE CARD
+            IS A FIXED SIZE — a `24rem` track and `25rem` tall, `self-start` so the row does
+            not stretch it — and nothing about the concept's card changes it (2026-09-04,
+            explicit user request: «estático… la mitad de lo que es ahora me sirve»). A
+            canvas whose frame grows while the list loads re-parks and re-heats its layout
+            on every size change, which is half of what read as «tarda en cargar». The
+            layout controls stay one click away in «Ampliar»: `compact` drops the chrome,
+            and a column this wide has room for the graph or for the toolbars, not both. */}
+        <Card className="flex h-[25rem] min-w-0 flex-col overflow-hidden xl:self-start">
+          <div className="flex items-center justify-between gap-2 p-3">
+            <span className="text-micro font-condensed uppercase text-muted-foreground">
+              {t("kg.map")}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>
+              <Maximize2 />
+              {t("kg.enlarge")}
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 border-t border-border">{canvas(true)}</div>
+
+          {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
+          <div className="flex flex-wrap gap-1 border-t border-border p-2">
+            {graph.data.relations.map((relation, index) => {
+              const hidden = hiddenRelations.has(index);
+              return (
+                <button
+                  key={relation.key}
+                  type="button"
+                  title={hidden ? t("kg.showRelation") : t("kg.hideRelation")}
+                  aria-pressed={!hidden}
+                  onClick={() =>
+                    setHiddenRelations((current) => {
+                      const next = new Set(current);
+                      if (next.has(index)) next.delete(index);
+                      else next.add(index);
+                      return next;
+                    })
+                  }
+                  className={cn(
+                    "flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-left text-small transition-colors hover:bg-accent",
+                    hidden && "opacity-45",
+                  )}
+                >
+                  <span
+                    className="h-0.5 w-3.5 shrink-0 rounded-full"
+                    style={{ background: relationColour(relation.type ?? relation.key, index) }}
+                  />
+                  <span className={cn("min-w-0 truncate", hidden && "line-through")}>
+                    {relation.verbose ?? relation.key}
+                  </span>
+                  {relation.prerequisite ? (
+                    <Waypoints
+                      className="size-3 shrink-0 text-muted-foreground"
+                      aria-label={t("kg.ordersCurriculum")}
+                    />
+                  ) : null}
+                  <span className="nums shrink-0 text-muted-foreground">{relation.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
       </div>
+
+      {/* THE RELATION BANDS ARE A BLOCK OF THEIR OWN UNDER THE THREE COLUMNS (2026-09-04,
+          explicit user request, after an hour inside the concept's card: «sacar el flow de
+          la ficha y posicionarlo en algún punto fuera»). A band is as wide as its longest
+          names, five columns of them, and the card is 26rem: inside it a third of the flow
+          was in view at a time. Here it has the page's width, which is what a horizontal
+          flow needs, and it mirrors the expanded view, where the bands sit under the canvas.
+          It scrolls into view on selection — `nearest`, so a flow already on screen moves
+          nothing — because the grid is ~74vh tall and the block starts below the fold. */}
+      {selectedConcept ? (
+        <Card ref={flowCard} className="scroll-mt-20 overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-border p-3">
+            <span className="text-micro font-condensed uppercase text-muted-foreground">
+              {t("kg.flow.heading", { name: selectedConcept.name })}
+            </span>
+          </div>
+          <ConceptFlow
+            graph={graph.data}
+            concept={selectedConcept.name}
+            onSelect={setSelected}
+            className="rounded-none border-0"
+          />
+        </Card>
+      ) : null}
 
       {/* The expanded map carries the inspector with it. Without it, choosing a concept here
           answered with a card in the rail underneath — behind the scrim, invisible — so the
@@ -784,7 +796,22 @@ function GraphExplorer() {
             the larger half either way, because the inspector is what you read AFTER
             choosing a node on it. */}
         <div className="flex h-[70vh] flex-col gap-3 lg:h-[68vh] lg:flex-row lg:gap-4">
-          <div className="min-h-0 min-w-0 flex-1">{canvas(false)}</div>
+          {/* THE BANDS GO UNDER THE CANVAS HERE, NOT IN THE INSPECTOR (2026-09-04, explicit
+              user request): at the canvas's width a flow of five columns fits without
+              scrolling, where the 23rem inspector could show a third of it. The inspector
+              keeps the sentences and the editing. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+            <div className="min-h-0 min-w-0 flex-1">{canvas(false)}</div>
+            {selectedConcept ? (
+              <div className="thin-scroll max-h-[42%] shrink-0 overflow-y-auto">
+                <ConceptFlow
+                  graph={graph.data}
+                  concept={selectedConcept.name}
+                  onSelect={setSelected}
+                />
+              </div>
+            ) : null}
+          </div>
           <div className="flex max-h-[45%] w-full shrink-0 flex-col overflow-hidden rounded-lg border border-border lg:max-h-none lg:w-[23rem]">
             {selectedConcept ? (
               <>
