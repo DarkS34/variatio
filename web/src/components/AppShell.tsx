@@ -198,18 +198,21 @@ function StepPill({
 // shape and differ only in the mark: a number for a stop, an icon for a door.
 // MEASURED AT 1280 (2026-09-02): the flanks leave the strip 881 px and, at `px-2.5`,
 // `gap-2` and `text-body`, the six pills asked for 951 — the two doors grew a box and a
-// word each. `px-2`, `gap-1.5` and `text-small` on the name bring it under; the word line
-// keeps the micro step, so the hierarchy inside a pill is unchanged.
+// word each. `px-2`, `gap-1.5` and `text-small` on the name brought it under; the word line
+// keeps the micro step, so the hierarchy inside a pill is unchanged. RE-MEASURED 2026-09-04,
+// when small went to 14 px and micro to 12: the flanks left 874 and the strip asked 881, so
+// the pills went to `px-1.5` — 6 px per pill, 36 in all — and the phase caption's `pl`
+// moved with it, since the two are one alignment.
 const PILL =
-  "flex shrink-0 flex-col gap-0.5 rounded-md px-2 py-1 transition-colors hover:bg-accent";
+  "flex shrink-0 flex-col gap-0.5 rounded-md px-1.5 py-1 transition-colors hover:bg-accent";
 const PILL_NAME = "flex items-center gap-1.5 whitespace-nowrap text-small";
 const PILL_WORD = "flex items-center gap-1 pl-[28px] text-micro";
 /**
  * The height a step pill reaches on its own: `py-1` twice, the 22 px counter box (taller
- * than the small line beside it), the `gap-0.5`, and one micro line (0.6875rem × 1.35).
+ * than the small line beside it), the `gap-0.5`, and one micro line (0.75rem × 1.35).
  * A door with no word under its name is held to it, so the row never changes height.
  */
-const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_0.928125rem)]";
+const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
 
 /**
  * One door of the second phase: what you do with the construction once it is closed.
@@ -320,7 +323,7 @@ function DoorPill({
  *
  * The caption is what carries the phase now that its number is gone. It is micro, condensed
  * and muted, so the row still reads as pills with a label over them and not as two rows of
- * navigation. Its `pl-2` is the pills' own `px-2`, so the caption starts exactly on the
+ * navigation. Its `pl-1.5` is the pills' own `px-1.5`, so the caption starts exactly on the
  * first pill's box edge (2026-09-02, explicit user request: it was 2 px ahead of it).
  */
 function PhaseGroup({
@@ -337,7 +340,7 @@ function PhaseGroup({
     <div className="flex shrink-0 flex-col gap-0.5">
       <span
         aria-hidden
-        className="pl-2 font-condensed text-micro uppercase text-muted-foreground"
+        className="pl-1.5 font-condensed text-micro uppercase text-muted-foreground"
       >
         {label}
       </span>

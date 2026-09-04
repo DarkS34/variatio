@@ -87,7 +87,7 @@ function Rung({
         {label}
       </span>
       {detail ? (
-        <span className="mt-0.5 block text-small text-muted-foreground">{detail}</span>
+        <span className="mt-0.5 block text-body text-muted-foreground">{detail}</span>
       ) : null}
     </button>
   );

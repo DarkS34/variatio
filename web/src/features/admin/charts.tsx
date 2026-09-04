@@ -41,7 +41,7 @@ export function StatTile({
       >
         {value}
       </p>
-      {hint ? <p className="text-micro text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="text-small text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -136,7 +136,7 @@ export function BarRows({
         );
       })}
       {reference !== undefined && referenceLabel ? (
-        <p className="text-micro text-muted-foreground">{referenceLabel}</p>
+        <p className="text-small text-muted-foreground">{referenceLabel}</p>
       ) : null}
     </div>
   );
@@ -175,7 +175,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-3 text-micro text-muted-foreground">
+      <div className="flex items-center gap-3 text-small text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-[2px] bg-primary" />
           {t("charts.decided")}
@@ -333,7 +333,7 @@ export function Segments({
           ) : null,
         )}
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-micro text-muted-foreground">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-small text-muted-foreground">
         {segments.map((segment, index) => (
           <span key={segment.key} className="flex items-center gap-1.5">
             <span

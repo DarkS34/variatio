@@ -108,7 +108,7 @@ export function FormStep({
               {optional ? (
                 <span
                   id={`${id}-optional`}
-                  className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+                  className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase"
                 >
                   {t("common.optional")}
                 </span>

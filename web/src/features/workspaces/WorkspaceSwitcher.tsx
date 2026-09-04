@@ -94,7 +94,7 @@ export function WorkspaceSwitcher() {
           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         ) : null}
         <span className="min-w-0 flex-1 text-left">
-          <span className="block truncate text-[11px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
+          <span className="block truncate text-[12px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
             {t("workspace.switcher.label")}
           </span>
           <span className="mt-1 block truncate font-medium leading-tight">
@@ -130,7 +130,7 @@ export function WorkspaceSwitcher() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{workspace.name}</span>
-                  <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                  <span className="block truncate font-mono text-[12px] text-muted-foreground">
                     {workspace.slug}
                   </span>
                 </span>
@@ -225,7 +225,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
         className="font-mono text-small"
       />
       <div className="flex flex-col gap-1">
-        <span className="text-[11px] text-muted-foreground">{t("workspace.language.title")}</span>
+        <span className="text-[12px] text-muted-foreground">{t("workspace.language.title")}</span>
         <div role="group" aria-label={t("workspace.language.title")} className="flex gap-1">
           {LANGUAGES.map((option) => (
             <button
@@ -244,7 +244,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
             </button>
           ))}
         </div>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-[12px] text-muted-foreground">
           {t("workspace.language.onlyAtCreation")}
         </span>
       </div>
@@ -252,7 +252,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       {create.isError ? (
         <p className="text-small text-destructive">{(create.error as Error).message}</p>
       ) : (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           {t("workspace.startsEmpty")}
         </p>
       )}

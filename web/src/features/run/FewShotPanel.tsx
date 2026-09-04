@@ -52,7 +52,7 @@ function Exemplar({
         />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[11px] text-muted-foreground">{exemplar.id}</span>
+            <span className="font-mono text-[12px] text-muted-foreground">{exemplar.id}</span>
             {showType ? (
               <Badge variant="outline">{typeLabel(profile, typeKeyOf(profile, item), t)}</Badge>
             ) : null}
@@ -68,7 +68,7 @@ function Exemplar({
           </span>
           <span
             className={cn(
-              "mt-1 block text-small leading-relaxed",
+              "mt-1 block text-body leading-relaxed",
               open ? "whitespace-pre-wrap" : "line-clamp-2",
             )}
           >
@@ -88,7 +88,7 @@ function Exemplar({
                 {isCodeField(field) ? (
                   <CodeBlock code={fieldText(value)} maxHeight="14rem" />
                 ) : (
-                  <p className="whitespace-pre-wrap text-small text-muted-foreground">
+                  <p className="whitespace-pre-wrap text-body text-muted-foreground">
                     {fieldText(value)}
                   </p>
                 )}

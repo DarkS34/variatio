@@ -80,7 +80,7 @@ export function TechnicalDetails({ run }: { run: RunView }) {
                   {t("technical.attempt", { n: repair.attempt, max: repair.max_attempts })}
                 </span>{" "}
                 <span className="text-muted-foreground">({repair.where})</span>
-                <p className="font-mono text-micro text-muted-foreground">{repair.error}</p>
+                <p className="font-mono text-small text-muted-foreground">{repair.error}</p>
               </li>
             ))}
           </ul>

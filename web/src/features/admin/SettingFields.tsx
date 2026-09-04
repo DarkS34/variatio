@@ -398,7 +398,7 @@ export function GenerationModelsField({
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-baseline gap-x-2">
                   <span className="text-body font-medium">{family.label || model}</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">{model}</span>
+                  <span className="font-mono text-[12px] text-muted-foreground">{model}</span>
                 </span>
                 {family.blurbKey ? (
                   <span className="mt-0.5 block text-small text-muted-foreground">
@@ -518,7 +518,7 @@ export function FixedEffortField({
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-x-2">
                     <span className="text-body font-medium">{family.label || model}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{model}</span>
+                    <span className="font-mono text-[12px] text-muted-foreground">{model}</span>
                   </span>
                   <span className="mt-0.5 block text-small text-muted-foreground">
                     {adjustable

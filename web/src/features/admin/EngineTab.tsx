@@ -283,7 +283,7 @@ function TunnelCard({
         {tunnel.stderr.length > 0 ? (
           <details className="text-small text-muted-foreground">
             <summary className="cursor-pointer select-none">{t("eng.tunnel.sshSaid")}</summary>
-            <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 font-mono text-micro">
+            <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 font-mono text-small">
               {tunnel.stderr.join("\n")}
             </pre>
           </details>
@@ -416,7 +416,7 @@ function Vram({ running, total }: { running: RunningModel[]; total: number }) {
           </li>
         ))}
       </ul>
-      <p className="text-micro text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         {t("eng.vram.note")}
       </p>
     </div>
@@ -893,7 +893,7 @@ function HistorySection() {
                   <TD className="px-3 py-2">
                     {jobName(job.kind, t, job.label)}
                     {job.error ? (
-                      <span className="block truncate text-micro text-destructive" title={job.error}>
+                      <span className="block truncate text-small text-destructive" title={job.error}>
                         {job.error}
                       </span>
                     ) : null}

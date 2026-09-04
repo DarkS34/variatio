@@ -647,7 +647,7 @@ function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-micro text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         {t("adminStudy.decidedOf", {
           decided: plural("adminStudy.sessionCount", decided),
           total: aggregates.sessions,
@@ -672,7 +672,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-1.5 border-t border-border pt-2">
-      <h3 className="text-micro font-medium text-muted-foreground">
+      <h3 className="text-small font-medium text-muted-foreground">
         {t("adminStudy.noValidItem")}
       </h3>
       <div className="grid grid-cols-3 gap-2">
@@ -681,7 +681,7 @@ function Reliability({ aggregates }: { aggregates: EvaluationAggregates }) {
           const bad = (counts.failed ?? 0) + (counts.unavailable ?? 0);
           return (
             <div key={arm} className="rounded-lg border border-border px-2.5 py-1.5">
-              <p className="flex items-center gap-1.5 truncate text-micro text-muted-foreground">
+              <p className="flex items-center gap-1.5 truncate text-small text-muted-foreground">
                 <span
                   className="size-2 shrink-0 rounded-[2px]"
                   style={{ backgroundColor: ARM_META[arm].colour }}
@@ -716,7 +716,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-micro text-muted-foreground">
+      <p className="text-small text-muted-foreground">
         {t("adminStudy.ratedScale", { rated: plural("adminStudy.ratedCount", rubric.n) })}
       </p>
       <div className="space-y-1.5">
@@ -749,7 +749,7 @@ function Rubric({ aggregates }: { aggregates: EvaluationAggregates }) {
         })}
       </div>
       {rubric.complexity?.mean_distance_to_3 !== undefined ? (
-        <p className="text-micro text-muted-foreground">
+        <p className="text-small text-muted-foreground">
           {t("adminStudy.complexityNote")}
           <span className="nums">{rubric.complexity.mean_distance_to_3}</span>.
         </p>
@@ -1174,7 +1174,7 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
           : artifactName(summary.artifact, t)
       }
       aside={
-        <span className="text-micro text-muted-foreground">
+        <span className="text-small text-muted-foreground">
           {plural("adminStudy.stages.answers", summary.answered)}
           {summary.opened > summary.answered
             ? ` · ${plural("adminStudy.stages.openedOnly", summary.opened - summary.answered)}`
@@ -1219,13 +1219,13 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
               </div>
             ))}
             {summary.usable != null ? (
-              <p className="text-micro text-muted-foreground">
+              <p className="text-small text-muted-foreground">
                 {t("adminStudy.stages.usable", { pct: percent(summary.usable) })}
               </p>
             ) : null}
           </div>
 
-          <dl className="space-y-1 border-t border-border pt-2 text-micro text-muted-foreground">
+          <dl className="space-y-1 border-t border-border pt-2 text-small text-muted-foreground">
             <div className="flex flex-wrap gap-x-2">
               <dt>{t("adminStudy.stages.curation")}</dt>
               <dd className="nums">

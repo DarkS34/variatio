@@ -119,7 +119,7 @@ function ModelCard({
         </span>
 
         <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[11px] text-muted-foreground">{model}</span>
+          <span className="font-mono text-[12px] text-muted-foreground">{model}</span>
           {remote ? <Badge variant="outline">{t("form.model.remote")}</Badge> : null}
         </span>
 

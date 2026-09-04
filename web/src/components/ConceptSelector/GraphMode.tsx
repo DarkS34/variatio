@@ -77,7 +77,7 @@ export function GraphMode({
                 disabled={band.upTo.length === 0}
                 onClick={() => onAdd(band.upTo)}
                 title={t("concept.chooseUpToLevel", { level: band.level })}
-                className="rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded px-1.5 py-0.5 text-small text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {t("concept.upToHere")}
               </button>

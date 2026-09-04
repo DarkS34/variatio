@@ -25,7 +25,7 @@ export function WorkspaceContext({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-1.5 border-l-2 border-border pl-3">
-      <p className="flex items-center gap-2 text-micro text-muted-foreground">
+      <p className="flex items-center gap-2 text-small text-muted-foreground">
         {t("context.title")}
       </p>
 
@@ -41,7 +41,7 @@ export function WorkspaceContext({ slug }: { slug: string }) {
         <dl className="flex flex-wrap gap-x-4 gap-y-1">
           {facts.map(([key, value]) => (
             <div key={key} className="flex items-baseline gap-1.5">
-              <dt className="text-micro text-muted-foreground">
+              <dt className="text-small text-muted-foreground">
                 {FACT_LABEL[key] ? t(FACT_LABEL[key]) : key}
               </dt>
               <dd className="text-small">{value}</dd>

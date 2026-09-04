@@ -232,7 +232,7 @@ export function ConceptPicker({
 
                   <span
                     className={cn(
-                      "shrink-0 text-micro nums",
+                      "shrink-0 text-small nums",
                       picked > 0 ? "font-medium text-primary" : "text-muted-foreground",
                     )}
                   >
@@ -242,7 +242,7 @@ export function ConceptPicker({
                     <button
                       type="button"
                       onClick={() => toggleDomain(items, picked === items.length)}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      className="shrink-0 rounded px-1.5 py-0.5 text-small text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
                       {picked === items.length ? "ninguno" : "todos"}
                     </button>

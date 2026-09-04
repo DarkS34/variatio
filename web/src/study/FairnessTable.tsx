@@ -95,7 +95,7 @@ export function FairnessTable({ className }: { className?: string }) {
               ))}
             </TBody>
           </Table>
-          <p className="px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
             {t("fair.footnote")}
           </p>
         </div>

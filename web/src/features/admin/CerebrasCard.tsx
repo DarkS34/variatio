@@ -249,7 +249,7 @@ function Meter({
         </span>
       </p>
       <Progress value={used} max={limit} tone={tone} />
-      <p className={`nums text-micro text-muted-foreground ${emphasis}`}>
+      <p className={`nums text-small text-muted-foreground ${emphasis}`}>
         {remaining <= 0
           ? t("cere.exhaustedIn", {
               rolling: rolling.toLowerCase(),

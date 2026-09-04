@@ -335,9 +335,15 @@
      and the headings ran backwards: CardTitle is an h3 at 14 px and the h4s are at 12, i.e.
      smaller than the body text they sit above. That, and not the colour, is why every
      screen read as one uniform grey sheet.
-     The body stays at 14 px on purpose — the app is dense and raising it would push the
-     layout around. The problem was never that 14 was small, it was that 12 was used 247
-     times. */
+     The body stayed at 14 px until 2026-09-04 on the argument that the app is dense and
+     raising it would push the layout around, and that the problem was never that 14 was
+     small but that 12 was used 247 times. MEASURED that day across eleven screens: the
+     text a person actually reads was mostly `small` and `micro` — on «Generar ejercicios»
+     13 text nodes at 13 px and 11 at 11 px against 7 at 14 — so the three lower steps
+     moved up one pixel each (body 15, small 14, micro 12), by explicit user request. The
+     three upper steps did not move: the hierarchy is the same, one pixel later. What that
+     pushed around is recorded where it was re-measured: the bank row's height, the
+     navbar's pill height and the strip's width at 1280. */
   /* The display step grows and gets heavier, and that is the material talking: with the
      structure achromatic, the hierarchy that colour used to help carry has to be carried
      by the type alone. 40 px at 700 with -0.03em, against 36 at 600 with -0.02. It is the
@@ -357,17 +363,17 @@
   --text-heading--line-height: 1.4;
   --text-heading--font-weight: 600;
 
-  --text-body: 0.875rem;
+  --text-body: 0.9375rem;
   --text-body--line-height: 1.55;
 
-  --text-small: 0.8125rem;
+  --text-small: 0.875rem;
   --text-small--line-height: 1.5;
 
-  /* The micro step keeps its size and gains tracking and weight (0.12em at 600, against
-     0.08 at 500). At 11 px condensed it is the label of a rail stop, a table header or a
+  /* The micro step gains tracking and weight (0.12em at 600, against 0.08 at 500). At
+     12 px condensed (11 until 2026-09-04) it is the label of a rail stop, a table header or a
      badge, and in a material with no tinted structure those are read as marks rather than
      as words — the extra letterspacing is what makes them hold that job. */
-  --text-micro: 0.6875rem;
+  --text-micro: 0.75rem;
   --text-micro--line-height: 1.35;
   --text-micro--letter-spacing: 0.12em;
   --text-micro--font-weight: 600;

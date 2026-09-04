@@ -86,7 +86,7 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                     {workspace.slug}
                   </span>
                   {workspace.warm ? (
-                    <span className="ml-2 text-micro text-muted-foreground">
+                    <span className="ml-2 text-small text-muted-foreground">
                       {t("ws.inMemory")}
                     </span>
                   ) : null}
@@ -244,7 +244,7 @@ function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
       title={parts.map(([label, size]) => `${label}: ${bytes(size)}`).join(" · ")}
     >
       {bytes(disk.total)}
-      <span className="ml-1 text-micro text-muted-foreground">
+      <span className="ml-1 text-small text-muted-foreground">
         (
         {parts
           .filter(([, size]) => size > 0)

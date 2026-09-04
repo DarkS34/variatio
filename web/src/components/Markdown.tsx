@@ -349,7 +349,7 @@ export function Markdown({
                 key={key}
                 className={cn(
                   "mt-3 font-semibold first:mt-0",
-                  block.level <= 2 ? "text-[0.95rem]" : "text-body",
+                  block.level <= 2 ? "text-[1.0625rem]" : "text-body",
                 )}
               >
                 {renderInline(block.text, key)}

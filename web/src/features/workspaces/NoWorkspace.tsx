@@ -94,7 +94,7 @@ export function NoWorkspace() {
             {create.isError ? (
               <p className="text-small text-destructive">{(create.error as Error).message}</p>
             ) : slug ? (
-              <p className="font-mono text-[11px] text-muted-foreground">{slug}</p>
+              <p className="font-mono text-[12px] text-muted-foreground">{slug}</p>
             ) : null}
             {/* ENABLED WITH AN EMPTY NAME, AND THAT IS THE POINT. This is the only control
                 on the only screen the account can reach, and it greeted everybody greyed
