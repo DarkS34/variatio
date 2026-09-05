@@ -1,4 +1,4 @@
-import { Clock, EyeOff, Plus, Scale } from "lucide-react";
+import { ArrowLeft, Clock, EyeOff, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -264,6 +264,31 @@ export function EvaluationScreen() {
 
   const typeLabel = (key: string) => profile?.item_types?.[key]?.label || key;
 
+  /**
+   * The one way on from a finished comparison, as icon and label read off ONE choice.
+   *
+   * They are decided together because they are one statement. The header used to draw
+   * `Plus` whatever the label said, so a session opened from «Mis evaluaciones» read
+   * «+ Volver a la lista» — a plus sign on the one control that adds nothing; the foot
+   * had the same defect for an evaluator who is not offered the form.
+   */
+  const wayOn = (kind: "queue" | "order" | "list") => {
+    if (kind === "queue")
+      return {
+        icon: <Scale />,
+        label: t("eval.nextInQueue", {
+          pending: plural("eval.pendingCount", queue?.pending ?? 0),
+        }),
+      };
+    if (kind === "order") return { icon: <Plus />, label: t("eval.orderAnother") };
+    return { icon: <ArrowLeft />, label: t("eval.backToList") };
+  };
+
+  // The header closes the session; the foot opens whatever comes next. Both land on the
+  // form when there is one to land on, and on the list when there is not.
+  const headerWay = wayOn(tab === "compose" && canCompose ? "order" : "list");
+  const footWay = wayOn(queue && queue.pending > 0 ? "queue" : canCompose ? "order" : "list");
+
   const TABS: { id: Tab; label: string; count?: number; attention?: boolean }[] = [
     ...(CROSS_EVALUATION
       ? [
@@ -303,8 +328,8 @@ export function EvaluationScreen() {
             className="ml-auto"
             onClick={tab === "compose" && canCompose ? orderAnother : closeSession}
           >
-            <Plus />
-            {tab === "compose" && canCompose ? t("eval.orderAnother") : t("eval.backToList")}
+            {headerWay.icon}
+            {headerWay.label}
           </Button>
         ) : null}
       </header>
@@ -457,14 +482,8 @@ export function EvaluationScreen() {
 
           {session.revealed ? (
             <Button variant="outline" className="w-full" onClick={openNext}>
-              {queue && queue.pending > 0 ? <Scale /> : <Plus />}
-              {queue && queue.pending > 0
-                ? t("eval.nextInQueue", {
-                    pending: plural("eval.pendingCount", queue.pending),
-                  })
-                : canCompose
-                  ? t("eval.orderAnother")
-                  : t("eval.backToList")}
+              {footWay.icon}
+              {footWay.label}
             </Button>
           ) : null}
 

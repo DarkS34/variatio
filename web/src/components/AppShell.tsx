@@ -429,6 +429,8 @@ function MainNav({
   locked,
   rawStocked,
   rawWaiting,
+  stepsOpen,
+  onSteps,
   className,
 }: {
   path: string;
@@ -440,6 +442,12 @@ function MainNav({
   rawStocked: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
+  /** Whether the person asked to keep the four steps on the bar. Owned by `AppShell`,
+   *  because this navigation is MOUNTED TWICE — one instance per breakpoint, each hidden
+   *  by CSS — and two `useState`s over one `localStorage` key disagree the moment the
+   *  window is resized across `xl` after unfolding. */
+  stepsOpen: boolean;
+  onSteps: (open: boolean) => void;
   className?: string;
 }) {
   const { t } = useT();
@@ -470,13 +478,8 @@ function MainNav({
   // Leaving the step folds it again, which is the «hide them once finished» that was asked
   // for; the preference is what keeps them out for good.
   const allDone = stages.length > 0 && states.every((state) => state === "done");
-  const [unfolded, setUnfolded] = useState(readStepsPreference);
   const onStep = STEPS.some((step) => step.path === path);
-  const folded = allDone && !unfolded && !onStep;
-  const setSteps = (open: boolean) => {
-    setUnfolded(open);
-    writeStepsPreference(open);
-  };
+  const folded = allDone && !stepsOpen && !onStep;
 
   return (
     <nav
@@ -499,7 +502,7 @@ function MainNav({
     >
       <PhaseGroup label={t("nav.phase.build")}>
         {folded ? (
-          <FoldedPhase onUnfold={() => setSteps(true)} />
+          <FoldedPhase onUnfold={() => onSteps(true)} />
         ) : (
           <>
             {STEPS.map((step, index) => (
@@ -513,12 +516,14 @@ function MainNav({
                 busy={busy[index]}
               />
             ))}
-            {/* The way back to the folded bar, drawn only once there is a folded bar to go
-                back to: with a step still pending the four are the path and stay. */}
-            {allDone ? (
+            {/* The way back to the folded bar, drawn only where pressing it FOLDS
+                something: with a step still pending the four are the path and stay, and
+                standing on one of them the bar may not hide the stop you are on — there
+                it was a button that answered a press with nothing at all. */}
+            {allDone && !onStep ? (
               <button
                 type="button"
-                onClick={() => setSteps(false)}
+                onClick={() => onSteps(false)}
                 title={t("nav.build.fold")}
                 aria-label={t("nav.build.fold")}
                 className={cn(
@@ -628,6 +633,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const rawStocked =
     rawSlots.length > 0 && rawSlots.every((slot) => slot.files.length > 0);
 
+  // ONE PREFERENCE FOR BOTH COPIES OF THE BAR. `MainNav` is rendered twice — the wide one
+  // and the narrow one, each hidden by CSS at the other's breakpoint — so a `useState`
+  // inside it is two states over one `localStorage` key: unfolding on a phone left the
+  // desktop copy folded until a reload.
+  const [stepsOpen, setStepsOpen] = useState(readStepsPreference);
+  const setSteps = (open: boolean) => {
+    setStepsOpen(open);
+    writeStepsPreference(open);
+  };
+
   return (
     // The deck is the one screen that is a fixed layout — a head, a scrolling column and
     // a foot — so under it the wrapper is a definite height and `main` a flex column with
@@ -692,6 +707,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               locked={locked}
               rawWaiting={rawWaiting}
               rawStocked={rawStocked}
+              stepsOpen={stepsOpen}
+              onSteps={setSteps}
               className="hidden xl:flex"
             />
           ) : null}
@@ -710,6 +727,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             locked={locked}
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}
+            stepsOpen={stepsOpen}
+            onSteps={setSteps}
             className="flex border-t border-border px-3 py-1.5 xl:hidden"
           />
         ) : null}
