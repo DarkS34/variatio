@@ -6,9 +6,10 @@ buttons nobody was told about. That is `jobs/chain.py`, and this pins it, becaus
 links are invisible from the screen that starts them and a silently emptied `CHAINS` would
 look exactly like a chain that works.
 
-The conditions are pinned with it: each link declares one, an unmet condition SKIPS rather
-than fails, and the chain carries on with the next. A fresh workspace — graph first, no
-profile yet — must end at the graph without an error.
+The conditions are pinned with it: each link declares one, the condition is the LINK's own
+and not its neighbour's, an unmet condition SKIPS rather than fails, and the chain carries
+on with the next. A fresh workspace — graph first, no profile yet — must still get its
+descriptions, because describing reads the graph and never the profile.
 """
 
 import json
@@ -94,8 +95,32 @@ def test_every_link_declares_its_own_condition():
             assert kind in chain.REQUIRES, f"«{kind}» se encadena sin condición"
 
 
-def test_with_no_profile_the_chain_ends_at_the_graph(tmp_path, monkeypatch):
+def test_with_no_profile_the_descriptions_still_follow(tmp_path, monkeypatch):
+    """Describing needs the GRAPH, so the state a new workspace starts in is not a skip.
+
+    It used to be gated on the profile, which withheld the one derivation this chain calls
+    mandatory from the very workspace the chain was written for.
+    """
     ws = workspace(tmp_path)
+    runner = advance(monkeypatch, ws, build_job(ws))
+    assert [kind for kind, _ in runner.submitted] == ["describe_concepts"]
+
+
+def test_with_no_profile_the_other_two_links_are_skipped(tmp_path, monkeypatch):
+    """And the chain ends there rather than failing: both of them do read the profile."""
+    ws = workspace(tmp_path)
+    job = Job(
+        kind="describe_concepts",
+        params={"chain": ["review_taggability", "index"]},
+        workspace=ws.slug,
+    )
+    assert advance(monkeypatch, ws, job).submitted == []
+
+
+def test_without_a_graph_nothing_is_described(tmp_path, monkeypatch):
+    """The one condition describing actually has, and it is reported rather than raised."""
+    ws = Workspace(root=tmp_path, slug="test")
+    ws.instance_dir.mkdir(parents=True, exist_ok=True)
     runner = advance(monkeypatch, ws, build_job(ws))
     assert runner.submitted == []
 

@@ -6,9 +6,11 @@ concepts that work as labels have to be decided, and the indices warmed, so the 
 leaves all three pending chains them.
 
 What is NOT chained is whatever depends on an artifact that may not exist yet. Each link
-declares its condition; if it does not hold the link is skipped, the log says so and the
-chain goes on with the next one. In a freshly created workspace — graph first, no profile
-yet — all three are skipped and the build ends at the graph.
+declares its condition, and the condition is what the LINK ITSELF reads: describing needs
+the graph and nothing else, the taggability review needs an approved profile, indexing
+needs a profile and a bank. If a condition does not hold the link is skipped, the log says
+so and the chain goes on with the next one. In a freshly created workspace — graph first,
+no profile yet — the descriptions are written and the other two are skipped.
 
 A link that fails or is cancelled cuts the chain: `advance` is only called after a job that
 finished well.
@@ -29,8 +31,24 @@ CHAINS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _graph_exists(ws: Workspace) -> str | None:
+    """Why describing cannot follow, or `None` when it can.
+
+    THE GRAPH AND NOT THE PROFILE. `stages.describe_concepts` builds its describer from the
+    graph and the subject context alone — `review.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and
+    `stages/index._describer` exists to keep it that way — so gating it on the profile
+    withheld the one derivation this chain calls mandatory in exactly the state it was
+    written for: a workspace whose graph is its first artifact. It costs nothing extra
+    either, since the embedder writes whatever is missing at the next `initialize`; the
+    chain only moves that call earlier, which is what a chain is for.
+    """
+    if stages.knowledge_graph_path(ws) is None:
+        return "esta asignatura todavía no tiene grafo de conocimiento"
+    return None
+
+
 def _profile_exists(ws: Workspace) -> str | None:
-    """Why describing cannot follow, or `None` when it can."""
+    """Why a link that reads the exemplars profile cannot follow, or `None` when it can."""
     if stages.exemplars_profile_path(ws) is None:
         return "esta asignatura todavía no tiene perfil de ejemplares"
     return None
@@ -62,7 +80,7 @@ def _indexable(ws: Workspace) -> str | None:
 
 
 REQUIRES = {
-    "describe_concepts": _profile_exists,
+    "describe_concepts": _graph_exists,
     "review_taggability": _profile_approved,
     "index": _indexable,
 }
