@@ -128,25 +128,25 @@ def _transcribe_and_report(args: argparse.Namespace, ws) -> None:
         )
 
 
-def _parse_fixed(pairs: list[str]) -> dict[str, object]:
-    """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
-
-    Raises ValueError on a pair with no `=`.
-    """
-    fixed: dict[str, object] = {}
-    for pair in pairs:
-        field, sep, value = pair.partition("=")
-        if not sep or not field:
-            raise ValueError(f"--fixed expects FIELD=VALUE, got: {pair!r}")
-        try:
-            fixed[field] = json.loads(value)
-        except json.JSONDecodeError:
-            fixed[field] = value
-    return fixed
-
-
 def _generate_and_report(args: argparse.Namespace, ws) -> None:
     """Initialize the instance, generate what was asked for, and print the result."""
+    
+    def _parse_fixed(pairs: list[str]) -> dict[str, object]:
+        """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
+
+        Raises ValueError on a pair with no `=`.
+        """
+        fixed: dict[str, object] = {}
+        for pair in pairs:
+            field, sep, value = pair.partition("=")
+            if not sep or not field:
+                raise ValueError(f"--fixed expects FIELD=VALUE, got: {pair!r}")
+            try:
+                fixed[field] = json.loads(value)
+            except json.JSONDecodeError:
+                fixed[field] = value
+        return fixed
+    
     context = stages.initialize(tag=True, ws=ws)
     results = stages.generate(
         context,
@@ -166,7 +166,6 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
             print(f"--- THINKING ---\n{result.thinking}")
             print("-----------------\n")
         print(result.item.model_dump_json(indent=2))
-
 
 
 def main(argv: list[str] | None = None) -> int:
