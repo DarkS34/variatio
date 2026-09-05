@@ -21,12 +21,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     common = argparse.ArgumentParser(add_help=False)
-    # Required: there is no default workspace, and a build that guesses which instance
-    # it meant is a build that rewrites somebody else's graph.
+
     common.add_argument(
         "--workspace",
         metavar="SLUG",
-        required=True,
+        required=True, # Required: there is no default workspace
         help="operate on WORKSPACES_DIR/SLUG",
     )
 
@@ -114,15 +113,6 @@ def _parse_fixed(pairs: list[str]) -> dict[str, object]:
     return fixed
 
 
-def _report(results: list) -> None:
-    """Print each generated item, and its reasoning when the model produced any."""
-    for i, result in enumerate(results, 1):
-        print(f"\n============== ITEM {i} · {result.item_type} ==============")
-        print(result.item.model_dump_json(indent=2))
-        if result.thinking:
-            print(f"\n--- thinking ---\n{result.thinking}")
-
-
 def _generate_and_report(args: argparse.Namespace, ws) -> None:
     """Initialize the instance, generate what was asked for, and print the result."""
     context = stages.initialize(tag=True, ws=ws)
@@ -135,7 +125,16 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
         curriculum=args.curriculum,
         instructions=args.instructions,
     )
-    _report(results)
+    
+    # Print each generated item, and its reasoning when the model produced any
+    for i, result in enumerate(results, 1):
+        print(f"\n============== ITEM {i} · {result.item_type} ==============")
+        if result.thinking:
+            print("\n-----------------")
+            print(f"--- THINKING ---\n{result.thinking}")
+            print("-----------------\n")
+        print(result.item.model_dump_json(indent=2))
+
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -148,22 +147,24 @@ def main(argv: list[str] | None = None) -> int:
         # `restamp-descriptions` calls no model, so it must not demand a live engine.
         if args.command != "restamp-descriptions":
             bootstrap()
-        if args.command == "build":
-            built = stages.build_missing(ws)
-            if built:
-                logger.success(f"Artifacts built: {', '.join(built)}")
-            else:
-                logger.info("Every artifact of the instance already exists")
-        elif args.command == "init":
-            stages.initialize(tag=True, ws=ws)
-        elif args.command == "restamp-descriptions":
-            changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
-            print(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
-        elif args.command == "generate":
-            _generate_and_report(args, ws)
-        elif args.command == "all":
-            stages.build_missing(ws)
-            _generate_and_report(args, ws)
+        
+        match args.command:
+            case "build":
+                built = stages.build_missing(ws)
+                if built:
+                    logger.success(f"Artifacts built: {', '.join(built)}")
+                else:
+                    logger.info("Every artifact of the instance already exists")
+            case "init":
+                stages.initialize(tag=True, ws=ws)
+            case "restamp-descriptions":
+                changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+                logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
+            case "generate":
+                _generate_and_report(args, ws)
+            case "all":
+                stages.build_missing(ws)
+                _generate_and_report(args, ws)
     except stages.MissingArtifactError as e:
         logger.error(f"{e}; run `variatio build` first")
         return 1

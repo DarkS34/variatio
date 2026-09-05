@@ -21,20 +21,20 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config
+from ... import prompts as prompts_pkg
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace
 from ...instance import locale
 from ...instance.relations import RelationSchema
-from ... import prompts as prompts_pkg
 from .. import _context, _source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
     "BUILD_PHASES",
-    "build_models",
     "KnowledgeGraphBuilder",
     "blocks",
+    "build_models",
     "cleaning",
     "curation",
     "extraction",
@@ -59,8 +59,7 @@ BUILD_PHASES = (
     ("domains", "Agrupando los conceptos en dominios", 9),
     ("link", "Enlazando conceptos y ordenando el temario", 26),
     ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
-    # Last because it needs the names of the blocks, which no earlier phase has yet.
-    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
+    ("context", "Poniendo por escrito de qué asignatura es esto", 1), # Last because it needs the names of the blocks, which no earlier phase has yet.
 )
 
 def build_models() -> list[str]:
@@ -147,8 +146,7 @@ class KnowledgeGraphBuilder:
         total = sum(len(members) for members in graph["concepts_by_domains"].values())
         evidence = "\n".join(
             [
-                f"El temario se divide en {len(domains)} bloque(s), "
-                f"con {total} concepto(s) en total. Se llaman:",
+                (f"El temario se divide en {len(domains)} bloque(s), con {total} concepto(s) en total. Se llaman:"),
                 *(f"- {domain}" for domain in domains),
             ]
         )

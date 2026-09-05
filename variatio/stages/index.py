@@ -8,10 +8,15 @@ upstream — and it failed in exactly the state a new workspace starts in.
 
 from loguru import logger
 
-from ..core.workspace import Workspace
-from ..instance import locale
 from .. import prompts as prompts_pkg
-from ..embedder import ConceptDescriber, load_descriptions, load_sources, save_descriptions
+from ..core.workspace import Workspace
+from ..embedder import (
+    ConceptDescriber,
+    load_descriptions,
+    load_sources,
+    save_descriptions,
+)
+from ..instance import locale
 from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 
