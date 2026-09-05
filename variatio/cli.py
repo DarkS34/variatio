@@ -9,8 +9,8 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, stages
-from .core import paths
+from . import stages
+from .core import inference, paths
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -146,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         # `restamp-descriptions` calls no model, so it must not demand a live engine.
         if args.command != "restamp-descriptions":
-            bootstrap()
+            inference.require_engine()
         
         match args.command:
             case "build":

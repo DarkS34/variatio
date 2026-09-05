@@ -1,8 +1,9 @@
-"""The package root: logging configuration and the one startup check.
+"""The package root: the logging configuration, and nothing else.
 
-Importing `variatio` is side-effect-free apart from the logging setup below. The
-inference engine is reached only through `bootstrap()`, which every entry point that
-talks to a model must call.
+Importing `variatio` is side-effect-free apart from the logging setup below, and it must
+stay that way: the engine check lives in `core.inference.require_engine()`, which every
+entry point that talks to a model calls, so nothing here pulls the ollama SDK, httpx and
+tqdm into a caller that only wanted a loader.
 """
 
 import logging
@@ -36,18 +37,3 @@ logger.add(
     format="[{time:HH:mm:ss}] <level>{level: <8}</level> | <cyan>{module}</cyan> >> {message}",
     colorize=True,
 )
-
-
-def bootstrap() -> None:
-    """Raise unless the configured inference engine answers.
-
-    Every entry point that talks to a model must call this; the stages never do.
-    """
-    # Do not hoist: `core.inference` pulls the ollama SDK, httpx and tqdm, which is
-    # 364 ms of the 510 ms `import variatio` otherwise costs every caller.
-    from .core import inference
-
-    if not inference.is_available():
-        msg = f"Cannot connect to inference engine '{inference.engine_name()}'. Make sure it is running before initializing the agent."
-        logger.critical(msg)
-        raise RuntimeError(msg)

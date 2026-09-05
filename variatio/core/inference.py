@@ -695,6 +695,19 @@ def is_available() -> bool:
     return engine().is_available()
 
 
+def require_engine() -> None:
+    """Raise unless the configured inference engine answers.
+
+    Every entry point that talks to a model calls this before its first phase; the stages
+    never do. On the hybrid engine it is the LOCAL half that is checked, which is what this
+    process cannot do without — a Cerebras outage surfaces on its first remote call.
+    """
+    if not is_available():
+        msg = f"Cannot connect to inference engine '{engine_name()}'. Make sure it is running before initializing the agent."
+        logger.critical(msg)
+        raise RuntimeError(msg)
+
+
 def ensure_model(model: str) -> bool:
     """Make sure `model` is installed, pulling it if it is not."""
     return engine().ensure_model(model)
