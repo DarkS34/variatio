@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from variatio import admissibility
@@ -43,11 +45,38 @@ INADMISSIBLE = [
 ]
 
 
+# WHICH INSTANCE THE TWELVE MEASUREMENTS ARE TAKEN AGAINST, and it is named rather than
+# resolved. They used to call `paths.default_workspace()`, which was deleted on 2026-08-26
+# with the whole idea of a default instance — so from that day these twelve errored at
+# setup with an `AttributeError` instead of running, and being deselected by default
+# nobody saw it. The slug is overridable because `workspaces/` is gitignored: a checkout
+# has whatever its owner built, under whatever they called it.
+WORKSPACE = os.environ.get("VARIATIO_MODEL_WORKSPACE", "default")
+
+
 @pytest.fixture(scope="module")
 def instance():
-    ws = paths.default_workspace()
-    graph = KnowledgeGraph(_artifacts.knowledge_graph_path(ws))
-    profile = ExemplarsProfile(_artifacts.exemplars_profile_path(ws))
+    """The owners of the reference instance, or a skip saying what is missing.
+
+    Every precondition is checked here rather than left to blow up inside a test: these
+    are measurements of a MODEL against a real instance, so «this checkout does not have
+    that instance» is not a failure of the judge and must not read as one.
+    """
+    ws = paths.workspace(WORKSPACE)
+    graph_path = _artifacts.knowledge_graph_path(ws)
+    profile_path = _artifacts.exemplars_profile_path(ws)
+    if graph_path is None or profile_path is None:
+        pytest.skip(
+            f"«{WORKSPACE}» no tiene grafo y perfil construidos; "
+            "usa VARIATIO_MODEL_WORKSPACE para medir contra otra asignatura"
+        )
+    profile = ExemplarsProfile(profile_path)
+    if ITEM_TYPE not in profile.item_types:
+        pytest.skip(f"«{WORKSPACE}» no declara la modalidad «{ITEM_TYPE}»")
+    graph = KnowledgeGraph(graph_path)
+    absent = [c for c in TARGETS if c not in graph.all_concepts]
+    if absent:
+        pytest.skip(f"«{WORKSPACE}» no tiene el concepto {absent[0]!r}")
     context = _artifacts.load_content_context(ws)
     found = admissibility.owners(graph, profile.item_type(ITEM_TYPE), profile, context, TARGETS)
     return found, context.prompt_block()
