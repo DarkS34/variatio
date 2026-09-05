@@ -1,6 +1,6 @@
 import json
 
-from variatio import admissibility
+from variatio import screening
 from variatio.core.lexicon import fold
 from variatio.instance.exemplars_profile import ExemplarsProfile
 
@@ -44,12 +44,12 @@ def test_owners_carries_the_modalities_and_the_three_facts(owners_for):
 
 def test_catalog_keys_never_collide_with_owner_keys(owners_for):
     found = owners_for()
-    assert not {s.key for s in admissibility.CATALOG} & {o.key for o in found}
+    assert not {s.key for s in screening.catalog()} & {o.key for o in found}
 
 
 def test_every_slot_declares_a_label_and_an_example():
-    assert len(admissibility.CATALOG) == 4
-    assert all(s.key and s.label and s.example for s in admissibility.CATALOG)
+    assert len(screening.catalog()) == 4
+    assert all(s.key and s.label and s.example for s in screening.catalog())
 
 
 def test_the_difficulty_owns_its_control_without_decided_by(graph, context, tmp_path):
@@ -66,7 +66,7 @@ def test_the_difficulty_owns_its_control_without_decided_by(graph, context, tmp_
     path.write_text(json.dumps(profile_data, ensure_ascii=False), encoding="utf-8")
     older = ExemplarsProfile(path)
 
-    found = admissibility.owners(
+    found = screening.owners(
         graph, older.item_type("ejercicio"), older, context, ["Recursividad"]
     )
     field = _owner(found, "field:nivel_dificultad")

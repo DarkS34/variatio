@@ -1,4 +1,5 @@
-from variatio import admissibility
+from variatio import screening
+from variatio.screening import admissibility
 
 
 def test_accept_takes_a_valid_slot(owners_for):
@@ -40,11 +41,11 @@ def test_accept_rejects_an_unknown_slot(owners_for):
 
 
 def test_ruling_is_blocked_when_any_request_has_an_owner():
-    owner = admissibility.Owner(key="concepts", label="l", where="w", terms=("Variable",))
-    ruling = admissibility.Ruling(
+    owner = screening.Owner(key="concepts", label="l", where="w", terms=("Variable",))
+    ruling = screening.Ruling(
         requests=(
-            admissibility.Request(text="a", slot="ambito", owner=None, term=None),
-            admissibility.Request(text="b", slot=None, owner=owner, term="Variable"),
+            screening.Request(text="a", slot="ambito", owner=None, term=None),
+            screening.Request(text="b", slot=None, owner=owner, term="Variable"),
         ),
         checked=True,
     )
@@ -54,4 +55,4 @@ def test_ruling_is_blocked_when_any_request_has_an_owner():
 
 
 def test_an_empty_ruling_is_ok():
-    assert admissibility.Ruling(requests=(), checked=False).ok
+    assert screening.Ruling(requests=(), checked=False).ok

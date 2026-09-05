@@ -1,6 +1,6 @@
 import pytest
 
-from variatio import guardrail
+from variatio.screening import guardrail
 
 
 class _Reply:

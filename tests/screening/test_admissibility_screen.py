@@ -1,6 +1,7 @@
 import json
 
-from variatio import admissibility
+from variatio import screening
+from variatio.screening import admissibility
 
 from ..conftest import ES
 
@@ -24,7 +25,7 @@ def test_screen_returns_an_empty_ruling_without_calling_anyone(owners_for, monke
         raise AssertionError("no debería llamar al modelo")
 
     monkeypatch.setattr(admissibility.inference, "generate", explode)
-    ruling = admissibility.screen("   ", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("   ", owners_for(), ["Recursividad"], ES)
     assert ruling.requests == ()
     assert ruling.ok
 
@@ -39,7 +40,7 @@ def test_screen_accepts_two_slots(owners_for, monkeypatch):
         }
     )
     monkeypatch.setattr(admissibility.inference, "generate", _fake_generate(payload))
-    ruling = admissibility.screen("x", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("x", owners_for(), ["Recursividad"], ES)
     assert ruling.ok
     assert ruling.checked
     assert [r.slot for r in ruling.requests] == ["ambito", "extension"]
@@ -54,7 +55,7 @@ def test_screen_blocks_on_an_owner(owners_for, monkeypatch):
         }
     )
     monkeypatch.setattr(admissibility.inference, "generate", _fake_generate(payload))
-    ruling = admissibility.screen("x", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("x", owners_for(), ["Recursividad"], ES)
     assert not ruling.ok
     assert ruling.blocked[0].owner.key == "concepts"
     assert ruling.blocked[0].term == "Variable"
@@ -62,7 +63,7 @@ def test_screen_blocks_on_an_owner(owners_for, monkeypatch):
 
 def test_screen_fails_open_when_the_answer_is_unreadable(owners_for, monkeypatch):
     monkeypatch.setattr(admissibility.inference, "generate", _fake_generate("no soy json"))
-    ruling = admissibility.screen("x", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("x", owners_for(), ["Recursividad"], ES)
     assert ruling.ok
     assert not ruling.checked
     assert ruling.requests == ()
@@ -77,7 +78,7 @@ def test_screen_fails_open_when_every_entry_is_discarded(owners_for, monkeypatch
         }
     )
     monkeypatch.setattr(admissibility.inference, "generate", _fake_generate(payload))
-    ruling = admissibility.screen("x", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("x", owners_for(), ["Recursividad"], ES)
     assert ruling.ok
     assert not ruling.checked
 
@@ -88,6 +89,6 @@ def test_screen_fails_open_when_the_engine_raises(owners_for, monkeypatch):
     monkeypatch.setattr(
         admissibility.inference, "generate", _fake_generate(InferenceError("motor caído"))
     )
-    ruling = admissibility.screen("x", owners_for(), ["Recursividad"], ES)
+    ruling = screening.screen("x", owners_for(), ["Recursividad"], ES)
     assert ruling.ok
     assert not ruling.checked

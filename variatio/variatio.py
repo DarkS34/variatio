@@ -16,7 +16,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import admissibility, checks, config, guardrail
+from . import checks, config, screening, wording as wording_sets
 from .concept_tagger import ConceptTagger
 from .core import inference, progress
 from .core.repair import parse_with_repair
@@ -70,15 +70,6 @@ def _public_fields(item: dict) -> dict:
     return {name: value for name, value in item.items() if not name.startswith("_")}
 
 
-def _sentence_case(text: str) -> str:
-    """Upper-case the first letter and leave the rest alone.
-
-    NOT `str.capitalize()`, which lowercases everything after it: an owner's `where`
-    quotes a screen control by name, and capitalising it names one nobody can find.
-    """
-    return text[:1].upper() + text[1:]
-
-
 def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     """Drop blank pins.
 
@@ -96,7 +87,9 @@ def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     return kept
 
 
-def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> tuple[BaseModel | None, str | None]:
+def parse_item(
+    response: str, fixed: dict[str, object], item_type: ItemType, wording=None
+) -> tuple[BaseModel | None, str | None]:
     """Return the best schema-conforming object in the reply, not merely the first one.
 
     Candidates are scored by how much of the schema they cover and, on a tie, the last
@@ -105,6 +98,7 @@ def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> 
     losing to a crooked JSON another would have had repaired measures parsing, not
     content.
     """
+    wording = wording or wording_sets.of(None)
     schema_fields = set(item_type.field_specs)
     candidates = json_objects(response) or [response]
     best: BaseModel | None = None
@@ -124,7 +118,7 @@ def parse_item(response: str, fixed: dict[str, object], item_type: ItemType) -> 
         except (ValidationError, ValueError, TypeError) as e:
             error = f"{type(e).__name__}: {e!s}"
             continue
-        floor = checks.content_floor(item, item_type)
+        floor = checks.content_floor(item, item_type, wording)
         if floor:
             error = floor
             continue
@@ -171,7 +165,7 @@ def _split_exemplar_fields(
 
 
 def build_few_shot_block(
-    item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None
+    item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None, wording=None
 ) -> str:
     """Render the few-shot exemplars the way the model is shown them.
 
@@ -182,6 +176,7 @@ def build_few_shot_block(
     if not few_shot:
         return ""
     primary = item_type.primary_field
+    wording = wording or wording_sets.of(None)
     properties = item_type.stripped_schema().get("properties", {})
     parts = []
     for position, ex in enumerate(few_shot):
@@ -189,10 +184,8 @@ def build_few_shot_block(
         header = f" ({', '.join(scalar_meta)})" if scalar_meta else ""
         lines = ["---"]
         if origins and position < len(origins) and origins[position] == NEIGHBOUR:
-            prior = ex.get("primary_concept") or "concepto previo"
-            lines.append(
-                f"(Ejemplo de un concepto previo: «{prior}». Referencia de forma, no del objetivo.)"
-            )
+            prior = ex.get("primary_concept") or wording.UNNAMED_CONCEPT
+            lines.append(wording.neighbour_note(prior))
         lines += [f"{primary.upper()}{header}:", primary_text]
         for name, value in text_blocks:
             lines.append(f"{name.upper()}:")
@@ -314,6 +307,7 @@ class VariantGenerator:
         self.embedder = embedder
         self.exemplars_profile = exemplars_profile
         self.prompts = prompts
+        self._wording = wording_sets.beside(prompts)
         # The graph's own label for «is a prerequisite of», in the instance's language: a
         # field and not a `config` read, which would be the installation's for every
         # workspace.
@@ -382,7 +376,7 @@ class VariantGenerator:
         item_type_block = self._build_item_type_block(target_type)
 
         accepted: list[GeneratedVariant] = []
-        with progress.step("generate", "Generando variantes", total=n) as reporter:
+        with progress.step("generate", "Writing the items", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
                 already = list(avoid or []) + self._collect_already_generated(
@@ -414,7 +408,7 @@ class VariantGenerator:
 
                 def verify(result: GeneratedVariant) -> dict:
                     """Run the checks over one candidate, against the batch so far."""
-                    with progress.step("check", "Comprobando la variante"):
+                    with progress.step("check", "Checking the item"):
                         return checks.run(
                             result.item,
                             target_type,
@@ -425,6 +419,7 @@ class VariantGenerator:
                             tagger=self.tagger,
                             few_shot=few_shot,
                             batch=[r.item for r in accepted],
+                            wording=self._wording,
                         )
 
                 result = generate_with_retries(
@@ -477,53 +472,22 @@ class VariantGenerator:
         """Drop the pins with no value."""
         return clean_fixed(fixed)
 
-    def _screen_instructions_owners(self, item_type, concepts: list[str]) -> list:
-        """Derive the controls that already decide something, for the scope judge."""
-        return admissibility.owners(
-            self.knowledge_graph,
-            item_type,
-            self.exemplars_profile,
-            self.content_context,
-            concepts,
-        )
-
     def _screen_instructions(self, item_type, concepts: list[str], instructions: str):
         """Screen the free text before it is concatenated into the generation prompt.
 
-        The guardrail goes FIRST and the scope judge second, never the other way round:
-        the guardrail reads the text alone with a 4096 window, while the scope judge is
-        handed the graph's whole concept list, so a text that should reach no model at
-        all would otherwise reach the larger of the two. No text, no model call.
-
-        Raises ValueError when either screen blocks the commission.
+        One line, because the order, the two error sentences and the owner derivation are
+        `screening.screen_instructions`'s — the evaluation runs the same sequence and the
+        two used to be a copy of each other.
         """
-        if not instructions:
-            return admissibility.Ruling(requests=(), checked=True)
-
-        # The raise stays inside the step so a block marks that step failed: a green tick
-        # on «revisando» beside a failed job would read as if something else broke.
-        with progress.step("guardrail", "Revisando las instrucciones"):
-            verdict = guardrail.check(instructions)
-            if verdict.blocked:
-                raise ValueError(
-                    f"Las instrucciones adicionales no han pasado la revisión: se ha detectado {verdict.reason}."
-                )
-
-        with progress.step("admissibility", "Revisando el alcance del encargo"):
-            ruling = admissibility.screen(
-                instructions,
-                self._screen_instructions_owners(item_type, concepts),
-                concepts,
-                self.prompts,
-                self.content_context.prompt_block(),
-            )
-            if not ruling.ok:
-                first = ruling.blocked[0]
-                raise ValueError(
-                    f"«{first.text}» no se pide aquí: lo decide {first.owner.label} "
-                    f"(«{first.term}»). {_sentence_case(first.owner.where)}."
-                )
-        return ruling
+        return screening.screen_instructions(
+            instructions,
+            knowledge_graph=self.knowledge_graph,
+            item_type=item_type,
+            profile=self.exemplars_profile,
+            content_context=self.content_context,
+            concepts=concepts,
+            prompts=self.prompts,
+        )
 
     def _validate_input(
         self,
@@ -749,7 +713,7 @@ class VariantGenerator:
         ]
         if not parts:
             return ""
-        return "Sin descripción; en el grafo " + "; ".join(parts) + "."
+        return self._wording.relations_sentence(parts)
 
     def _build_item_type_block(self, item_type: ItemType) -> str:
         """Name the modality to produce, and the sibling modalities to stay away from."""
@@ -759,9 +723,7 @@ class VariantGenerator:
         others = [t for k, t in self.exemplars_profile.item_types.items() if k != item_type.key]
         if others:
             lines.append(
-                "Otras modalidades de la asignatura, que NO debes producir aquí: "
-                + ", ".join(f"{t.label} (`{t.key}`)" for t in others)
-                + "."
+                self._wording.other_modalities([f"{t.label} (`{t.key}`)" for t in others])
             )
         return "\n".join(lines)
 
@@ -769,7 +731,7 @@ class VariantGenerator:
         self, item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None
     ) -> str:
         """Render the few-shot block through the module-level renderer the arms share."""
-        return build_few_shot_block(item_type, few_shot, origins)
+        return build_few_shot_block(item_type, few_shot, origins, self._wording)
 
     def _collect_already_generated(
         self, item_type: ItemType, accepted: list[GeneratedVariant]
@@ -825,27 +787,29 @@ class VariantGenerator:
                 if key not in self._FIELD_META_KEYS
             )
             if name not in required:
-                facets.append("opcional")
+                facets.append(self._wording.OPTIONAL_FIELD)
             desc = " ".join((spec.get("description") or "").split())
             line = f"- `{name}` ({', '.join(facets)})"
             if desc:
                 line += f": {desc}"
             if name in guidance:
-                line += f"\n  Guía anotada a mano para este campo: {guidance[name]}"
+                line += f"\n  {self._wording.hand_written_guidance(guidance[name])}"
             lines.append(line)
         return "\n".join(lines)
 
-    @staticmethod
-    def _field_type(spec: dict) -> str:
+    def _field_type(self, spec: dict) -> str:
         """Name a field's type in the prose the prompt reads."""
+        wording = self._wording
         if "type" in spec:
             if spec["type"] == "array":
                 inner = (spec.get("items") or {}).get("type")
-                return f"lista de {inner}" if inner else "lista"
+                return wording.type_list_of(inner) if inner else wording.TYPE_LIST
             return str(spec["type"])
         if "anyOf" in spec:
-            return " o ".join(str(v.get("type", "objeto")) for v in spec["anyOf"])
-        return "valor"
+            return wording.TYPE_OR.join(
+                str(v.get("type", wording.TYPE_OBJECT)) for v in spec["anyOf"]
+            )
+        return wording.TYPE_VALUE
 
     def _build_fixed_values_block(self, item_type: ItemType, fixed: dict[str, object]) -> str:
         """State each pinned field and the exact value it must carry."""
@@ -854,9 +818,9 @@ class VariantGenerator:
         for name, value in fixed.items():
             value_repr = json.dumps(value, ensure_ascii=False)
             desc = (properties.get(name, {}).get("description") or "").strip()
-            entry = f"- `{name}`: debe ser exactamente {value_repr}."
+            entry = self._wording.fixed_value(name, value_repr)
             if desc:
-                entry += f"\n  Descripción del schema: {desc}"
+                entry += f"\n  {self._wording.schema_description(desc)}"
             lines.append(entry)
         return "\n".join(lines)
 
@@ -890,7 +854,9 @@ class VariantGenerator:
 
         def parse(text: str) -> tuple[BaseModel | None, str | None]:
             """Parse one reply into an item, stripping any reasoning first."""
-            return parse_item(inference.split_thinking(text).response, fixed, item_type)
+            return parse_item(
+                inference.split_thinking(text).response, fixed, item_type, self._wording
+            )
 
         item, _ = parse_with_repair(
             body,

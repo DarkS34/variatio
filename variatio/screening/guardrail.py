@@ -4,6 +4,10 @@ A regex catches prompt injection before any model is asked; the rest is one call
 criterion of `config.GUARDRAIL_CRITERIA`, stopping at the first that flags. A criterion
 the model cannot answer is logged and skipped rather than blocking, but it clears
 `checked` so the caller knows the screen was only partial.
+
+The patterns and the wording of a verdict come from `wording`, not from this file: an
+override is written in the workspace's own language, so a Spanish alternation over an
+English commission recognises nothing but the English half both sets share.
 """
 
 import re
@@ -11,46 +15,34 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from . import config
-from .core import inference, progress
-from .core.inference import InferenceError
-from .core.lexicon import fold
+from .. import config, wording as wording_sets
+from ..core import inference, progress
+from ..core.inference import InferenceError
+from ..core.lexicon import fold
 
 _SCORE = re.compile(r"<score>\s*(yes|no)\s*</score>", re.IGNORECASE)
 _BARE = re.compile(r"\b(yes|no)\b", re.IGNORECASE)
 
-_OVERRIDE_VERBS = (
-    r"olvida(?:te|d)?|olvides|ignora(?:d)?|ignores|omite|omitas|omitid|"
-    r"descarta(?:d)?|descartes|obvia|obvies|anula(?:d)?|anules|salta(?:te)?|saltes|"
-    r"incumple|desobedece|haz caso omiso|"
-    r"no (?:sigas|obedezcas|cumplas|respetes|apliques|tengas en cuenta)|"
-    r"deja de (?:seguir|obedecer|aplicar|hacer caso)|"
-    r"forget|ignore|disregard|bypass|override|stop following|do not follow"
-)
-_OVERRIDE_OBJECTS = (
-    r"instruccion(?:es)?|indicacion(?:es)?|regla(?:s)?|orden(?:es)?|consigna(?:s)?|"
-    r"restriccion(?:es)?|directriz|directrices|prompt(?:s)?|"
-    r"instruction(?:s)?|rule(?:s)?|constraint(?:s)?|directive(?:s)?|guideline(?:s)?"
-)
-_INJECTION = re.compile(
-    rf"\b(?:{_OVERRIDE_VERBS})\b[^.;:!?]{{0,40}}?\b(?:{_OVERRIDE_OBJECTS})\b"
-    rf"|\b(?:{_OVERRIDE_OBJECTS}) (?:anterior(?:es)?|previ[ao]s?|de arriba)\b"
-    r"|\b(?:system|previous|prior) prompt\b"
-    r"|\bprompt del sistema\b"
-    # The lookahead spares «instrucciones del sistema operativo», a legitimate subject.
-    r"|\binstrucciones del sistema\b(?! ?operativ)"
-)
+_INJECTION_CACHE: dict[str, re.Pattern[str]] = {}
 
-_LABELS = {
-    "instruction_override": "una instrucción dirigida al sistema, no al ejercicio",
-    "harm": "contenido dañino",
-    "jailbreak": "un intento de saltarse las instrucciones del sistema",
-    "social_bias": "sesgo contra un colectivo",
-    "violence": "violencia",
-    "profanity": "lenguaje ofensivo",
-    "sexual_content": "contenido sexual",
-    "unethical_behavior": "comportamiento poco ético",
-}
+
+def injection_pattern(wording) -> re.Pattern[str]:
+    """Return the compiled override detector for one language, compiling it once.
+
+    Two branches plus whatever the language adds: a verb reaching an object within 40
+    characters, and an object carried by a backward-looking qualifier with no verb at all.
+    """
+    cached = _INJECTION_CACHE.get(wording.LANGUAGE)
+    if cached is not None:
+        return cached
+    branches = [
+        rf"\b(?:{wording.OVERRIDE_VERBS})\b[^.;:!?]{{0,40}}?\b(?:{wording.OVERRIDE_OBJECTS})\b",
+        rf"\b(?:{wording.OVERRIDE_OBJECTS}) (?:{wording.OVERRIDE_QUALIFIERS})\b",
+        *wording.INJECTION_PATTERNS,
+    ]
+    compiled = re.compile("|".join(branches))
+    _INJECTION_CACHE[wording.LANGUAGE] = compiled
+    return compiled
 
 
 @dataclass(frozen=True)
@@ -59,21 +51,15 @@ class Verdict:
 
     blocked_by: str | None
     checked: bool
+    reason: str = ""
 
     @property
     def blocked(self) -> bool:
         """True when a criterion flagged the text."""
         return self.blocked_by is not None
 
-    @property
-    def reason(self) -> str:
-        """What blocked the text, in the wording the screen shows, or an empty string."""
-        if self.blocked_by is None:
-            return ""
-        return _LABELS.get(self.blocked_by, self.blocked_by)
 
-
-def check(text: str, criteria: list[str] | None = None) -> Verdict:
+def check(text: str, criteria: list[str] | None = None, wording=None) -> Verdict:
     """Screen one free text and return the verdict.
 
     The injection regex runs first, over the folded text and before any model call: an
@@ -86,8 +72,15 @@ def check(text: str, criteria: list[str] | None = None) -> Verdict:
     """
     if criteria is None:
         criteria = config.GUARDRAIL_CRITERIA
-    if _INJECTION.search(fold(text)):
-        verdict = Verdict(blocked_by="instruction_override", checked=True)
+    if wording is None:
+        wording = wording_sets.of(None)
+
+    def verdict_for(blocked_by: str | None, checked: bool) -> Verdict:
+        label = wording.GUARDRAIL_LABELS.get(blocked_by, blocked_by) if blocked_by else ""
+        return Verdict(blocked_by=blocked_by, checked=checked, reason=label)
+
+    if injection_pattern(wording).search(fold(text)):
+        verdict = verdict_for("instruction_override", True)
         progress.emit("guardrail", ok=False, criteria=verdict.blocked_by, checked=True)
         return verdict
 
@@ -104,7 +97,7 @@ def check(text: str, criteria: list[str] | None = None) -> Verdict:
             blocked_by = criterion
             break
 
-    verdict = Verdict(blocked_by=blocked_by, checked=not unreadable)
+    verdict = verdict_for(blocked_by, not unreadable)
     if unreadable:
         logger.warning(
             f"The guardrail could not judge {', '.join(unreadable)}; letting the request through"

@@ -1,6 +1,7 @@
 import pytest
 
-from variatio import admissibility
+from variatio import screening
+from variatio.screening import admissibility
 from variatio.prompts.es import generate_content_prompt
 
 from ..conftest import ES
@@ -15,8 +16,8 @@ BLOCKS = dict(
 
 def test_the_prompt_renders_one_line_per_typed_request():
     requests = (
-        admissibility.Request(text="una panadería", slot="ambito", owner=None, term=None),
-        admissibility.Request(text="breve", slot="extension", owner=None, term=None),
+        screening.Request(text="una panadería", slot="ambito", owner=None, term=None),
+        screening.Request(text="breve", slot="extension", owner=None, term=None),
     )
     prompt = generate_content_prompt(**BLOCKS, instructions="da igual", requests=requests)
     assert "- Ámbito: una panadería" in prompt
@@ -37,21 +38,24 @@ def test_the_prompt_has_no_petition_section_without_instructions():
 def test_the_prompt_labels_match_the_catalog():
     from variatio.prompts.es.generation import _SLOT_LABELS
 
-    assert _SLOT_LABELS == {s.key: s.label for s in admissibility.CATALOG}
+    assert _SLOT_LABELS == {s.key: s.label for s in screening.catalog()}
 
 
-def _bare_generator(context):
-    from variatio import variatio as vg
+def _screen(context, graph, profile, instructions):
+    """Run the shared screening sequence the generator and the evaluation both call."""
+    return screening.screen_instructions(
+        instructions,
+        knowledge_graph=graph,
+        item_type=profile.item_type("ejercicio"),
+        profile=profile,
+        content_context=context,
+        concepts=["Recursividad"],
+        prompts=ES,
+    )
 
-    generator = vg.VariantGenerator.__new__(vg.VariantGenerator)
-    generator.content_context = context
-    generator.prompts = ES
-    generator._screen_instructions_owners = lambda item_type, concepts: []
-    return generator
 
-
-def test_generate_screens_the_guardrail_before_the_classifier(context, monkeypatch):
-    from variatio import guardrail
+def test_generate_screens_the_guardrail_before_the_classifier(context, graph, profile, monkeypatch):
+    from variatio.screening import guardrail
 
     order = []
     monkeypatch.setattr(
@@ -62,16 +66,16 @@ def test_generate_screens_the_guardrail_before_the_classifier(context, monkeypat
     monkeypatch.setattr(
         admissibility,
         "screen",
-        lambda *a, **k: order.append("admissibility") or admissibility.Ruling((), True),
+        lambda *a, **k: order.append("admissibility") or screening.Ruling((), True),
     )
-    _bare_generator(context)._screen_instructions(None, ["Recursividad"], "que vaya de deporte")
+    _screen(context, graph, profile, "que vaya de deporte")
     assert order == ["guardrail", "admissibility"]
 
 
-def test_generate_raises_naming_the_owner_and_the_term(context, monkeypatch):
-    from variatio import guardrail
+def test_generate_raises_naming_the_owner_and_the_term(context, graph, profile, monkeypatch):
+    from variatio.screening import guardrail
 
-    owner = admissibility.Owner(
+    owner = screening.Owner(
         key="field:nivel_dificultad",
         label="nivel_dificultad",
         where="decídelo en «¿Cómo debe ser?»",
@@ -81,12 +85,12 @@ def test_generate_raises_naming_the_owner_and_the_term(context, monkeypatch):
     monkeypatch.setattr(
         admissibility,
         "screen",
-        lambda *a, **k: admissibility.Ruling(
-            (admissibility.Request("muy difícil", None, owner, "avanzado"),), True
+        lambda *a, **k: screening.Ruling(
+            (screening.Request("muy difícil", None, owner, "avanzado"),), True
         ),
     )
     with pytest.raises(ValueError) as excinfo:
-        _bare_generator(context)._screen_instructions(None, ["Recursividad"], "muy difícil")
+        _screen(context, graph, profile, "muy difícil")
     message = str(excinfo.value)
     assert "muy difícil" in message
     assert "nivel_dificultad" in message

@@ -13,10 +13,10 @@ from dataclasses import replace
 
 from loguru import logger
 
-from variatio import admissibility, checks, config, guardrail, stages
+from variatio import checks, config, screening, stages
 from variatio.core import progress
 from variatio.stages.initialize import PipelineContext
-from variatio.variatio import _sentence_case, clean_fixed, forbidden
+from variatio.variatio import clean_fixed, forbidden
 
 from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 from . import config as evaluation_config
@@ -251,41 +251,20 @@ def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
 def _screen(context, item_type, commission: Commission):
     """Pay the guardrail and the admissibility judge ONCE, and return the ruling.
 
-    Guardrail first, admissibility second, as the pipeline orders them. Either one blocking
-    raises, so the session never comes into existence rather than recording a refusal.
+    `screening.screen_instructions` is the pipeline's own sequence; the prefix is all that
+    tells these steps from a generation's. Either screen blocking raises, so the session
+    never comes into existence rather than recording a refusal.
     """
-    if not commission.instructions:
-        return admissibility.Ruling(requests=(), checked=True)
-
-    with progress.step("eval.guardrail", "Revisando el encargo"):
-        verdict = guardrail.check(commission.instructions)
-        if verdict.blocked:
-            raise ValueError(
-                f"Las instrucciones adicionales no han pasado la revisión: "
-                f"se ha detectado {verdict.reason}."
-            )
-
-    with progress.step("eval.admissibility", "Revisando el alcance del encargo"):
-        ruling = admissibility.screen(
-            commission.instructions,
-            admissibility.owners(
-                context.knowledge_graph,
-                item_type,
-                context.exemplars_profile,
-                context.content_context,
-                commission.concepts,
-            ),
-            commission.concepts,
-            context.prompts,
-            context.content_context.prompt_block(),
-        )
-        if not ruling.ok:
-            first = ruling.blocked[0]
-            raise ValueError(
-                f"«{first.text}» no se pide aquí: lo decide {first.owner.label} "
-                f"(«{first.term}»). {_sentence_case(first.owner.where)}."
-            )
-    return ruling
+    return screening.screen_instructions(
+        commission.instructions,
+        knowledge_graph=context.knowledge_graph,
+        item_type=item_type,
+        profile=context.exemplars_profile,
+        content_context=context.content_context,
+        concepts=commission.concepts,
+        prompts=context.prompts,
+        step_prefix="eval.",
+    )
 
 
 def _validate(context: PipelineContext, item_type, commission: Commission) -> None:

@@ -11,7 +11,8 @@ wildcard reads «phases» as an artifact and answers «Artefacto desconocido». 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio import admissibility, taggability
+from variatio import screening, taggability
+from variatio.instance import locale
 from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.stages import _artifacts
 from variatio.stages import build_phases as phases_of
@@ -159,13 +160,20 @@ def build_phases() -> dict:
     }
 
 
-def _scope_payload(knowledge_graph, profile, content_context, item_type: str) -> dict:
-    """Render the admissibility catalogue: the four slots and who owns each of them."""
+def _scope_payload(knowledge_graph, profile, content_context, item_type: str, wording) -> dict:
+    """Render the admissibility catalogue: the four slots and who owns each of them.
+
+    Worded in the WORKSPACE's language and not the account's: what it names are the judge's
+    own slots and the controls it points at, and the judge reads this instance's prompts.
+    """
     target_type = profile.item_type(item_type)
-    found = admissibility.owners(knowledge_graph, target_type, profile, content_context, [])
+    found = screening.owners(
+        knowledge_graph, target_type, profile, content_context, [], wording
+    )
     return {
         "slots": [
-            {"key": s.key, "label": s.label, "example": s.example} for s in admissibility.CATALOG
+            {"key": s.key, "label": s.label, "example": s.example}
+            for s in screening.catalog(wording)
         ],
         "owners": [
             {"key": o.key, "label": o.label, "where": o.where} for o in found if o.key != "context"
@@ -209,6 +217,7 @@ def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
         profile,
         _artifacts.load_content_context(access.ws),
         item_type,
+        locale.wording(access.ws),
     )
 
 

@@ -1,4 +1,5 @@
-from variatio import admissibility
+from variatio import screening
+from variatio.screening import admissibility
 
 
 def test_the_commission_accepts_a_ruling():
@@ -8,8 +9,8 @@ def test_the_commission_accepts_a_ruling():
         concepts=["Recursividad"],
         item_type="ejercicio",
         instructions="que vaya de deporte",
-        ruling=admissibility.Ruling(
-            (admissibility.Request("que vaya de deporte", "ambito", None, None),), True
+        ruling=screening.Ruling(
+            (screening.Request("que vaya de deporte", "ambito", None, None),), True
         ),
     )
     assert commission.ruling.ok
@@ -44,7 +45,7 @@ def test_the_system_arm_reuses_the_ruling_instead_of_rescreening(monkeypatch):
         concepts=["Recursividad"],
         item_type="ejercicio",
         instructions="que vaya de deporte",
-        ruling=admissibility.Ruling((), True),
+        ruling=screening.Ruling((), True),
     )
     system.run(commission, _Context())
     assert calls == []

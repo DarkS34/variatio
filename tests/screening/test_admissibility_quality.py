@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from variatio import admissibility
+from variatio import screening
 from variatio.core import paths
 from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
@@ -78,7 +78,7 @@ def instance():
     if absent:
         pytest.skip(f"«{WORKSPACE}» no tiene el concepto {absent[0]!r}")
     context = _artifacts.load_content_context(ws)
-    found = admissibility.owners(graph, profile.item_type(ITEM_TYPE), profile, context, TARGETS)
+    found = screening.owners(graph, profile.item_type(ITEM_TYPE), profile, context, TARGETS)
     return found, context.prompt_block()
 
 
@@ -86,7 +86,7 @@ def instance():
 @pytest.mark.parametrize("text", ADMISSIBLE)
 def test_a_legitimate_scenario_is_never_rejected(instance, text):
     owners, block = instance
-    ruling = admissibility.screen(text, owners, TARGETS, ES, block)
+    ruling = screening.screen(text, owners, TARGETS, ES, block)
     assert ruling.checked, "el juez devolvió una respuesta ilegible"
     assert ruling.ok, f"rechazada por {ruling.blocked[0].owner.key} ({ruling.blocked[0].term})"
 
@@ -95,7 +95,7 @@ def test_a_legitimate_scenario_is_never_rejected(instance, text):
 @pytest.mark.parametrize("text", UNOWNED)
 def test_a_request_no_control_owns_is_never_blocked(instance, text):
     owners, block = instance
-    ruling = admissibility.screen(text, owners, TARGETS, ES, block)
+    ruling = screening.screen(text, owners, TARGETS, ES, block)
     assert ruling.ok, f"rechazada por {ruling.blocked[0].owner.key} ({ruling.blocked[0].term})"
 
 
@@ -104,7 +104,7 @@ def test_every_inadmissible_request_is_caught(instance):
     owners, block = instance
     caught = []
     for text, expected in INADMISSIBLE:
-        ruling = admissibility.screen(text, owners, TARGETS, ES, block)
+        ruling = screening.screen(text, owners, TARGETS, ES, block)
         if not ruling.ok and ruling.blocked[0].owner.key == expected:
             caught.append(text)
     assert len(caught) == len(INADMISSIBLE), (

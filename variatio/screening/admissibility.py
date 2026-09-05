@@ -12,16 +12,16 @@ from dataclasses import dataclass
 from json_repair import repair_json
 from loguru import logger
 
-from . import config
-from .core import inference, progress
-from .core.inference import InferenceError
-from .core.lexicon import fold
+from .. import config, wording as wording_sets
+from ..core import inference, progress
+from ..core.inference import InferenceError
+from ..core.lexicon import fold
 
 
 @dataclass(frozen=True)
 class Slot:
     """One admissible kind of request, with the wording the prompt illustrates it by."""
-
+    
     key: str
     label: str
     example: str
@@ -30,7 +30,7 @@ class Slot:
 @dataclass(frozen=True)
 class Owner:
     """A control that already decides something, the terms it holds and where it lives."""
-
+    
     key: str
     label: str
     where: str
@@ -40,7 +40,7 @@ class Owner:
 @dataclass(frozen=True)
 class Request:
     """One request read out of the free text: admitted into a slot, or owned elsewhere."""
-
+    
     text: str
     slot: str | None
     owner: Owner | None
@@ -65,22 +65,34 @@ class Ruling:
         return not self.blocked
 
 
-CATALOG: tuple[Slot, ...] = (
-    Slot("ambito", "Ámbito", "que vaya de una panadería"),
-    Slot("elementos", "Elementos del enunciado", "con una tabla de datos"),
-    Slot("extension", "Extensión", "un enunciado breve"),
-    Slot("datos", "Datos concretos", "que la lista tenga al menos 10 elementos"),
-)
+SLOT_KEYS: tuple[str, ...] = tuple(key for key, _, _ in wording_sets.of(None).SLOTS)
 
 
-def owners(knowledge_graph, item_type, profile, content_context, concepts) -> list[Owner]:
+def catalog(wording=None) -> tuple[Slot, ...]:
+    """Return the four admissible slots, worded in one language.
+
+    The KEYS are the catalogue and never move — the grammar pins them, the prompt's own
+    label table is checked against them by test, and `_accept` admits nothing else. What a
+    language owns is the label and the example the prompt illustrates each one by.
+    """
+    if wording is None:
+        wording = wording_sets.of(None)
+    return tuple(Slot(key, label, example) for key, label, example in wording.SLOTS)
+
+
+def owners(knowledge_graph, item_type, profile, content_context, concepts, wording=None) -> list[Owner]:
     """Derive the controls that already decide something for this commission.
 
     The terms belong to the instance, not to the code: the graph's non-target concepts,
     the `decided_by: "user"` enums plus the difficulty, the modalities, and the three
-    context facts. Another
-    workspace gets other owners with no change here.
+    context facts. Another workspace gets other owners with no change here, and the
+    wording of each one comes from the language the commission is judged in.
     """
+    if wording is None:
+        wording = wording_sets.of(None)
+    concepts_label, concepts_where = wording.OWNER_CONCEPTS
+    item_type_label, item_type_where = wording.OWNER_ITEM_TYPE
+    context_label, context_where = wording.OWNER_CONTEXT
     targets = set(concepts)
     found: list[Owner] = []
 
@@ -89,8 +101,8 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
         found.append(
             Owner(
                 key="concepts",
-                label="los conceptos objetivo",
-                where="elígelos en el paso de conceptos",
+                label=concepts_label,
+                where=concepts_where,
                 terms=others,
             )
         )
@@ -111,9 +123,9 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
                 key=f"field:{name}",
                 label=name,
                 where=(
-                    "elígelo en «¿De qué nivel?»"
+                    wording.OWNER_DIFFICULTY_WHERE
                     if name == difficulty
-                    else "decídelo en «¿Cómo debe ser?»"
+                    else wording.OWNER_FIELD_WHERE
                 ),
                 terms=values,
             )
@@ -127,8 +139,8 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
     found.append(
         Owner(
             key="item_type",
-            label="la modalidad del ejercicio",
-            where="elígela en el paso de modalidad",
+            label=item_type_label,
+            where=item_type_where,
             terms=modalities,
         )
     )
@@ -146,8 +158,8 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts) -> li
         found.append(
             Owner(
                 key="context",
-                label="la materia, el nivel y el idioma",
-                where="los fija el contexto de la asignatura, en el panel",
+                label=context_label,
+                where=context_where,
                 terms=facts,
             )
         )
@@ -166,7 +178,7 @@ def _schema(owners: list[Owner]) -> dict:
                     "type": "object",
                     "properties": {
                         "text": {"type": "string"},
-                        "slot": {"enum": [*(s.key for s in CATALOG), None]},
+                        "slot": {"enum": [*SLOT_KEYS, None]},
                         "owner": {"enum": [*(o.key for o in owners), None]},
                         "term": {"type": ["string", "null"]},
                     },
@@ -182,7 +194,7 @@ def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | No
     """Return one verified request, or None when the judge's entry does not hold up.
 
     The answer is checked against the derived catalogue before it is believed: the slot
-    must be in `CATALOG`, the owner in `owners`, and the term must fold-match one that
+    must be in `SLOT_KEYS`, the owner in `owners`, and the term must fold-match one that
     owner actually holds without being a target concept. An invented term is discarded,
     never reported — a grammar pins the keys, not the values.
     """
@@ -191,7 +203,7 @@ def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | No
         return None
 
     slot = entry.get("slot")
-    if slot in {s.key for s in CATALOG}:
+    if slot in SLOT_KEYS:
         return Request(text=text, slot=slot, owner=None, term=None)
 
     owner = next((o for o in owners if o.key == entry.get("owner")), None)
@@ -226,7 +238,7 @@ def screen(
 
     prompt = prompts.classify_instructions_prompt(
         instructions=text,
-        catalog=CATALOG,
+        catalog=catalog(wording_sets.beside(prompts)),
         owners=owners,
         targets=targets,
         context_block=context_block,

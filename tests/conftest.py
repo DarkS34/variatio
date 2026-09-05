@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from variatio import admissibility, prompts
+from variatio import prompts, screening
 from variatio.core import cerebras_budget
 from variatio.instance.content_context import ContentContext
 from variatio.instance.exemplars_profile import ExemplarsProfile
@@ -191,7 +191,7 @@ def graph(chain_graph_path):
 @pytest.fixture
 def owners_for(graph, profile, context):
     def build(targets=("Recursividad",), item_type="ejercicio"):
-        return admissibility.owners(
+        return screening.owners(
             graph, profile.item_type(item_type), profile, context, list(targets)
         )
 
