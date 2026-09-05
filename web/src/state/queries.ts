@@ -22,6 +22,7 @@ import type {
   Role,
   WorkspaceRow,
 } from "@/lib/types";
+import { stageReviewKeys } from "@/evaluation/queries";
 import { authKeys, useHasWorkspace, useSession } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
@@ -392,7 +393,16 @@ export function useRawMissingFor(artifact: ArtifactName | undefined): RawKind | 
   return slot?.kind ?? null;
 }
 
-/** Everything an artifact write can invalidate, in one place. */
+/**
+ * Everything an artifact write can invalidate, in one place.
+ *
+ * EL CUESTIONARIO DE LA ETAPA ESTÁ AQUÍ PORQUE VA CON EL ARTEFACTO. Su carga responde dos
+ * cosas que dejan de ser ciertas en cuanto una construcción termina: si hay algo
+ * construido que valorar, y bajo qué hash se archiva la respuesta. Sin invalidarlo, el
+ * `built: false` que se leyó cuando la etapa no existía sobrevivía a la construcción —y
+ * con `refetchOnWindowFocus: false` la única forma de refrescarlo era recargar la página,
+ * así que el formulario no aparecía al terminar de construir.
+ */
 export function useInvalidateChain() {
   const client = useQueryClient();
   return () => {
@@ -403,6 +413,7 @@ export function useInvalidateChain() {
     client.invalidateQueries({ queryKey: ["bank"] });
     client.invalidateQueries({ queryKey: keys.profile });
     client.invalidateQueries({ queryKey: ["generations"] });
+    client.invalidateQueries({ queryKey: stageReviewKeys });
   };
 }
 

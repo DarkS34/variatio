@@ -125,6 +125,20 @@ export function GenerateScreen() {
     [run],
   );
 
+  // AL VOLVER AL FORMULARIO, LA TANDA ANTERIOR SE VA DE LA PANTALLA (2026-09-05, explicit
+  // user request). Esto revoca el «los resultados siguen a la vista hasta que la siguiente
+  // tanda los sustituya» que traía «Variar el encargo actual»: las dos salidas abren un
+  // encargo NUEVO, así que lo que quedaba debajo era la respuesta a uno viejo, encima del
+  // formulario que se está rellenando. No se pierde nada — cada ítem se guarda solo en
+  // cuanto se valida, y «Mis ejercicios» es donde se leen. Se limpia al lanzar, que es
+  // cuando vuelve a haber algo que enseñar.
+  //
+  // VA CON EL RESTO DE LOS HOOKS y no junto a los dos botones que lo mueven: debajo del
+  // `return` temprano de la carga sería un hook condicional, y React se cae entero con
+  // «Rendered more hooks than during the previous render» en cuanto el perfil termina de
+  // cargar. Medido: la pantalla no se dibujaba.
+  const [dismissed, setDismissed] = useState(false);
+
   // Each item becomes a row of «Mis variantes» the moment it validates; the archive is
   // told so that opening it during a run already lists what arrived.
   useEffect(() => {
@@ -158,13 +172,15 @@ export function GenerateScreen() {
   // The coverage travels CLOSED, as the form counts it and as `server/curriculum.resolve`
   // would close it anyway: this way the bar under the result, which reads the request back,
   // says the same number the button said before launching.
-  const launch = () =>
+  const launch = () => {
+    setDismissed(false);
     submit.mutate({
       kind: "generate",
       params: {
         ...toParams({ ...form, curriculum: covered(adjacency(kgGraph.data), form.curriculum) }),
       },
     });
+  };
 
   // The bar describes the commission that ran; only with no job to read it from does it
   // fall back to the form.
@@ -179,28 +195,24 @@ export function GenerateScreen() {
   const vary = () => {
     setForm(again);
     setEditing(true);
+    setDismissed(true);
   };
   const fromScratch = () => {
     setForm(EMPTY_FORM);
     setEditing(true);
+    setDismissed(true);
   };
 
-  const hasRun = Boolean(run) && (active || results.length > 0 || status === "failed");
+  const hasRun =
+    !dismissed && Boolean(run) && (active || results.length > 0 || status === "failed");
   const collapsed = hasRun && !editing;
 
+  // El aviso «Parte del encargo anterior», con su segundo «Empezar desde cero» al lado, se
+  // borró con la retirada de arriba (2026-09-05, explicit user request): decía que los
+  // ejercicios de abajo estaban guardados y que la siguiente tanda los sustituiría, y ya no
+  // hay ninguno abajo del que decirlo; el botón era el mismo que se acababa de pulsar.
   const formPanel = (
     <div className="space-y-3">
-      {hasRun && editing ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-          <p className="min-w-0 flex-1 text-body text-muted-foreground">
-            {t("generate.reopened")}
-          </p>
-          <Button variant="ghost" size="sm" onClick={() => setForm(EMPTY_FORM)}>
-            <Eraser />
-            {t("generate.startOver")}
-          </Button>
-        </div>
-      ) : null}
       <GenerateForm
         state={form}
         onChange={setForm}

@@ -1059,7 +1059,6 @@ export const es = {
   "doc.emptyPage": "Puede ser una página realmente vacía del original —una portada, un separador— o algo que el modelo no supo leer. Compruébalo antes de construir.",
   "fewshot.title": "Ejercicios tuyos que se le enseñaron como ejemplo",
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
-  "generate.reopened": "Parte del encargo anterior. Los ejercicios de abajo ya están guardados: la nueva tanda los sustituye en pantalla, no en «Mis ejercicios».",
   "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo en «Mis ejercicios».",
   "workspace.switcher.label": "Asignatura",
   "workspace.switcher.choose": "Elegir asignatura",

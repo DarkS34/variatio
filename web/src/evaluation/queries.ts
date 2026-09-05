@@ -165,6 +165,16 @@ export function useAssignSet() {
 /** Keyed by artifact AND by workspace: the same stage of two subjects is two forms. */
 export const stageReviewKey = (artifact: string) => ["stage-review", artifact] as const;
 
+/**
+ * Every stage's form at once, which is what an artifact write has to invalidate.
+ *
+ * The payload is not a constant: it says whether there is anything built to judge, and
+ * under which hash the answer will be filed. So a build that finishes leaves it stale, and
+ * `state/queries.useInvalidateChain` — the one home of what an artifact write invalidates —
+ * reads this prefix rather than keeping a second copy of the key.
+ */
+export const stageReviewKeys = ["stage-review"] as const;
+
 export function useStageReview(artifact: string | undefined) {
   return useQuery({
     queryKey: stageReviewKey(artifact ?? "none"),

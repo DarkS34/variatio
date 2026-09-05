@@ -926,7 +926,6 @@ export const en: Catalogue = {
   "doc.emptyPage": "It may be a genuinely empty page of the original —a cover, a separator— or something the model could not read. Check it before building.",
   "fewshot.title": "Exercises of yours shown to it as examples",
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
-  "generate.reopened": "Part of the previous commission. The exercises below are already saved: the new batch replaces them on screen, not in «My exercises».",
   "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated exercise saves itself in «My exercises».",
   "workspace.switcher.label": "Subject",
   "workspace.switcher.choose": "Choose subject",

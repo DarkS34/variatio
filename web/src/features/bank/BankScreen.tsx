@@ -148,7 +148,11 @@ function ItemReading({ item, fields, primaryField, onClose }: ItemDialogProps) {
             </Badge>
           ) : (
             concepts.map((concept) => (
-              <Badge key={concept} variant={concept === item.primary_concept ? "default" : "secondary"}>
+              <Badge
+                key={concept}
+                variant={concept === item.primary_concept ? "default" : "secondary"}
+                title={concept === item.primary_concept ? t("concept.isPrimary") : undefined}
+              >
                 {concept}
               </Badge>
             ))
@@ -425,7 +429,18 @@ function ItemRow({
         </TD>
         {typeLabel ? (
           <TD className="py-2 pl-2">
-            <Badge variant="outline">{typeLabel}</Badge>
+            {/* UNA INSIGNIA NO SE PARTE EN VARIAS LÍNEAS. La columna es fija y hay nombres
+                de tipo largos («Problema de construcción formal»), así que la insignia
+                crecía a dos y tres líneas: con `--radius: 0` las únicas formas posibles son
+                la píldora y el rectángulo a escuadra, y una píldora de tres líneas es un
+                lozenge con las esquinas comiéndose el texto. Se corta con puntos
+                suspensivos y el nombre entero va en el `title`, que es la misma regla que
+                el `+N` de la celda de al lado: lo que se recorta se nombra, no se esconde.
+                El `truncate` va en un hijo y no en la insignia, porque `text-overflow` no
+                actúa sobre los ítems de un contenedor flex. */}
+            <Badge variant="outline" className="max-w-full" title={typeLabel}>
+              <span className="truncate">{typeLabel}</span>
+            </Badge>
           </TD>
         ) : null}
         <TD className="py-2 pr-3">
@@ -448,8 +463,17 @@ function ItemRow({
               </Badge>
             ) : (
               <>
+                {/* EL PRINCIPAL SE DICE AL PASAR EL RATÓN, Y SÓLO ÉL. La diferencia entre
+                    `default` y `secondary` es un tono, y un tono no se nota en una fila de
+                    insignias: el `title` es lo que dice qué significa. Los demás no llevan
+                    ninguno — un rótulo en cada uno sería ruido, y es el mismo criterio que
+                    `ConceptPicker` ya aplica. */}
                 {shownConcepts.map((concept) => (
-                  <Badge key={concept} variant={concept === item.primary_concept ? "default" : "secondary"}>
+                  <Badge
+                    key={concept}
+                    variant={concept === item.primary_concept ? "default" : "secondary"}
+                    title={concept === item.primary_concept ? t("concept.isPrimary") : undefined}
+                  >
                     {concept}
                   </Badge>
                 ))}
@@ -1031,7 +1055,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 two screens to the right. Fixed, the columns are the header's widths, the
                 statement takes what is left, and the `<pre>` scrolls inside its own cell
                 as it was always meant to. */}
-            <Table minWidth="44rem" className="table-fixed">
+            <Table minWidth="48rem" className="table-fixed">
               <THead>
                 <TR>
                   <Correction>
@@ -1049,7 +1073,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     </TH>
                   </Correction>
                   <TH>{primaryHeader}</TH>
-                  {manyTypes ? <TH className="w-40">{t("bank.column.modality")}</TH> : null}
+                  {/* 15rem y no 10, y el número está medido: los nueve nombres de tipo de
+                      las dos asignaturas de referencia miden entre 142 y 262 px dibujados
+                      como insignia, y a 10rem se recortaban TODOS. A 15 caben ocho de los
+                      nueve enteros y el recorte vuelve a ser la excepción — que es lo que
+                      justifica resolverlo con puntos suspensivos y un `title`. Lo paga el
+                      enunciado, que va recortado a dos líneas y tenía 766 px; `minWidth`
+                      sube con ello, o en una ventana estrecha la columna del enunciado se
+                      quedaría sin nada. */}
+                  {manyTypes ? <TH className="w-60">{t("bank.column.modality")}</TH> : null}
                   <TH className="w-72">{t("bank.column.concepts")}</TH>
                   {difficultyField ? (
                     <TH className="w-28">{t("bank.column.difficulty")}</TH>
