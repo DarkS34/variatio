@@ -4,6 +4,7 @@ from variatio import config
 from variatio.builders._source_docs import pages
 from variatio.core.workspace import Workspace
 from variatio.stages import transcribe
+from variatio.wording import es as ES_WORDING
 
 
 @pytest.fixture
@@ -247,7 +248,7 @@ def test_an_edited_document_still_reads_as_done(ws):
 def test_a_failed_page_is_reported_as_such(ws):
     _source, cache = three_pages(ws)
     transcribe.write_document_page(
-        ws, "exemplars", "examen.md", 2, f"{pages.FAILED_PAGE_PREFIX} — página 2 de 3]"
+        ws, "exemplars", "examen.md", 2, f"{ES_WORDING.FAILED_PAGE_PREFIX} — página 2 de 3]"
     )
     listing = transcribe.document_pages_listing(ws, "exemplars", "examen.md")
     assert [page["failed"] for page in listing] == [False, True, False]

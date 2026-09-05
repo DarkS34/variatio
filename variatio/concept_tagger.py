@@ -303,7 +303,7 @@ class ConceptTagger:
             [self.embed_text(exemplars_bank[c_id]) for c_id in pending]
         )
 
-        with progress.step("tagging", "Etiquetando el banco con conceptos del grafo", total) as reporter:
+        with progress.step("tagging", "Tagging the bank with the graph's concepts", total) as reporter:
             for idx, c_id in enumerate(pending, 1):
                 progress.checkpoint()
                 content = exemplars_bank[c_id]

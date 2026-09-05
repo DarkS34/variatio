@@ -24,6 +24,7 @@ from ..core.workspace import Workspace
 from ..instance import locale
 from ..instance.content_context import ContentContext
 from .. import prompts as prompts_pkg
+from .. import wording as wording_sets
 from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from . import _source_docs
 
@@ -31,8 +32,8 @@ from . import _source_docs
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los documentos", 30),
-    ("extract", "Extrayendo y etiquetando los ítems", 70),
+    ("convert", "Reading the documents", 30),
+    ("extract", "Extracting and tagging the items", 70),
 )
 
 
@@ -61,6 +62,7 @@ class ExemplarsBankBuilder:
         """Resolve the workspace's prompt set and precompute the schema and prompt blocks."""
         self.workspace = workspace
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self.exemplars_profile = exemplars_profile
         self.content_context = content_context or ContentContext()
 
@@ -73,7 +75,7 @@ class ExemplarsBankBuilder:
         # plain text needs no conversion, so on the usual corpus Docling is never built.
         self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
         self._type_keys = exemplars_profile.type_keys
-        self._types_block = self._build_types_block(exemplars_profile)
+        self._types_block = self._build_types_block(exemplars_profile, self._wording)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
         self._id_counter = 0
 
@@ -99,18 +101,18 @@ class ExemplarsBankBuilder:
         return {"type": "array", "items": items}
 
     @staticmethod
-    def _build_types_block(exemplars_profile: ExemplarsProfile) -> str:
+    def _build_types_block(exemplars_profile: ExemplarsProfile, wording) -> str:
         """The prompt's catalogue of modalities: schema and per-field extraction guidance."""
         blocks = []
         for key, item_type in exemplars_profile.item_types.items():
             lines = [f"### `{key}` — {item_type.label}"]
             if item_type.description:
                 lines.append(item_type.description)
-            lines.append("Schema de un ítem de esta modalidad:")
+            lines.append(wording.ITEM_SCHEMA_HEADING)
             lines.append(item_type.schema_str())
             guidance = item_type.field_guidance("extraction")
             if guidance:
-                lines.append("Guía de extracción por campo — síguela literalmente:")
+                lines.append(wording.EXTRACTION_GUIDE_HEADING)
                 lines.extend(f"- `{name}`: {text}" for name, text in guidance.items())
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
@@ -164,7 +166,7 @@ class ExemplarsBankBuilder:
 
             progress.phase("extract", f"0/{len(files)} documento(s)")
             with progress.step(
-                "extract", "Extrayendo y etiquetando los ítems", len(files)
+                "extract", "Extracting and tagging the items", len(files)
             ) as reporter:
                 for idx, file_path in enumerate(files, 1):
                     progress.checkpoint()
@@ -172,7 +174,7 @@ class ExemplarsBankBuilder:
                     reporter.start(idx, detail=file_path.name)
                     progress.advance(
                         (idx - 1) / len(files),
-                        f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
+                        f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} item(s)",
                     )
                     try:
                         new_items = self._process_file(
@@ -198,8 +200,8 @@ class ExemplarsBankBuilder:
                         # second — so the bar moves within a document and not only between two.
                         progress.advance(
                             (idx - 0.5) / len(files),
-                            f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
-                            f"{len(new_items)} ítem(s)",
+                            f"{file_path.name} ({idx}/{len(files)}) · tagging "
+                            f"{len(new_items)} item(s)",
                         )
                         try:
                             bank = on_items(bank, list(new_items))
@@ -221,7 +223,7 @@ class ExemplarsBankBuilder:
         finally:
             working.unlink(missing_ok=True)
 
-        progress.advance(1.0, f"{len(bank)} ítem(s)")
+        progress.advance(1.0, f"{len(bank)} item(s)")
         logger.success(f"Bank finished: {len(bank)} item(s) in {Path(output_file_path).name}")
         return bank
 
@@ -237,7 +239,7 @@ class ExemplarsBankBuilder:
         progress.phase("convert", f"0/{len(files)} documento(s)")
         text_by_file: dict[Path, str] = {}
         with progress.step(
-            "convert", "Transcribiendo los documentos", len(files)
+            "convert", "Reading the documents", len(files)
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
@@ -273,7 +275,7 @@ class ExemplarsBankBuilder:
         seen: set[str] = set()
         repeated = 0
         with progress.step(
-            "extract_batches", f"{file_path.name}: extrayendo lotes", len(batches)
+            "extract_batches", f"{file_path.name}: extracting batches", len(batches)
         ) as reporter:
             for b_idx, batch in enumerate(batches, 1):
                 progress.checkpoint()

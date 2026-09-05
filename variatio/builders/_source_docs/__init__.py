@@ -28,7 +28,7 @@ from .markdown import (
 )
 from .pages import (
     PARAGRAPH,
-    UNREADABLE_IMAGE_MARK,
+    FAILED_PAGE_PREFIXES,
     adopt_pages,
     document_cache_dir,
     document_markdown,
@@ -59,7 +59,7 @@ __all__ = [
     "PARAGRAPH",
     "PLAIN_TEXT_EXTS",
     "SUPPORTED_EXTS",
-    "UNREADABLE_IMAGE_MARK",
+    "FAILED_PAGE_PREFIXES",
     "LazyConverter",
     "adopt_pages",
     "chunk_markdown",

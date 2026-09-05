@@ -141,9 +141,9 @@ _BUILDERS = {
 
 
 _LABELS = {
-    _artifacts.EXEMPLARS_PROFILE: "Perfil de ejemplares",
-    _artifacts.KNOWLEDGE_GRAPH: "Grafo de conocimiento",
-    _artifacts.EXEMPLARS_BANK: "Banco de ejemplares",
+    _artifacts.EXEMPLARS_PROFILE: "Exemplars profile",
+    _artifacts.KNOWLEDGE_GRAPH: "Knowledge graph",
+    _artifacts.EXEMPLARS_BANK: "Exemplars bank",
 }
 
 # Each builder declares what its phases cost; installing the plan here is what turns
@@ -185,7 +185,7 @@ def build_artifact(artifact: str, ws: Workspace) -> dict:
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
 
-    with progress.step(f"build_{artifact}", f"Construyendo: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
+    with progress.step(f"build_{artifact}", f"Building: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
         return _BUILDERS[artifact](ws=ws)
 
 

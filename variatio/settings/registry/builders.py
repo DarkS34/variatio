@@ -75,7 +75,7 @@ El valor sale de la medición y no del gusto: de las 537 páginas PDF legítimas
 asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y en
 `compiladores` el p99 son 739 y la mayor sana 1.397 — entre 1.397 y 40.960 no hay ni una.
 4.096 deja 2,1× de margen sobre la peor página real y corta la desbocada al 10 % de su
-coste. Una respuesta que llega al techo se marca como PÁGINA FALLIDA (`FAILED_PAGE_PREFIX`),
+coste. Una respuesta que llega al techo se marca como PÁGINA FALLIDA (`FAILED_PAGE_PREFIXES`),
 no se guarda truncada: una página cortada en silencio es la pérdida que este proyecto no
 acepta, y una marcada sale en rojo en «Apuntes y ejercicios», donde se corrige a mano o se
 sube este valor si de verdad era una página larguísima. No se reintenta, porque a

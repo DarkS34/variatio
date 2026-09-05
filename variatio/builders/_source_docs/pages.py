@@ -28,7 +28,8 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config
-from ...core import inference, progress
+from ... import wording as wording_sets
+from ...core import inference, languages, progress
 from ...core.json_io import write_json
 from ...prompts.marks import EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 from . import office
@@ -69,11 +70,13 @@ META_EXTRA = (
     "images_unreadable",
 )
 
-FAILED_PAGE_PREFIX = "> [TRANSCRIPCIÓN FALLIDA"
+# The marker a failed page carries, in EVERY language the installation writes: what is
+# written goes in the workspace's own words, but `failed_pages` counts pages already on
+# disk and cannot ask which language wrote them.
+FAILED_PAGE_PREFIXES = tuple(wording_sets.of(code).FAILED_PAGE_PREFIX for code in languages.LANGUAGES)
 # Left where a picture stood when nothing could be read off it — a metafile Pillow cannot
 # open, or a call that failed after its retries. Visible on purpose, like the failed page:
 # a formula that silently vanished from an exercise is worse than one that says it is gone.
-UNREADABLE_IMAGE_MARK = "[IMAGEN NO LEGIBLE]"
 
 # Where the transcription of each picture is cached, keyed by the picture's content and
 # shared by every document of the workspace: one file per distinct image, so the header
@@ -378,7 +381,7 @@ def failed_pages(pages: list[str]) -> list[int]:
     return [
         index
         for index, page in enumerate(pages, 1)
-        if page.lstrip().startswith(FAILED_PAGE_PREFIX)
+        if page.lstrip().startswith(FAILED_PAGE_PREFIXES)
     ]
 
 
@@ -469,7 +472,7 @@ def _transcribe_page(
                 max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
             )
             if answer.truncated:
-                return _runaway_page(index, count, tag, len(answer.response))
+                return _runaway_page(index, count, tag, len(answer.response), prompts)
             page = _unwrap_markdown_fence(answer.response)
             stripped = page.strip()
             # Tolerant on purpose: models wrap the sentinel in backticks, or add a full
@@ -485,21 +488,18 @@ def _transcribe_page(
     logger.error(f"{tag}page {index}/{count}: giving up after the retries ({last_error})")
     # A lost page is lost exercises. Leave a marker a human will trip over in the cached
     # file rather than a silent gap that looks like a page with nothing on it.
-    return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
+    return wording_sets.beside(prompts).failed_page(index, count, str(last_error))
 
 
-def _runaway_page(index: int, count: int, tag: str, chars: int) -> str:
+def _runaway_page(index: int, count: int, tag: str, chars: int, prompts) -> str:
     """The failure marker for a page whose answer hit the output cap."""
     cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
     logger.error(
         f"{tag}page {index}/{count}: answer cut at the {cap}-token cap after {chars} "
         "characters, most likely a repetition loop; marked as failed and not retried"
     )
-    return (
-        f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: la respuesta superó el techo "
-        f"de {cap} tokens de salida; el modelo se quedó repitiendo algo de la página "
-        "(una línea de puntos, un borde) en vez de terminar. Corrígela a mano o sube "
-        "TRANSCRIBE_MAX_OUTPUT_TOKENS en «Configuración» si de verdad era una página tan larga]"
+    return wording_sets.beside(prompts).failed_page_truncated(
+        index, count, cap, "TRANSCRIBE_MAX_OUTPUT_TOKENS"
     )
 
 
@@ -528,13 +528,13 @@ def transcribe_pdf(
             f"resuming at {len(pages) + 1}"
         )
     with progress.step(
-        "transcribe", f"{pdf_path.name}: transcribiendo páginas", count
+        "transcribe", f"{pdf_path.name}: reading pages", count
     ) as reporter:
         if pages:
-            reporter.tick(len(pages), detail=f"página {len(pages)}/{count}")
+            reporter.tick(len(pages), detail=f"page {len(pages)}/{count}")
         for index, image in enumerate(images, len(pages) + 1):
             progress.checkpoint()
-            reporter.start(index, detail=f"página {index}/{count}")
+            reporter.start(index, detail=f"page {index}/{count}")
             page = _transcribe_page(image, index, count, model, tag, prompts)
             pages.append(page)
             if fingerprint:
@@ -739,14 +739,15 @@ def transcribe_office(
     readings: dict[str, str] = {}
     memo: dict[str, str] = {}
     reused = 0
+    unreadable = wording_sets.beside(prompts).UNREADABLE_IMAGE_MARK
     with progress.step(
-        "transcribe_image", f"{source.name}: transcribiendo imágenes", len(found)
+        "transcribe_image", f"{source.name}: reading pictures", len(found)
     ) as reporter:
         for index, (ref, image) in enumerate(found, 1):
             progress.checkpoint()
-            reporter.start(index, detail=f"imagen {index}/{len(found)}")
+            reporter.start(index, detail=f"picture {index}/{len(found)}")
             if image is None:
-                readings[ref] = UNREADABLE_IMAGE_MARK
+                readings[ref] = unreadable
                 tally["images_unreadable"] += 1
                 continue
             encoded = _encode_image(image)
@@ -759,7 +760,7 @@ def transcribe_office(
                     base64.b64encode(encoded).decode(), index, len(found), model, tag, prompts
                 )
                 if reading is None:
-                    readings[ref] = UNREADABLE_IMAGE_MARK
+                    readings[ref] = unreadable
                     tally["images_unreadable"] += 1
                     continue
                 _write_image_cache(images_dir, digest, model, reading)
@@ -1099,7 +1100,7 @@ def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> l
         return []
     records: list[dict] = []
     with progress.step(
-        "transcribe_seam", "Revisando las costuras entre páginas", len(boundaries)
+        "transcribe_seam", "Checking the seams between pages", len(boundaries)
     ) as reporter:
         for done, (left, right, index) in enumerate(boundaries, 1):
             progress.checkpoint()

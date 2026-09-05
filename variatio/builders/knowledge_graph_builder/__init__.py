@@ -22,6 +22,7 @@ from loguru import logger
 
 from ... import config
 from ... import prompts as prompts_pkg
+from ... import wording as wording_sets
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace
@@ -53,13 +54,13 @@ __all__ = [
 # extraction pass and below the whole-inventory reasoning after it. On later builds it flies
 # past, because the page cache answers instead of the model.
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los documentos del corpus", 40),
-    ("extract", "Extrayendo conceptos y relaciones", 16),
-    ("clean", "Fusionando duplicados y normalizando nombres", 25),
-    ("domains", "Agrupando los conceptos en dominios", 9),
-    ("link", "Enlazando conceptos y ordenando el temario", 26),
-    ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
-    ("context", "Poniendo por escrito de qué asignatura es esto", 1), # Last because it needs the names of the blocks, which no earlier phase has yet.
+    ("convert", "Reading the corpus documents", 40),
+    ("extract", "Extracting concepts and relations", 16),
+    ("clean", "Merging duplicates and normalising names", 25),
+    ("domains", "Grouping the concepts into domains", 9),
+    ("link", "Linking concepts and ordering the syllabus", 26),
+    ("curate", "Typing the relations and breaking cycles", 1),
+    ("context", "Writing down what subject this is", 1), # Last because it needs the names of the blocks, which no earlier phase has yet.
 )
 
 def build_models() -> list[str]:
@@ -96,6 +97,7 @@ class KnowledgeGraphBuilder:
         # prompts interpolate is prose written in the schema's language, and its slot names
         # are the two words the prompts' own text uses.
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self.schema = schema or locale.relation_schema(workspace)
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE
@@ -146,14 +148,14 @@ class KnowledgeGraphBuilder:
         total = sum(len(members) for members in graph["concepts_by_domains"].values())
         evidence = "\n".join(
             [
-                (f"El temario se divide en {len(domains)} bloque(s), con {total} concepto(s) en total. Se llaman:"),
+                self._wording.syllabus_blocks(len(domains), total),
                 *(f"- {domain}" for domain in domains),
             ]
         )
         _context.synthesize(
             self.workspace,
             evidence,
-            "EL GRAFO DEL TEMARIO",
+            self._wording.CONTEXT_SOURCE_GRAPH,
             config.KG_CONTEXT_MODEL,
             think=config.THINK_KG_CONTEXT,
         )

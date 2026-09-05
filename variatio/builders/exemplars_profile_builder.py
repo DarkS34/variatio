@@ -22,15 +22,16 @@ from ..core.workspace import Workspace
 from ..instance import content_context, locale
 from ..instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
+from .. import wording as wording_sets
 from . import _context, _source_docs
 
 
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los ejemplares", 40),
-    ("scan", "Buscando modalidades de ejercicio", 40),
-    ("consolidate", "Consolidando el perfil", 19),
+    ("convert", "Reading the exemplars", 40),
+    ("scan", "Looking for exercise types", 40),
+    ("consolidate", "Consolidating the profile", 19),
     # Last, and one call: it needs the modalities the consolidation has just written.
-    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
+    ("context", "Writing down what subject this is", 1),
 )
 
 MAX_EXCERPTS_PER_TYPE = 3
@@ -177,6 +178,7 @@ class ExemplarsProfileBuilder:
         """Resolve the workspace's prompt set and the three models of the build."""
         self.workspace = workspace
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self._context_cache: str | None = None
         self.scan_model = scan_model or config.EP_SCAN_MODEL
         self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
@@ -265,10 +267,11 @@ class ExemplarsProfileBuilder:
         item_types = profile.get("item_types") or {}
         if not item_types:
             return
-        lines = [f"La asignatura plantea sus tareas en {len(item_types)} modalidad(es):"]
+        lines = [self._wording.modalities_heading(len(item_types))]
         for key, spec in item_types.items():
             label = spec.get("label") or key
-            lines.append(f"- {label}: {spec.get('description') or 'sin descripción'}")
+            description = spec.get("description") or self._wording.NO_DESCRIPTION
+            lines.append(f"- {label}: {description}")
 
         excerpts = [
             excerpt
@@ -282,7 +285,7 @@ class ExemplarsProfileBuilder:
         _context.synthesize(
             self.workspace,
             "\n".join(lines),
-            "EL PERFIL DE EJEMPLARES",
+            self._wording.CONTEXT_SOURCE_PROFILE,
             self.context_model,
             think=config.THINK_EP_CONTEXT,
         )
@@ -300,7 +303,7 @@ class ExemplarsProfileBuilder:
         progress.phase("convert", f"0/{len(files)} documento(s)")
         chunks: list[tuple[str, str]] = []
         with progress.step(
-            "convert", "Transcribiendo los ejemplares", len(files)
+            "convert", "Reading the exemplars", len(files)
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
@@ -339,19 +342,19 @@ class ExemplarsProfileBuilder:
         found: dict[str, dict] = {}
 
         with progress.step(
-            "scan", "Buscando modalidades de ejercicio", len(chunks)
+            "scan", "Looking for exercise types", len(chunks)
         ) as reporter:
             for idx, (location, body) in enumerate(chunks, 1):
                 progress.checkpoint()
                 reporter.start(idx, detail=location)
                 progress.advance(
                     (idx - 1) / len(chunks),
-                    f"{location} ({idx}/{len(chunks)}) · {len(found)} modalidad(es)",
+                    f"{location} ({idx}/{len(chunks)}) · {len(found)} exercise type(s)",
                 )
                 for entry in self._scan_chunk(body, location, f"[{idx}/{len(chunks)}] "):
                     self._merge_finding(found, entry, location)
 
-        progress.advance(1.0, f"{len(found)} modalidad(es)")
+        progress.advance(1.0, f"{len(found)} exercise type(s)")
         logger.success(
             f"Scan finished: {len(found)} candidate modality(ies) ({', '.join(sorted(found))})"
         )
@@ -447,14 +450,14 @@ class ExemplarsProfileBuilder:
         for record in sorted(found.values(), key=lambda r: -r["seen"]):
             lines = [
                 f"## `{record['key']}` — {' / '.join(record['labels']) or record['key']}",
-                f"Visto en {record['seen']} fragmento(s).",
+                self._wording.seen_in_chunks(record["seen"]),
             ]
             if record["signals"]:
-                lines.append("Señales: " + " | ".join(record["signals"][:3]))
+                lines.append(self._wording.signals_line(record["signals"][:3]))
             if record["fields"]:
-                lines.append("Campos observados: " + ", ".join(record["fields"]))
+                lines.append(self._wording.fields_line(record["fields"]))
             for location, excerpt in record["excerpts"]:
-                lines.append(f"Ejemplar ({location}):\n{excerpt}")
+                lines.append(f"{self._wording.exemplar_heading(location)}\n{excerpt}")
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
 
@@ -462,8 +465,8 @@ class ExemplarsProfileBuilder:
 
     def _consolidate(self, found: dict[str, dict]) -> dict:
         """Turn the candidate modalities into one profile, under its own progress step."""
-        progress.phase("consolidate", f"{len(found)} modalidad(es) candidata(s)")
-        with progress.step("consolidate", "Consolidando el perfil de ejemplares"):
+        progress.phase("consolidate", f"{len(found)} candidate exercise type(s)")
+        with progress.step("consolidate", "Consolidating the exemplars profile"):
             profile = guarantee_difficulty(self._infer(self._findings_block(found)), self.prompts)
         progress.advance(1.0)
         return profile

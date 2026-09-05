@@ -25,7 +25,7 @@ DONE = "done"
 PENDING = "pending"
 STALE = "stale"
 
-TRANSCRIBE_PHASES = (("transcribe", "Transcribiendo los documentos", 100),)
+TRANSCRIBE_PHASES = (("transcribe", "Reading the documents", 100),)
 
 # What each fingerprint field means in the sentence the screen shows: expiry has to be
 # VISIBLE, or a build quietly re-transcribes a whole corpus because somebody nudged the DPI.
@@ -300,7 +300,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         # inside this one, and the client patches the LAST step carrying an id — so the two
         # loops overwrote each other's counter and neither could be drawn.
         with progress.step(
-            "transcribe_documents", "Transcribiendo los documentos", len(sources)
+            "transcribe_documents", "Reading the documents", len(sources)
         ) as reporter:
             for idx, source in enumerate(sources, 1):
                 progress.checkpoint()
@@ -332,7 +332,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                 progress.emit(
                     "artifact.progress", name=f"transcribe_{slot}", count=summary["pages"]
                 )
-        progress.advance(1.0, f"{summary['pages']} página(s)")
+        progress.advance(1.0, f"{summary['pages']} page(s)")
 
     logger.success(
         f"Transcription of «{slot}»: {summary['documents']} document(s), "

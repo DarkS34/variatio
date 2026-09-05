@@ -31,7 +31,7 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
 
     det_map, representatives = deterministic_merge(nodes)
     logger.info(f"Mechanical merge: {len(nodes)} → {len(representatives)} node(s)")
-    progress.advance(0.1, f"{len(nodes)} → {len(representatives)} nodo(s) por fusión mecánica")
+    progress.advance(0.1, f"{len(nodes)} → {len(representatives)} node(s) after the mechanical merge")
 
     definitions = staging.get("definitions") or {}
     llm_map = propose_merges(
@@ -44,7 +44,7 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     )
     canonicals = sorted({llm_map.get(n, n) for n in representatives})
     logger.info(f"Semantic merge: {len(representatives)} → {len(canonicals)} node(s)")
-    progress.advance(0.6, f"{len(canonicals)} nodo(s) tras la fusión semántica")
+    progress.advance(0.6, f"{len(canonicals)} node(s) after the semantic merge")
 
     surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
     drop = propose_drops(
@@ -133,7 +133,7 @@ def propose_merges(
     valid = set(nodes)
     alias_map: dict[str, str] = {}
     with progress.step(
-        "kg_merge", "Decidiendo qué nombres son el mismo concepto", len(batches)
+        "kg_merge", "Deciding which names are the same concept", len(batches)
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()
@@ -170,7 +170,7 @@ def merge_candidates(nodes: list[str]) -> list[list[str]]:
     if len(nodes) < 2:
         return []
     vectors = embed_normalized(
-        nodes, "los nombres de los nodos", model=config.EMBEDDING_LLM
+        nodes, "the node names", model=config.EMBEDDING_LLM
     )
     if vectors is None:
         return []
@@ -273,7 +273,7 @@ def propose_drops(
     drop: set[str] = set()
 
     with progress.step(
-        "kg_drop", "Descartando lo que no nombra un concepto", len(batches)
+        "kg_drop", "Dropping what does not name a concept", len(batches)
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()

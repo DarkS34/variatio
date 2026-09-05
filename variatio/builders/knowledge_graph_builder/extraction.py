@@ -85,7 +85,7 @@ def convert_corpus(
 
     converted: list[tuple[str, dict[int, list[str]], list[tuple[str, list[str], str]]]] = []
     with progress.step(
-        "kg_convert", "Transcribiendo los documentos del corpus", len(files)
+        "kg_convert", "Reading the corpus documents", len(files)
     ) as reporter:
         for idx, file_path in enumerate(files, 1):
             progress.checkpoint()
@@ -167,7 +167,7 @@ def extract_documents(
     relations: set[tuple[str, str, str]] = set()
     done = 0
 
-    with progress.step("kg_extract", "Extrayendo conceptos y relaciones", total) as reporter:
+    with progress.step("kg_extract", "Extracting concepts and relations", total) as reporter:
         for di, (name, _, chunks) in enumerate(documents):
             for ci, (location, headings, chunk) in enumerate(chunks, 1):
                 progress.checkpoint()
@@ -178,7 +178,7 @@ def extract_documents(
                     done,
                     detail=(
                         f"{name} · {location or f'fragmento {ci}'} · "
-                        f"{len(origins)} concepto(s), {len(relations)} relación(es)"
+                        f"{len(origins)} concept(s), {len(relations)} relation(s)"
                     ),
                 )
                 progress.advance(
@@ -217,10 +217,10 @@ def extract_documents(
                     "artifact.progress",
                     name="knowledge_graph",
                     count=len(origins),
-                    detail=f"{len(relations)} relación(es)",
+                    detail=f"{len(relations)} relation(s)",
                 )
 
-    progress.advance(1.0, f"{len(origins)} concepto(s), {len(relations)} relación(es)")
+    progress.advance(1.0, f"{len(origins)} concept(s), {len(relations)} relation(s)")
     return {
         "origins": dict(origins),
         "passages": dict(passages),

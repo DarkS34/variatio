@@ -89,7 +89,7 @@ def test_the_headings_of_both_pages_are_still_seen_as_sections(corpus, monkeypat
 
 def test_no_page_mark_survives_into_a_chunk(corpus, monkeypatch):
     documents, _seen = convert(corpus, monkeypatch, ["Uno.", "Dos."], seam="paragraph")
-    assert all("pág." not in body for _p, _h, body in documents[0][2])
+    assert all("page" not in body for _p, _h, body in documents[0][2])
 
 
 def test_a_second_build_reuses_the_pages_and_calls_no_model(corpus, monkeypatch):

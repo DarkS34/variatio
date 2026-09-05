@@ -35,7 +35,7 @@ IMAGE_MARK_RE = re.compile(r"<!-- image:(#/pictures/\d+) -->")
 # Where a page ENDED, kept in the joined markdown so a transcription can still be read page
 # by page and removed before anything is chunked: a comment that survived into a chunk would
 # be quoted back as an item's statement or as a concept's corpus passage.
-PAGE_MARK_RE = re.compile(r"^[ \t]*<!--\s*pág\.\s*\d+\s*-->[ \t]*(?:\n|$)", re.MULTILINE)
+PAGE_MARK_RE = re.compile(r"^[ \t]*<!--\s*(?:page|pág\.)\s*\d+\s*-->[ \t]*(?:\n|$)", re.MULTILINE)
 PAGE_NUMBER_RE = re.compile(r"^[ \t]*\d{1,4}[ \t]*$", re.MULTILINE)
 HYPHEN_BREAK_RE = re.compile(r"(\w)-\n(\w)")
 BLANK_RUN_RE = re.compile(r"\n{3,}")
@@ -320,7 +320,7 @@ def headings_by_level(text: str) -> dict[int, list[str]]:
 
 def page_mark(index: int) -> str:
     """The comment marking where page `index` ended."""
-    return f"<!-- pág. {index} -->"
+    return f"<!-- page {index} -->"
 
 
 def strip_page_marks(text: str) -> str:

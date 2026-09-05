@@ -36,7 +36,7 @@ def run(
     definitions = cleaned.get("definitions") or {}
 
     progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
-    with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
+    with progress.step("kg_domains", "Grouping the concepts into domains"):
         progress.checkpoint()
         concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts, prompts=prompts)
         if not concepts_by_domains:
@@ -65,7 +65,7 @@ def run(
     )
 
     progress.phase("curate")
-    with progress.step("kg_curate", "Tipando las relaciones y rompiendo ciclos"):
+    with progress.step("kg_curate", "Typing the relations and breaking cycles"):
         universe = {c for cs in concepts_by_domains.values() for c in cs}
         typed = build_typed_relations(relations, universe, schema)
         report_against_order(typed, positions, schema.prerequisite_verbose)
@@ -489,12 +489,12 @@ def link_relations(
     total = len(domains) + 1
 
     with progress.step(
-        "kg_link", "Enlazando conceptos y ordenando el temario", total
+        "kg_link", "Linking concepts and ordering the syllabus", total
     ) as reporter:
         for idx, domain in enumerate(domains, 1):
             progress.checkpoint()
             members = concepts_by_domains[domain]
-            reporter.start(idx, detail=f"{domain} · {len(members)} concepto(s)")
+            reporter.start(idx, detail=f"{domain} · {len(members)} concept(s)")
             progress.advance((idx - 1) / total, f"{domain} ({idx}/{len(domains)})")
             known.update(
                 tuple(r)
@@ -521,7 +521,7 @@ def link_relations(
         )
 
     logger.info(f"Linking added {len(known) - before} relation(s)")
-    progress.advance(1.0, f"{len(known) - before} relación(es) nuevas")
+    progress.advance(1.0, f"{len(known) - before} new relation(s)")
     return sorted(list(r) for r in known)
 
 

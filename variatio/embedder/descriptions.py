@@ -14,6 +14,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config
+from .. import wording as wording_sets
 from ..core import inference, progress
 from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
@@ -58,16 +59,16 @@ def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | N
     except json.JSONDecodeError as e:
         return None, str(e)
     if not isinstance(data, dict):
-        return None, "la respuesta no es un objeto"
+        return None, "the answer is not an object"
     written = data.get("descriptions")
     if not isinstance(written, dict):
-        return None, "falta el objeto «descriptions»"
+        return None, "the «descriptions» object is missing"
 
     out = {}
     for concept in concepts:
         text = written.get(concept)
         if not isinstance(text, str) or not text.strip():
-            return None, f"falta la descripción de «{concept}»"
+            return None, f"the description of «{concept}» is missing"
         out[concept] = " ".join(text.split())
     return out, None
 
@@ -146,6 +147,7 @@ class ConceptDescriber:
         self.knowledge_graph = knowledge_graph
         self.context = context
         self.prompts = prompts
+        self._wording = wording_sets.beside(self.prompts)
         self.path = Path(path)
         self.sources_path = Path(sources_path)
         self.siblings_top_k = (
@@ -312,7 +314,7 @@ class ConceptDescriber:
             groups.setdefault(self.knowledge_graph.concept_domain[concept], []).append(concept)
 
         with progress.step(
-            "descriptions", "Generando descripciones de conceptos", total=len(plan)
+            "descriptions", "Writing concept descriptions", total=len(plan)
         ) as reporter:
             done = 0
             for domain, batch in groups.items():
@@ -391,7 +393,7 @@ class ConceptDescriber:
             prompts=self.prompts,
         )
         if parsed is None:
-            raise ValueError(f"descripción ilegible: {error}")
+            raise ValueError(f"unreadable description: {error}")
         return parsed
 
     def simple_describe(self, concept: str) -> str:
@@ -566,7 +568,8 @@ class ConceptDescriber:
         for text, owners in by_text.items():
             head = f"[{places[text]}]" if places[text] else ""
             named = ", ".join(o for o in owners if o in wanted)
-            blocks.append(f"{head}\nCONCEPTOS EXTRAÍDOS DE AQUÍ: {named}\n\n{text}")
+            heading = self._wording.PASSAGE_CONCEPTS_HEADING
+            blocks.append(f"{head}\n{heading}{named}\n\n{text}")
         return "\n\n---\n\n".join(blocks)
 
     def _existing_block(self, domain: str, batch: list[str], written: dict[str, str]) -> str:
@@ -587,7 +590,7 @@ class ConceptDescriber:
         """Render every domain and its concepts, marking the one being described."""
         lines = []
         for domain, names in self.knowledge_graph.concepts_by_domains.items():
-            mark = " (el que estás describiendo)" if domain == current else ""
+            mark = self._wording.DESCRIBING_MARK if domain == current else ""
             lines.append(f"- {domain}{mark}: {', '.join(names)}")
         return "\n".join(lines)
 

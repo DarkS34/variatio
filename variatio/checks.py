@@ -15,7 +15,7 @@ import numpy as np
 from loguru import logger
 from pydantic import BaseModel
 
-from . import config
+from . import config, wording as wording_sets
 from .concept_tagger import TRACE_KEY, ConceptTagger
 from .core.lexicon import mentions
 from .embedder import Embedder
@@ -42,15 +42,18 @@ def practised_later(primary: str | None, forbidden: list[str]) -> list[str]:
     return [primary] if primary and primary in forbidden else []
 
 
-def content_floor(item: BaseModel, item_type: ItemType) -> str | None:
+def content_floor(item: BaseModel, item_type: ItemType, wording=None) -> str | None:
     """Return why the item is too empty to be worth keeping, or None.
 
-    A required field explicitly typed as nullable does not count as missing.
+    A required field explicitly typed as nullable does not count as missing. The sentence
+    is the workspace's, like every other reason: it is read on screen and, when it becomes
+    a retry, by the model writing the next attempt.
     """
+    wording = wording or wording_sets.of(None)
     data = item.model_dump(mode="json")
     primary = data.get(item_type.primary_field)
     if not isinstance(primary, str) or len(primary.strip()) < MIN_PRIMARY_CHARS:
-        return f"el campo principal «{item_type.primary_field}» está vacío o es demasiado corto"
+        return wording.check_empty_primary(item_type.primary_field)
     schema = item_type.stripped_schema()
     properties = schema.get("properties", {})
     missing = [
@@ -59,7 +62,7 @@ def content_floor(item: BaseModel, item_type: ItemType) -> str | None:
         if data.get(name) in (None, "") and not _nullable(properties.get(name, {}))
     ]
     if missing:
-        return f"campo(s) obligatorio(s) sin contenido: {', '.join(missing)}"
+        return wording.check_missing_fields(missing)
     return None
 
 
@@ -73,7 +76,7 @@ def _texts(item: dict) -> list[str]:
     return [value for value in item.values() if isinstance(value, str)]
 
 
-def forbidden_mentions(item: dict, forbidden: list[str]) -> list[str]:
+def forbidden_mentions(item: dict, forbidden: list[str], wording=None) -> list[str]:
     """Return the not-yet-taught concepts the item actually mentions.
 
     It takes the DUMPED item rather than the model so that the evaluation can hold its three
@@ -81,7 +84,7 @@ def forbidden_mentions(item: dict, forbidden: list[str]) -> list[str]:
     «lo no impartido» a boundary apart is one that drifts.
     """
     texts = _texts(item)
-    return [c for c in forbidden if any(mentions(text, c) for text in texts)]
+    return [c for c in forbidden if any(mentions(text, c, wording) for text in texts)]
 
 
 def nearest(
@@ -124,6 +127,7 @@ def run(
     tagger: ConceptTagger | None,
     few_shot: list[tuple[str, dict]],
     batch: list[BaseModel],
+    wording=None,
 ) -> dict:
     """Run every check over one variant and return the collected verdict.
 
@@ -134,16 +138,17 @@ def run(
     a reason to retry; under `RULE_PRACTISES` the mentions are neither reason nor flag, and
     what is held against the item is the tagger's primary concept lying after the target.
     """
+    wording = wording or wording_sets.of(None)
     data = item.model_dump(mode="json")
     text = item_type.embed_text(data)
     checks: dict = {"rule": rule}
 
-    hits = forbidden_mentions(data, forbidden) if rule == RULE_MENTIONS else []
+    hits = forbidden_mentions(data, forbidden, wording) if rule == RULE_MENTIONS else []
     checks["forbidden"] = hits
 
     others = [(ex_id, item_type.embed_text(ex)) for ex_id, ex in few_shot]
     others += [
-        (f"lote {i + 1}", item_type.embed_text(previous.model_dump(mode="json")))
+        (wording.batch_label(i + 1), item_type.embed_text(previous.model_dump(mode="json")))
         for i, previous in enumerate(batch)
     ]
     close = nearest(embedder, text, others)
@@ -165,20 +170,18 @@ def run(
 
     reasons = []
     if hits:
-        reasons.append(f"menciona lo no impartido: {', '.join(hits)}")
+        reasons.append(wording.check_mentions_untaught(hits))
     if later:
-        reasons.append(f"practica lo que va después del objetivo: {', '.join(later)}")
+        reasons.append(wording.check_practises_later(later))
     if checks["similarity"] and checks["similarity"]["high"]:
-        reasons.append(f"muy parecida a {close[0]} ({close[1]:.2f})")
+        reasons.append(wording.check_too_similar(close[0], close[1]))
     flags = list(reasons)
     # Whether a target is among the tags AT ALL, never whether it was made primary. Which
     # of several targets an item practises is the generator's business — the prompt asks
     # for one or two out of the set — so `on_target`, which this read until 2026-09-02,
     # flagged a disagreement about ranking as if it were a miss.
     if tagger is not None and targets and not checks["tagger"]["targets_found"]:
-        missed = f"el etiquetador no la reconoce como {' / '.join(targets)}"
-        seen = checks["tagger"]["primary"]
-        flags.append(f"{missed}; la etiqueta como «{seen}»" if seen else missed)
+        flags.append(wording.check_tagger_missed(targets, checks["tagger"]["primary"]))
     checks["flags"] = flags
     checks["reasons"] = reasons
     checks["verdict"] = "retry" if reasons else "accept"

@@ -10,7 +10,7 @@ import json
 
 from loguru import logger
 
-from .. import prompts
+from .. import prompts, wording as wording_sets
 from ..core import languages
 from ..core.json_io import write_json
 from ..core.workspace import Workspace
@@ -67,6 +67,17 @@ def relation_schema(ws: Workspace):
 def prerequisite_relation(ws: Workspace) -> str | None:
     """Return the verbose label of the relation that orders the curriculum."""
     return relation_schema(ws).prerequisite_verbose
+
+
+def wording(ws: Workspace):
+    """Return the wording this workspace's own strings are composed in.
+
+    The sibling of `prompts.of` for everything the code assembles itself — the injection
+    patterns, the free-text catalogue, the checks' sentences and the marks a transcription
+    leaves on a page. Resolved here so nothing pairs one language's prompts with another's
+    wording; a component already holding a prompt set uses `wording.beside` instead.
+    """
+    return wording_sets.of(prompt_language(ws))
 
 
 def difficulty(ws: Workspace) -> tuple[str, list[str]]:

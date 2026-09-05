@@ -17,6 +17,7 @@ from variatio import config
 from variatio.builders._source_docs import pages
 from variatio.core.inference import GenerationResponse
 from variatio.prompts import of as prompts_of
+from variatio.wording import es as ES_WORDING
 
 
 class _Engine:
@@ -48,7 +49,7 @@ def test_the_cap_travels_with_every_page_call(monkeypatch):
 
 def test_a_cut_answer_is_a_failed_page_and_names_the_page(monkeypatch):
     page, _ = _page(monkeypatch, GenerationResponse("\\_" * 2048, truncated=True))
-    assert page.startswith(pages.FAILED_PAGE_PREFIX)
+    assert page.startswith(ES_WORDING.FAILED_PAGE_PREFIX)
     assert "página 3 de 7" in page
     assert "4096" in page, "el marcador dice qué techo se superó"
     assert "\\_\\_" not in page, "la basura no se guarda"

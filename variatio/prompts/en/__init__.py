@@ -40,6 +40,8 @@ from .profile import (
     repair_exemplars_profile_prompt,
     scan_item_types_prompt,
 )
+LANGUAGE = "en"
+
 from .repair import (
     json_repair_prompt,
 )
@@ -59,6 +61,7 @@ from .tagging import (
 )
 
 __all__ = [
+    "LANGUAGE",
     "CORRECT_ANSWER_MARK",
     "DIFFICULTY_FALLBACK_DESCRIPTION",
     "DIFFICULTY_FALLBACK_EXTRACTION",

@@ -21,6 +21,7 @@ from variatio.core import inference
 from variatio.prompts.marks import EMPTY_IMAGE_MARK
 
 from ..conftest import ES
+from variatio.wording import es as ES_WORDING
 
 docling = pytest.importorskip("docling_core.types.doc")
 
@@ -92,7 +93,7 @@ def _blocks(text: str) -> list[str]:
 def test_a_picture_is_read_where_it_stood_and_a_repeated_one_only_once(source, model, tmp_path):
     text, tally = _read(source, images_dir=tmp_path / "images")
 
-    assert _blocks(text) == ["antes", "$x$", "entre", "$x$", pages.UNREADABLE_IMAGE_MARK, "después"]
+    assert _blocks(text) == ["antes", "$x$", "entre", "$x$", ES_WORDING.UNREADABLE_IMAGE_MARK, "después"]
     assert tally == {"images_total": 3, "images_unreadable": 1}
     # Two pictures with the same bytes are one call, and the header logo is furniture the
     # markdown never carries, so it is not read at all.
@@ -122,7 +123,7 @@ def test_a_logo_leaves_nothing_behind_and_is_remembered(source, tmp_path, monkey
     monkeypatch.setattr(pages.inference, "generate", stub.generate)
 
     text, _ = _read(source, images_dir=tmp_path / "images")
-    assert _blocks(text) == ["antes", "entre", pages.UNREADABLE_IMAGE_MARK, "después"]
+    assert _blocks(text) == ["antes", "entre", ES_WORDING.UNREADABLE_IMAGE_MARK, "después"]
     assert EMPTY_IMAGE_MARK not in text
 
     _read(source, images_dir=tmp_path / "images")
@@ -136,7 +137,7 @@ def test_a_failed_reading_leaves_the_mark_and_is_not_cached(source, tmp_path, mo
 
     text, tally = _read(source, images_dir=tmp_path / "images")
 
-    assert text.count(pages.UNREADABLE_IMAGE_MARK) == 3
+    assert text.count(ES_WORDING.UNREADABLE_IMAGE_MARK) == 3
     assert tally == {"images_total": 3, "images_unreadable": 3}
     assert not list((tmp_path / "images").glob("*.json")), "a failure must be retried next time"
 

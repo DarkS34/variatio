@@ -4,6 +4,8 @@ Interchangeable with `en/` by construction: the same names, the same signatures 
 same JSON keys, which is what lets a caller hold one without knowing which.
 """
 
+LANGUAGE = "es"
+
 from .repair import (
     json_repair_prompt,
 )
@@ -59,6 +61,7 @@ from .knowledge_graph import (
 )
 
 __all__ = [
+    "LANGUAGE",
     "CORRECT_ANSWER_MARK",
     "DIFFICULTY_FALLBACK_DESCRIPTION",
     "DIFFICULTY_FALLBACK_EXTRACTION",

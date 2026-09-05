@@ -146,7 +146,7 @@ class Embedder:
         """Embed every taggable concept's description into the concepts index."""
         concepts = self.knowledge_graph.taggable_concepts
         with progress.step(
-            "index_concepts", "Indexando conceptos", total=len(concepts)
+            "index_concepts", "Indexing the concepts", total=len(concepts)
         ) as reporter:
             vectors = self._embed_many(
                 [self.concept_descriptions[c] for c in concepts], "document", reporter
@@ -179,7 +179,7 @@ class Embedder:
                 f"({len(reusable)} reused from the cache)"
             )
             with progress.step(
-                "embed_bank", "Indexando el banco de ejemplos", total=len(pending)
+                "embed_bank", "Indexing the exemplars bank", total=len(pending)
             ) as reporter:
                 vectors = self._embed_many(
                     [self.embed_text(annotated_bank[ex_id]) for ex_id in pending],
@@ -312,7 +312,7 @@ class Embedder:
             return
         logger.info(f"Embedding {len(pending)} statement(s) for retrieval")
         with progress.step(
-            "embed_queries", "Vectorizando los enunciados", total=len(pending)
+            "embed_queries", "Embedding the statements", total=len(pending)
         ) as reporter:
             self._embed_many(texts, "query", reporter)
 
