@@ -1,7 +1,7 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
-Nothing inside `server` may import this module. It is also the only place the study is
-mounted, because `study.api` imports `server.auth` and `server.routers.jobs` back and
+Nothing inside `server` may import this module. It is also the only place the evaluation is
+mounted, because `evaluation.api` imports `server.auth` and `server.routers.jobs` back and
 mounting it from the router package would close a cycle.
 """
 
@@ -20,9 +20,9 @@ from . import jobs, middleware, runtime, settings
 from .routers import ROUTERS
 
 try:
-    from study import api as study_api
+    from evaluation import api as evaluation_api
 except ImportError:
-    study_api = None
+    evaluation_api = None
 
 
 @contextlib.asynccontextmanager
@@ -60,7 +60,7 @@ def _autostart_tunnel() -> None:
 
 
 def create_app() -> FastAPI:
-    """Assemble the whole application: middleware, routers, the study and the bundle."""
+    """Assemble the whole application: middleware, routers, the evaluation and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -88,10 +88,10 @@ def create_app() -> FastAPI:
     for router in ROUTERS:
         app.include_router(router)
 
-    # The study registers its own routers and job handler here, and only here: importing
+    # The evaluation registers its own routers and job handler here, and only here: importing
     # it from the router package would close a cycle.
-    if study_api is not None:
-        study_api.install(app)
+    if evaluation_api is not None:
+        evaluation_api.install(app)
 
     _mount_web(app)
     return app

@@ -7,10 +7,10 @@ lays the panel out.
 from ..types import Setting
 from . import builders, generation, inference, logging, reasoning, retrieval, tunnel
 
-# The one place `variatio` names the study, and optional on purpose: `study` imports
+# The one place `variatio` names the evaluation, and optional on purpose: `evaluation` imports
 # `variatio` and never the reverse, so the registry reaches it by name, not by import.
 try:
-    from study.settings import SETTINGS as STUDY_SETTINGS
+    from evaluation.settings import SETTINGS as STUDY_SETTINGS
 except ImportError:
     STUDY_SETTINGS: list[Setting] = []
 

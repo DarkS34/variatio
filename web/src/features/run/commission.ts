@@ -9,7 +9,7 @@ import { EFFORT_ORDER, type EffortLevel } from "./effort";
  * different screens convert a form into a request — the generate screen, the evaluator's
  * own commission and the panel's stock — and the one field they disagree about is `n`.
  * A conversion that lives inside a component cannot be tested without a DOM, and this one
- * shipped wrong: see `study/commission.ts`.
+ * shipped wrong: see `evaluation/commission.ts`.
  */
 
 export interface FormState {
@@ -38,7 +38,7 @@ export interface FormState {
    * that list well enough to resolve it — the server does, and what a run RECORDS is the
    * model that actually wrote it, never the one a browser guessed. Only the "generate"
    * variant sets it: a comparison's two local proposals are written by the installation's
-   * own `evaluation.local_model`, and `study/commission.ts` strips the field on the way.
+   * own `evaluation.local_model`, and `evaluation/commission.ts` strips the field on the way.
    *
    * IT WENT AWAY ON 2026-09-01 AND CAME BACK THE SAME DAY, both by explicit user request.
    * What the removal was for survives in the offer: an installation that wants to decide

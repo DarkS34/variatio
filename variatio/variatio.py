@@ -4,7 +4,7 @@ The prompt is built around the knowledge frontier — the target concepts, the
 prerequisites the item may lean on, and what comes after the targets — forbidden outright
 when a curriculum says it is untaught, merely not the thing to practise when nobody said
 where the class stands. `parse_item` and `build_few_shot_block` live at module level rather than on
-the generator because the study's evaluation arms have to present and parse EXACTLY as
+the generator because the evaluation's evaluation arms have to present and parse EXACTLY as
 this does; otherwise the comparison measures the layout and the parsing, not the graph.
 """
 
@@ -344,12 +344,12 @@ class VariantGenerator:
     ) -> list[GeneratedVariant]:
         """Produce up to `n` items for `concepts`, checking and retrying each one.
 
-        A pre-screened `ruling` is honoured as it arrives, which is how the study pays
+        A pre-screened `ruling` is honoured as it arrives, which is how the evaluation pays
         the admissibility judge once for the three arms. `on_accepted` fires per item,
         so a cancelled run keeps whatever had already validated. `model` overrides the
         installation's default writer for this commission alone — the caller checks it
         against what the installation offers (`stages.resolve_generation_model`); nothing
-        here does, so the study's arms keep passing none and get the default.
+        here does, so the evaluation's arms keep passing none and get the default.
         """
         writer = model or self.generator_model
         target_type = self.exemplars_profile.item_type(item_type)

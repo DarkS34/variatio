@@ -142,7 +142,7 @@ export function isModelSetting(setting: ConfigSetting): boolean {
   );
 }
 
-/** The study's own model setting: the writer of a comparison's two local proposals. Its
+/** The evaluation's own model setting: the writer of a comparison's two local proposals. Its
  *  null reads «the same model that writes a generation», not «follow the main». */
 const EVALUATION_WRITER = "evaluation.local_model";
 
@@ -342,7 +342,7 @@ export function CerebrasModelsField({
  * the machine. What stays here is the SHORTLIST.
  *
  * ORDER IS MEANING: the first one is what everything that does not choose is written with
- * — the CLI, the study's three arms and any request naming none — so the chosen ones are
+ * — the CLI, the evaluation's three arms and any request naming none — so the chosen ones are
  * listed first, in their stored order, and «Poner primero» is how that is edited. Checking
  * one appends it; a list of one is legal and simply hides the chooser on the generate
  * screen.

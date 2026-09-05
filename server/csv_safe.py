@@ -6,7 +6,7 @@ the standard defusing; quoting is not an alternative, because the CSV parser str
 quotes before the cell is typed. Numbers are exempt so a column of negative figures does
 not arrive as text and stop adding up.
 
-The copy lives here rather than in either caller because the study already imports
+The copy lives here rather than in either caller because the evaluation already imports
 `server` and the reverse would close a cycle.
 """
 

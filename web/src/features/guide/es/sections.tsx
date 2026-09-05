@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
-import { ARM_META } from "@/study/arms";
+import { ARM_META } from "@/evaluation/arms";
 import {
   USES,
   STEPS,
@@ -58,13 +58,13 @@ function Pill({
 }: {
   icon: LucideIcon;
   label: string;
-  tone?: "study";
+  tone?: "evaluation";
 }) {
   return (
     <span
       className={
-        tone === "study"
-          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
+        tone === "evaluation"
+          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]"
           : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
@@ -119,7 +119,7 @@ function Start() {
                   key={door.key}
                   icon={door.key === "generate" ? Play : Scale}
                   label={t(door.labelKey)}
-                  tone={door.study ? "study" : undefined}
+                  tone={door.evaluation ? "evaluation" : undefined}
                 />
               ))}
             </div>
@@ -1876,7 +1876,7 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">solo administradores</Badge>
         <Paragraph>
-          La instalación vista desde fuera, en cinco pestañas: «{t("admin.tab.study")}» (el
+          La instalación vista desde fuera, en cinco pestañas: «{t("admin.tab.evaluation")}» (el
           estudio), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos), «
           {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar), «
           {t("admin.tab.engine")}» y «{t("admin.tab.config")}» (todos los ajustes, cada uno con
@@ -1917,7 +1917,7 @@ function Admin() {
         </p>
         <p>
           Son cinco pestañas, y esta sección las cubre todas. La de «
-          {t("admin.tab.study")}» reúne lo que ha contestado la gente, en dos bloques: las
+          {t("admin.tab.evaluation")}» reúne lo que ha contestado la gente, en dos bloques: las
           comparaciones a ciegas de la fase de pruebas, con sus recuentos y sus contrastes, y los
           formularios que cierran cada paso de la fase de construcción, resumidos paso a paso.
           Arriba de los dos va un solo filtro —una cuenta, un tipo de cuenta (docentes o

@@ -2,7 +2,7 @@
 
 Two claims, and they are the ones every layer above depends on. A commission that names
 nothing is written with the FIRST offered model — the same one `VARIANT_GENERATION_LLM`
-resolves to, so the CLI and the study's three arms did not change when the screen gained
+resolves to, so the CLI and the evaluation's three arms did not change when the screen gained
 a chooser. And a name that is not on the list is refused rather than substituted: the
 offered list is edited from the panel while jobs sit in the queue, so trusting what a
 request carries would let a job run on a model the installation stopped offering.

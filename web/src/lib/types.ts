@@ -564,7 +564,7 @@ export interface GenerationDetail {
  * What an account is asked when it compares proposals, and nothing else.
  *
  * It is NOT an authorisation: no route reads it, so an account that administers the
- * installation can be a teacher like any other. `null` means nobody said — the study
+ * installation can be a teacher like any other. `null` means nobody said — the evaluation
  * reports it as unset and falls back to the teacher's wording.
  */
 export type EvaluatorProfile = "teacher" | "student";

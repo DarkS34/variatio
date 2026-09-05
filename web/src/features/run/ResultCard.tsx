@@ -91,7 +91,7 @@ export function ItemFields({
  * nobody preparing a subject decides anything with. A flag is worth a line because it
  * names something to look at; its absence is not.
  *
- * `detail` used to put both back for the study's reveal panel, and that caller went on
+ * `detail` used to put both back for the evaluation's reveal panel, and that caller went on
  * 2026-09-04 (explicit user request: the reveal reads exactly as «Generar» does). With no
  * caller left the parameter is gone rather than kept for a reader that might return, and
  * so are the four strings only it drew.

@@ -217,7 +217,7 @@ class OllamaEngine:
         """Turn `think` into Ollama's own option, at the last hop before the call.
 
         THIS IS WHERE `True` BECOMES AN EFFORT LEVEL — with `cerebras.reasoning_effort`,
-        the only place it does. The boolean callers (the study's `Commission`, the
+        the only place it does. The boolean callers (the evaluation's `Commission`, the
         `generations.think` column, the UI switch) get the fixed `DEFAULT_THINK_EFFORT`; a
         pipeline phase passes what `settings.derived` resolved for it, so a string travels
         through untouched and `False` stays `False` — no reasoning at all, which the

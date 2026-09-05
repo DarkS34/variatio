@@ -181,7 +181,7 @@ def delete_user(session: Session, user: User) -> None:
 
     What the account *did* is not the account: `generations.user_id` and
     `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's
-    variants survives their leaving and the study keeps the sessions it counted. What
+    variants survives their leaving and the evaluation keeps the sessions it counted. What
     cascades is what only means anything while the account exists — its memberships, its
     open sessions, its pending reset links and, since 2026-09-03, its stage forms: a
     verdict on a build with nobody behind it cannot be read or withdrawn from the panel.

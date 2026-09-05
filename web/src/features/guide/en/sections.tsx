@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
-import { ARM_META } from "@/study/arms";
+import { ARM_META } from "@/evaluation/arms";
 import {
   USES,
   STEPS,
@@ -59,13 +59,13 @@ function Pill({
 }: {
   icon: LucideIcon;
   label: string;
-  tone?: "study";
+  tone?: "evaluation";
 }) {
   return (
     <span
       className={
-        tone === "study"
-          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]"
+        tone === "evaluation"
+          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]"
           : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
       }
     >
@@ -121,7 +121,7 @@ function Start() {
                   key={door.key}
                   icon={door.key === "generate" ? Play : Scale}
                   label={t(door.labelKey)}
-                  tone={door.study ? "study" : undefined}
+                  tone={door.evaluation ? "evaluation" : undefined}
                 />
               ))}
             </div>
@@ -689,7 +689,7 @@ function Verdict({ artifact }: { artifact: string }) {
         </p>
         <p>
           Whether you <strong>corrected before judging</strong> is kept too. It is not
-          surveillance: it is a variable of the study, because the mark of somebody who has
+          surveillance: it is a variable of the evaluation, because the mark of somebody who has
           curated the result by hand is not the mark of somebody judging it as it came out,
           and without telling them apart the two are mixed into the same average.
         </p>
@@ -1588,7 +1588,7 @@ function Evaluate() {
         <p>
           Showing you the result of what you are about to judge is an invitation to even it out.
           Your sessions are yours and you can reread them; the count belongs to whoever analyses
-          the study.
+          the evaluation.
         </p>
       </Alert>
 
@@ -1888,7 +1888,7 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          The installation seen from outside, in five tabs: "{t("admin.tab.study")}" (the study),
+          The installation seen from outside, in five tabs: "{t("admin.tab.evaluation")}" (the evaluation),
           "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
           {t("admin.tab.workspaces")}" (disk usage, export, delete), "{t("admin.tab.engine")}"
           and "{t("admin.tab.config")}" (every setting, each with what it cost to measure it and
@@ -1929,7 +1929,7 @@ function Admin() {
           sees it.
         </p>
         <p>
-          Five tabs, and this section covers all of them. "{t("admin.tab.study")}" gathers what
+          Five tabs, and this section covers all of them. "{t("admin.tab.evaluation")}" gathers what
           people have answered, in two blocks: the blind comparisons of the testing phase, with
           their tallies and their contrasts, and the forms that close each step of the
           construction phase, summarised step by step. Above both sits one filter — an account,
@@ -1980,7 +1980,7 @@ function Admin() {
             {
               key: "perfil",
               head: <>"{t("acc.profileLabel")}"</>,
-              body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the study groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
+              body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the evaluation groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
             },
             {
               key: "sesiones",
@@ -2002,7 +2002,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>"{t("common.delete")}"</>,
-              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated exercises and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the study does not lose the comparisons it counted.",
+              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated exercises and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the evaluation does not lose the comparisons it counted.",
             },
           ]}
         />

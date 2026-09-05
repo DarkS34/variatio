@@ -11,7 +11,7 @@ Developed as the final thesis (TFM) of a Master's degree in Artificial Intellige
 - **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.md`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model, with caching, review and hand correction from inside the application.
 - **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is forbidden because it has not been taught yet) and on the course curriculum — the list of concepts already covered, editable per workspace. A guardrail and an admissibility judge screen the free-text instructions, and every item is validated against the profile's schema before it is saved.
 - **Serves several subjects at once.** Each *workspace* is a complete instance (artifacts, cache, raw documents, curriculum, history) with its own members and roles. Artifacts are versioned in the database and every stage goes through explicit review and approval.
-- **Evaluates itself blind.** The `study/` package compares three architectures (*naive*, *RAG*, full system) in blind sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
+- **Evaluates itself blind.** The `evaluation/` package compares three architectures (*naive*, *RAG*, full system) in blind sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
 
 ## How it works
 
@@ -54,7 +54,7 @@ A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** fron
 - **Raw data** as a destination of its own: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor where a hand correction beats the model and survives every later build.
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or quota. Weighted phase-plan progress, an authenticated WebSocket, safe cancellation.
 - **Generate and evaluate**: commissions with concepts, modality, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with its full commission, reproducible from «My variants».
-- **Administration**: engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, and the study's panel.
+- **Administration**: engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, and the evaluation's panel.
 - **Two languages on two axes**: the interface language (es/en) belongs to the account; the prompt language belongs to the workspace and is fixed at creation. A built-in user guide lives at `/guide`.
 
 ## Getting started
@@ -104,14 +104,14 @@ variatio/     the pipeline: core (inference, progress), instance (loaders),
               builders (raw → artifacts), stages (orchestration), embedder,
               prompts (es/en), settings (the settings registry)
 server/       API, database, identity, job queue, the «system» CLI
-study/        the TFM's evaluation: arms, sessions, statistics, its API
+evaluation/        the TFM's evaluation: arms, sessions, statistics, its API
 web/          the React frontend
 tests/        one directory per subsystem
 workspaces/   the instances; «default» ships as the reference
 migrations/   Alembic
 ```
 
-The boundary is strict and pinned by tests: `study` imports `variatio`, never the reverse; importing `variatio` pulls in neither Docling nor the server; secrets live only in `.env` and never enter `config.json`.
+The boundary is strict and pinned by tests: `evaluation` imports `variatio`, never the reverse; importing `variatio` pulls in neither Docling nor the server; secrets live only in `.env` and never enter `config.json`.
 
 ## Configuration
 

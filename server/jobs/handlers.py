@@ -105,10 +105,10 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
     if slot not in _SLOTS:
         raise ValueError(f"Ranura desconocida: '{slot}'; esperaba una de {list(_SLOTS)}")
 
-    from study import raw_text
+    from evaluation import raw_text
     from variatio.stages import transcribe_slot
 
-    # The study's plain reading of the same slot, first and best effort: seconds, and it
+    # The evaluation's plain reading of the same slot, first and best effort: seconds, and it
     # must not be lost to a cancelled transcription nor stop one.
     try:
         raw_text.prepare_slot(ws, slot)

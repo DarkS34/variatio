@@ -21,7 +21,7 @@ _FK = "stage_evaluations_user_id_fkey"
 def upgrade() -> None:
     # `0011` made `user_id` SET NULL «like generations and evaluation_sessions», and the
     # analogy was wrong (2026-09-03, explicit user request). Those two are material a
-    # course was built on and sessions the study counted; a stage form is one person's
+    # course was built on and sessions the evaluation counted; a stage form is one person's
     # verdict on a build, and with nobody behind it the panel can neither filter it,
     # group it nor withdraw it — six such rows were found stranded in production after
     # an account was deleted, and had to be removed by hand. From here on the account

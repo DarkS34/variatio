@@ -755,7 +755,7 @@ export function useMembershipActions() {
  *
  * The whole `["admin", …]` prefix goes, not just the overview: the deleted account was a
  * row in the accounts table, a group in «por cuenta» and possibly the current filter of
- * the study tab, and leaving any of those cached shows a name that no longer exists.
+ * the evaluation tab, and leaving any of those cached shows a name that no longer exists.
  */
 export function useDeleteAccount() {
   const client = useQueryClient();

@@ -76,7 +76,7 @@ def _texts(item: dict) -> list[str]:
 def forbidden_mentions(item: dict, forbidden: list[str]) -> list[str]:
     """Return the not-yet-taught concepts the item actually mentions.
 
-    It takes the DUMPED item rather than the model so that the study can hold its three
+    It takes the DUMPED item rather than the model so that the evaluation can hold its three
     proposals to this very rule instead of keeping a second copy of it: two readings of
     «lo no impartido» a boundary apart is one that drifts.
     """

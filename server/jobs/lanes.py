@@ -73,7 +73,7 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     ),
     # The three arms together: the two baselines generate and repair, and the system arm is
     # the whole generator, admissibility judge included. The writer of the two local arms
-    # is absent for the generate kind's reason: since 2026-09-04 it is the study's own
+    # is absent for the generate kind's reason: since 2026-09-04 it is the evaluation's own
     # setting (`evaluation.local_model`), which `models_for` puts at the head of this list.
     "evaluate": (
         "ADMISSIBILITY_LLM",
@@ -122,13 +122,13 @@ def _writer(params: dict | None) -> str:
 def _evaluation_writer() -> str:
     """Return the model an evaluation's two local proposals are written with.
 
-    The study's own setting, read through `study.config` at dispatch time like everything
-    else here — the panel edits it hot. Imported inside the function: the study is mounted
+    The evaluation's own setting, read through `evaluation.config` at dispatch time like everything
+    else here — the panel edits it hot. Imported inside the function: the evaluation is mounted
     from `server/app.py` and nothing else under `server/` names it at module scope.
     """
-    from study import config as study_config
+    from evaluation import config as evaluation_config
 
-    return study_config.LOCAL_MODEL
+    return evaluation_config.LOCAL_MODEL
 
 
 def _remote_models() -> frozenset[str]:

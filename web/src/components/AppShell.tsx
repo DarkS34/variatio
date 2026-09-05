@@ -237,7 +237,7 @@ const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
  * two doors sit `gap-1` apart, the same 4 px the rule between the phases keeps on either
  * side, where the steps sit 2 px apart.
  *
- * «Evaluar el sistema» carries `--study`, tinted whether locked or not: what the tint says
+ * «Evaluar el sistema» carries `--evaluation`, tinted whether locked or not: what the tint says
  * is «this is a different kind of thing», which is true from wherever you look at it. It is
  * the one place in the navigation that spends a colour on identity.
  */
@@ -256,13 +256,13 @@ function DoorPill({
   disabledReason?: string | null;
 }) {
   const { t } = useT();
-  const study = door.study;
+  const evaluation = door.evaluation;
   const face = cn(
     PILL,
     PILL_HEIGHT,
     "justify-center",
-    study &&
-      "text-study ring-1 ring-inset ring-[color-mix(in_oklch,var(--study)_30%,transparent)] bg-[color-mix(in_oklch,var(--study)_9%,transparent)]",
+    evaluation &&
+      "text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]",
   );
   const body = (
     <>
@@ -271,7 +271,7 @@ function DoorPill({
           PILL_NAME,
           "font-medium",
           !open && "text-muted-foreground",
-          open && !study && "text-foreground",
+          open && !evaluation && "text-foreground",
         )}
       >
         <span
@@ -308,9 +308,9 @@ function DoorPill({
       aria-current={active ? "page" : undefined}
       className={cn(
         face,
-        study && "hover:bg-[color-mix(in_oklch,var(--study)_16%,transparent)]",
-        study && active && "bg-[color-mix(in_oklch,var(--study)_18%,transparent)]",
-        !study && active && "bg-accent",
+        evaluation && "hover:bg-[color-mix(in_oklch,var(--evaluation)_16%,transparent)]",
+        evaluation && active && "bg-[color-mix(in_oklch,var(--evaluation)_18%,transparent)]",
+        !evaluation && active && "bg-accent",
       )}
     >
       {body}

@@ -28,7 +28,7 @@
 
    It also buys measurable room. Taking the structural role out of the colour budget frees
    a whole family, and the five semantic colours end up further apart than in any previous
-   material: the tightest pair is destructive/study under deuteranopia at ΔE 17.2 in light
+   material: the tightest pair is destructive/evaluation under deuteranopia at ΔE 17.2 in light
    and 19.8 in dark, against a floor of 15.
 
    Every value here is MEASURED, not picked: `pnpm check:color` reads them out of this file
@@ -82,7 +82,7 @@
      measurement said so. The obvious accent for black-on-white is a signal red, so the
      first draft made --attention red 27 and pushed --destructive to a wine at 352. It
      fails twice: settled against destructive collapses to ΔE 6.1 under deuteranopia, and
-     attention against study to 13.1 under protanopia. Giving "act here" the blue and
+     attention against evaluation to 13.1 under protanopia. Giving "act here" the blue and
      leaving red to mean damage clears everything — and it also puts the two apart in the
      one way that survives every deficiency, since blue and red separate on the axis
      dichromats keep. */
@@ -104,8 +104,8 @@
      oklch(0.50 0.12 95) measured ΔE 5.8 from --destructive under deuteranopia.
 
      THE LIGHTNESS IS THE MEASURED PART, AND IT WAS FOUND BY A CHECK `check:color` DOES NOT
-     MAKE. The script compares --study against the other four semantic colours and compares
-     --primary against the arms, but it never compares --study against the arms — and
+     MAKE. The script compares --evaluation against the other four semantic colours and compares
+     --primary against the arms, but it never compares --evaluation against the arms — and
      --arm-rag is also a green (0.57 0.125 158). A first draft at oklch(0.48 0.14 150)
      passed the whole gate while sitting ΔE 15.0 from it, so on the evaluation screen the
      «Evaluar» pill would have been very nearly the colour of the rag arm's own bars: not a
@@ -114,8 +114,8 @@
      27.6 in light and 28.5 in dark against the nearest arm in the worst of the three
      visions. Chroma 0.13 rather than more keeps it inside sRGB; the greens that measured
      best were all outside it, which makes their measurement fiction. */
-  --study: oklch(0.40 0.13 140);
-  --study-foreground: oklch(0.99 0.004 140);
+  --evaluation: oklch(0.40 0.13 140);
+  --evaluation-foreground: oklch(0.99 0.004 140);
 
   --border: oklch(0.87 0.004 265);
   /* --input is not the same value as --border, and the reason has not changed with the
@@ -137,7 +137,7 @@
 
   /* Syntax highlighting keeps its own pair so that the ultramarine goes on meaning "act
      here" rather than "string literal". The string moves to a teal at 200 — no state token
-     speaks for it, and it deliberately avoids --study's green, which is the same mistake
+     speaks for it, and it deliberately avoids --evaluation's green, which is the same mistake
      one hue over. */
   --code-string: oklch(0.45 0.07 200);
   --code-number: oklch(0.46 0.13 295);
@@ -164,7 +164,7 @@
      needs to do identity work at all. In other words the three bars of «cuántas veces
      ganó cada una» were, for a real reader, two bars and a doubt.
      They do NOT move when the material of the palette does: they are the encoding of the
-     study, and a recorded session read beside a fresh one has to draw its arms the same
+     evaluation, and a recorded session read beside a fresh one has to draw its arms the same
      way.
      Two things must not change. The ORDER — naive, rag, system — is what the pairs were
      validated on, so charts render the arms in it; and the SLOTS are per entity, never
@@ -203,7 +203,7 @@
 
   --settled: oklch(0.68 0.010 265);
   --attention: oklch(0.68 0.16 262);
-  /* Dark, like --destructive-foreground and --study-foreground, and for the same reason:
+  /* Dark, like --destructive-foreground and --evaluation-foreground, and for the same reason:
      at 0.68 this blue is light enough that a near-white label on it measured 2.84 — under
      the 4.5 floor, on the app's own «act here» button. It was a literal in `ui/button.tsx`,
      so `check:color` could not see it; the pair check reads it now and it is 6.63. */
@@ -215,16 +215,16 @@
   --destructive-foreground: oklch(0.16 0.004 25);
 
   /* 0.84 and not the 0.80 a first pass used: the arms are lighter in dark mode (the band
-     is 0.56-0.63), so the lightness gap that keeps --study clear of --arm-rag has to be
+     is 0.56-0.63), so the lightness gap that keeps --evaluation clear of --arm-rag has to be
      opened at the top here rather than at the bottom. Measured at 28.5 against the nearest
      arm in the worst vision, against 23.0 at 0.80. */
-  --study: oklch(0.84 0.13 140);
+  --evaluation: oklch(0.84 0.13 140);
   /* And the same inversion --destructive-foreground makes, for the same reason: in dark
-     mode --study is a LIGHT green, so the label that sits on it goes DARK. It was a
+     mode --evaluation is a LIGHT green, so the label that sits on it goes DARK. It was a
      near-white literal in StageGate until 2026-09-01 — 1.72:1, unreadable — because a
      colour written outside this file is invisible to `check:color`. It is a token now, and
      the checker compares every --X-foreground against its --X. */
-  --study-foreground: oklch(0.16 0.004 140);
+  --evaluation-foreground: oklch(0.16 0.004 140);
 
   --border: oklch(0.30 0.005 265);
   --input: oklch(0.50 0.008 265);
@@ -307,8 +307,8 @@
   --color-settled: var(--settled);
   --color-attention: var(--attention);
   --color-attention-foreground: var(--attention-foreground);
-  --color-study: var(--study);
-  --color-study-foreground: var(--study-foreground);
+  --color-evaluation: var(--evaluation);
+  --color-evaluation-foreground: var(--evaluation-foreground);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
   --color-border: var(--border);

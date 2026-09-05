@@ -49,7 +49,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
         # SET NULL and not CASCADE, like `generations.user_id` and
         # `evaluation_sessions.user_id`: deleting an account must not delete the
-        # measurements the study counted.
+        # measurements the evaluation counted.
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(

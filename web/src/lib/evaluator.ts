@@ -5,9 +5,9 @@ import type { Key } from "@/lib/i18n";
  * The two evaluator profiles, named once for the whole browser.
  *
  * What each one is ASKED is deliberately not here: the wording is the instrument, it lives
- * in `study/api/instruments.py` and it arrives with the listing. These are labels for the
+ * in `evaluation/api/instruments.py` and it arrives with the listing. These are labels for the
  * screens that SET the profile, which is a property of the account — the same reason the
- * Python keeps `EVALUATOR_PROFILES` in `server/db/models.py` and not in `study/`.
+ * Python keeps `EVALUATOR_PROFILES` in `server/db/models.py` and not in `evaluation/`.
  */
 export const PROFILES: EvaluatorProfile[] = ["teacher", "student"];
 

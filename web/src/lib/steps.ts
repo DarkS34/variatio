@@ -41,14 +41,14 @@ export const STEPS = [
  * have. `USES` is the second phase's two doors, one home for the bar and the guide.
  */
 export const USES = [
-  { key: "generate", path: "/generate", labelKey: "nav.create", study: false },
-  { key: "compare", path: "/evaluate", labelKey: "nav.compare", study: true },
+  { key: "generate", path: "/generate", labelKey: "nav.create", evaluation: false },
+  { key: "compare", path: "/evaluate", labelKey: "nav.compare", evaluation: true },
 ] as const satisfies readonly {
   key: string;
   path: string;
   labelKey: Key;
-  /** Whether the door belongs to the study rather than to the product: drawn in `--study`. */
-  study: boolean;
+  /** Whether the door belongs to the evaluation rather than to the product: drawn in `--evaluation`. */
+  evaluation: boolean;
 }[];
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */

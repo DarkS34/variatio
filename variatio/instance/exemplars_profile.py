@@ -191,7 +191,7 @@ class ItemType:
 
         Every `description` and every `title` is dropped, at every depth. The stripped schema
         still carries the profile's own prose — a field's description, and under the
-        difficulty field the whole criterion the consolidator wrote — and the study's RAG arm
+        difficulty field the whole criterion the consolidator wrote — and the evaluation's RAG arm
         must see none of it: what that arm measures is the bank alone, and a sentence
         written by this system's profile builder is not the bank.
         """

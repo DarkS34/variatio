@@ -121,12 +121,12 @@ const TEXT = [
   "--destructive",
   "--code-string",
   "--code-number",
-  "--study",
+  "--evaluation",
 ];
 const SURFACES = ["--background", "--card"];
 // A separator carries no information, so WCAG asks nothing of it; a control outline does.
 const OUTLINE = { "--input": 3, "--border": 1.3 };
-const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--study"];
+const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation"];
 const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
 
 // Text on a tint of ITS OWN hue. This is the case the plain contrast table cannot see and
@@ -138,13 +138,13 @@ const TINTED = [
   ["--attention", 0.08],
   ["--settled", 0.08],
   ["--destructive", 0.08],
-  ["--study", 0.08],
+  ["--evaluation", 0.08],
 ];
 
 // EVERY `--X-foreground` AGAINST ITS `--X`. This is the pair the tables above cannot see:
 // they check a colour used as TEXT on the page's surfaces, and a foreground token is the
 // opposite case — the label that sits ON the colour. Added 2026-09-01, after the stage
-// review's opener button shipped a near-white label on `--study`, which is a LIGHT green in
+// review's opener button shipped a near-white label on `--evaluation`, which is a LIGHT green in
 // dark mode: 1.72:1, and green enough on both sides that it read as a styling choice.
 // Derived from the token names rather than listed, so a new pair is covered by existing.
 const TEXT_MIN = 4.5;

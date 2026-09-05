@@ -1,4 +1,4 @@
-"""The installation's own panel: the accounts, the workspaces and how the study is going.
+"""The installation's own panel: the accounts, the workspaces and how the evaluation is going.
 
 Every route here is behind `require_admin`, and the whole router exists under `/api/admin`
 because `/api/workspaces`'s `auth.MANAGE` only ever reaches the ACTIVE workspace — tidying
@@ -10,7 +10,7 @@ exists. Two screens for one question is how an installation ends up with two ans
 
 What this is NOT: a second way into the pipeline. Nothing here builds, edits or approves
 anything. It reads what the installation has recorded, hands out access, and exports a CSV.
-The one thing it reads across accounts is the study — whose unit of analysis is a session,
+The one thing it reads across accounts is the evaluation — whose unit of analysis is a session,
 and whose interesting question cannot be answered from inside one account. That bypass
 lives in `auth.deps.access_for`, in one `if`, and nowhere else.
 """
@@ -22,7 +22,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from study.api import store as evaluation_store
+from evaluation.api import store as evaluation_store
 
 from .. import auth, deps, maintenance, review, runtime, settings, storage
 from ..auth import deps as auth_deps
@@ -250,7 +250,7 @@ def grant_membership(
 def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db)) -> dict:
     """Correct an account's evaluator profile, administrators included.
 
-    It changes the wording of one question and how the study groups its results; it
+    It changes the wording of one question and how the evaluation groups its results; it
     grants and withholds nothing, which is why withholding this control from anybody
     would be a restriction with no reason.
     """

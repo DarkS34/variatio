@@ -7,7 +7,7 @@ DERIVED_ONLY = {
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
     # Not a setting since 2026-08-29: the commission picks its writer out of
-    # `generation.models`, and this is the first of them — what the CLI, the study's arms
+    # `generation.models`, and this is the first of them — what the CLI, the evaluation's arms
     # and a request naming none are written with.
     "VARIANT_GENERATION_LLM",
 }
@@ -78,9 +78,9 @@ def test_every_phase_key_is_declared_in_the_registry():
 
 # 106 since the seventeen per-phase reasoning switches (89 when the generation checks got
 # their retry budget, 88 when the admissibility judge became a phase of its own); the
-# study's six are still declared outside this package and picked up by name. 97 named, not
-# 111: the ten without one are the four context windows and the study's six, which the
-# study reads through `study.config`, so none of them lands in `variatio.config`.
+# evaluation's six are still declared outside this package and picked up by name. 97 named, not
+# 111: the ten without one are the four context windows and the evaluation's six, which the
+# evaluation reads through `evaluation.config`, so none of them lands in `variatio.config`.
 # The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
 # the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23). 115 since
 # the hybrid Cerebras engine (2026-08-24): base URL, API key and routing list, all named.
@@ -120,10 +120,10 @@ def test_the_registry_holds_what_this_work_transcribed():
     # the reasoning levels was a table in the browser's own source, so declaring it for a new
     # model was a code change — a measurement made by whoever administers the installation,
     # kept where only whoever deploys it could write it down.
-    # 146 on 2026-09-02, when Mistral joined the study's external chain: Gemini's free tier
+    # 146 on 2026-09-02, when Mistral joined the evaluation's external chain: Gemini's free tier
     # answers 429 in the middle of a data-collection session, and the link behind it had to
     # be another COMMERCIAL model rather than Groq serving open weights. Two settings, a
-    # model id and a key, and `BY_NAME` does not move — like the study's other six, they
+    # model id and a key, and `BY_NAME` does not move — like the evaluation's other six, they
     # feed derived values and never become a `config` attribute.
     # 148 and 117 later on 2026-09-02, when the pictures of a Word or PowerPoint file
     # started being read one by one: a reasoning switch of their own (named) and its effort
@@ -133,9 +133,9 @@ def test_the_registry_holds_what_this_work_transcribed():
     # model's effort said only that the requester does not choose it, and the level was then
     # whatever the browser's own slider happened to hold — so the installation could bar the
     # decision without being able to take it.
-    # 150 on 2026-09-04, when `evaluation.local_model` joined the study's settings: the
+    # 150 on 2026-09-04, when `evaluation.local_model` joined the evaluation's settings: the
     # writer of a comparison's two local proposals is the installation's, unnamed like the
-    # study's other eight, so `BY_NAME` does not move.
+    # evaluation's other eight, so `BY_NAME` does not move.
     # 151 and 119 on 2026-09-05, when `builders.transcribe_max_output_tokens` arrived: nine
     # pages of two exam papers had each spent the engine's whole 40 960-token budget on one
     # repeated `\_`, and the cut answer is a FAILED page rather than a short one.

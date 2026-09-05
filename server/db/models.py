@@ -192,7 +192,7 @@ class User(Base):
     through, which answers the same question without an extension SQLite could not run.
 
     `evaluator_profile` (`teacher` / `student` / NULL) is a stratification variable for
-    the study and nothing else. `ui_language` is what this person READS — the interface,
+    the evaluation and nothing else. `ui_language` is what this person READS — the interface,
     the guide, the errors — and is deliberately a different axis from a workspace's
     `prompt_language`; NOT NULL, because there is no such thing as reading no language.
     `active_workspace_id` is a *preference* and never an authorisation: `require_member`
@@ -372,7 +372,7 @@ class Generation(Base):
 class EvalSession(Base):
     """One blind comparison, with the evaluator it belongs to.
 
-    A session on disk has no evaluator, and the study's unit is a session: without an
+    A session on disk has no evaluator, and the evaluation's unit is a session: without an
     account to group by, none of the analysis is computable. The header columns are
     queried, since the aggregates group by them, while `trace` holds the whole
     `EvaluationSession.to_dict()` — three prompts, three raw answers, exemplars, timings
@@ -396,7 +396,7 @@ class EvalSession(Base):
     is the absence of one: it never enters the preference counts and is a datum about the
     panel's composition.
 
-    `user_id` is `SET NULL` for the same reason `generations.user_id` is: the study keeps
+    `user_id` is `SET NULL` for the same reason `generations.user_id` is: the evaluation keeps
     the sessions it counted when an account is deleted.
     """
 
@@ -468,14 +468,14 @@ class StageEvaluation(Base):
 
     `instrument` is the version of the question set. Rewording a question changes what was
     measured, so rows answered under different wordings must not be pooled by accident:
-    `study.api.stage_instruments.VERSION` is what is stored here, and the analysis groups by
+    `evaluation.api.stage_instruments.VERSION` is what is stored here, and the analysis groups by
     it. `overall` is a column and the rest of the answers are JSON for the reason
     `EvalSession` splits the same way — the aggregates group by the single ordinal scale,
     and everything else is read one row at a time.
 
     `user_id` CASCADES, unlike the other two tables that record what a person produced
     (2026-09-03, explicit user request). A generated exercise and a blind comparison are
-    material a course was built on or a session the study counted; a form is one person's
+    material a course was built on or a session the evaluation counted; a form is one person's
     verdict on a build and means nothing with nobody behind it — a row with no evaluator
     cannot be filtered, grouped or withdrawn from the panel, which is how six of them were
     found stranded in production. Deleting the account takes its forms with it.
@@ -511,7 +511,7 @@ class StageEvaluation(Base):
     note: Mapped[str | None] = mapped_column(Text, default=None)
 
     # Whether this person had corrected the artifact by hand before answering. Curating is
-    # no longer required to move down the chain, so it is a variable of the study instead
+    # no longer required to move down the chain, so it is a variable of the evaluation instead
     # of a guarantee: the verdict of somebody who fixed the thing is not the verdict of
     # somebody who judged it as it came out, and one average over both says neither. It is
     # NOT `CURATED` above, which names which FILE is being read; this is about the person.

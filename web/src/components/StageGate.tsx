@@ -44,9 +44,9 @@ import {
   useSplitEngine,
 } from "@/state/queries";
 import { useMutation } from "@tanstack/react-query";
-import { StageReview } from "@/study/StageReview";
-import { useStageReview } from "@/study/queries";
-import { questionCount } from "@/study/types";
+import { StageReview } from "@/evaluation/StageReview";
+import { useStageReview } from "@/evaluation/queries";
+import { questionCount } from "@/evaluation/types";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName, buildCall } from "@/lib/names";
 
@@ -249,7 +249,7 @@ export function StageGate({
   // it is «estoy corrigiendo ahora», which nothing on disk records.
   const [curating, setCurating] = useState(false);
   const reviewPanel = useRef<HTMLDivElement>(null);
-  // WHETHER THIS PERSON CORRECTED BEFORE JUDGING, which is the study's own contrast:
+  // WHETHER THIS PERSON CORRECTED BEFORE JUDGING, which is the evaluation's own contrast:
   // «cómo lo valoran los que curaron y cómo lo valoran los que no». It is the header that
   // knows — the verdict panel only sees its own form — and it is a WRITE that counts, not
   // merely having opened the controls.
@@ -529,7 +529,7 @@ export function StageGate({
             objeción fue literal: «le doy aquí, pero ¿qué he revisado, si yo no he revisado
             nada?». Debajo del artefacto la frase es cierta.
 
-            Aquí es donde se gasta `--study`: es el token de la evaluación en toda la
+            Aquí es donde se gasta `--evaluation`: es el token de la evaluación en toda la
             aplicación — la píldora «Comparar» del navbar se dibuja en él. Relleno mientras
             no se ha contestado y sobrio en cuanto se contesta, que es la única diferencia
             que importa. No se dibuja con la etapa sin construir — no habría nada que
@@ -561,8 +561,8 @@ export function StageGate({
             className={cn(
               "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
               answeredReview
-                ? "border-[color-mix(in_oklch,var(--study)_35%,transparent)] bg-[color-mix(in_oklab,var(--study)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--study)_12%,var(--card))]"
-                : "border-study bg-study text-study-foreground hover:bg-[color-mix(in_oklab,var(--study)_88%,var(--study-foreground))]",
+                ? "border-[color-mix(in_oklch,var(--evaluation)_35%,transparent)] bg-[color-mix(in_oklab,var(--evaluation)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--card))]"
+                : "border-evaluation bg-evaluation text-evaluation-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_88%,var(--evaluation-foreground))]",
             )}
           >
             <ClipboardCheck aria-hidden className="size-5 shrink-0" />

@@ -32,7 +32,7 @@ import { SLIDE_COUNT, slidePath } from "./slides";
  * said «pedir ejercicios», which is one hinge told twice — and comparing, the third thing
  * the product does, was not presented as a phase at all. The phases are named on the
  * titles now, the hinge is the opening sentence of the generating slide instead of a
- * slide of its own, and the closing pair — what the study asks, and where to start —
+ * slide of its own, and the closing pair — what the evaluation asks, and where to start —
  * became one slide, because a slide whose whole content is «press the button below» says
  * what the button says. THE PHASES ARE TWO AND THEY ARE NAMED, NOT NUMBERED (2026-09-02,
  * explicit user request): the construction, whose four steps are numbered 1–4 because
@@ -108,7 +108,7 @@ interface Slide {
  *
  * The tint is `--destructive` at 12 % mixed INTO the page (`oklab`, never `oklch`: the
  * background's chroma is ~0 with a hue of 265, and mixing round the hue circle from there
- * lands on a blue — measured when the study block was tinted). The ink stays the ink:
+ * lands on a blue — measured when the evaluation block was tinted). The ink stays the ink:
  * what is marked is the sentence, not a warning label, so the text is not repainted and
  * keeps its measured contrast against the paper.
  */

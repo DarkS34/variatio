@@ -70,7 +70,7 @@ def test_a_model_no_phase_names_any_more_leaves_the_context():
 
 
 # The writer of a variant is the commission's since 2026-08-29, so it is not a phase model
-# any more: what the CLI, the study's arms and a request naming none get is the FIRST of
+# any more: what the CLI, the evaluation's arms and a request naming none get is the FIRST of
 # the offered list.
 def test_the_default_writer_is_the_first_model_offered():
     values = base()

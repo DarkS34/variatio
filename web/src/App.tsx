@@ -26,7 +26,7 @@ const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
 );
 const EvaluationScreen = lazy(() =>
-  import("@/study/EvaluationScreen").then((m) => ({ default: m.EvaluationScreen })),
+  import("@/evaluation/EvaluationScreen").then((m) => ({ default: m.EvaluationScreen })),
 );
 const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),

@@ -178,7 +178,7 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
 
 
 def _prepare_raw_text(ws: Workspace, kind: str) -> None:
-    """Bring the study's plain reading of the slot in line with its files, best effort.
+    """Bring the evaluation's plain reading of the slot in line with its files, best effort.
 
     The RAG arm of the evaluation retrieves over the documents read with a plain extractor,
     and that reading is prepared here, inside step 1, with no step and no badge: it is
@@ -186,7 +186,7 @@ def _prepare_raw_text(ws: Workspace, kind: str) -> None:
     it. An upload or a deletion must not fail because it did.
     """
     try:
-        from study import raw_text
+        from evaluation import raw_text
 
         raw_text.prepare_slot(ws, kind)
     except Exception as exc:  # noqa: BLE001 - the request matters more than the reading

@@ -212,7 +212,7 @@ def change_language(
     """Set the language this account reads the interface in, and nothing else.
 
     The account's own and only the account's: an administrator corrects an evaluator
-    profile because it is a variable of the study, but what somebody reads the interface
+    profile because it is a variable of the evaluation, but what somebody reads the interface
     in is nobody else's decision. It touches no workspace — what a person reads and what
     an instance's prompts are written in are separate axes.
     """
