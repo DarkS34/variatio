@@ -53,7 +53,7 @@ A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** fron
 - **Staged preparation**: profile → graph → bank, each with build, review, approval and a restorable history. The graph viewer is a hand-rolled `<canvas>` with a force layout and a curriculum view by prerequisite level.
 - **Raw data** as a destination of its own: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor where a hand correction beats the model and survives every later build.
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or quota. Weighted phase-plan progress, an authenticated WebSocket, safe cancellation.
-- **Generate and evaluate**: commissions with concepts, modality, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with its full commission, reproducible from «My variants».
+- **Generate and evaluate**: commissions with concepts, modality, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with its full commission, reproducible from «My exercises», where they are private to whoever asked for them.
 - **Administration**: engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, and the evaluation's panel.
 - **Two languages on two axes**: the interface language (es/en) belongs to the account; the prompt language belongs to the workspace and is fixed at creation. A built-in user guide lives at `/guide`.
 

@@ -34,7 +34,6 @@ export const keys = {
   context: ["context"] as const,
   kg: ["kg"] as const,
   kgGraph: ["kg", "graph"] as const,
-  descriptions: ["kg", "descriptions"] as const,
   bank: (params: Record<string, unknown>) => ["bank", params] as const,
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
@@ -290,23 +289,6 @@ export function useKgGraph(workspace?: string | null) {
   });
 }
 
-/**
- * The descriptions, and while they are being written, refreshed on their own.
- *
- * The writer saves after each concept — cancelling loses nothing — but the screen only asked
- * again when the job finished or when the tab regained focus, so the list filled in jumps
- * and by surprise. With the job running it asks every few seconds, which is the pace they
- * are written at.
- */
-export function useDescriptions() {
-  const live = useJobRunning("describe_concepts");
-  return useQuery({
-    queryKey: keys.descriptions,
-    queryFn: api.descriptions,
-    refetchInterval: live ? 4_000 : false,
-  });
-}
-
 export function useCoverage() {
   return useQuery({ queryKey: keys.coverage, queryFn: api.coverage });
 }
@@ -409,7 +391,6 @@ export function useInvalidateChain() {
     client.invalidateQueries({ queryKey: keys.pipeline });
     client.invalidateQueries({ queryKey: keys.kg });
     client.invalidateQueries({ queryKey: keys.kgGraph });
-    client.invalidateQueries({ queryKey: keys.descriptions });
     client.invalidateQueries({ queryKey: ["bank"] });
     client.invalidateQueries({ queryKey: keys.profile });
     client.invalidateQueries({ queryKey: ["generations"] });
