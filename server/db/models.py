@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -210,7 +211,7 @@ class User(Base):
     )
     name: Mapped[str] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(Text)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     ui_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     email_verified_at: Mapped[datetime | None] = mapped_column(
@@ -352,12 +353,12 @@ class Generation(Base):
         ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
     )
     job_id: Mapped[str | None] = mapped_column(String(32), default=None, index=True)
-    item_type: Mapped[str] = mapped_column(String(64), default="")
+    item_type: Mapped[str] = mapped_column(String(64), default="", server_default="")
     concepts: Mapped[list] = mapped_column(Json, default=list)
     curriculum: Mapped[list] = mapped_column(Json, default=list)
     fixed: Mapped[dict] = mapped_column(Json, default=dict)
     instructions: Mapped[str | None] = mapped_column(Text, default=None)
-    think: Mapped[bool] = mapped_column(Boolean, default=True)
+    think: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     model: Mapped[str | None] = mapped_column(String(128), default=None)
     item: Mapped[dict] = mapped_column(Json, default=dict)
     thinking: Mapped[str | None] = mapped_column(Text, default=None)
@@ -401,7 +402,10 @@ class EvalSession(Base):
     """
 
     __tablename__ = "evaluation_sessions"
-    __table_args__ = (Index("ix_evaluation_recent", "workspace_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_evaluation_recent", "workspace_id", "created_at"),
+        Index("ix_evaluation_set", "set_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
     workspace_id: Mapped[int] = mapped_column(
@@ -413,22 +417,23 @@ class EvalSession(Base):
     job_id: Mapped[str | None] = mapped_column(String(32), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    set_id: Mapped[str | None] = mapped_column(String(32), default=None, index=True)
+    set_id: Mapped[str | None] = mapped_column(String(32), default=None)
     assigned_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
 
-    item_type: Mapped[str] = mapped_column(String(64), default="")
+    item_type: Mapped[str] = mapped_column(String(64), default="", server_default="")
     concepts: Mapped[list] = mapped_column(Json, default=list)
     curriculum: Mapped[list] = mapped_column(Json, default=list)
     fixed: Mapped[dict] = mapped_column(Json, default=dict)
     instructions: Mapped[str | None] = mapped_column(Text, default=None)
-    seed: Mapped[int] = mapped_column(BigInteger, default=0)
+    seed: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
     shuffle: Mapped[list] = mapped_column(Json, default=list)
-    think: Mapped[bool] = mapped_column(Boolean, default=True)
+    think: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
-    # `{"1": "as_is", "2": "no", ...}`, keyed by position.
-    triage: Mapped[dict] = mapped_column(Json, default=dict)
+    # `{"1": "as_is", "2": "no", ...}`, keyed by position. Nullable in the database
+    # since 0007 added it to a table that already had rows; the ORM never writes one.
+    triage: Mapped[dict] = mapped_column(Json, default=dict, nullable=True)
 
     choice: Mapped[int | None] = mapped_column(Integer, default=None)
     choice_arm: Mapped[str | None] = mapped_column(String(16), default=None, index=True)
@@ -504,9 +509,9 @@ class StageEvaluation(Base):
     artifact: Mapped[str] = mapped_column(String(32), index=True)
     artifact_hash: Mapped[str | None] = mapped_column(String(64), default=None)
     job_id: Mapped[str | None] = mapped_column(String(32), default=None)
-    instrument: Mapped[str] = mapped_column(String(16), default="")
+    instrument: Mapped[str] = mapped_column(String(16), default="", server_default="")
 
-    answers: Mapped[dict] = mapped_column(Json, default=dict)
+    answers: Mapped[dict] = mapped_column(Json, default=dict, server_default="{}")
     overall: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
     note: Mapped[str | None] = mapped_column(Text, default=None)
 
