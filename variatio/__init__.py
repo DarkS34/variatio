@@ -8,16 +8,13 @@ tqdm into a caller that only wanted a loader.
 
 import logging
 import sys
-import warnings
 
 from loguru import logger
 
-from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES
+from .config import LOG_LEVEL, NOISY_LOGGERS
 
 for name in NOISY_LOGGERS:
     logging.getLogger(name).setLevel(logging.ERROR)
-for pattern in NOISY_WARNING_MODULES:
-    warnings.filterwarnings("ignore", module=pattern)
 
 
 logger.remove()

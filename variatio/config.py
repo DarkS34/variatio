@@ -140,6 +140,5 @@ GUARDRAIL_CRITERIA: list[str]
 
 LOG_LEVEL: str
 NOISY_LOGGERS: list[str]
-NOISY_WARNING_MODULES: list[str]
 
 apply(globals())

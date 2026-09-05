@@ -98,14 +98,7 @@
   "logging": {
     "level": "INFO",
     "noisy_loggers": [
-      "docling",
-      "docling_core",
-      "docling_ibm_models",
-      "PIL"
-    ],
-    "noisy_warning_modules": [
-      "docling.*",
-      "PIL.*"
+      "docling"
     ]
   },
   "profiles": {

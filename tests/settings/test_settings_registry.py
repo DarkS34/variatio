@@ -139,5 +139,8 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 151 and 119 on 2026-09-05, when `builders.transcribe_max_output_tokens` arrived: nine
     # pages of two exam papers had each spent the engine's whole 40 960-token budget on one
     # repeated `\_`, and the cut answer is a FAILED page rather than a short one.
-    assert len(REGISTRY) == 151
-    assert len(BY_NAME) == 119
+    # 150 and 118 on 2026-09-05, when `logging.noisy_warning_modules` left: measured over the
+    # 22 Office documents of the installation, on the route production takes, it silenced
+    # exactly zero warnings — nothing under Docling or PIL reaches `warnings.warn` at all.
+    assert len(REGISTRY) == 150
+    assert len(BY_NAME) == 118
