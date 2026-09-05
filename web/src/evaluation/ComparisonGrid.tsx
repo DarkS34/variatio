@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
-import { ItemFields } from "@/features/run/ResultCard";
+import { ItemFields } from "@/features/generate/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";

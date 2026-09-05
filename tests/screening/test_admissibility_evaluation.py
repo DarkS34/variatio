@@ -1,5 +1,5 @@
-from variatio import screening
-from variatio.screening import admissibility
+from variatio.runtime import screening
+from variatio.runtime.screening import admissibility
 
 
 def test_the_commission_accepts_a_ruling():

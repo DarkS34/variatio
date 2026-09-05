@@ -16,9 +16,9 @@ import json
 
 import pytest
 
-from server import review
+from server import approvals
 from server.jobs import chain
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from variatio.core.workspace import Workspace
 
 from ..conftest import CHAIN_GRAPH
@@ -55,7 +55,7 @@ def workspace(tmp_path, *, profile=False, approved=False, bank=False) -> Workspa
             json.dumps(PROFILE, ensure_ascii=False), encoding="utf-8"
         )
     if approved:
-        review.ReviewState(ws).approve(review.EXEMPLARS_PROFILE)
+        approvals.Approvals(ws).approve(approvals.EXEMPLARS_PROFILE)
     if bank:
         ws.exemplars_bank_path.write_text(json.dumps({"items": []}), encoding="utf-8")
     return ws
@@ -67,7 +67,7 @@ def build_job(ws: Workspace, params: dict | None = None) -> Job:
 
 def advance(monkeypatch, ws: Workspace, job: Job) -> Recorder:
     """Run one step of the chain against `ws`, whatever slug the job carries."""
-    monkeypatch.setattr(chain.settings, "workspace_for", lambda _slug: ws)
+    monkeypatch.setattr(chain.installation, "workspace_for", lambda _slug: ws)
     runner = Recorder()
     chain.advance(runner, job)
     return runner

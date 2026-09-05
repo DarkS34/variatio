@@ -3,7 +3,8 @@ import os
 
 import pytest
 
-from variatio import prompts, screening
+from variatio import prompts
+from variatio.runtime import screening
 from variatio.core import cerebras_budget
 from variatio.instance.content_context import ContentContext
 from variatio.instance.exemplars_profile import ExemplarsProfile

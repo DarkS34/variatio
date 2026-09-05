@@ -15,7 +15,7 @@ here: the engine is switched from the panel while the process runs.
 
 from loguru import logger
 
-from variatio import config, stages
+from variatio import config, entrypoints
 from variatio.core import inference
 
 LOCAL = "local"
@@ -43,17 +43,17 @@ def capacities() -> dict[str, int]:
     """Return the room every lane has right now, for one pass of the dispatcher."""
     return {backend: capacity(backend) for backend in BACKENDS}
 
-# `stages.build_models` is the builder's own declaration, so the phases and the lane cannot
+# `entrypoints.build_models` is the builder's own declaration, so the phases and the lane cannot
 # drift apart.
 _BUILD_ARTIFACT = {
-    "build_profile": stages.EXEMPLARS_PROFILE,
-    "build_kg": stages.KNOWLEDGE_GRAPH,
-    "build_bank": stages.EXEMPLARS_BANK,
+    "build_profile": entrypoints.EXEMPLARS_PROFILE,
+    "build_kg": entrypoints.KNOWLEDGE_GRAPH,
+    "build_bank": entrypoints.EXEMPLARS_BANK,
 }
 
 # The components, by the `config` name holding each model. Written out rather than
 # introspected: what a handler calls is not derivable from anything, since `index`, `tag`,
-# `generate` and `evaluate` all raise a `PipelineContext`, and building one writes whatever
+# `generate` and `evaluate` all raise a `RuntimeContext`, and building one writes whatever
 # concept descriptions are missing — a model call the handler never mentions.
 _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     "transcribe": ("TRANSCRIBE_MODEL", "TRANSCRIBE_SEAM_MODEL"),
@@ -92,7 +92,7 @@ def _excluded() -> set[str]:
 def models_for(kind: str, params: dict | None = None) -> list[str]:
     """Return the generative models a job of this kind will call, in declaration order."""
     if kind in _BUILD_ARTIFACT:
-        models = stages.build_models(_BUILD_ARTIFACT[kind])
+        models = entrypoints.build_models(_BUILD_ARTIFACT[kind])
     else:
         models = [getattr(config, name, None) for name in _COMPONENT_MODELS.get(kind, ())]
 
@@ -114,8 +114,8 @@ def _writer(params: dict | None) -> str:
     """
     requested = (params or {}).get("model")
     try:
-        return stages.resolve_generation_model(requested if isinstance(requested, str) else None)
-    except stages.UnofferedModelError:
+        return entrypoints.resolve_generation_model(requested if isinstance(requested, str) else None)
+    except entrypoints.UnofferedModelError:
         return config.VARIANT_GENERATION_LLM
 
 

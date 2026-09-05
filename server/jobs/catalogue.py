@@ -1,4 +1,10 @@
-"""What a job and an event are, and the three tables that classify a job kind."""
+"""What a job and an event are, and the three tables that classify a job kind.
+
+Named `models.py` until 2026-09-06. Under `server/`, «model» already meant two other
+things — the ML model (`model_pulls.py`, `required_models`) and the ORM row
+(`db/models.py`, which keeps its conventional name) — and this file is neither: it is
+the catalogue of job kinds, which is what this project's own documentation calls it.
+"""
 
 import time
 import uuid

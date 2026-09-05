@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-from variatio.builders._source_docs import markdown, pages
+from variatio.builders.source_docs import markdown, pages
 
 from ..conftest import ES
 

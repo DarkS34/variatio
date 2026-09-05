@@ -209,7 +209,7 @@ enciende; lo que pierde es el deslizador: se llama con el nivel que resuelva el 
 pantalla lo dice en una palabra, «activado», en vez de «activado · bajo».
 
 ESTO ERA UNA TABLA EN EL CÓDIGO hasta el 2026-09-01 (petición explícita del usuario). Vivía
-en `web/src/features/run/models.ts` como el campo `effortMatters` de cada familia, indexada
+en `web/src/features/generate/models.ts` como el campo `effortMatters` de cada familia, indexada
 por el principio del nombre, así que declarar que un modelo nuevo ignora los niveles era un
 cambio de código y un despliegue. Es una propiedad medida del modelo, sí, pero quien la mide
 es quien administra la instalación y quien la sufre es quien pide el ejercicio, de modo que
@@ -282,7 +282,7 @@ disco un modelo que la generación ofrece.
 La lista está acotada por abajo a uno: vaciarla dejaría a la generación sin modelo y a
 `VARIANT_GENERATION_LLM` sin valor. Por arriba no hay límite, pero dos o tres es lo que cabe
 leerse en la pantalla antes de pedir un ítem; la nota y el enlace de cada familia conocida
-los pone el cliente (`web/src/features/run/models.ts`), y un modelo que no reconozca se
+los pone el cliente (`web/src/features/generate/models.ts`), y un modelo que no reconozca se
 ofrece igual, con su nombre y sin nota."""
 
 _PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la

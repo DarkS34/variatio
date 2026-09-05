@@ -9,9 +9,9 @@ absent from `JOB_ARTIFACT`, from `SUBPROCESS_KINDS`, from `GATES` and from `CHAI
 import pytest
 
 from server.jobs import chain, handlers
-from server.jobs.models import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS, Job
+from server.jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS, Job
 from server.routers.jobs import GATES, NEEDS_APPROVED
-from variatio import stages
+from variatio import entrypoints
 from variatio.core.workspace import Workspace
 
 
@@ -27,7 +27,7 @@ def stub(monkeypatch, tmp_path):
         calls.append((ws.slug, slot))
         return {"slot": slot, "documents": 2, "pages": 7}
 
-    monkeypatch.setattr(stages, "transcribe_slot", transcribe_slot, raising=False)
+    monkeypatch.setattr(entrypoints, "transcribe_slot", transcribe_slot, raising=False)
     return calls
 
 

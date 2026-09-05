@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from server.db import Base, Generation, repository
 from server.jobs import handlers
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from variatio.core import progress
 from variatio.core.progress import Cancelled
 
@@ -97,7 +97,7 @@ def test_each_validated_item_is_saved_as_it_arrives(make, stubbed, monkeypatch):
             kwargs["on_accepted"](result, i + 1)
         return accepted
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"n": 2, "concepts": ["Bucles"]}, workspace="aula")
     result, emitter, _ = _run(job)
 
@@ -120,7 +120,7 @@ def test_the_row_records_the_model_the_commission_chose(make, stubbed, monkeypat
         kwargs["on_accepted"](_variant("uno"), 1)
         return [_variant("uno")]
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(
         kind="generate",
         params={"n": 1, "concepts": ["Bucles"], "model": "el-lento"},
@@ -140,7 +140,7 @@ def test_a_commission_naming_no_model_records_the_default_one(make, stubbed, mon
         kwargs["on_accepted"](_variant("uno"), 1)
         return [_variant("uno")]
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"n": 1, "concepts": ["Bucles"]}, workspace="aula")
     result, _, _ = _run(job)
 
@@ -153,7 +153,7 @@ def test_a_commission_naming_no_model_records_the_default_one(make, stubbed, mon
 # whatever the installation offers today.
 def test_a_model_that_stopped_being_offered_stops_the_job(make, stubbed, monkeypatch):
     monkeypatch.setattr(handlers.config, "GENERATION_MODELS", ["el-que-hay"])
-    monkeypatch.setattr(handlers.stages, "generate", lambda *a, **k: pytest.fail("no llega"))
+    monkeypatch.setattr(handlers.entrypoints, "generate", lambda *a, **k: pytest.fail("no llega"))
     job = Job(
         kind="generate",
         params={"n": 1, "concepts": ["Bucles"], "model": "el-que-ya-no"},
@@ -162,7 +162,7 @@ def test_a_model_that_stopped_being_offered_stops_the_job(make, stubbed, monkeyp
     result, _, error = _run(job)
 
     assert result is None
-    assert isinstance(error, handlers.stages.UnofferedModelError)
+    assert isinstance(error, handlers.entrypoints.UnofferedModelError)
     assert _rows(make) == []
 
 
@@ -172,7 +172,7 @@ def test_a_cancelled_run_keeps_what_it_validated(make, stubbed, monkeypatch):
         kwargs["on_accepted"](_variant("dos"), 2)
         raise Cancelled("cancelled by the user")
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"n": 5, "concepts": ["Bucles"]}, workspace="aula")
     result, _, error = _run(job)
 
@@ -192,7 +192,7 @@ def test_a_database_failure_loses_the_record_and_nothing_else(make, stubbed, mon
         kwargs["on_accepted"](_variant("uno"), 1)
         return [_variant("uno")]
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"n": 1, "concepts": ["Bucles"]}, workspace="aula")
     result, emitter, error = _run(job)
 
@@ -213,7 +213,7 @@ def test_a_count_of_zero_is_not_silently_turned_into_one(make, stubbed, monkeypa
         seen.update(kwargs)
         return []
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"n": 0, "concepts": ["Bucles"]}, workspace="aula")
     result, _, error = _run(job)
 
@@ -231,7 +231,7 @@ def test_an_absent_count_still_means_one(make, stubbed, monkeypatch):
         kwargs["on_accepted"](_variant("uno"), 1)
         return [_variant("uno")]
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     job = Job(kind="generate", params={"concepts": ["Bucles"]}, workspace="aula")
     result, _, error = _run(job)
 

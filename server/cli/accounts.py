@@ -145,7 +145,7 @@ def invite(args) -> int:
     from ..db import session_scope
     from ..db.identity import create_invite
     from ..db.repository import get_workspace
-    from ..settings import INVITE_TTL, public_base_url
+    from ..installation import INVITE_TTL, public_base_url
 
     with session_scope() as session:
         workspace_id = None

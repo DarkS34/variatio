@@ -29,7 +29,7 @@ class KnowledgeGraph:
 
         # A build writes `false` here and an empty exclusion list below, so an unreviewed
         # graph loads with EVERY concept taggable. The loader only states the flag; the
-        # caller decides what to do about it, and `stages.initialize` says it out loud.
+        # caller decides what to do about it, and `entrypoints.initialize` says it out loud.
         self.taggability_reviewed: bool = bool(data.get("taggability_reviewed", False))
         self.generic_non_taggable_concepts: set[str] = set(
             data.get("generic_non_taggable_concepts", [])

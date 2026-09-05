@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from evaluation.arms.vector_store import FlatIndex
-from variatio.embedder import cache
+from variatio.runtime.embedder import cache
 
 FINGERPRINT = "0123456789abcdef0123456789abcdef"
 

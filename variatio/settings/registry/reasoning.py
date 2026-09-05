@@ -197,7 +197,7 @@ Y el nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el 
 (cuatro valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
 Por eso las opciones de aquí siguen siendo cuatro: son las que ACEPTA el motor, y qué hace
 cada modelo con ellas se declara donde se sabe de qué modelo se habla —
-`web/src/features/run/models.ts` para el que elige el encargo, que ofrece tres.
+`web/src/features/generate/models.ts` para el que elige el encargo, que ofrece tres.
 
 Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa:
 `xhigh` NO existe («invalid think value»), ni tampoco `none`. Cerebras no tiene `max`

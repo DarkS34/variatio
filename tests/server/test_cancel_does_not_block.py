@@ -17,7 +17,7 @@ import time
 import pytest
 
 from server.jobs.bus import EventBus
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from server.jobs import runner as runner_module
 from server.jobs.runner import JobControl
 

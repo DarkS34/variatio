@@ -22,10 +22,10 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.builders._source_docs.chunking import chunk_text
-from variatio.builders._source_docs.files import list_source_files
+from variatio.builders.source_docs.chunking import chunk_text
+from variatio.builders.source_docs.files import list_source_files
 from variatio.core.json_io import write_json
-from variatio.stages.transcribe import SLOTS, slot_dir
+from variatio.entrypoints.transcribe import SLOTS, slot_dir
 
 TEXT_VERSION = 1
 META_NAME = "_meta.json"

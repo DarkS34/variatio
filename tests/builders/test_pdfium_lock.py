@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.builders._source_docs import pages
+from variatio.builders.source_docs import pages
 
 
 class _Lock:

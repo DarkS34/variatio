@@ -16,14 +16,16 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from . import checks, config, screening, wording as wording_sets
-from .concept_tagger import ConceptTagger
-from .core import inference, progress
-from .core.repair import parse_with_repair
+from .. import config
+from .. import wording as wording_sets
+from . import checks, screening
+from .tagger import ConceptTagger
+from ..core import inference, progress
+from ..core.repair import parse_with_repair
 from .embedder import Embedder
-from .instance.content_context import ContentContext
-from .instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
-from .instance.knowledge_graph import KnowledgeGraph
+from ..instance.content_context import ContentContext
+from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
+from ..instance.knowledge_graph import KnowledgeGraph
 
 
 def json_objects(text: str) -> list[str]:
@@ -342,7 +344,7 @@ class VariantGenerator:
         the admissibility judge once for the three arms. `on_accepted` fires per item,
         so a cancelled run keeps whatever had already validated. `model` overrides the
         installation's default writer for this commission alone — the caller checks it
-        against what the installation offers (`stages.resolve_generation_model`); nothing
+        against what the installation offers (`entrypoints.resolve_generation_model`); nothing
         here does, so the evaluation's arms keep passing none and get the default.
         """
         writer = model or self.generator_model

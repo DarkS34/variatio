@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from loguru import logger
 
-    from variatio import stages
+    from variatio import entrypoints
     from variatio.core import inference, paths, progress
 
     from . import joblog
@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     progress.set_emitter(emitter)
     try:
         inference.require_engine()
-        result = stages.build_artifact(args.artifact, paths.workspace(args.workspace))
+        result = entrypoints.build_artifact(args.artifact, paths.workspace(args.workspace))
     except progress.Cancelled:
         send("worker.cancelled")
         return 2

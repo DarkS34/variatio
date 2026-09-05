@@ -21,7 +21,7 @@ import contextlib
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from .. import middleware, runtime
+from .. import middleware, singletons
 from ..auth import authenticate_socket
 
 router = APIRouter()
@@ -80,7 +80,7 @@ def _backlog(since: int, slug: str) -> tuple[list[dict], bool, int]:
     `delivered` is computed BEFORE the cold trim: a trimmed event must not come back from
     the live queue as if it were new.
     """
-    replayed, gap = runtime.bus.replay(since, workspace=slug)
+    replayed, gap = singletons.bus.replay(since, workspace=slug)
     delivered = replayed[-1]["seq"] if replayed else since
     if since <= 0:
         replayed = trim_cold_replay(replayed)
@@ -113,11 +113,11 @@ async def stream(websocket: WebSocket) -> None:
     slug = access.workspace.slug
     since = _since(websocket)
 
-    async with runtime.bus.subscribe() as queue:
+    async with singletons.bus.subscribe() as queue:
         replayed, gap, delivered = _backlog(since, slug)
         jobs = [
             job.to_dict()
-            for job in runtime.runner.all(limit=JOBS_SNAPSHOT_LIMIT, workspace=slug)
+            for job in singletons.runner.all(limit=JOBS_SNAPSHOT_LIMIT, workspace=slug)
         ]
 
         try:
@@ -126,7 +126,7 @@ async def stream(websocket: WebSocket) -> None:
                     "kind": "stream.ready",
                     "since": since,
                     "gap": gap,
-                    "last_seq": runtime.bus.last_seq,
+                    "last_seq": singletons.bus.last_seq,
                     "workspace": slug,
                     "jobs": jobs,
                     "events": replayed,
@@ -137,7 +137,7 @@ async def stream(websocket: WebSocket) -> None:
                     event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
                 except asyncio.TimeoutError:
                     await websocket.send_json(
-                        {"kind": "stream.heartbeat", "last_seq": runtime.bus.last_seq}
+                        {"kind": "stream.heartbeat", "last_seq": singletons.bus.last_seq}
                     )
                     continue
                 # The replay and the live queue overlap by design; drop the duplicates
@@ -145,7 +145,7 @@ async def stream(websocket: WebSocket) -> None:
                 if event.seq <= delivered:
                     continue
                 delivered = event.seq
-                if not runtime.bus.visible(event, slug):
+                if not singletons.bus.visible(event, slug):
                     continue
                 await websocket.send_json(event.to_dict())
         except WebSocketDisconnect:

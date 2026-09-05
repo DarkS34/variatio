@@ -1,6 +1,6 @@
 """The command line: argument parsing, the build-if-missing policy, and the reporting.
 
-Every `print()` and every exit code of the library lives here. The stages return data and
+Every `print()` and every exit code of the library lives here. The entry points return data and
 raise; deciding to build what is missing is this layer's call and never theirs.
 """
 
@@ -9,7 +9,7 @@ import json
 
 from loguru import logger
 
-from . import stages
+from . import entrypoints
 from .core import inference, paths
 
 
@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     transcribe.add_argument(
         "--slot",
-        choices=(*stages.SLOTS, "all"),
+        choices=(*entrypoints.SLOTS, "all"),
         default="all",
         help="which raw origin to read (default: both)",
     )
@@ -115,12 +115,12 @@ def _transcribe_and_report(args: argparse.Namespace, ws) -> None:
     phase, which finds this cache done or does the work itself, so nothing chains off this
     subcommand and no build refuses to run for want of it.
     """
-    slots = stages.SLOTS if args.slot == "all" else (args.slot,)
+    slots = entrypoints.SLOTS if args.slot == "all" else (args.slot,)
     failed = 0
     for slot in slots:
         # The stage logs each slot's totals as it closes it; the one thing it does not say is
         # what a person still has to do, which is this layer's job.
-        failed += stages.transcribe_slot(ws, slot)["failed_pages"]
+        failed += entrypoints.transcribe_slot(ws, slot)["failed_pages"]
     if failed:
         logger.warning(
             f"{failed} page(s) could not be read: each is marked inside its document and can "
@@ -147,8 +147,8 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
                 fixed[field] = value
         return fixed
     
-    context = stages.initialize(tag=True, ws=ws)
-    results = stages.generate(
+    context = entrypoints.initialize(tag=True, ws=ws)
+    results = entrypoints.generate(
         context,
         concepts=args.concepts,
         item_type=args.item_type,
@@ -183,22 +183,22 @@ def main(argv: list[str] | None = None) -> int:
             case "transcribe":
                 _transcribe_and_report(args, ws)
             case "build":
-                built = stages.build_missing(ws)
+                built = entrypoints.build_missing(ws)
                 if built:
                     logger.success(f"Artifacts built: {', '.join(built)}")
                 else:
                     logger.info("Every artifact of the instance already exists")
             case "init":
-                stages.initialize(tag=True, ws=ws)
+                entrypoints.initialize(tag=True, ws=ws)
             case "restamp-descriptions":
-                changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+                changed, total = entrypoints.restamp_descriptions(ws=ws, dry_run=args.dry_run)
                 logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
             case "generate":
                 _generate_and_report(args, ws)
             case "all":
-                stages.build_missing(ws)
+                entrypoints.build_missing(ws)
                 _generate_and_report(args, ws)
-    except stages.MissingArtifactError as e:
+    except entrypoints.MissingArtifactError as e:
         logger.error(f"{e}; run `variatio build` first")
         return 1
     except (RuntimeError, ImportError, OSError, ValueError) as e:

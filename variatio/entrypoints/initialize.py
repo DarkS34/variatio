@@ -1,4 +1,4 @@
-"""Phase 1 — load the instance, warm the indices, hand back a `PipelineContext`.
+"""Phase 1 — load the instance, warm the indices, hand back a `RuntimeContext`.
 
 Read-only by default: `initialize(tag=True)` is the only phase-1 write to `instance/`.
 Initialize once per process and generate many times — building the embedder writes every
@@ -13,16 +13,16 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config
-from ..concept_tagger import ConceptTagger
+from ..runtime.tagger import ConceptTagger
 from ..core import progress
 from ..core.workspace import Workspace
-from ..embedder import Embedder
+from ..runtime.embedder import Embedder
 from ..instance import locale
 from ..instance.content_context import ContentContext
 from .. import prompts as prompts_pkg
 from ..instance.exemplars_profile import ExemplarsProfile
 from ..instance.knowledge_graph import KnowledgeGraph
-from ..variatio import VariantGenerator
+from ..runtime.generator import VariantGenerator
 from . import _artifacts
 
 
@@ -76,7 +76,7 @@ def make_tagger(
 
 
 @dataclass
-class PipelineContext:
+class RuntimeContext:
     """Everything a run needs, loaded once: the artifacts, the index and the generator."""
 
     exemplars_profile: ExemplarsProfile
@@ -172,10 +172,10 @@ def _check_bank_against_profile(
         )
 
 
-def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
+def initialize(ws: Workspace, tag: bool = False) -> RuntimeContext:
     """Load the instance and warm the indices.
 
-    Read-only by default: tagging is a separate, explicit act (`stages.tag_bank`)
+    Read-only by default: tagging is a separate, explicit act (`entrypoints.tag_bank`)
     because it rewrites the exemplars bank. `tag=True` restores the old all-in-one
     behaviour the CLI relies on.
     """
@@ -244,7 +244,7 @@ def initialize(ws: Workspace, tag: bool = False) -> PipelineContext:
         tagger=tagger,
     )
 
-    context = PipelineContext(
+    context = RuntimeContext(
         exemplars_profile=exemplars_profile,
         content_context=content_context,
         knowledge_graph=knowledge_graph,

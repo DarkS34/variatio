@@ -16,7 +16,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
-from server import csv_safe, review
+from server import approvals, csv_safe
 
 from . import stage_instruments, stage_queries
 
@@ -219,7 +219,7 @@ def aggregates(headers: list[dict]) -> dict:
         "overall_mean": _mean([row["overall"] for row in answered]),
         "by_artifact": [
             artifact_summary(artifact, [row for row in headers if row["artifact"] == artifact])
-            for artifact in review.ARTIFACTS
+            for artifact in approvals.ARTIFACTS
         ],
     }
 
@@ -253,7 +253,7 @@ def by_account(headers: list[dict]) -> list[dict]:
                 "overall_mean": _mean([row["overall"] for row in answered]),
                 "per_artifact": {
                     artifact: sum(1 for row in answered if row["artifact"] == artifact)
-                    for artifact in review.ARTIFACTS
+                    for artifact in approvals.ARTIFACTS
                 },
                 "curated": sum(1 for row in answered if row["curated"]),
                 "last_at": max(row.get("updated_at") or row.get("created_at") or 0 for row in rows),

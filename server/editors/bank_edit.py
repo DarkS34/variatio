@@ -9,14 +9,14 @@ surface is manual editing, and it is validated here for the same reason.
 import re
 
 from variatio import config
-from variatio.concept_tagger import TRACE_KEY
+from variatio.runtime.tagger import TRACE_KEY
 from variatio.core.workspace import Workspace
 from variatio.instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
 
-from .. import deps, review, storage
+from .. import approvals, deps, storage
 
-ARTIFACT = review.EXEMPLARS_BANK
+ARTIFACT = approvals.EXEMPLARS_BANK
 
 # Not part of the content schema, but part of every item on disk.
 META_FIELDS = ("source", "concepts", "primary_concept", ITEM_TYPE_KEY, TRACE_KEY)
@@ -59,7 +59,7 @@ def _load_bank(ws: Workspace) -> dict:
 
 def _profile(ws: Workspace) -> ExemplarsProfile:
     """Load the profile that wins. Raises BankError when there is none."""
-    path = review.current_path(ws, review.EXEMPLARS_PROFILE)
+    path = approvals.current_path(ws, approvals.EXEMPLARS_PROFILE)
     if path is None:
         raise BankError("Falta el perfil de ejemplares")
     return ExemplarsProfile(path)
@@ -67,7 +67,7 @@ def _profile(ws: Workspace) -> ExemplarsProfile:
 
 def _graph(ws: Workspace) -> KnowledgeGraph:
     """Load the graph that wins. Raises BankError when there is none."""
-    path = review.current_path(ws, review.KNOWLEDGE_GRAPH)
+    path = approvals.current_path(ws, approvals.KNOWLEDGE_GRAPH)
     if path is None:
         raise BankError("Falta el grafo de conocimiento")
     return KnowledgeGraph(str(path))
@@ -265,7 +265,7 @@ def _persist(ws: Workspace, bank: dict, note: str) -> dict:
             "El banco se está reconstruyendo: espera a que termine para editarlo"
         )
     storage.write_json(ws.exemplars_bank_path, bank, ws=ws, artifact=ARTIFACT)
-    review.ReviewState(ws).invalidate(ARTIFACT)
+    approvals.Approvals(ws).invalidate(ARTIFACT)
     deps.invalidate(ws.slug, note)
     return {"hash": storage.sha256_of(ws.exemplars_bank_path)}
 

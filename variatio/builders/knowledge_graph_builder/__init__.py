@@ -28,7 +28,7 @@ from ...core.inference import ensure_models
 from ...core.workspace import Workspace
 from ...instance import locale
 from ...instance.relations import RelationSchema
-from .. import _context, _source_docs
+from .. import _context, source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
@@ -106,7 +106,7 @@ class KnowledgeGraphBuilder:
 
         # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
         # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self.converter = _source_docs.LazyConverter(table_structure=False)
+        self.converter = source_docs.LazyConverter(table_structure=False)
 
     # PUBLIC API ----------------------------------------------------------------------------------
 

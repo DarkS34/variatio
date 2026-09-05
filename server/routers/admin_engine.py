@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config
 from variatio.core import cerebras_budget, inference
 
-from .. import auth, csv_safe, deps, jobs, runtime
+from .. import auth, csv_safe, deps, jobs, singletons
 from ..db import Base, database_url
 from ..db.models import User
 from ..tunnel import TunnelError
@@ -108,14 +108,14 @@ def engine() -> dict:
             for model, names in sorted(asked_by.items())
         ],
         "idle": {
-            "seconds": runtime.runner.idle_seconds(),
+            "seconds": singletons.runner.idle_seconds(),
             "threshold": config.IDLE_UNLOAD_SECONDS,
             "poll": config.IDLE_UNLOAD_POLL_SECONDS,
         },
-        "busy": runtime.runner.is_busy(),
+        "busy": singletons.runner.is_busy(),
         "contexts": deps.warm_slugs(),
-        "pulls": runtime.pulls.all(),
-        "tunnel": runtime.tunnel.status(),
+        "pulls": singletons.pulls.all(),
+        "tunnel": singletons.tunnel.status(),
         "cerebras": cerebras_state(),
     }
 
@@ -199,7 +199,7 @@ def cerebras_export() -> Response:
 @router.post("/engine/release")
 def release(admin: User = Depends(auth.require_admin)) -> dict:
     """Unload the resident models, refusing while any job runs."""
-    job = runtime.runner.current()
+    job = singletons.runner.current()
     if job is not None:
         raise HTTPException(
             409, f"Hay un trabajo en curso («{job.label}»): espera o cancélalo antes."
@@ -224,7 +224,7 @@ def pull_model(body: ModelBody, admin: User = Depends(auth.require_admin)) -> di
     if not inference.is_available():
         raise HTTPException(503, "El motor no responde: no puede descargar nada.")
     try:
-        return {"pull": runtime.pulls.start(body.model, admin.username)}
+        return {"pull": singletons.pulls.start(body.model, admin.username)}
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
 
@@ -243,9 +243,9 @@ def delete_model(model: str) -> dict:
             f"'{model}' lo pide la configuración ({', '.join(asked_by)}): "
             "cambia esos ajustes antes de borrarlo.",
         )
-    if runtime.pulls.is_pulling(model):
+    if singletons.pulls.is_pulling(model):
         raise HTTPException(409, f"'{model}' se está descargando ahora mismo.")
-    job = runtime.runner.current()
+    job = singletons.runner.current()
     if job is not None:
         raise HTTPException(
             409, f"Hay un trabajo en curso («{job.label}») que podría estar usándolo."
@@ -281,7 +281,7 @@ def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> 
 
 def _refuse_while_running(slug: str | None = None) -> None:
     """Raise 409 while a job runs: invalidating under it would pull its index away."""
-    for job in runtime.runner.running():
+    for job in singletons.runner.running():
         if slug is None or job.workspace == slug:
             raise HTTPException(
                 409,
@@ -295,14 +295,14 @@ def _refuse_while_running(slug: str | None = None) -> None:
 @router.get("/engine/tunnel")
 def tunnel() -> dict:
     """Answer the tunnel's state, with the last stderr lines a key problem lands in."""
-    return runtime.tunnel.status()
+    return singletons.tunnel.status()
 
 
 @router.post("/engine/tunnel/start")
 def tunnel_start() -> dict:
     """Open the port forward to the GPU box and let the watchdog keep it open."""
     try:
-        return runtime.tunnel.start()
+        return singletons.tunnel.start()
     except TunnelError as exc:
         raise HTTPException(409, str(exc)) from None
 
@@ -310,7 +310,7 @@ def tunnel_start() -> dict:
 @router.post("/engine/tunnel/stop")
 def tunnel_stop() -> dict:
     """Close the port forward, and stop the watchdog relaunching it."""
-    return runtime.tunnel.stop()
+    return singletons.tunnel.stop()
 
 
 # THE QUEUE'S PAST ------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def job_history(limit: int = Query(50, ge=1, le=200)) -> dict:
     """
     settled = [
         job.to_dict()
-        for job in runtime.runner.all(limit=400)
+        for job in singletons.runner.all(limit=400)
         if job.status not in ("running", "queued")
     ]
     return {"jobs": settled[:limit]}

@@ -13,10 +13,10 @@ side must not rewrite the other.
 
 import pytest
 
-from variatio.builders._source_docs import pages
+from variatio.builders.source_docs import pages
 from variatio.core import paths
 from variatio.core.workspace import Workspace
-from variatio.stages import transcribe
+from variatio.entrypoints import transcribe
 
 TEXT = "Un enunciado que ocupa una página entera."
 

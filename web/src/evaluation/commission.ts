@@ -1,4 +1,4 @@
-import { toParams, type FormState } from "@/features/run/commission";
+import { toParams, type FormState } from "@/features/generate/commission";
 
 import type { AdminGenerateParams } from "./api";
 import type { EvaluationParams } from "./types";

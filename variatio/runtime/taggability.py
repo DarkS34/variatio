@@ -9,11 +9,11 @@ copy of the renderers would desynchronise this block format from the graph's own
 
 from loguru import logger
 
-from . import config
-from .builders.knowledge_graph_builder import blocks, parsing
-from .builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
-from .core import inference, progress
-from .instance.content_context import ContentContext
+from .. import config
+from ..builders.knowledge_graph_builder import blocks, parsing
+from ..builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
+from ..core import inference, progress
+from ..instance.content_context import ContentContext
 
 MAX_SAMPLES_PER_DOMAIN = 3
 SAMPLE_CHARS = 300

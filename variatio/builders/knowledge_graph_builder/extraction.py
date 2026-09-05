@@ -15,7 +15,7 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.lexicon import mentions
-from .. import _source_docs
+from .. import source_docs
 from . import parsing
 from .schemas import EXTRACT_SCHEMA
 
@@ -75,7 +75,7 @@ def convert_corpus(
     for both raw slots — so Docling is left with the Office files, which have no page to
     render and whose pictures are read one by one with the same model.
     """
-    files = _source_docs.list_source_files(input_dir, recursive=recursive)
+    files = source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
         logger.error(f"No supported document in {input_dir}")
         return []
@@ -92,7 +92,7 @@ def convert_corpus(
             reporter.start(idx, detail=file_path.name)
             progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
             try:
-                text = _source_docs.document_markdown(
+                text = source_docs.document_markdown(
                     file_path,
                     prompts,
                     converter=converter,
@@ -105,11 +105,11 @@ def convert_corpus(
                 logger.exception(f"[{file_path.name}] skipped: {e}")
                 continue
 
-            chunks = _source_docs.chunk_sections(text, chunk_size)
+            chunks = source_docs.chunk_sections(text, chunk_size)
             if not chunks:
                 logger.warning(f"[{file_path.name}] produced no text")
                 continue
-            converted.append((file_path.name, _source_docs.headings_by_level(text), chunks))
+            converted.append((file_path.name, source_docs.headings_by_level(text), chunks))
 
     titles = select_titles([levels for _, levels, _ in converted])
     documents = [

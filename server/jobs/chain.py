@@ -18,11 +18,11 @@ finished well.
 
 from loguru import logger
 
-from variatio import stages
+from variatio import entrypoints
 from variatio.core.workspace import Workspace
 
-from .. import review, settings
-from .models import JOB_LABELS, Job
+from .. import approvals, installation
+from .catalogue import JOB_LABELS, Job
 
 # What each job drags behind it. Only the graph build has a chain: it is the only one
 # whose result leaves three mandatory derivations undone.
@@ -34,22 +34,22 @@ CHAINS: dict[str, tuple[str, ...]] = {
 def _graph_exists(ws: Workspace) -> str | None:
     """Why describing cannot follow, or `None` when it can.
 
-    THE GRAPH AND NOT THE PROFILE. `stages.describe_concepts` builds its describer from the
-    graph and the subject context alone — `review.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and
-    `stages/index._describer` exists to keep it that way — so gating it on the profile
+    THE GRAPH AND NOT THE PROFILE. `entrypoints.describe_concepts` builds its describer from the
+    graph and the subject context alone — `approvals.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and
+    `entrypoints/descriptions._describer` exists to keep it that way — so gating it on the profile
     withheld the one derivation this chain calls mandatory in exactly the state it was
     written for: a workspace whose graph is its first artifact. It costs nothing extra
     either, since the embedder writes whatever is missing at the next `initialize`; the
     chain only moves that call earlier, which is what a chain is for.
     """
-    if stages.knowledge_graph_path(ws) is None:
+    if entrypoints.knowledge_graph_path(ws) is None:
         return "esta asignatura todavía no tiene grafo de conocimiento"
     return None
 
 
 def _profile_exists(ws: Workspace) -> str | None:
     """Why a link that reads the exemplars profile cannot follow, or `None` when it can."""
-    if stages.exemplars_profile_path(ws) is None:
+    if entrypoints.exemplars_profile_path(ws) is None:
         return "esta asignatura todavía no tiene perfil de ejemplares"
     return None
 
@@ -64,7 +64,7 @@ def _profile_approved(ws: Workspace) -> str | None:
     reason = _profile_exists(ws)
     if reason is not None:
         return reason
-    if review.ReviewState(ws).state(review.EXEMPLARS_PROFILE)["status"] != "approved":
+    if approvals.Approvals(ws).state(approvals.EXEMPLARS_PROFILE)["status"] != "approved":
         return "el perfil de ejemplares aún no está aprobado"
     return None
 
@@ -96,7 +96,7 @@ def advance(runner, job: Job) -> None:
     if not remaining:
         return
 
-    ws = settings.workspace_for(job.workspace)
+    ws = installation.workspace_for(job.workspace)
     while remaining:
         kind = remaining.pop(0)
         blocked = REQUIRES.get(kind, lambda _ws: None)(ws)

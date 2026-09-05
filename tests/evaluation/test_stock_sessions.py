@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 from server.auth.deps import Access
 from server.db import identity, repository
 from server.db.models import Base
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from evaluation.api import admin as evaluation_admin
 from evaluation.api import jobs as evaluation_jobs
 from evaluation.api import queries

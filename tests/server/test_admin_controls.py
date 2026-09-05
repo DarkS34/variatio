@@ -2,11 +2,11 @@ import json
 
 import pytest
 
-from server import settings as server_settings
+from server import installation
 from server import tunnel
 from server.auth.rate_limit import RateLimiter
 from variatio import config
-from variatio import settings as vg_settings
+from variatio import settings
 from variatio.core import paths
 from variatio.core.workspace import Workspace
 from variatio.settings import store
@@ -93,27 +93,27 @@ def config_file(tmp_path, monkeypatch):
     path = tmp_path / "config.json"
     monkeypatch.setattr(store, "CONFIG_PATH", path)
     namespace: dict = {}
-    vg_settings.apply(namespace)
+    settings.apply(namespace)
     yield path, namespace
-    vg_settings.apply(namespace)
+    settings.apply(namespace)
 
 
 def test_reset_removes_the_key_from_the_file_and_restores_the_default(config_file):
     path, namespace = config_file
-    vg_settings.update({"engine.idle_unload_seconds": 42})
+    settings.update({"engine.idle_unload_seconds": 42})
     assert namespace["IDLE_UNLOAD_SECONDS"] == 42
     assert json.loads(path.read_text(encoding="utf-8"))["engine"]["idle_unload_seconds"] == 42
 
-    vg_settings.reset(["engine.idle_unload_seconds"])
+    settings.reset(["engine.idle_unload_seconds"])
     written = json.loads(path.read_text(encoding="utf-8"))
     assert "idle_unload_seconds" not in written.get("engine", {})
     assert namespace["IDLE_UNLOAD_SECONDS"] == 1800
-    assert vg_settings.sources()["engine.idle_unload_seconds"] == "default"
+    assert settings.sources()["engine.idle_unload_seconds"] == "default"
 
 
 def test_reset_refuses_an_unknown_key(config_file):
-    with pytest.raises(vg_settings.SettingError, match="no.existe"):
-        vg_settings.reset(["no.existe"])
+    with pytest.raises(settings.SettingError, match="no.existe"):
+        settings.reset(["no.existe"])
 
 
 # DISK ------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     (ws.cache_dir / "embeddings").mkdir(parents=True)
     (ws.cache_dir / "embeddings" / "c.npz").write_bytes(b"x" * 7)
 
-    usage = server_settings.disk_usage(ws)
+    usage = installation.disk_usage(ws)
     assert usage == {"raw": 10, "instance": 20, "cache": 7, "history": 5, "total": 42}
 
 
@@ -145,7 +145,7 @@ def test_clear_cache_removes_vectors_and_markdown_but_keeps_descriptions(tmp_pat
     (ws.markdown_cache_dir / "doc.md").write_text("hola", encoding="utf-8")
     ws.concept_descriptions_path.write_text("{}", encoding="utf-8")
 
-    result = server_settings.clear_cache(ws)
+    result = installation.clear_cache(ws)
     assert result == {"files_removed": 2, "bytes_freed": 11}
     assert not (ws.cache_dir / "embeddings").exists()
     assert not ws.markdown_cache_dir.exists()

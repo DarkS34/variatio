@@ -11,10 +11,10 @@ exists to show, and caching it would make the panel lie about the GPU.
 
 from fastapi import APIRouter
 
-from variatio import config, stages
+from variatio import config, entrypoints
 from variatio.core import inference
 
-from .. import auth, deps, runtime
+from .. import auth, deps, singletons
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
@@ -78,13 +78,13 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             # What a commission may choose between, the default first. It is read by the
             # generate screen, so it travels here rather than on a route of its own: the
             # form already polls this one to know whether the engine answers at all.
-            "offered": stages.generation_models(),
+            "offered": entrypoints.generation_models(),
             # Which of those may not have their effort adjusted per commission. It rides
             # here for the same reason `offered` does: the form already polls this route.
-            "fixed_effort": stages.fixed_effort_models(),
+            "fixed_effort": entrypoints.fixed_effort_models(),
             # And with which level each of those is called, so the form shows the one the
             # installation declared instead of the last one its own slider held.
-            "fixed_effort_levels": stages.fixed_effort_levels(),
+            "fixed_effort_levels": entrypoints.fixed_effort_levels(),
             "installed": installed,
             "missing": _missing_models(required, installed, remote),
             "remote": sorted(remote & set(required.values())),
@@ -103,5 +103,5 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             "raw_exemplars_exists": ws.raw_exemplars_dir.is_dir(),
             "raw_corpus_exists": ws.raw_corpus_dir.is_dir(),
         },
-        "busy": runtime.runner.is_busy(),
+        "busy": singletons.runner.is_busy(),
     }

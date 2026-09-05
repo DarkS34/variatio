@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from server import settings
+from server import installation
 from server.app import app
 from server.middleware import HSTS, csp
 
@@ -11,10 +11,10 @@ def client(monkeypatch):
     # The checkout's own `.env` puts this process in production with a public base URL, so
     # without pinning the four answers the origin every assertion below turns on would be
     # whatever the machine running the suite is configured for.
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
-    monkeypatch.setattr(settings, "trust_proxy", lambda: False)
-    monkeypatch.setattr(settings, "dev_cors_origins", lambda: [])
-    monkeypatch.setattr(settings, "cookie_secure", lambda: False)
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "trust_proxy", lambda: False)
+    monkeypatch.setattr(installation, "dev_cors_origins", lambda: [])
+    monkeypatch.setattr(installation, "cookie_secure", lambda: False)
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -63,7 +63,7 @@ def _connect_src(policy: str) -> list[str]:
 # names one origin — and that distinction is the whole point, so the check is on the shape
 # of each source and not on whether the string «wss» appears.
 def test_no_source_is_a_bare_scheme(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: "https://variatio.example")
+    monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.example")
     sources = _connect_src(csp())
 
     assert "'self'" in sources
@@ -75,12 +75,12 @@ def test_no_source_is_a_bare_scheme(monkeypatch):
 # nothing new and rescues the browsers that predate CSP3's `'self'` matching a same-origin
 # socket.
 def test_the_declared_host_is_named_as_a_socket_origin(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: "https://variatio.example")
+    monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.example")
     assert _connect_src(csp()) == ["'self'", "wss://variatio.example"]
 
 
 def test_without_a_declared_base_url_self_stands_alone(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
     assert _connect_src(csp()) == ["'self'"]
 
 
@@ -92,7 +92,7 @@ def test_styles_keep_their_inline_allowance():
 
 
 def test_the_transport_header_is_sent_where_tls_terminates(client, monkeypatch):
-    monkeypatch.setattr(settings, "cookie_secure", lambda: True)
+    monkeypatch.setattr(installation, "cookie_secure", lambda: True)
 
     assert client.get("/api/nada").headers["strict-transport-security"] == HSTS
 

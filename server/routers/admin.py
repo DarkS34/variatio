@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from evaluation.api import store as evaluation_store
 
-from .. import auth, deps, maintenance, review, runtime, settings, storage
+from .. import approvals, auth, deps, installation, maintenance, singletons, storage
 from ..auth import deps as auth_deps
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import generations, identity, repository
@@ -88,7 +88,7 @@ def _lane_jobs() -> dict:
     return {
         backend: {
             "capacity": jobs_lanes.capacity(backend),
-            "jobs": [job.to_dict() for job in runtime.runner.holders_in(backend)],
+            "jobs": [job.to_dict() for job in singletons.runner.holders_in(backend)],
         }
         for backend in jobs_lanes.BACKENDS
     }
@@ -132,7 +132,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         "generations": generations.count_generations(db, workspace.id),
         "warm": workspace.slug in deps.warm_slugs(),
         "stages": _chain(workspace.slug),
-        "disk": settings.disk_usage(settings.workspace_for(workspace.slug)),
+        "disk": installation.disk_usage(installation.workspace_for(workspace.slug)),
     }
 
 
@@ -145,7 +145,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
     headers = evaluation_store.headers(db)
     by_account = {group["key"]: group for group in evaluation_store.by_account(headers)}
 
-    running = runtime.runner.running()
+    running = singletons.runner.running()
     return {
         "totals": {
             "users": len(users),
@@ -162,7 +162,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             "busy": bool(running),
             "job": running[0].to_dict() if running else None,
             "lanes": _lane_jobs(),
-            "queued": len(runtime.runner.pending()),
+            "queued": len(singletons.runner.pending()),
             "warm_contexts": deps.warm_slugs(),
         },
     }
@@ -207,7 +207,7 @@ def create_invite(
     invite = identity.create_invite(
         db,
         token_hash=auth.digest(token),
-        ttl=settings.INVITE_TTL,
+        ttl=installation.INVITE_TTL,
         workspace_id=workspace.id if workspace else None,
         role=body.role,
         created_by=admin.id,
@@ -322,11 +322,11 @@ def delete_workspace(
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    ws = settings.workspace_for(slug)
+    ws = installation.workspace_for(slug)
     # Tree before row: this way a failure leaves the row standing and the call retryable,
     # where the other order strands files nobody is on record as owning.
     try:
-        removed = settings.destroy(ws)
+        removed = installation.destroy(ws)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
@@ -339,7 +339,7 @@ def delete_workspace(
     deps.invalidate(slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
-    runtime.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
     return {
         "deleted": slug,
         "path": str(ws.root),
@@ -361,20 +361,20 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
     undone from «Restaurar» on the artifact's own screen — and that is what makes this
     button safe to offer at all.
     """
-    if artifact not in review.ARTIFACTS:
+    if artifact not in approvals.ARTIFACTS:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'.")
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    if artifact in runtime.runner.building_artifacts(slug):
+    if artifact in singletons.runner.building_artifacts(slug):
         raise HTTPException(
             409, "Ese artefacto se está construyendo ahora mismo; cancela el trabajo antes."
         )
 
-    ws = settings.workspace_for(slug)
-    result = review.discard(ws, artifact)
+    ws = installation.workspace_for(slug)
+    result = approvals.discard(ws, artifact)
     deps.invalidate(slug, f"'{artifact}' eliminado desde administración")
-    runtime.bus.publish(slug, None, "pipeline.changed", {"artifact": artifact, "action": "discard"})
+    singletons.bus.publish(slug, None, "pipeline.changed", {"artifact": artifact, "action": "discard"})
     return {"workspace": slug, **result}
 
 
@@ -389,10 +389,10 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     # Every run of this workspace, on either lane: `current()` alone would miss the one on
     # the second lane whenever somebody else's older job holds the first.
-    if runtime.runner.running(slug) or runtime.runner.pending(slug):
+    if singletons.runner.running(slug) or singletons.runner.pending(slug):
         raise HTTPException(409, "Esa asignatura tiene trabajo en curso o en cola; espera o cancélalo.")
-    ws = settings.workspace_for(slug)
-    result = settings.clear_cache(ws)
+    ws = installation.workspace_for(slug)
+    result = installation.clear_cache(ws)
     deps.invalidate(slug, "caché vaciada desde administración")
     return {"workspace": slug, **result}
 
@@ -407,7 +407,7 @@ def export_workspace(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    ws = settings.workspace_for(slug)
+    ws = installation.workspace_for(slug)
     files = {
         "knowledge_graph": ws.kg_path,
         "knowledge_graph_autogenerated": ws.kg_autogenerated_path,
@@ -437,13 +437,13 @@ def job_queue() -> dict:
     `running` is the oldest job, kept as it was; `lanes` is the honest picture now that
     the queue serialises per backend and two jobs can be in flight at once.
     """
-    running = runtime.runner.running()
+    running = singletons.runner.running()
     return {
         "running": running[0].to_dict() if running else None,
         "lanes": _lane_jobs(),
         "queued": [
-            {**job.to_dict(), "queue_position": runtime.runner.queue_position(job.id)}
-            for job in runtime.runner.pending()
+            {**job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
+            for job in singletons.runner.pending()
         ],
     }
 
@@ -451,9 +451,9 @@ def job_queue() -> dict:
 @router.delete("/jobs/{job_id}")
 def cancel_job(job_id: str) -> dict:
     """Cancel any job of the installation, whatever workspace it belongs to."""
-    if runtime.runner.get(job_id) is None:
+    if singletons.runner.get(job_id) is None:
         raise HTTPException(404, f"No existe el trabajo '{job_id}'.")
-    return {"cancelled": runtime.runner.cancel(job_id)}
+    return {"cancelled": singletons.runner.cancel(job_id)}
 
 
 # ACCOUNTS --------------------------------------------------------------------------------
@@ -542,11 +542,11 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
     if not user.active:
         raise HTTPException(409, "La cuenta está desactivada: reactívala antes.")
     token = auth.new_token()
-    identity.create_reset(db, user.id, auth.digest(token), settings.RESET_TTL)
+    identity.create_reset(db, user.id, auth.digest(token), installation.RESET_TTL)
     return {
         "user_id": user.id,
         "link": f"{auth.base_url(request)}/reset?token={token}",
-        "expires_in_minutes": int(settings.RESET_TTL.total_seconds() // 60),
+        "expires_in_minutes": int(installation.RESET_TTL.total_seconds() // 60),
     }
 
 
@@ -595,7 +595,7 @@ def set_maintenance(
 
 def _chain(slug: str) -> list[dict]:
     """Read one workspace's three stages from its files, without mounting its index."""
-    ws = settings.workspace_for(slug)
+    ws = installation.workspace_for(slug)
     return [
         {
             "artifact": stage["artifact"],
@@ -603,7 +603,7 @@ def _chain(slug: str) -> list[dict]:
             "status": stage["status"],
             "is_autogenerated": stage["is_autogenerated"],
         }
-        for stage in runtime.pipeline_snapshot(ws)
+        for stage in singletons.pipeline_snapshot(ws)
     ]
 
 

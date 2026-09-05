@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from server import runtime
+from server import singletons
 from server.jobs import lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
@@ -41,7 +41,7 @@ RESERVATIONS = {"local": {LOCAL}, "remoto": {REMOTE}}
 def stand(monkeypatch):
     monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", 1, raising=False)
-    monkeypatch.setattr(runtime, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
+    monkeypatch.setattr(singletons, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
     monkeypatch.setattr(
         lanes,
         "backends_for",
@@ -57,7 +57,7 @@ def stand(monkeypatch):
         return {}
 
     runner = JobRunner(EventBus(), {kind: handler for kind in RESERVATIONS})
-    monkeypatch.setattr(runtime, "runner", runner)
+    monkeypatch.setattr(singletons, "runner", runner)
     runner.start()
     yield SimpleNamespace(runner=runner, started=started, release=release)
     release.set()

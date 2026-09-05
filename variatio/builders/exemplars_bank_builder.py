@@ -15,6 +15,8 @@ from loguru import logger
 from pydantic import ValidationError
 
 from .. import config
+from .. import prompts as prompts_pkg
+from .. import wording as wording_sets
 from ..core import inference, progress
 from ..core.inference import ensure_models
 from ..core.json_io import write_json
@@ -23,11 +25,8 @@ from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..instance import locale
 from ..instance.content_context import ContentContext
-from .. import prompts as prompts_pkg
-from .. import wording as wording_sets
 from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from . import _source_docs
-
+from . import source_docs
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.
@@ -73,7 +72,7 @@ class ExemplarsBankBuilder:
 
         # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
         # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+        self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
         self._type_keys = exemplars_profile.type_keys
         self._types_block = self._build_types_block(exemplars_profile, self._wording)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
@@ -141,12 +140,12 @@ class ExemplarsBankBuilder:
 
         `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
         whole bank right after a document's items are written and returns that same bank
-        annotated. The builder knows neither the graph nor the tagger — `stages/build.py`
+        annotated. The builder knows neither the graph nor the tagger — `entrypoints/build.py`
         wires it, being the layer whose job is to orchestrate.
         """
         self.bootstrap()
 
-        files = _source_docs.list_source_files(input_dir)
+        files = source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported document in {input_dir}")
             return {}
@@ -215,7 +214,7 @@ class ExemplarsBankBuilder:
                                 "artifact.progress", name="exemplars_bank", count=len(bank)
                             )
 
-            # An extraction that produced nothing may not replace what is there: `stages`
+            # An extraction that produced nothing may not replace what is there: `entrypoints`
             # turns it into an error, and the bank the workspace already had is what its
             # screen goes back to.
             if bank:
@@ -246,7 +245,7 @@ class ExemplarsBankBuilder:
                 reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    text_by_file[file_path] = _source_docs.document_markdown(
+                    text_by_file[file_path] = source_docs.document_markdown(
                         file_path,
                         self.prompts,
                         converter=self._docling,
@@ -427,7 +426,7 @@ class ExemplarsBankBuilder:
         by each; the price is items extracted twice, and `_identity` is what pays it. The
         ~10-character separator budget is charged to the first block of a batch too.
         """
-        blocks = _source_docs.split_blocks(content)
+        blocks = source_docs.split_blocks(content)
         if not blocks:
             return []
 

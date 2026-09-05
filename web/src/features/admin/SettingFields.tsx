@@ -10,8 +10,8 @@ import { Alert, Checkbox, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
-import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/features/run/effort";
-import { familyOf } from "@/features/run/models";
+import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/features/generate/effort";
+import { familyOf } from "@/features/generate/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
 import type {
   ConfigImpact,

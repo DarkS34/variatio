@@ -2,7 +2,7 @@ import json
 
 from variatio.core.workspace import Workspace
 from variatio.instance.content_context import ContentContext
-from variatio.stages import _artifacts
+from variatio.entrypoints import _artifacts
 
 
 def write(path, data):

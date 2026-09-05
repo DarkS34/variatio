@@ -5,7 +5,7 @@ small local classifier reading the text alone with a 4096 window, the scope judg
 the graph's whole concept list, so a text that should reach no model at all must not reach
 the larger of the two first. What they were not is separate SEQUENCES: the generator and the
 evaluation each carried their own copy of the order, the two error sentences and the owner
-derivation, and the evaluation reached into `variatio.variatio` for a private helper to
+derivation, and the evaluation reached into `variatio.runtime.generator` for a private helper to
 format one of them. `screen_instructions` is that sequence, once.
 
 Both fail open, each in its own way: an unreadable guardrail criterion is skipped and clears
@@ -13,8 +13,8 @@ Both fail open, each in its own way: an unreadable guardrail criterion is skippe
 that blocks when its model is down blocks everything.
 """
 
-from .. import wording as wording_sets
-from ..core import progress
+from ... import wording as wording_sets
+from ...core import progress
 from . import admissibility, guardrail
 from .admissibility import (
     SLOT_KEYS,

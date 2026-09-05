@@ -7,7 +7,7 @@ and only this one.
 Two keys per attempt, never one: the IP stops a spray across many accounts, and the
 account stops a spray from many IPs. Either alone leaves the other attack open.
 
-`settings` and `deps` are imported inside the functions that need them, because this
+`installation` and `deps` are imported inside the functions that need them, because this
 module sits between the two halves of their import cycle.
 """
 
@@ -81,9 +81,9 @@ FALLBACK_LIMITS: dict[str, tuple[int, float]] = {"accept": (10, 3600.0)}
 
 def limits(bucket: str) -> tuple[int, float]:
     """Return the (limit, window) this bucket is configured with."""
-    from .. import settings
+    from .. import installation
 
-    declared = settings.RATE_LIMITS.get(bucket)
+    declared = installation.RATE_LIMITS.get(bucket)
     return declared if declared is not None else FALLBACK_LIMITS[bucket]
 
 

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from variatio.builders._source_docs import pages
+from variatio.builders.source_docs import pages
 from variatio.builders.knowledge_graph_builder import extraction
 from variatio.core.inference import GenerationResponse
 from variatio.core.workspace import Workspace

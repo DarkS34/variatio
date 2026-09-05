@@ -24,7 +24,7 @@ from variatio.core import progress
 
 from . import joblog, lanes
 from .bus import EventBus
-from .models import SUBPROCESS_KINDS, Job
+from .catalogue import SUBPROCESS_KINDS, Job
 
 Handler = Callable[[Job, "JobControl"], "dict | None"]
 
@@ -103,7 +103,7 @@ class JobRunner:
         self.bus = bus
         self.handlers = handlers
         # Enqueued by itself when a job finishes well. The queue stays generic: who follows
-        # whom is `jobs/chain.py`'s, installed by `runtime.py`.
+        # whom is `jobs/chain.py`'s, installed by `singletons.py`.
         self.after_success: Callable[["JobRunner", Job], None] | None = None
         self._jobs: dict[str, Job] = {}
         self._controls: dict[str, JobControl] = {}

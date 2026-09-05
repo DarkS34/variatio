@@ -58,7 +58,7 @@ class Commission:
     the evaluator's choice. It is one model for both, which is what keeps the comparison
     about architectures; the commercial arm keeps its own chain. `effort` is what those two
     arms pass as `think`: the drawn boolean, or the level the installation declared when
-    that model's effort is locked (`stages.resolve_generation_effort`). The boolean stays
+    that model's effort is locked (`entrypoints.resolve_generation_effort`). The boolean stays
     the recorded condition; the level is the installation's.
     """
 

@@ -7,14 +7,14 @@ paper, because these are the numbers the memoria quotes about the chain itself.
 import csv
 import io
 
-from server import review
+from server import approvals
 from evaluation.api import stage_instruments as instruments
 from evaluation.api import stage_store as store
 from evaluation.api.admin import PROFILE_FILTERS, _narrow
 
-GRAPH = review.KNOWLEDGE_GRAPH
-PROFILE = review.EXEMPLARS_PROFILE
-BANK = review.EXEMPLARS_BANK
+GRAPH = approvals.KNOWLEDGE_GRAPH
+PROFILE = approvals.EXEMPLARS_PROFILE
+BANK = approvals.EXEMPLARS_BANK
 
 
 def _form(
@@ -79,7 +79,7 @@ def test_the_mean_and_the_distribution_are_over_answered_rows_only():
 def test_every_stage_is_reported_even_with_nothing_answered():
     summary = store.aggregates([])
 
-    assert [a["artifact"] for a in summary["by_artifact"]] == list(review.ARTIFACTS)
+    assert [a["artifact"] for a in summary["by_artifact"]] == list(approvals.ARTIFACTS)
     assert all(a["answered"] == 0 and a["overall"]["mean"] is None for a in summary["by_artifact"])
 
 

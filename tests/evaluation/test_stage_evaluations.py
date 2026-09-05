@@ -7,14 +7,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import review
+from server import approvals
 from server.db import Base, repository
 from server.db.models import StageEvaluation
 from evaluation.api import stage_instruments as instruments
 from evaluation.api import stage_queries as queries
 from evaluation.api import stages
 
-GRAPH = review.KNOWLEDGE_GRAPH
+GRAPH = approvals.KNOWLEDGE_GRAPH
 
 
 @pytest.fixture
@@ -86,7 +86,7 @@ def test_two_people_judge_the_same_build_separately(db, ws):
 
 
 def test_each_artifact_is_its_own_row(db, ws):
-    _save(db, ws, "aaa", 3, artifact=review.EXEMPLARS_PROFILE)
+    _save(db, ws, "aaa", 3, artifact=approvals.EXEMPLARS_PROFILE)
     _save(db, ws, "aaa", 4, artifact=GRAPH)
     db.commit()
     assert len(db.query(StageEvaluation).all()) == 2
@@ -221,7 +221,7 @@ def test_the_route_carries_the_mark_from_the_body_to_the_row(db, ws, monkeypatch
 
 
 def test_every_artifact_of_the_chain_has_questions():
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         assert instruments.QUESTIONS.get(artifact), artifact
         assert instruments.PREAMBLE.get(artifact), artifact
 
@@ -233,7 +233,7 @@ def test_the_count_is_the_instruments_own_and_includes_overall():
     control contradecía al formulario que abre. `overall` cuenta: está en el formulario, es
     lo último que se contesta y es lo que significa «contestada».
     """
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         expected = len(instruments.QUESTIONS[artifact]) + 1
         assert instruments.count(artifact) == expected, artifact
         assert instruments.for_artifact(artifact)["count"] == expected, artifact
@@ -248,7 +248,7 @@ def test_the_three_stages_ask_five_statements_on_the_same_axes():
     MISMAS CLAVES en las tres, que es lo que deja ponerlas en una tabla lado a lado sin
     traducir nada.
     """
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         assert instruments.count(artifact) == 5, artifact
         keys = [q["key"] for q in instruments.QUESTIONS[artifact]]
         assert keys == ["precision", "recall", "function", "effort"], artifact
@@ -258,7 +258,7 @@ def test_the_three_stages_ask_five_statements_on_the_same_axes():
 
 def test_the_preamble_says_the_number_the_instrument_actually_asks():
     """La cifra de la prosa sale de `count()`, así que no puede desfasarse al añadir una."""
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         spelled = instruments._SPELLED[instruments.count(artifact)]
         assert instruments.preamble(artifact).startswith(spelled + " afirmaciones"), artifact
 
@@ -270,7 +270,7 @@ def test_one_scale_for_every_statement_and_for_overall():
     assert instruments.SCALE_LABELS[0].lower().startswith("totalmente en desacuerdo")
     assert instruments.SCALE_LABELS[-1].lower().startswith("totalmente de acuerdo")
     assert instruments.SCALE_MIN <= instruments.AGREE_FROM <= instruments.SCALE_MAX
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         payload = instruments.for_artifact(artifact)
         assert payload["scale"] == {"min": 1, "max": 5, "labels": list(instruments.SCALE_LABELS)}
         assert payload["overall"]["statement"]
@@ -280,7 +280,7 @@ def test_one_scale_for_every_statement_and_for_overall():
 
 def test_the_two_comparable_items_are_asked_of_all_three():
     """`effort` y la de conjunto son lo que la memoria puede poner en una tabla."""
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         keys = [q["key"] for q in instruments.QUESTIONS[artifact]]
         assert "effort" in keys, artifact
         assert instruments.for_artifact(artifact)["overall"]["key"] == "overall"
@@ -290,20 +290,20 @@ def test_effort_is_worded_identically_everywhere():
     """Comparar entre etapas exige que la afirmación sea LA MISMA, no una parecida."""
     asked = {
         next(q["statement"] for q in instruments.QUESTIONS[a] if q["key"] == "effort")
-        for a in review.ARTIFACTS
+        for a in approvals.ARTIFACTS
     }
     assert len(asked) == 1
 
 
 def test_no_question_key_repeats_within_an_artifact():
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         keys = [q["key"] for q in instruments.QUESTIONS[artifact]]
         assert len(keys) == len(set(keys)), artifact
 
 
 def test_every_statement_is_a_sentence_and_carries_no_options_of_its_own():
     """Una afirmación Likert no trae opciones: la escala es una y va aparte."""
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         for question in instruments.QUESTIONS[artifact]:
             assert question["statement"].strip().endswith("."), (artifact, question["key"])
             assert "options" not in question, (artifact, question["key"])
@@ -313,7 +313,7 @@ def test_no_question_names_an_artefact_or_a_model():
     """El vocabulario es el del profesor: ninguna afirmación nombra una pieza del sistema."""
     forbidden = ("grafo", "perfil de ejemplares", "banco de ejemplares", "artefacto", "modelo",
                  "workspace", "etiquetabilidad", "corpus", "prompt")
-    for artifact in review.ARTIFACTS:
+    for artifact in approvals.ARTIFACTS:
         payload = instruments.for_artifact(artifact)
         text = " ".join(
             [payload["preamble"], payload["overall"]["statement"]]

@@ -2,7 +2,7 @@ import { Check, CircleSlash, Maximize2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ItemChecks, ItemFields } from "@/features/run/ResultCard";
+import { ItemChecks, ItemFields } from "@/features/generate/ResultCard";
 import { duration } from "@/lib/format";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";

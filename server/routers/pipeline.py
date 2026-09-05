@@ -11,13 +11,13 @@ wildcard reads «phases» as an artifact and answers «Artefacto desconocido». 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio import screening, taggability
+from variatio.runtime import screening
 from variatio.instance import locale
 from variatio.instance.exemplars_profile import ExemplarsProfile
-from variatio.stages import _artifacts
-from variatio.stages import build_phases as phases_of
+from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
+from variatio.entrypoints import build_phases as phases_of
 
-from .. import auth, deps, review, runtime, storage
+from .. import approvals, auth, deps, singletons, storage
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
 
@@ -25,9 +25,9 @@ router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth
 
 # The job that moves each stage forward, so the UI never has to hardcode it.
 NEXT_JOB = {
-    review.EXEMPLARS_PROFILE: "build_profile",
-    review.KNOWLEDGE_GRAPH: "build_kg",
-    review.EXEMPLARS_BANK: "build_bank",
+    approvals.EXEMPLARS_PROFILE: "build_profile",
+    approvals.KNOWLEDGE_GRAPH: "build_kg",
+    approvals.EXEMPLARS_BANK: "build_bank",
 }
 
 
@@ -39,7 +39,7 @@ class RestoreBody(BaseModel):
 
 def _check(artifact: str) -> None:
     """Raise 404 unless the path names one of the three artifacts of the chain."""
-    if artifact not in review.ARTIFACTS:
+    if artifact not in approvals.ARTIFACTS:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'")
 
 
@@ -56,9 +56,9 @@ def _lane_payload(backend: str, slug: str) -> dict:
     nothing. `running` and `capacity` report the activity itself; at capacity 1 the two
     readings coincide, so a single-engine installation is unchanged.
     """
-    holders = runtime.runner.holders_in(backend)
+    holders = singletons.runner.holders_in(backend)
     room = jobs_lanes.capacity(backend)
-    waiting = [j for j in runtime.runner.pending() if backend in j.backends]
+    waiting = [j for j in singletons.runner.pending() if backend in j.backends]
     mine = [j for j in waiting if j.workspace == slug]
     ahead = None
     if mine:
@@ -88,7 +88,7 @@ def _queue_ahead(waiting: list, running: list) -> int | None:
         return None
     first = set(waiting[0].backends)
     blocking = sum(1 for j in running if first & set(j.backends))
-    return max(0, blocking + runtime.runner.queue_position(waiting[0].id) - 1)
+    return max(0, blocking + singletons.runner.queue_position(waiting[0].id) - 1)
 
 
 def pipeline_payload(access: auth.Access) -> dict:
@@ -100,12 +100,12 @@ def pipeline_payload(access: auth.Access) -> dict:
     `current_job`, the waiting counts and the artifacts marked as building are statements
     about this instance and never leave it.
     """
-    chain = runtime.pipeline_snapshot(access.ws)
+    chain = singletons.pipeline_snapshot(access.ws)
     for stage in chain:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
     slug = access.ws.slug
-    waiting = runtime.runner.pending(slug)
-    running = runtime.runner.running()
+    waiting = singletons.runner.pending(slug)
+    running = singletons.runner.running()
     # The oldest running job of THIS workspace: the oldest of the installation would blank
     # your own run for as long as somebody else's older one holds the other lane.
     ours = [j for j in running if j.workspace == slug]
@@ -117,7 +117,7 @@ def pipeline_payload(access: auth.Access) -> dict:
         "generation_unlocked": all(s["status"] == "approved" for s in chain),
         "current_job": current.to_dict() if current is not None else None,
         "queued": len(waiting),
-        "queue_length": len(running) + len(runtime.runner.pending()),
+        "queue_length": len(running) + len(singletons.runner.pending()),
         "queue_ahead": ahead,
         "lanes": lanes,
         # Somebody else is holding a lane: the honest reason a job of yours has not
@@ -139,7 +139,7 @@ def get_pipeline(access: auth.Access = auth.VIEW) -> dict:
 # Some jobs build no artifact and still have a phase plan: the taggability review patches
 # a list of the graph in place. `useArtifactRun` is keyed by artifact and cannot find them,
 # so their plan is published by job kind instead.
-JOB_PHASES = {"review_taggability": taggability.BUILD_PHASES}
+JOB_PHASES = {"review_taggability": TAGGABILITY_PHASES}
 
 
 def _plan(phases) -> list[dict]:
@@ -155,7 +155,7 @@ def build_phases() -> dict:
     depends on the models, and this project changes those to find out what they do.
     """
     return {
-        "artifacts": {artifact: _plan(phases_of(artifact)) for artifact in review.ARTIFACTS},
+        "artifacts": {artifact: _plan(phases_of(artifact)) for artifact in approvals.ARTIFACTS},
         "jobs": {kind: _plan(phases) for kind, phases in JOB_PHASES.items()},
     }
 
@@ -199,7 +199,7 @@ def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
     answer does not change with the commission.
 
     Deliberately NOT `deps.get_context(access.ws)`: that registry builds a
-    `PipelineContext`, which raises the embedder, the tagger and the generator and costs
+    `RuntimeContext`, which raises the embedder, the tagger and the generator and costs
     minutes. Three file reads are the whole job here.
     """
     profile_path = _artifacts.exemplars_profile_path(access.ws)
@@ -226,10 +226,10 @@ def approve(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     """Mark one artifact approved, opening whatever it gates."""
     _check(artifact)
     try:
-        runtime.review_state(access.ws).approve(artifact)
+        singletons.approvals(access.ws).approve(artifact)
     except FileNotFoundError as exc:
         raise HTTPException(409, str(exc)) from exc
-    runtime.bus.publish(
+    singletons.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "approve"}
     )
     return pipeline_payload(access)
@@ -239,8 +239,8 @@ def approve(artifact: str, access: auth.Access = auth.VIEW) -> dict:
 def reopen(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     """Take one artifact back out of approval so it can be edited again."""
     _check(artifact)
-    runtime.review_state(access.ws).reopen(artifact)
-    runtime.bus.publish(
+    singletons.approvals(access.ws).reopen(artifact)
+    singletons.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "reopen"}
     )
     return pipeline_payload(access)
@@ -257,15 +257,15 @@ def history(artifact: str, access: auth.Access = auth.VIEW) -> dict:
 def restore(artifact: str, body: RestoreBody, access: auth.Access = auth.VIEW) -> dict:
     """Put one snapshot back in place, invalidating the warm context with it."""
     _check(artifact)
-    target = review.canonical_path(access.ws, artifact)
+    target = approvals.canonical_path(access.ws, artifact)
     try:
         storage.restore(access.ws, artifact, body.snapshot_id, target)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
 
-    runtime.review_state(access.ws).invalidate(artifact)
+    singletons.approvals(access.ws).invalidate(artifact)
     deps.invalidate(access.ws.slug, f"'{artifact}' restaurado desde una copia")
-    runtime.bus.publish(
+    singletons.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "restore"}
     )
     return pipeline_payload(access)

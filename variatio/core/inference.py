@@ -698,7 +698,7 @@ def is_available() -> bool:
 def require_engine() -> None:
     """Raise unless the configured inference engine answers.
 
-    Every entry point that talks to a model calls this before its first phase; the stages
+    Every entry point that talks to a model calls this before its first phase; the entry points
     never do. On the hybrid engine it is the LOCAL half that is checked, which is what this
     process cannot do without — a Cerebras outage surfaces on its first remote call.
     """

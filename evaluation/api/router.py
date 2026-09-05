@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from server import auth
 from server import curriculum as curriculum_store
-from server import runtime
+from server import singletons
 from server.db.models import EvalSession
 from server.editors import kg_edit
 from server.routers.jobs import gate_error
@@ -104,14 +104,14 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         "instructions": body.instructions,
         "seed": body.seed,
     }
-    job = runtime.runner.submit(
+    job = singletons.runner.submit(
         "evaluate",
         params,
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
     )
-    return {"job": job.to_dict(), "since": runtime.bus.last_seq}
+    return {"job": job.to_dict(), "since": singletons.bus.last_seq}
 
 
 # LISTING ---------------------------------------------------------------------------------------

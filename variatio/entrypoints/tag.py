@@ -4,9 +4,9 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..concept_tagger import ConceptTagger
+from ..runtime.tagger import ConceptTagger
 from ..core.json_io import write_json
-from .initialize import PipelineContext
+from .initialize import RuntimeContext
 
 
 def save_bank(bank: dict, path: str | Path) -> Path:
@@ -15,7 +15,7 @@ def save_bank(bank: dict, path: str | Path) -> Path:
 
 
 def tag_bank(
-    context: PipelineContext,
+    context: RuntimeContext,
     ids: list[str] | None = None,
     path: str | Path | None = None,
 ) -> dict:

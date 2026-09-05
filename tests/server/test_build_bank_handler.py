@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from server import review
+from server import approvals
 from server.jobs import handlers
 from variatio.core import progress
 from variatio.core.workspace import Workspace
@@ -40,7 +40,7 @@ def _job(kind="build_bank"):
     return handlers.Job(kind=kind, workspace="aula")
 
 
-def _snapshots(ws, artifact=review.EXEMPLARS_BANK):
+def _snapshots(ws, artifact=approvals.EXEMPLARS_BANK):
     directory = ws.history_dir / artifact
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(directory.glob("*.json"))]
 
@@ -75,4 +75,4 @@ def test_the_artifacts_with_a_draft_are_not_snapshotted_here(handler, ws, monkey
     handler.HANDLERS["build_kg"](_job("build_kg"), None)
 
     # `retire_curated` is what files the curated graph, and only once a draft exists.
-    assert not (ws.history_dir / review.KNOWLEDGE_GRAPH).exists()
+    assert not (ws.history_dir / approvals.KNOWLEDGE_GRAPH).exists()

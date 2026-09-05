@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import settings
+from server import installation
 from server.auth import mail
 from server.db import identity
 from server.db.models import Base
@@ -43,19 +43,19 @@ def user(db):
 
 
 def test_no_smtp_is_reported_as_no_mail(db, user, monkeypatch):
-    monkeypatch.setattr(settings, "smtp_host", lambda: "")
+    monkeypatch.setattr(installation, "smtp_host", lambda: "")
     assert _me(db, user)["mail_configured"] is False
 
 
 def test_a_configured_host_is_reported(db, user, monkeypatch):
-    monkeypatch.setattr(settings, "smtp_host", lambda: "smtp.example.org")
+    monkeypatch.setattr(installation, "smtp_host", lambda: "smtp.example.org")
     assert _me(db, user)["mail_configured"] is True
 
 
 def test_it_is_an_installation_fact_and_not_the_account_s(db, user, monkeypatch):
     """The client hides a FIELD with it; putting it on `user` would invite the opposite
     reading — that this account has mail — which is never what it means."""
-    monkeypatch.setattr(settings, "smtp_host", lambda: "smtp.example.org")
+    monkeypatch.setattr(installation, "smtp_host", lambda: "smtp.example.org")
     payload = _me(db, user)
     assert "mail_configured" not in payload["user"]
 
@@ -65,7 +65,7 @@ def test_the_flag_is_the_one_mail_itself_reads(db, user, monkeypatch):
     screen exactly where `send` then refuses to deliver, so the payload asks
     `mail.configured` rather than testing the setting a second time of its own."""
     monkeypatch.setattr(mail, "configured", lambda: True)
-    monkeypatch.setattr(settings, "smtp_host", lambda: "")
+    monkeypatch.setattr(installation, "smtp_host", lambda: "")
     assert _me(db, user)["mail_configured"] is True
 
 

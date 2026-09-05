@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from variatio.core import inference
 
-from .. import auth, raw_data, runtime
+from .. import auth, raw_data, singletons
 
 router = APIRouter(prefix="/api/raw", tags=["raw"], dependencies=[auth.VIEW])
 
@@ -50,7 +50,7 @@ def _transcribing(slug: str, kind: str):
     at a time and `current()` only answers the oldest, so a transcription on the other
     lane would slip past the duplicate guard.
     """
-    for job in runtime.runner.running(slug) + runtime.runner.pending(slug):
+    for job in singletons.runner.running(slug) + singletons.runner.pending(slug):
         if job.kind == raw_data.TRANSCRIBE_JOB and job.params.get("slot") == kind:
             return job
     return None
@@ -92,7 +92,7 @@ def start_transcription(kind: str, access: auth.Access = auth.VIEW) -> dict:
             409, f"Ya se está transcribiendo «{raw_data.SLOTS[kind]['label']}»."
         )
 
-    job = runtime.runner.submit(
+    job = singletons.runner.submit(
         raw_data.TRANSCRIBE_JOB,
         {"slot": kind},
         workspace=access.ws.slug,
@@ -100,7 +100,7 @@ def start_transcription(kind: str, access: auth.Access = auth.VIEW) -> dict:
         user_name=access.user.name,
     )
     logger.info(f"[{kind}] Transcripción encolada")
-    return {"job": job.to_dict(), "since": runtime.bus.last_seq}
+    return {"job": job.to_dict(), "since": singletons.bus.last_seq}
 
 
 @router.get("/{kind}/transcription/{name}")
@@ -177,7 +177,7 @@ def upload(
     if result["added"]:
         names = ", ".join(f["name"] for f in result["added"])
         logger.info(f"[{kind}] {len(result['added'])} documento(s) añadidos: {names}")
-        runtime.bus.publish(
+        singletons.bus.publish(
             access.ws.slug, None, "raw.changed", {"kind": kind, "added": len(result["added"])}
         )
 
@@ -193,7 +193,7 @@ def delete(kind: str, name: str, access: auth.Access = auth.VIEW) -> dict:
         raise _not_found(exc) from exc
 
     logger.info(f"[{kind}] documento eliminado: {result['deleted']}")
-    runtime.bus.publish(
+    singletons.bus.publish(
         access.ws.slug, None, "raw.changed", {"kind": kind, "deleted": result["deleted"]}
     )
     return {**result, "slot": raw_data.slot(access.ws, kind)}

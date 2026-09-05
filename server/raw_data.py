@@ -14,10 +14,10 @@ from pathlib import Path
 from fastapi import UploadFile
 from loguru import logger
 
-from variatio.builders._source_docs import SUPPORTED_EXTS
+from variatio.builders.source_docs import SUPPORTED_EXTS
 from variatio.core.workspace import Workspace
 
-from . import review
+from . import approvals
 
 CHUNK = 1024 * 1024
 MAX_BYTES = 512 * 1024 * 1024
@@ -36,7 +36,7 @@ SLOTS: dict[str, dict] = {
             "Los apuntes y el material teórico de la asignatura. De aquí se extrae el "
             "grafo de conocimiento: conceptos, dominios y relaciones."
         ),
-        "feeds": [review.KNOWLEDGE_GRAPH],
+        "feeds": [approvals.KNOWLEDGE_GRAPH],
     },
     EXEMPLARS: {
         "kind": EXEMPLARS,
@@ -45,7 +45,7 @@ SLOTS: dict[str, dict] = {
             "Ejercicios, exámenes o prácticas ya resueltos. De aquí se infiere el perfil "
             "de contenido y se extrae el banco de ejemplos."
         ),
-        "feeds": [review.EXEMPLARS_PROFILE, review.EXEMPLARS_BANK],
+        "feeds": [approvals.EXEMPLARS_PROFILE, approvals.EXEMPLARS_BANK],
     },
 }
 
@@ -259,7 +259,7 @@ def delete(ws: Workspace, kind: str, name: str) -> dict:
 
 def _stage():
     """Import the transcription stage lazily, so listing a slot costs no pipeline import."""
-    from variatio.stages import transcribe
+    from variatio.entrypoints import transcribe
 
     return transcribe
 

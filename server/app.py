@@ -16,7 +16,7 @@ from loguru import logger
 
 from variatio import config
 
-from . import jobs, middleware, runtime, settings
+from . import installation, jobs, middleware, singletons
 from .routers import ROUTERS
 
 try:
@@ -33,28 +33,28 @@ async def lifespan(app: FastAPI):
     can release them, so shutdown does it best-effort in a thread — a slow engine must not
     hold the event loop past uvicorn's own shutdown timeout.
     """
-    runtime.bus.attach_loop(asyncio.get_running_loop())
+    singletons.bus.attach_loop(asyncio.get_running_loop())
     _autostart_tunnel()
-    runtime.runner.start()
-    runtime.idle_unloader.start()
+    singletons.runner.start()
+    singletons.idle_unloader.start()
     try:
         yield
     finally:
-        runtime.idle_unloader.stop()
-        runtime.runner.shutdown()
+        singletons.idle_unloader.stop()
+        singletons.runner.shutdown()
         try:
             await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
         except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
             logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
-        runtime.tunnel.stop()
+        singletons.tunnel.stop()
 
 
 def _autostart_tunnel() -> None:
     """Open the SSH tunnel when the installation asks for it; a failure is a panel message."""
-    if not (config.OLLAMA_SSH_AUTOSTART and runtime.tunnel.configured()):
+    if not (config.OLLAMA_SSH_AUTOSTART and singletons.tunnel.configured()):
         return
     try:
-        runtime.tunnel.start()
+        singletons.tunnel.start()
     except Exception as e:  # noqa: BLE001 - a dead tunnel is a panel message, not a crash
         logger.warning(f"No se pudo abrir el túnel SSH al arrancar: {e}")
 
@@ -75,7 +75,7 @@ def create_app() -> FastAPI:
 
     # Off by default: with a session cookie, a permissive CORS policy turns another
     # origin's page into a logged-in client. Vite proxies `/api` and `/ws` in development.
-    origins = settings.dev_cors_origins()
+    origins = installation.dev_cors_origins()
     if origins:
         app.add_middleware(
             CORSMiddleware,
@@ -119,7 +119,7 @@ class _Assets(StaticFiles):
 
 def _mount_web(app: FastAPI) -> None:
     """Serve the built front-end when it exists, so `uvicorn` alone is the whole app."""
-    dist = settings.WEB_DIST_DIR
+    dist = installation.WEB_DIST_DIR
     if not dist.is_dir():
         return
 

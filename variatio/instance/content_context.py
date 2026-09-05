@@ -97,7 +97,7 @@ class ContentContext:
 def resolve_path(ws: Workspace) -> Path | None:
     """Return the curated context if there is one, else the draft, else None.
 
-    It lives here rather than in `stages/_artifacts` — which re-exports it — because the
+    It lives here rather than in `entrypoints/_artifacts` — which re-exports it — because the
     builders synthesise the context and a builder may not import a stage.
     """
     if ws.content_context_path.is_file():

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from variatio import taggability
+from variatio.runtime import taggability
 from variatio.instance.content_context import ContentContext
 from variatio.prompts.es import review_taggable_concepts_prompt
 

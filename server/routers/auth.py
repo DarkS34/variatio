@@ -24,7 +24,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from .. import settings
+from .. import installation
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
 from ..db import identity
@@ -265,9 +265,9 @@ def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps
     user = identity.get_user(session, username)
     if user is not None and user.active:
         token = tokens.new_token()
-        identity.create_reset(session, user.id, tokens.digest(token), settings.RESET_TTL)
+        identity.create_reset(session, user.id, tokens.digest(token), installation.RESET_TTL)
         link = f"{deps.base_url(request)}/reset?token={token}"
-        minutes = int(settings.RESET_TTL.total_seconds() // 60)
+        minutes = int(installation.RESET_TTL.total_seconds() // 60)
         if user.email:
             mail.send(
                 user.email,
@@ -479,17 +479,17 @@ def _issue_session(session: DbSession, user: User, request: Request, response: R
         session,
         user_id=user.id,
         token_hash=tokens.digest(token),
-        sliding=settings.SESSION_SLIDING,
-        absolute=settings.SESSION_ABSOLUTE,
+        sliding=installation.SESSION_SLIDING,
+        absolute=installation.SESSION_ABSOLUTE,
         ip=deps.client_ip(request) or None,
         user_agent=request.headers.get("user-agent"),
     )
     response.set_cookie(
-        settings.session_cookie(),
+        installation.session_cookie(),
         token,
-        max_age=int(settings.SESSION_ABSOLUTE.total_seconds()),
+        max_age=int(installation.SESSION_ABSOLUTE.total_seconds()),
         httponly=True,
-        secure=settings.cookie_secure(),
+        secure=installation.cookie_secure(),
         samesite="lax",
         path="/",
     )
@@ -502,10 +502,10 @@ def _clear_cookie(response: Response) -> None:
     whole by the browser, so a logout written without them leaves the cookie in the jar.
     """
     response.delete_cookie(
-        settings.session_cookie(),
+        installation.session_cookie(),
         path="/",
         httponly=True,
-        secure=settings.cookie_secure(),
+        secure=installation.cookie_secure(),
         samesite="lax",
     )
 

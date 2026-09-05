@@ -7,7 +7,7 @@ next job rebuilds it. What bounds `MAX_CONTEXTS` is not memory but that rebuildi
 costs minutes.
 
 Two jobs of the same workspace can run at once on different lanes and share one context.
-`_lock` is held across `stages.initialize` so the second waits instead of starting a second
+`_lock` is held across `entrypoints.initialize` so the second waits instead of starting a second
 build, and the components a context holds (`Embedder`, `ConceptTagger`,
 `VariantGenerator`) assign no instance state after their constructor. A component that
 starts keeping per-run state on `self` breaks that.
@@ -18,14 +18,14 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variatio import stages
+from variatio import entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
-from variatio.stages import PipelineContext
+from variatio.entrypoints import RuntimeContext
 
 MAX_CONTEXTS = 8
 
-_contexts: "OrderedDict[str, PipelineContext]" = OrderedDict()
+_contexts: "OrderedDict[str, RuntimeContext]" = OrderedDict()
 _invalid_reasons: dict[str, str] = {}
 _lock = threading.RLock()
 
@@ -39,7 +39,7 @@ def require_inference() -> None:
         )
 
 
-def get_context(ws: Workspace) -> PipelineContext:
+def get_context(ws: Workspace) -> RuntimeContext:
     """Return the workspace's warm context, building it under the lock if there is none."""
     with _lock:
         existing = _contexts.get(ws.slug)
@@ -52,13 +52,13 @@ def get_context(ws: Workspace) -> PipelineContext:
         if reason:
             logger.info(f"Reconstruyendo el contexto de «{ws.slug}»: {reason}")
 
-        context = stages.initialize(tag=False, ws=ws)
+        context = entrypoints.initialize(tag=False, ws=ws)
         _contexts[ws.slug] = context
         _evict()
         return context
 
 
-def reload_context(ws: Workspace) -> PipelineContext:
+def reload_context(ws: Workspace) -> RuntimeContext:
     """Drop the workspace's context and build it again."""
     invalidate(ws.slug, "reindexado solicitado")
     return get_context(ws)
@@ -84,7 +84,7 @@ def invalidate_all(reason: str) -> int:
         return len(slugs)
 
 
-def peek(slug: str) -> PipelineContext | None:
+def peek(slug: str) -> RuntimeContext | None:
     """Return a workspace's context if it is already warm, without building one."""
     with _lock:
         return _contexts.get(slug)

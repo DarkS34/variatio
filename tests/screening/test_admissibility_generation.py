@@ -1,7 +1,7 @@
 import pytest
 
-from variatio import screening
-from variatio.screening import admissibility
+from variatio.runtime import screening
+from variatio.runtime.screening import admissibility
 from variatio.prompts.es import generate_content_prompt
 
 from ..conftest import ES
@@ -55,7 +55,7 @@ def _screen(context, graph, profile, instructions):
 
 
 def test_generate_screens_the_guardrail_before_the_classifier(context, graph, profile, monkeypatch):
-    from variatio.screening import guardrail
+    from variatio.runtime.screening import guardrail
 
     order = []
     monkeypatch.setattr(
@@ -73,7 +73,7 @@ def test_generate_screens_the_guardrail_before_the_classifier(context, graph, pr
 
 
 def test_generate_raises_naming_the_owner_and_the_term(context, graph, profile, monkeypatch):
-    from variatio.screening import guardrail
+    from variatio.runtime.screening import guardrail
 
     owner = screening.Owner(
         key="field:nivel_dificultad",

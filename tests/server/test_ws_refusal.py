@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from fastapi import FastAPI
 
-from server import settings
+from server import installation
 from server.routers import ws as ws_module
 
 
@@ -72,9 +72,9 @@ def _messages(app, headers: dict[str, str]) -> list[dict]:
 
 @pytest.fixture
 def app(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
-    monkeypatch.setattr(settings, "trust_proxy", lambda: False)
-    monkeypatch.setattr(settings, "dev_cors_origins", lambda: [])
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "trust_proxy", lambda: False)
+    monkeypatch.setattr(installation, "dev_cors_origins", lambda: [])
     monkeypatch.setattr(ws_module, "authenticate_socket", lambda socket: None)
     application = FastAPI()
     application.include_router(ws_module.router)

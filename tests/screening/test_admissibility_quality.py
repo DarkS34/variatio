@@ -2,11 +2,11 @@ import os
 
 import pytest
 
-from variatio import screening
+from variatio.runtime import screening
 from variatio.core import paths
 from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.instance.knowledge_graph import KnowledgeGraph
-from variatio.stages import _artifacts
+from variatio.entrypoints import _artifacts
 
 from ..conftest import ES
 

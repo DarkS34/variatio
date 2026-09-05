@@ -11,7 +11,7 @@ small, co-resident and not what a wait is ever about.
 import pytest
 
 from server.jobs import lanes
-from server.jobs.models import JOB_LABELS
+from server.jobs.catalogue import JOB_LABELS
 from variatio import config
 from variatio.core import inference
 from variatio.settings import derived
@@ -60,7 +60,7 @@ def test_one_engine_means_one_lane_for_every_component(ollama):
 
 
 # Separate from the components because a build's models are the BUILDER's declaration, not
-# a table here: this is the one test that reads `stages.build_models`, and it is where a
+# a table here: this is the one test that reads `entrypoints.build_models`, and it is where a
 # builder that stops resolving its own phase models shows up.
 def test_one_engine_means_one_lane_for_every_build(ollama):
     for kind in BUILD_KINDS:

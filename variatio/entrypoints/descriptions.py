@@ -10,7 +10,7 @@ from loguru import logger
 
 from .. import prompts as prompts_pkg
 from ..core.workspace import Workspace
-from ..embedder import (
+from ..runtime.embedder import (
     ConceptDescriber,
     load_descriptions,
     load_sources,

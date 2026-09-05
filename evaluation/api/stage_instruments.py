@@ -46,7 +46,7 @@ whenever a statement, the scale or their ORDER changes, and never edit a wording
 without doing so.
 """
 
-from server import review
+from server import approvals
 
 # Stored in `stage_evaluations.instrument`. Bump on ANY change to the statements below.
 # «4» since 2026-09-04: the five questions became five Likert statements on one shared
@@ -112,7 +112,7 @@ _NOTE = {
 }
 
 QUESTIONS: dict[str, tuple[dict, ...]] = {
-    review.EXEMPLARS_PROFILE: (
+    approvals.EXEMPLARS_PROFILE: (
         # PRECISION. The consolidator has produced different type sets across runs on one
         # corpus and has split one modality in two, which is what «repetido con otro
         # nombre» is there to catch.
@@ -141,7 +141,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         },
         _EFFORT,
     ),
-    review.KNOWLEDGE_GRAPH: (
+    approvals.KNOWLEDGE_GRAPH: (
         # PRECISION, and wider than «not of my subject»: the extractor's measured failures
         # are an example exercise's terms pulled in as concepts, a concept twice under two
         # names, and a granularity no teacher would put on a syllabus.
@@ -170,7 +170,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         },
         _EFFORT,
     ),
-    review.EXEMPLARS_BANK: (
+    approvals.EXEMPLARS_BANK: (
         # PRECISION, in the bank's own terms: an item cut in half and a paragraph of theory
         # taken for an exercise are the two ways something that should not be here got in.
         {
@@ -206,16 +206,16 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
 # button that opens this form promised «cinco preguntas» for all three stages while the
 # graph asked six, so the control contradicted the form it opened.
 PREAMBLE: dict[str, str] = {
-    review.EXEMPLARS_PROFILE: (
+    approvals.EXEMPLARS_PROFILE: (
         "{n} afirmaciones sobre los tipos de ejercicio que acabas de revisar: di cuánto "
         "estás de acuerdo con cada una. Es lo único que te pedimos a cambio, y es lo que "
         "se está midiendo en el estudio."
     ),
-    review.KNOWLEDGE_GRAPH: (
+    approvals.KNOWLEDGE_GRAPH: (
         "{n} afirmaciones sobre el temario que acabas de revisar: di cuánto estás de "
         "acuerdo con cada una."
     ),
-    review.EXEMPLARS_BANK: (
+    approvals.EXEMPLARS_BANK: (
         "{n} afirmaciones sobre los ejercicios que acabas de revisar: di cuánto estás de "
         "acuerdo con cada una."
     ),

@@ -9,7 +9,8 @@ import inspect
 
 import pytest
 
-from variatio import screening, wording
+from variatio import wording
+from variatio.runtime import screening
 from variatio.core import languages
 
 SETS = [wording.of(code) for code in languages.LANGUAGES]
@@ -69,7 +70,7 @@ def test_the_spanish_set_catches_a_spanish_override():
 
 
 def test_a_failed_page_is_recognised_whatever_language_wrote_it():
-    from variatio.builders._source_docs import pages
+    from variatio.builders.source_docs import pages
 
     for module in SETS:
         marked = module.failed_page(2, 3, "boom")

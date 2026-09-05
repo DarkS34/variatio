@@ -10,7 +10,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, runtime, settings
+from server import auth, installation, singletons
 from server import curriculum as curriculum_store
 from server.db import identity, repository
 from server.db.models import User
@@ -261,14 +261,14 @@ def _commission_gate(slug: str) -> dict:
     to the browser as ARTIFACT KEYS, which `web/src/lib/names.ts` says in the reader's own
     language; that second read only happens on the unhappy path.
     """
-    ws = settings.workspace_for(slug)
+    ws = installation.workspace_for(slug)
     if gate_error(ws, "evaluate") is None:
         return {"ready": True, "pending": []}
     return {
         "ready": False,
         "pending": [
             stage["artifact"]
-            for stage in runtime.pipeline_snapshot(ws)
+            for stage in singletons.pipeline_snapshot(ws)
             if stage["status"] != "approved"
         ],
     }
@@ -342,7 +342,7 @@ def generate(
     if repository.get_workspace(db, body.workspace) is None:
         raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
-    ws = settings.workspace_for(body.workspace)
+    ws = installation.workspace_for(body.workspace)
     error = gate_error(ws, "evaluate")
     if error:
         raise HTTPException(409, error)
@@ -353,7 +353,7 @@ def generate(
     # One job per comparison: the handler produces exactly one session, and the lane
     # serialises them on the single GPU.
     jobs = [
-        runtime.runner.submit(
+        singletons.runner.submit(
             "evaluate",
             {
                 "concepts": body.concepts,
@@ -374,7 +374,7 @@ def generate(
         f"[estudio] «{admin.username}» encargó {len(jobs)} comparación(es) "
         f"en «{body.workspace}»"
     )
-    return {"jobs": [job.to_dict() for job in jobs], "since": runtime.bus.last_seq}
+    return {"jobs": [job.to_dict() for job in jobs], "since": singletons.bus.last_seq}
 
 
 @router.get("/evaluations/sets")

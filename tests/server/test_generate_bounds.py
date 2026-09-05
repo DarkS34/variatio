@@ -5,7 +5,7 @@ spends, and unbounded it let a commission empty the day's quota before anything 
 refuse it — measured against a live installation, an `n: 100000` was accepted, started
 running, and was only stopped by an explicit DELETE. The library already knew both rules;
 the API simply never asked, so the answer arrived as a failed job after the commission had
-taken a lane and raised a `PipelineContext`.
+taken a lane and raised a `RuntimeContext`.
 """
 
 import re
@@ -17,7 +17,7 @@ from fastapi import HTTPException
 from server.routers import jobs
 from variatio import config
 
-FORM = Path(__file__).resolve().parents[2] / "web/src/features/run/GenerateForm.tsx"
+FORM = Path(__file__).resolve().parents[2] / "web/src/features/generate/GenerateForm.tsx"
 
 
 def refused(params: dict) -> HTTPException:

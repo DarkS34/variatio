@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from server.db import Base, repository
 from server.db import generations as db_generations
 from server.jobs import handlers
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from variatio.core import progress
 
 
@@ -96,7 +96,7 @@ def _run(job: Job, monkeypatch) -> dict:
         seen.update(kwargs)
         return []
 
-    monkeypatch.setattr(handlers.stages, "generate", fake_generate)
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
     with progress.emitting(_Emitter()):
         handlers.handle_generate(job, None)
     return seen

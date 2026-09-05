@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core.workspace import Workspace as PathWorkspace
 
-from .. import maintenance, settings
+from .. import installation, maintenance
 from ..db import identity, repository, session_scope
 from ..db.models import OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
@@ -82,7 +82,7 @@ def db() -> Iterator[DbSession]:
 
 def session_token(request: Request | WebSocket) -> str | None:
     """Return the session cookie of this request or handshake, if it carries one."""
-    return request.cookies.get(settings.session_cookie())
+    return request.cookies.get(installation.session_cookie())
 
 
 _UNCONFIGURED_BASE_URL_REPORTED = False
@@ -99,10 +99,10 @@ def base_url(request: Request) -> str:
     """
     global _UNCONFIGURED_BASE_URL_REPORTED
 
-    configured = settings.public_base_url()
+    configured = installation.public_base_url()
     if configured:
         return configured
-    if settings.is_production() and not _UNCONFIGURED_BASE_URL_REPORTED:
+    if installation.is_production() and not _UNCONFIGURED_BASE_URL_REPORTED:
         _UNCONFIGURED_BASE_URL_REPORTED = True
         logger.warning(
             "PUBLIC_BASE_URL no está configurado: los enlaces de invitación y de "
@@ -121,7 +121,7 @@ def client_ip(request: Request | WebSocket) -> str:
     the same as not having one. Caddy overwrites the header rather than appending, so
     both readings agree there.
     """
-    if settings.trust_proxy():
+    if installation.trust_proxy():
         forwarded = [
             part.strip()
             for part in request.headers.get("x-forwarded-for", "").split(",")
@@ -158,7 +158,7 @@ def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] |
         return None
     row, user = found
     identity.touch_session(
-        session, row, settings.SESSION_SLIDING, settings.SESSION_TOUCH_INTERVAL
+        session, row, installation.SESSION_SLIDING, installation.SESSION_TOUCH_INTERVAL
     )
     return row, user
 
@@ -311,7 +311,7 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
         user=user,
         workspace=workspace,
         role=role,
-        ws=settings.workspace_for(workspace.slug),
+        ws=installation.workspace_for(workspace.slug),
         as_admin=as_admin,
     )
 

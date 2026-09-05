@@ -35,7 +35,7 @@ const ProfileScreen = lazy(() =>
   import("@/features/profile/ProfileEditor").then((m) => ({ default: m.ProfileScreen })),
 );
 const GenerateScreen = lazy(() =>
-  import("@/features/run/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
+  import("@/features/generate/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
 );
 const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),

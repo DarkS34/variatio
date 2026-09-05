@@ -6,14 +6,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from server import app as app_module
-from server import settings, storage
+from server import installation, storage
 from variatio.core.workspace import Workspace
 
 
 def _spa_client(dist: Path, monkeypatch) -> TestClient:
     dist.mkdir(parents=True, exist_ok=True)
     (dist / "index.html").write_text("SPA", encoding="utf-8")
-    monkeypatch.setattr(settings, "WEB_DIST_DIR", dist)
+    monkeypatch.setattr(installation, "WEB_DIST_DIR", dist)
     app = FastAPI()
     app_module._mount_web(app)
     return TestClient(app)

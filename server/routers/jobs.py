@@ -10,13 +10,13 @@ for: without that the id is a twelve-hex guess away from another instance's even
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from variatio import config, stages
+from variatio import config, entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import auth, review, runtime
+from .. import approvals, auth, singletons
 from ..jobs import lanes
-from ..jobs.models import JOB_LABELS
+from ..jobs.catalogue import JOB_LABELS
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 
@@ -24,10 +24,10 @@ router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 GATES: dict[str, str | None] = {
     "build_profile": None,
     "build_kg": None,
-    "build_bank": review.EXEMPLARS_BANK,
+    "build_bank": approvals.EXEMPLARS_BANK,
     "describe_concepts": None,
     "index": None,
-    "tag": review.EXEMPLARS_BANK,
+    "tag": approvals.EXEMPLARS_BANK,
     "generate": "__all__",
     "evaluate": "__all__",
 }
@@ -37,7 +37,7 @@ GATES: dict[str, str | None] = {
 # reuse `EXEMPLARS_BANK` as a gate: that would demand the graph be approved, and the review
 # is what happens before approving it. Hence a table of its own.
 NEEDS_APPROVED: dict[str, str] = {
-    "review_taggability": review.EXEMPLARS_PROFILE,
+    "review_taggability": approvals.EXEMPLARS_PROFILE,
 }
 
 
@@ -52,15 +52,15 @@ class JobBody(BaseModel):
 def _pending_labels(ws: Workspace) -> list[str]:
     """Name the stages of the chain that are not approved yet."""
     return [
-        s["label"] for s in runtime.pipeline_snapshot(ws) if s["status"] != "approved"
+        s["label"] for s in singletons.pipeline_snapshot(ws) if s["status"] != "approved"
     ]
 
 
 def _unapproved_upstream(state, gate: str) -> list[str]:
     """Name the artifacts `gate` depends on that are not approved yet."""
     return [
-        review.LABELS[up]
-        for up in review.UPSTREAM[gate]
+        approvals.LABELS[up]
+        for up in approvals.UPSTREAM[gate]
         if state.state(up)["status"] != "approved"
     ]
 
@@ -74,13 +74,13 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
     """
     needed = NEEDS_APPROVED.get(kind)
     if needed is not None:
-        if runtime.review_state(ws).state(needed)["status"] != "approved":
-            return f"Antes hay que dar por bueno: {review.LABELS[needed]}."
+        if singletons.approvals(ws).state(needed)["status"] != "approved":
+            return f"Antes hay que dar por bueno: {approvals.LABELS[needed]}."
 
     gate = GATES.get(kind)
     if gate is None:
         return None
-    state = runtime.review_state(ws)
+    state = singletons.approvals(ws)
     if gate == "__all__":
         if not state.generation_unlocked():
             pending = _pending_labels(ws)
@@ -102,7 +102,7 @@ def _check_params(kind: str, params: dict) -> None:
 
     Only what can be answered without a model and without an index is checked here. The
     concepts, the fixed fields and the curriculum are the generator's, because deciding
-    them needs the knowledge graph and the exemplars profile — a `PipelineContext`, which
+    them needs the knowledge graph and the exemplars profile — a `RuntimeContext`, which
     on a cold workspace is minutes. What must not wait for that is the COUNT: it is the
     one parameter that decides how much a single request spends, and unbounded it let a
     commission empty the day's quota before anything could refuse it.
@@ -110,8 +110,8 @@ def _check_params(kind: str, params: dict) -> None:
     if kind != "generate":
         return
     try:
-        stages.resolve_generation_model(params.get("model"))
-    except stages.UnofferedModelError as error:
+        entrypoints.resolve_generation_model(params.get("model"))
+    except entrypoints.UnofferedModelError as error:
         raise HTTPException(422, str(error)) from None
 
     if params.get("n") is not None:
@@ -139,7 +139,7 @@ def _check_params(kind: str, params: dict) -> None:
 
 def _mine(job_id: str, access: auth.Access):
     """Load a job of this workspace, or 404 — one of another instance does not exist here."""
-    job = runtime.runner.get(job_id)
+    job = singletons.runner.get(job_id)
     if job is None or job.workspace != access.ws.slug:
         raise HTTPException(404, f"No existe el trabajo '{job_id}'")
     return job
@@ -167,7 +167,7 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
 
     _check_params(body.kind, body.params)
 
-    job = runtime.runner.submit(
+    job = singletons.runner.submit(
         body.kind,
         body.params,
         workspace=access.ws.slug,
@@ -176,8 +176,8 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
     )
     return {
         "job": job.to_dict(),
-        "since": runtime.bus.last_seq,
-        "queue_position": runtime.runner.queue_position(job.id),
+        "since": singletons.bus.last_seq,
+        "queue_position": singletons.runner.queue_position(job.id),
     }
 
 
@@ -185,7 +185,7 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
 def listing(limit: int = Query(50, ge=1, le=200), access: auth.Access = auth.VIEW) -> dict:
     """Answer the most recent jobs of this workspace."""
     return {
-        "jobs": [j.to_dict() for j in runtime.runner.all(limit, workspace=access.ws.slug)]
+        "jobs": [j.to_dict() for j in singletons.runner.all(limit, workspace=access.ws.slug)]
     }
 
 
@@ -200,19 +200,19 @@ def current(access: auth.Access = auth.VIEW) -> dict:
     first on the other lane would report «nada en ejecución» while your build runs.
     Whether a lane is held at all, and by what, stays global — the machine is shared.
     """
-    running = runtime.runner.running()
+    running = singletons.runner.running()
     ours = [j for j in running if j.workspace == access.ws.slug]
-    holders = [runtime.runner.current_in(backend) for backend in lanes.BACKENDS]
+    holders = [singletons.runner.current_in(backend) for backend in lanes.BACKENDS]
     held = [job for job in holders if job is not None]
     return {
         "job": ours[0].to_dict() if ours else None,
         "queued": [
-            {**j.to_dict(), "queue_position": runtime.runner.queue_position(j.id)}
-            for j in runtime.runner.pending(access.ws.slug)
+            {**j.to_dict(), "queue_position": singletons.runner.queue_position(j.id)}
+            for j in singletons.runner.pending(access.ws.slug)
         ],
         "engine_busy": bool(held),
         "engine_busy_elsewhere": any(j.workspace != access.ws.slug for j in held),
-        "last_seq": runtime.bus.last_seq,
+        "last_seq": singletons.bus.last_seq,
     }
 
 
@@ -220,7 +220,7 @@ def current(access: auth.Access = auth.VIEW) -> dict:
 def detail(job_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one job of this workspace, with how many are ahead of it."""
     job = _mine(job_id, access)
-    return {"job": job.to_dict(), "queue_position": runtime.runner.queue_position(job_id)}
+    return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job_id)}
 
 
 @router.get("/jobs/{job_id}/events")
@@ -233,7 +233,7 @@ def job_events(
     """Replay one job's events, for a screen that arrived after they were emitted."""
     _mine(job_id, access)
     return {
-        "events": runtime.bus.job_events(
+        "events": singletons.bus.job_events(
             access.ws.slug, job_id, since=since, limit=limit
         )
     }
@@ -243,7 +243,7 @@ def job_events(
 def cancel(job_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Ask one job of this workspace to stop at its next checkpoint."""
     _mine(job_id, access)
-    return {"cancelled": runtime.runner.cancel(job_id)}
+    return {"cancelled": singletons.runner.cancel(job_id)}
 
 
 @router.get("/events")
@@ -254,5 +254,5 @@ def events(since: int = 0, access: auth.Access = auth.VIEW) -> dict:
     explicitly anyway so «you may only replay your own events» is visible where the
     replay happens rather than inferred two files away.
     """
-    replayed, gap = runtime.bus.replay(since, workspace=access.ws.slug)
-    return {"events": replayed, "gap": gap, "last_seq": runtime.bus.last_seq}
+    replayed, gap = singletons.bus.replay(since, workspace=access.ws.slug)
+    return {"events": replayed, "gap": gap, "last_seq": singletons.bus.last_seq}

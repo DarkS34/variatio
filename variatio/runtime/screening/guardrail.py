@@ -15,10 +15,10 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from .. import config, wording as wording_sets
-from ..core import inference, progress
-from ..core.inference import InferenceError
-from ..core.lexicon import fold
+from ... import config, wording as wording_sets
+from ...core import inference, progress
+from ...core.inference import InferenceError
+from ...core.lexicon import fold
 
 _SCORE = re.compile(r"<score>\s*(yes|no)\s*</score>", re.IGNORECASE)
 _BARE = re.compile(r"\b(yes|no)\b", re.IGNORECASE)

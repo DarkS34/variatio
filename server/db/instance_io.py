@@ -17,7 +17,7 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from variatio import stages
+from variatio import entrypoints
 from variatio.core import json_io
 from variatio.core.workspace import Workspace as FsWorkspace
 from variatio.instance import locale
@@ -54,12 +54,12 @@ def _file_sha256(path: Path) -> str:
 
 
 def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
-    """Return the file the stages would read for this kind, or None."""
-    if kind == stages.KNOWLEDGE_GRAPH:
-        return stages.knowledge_graph_path(ws)
-    if kind == stages.EXEMPLARS_PROFILE:
-        return stages.exemplars_profile_path(ws)
-    if kind == stages.EXEMPLARS_BANK:
+    """Return the file the entry points would read for this kind, or None."""
+    if kind == entrypoints.KNOWLEDGE_GRAPH:
+        return entrypoints.knowledge_graph_path(ws)
+    if kind == entrypoints.EXEMPLARS_PROFILE:
+        return entrypoints.exemplars_profile_path(ws)
+    if kind == entrypoints.EXEMPLARS_BANK:
         return ws.exemplars_bank_path if ws.exemplars_bank_path.is_file() else None
     return None
 
@@ -172,7 +172,7 @@ def import_instance(
 
 
 def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
-    """Write a database workspace back out as the directory layout the stages read.
+    """Write a database workspace back out as the directory layout the entry points read.
 
     `instance/locale.json` is written unconditionally, unlike the artifacts: a directory
     without it reads as Spanish, which for an English instance is not a missing file but

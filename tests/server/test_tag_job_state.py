@@ -2,12 +2,12 @@ import json
 
 import pytest
 
-from server import review
+from server import approvals
 from server.jobs.bus import EventBus
 from server.jobs.handlers import HANDLERS
-from server.jobs.models import JOB_ARTIFACT, Job
+from server.jobs.catalogue import JOB_ARTIFACT, Job
 from server.jobs.runner import JobRunner
-from server.review import ReviewState
+from server.approvals import Approvals
 from variatio.core.workspace import Workspace
 
 BANK = {"C001": {"enunciado": "Suma dos números.", "item_type": "ejercicio"}}
@@ -31,14 +31,14 @@ def test_tagging_puts_the_bank_into_the_building_state(runner, ws):
     runner.submit("tag", {}, workspace="aula")
 
     building = runner.building_artifacts("aula")
-    assert building == {review.EXEMPLARS_BANK}
-    assert ReviewState(ws).state(review.EXEMPLARS_BANK, building)["status"] == "building"
+    assert building == {approvals.EXEMPLARS_BANK}
+    assert Approvals(ws).state(approvals.EXEMPLARS_BANK, building)["status"] == "building"
 
 
 def test_tagging_is_filed_under_the_bank_without_being_a_rebuild(runner):
     job = runner.submit("tag", {}, workspace="aula")
 
-    assert job.to_dict()["artifact"] == review.EXEMPLARS_BANK
+    assert job.to_dict()["artifact"] == approvals.EXEMPLARS_BANK
     assert not job.kind.startswith("build_")
 
 

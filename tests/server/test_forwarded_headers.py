@@ -2,7 +2,7 @@ import pytest
 from loguru import logger
 from starlette.requests import Request
 
-from server import settings
+from server import installation
 from server.auth import deps
 
 PEER = "198.51.100.4"
@@ -26,7 +26,7 @@ def _request(headers: dict[str, str] | None = None, peer: str | None = PEER) -> 
 
 @pytest.fixture
 def behind_a_proxy(monkeypatch):
-    monkeypatch.setattr(settings, "trust_proxy", lambda: True)
+    monkeypatch.setattr(installation, "trust_proxy", lambda: True)
 
 
 # WHO IS ASKING ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def test_spaces_and_empty_entries_never_become_the_key(behind_a_proxy):
 
 
 def test_without_a_proxy_to_trust_the_header_is_not_read(monkeypatch):
-    monkeypatch.setattr(settings, "trust_proxy", lambda: False)
+    monkeypatch.setattr(installation, "trust_proxy", lambda: False)
     assert deps.client_ip(_request({"x-forwarded-for": "203.0.113.7"})) == PEER
 
 
@@ -65,21 +65,21 @@ def test_a_request_with_no_client_at_all_has_no_key(behind_a_proxy):
 
 
 def test_the_configured_address_is_the_one_the_links_carry(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: "https://variatio.example")
+    monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.example")
     asked = _request({"origin": "https://malo.example"})
     assert deps.base_url(asked) == "https://variatio.example"
 
 
 def test_the_origin_of_whoever_asked_is_never_reflected_into_a_link(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
-    monkeypatch.setattr(settings, "is_production", lambda: False)
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "is_production", lambda: False)
     asked = _request({"origin": "https://malo.example"})
     assert deps.base_url(asked) == "http://api.interna"
 
 
 def test_an_installation_in_production_without_the_variable_says_so_once(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
-    monkeypatch.setattr(settings, "is_production", lambda: True)
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "is_production", lambda: True)
     monkeypatch.setattr(deps, "_UNCONFIGURED_BASE_URL_REPORTED", False)
 
     said: list[str] = []
@@ -95,8 +95,8 @@ def test_an_installation_in_production_without_the_variable_says_so_once(monkeyp
 
 
 def test_and_in_development_it_says_nothing(monkeypatch):
-    monkeypatch.setattr(settings, "public_base_url", lambda: None)
-    monkeypatch.setattr(settings, "is_production", lambda: False)
+    monkeypatch.setattr(installation, "public_base_url", lambda: None)
+    monkeypatch.setattr(installation, "is_production", lambda: False)
     monkeypatch.setattr(deps, "_UNCONFIGURED_BASE_URL_REPORTED", False)
 
     said: list[str] = []

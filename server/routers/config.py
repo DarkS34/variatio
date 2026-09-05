@@ -13,12 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from variatio import config as vg_config
-from variatio import settings as vg_settings
+from variatio import settings
 from variatio.core import cerebras, inference
 from variatio.core.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
-from .. import auth, deps, runtime
+from .. import auth, deps, singletons
 
 router = APIRouter(
     prefix="/api/admin/config", tags=["config"], dependencies=[Depends(auth.require_admin)]
@@ -40,9 +40,9 @@ class Reset(BaseModel):
 def _payload() -> dict:
     """Assemble the whole configuration screen: groups, values, pipeline and models."""
     return {
-        "groups": list(vg_settings.GROUPS),
-        "settings": vg_settings.snapshot(),
-        "pipeline": vg_settings.pipeline(),
+        "groups": list(settings.GROUPS),
+        "settings": settings.snapshot(),
+        "pipeline": settings.pipeline(),
         "models": _models(),
     }
 
@@ -69,7 +69,7 @@ def _models() -> dict:
 
 def _refuse_while_busy() -> None:
     """Raise 409 while a job runs: half a build written under two configurations."""
-    job = runtime.runner.current()
+    job = singletons.runner.current()
     if job is not None:
         raise HTTPException(
             409,
@@ -123,7 +123,7 @@ def write(body: Patch) -> dict:
     """Store the given values and answer the screen, with what the change invalidated."""
     _refuse_while_busy()
     try:
-        impacts = vg_settings.update(body.values)
+        impacts = settings.update(body.values)
     except SettingError as error:
         raise HTTPException(422, str(error)) from None
     return {**_payload(), "applied": _act(impacts)}
@@ -138,7 +138,7 @@ def reset(body: Reset) -> dict:
     """
     _refuse_while_busy()
     try:
-        impacts = vg_settings.reset(body.keys)
+        impacts = settings.reset(body.keys)
     except SettingError as error:
         raise HTTPException(422, str(error)) from None
     return {**_payload(), "applied": _act(impacts)}
@@ -148,5 +148,5 @@ def reset(body: Reset) -> dict:
 def reload() -> dict:
     """Re-read `config.json` and the environment, and answer what that invalidated."""
     _refuse_while_busy()
-    impacts = vg_settings.reload()
+    impacts = settings.reload()
     return {**_payload(), "applied": _act(impacts)}

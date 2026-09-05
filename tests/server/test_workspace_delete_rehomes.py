@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import settings as server_settings
+from server import installation
 from server.auth import deps as auth_deps
 from server.db import identity, repository
 from server.db.models import Base, EDITOR
@@ -31,7 +31,7 @@ def db(monkeypatch):
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     # The tree is a separate decision and has its own test; what is under examination here
     # is which row the account points at afterwards.
-    monkeypatch.setattr(server_settings, "destroy", lambda ws: False)
+    monkeypatch.setattr(installation, "destroy", lambda ws: False)
     yield session
     session.close()
 

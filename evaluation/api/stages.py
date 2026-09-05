@@ -7,7 +7,7 @@ that draw it are stage screens; what they are collecting is research data.
 
 THE HASH IS NEVER TAKEN FROM THE REQUEST. Which build was judged is the one fact that
 makes a row a measurement, so it is resolved here from the file on disk — the same digest
-`ReviewState.state` reports and approvals record. A client that sent its own would be
+`Approvals.state` reports and approvals record. A client that sent its own would be
 stamping a verdict onto whatever it happened to believe was built.
 """
 
@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, review, runtime
+from server import approvals, auth, singletons
 
 from . import stage_instruments, stage_queries
 
@@ -39,14 +39,14 @@ class AnswersBody(BaseModel):
 
 def _artifact(artifact: str) -> str:
     """Refuse anything that is not one of the three stages of the chain."""
-    if artifact not in review.ARTIFACTS:
+    if artifact not in approvals.ARTIFACTS:
         raise HTTPException(404, f"No existe la etapa «{artifact}».")
     return artifact
 
 
 def _digest(access: auth.Access, artifact: str) -> str | None:
     """The digest of what is on disk right now, or None when nothing is built."""
-    return runtime.review_state(access.ws).state(artifact)["hash"]
+    return singletons.approvals(access.ws).state(artifact)["hash"]
 
 
 def _mine(row) -> dict | None:

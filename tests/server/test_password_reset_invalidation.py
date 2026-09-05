@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server import settings
+from server import installation
 from server.auth import passwords, rate_limit, tokens
 from server.db import identity
 from server.db.models import Base
@@ -65,7 +65,7 @@ def _account(db, username: str = "ana"):
 
 
 def _link(db, user, token: str) -> str:
-    identity.create_reset(db, user.id, tokens.digest(token), settings.RESET_TTL)
+    identity.create_reset(db, user.id, tokens.digest(token), installation.RESET_TTL)
     return token
 
 

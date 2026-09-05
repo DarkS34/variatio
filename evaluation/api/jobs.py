@@ -9,7 +9,7 @@ from loguru import logger
 from server import deps
 from server.db import repository, session_scope
 from server.jobs.handlers import context_for
-from server.jobs.models import Job
+from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio.core import progress
 

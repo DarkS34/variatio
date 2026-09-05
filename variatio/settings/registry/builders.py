@@ -37,7 +37,7 @@ en silencio lo que pide el ejercicio. Fijada a 0 por eso.
 
 Sigue siendo una constante propia en vez de `TEMPERATURE_DETERMINISTIC`, aunque tenga el
 mismo valor y por la misma razón: esta forma parte de la huella de la caché de páginas
-(`_source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
+(`source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
 todos los corpus. Unificarlas haría que esa consecuencia siguiera a una edición hecha
 pensando en otra cosa.""",
     ),

@@ -4,6 +4,12 @@ Each artifact is built, reviewed and approved before the next one is unlocked.
 Approving records the artifact's own hash *and* the hash of everything it was
 derived from; if an upstream later changes, the downstream is marked stale and
 the UI can offer to redo that step. Nothing repairs itself behind the user's back.
+
+Named `review.py` until 2026-09-06. «Review» had come to mean three different things a
+click apart — this, the construction questionnaire (`StageReview`, `stage_evaluations`)
+and `review_taggability` — and of the three this is the only one that is not a review at
+all: it is the record of what has been approved. `.review_state.json` and
+`Workspace.review_state_path` keep their names, being the operational truth on disk.
 """
 
 import json
@@ -14,16 +20,16 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio import stages
+from variatio import entrypoints
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
 
 from . import storage
 from .db import mirror
 
-EXEMPLARS_PROFILE = stages.EXEMPLARS_PROFILE
-KNOWLEDGE_GRAPH = stages.KNOWLEDGE_GRAPH
-EXEMPLARS_BANK = stages.EXEMPLARS_BANK
+EXEMPLARS_PROFILE = entrypoints.EXEMPLARS_PROFILE
+KNOWLEDGE_GRAPH = entrypoints.KNOWLEDGE_GRAPH
+EXEMPLARS_BANK = entrypoints.EXEMPLARS_BANK
 
 # The chain as the screens draw it: the navbar and the panel's cards read this tuple, so it
 # is the order a person works in. The profile leads because finishing the graph needs an
@@ -89,9 +95,9 @@ def working_path(ws: Workspace, artifact: str) -> Path | None:
 def current_path(ws: Workspace, artifact: str) -> Path | None:
     """The file actually read for an artifact: the curated one, else its draft."""
     if artifact == EXEMPLARS_PROFILE:
-        return stages.exemplars_profile_path(ws)
+        return entrypoints.exemplars_profile_path(ws)
     if artifact == KNOWLEDGE_GRAPH:
-        return stages.knowledge_graph_path(ws)
+        return entrypoints.knowledge_graph_path(ws)
     path = ws.exemplars_bank_path
     return path if path.is_file() else None
 
@@ -145,7 +151,7 @@ def discard(ws: Workspace, artifact: str) -> dict:
     working = working_path(ws, artifact)
     if working is not None:
         working.unlink(missing_ok=True)
-    ReviewState(ws).reopen(artifact)
+    Approvals(ws).reopen(artifact)
     return {
         "artifact": artifact,
         "removed": [str(path) for path in files],
@@ -161,7 +167,7 @@ def retire_curated(ws: Workspace, artifact: str) -> bool:
         return False
     storage.backup(ws, curated, artifact)
     curated.unlink()
-    ReviewState(ws).reopen(artifact)
+    Approvals(ws).reopen(artifact)
     logger.info(
         f"[revisión] «{LABELS[artifact]}» curado anterior retirado al historial; "
         "el borrador recién construido pasa a ser el artefacto"
@@ -186,7 +192,7 @@ def _status(artifact: str, building: set[str], digest: str | None, record: dict 
     return "approved"
 
 
-class ReviewState:
+class Approvals:
     """One workspace's approvals, read from and written to its `.review_state.json`.
 
     Constructed where it is needed rather than kept as a singleton: it holds a path and a

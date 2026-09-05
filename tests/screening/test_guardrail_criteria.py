@@ -1,6 +1,6 @@
 """The guardrail screens against the criteria configured now, not at import."""
 
-from variatio.screening import guardrail
+from variatio.runtime.screening import guardrail
 
 
 def test_the_criteria_are_read_at_call_time(monkeypatch):

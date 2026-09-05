@@ -1,8 +1,8 @@
 import numpy as np
 
-from variatio import checks
+from variatio.runtime import checks
 from variatio.instance.exemplars_profile import ItemType
-from variatio.variatio import parse_item
+from variatio.runtime.generator import parse_item
 
 PROFILE = {
     "primary_field": "enunciado",

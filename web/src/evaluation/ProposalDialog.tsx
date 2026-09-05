@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { ItemChecks, ItemFields } from "@/features/run/ResultCard";
+import { ItemChecks, ItemFields } from "@/features/generate/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";

@@ -18,8 +18,8 @@ from sqlalchemy.pool import StaticPool
 
 from fastapi import HTTPException
 
-from server import runtime
-from server import settings as server_settings
+from server import singletons
+from server import installation
 from server.auth import deps as auth_deps
 from server.db import identity, repository
 from server.db.models import Base, EDITOR, OWNER
@@ -33,7 +33,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(runtime.bus, "publish", lambda *a, **k: None)
+    monkeypatch.setattr(singletons.bus, "publish", lambda *a, **k: None)
     yield session
     session.close()
 
@@ -42,8 +42,8 @@ def db(monkeypatch):
 # with them. The suite's autouse fixture has already moved `WORKSPACES_DIR` into a tmp
 # directory, so this writes nowhere near the installation's own instances.
 def _workspace(db, slug: str):
-    ws = server_settings.workspace_for(slug)
-    server_settings.provision(ws)
+    ws = installation.workspace_for(slug)
+    installation.provision(ws)
     (ws.raw_corpus_dir / "apuntes.md").write_text("# Apuntes", encoding="utf-8")
     return repository.ensure_workspace(db, slug, slug.capitalize())
 
@@ -63,7 +63,7 @@ def _access(user, workspace, role=OWNER):
         user=user,
         workspace=workspace,
         role=role,
-        ws=server_settings.workspace_for(workspace.slug),
+        ws=installation.workspace_for(workspace.slug),
     )
 
 
@@ -131,7 +131,7 @@ def test_deleting_an_instance_only_you_hold_takes_its_files(db):
     result = remove("aula", access=_access(ana, aula), db=db)
 
     assert result["files_removed"] is True
-    assert not server_settings.workspace_for("aula").root.exists()
+    assert not installation.workspace_for("aula").root.exists()
 
 
 # The other side of the same condition, and the reason it is a condition at all: those raw
@@ -146,7 +146,7 @@ def test_deleting_one_other_people_are_in_leaves_their_files(db):
     result = remove("aula", access=_access(ana, aula), db=db)
 
     assert result["files_removed"] is False
-    assert (server_settings.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
+    assert (installation.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
 
 
 # An administrator reaches this through the bypass and holds no membership row, so «is
@@ -159,7 +159,7 @@ def test_an_administrator_deleting_a_workspace_with_a_member_leaves_its_files(db
     result = remove("aula", access=_access(root, aula), db=db)
 
     assert result["files_removed"] is False
-    assert (server_settings.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
+    assert (installation.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
 
 
 # The tree first, as in `DELETE /api/admin/workspaces/{slug}`: a failure leaves the row
@@ -172,7 +172,7 @@ def test_a_tree_that_cannot_be_removed_leaves_the_row_standing(db, monkeypatch):
     def refuse(ws):
         raise OSError("dispositivo ocupado")
 
-    monkeypatch.setattr(server_settings, "destroy", refuse)
+    monkeypatch.setattr(installation, "destroy", refuse)
 
     with pytest.raises(HTTPException) as raised:
         remove("aula", access=_access(ana, aula), db=db)

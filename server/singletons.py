@@ -3,15 +3,19 @@
 They stay single because they model this installation's whole capacity — one ordered stream
 of events, and one arbiter of what may run beside what. That arbiter is not a single file
 of work: `jobs/lanes.py` serialises per backend, so a local job and a remote one hold
-different lanes and run at once. The `ReviewState` is deliberately NOT a singleton — it is
+different lanes and run at once. The `Approvals` reader is deliberately NOT a singleton — it is
 one per workspace, built where it is used.
+
+Named `runtime.py` until 2026-09-06: `variatio/runtime/` is the package of components
+that consume the artifacts, and two modules called `runtime` one import apart said two
+different things. The docstring's own first word is what this is.
 """
 
 from variatio.core.workspace import Workspace
 
 from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
 from .model_pulls import PullTracker
-from .review import ReviewState
+from .approvals import Approvals
 from .tunnel import SshTunnel
 
 bus = EventBus()
@@ -27,9 +31,9 @@ tunnel = SshTunnel()
 pulls = PullTracker()
 
 
-def review_state(ws: Workspace) -> ReviewState:
-    """Return a fresh `ReviewState` for one workspace."""
-    return ReviewState(ws)
+def approvals(ws: Workspace) -> Approvals:
+    """Return a fresh `Approvals` reader for one workspace."""
+    return Approvals(ws)
 
 
 def building(ws: Workspace) -> set[str]:
@@ -39,4 +43,4 @@ def building(ws: Workspace) -> set[str]:
 
 def pipeline_snapshot(ws: Workspace) -> list[dict]:
     """The whole chain's state for one workspace, with what is building marked as such."""
-    return review_state(ws).snapshot(building(ws))
+    return approvals(ws).snapshot(building(ws))

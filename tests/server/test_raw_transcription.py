@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import auth, raw_data, runtime
+from server import auth, raw_data, singletons
 from server.auth.deps import Access
 from server.routers.raw import router as raw_router
 from variatio.core import inference
@@ -124,9 +124,9 @@ def queue(monkeypatch):
             to_dict=lambda: {"id": "abc123", "kind": kind, "params": params or {}}
         )
 
-    monkeypatch.setattr(runtime.runner, "submit", submit)
-    monkeypatch.setattr(runtime.runner, "running", lambda slug=None: [])
-    monkeypatch.setattr(runtime.runner, "pending", lambda slug=None: [])
+    monkeypatch.setattr(singletons.runner, "submit", submit)
+    monkeypatch.setattr(singletons.runner, "running", lambda slug=None: [])
+    monkeypatch.setattr(singletons.runner, "pending", lambda slug=None: [])
     return submitted
 
 
@@ -178,7 +178,7 @@ def test_the_same_slot_is_not_transcribed_twice_at_once(client, queue, monkeypat
     running = SimpleNamespace(
         kind="transcribe", workspace="aula", params={"slot": "exemplars"}
     )
-    monkeypatch.setattr(runtime.runner, "running", lambda slug=None: [running])
+    monkeypatch.setattr(singletons.runner, "running", lambda slug=None: [running])
 
     response = client.post("/api/raw/exemplars/transcription")
 

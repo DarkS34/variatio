@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from server import settings
+from server import installation
 from server.auth import deps
 from variatio.core import paths
 
@@ -58,5 +58,5 @@ def test_a_request_that_names_none_is_told_so(nobody):
 # the fallback gone the name owns nothing, and refusing it would be one special case kept
 # for its own sake.
 def test_default_is_a_name_anybody_may_use():
-    assert settings.slug_error("default") is None
+    assert installation.slug_error("default") is None
     assert paths.workspace("default").slug == "default"

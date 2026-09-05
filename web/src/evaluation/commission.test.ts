@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_FORM } from "@/features/run/commission";
+import { EMPTY_FORM } from "@/features/generate/commission";
 
 import { toEvaluationParams, toStockParams } from "./commission";
 

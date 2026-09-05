@@ -113,7 +113,7 @@ def test_a_deleted_workspace_is_never_offered(db):
 
 def test_each_workspace_says_whether_a_commission_can_be_composed_in_it(db):
     session, _ = db
-    from server import review
+    from server import approvals
 
     # Neither of these instances has anything built, which is the state every workspace
     # starts in: not ready, and the three stages named. The names are ARTIFACT KEYS and
@@ -121,7 +121,7 @@ def test_each_workspace_says_whether_a_commission_can_be_composed_in_it(db):
     # the reader's own language.
     for entry in _accounts(session)["admin"]["workspaces"]:
         assert entry["ready"] is False
-        assert entry["pending"] == list(review.ARTIFACTS)
+        assert entry["pending"] == list(approvals.ARTIFACTS)
 
 
 def test_an_approved_chain_is_offered_with_nothing_pending(db, monkeypatch):

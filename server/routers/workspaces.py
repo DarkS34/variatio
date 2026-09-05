@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import languages
 from variatio.instance import locale
 
-from .. import auth, deps, runtime, settings
+from .. import auth, deps, installation, singletons
 from ..auth import deps as auth_deps
 from ..db import generations, identity, repository
 from ..db.models import OWNER, VIEWER, User, Workspace
@@ -100,7 +100,7 @@ def create(
 ) -> dict:
     """Create an instance, make the caller its owner, and activate it."""
     slug = body.slug.strip().lower()
-    error = settings.slug_error(slug)
+    error = installation.slug_error(slug)
     if error:
         raise HTTPException(422, error)
     if repository.get_workspace(db, slug) is not None:
@@ -118,8 +118,8 @@ def create(
 
     # The directory tree before the row is usable: every screen of a brand-new workspace
     # reads files, and an empty chain with nowhere to upload into is a dead end.
-    ws = settings.workspace_for(slug)
-    settings.provision(ws)
+    ws = installation.workspace_for(slug)
+    installation.provision(ws)
     # The file is what a build reads — the pipeline never touches the database — so the
     # row written above is the mirror and this is the truth.
     locale.set_prompt_language(ws, workspace.prompt_language)
@@ -188,7 +188,7 @@ def remove(
         # Tree before row: this way a failure leaves the row standing and the call
         # retryable, where the other order strands files nobody is on record as owning.
         try:
-            removed = settings.destroy(ws)
+            removed = installation.destroy(ws)
         except (ValueError, OSError) as exc:
             raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
@@ -201,7 +201,7 @@ def remove(
     deps.invalidate(ws.slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
-    runtime.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
     return {
         "deleted": slug,
         "path": str(ws.root),
@@ -249,7 +249,7 @@ def leave(
         )
 
     others = [m for m, _ in identity.members_of(db, workspace.id) if m.user_id != user.id]
-    ws = settings.workspace_for(slug)
+    ws = installation.workspace_for(slug)
 
     if others:
         db.delete(membership)
@@ -262,7 +262,7 @@ def leave(
     # Tree before row, as in `remove`: a failure leaves the row and the membership
     # standing and the call retryable.
     try:
-        removed = settings.destroy(ws)
+        removed = installation.destroy(ws)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
@@ -290,7 +290,7 @@ def summary(
     """Answer another instance's chain, so the switcher can show its state in place."""
     workspace = auth.resolve_workspace(db, user, slug)
     access = auth.access_for(db, user, workspace, VIEWER)
-    stages = runtime.pipeline_snapshot(access.ws)
+    stages = singletons.pipeline_snapshot(access.ws)
     return {
         "slug": workspace.slug,
         "name": workspace.name,

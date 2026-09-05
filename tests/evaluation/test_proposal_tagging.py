@@ -2,7 +2,7 @@
 
 The line under a revealed card is only worth reading if the set behind it is the one the
 system arm was actually told to avoid, so what is pinned here is that identity: `off_limits`
-is `variatio.variatio.forbidden` over the dependent closure and nothing of its own — read
+is `variatio.runtime.generator.forbidden` over the dependent closure and nothing of its own — read
 under the same rule `checks.run` reads it: any MENTION when a curriculum was given, only
 the PRACTISED concept when none was (2026-09-04).
 """

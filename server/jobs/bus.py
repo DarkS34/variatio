@@ -16,8 +16,8 @@ from collections import deque
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from .. import settings
-from .models import Event
+from .. import installation
+from .catalogue import Event
 
 
 class EventBus:
@@ -30,7 +30,7 @@ class EventBus:
 
     def __init__(self, buffer_size: int | None = None):
         """Open an empty bus with a replay buffer and no subscribers."""
-        self._buffer: deque[Event] = deque(maxlen=buffer_size or settings.EVENT_BUFFER_SIZE)
+        self._buffer: deque[Event] = deque(maxlen=buffer_size or installation.EVENT_BUFFER_SIZE)
         self._lock = threading.Lock()
         self._seq = 0
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -55,7 +55,7 @@ class EventBus:
         """
         if not workspace:
             return None
-        return Path(settings.workspace_for(workspace).runs_dir)
+        return Path(installation.workspace_for(workspace).runs_dir)
 
     # PUBLISH -------------------------------------------------------------------------------
 

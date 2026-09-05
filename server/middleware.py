@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
-from . import settings
+from . import installation
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -24,7 +24,7 @@ def _socket_origin() -> str:
     CSP3's rule that `'self'` matches a same-origin `wss:` (Safari below 16). A bare `ws:`
     or `wss:` here would be a scheme source matching every host there is.
     """
-    base = settings.public_base_url()
+    base = installation.public_base_url()
     if not base:
         return ""
     split = urlsplit(base)
@@ -77,7 +77,7 @@ class SecurityHeaders(BaseHTTPMiddleware):
         for header, value in HEADERS.items():
             response.headers.setdefault(header, value)
         response.headers.setdefault("Content-Security-Policy", csp())
-        if settings.cookie_secure():
+        if installation.cookie_secure():
             response.headers.setdefault("Strict-Transport-Security", HSTS)
         return response
 
@@ -126,19 +126,19 @@ def _allowed(connection) -> set[str]:
     request: with `trust_proxy()` on, an attacker sending both `Origin: https://evil.com`
     and `X-Forwarded-Host: evil.com` would otherwise have their own origin admitted here.
     """
-    base = settings.public_base_url()
+    base = installation.public_base_url()
     if base:
         own = {base}
     else:
         scheme = _PAGE_SCHEME.get(connection.url.scheme, connection.url.scheme)
         own = {f"{scheme}://{connection.url.netloc}"}
-        if settings.trust_proxy():
+        if installation.trust_proxy():
             # Behind TLS the app is spoken to over plain http, so its own idea of the
             # scheme is the wrong half of the origin the browser sent. The host is the
             # `Host` header either way, which a browser does not let a page choose.
             own.add(f"http://{connection.url.netloc}")
             own.add(f"https://{connection.url.netloc}")
-    return own | set(settings.dev_cors_origins())
+    return own | set(installation.dev_cors_origins())
 
 
 def _refused() -> JSONResponse:

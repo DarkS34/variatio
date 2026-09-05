@@ -23,7 +23,7 @@ from ..instance import content_context, locale
 from ..instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
 from .. import wording as wording_sets
-from . import _context, _source_docs
+from . import _context, source_docs
 
 
 BUILD_PHASES = (
@@ -192,7 +192,7 @@ class ExemplarsProfileBuilder:
 
         # Only `.docx` and `.pptx` ever reach it: a PDF goes through the page-transcription
         # route and plain text needs no conversion, so on a PDF corpus Docling is never built.
-        self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+        self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
@@ -218,7 +218,7 @@ class ExemplarsProfileBuilder:
         """
         self.bootstrap()
 
-        files = _source_docs.list_source_files(input_dir)
+        files = source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported document in {input_dir}")
             return {}
@@ -310,7 +310,7 @@ class ExemplarsProfileBuilder:
                 reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    content = _source_docs.document_markdown(
+                    content = source_docs.document_markdown(
                         file_path,
                         self.prompts,
                         converter=self._docling,
@@ -326,7 +326,7 @@ class ExemplarsProfileBuilder:
                 if not content.strip():
                     logger.warning(f"[{file_path.name}] no content after the transcription")
                     continue
-                for heading, body in _source_docs.chunk_markdown(content, self.chunk_size):
+                for heading, body in source_docs.chunk_markdown(content, self.chunk_size):
                     location = f"{file_path.stem} > {heading}" if heading else file_path.stem
                     chunks.append((location, body))
 

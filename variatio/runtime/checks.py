@@ -15,11 +15,12 @@ import numpy as np
 from loguru import logger
 from pydantic import BaseModel
 
-from . import config, wording as wording_sets
-from .concept_tagger import TRACE_KEY, ConceptTagger
-from .core.lexicon import mentions
+from .. import config
+from .. import wording as wording_sets
+from .tagger import TRACE_KEY, ConceptTagger
+from ..core.lexicon import mentions
 from .embedder import Embedder
-from .instance.exemplars_profile import ItemType
+from ..instance.exemplars_profile import ItemType
 
 MIN_PRIMARY_CHARS = 20
 

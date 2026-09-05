@@ -19,8 +19,8 @@ from .models import CURATED, DRAFT, Approval, Artifact, RawDocument, Workspace
 def content_sha256(content) -> str:
     """Hash content exactly as the same artifact would be hashed on disk.
 
-    Byte-identical to what `storage.write_json`, `stages.save_bank` and
-    `_source_docs.save_json` write, verified against all four artifacts of the reference
+    Byte-identical to what `storage.write_json`, `entrypoints.save_bank` and
+    `source_docs.save_json` write, verified against all four artifacts of the reference
     instance. Nothing *depends* on that agreement — `instance_io` re-derives hashes
     rather than trusting it — but it is what makes the two storage backends comparable,
     so do not change the separators or the indent casually.
@@ -87,7 +87,7 @@ def latest_artifact(
 def current_artifact(session: Session, workspace_id: int, kind: str) -> Artifact | None:
     """Return the curated version of an artifact, or the draft when there is none.
 
-    The same rule `stages._artifacts` applies to files, so both storage backends answer
+    The same rule `entrypoints._artifacts` applies to files, so both storage backends answer
     identically.
     """
     return latest_artifact(session, workspace_id, kind, CURATED) or latest_artifact(

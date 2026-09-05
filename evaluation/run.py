@@ -1,6 +1,6 @@
 """One commission, three architectures, one blind comparison.
 
-Mechanism, not policy, in the way `variatio.stages` is: it returns an `EvaluationSession`,
+Mechanism, not policy, in the way `variatio.entrypoints` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
 `evaluation/api/store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
@@ -13,17 +13,18 @@ from dataclasses import replace
 
 from loguru import logger
 
-from variatio import checks, config, screening, stages
+from variatio import config, entrypoints
+from variatio.runtime import checks, screening
 from variatio.core import progress
-from variatio.stages.initialize import PipelineContext
-from variatio.variatio import clean_fixed, forbidden
+from variatio.entrypoints.initialize import RuntimeContext
+from variatio.runtime.generator import clean_fixed, forbidden
 
 from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
 from . import config as evaluation_config
 
 
 def evaluate(
-    context: PipelineContext,
+    context: RuntimeContext,
     concepts: list[str],
     item_type: str | None = None,
     fixed: dict[str, object] | None = None,
@@ -64,7 +65,7 @@ def evaluate(
         instructions=(instructions or "").strip(),
         think=think,
         model=writer,
-        effort=stages.resolve_generation_effort(writer, think),
+        effort=entrypoints.resolve_generation_effort(writer, think),
     )
     _validate(context, target_type, commission)
 
@@ -267,7 +268,7 @@ def _screen(context, item_type, commission: Commission):
     )
 
 
-def _validate(context: PipelineContext, item_type, commission: Commission) -> None:
+def _validate(context: RuntimeContext, item_type, commission: Commission) -> None:
     """Raise ValueError unless the commission is runnable by all three arms.
 
     Checked here rather than inside the arms: an invalid commission must fail the whole

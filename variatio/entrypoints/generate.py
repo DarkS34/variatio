@@ -3,8 +3,8 @@
 from collections.abc import Callable
 
 from .. import config
-from ..variatio import GeneratedVariant
-from .initialize import PipelineContext
+from ..runtime.generator import GeneratedVariant
+from .initialize import RuntimeContext
 
 
 class UnofferedModelError(ValueError):
@@ -70,7 +70,7 @@ def resolve_generation_model(requested: str | None) -> str:
 
 
 def generate(
-    context: PipelineContext,
+    context: RuntimeContext,
     concepts: list[str] | None = None,
     item_type: str | None = None,
     n: int = 1,

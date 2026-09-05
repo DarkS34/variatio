@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from fastapi import HTTPException
 
-from server import settings
+from server import installation
 from server.db import identity, repository
 from server.db.models import Base, EDITOR, OWNER
 from server.routers.workspaces import leave
@@ -40,8 +40,8 @@ def db():
 # autouse fixture has already moved `WORKSPACES_DIR` into a tmp directory, so `provision`
 # writes nowhere near the installation's own instances.
 def _workspace(db, slug: str):
-    ws = settings.workspace_for(slug)
-    settings.provision(ws)
+    ws = installation.workspace_for(slug)
+    installation.provision(ws)
     (ws.raw_corpus_dir / "apuntes.md").write_text("# Apuntes", encoding="utf-8")
     return repository.ensure_workspace(db, slug, slug.capitalize())
 
@@ -72,7 +72,7 @@ def test_the_last_member_out_takes_the_workspace_with_them(db):
     # And the files go too: with nobody left holding it, what would survive is orphaned
     # weight under a slug the installation no longer records anywhere.
     assert result["files_removed"] is True
-    assert not settings.workspace_for("aula").root.exists()
+    assert not installation.workspace_for("aula").root.exists()
 
 
 def test_leaving_a_shared_workspace_removes_only_that_seat(db):
@@ -91,7 +91,7 @@ def test_leaving_a_shared_workspace_removes_only_that_seat(db):
     assert ana.active_workspace_id == aula.id
     # Nothing on disk moves: the instance still belongs to somebody, and one person walking
     # out of it is not a reason to delete what the rest are working on.
-    assert (settings.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
+    assert (installation.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
 
 
 def test_the_last_member_takes_it_even_when_they_do_not_own_it(db):
@@ -149,7 +149,7 @@ def test_a_tree_that_cannot_be_removed_leaves_the_row_standing(db, monkeypatch):
     def refuse(ws):
         raise OSError("dispositivo ocupado")
 
-    monkeypatch.setattr(settings, "destroy", refuse)
+    monkeypatch.setattr(installation, "destroy", refuse)
 
     with pytest.raises(HTTPException) as raised:
         leave("aula", user=ana, db=db)

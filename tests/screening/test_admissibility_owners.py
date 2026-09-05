@@ -1,6 +1,6 @@
 import json
 
-from variatio import screening
+from variatio.runtime import screening
 from variatio.core.lexicon import fold
 from variatio.instance.exemplars_profile import ExemplarsProfile
 

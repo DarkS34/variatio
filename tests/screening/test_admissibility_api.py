@@ -1,4 +1,5 @@
-from variatio import screening, wording
+from variatio import wording
+from variatio.runtime import screening
 
 
 def test_the_scope_payload_carries_slots_owners_and_facts(graph, profile, context):
