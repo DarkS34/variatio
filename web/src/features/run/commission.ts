@@ -18,12 +18,18 @@ export interface FormState {
   /** null means "not chosen yet"; it resolves on its own only when the profile declares a
    *  single modality, because then there is nothing to choose. */
   itemType: string | null;
-  /** Off = no restriction. */
-  useCurriculum: boolean;
-  /** Only counts with `useCurriculum`. On = the workspace's own stored list, which no
-   *  screen sets any more: it is only ever read back off an older run. */
+  /**
+   * The workspace's own stored list, which no screen sets any more: it is only ever read
+   * back off an older run whose request carried no `curriculum` at all.
+   */
   usePresetCurriculum: boolean;
-  /** The ad-hoc one; only counts with `useCurriculum` on and `usePresetCurriculum` off. */
+  /**
+   * What the class has covered, as the person ticked it. IN FORCE EXACTLY WHEN IT HOLDS
+   * SOMETHING (2026-09-05, explicit user request: «no lo detecte con un switch sino que
+   * sea si hay conceptos dentro o no»). There used to be a `useCurriculum` switch beside
+   * it, so the form could be «restricted» with nothing ticked and a ticked list could be
+   * switched off; both states sent `[]`, which is what an empty list sends now.
+   */
   curriculum: string[];
   decisions: Record<string, unknown>;
   instructions: string;
@@ -51,7 +57,6 @@ export const EMPTY_FORM: FormState = {
   n: 1,
   concepts: [],
   itemType: null,
-  useCurriculum: false,
   // FALSE, since 2026-09-01: the workspace's stored list can no longer be edited, so
   // nothing may resolve to it by default. It stays in the shape because `fromParams` reads
   // it — a run recorded before the change carried no `curriculum` field at all and did run
@@ -88,9 +93,9 @@ export function toParams(state: FormState): GenerateParams {
   // Absent and `[]` are NOT the same request: `server/curriculum.resolve` returns the
   // parameter unchanged whenever it is given — the empty list included, which is how one
   // says "no restriction" — and only falls back to the workspace's stored curriculum when
-  // nothing arrives at all. So the preset case sends no field, not an empty one.
-  if (!state.useCurriculum) params.curriculum = [];
-  else if (!state.usePresetCurriculum) params.curriculum = state.curriculum;
+  // nothing arrives at all. So the preset case sends no field, not an empty one, and a
+  // list with nothing ticked sends the empty one, which is «sin restricción».
+  if (!state.usePresetCurriculum) params.curriculum = state.curriculum;
   if (state.instructions.trim()) params.instructions = state.instructions.trim();
   return params;
 }
@@ -112,7 +117,6 @@ export function fromParams(params: Record<string, unknown>): FormState {
     itemType: (params.item_type as string) || null,
     // Absent is the workspace's own and `[]` is «sin restricción», exactly as the server
     // resolves them.
-    useCurriculum: curriculum === undefined || curriculum.length > 0,
     usePresetCurriculum: curriculum === undefined,
     curriculum: curriculum ? [...curriculum] : [],
     decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },

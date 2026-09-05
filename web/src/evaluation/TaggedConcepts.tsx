@@ -1,6 +1,6 @@
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { ConceptChip } from "@/components/ui/concept-chip";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -49,15 +49,21 @@ export function TaggedConcepts({ tagging }: { tagging: ProposalTagging }) {
           <span className="text-small text-muted-foreground">{t("reveal.tagging.none")}</span>
         ) : (
           concepts.map((concept) => (
-            <Badge
+            <ConceptChip
               key={concept}
-              variant={
-                out.has(concept) ? "attention" : concept === tagging.primary ? "default" : "secondary"
+              tone={
+                out.has(concept) ? "attention" : concept === tagging.primary ? "primary" : "default"
               }
-              title={out.has(concept) ? t("reveal.tagging.offLimits") : undefined}
+              title={
+                out.has(concept)
+                  ? t("reveal.tagging.offLimits")
+                  : concept === tagging.primary
+                    ? t("concept.isPrimary")
+                    : undefined
+              }
             >
               {concept}
-            </Badge>
+            </ConceptChip>
           ))
         )}
       </div>

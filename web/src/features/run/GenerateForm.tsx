@@ -11,12 +11,12 @@ import {
   Plus,
   Scale,
   TriangleAlert,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Badge } from "@/components/ui/badge";
+import { ConceptChip } from "@/components/ui/concept-chip";
 import { InfoHint } from "@/components/ui/hint";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -99,7 +99,6 @@ function curriculumLabel(
   presetSize: number | null,
   { t }: Translate,
 ): string {
-  if (!state.useCurriculum) return t("form.curriculum.none");
   if (state.usePresetCurriculum) {
     if (presetSize === null) return t("form.curriculum.workspace");
     return presetSize > 0
@@ -108,7 +107,7 @@ function curriculumLabel(
   }
   return state.curriculum.length > 0
     ? t("form.curriculum.ofN", { n: state.curriculum.length })
-    : t("form.curriculum.noneChosen");
+    : t("form.curriculum.none");
 }
 
 export function summarize(
@@ -207,21 +206,14 @@ function ChosenConcepts({
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", centred && "justify-center")}>
       {names.map((name) => (
-        <Badge key={name} variant="secondary" className="pr-1">
-          <span
-            className="size-1.5 shrink-0 rounded-full"
-            style={{ background: colourFor(name) }}
-          />
-          <span className="max-w-56 truncate">{name}</span>
-          <button
-            type="button"
-            onClick={() => onRemove(name)}
-            aria-label={t("form.removeConcept", { name })}
-            className="rounded-full p-0.5 hover:bg-background/60"
-          >
-            <X className="size-3" />
-          </button>
-        </Badge>
+        <ConceptChip
+          key={name}
+          colour={colourFor(name)}
+          onRemove={() => onRemove(name)}
+          removeLabel={t("form.removeConcept", { name })}
+        >
+          {name}
+        </ConceptChip>
       ))}
     </div>
   );
@@ -397,10 +389,12 @@ export function GenerateForm({
     [graphAdjacency, state.curriculum],
   );
   const activeCurriculum = useMemo(() => {
-    if (!state.useCurriculum) return null;
     const list = state.usePresetCurriculum ? [] : coveredCurriculum;
     return list.length > 0 ? list : null;
-  }, [state.useCurriculum, state.usePresetCurriculum, coveredCurriculum]);
+  }, [state.usePresetCurriculum, coveredCurriculum]);
+  // Whether anything bounds this commission: the list holds something, or an older run
+  // is being described that ran against the workspace's own.
+  const restricting = state.usePresetCurriculum || state.curriculum.length > 0;
 
   const priorClosure = useMemo(
     () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
@@ -479,8 +473,8 @@ export function GenerateForm({
 
   // Answering a step opens the next one. The rule is narrow on purpose: only a gesture that
   // leaves NOTHING else to decide in that step calls this, because collapsing a question the
-  // person is still in the middle of is worse than the click it saves. Turning the curriculum
-  // on is the case that proves it — it is not an answer, it opens two more.
+  // person is still in the middle of is worse than the click it saves. Marking the curriculum
+  // is the case that proves it — it is not an answer, it changes what may be chosen next.
   const advance = (from: string) => setOpen(steps[steps.indexOf(from) + 1] ?? null);
 
   // Changing modality changes which concepts have exemplars at all, so what was chosen
@@ -528,7 +522,12 @@ export function GenerateForm({
     .map((field) => describeDecision(field, state.decisions[field], t))
     .join(" · ");
 
-  const curriculumSummary = curriculumLabel(state, null, tr);
+  // The box counts what is COVERED — the picks closed downwards — because that is what the
+  // button beside it counts and what will run; the collapsed bar keeps the picks.
+  const curriculumSummary =
+    restricting && !state.usePresetCurriculum
+      ? t("form.curriculum.ofN", { n: coveredCurriculum.length })
+      : curriculumLabel(state, null, tr);
 
   // What «Ajustes» says while it is shut: nothing set reads as «nada»; anything set is
   // named, because a disclosure that hides a decision without saying so is where a
@@ -592,7 +591,7 @@ export function GenerateForm({
                     {key}
                   </span>
                   {spec.description ? (
-                    <span className="mt-1 block text-body text-muted-foreground">
+                    <span className="mt-1 block text-small text-muted-foreground">
                       {spec.description}
                     </span>
                   ) : null}
@@ -610,7 +609,7 @@ export function GenerateForm({
         answered={chosen}
         summary={[
           state.concepts.join(" · ") || t("form.practise.none"),
-          state.useCurriculum && activeCurriculum ? curriculumSummary : null,
+          restricting ? curriculumSummary : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -625,20 +624,54 @@ export function GenerateForm({
 
             Es una caja propia y no una fila suelta: lo que la separa del botón grande de
             debajo es que acota, no elige, y sin borde las dos cosas se leerían como una
-            lista de dos controles del mismo rango. */}
+            lista de dos controles del mismo rango.
+
+            NO HAY INTERRUPTOR: EL CURRÍCULO ESTÁ EN VIGOR CUANDO TIENE CONCEPTOS
+            (2026-09-05, petición explícita). El interruptor permitía dos estados que no
+            decían nada — «restringido» sin marcar nada, y una lista marcada apagada —, y
+            los dos enviaban `[]`. Ahora la caja se llama por su nombre, «Currículo», dice
+            en una línea lo que tiene marcado, y lo marcado se ve debajo como píldoras con
+            su aspa: quitar la última es quitar la restricción. */}
         <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-          <Switch
-            checked={state.useCurriculum}
-            onCheckedChange={(useCurriculum) => patch({ useCurriculum })}
-          >
-            <span className="text-body font-medium">{t("form.taught.restrict")}</span>
-          </Switch>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-micro font-condensed uppercase text-muted-foreground">
+              {t("form.taught.name")}
+            </span>
+            <span className="text-body font-medium">{t("form.taught.title")}</span>
+            <span
+              className={cn(
+                "ml-auto text-small",
+                restricting ? "font-medium text-primary" : "text-muted-foreground",
+              )}
+            >
+              {curriculumSummary}
+            </span>
+          </div>
           <p className="text-small text-muted-foreground">{t("form.taught.hint")}</p>
-          {state.useCurriculum ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setPicking("curriculum")}>
               <ListChecks />
               {t("form.taught.pick", { n: coveredCurriculum.length })}
             </Button>
+            {restricting ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => patch({ curriculum: [], usePresetCurriculum: false })}
+              >
+                {t("form.outside.lift")}
+              </Button>
+            ) : null}
+          </div>
+          {state.curriculum.length > 0 ? (
+            <ChosenConcepts
+              names={state.curriculum}
+              colourFor={colourFor}
+              onRemove={(name) =>
+                patch({ curriculum: state.curriculum.filter((c) => c !== name) })
+              }
+              empty=""
+            />
           ) : null}
         </div>
 
@@ -659,7 +692,11 @@ export function GenerateForm({
               >
                 {plural("form.outside.drop", outsideCurriculum.length)}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => patch({ useCurriculum: false })}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => patch({ curriculum: [], usePresetCurriculum: false })}
+              >
                 {t("form.outside.lift")}
               </Button>
             </div>

@@ -24,7 +24,6 @@ export function fromGeneration(row: GenerationRow): FormState {
     ...EMPTY_FORM,
     concepts: [...row.concepts],
     itemType: row.item_type || null,
-    useCurriculum: row.curriculum.length > 0,
     usePresetCurriculum: false,
     curriculum: [...row.curriculum],
     decisions: { ...row.fixed },

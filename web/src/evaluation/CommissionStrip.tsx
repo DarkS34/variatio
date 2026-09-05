@@ -1,3 +1,4 @@
+import { ConceptChip } from "@/components/ui/concept-chip";
 import { readableValue } from "@/lib/text";
 import { difficultyFieldOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";
@@ -53,12 +54,7 @@ export function CommissionStrip({
       </span>
       <span className="flex flex-wrap items-center gap-1.5">
         {session.concepts.map((concept) => (
-          <span
-            key={concept}
-            className="rounded-full border border-border bg-card px-2.5 py-px text-small"
-          >
-            {concept}
-          </span>
+          <ConceptChip key={concept}>{concept}</ConceptChip>
         ))}
       </span>
 

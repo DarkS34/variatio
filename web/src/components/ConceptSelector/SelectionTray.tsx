@@ -1,7 +1,7 @@
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConceptChip } from "@/components/ui/concept-chip";
 import { useT } from "@/lib/i18n";
 
 export function SelectionTray({
@@ -14,7 +14,6 @@ export function SelectionTray({
   onConfirm,
   confirmLabel,
   hidden = 0,
-  onShowAll,
 }: {
   selected: string[];
   /**
@@ -26,8 +25,6 @@ export function SelectionTray({
   total: number;
   /** How many concepts the exemplar scope is keeping out of the board. */
   hidden?: number;
-  /** Lifts that scope. Drawn beside the count, where the absence is felt. */
-  onShowAll?: () => void;
   colourFor: (concept: string) => string | undefined;
   onRemove: (concept: string) => void;
   onClear: () => void;
@@ -53,25 +50,13 @@ export function SelectionTray({
             ) : null}
             {/* WHAT IS NOT ON THE BOARD, SAID ON THE BOARD. Without it «0 de 42» is the
                 whole truth a person has, over a graph of 162 concepts. The count is the
-                statement and the link beside it is the lever — the same one the header's
-                scope switch holds, repeated here because this is where the absence is
-                felt. */}
+                statement; the lever is the scope switch in the header alone — the
+                «Mostrar todos» link that sat beside the count went on 2026-09-05
+                (explicit user request). */}
             {hidden > 0 ? (
               <span>
                 {" · "}
                 {plural("tray.hiddenNoExemplars", hidden)}
-                {onShowAll ? (
-                  <>
-                    {" · "}
-                    <button
-                      type="button"
-                      onClick={onShowAll}
-                      className="font-medium text-attention underline-offset-2 hover:underline"
-                    >
-                      {t("tray.showAll")}
-                    </button>
-                  </>
-                ) : null}
               </span>
             ) : null}
           </p>
@@ -98,21 +83,15 @@ export function SelectionTray({
               <span className="text-body text-muted-foreground">{t("concept.noneChosen")}</span>
             ) : (
               selected.map((name) => (
-                <Badge key={name} variant="secondary" className="pr-1">
-                  <span
-                    className="size-1.5 shrink-0 rounded-full"
-                    style={{ background: colourFor(name) }}
-                  />
-                  <span className="max-w-64 truncate">{name}</span>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(name)}
-                    aria-label={t("concept.remove", { name })}
-                    className="rounded-full p-0.5 hover:bg-background/60"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </Badge>
+                <ConceptChip
+                  key={name}
+                  tone="primary"
+                  colour={colourFor(name)}
+                  onRemove={() => onRemove(name)}
+                  removeLabel={t("concept.remove", { name })}
+                >
+                  {name}
+                </ConceptChip>
               ))
             )}
           </div>
@@ -125,13 +104,9 @@ export function SelectionTray({
                 {t("tray.byPrerequisiteLabel")}
               </span>
               {implied.map((name) => (
-                <Badge
-                  key={name}
-                  className="border-dashed border-primary/50 bg-primary/10 text-primary"
-                  title={t("concept.byPrerequisite")}
-                >
-                  <span className="max-w-64 truncate">{name}</span>
-                </Badge>
+                <ConceptChip key={name} tone="prerequisite" title={t("concept.byPrerequisite")}>
+                  {name}
+                </ConceptChip>
               ))}
             </div>
           </div>

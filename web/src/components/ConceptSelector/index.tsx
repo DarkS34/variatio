@@ -415,7 +415,6 @@ export function ConceptSelector({
         onConfirm={onConfirm ?? onClose}
         confirmLabel={confirmLabel ?? t("concept.done")}
         hidden={hiddenByExemplars}
-        onShowAll={() => setScope("all")}
       />
     </div>,
     document.body,

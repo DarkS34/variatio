@@ -521,7 +521,7 @@ export function GraphCanvas({
     let bestDistance = Infinity;
     bodies.current.forEach((body, index) => {
       const distance = Math.hypot(body.x - world.x, body.y - world.y);
-      const radius = radiusOf(degrees[index] ?? 0) + 5 / view.current.scale;
+      const radius = radiusOf(degrees[index] ?? 0, view.current.scale) + 5 / view.current.scale;
       if (distance < radius && distance < bestDistance) {
         best = index;
         bestDistance = distance;

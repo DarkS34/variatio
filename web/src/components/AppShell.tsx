@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Play, Scale, Wrench } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Play, Scale, Wrench } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
@@ -354,6 +354,65 @@ function NavRule() {
 }
 
 /**
+ * Whether the person asked to keep the four steps on the bar once they are all done.
+ *
+ * A per-browser convenience and not a setting: `localStorage`, guarded like `vg.theme`,
+ * absent by default — which is the folded state — and «open» once somebody unfolds them.
+ */
+const STEPS_KEY = "vg.buildSteps";
+
+function readStepsPreference(): boolean {
+  try {
+    return localStorage.getItem(STEPS_KEY) === "open";
+  } catch {
+    return false;
+  }
+}
+
+function writeStepsPreference(open: boolean) {
+  try {
+    if (open) localStorage.setItem(STEPS_KEY, "open");
+    else localStorage.removeItem(STEPS_KEY);
+  } catch {
+    // A browser that refuses site data still gets the session's own state.
+  }
+}
+
+/**
+ * The construction phase, folded into one pill once its four steps are done.
+ *
+ * THE STEPS LEAVE THE BAR WHEN THE CONSTRUCTION IS CLOSED (2026-09-05, explicit user
+ * request: «cuando la fase de construcción haya finalizado, que se oculten los pasos; que
+ * solamente quede la fase de pruebas, pero si el usuario lo requiere puede desplegarlo de
+ * nuevo»). Four stops with nothing left to do were most of the bar, on every screen, for
+ * the whole life of a subject after its first afternoon — and at 1280 px they pushed
+ * «Evaluar el sistema» past the edge of the strip. What stays is the phase's own caption,
+ * a tick and the sentence that the subject is prepared, and the word under the name is
+ * the way back: pressing the pill unfolds the four steps and remembers it. It is the same
+ * two-line pill as a step, so unfolding moves nothing vertically.
+ */
+function FoldedPhase({ onUnfold }: { onUnfold: () => void }) {
+  const { t } = useT();
+  return (
+    <button
+      type="button"
+      onClick={onUnfold}
+      title={t("nav.build.unfold")}
+      className={cn(PILL, PILL_HEIGHT, "text-left")}
+    >
+      <span className={cn(PILL_NAME, "font-medium text-foreground")}>
+        <StepCounter state="done" n="" />
+        {t("nav.build.folded")}
+      </span>
+      <span className={cn(PILL_WORD, "text-muted-foreground")}>
+        {t("nav.build.unfold")}
+        <ChevronRight className="size-3" strokeWidth={2.5} aria-hidden />
+      </span>
+    </button>
+  );
+}
+
+/**
  * The path, once, rendered in one of two places.
  *
  * Above `xl` it sits on the header's centre line, between the two flanks. Below it, the
@@ -406,6 +465,19 @@ function MainNav({
 
   const states = stepStates(stages, rawStocked);
 
+  // FOLDED WHEN EVERYTHING IS DONE, unless the person unfolded it or is standing on one of
+  // the steps — a bar that hides the stop you are on is a bar that says you are nowhere.
+  // Leaving the step folds it again, which is the «hide them once finished» that was asked
+  // for; the preference is what keeps them out for good.
+  const allDone = stages.length > 0 && states.every((state) => state === "done");
+  const [unfolded, setUnfolded] = useState(readStepsPreference);
+  const onStep = STEPS.some((step) => step.path === path);
+  const folded = allDone && !unfolded && !onStep;
+  const setSteps = (open: boolean) => {
+    setUnfolded(open);
+    writeStepsPreference(open);
+  };
+
   return (
     <nav
       ref={strip}
@@ -426,17 +498,39 @@ function MainNav({
       )}
     >
       <PhaseGroup label={t("nav.phase.build")}>
-        {STEPS.map((step, index) => (
-          <StepPill
-            key={step.path}
-            step={step}
-            state={states[index]}
-            n={stepNumber(index)}
-            active={path === step.path}
-            title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
-            busy={busy[index]}
-          />
-        ))}
+        {folded ? (
+          <FoldedPhase onUnfold={() => setSteps(true)} />
+        ) : (
+          <>
+            {STEPS.map((step, index) => (
+              <StepPill
+                key={step.path}
+                step={step}
+                state={states[index]}
+                n={stepNumber(index)}
+                active={path === step.path}
+                title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+                busy={busy[index]}
+              />
+            ))}
+            {/* The way back to the folded bar, drawn only once there is a folded bar to go
+                back to: with a step still pending the four are the path and stay. */}
+            {allDone ? (
+              <button
+                type="button"
+                onClick={() => setSteps(false)}
+                title={t("nav.build.fold")}
+                aria-label={t("nav.build.fold")}
+                className={cn(
+                  PILL_HEIGHT,
+                  "flex shrink-0 items-center rounded-md px-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <ChevronLeft className="size-4" strokeWidth={2.25} aria-hidden />
+              </button>
+            ) : null}
+          </>
+        )}
       </PhaseGroup>
 
       <NavRule />

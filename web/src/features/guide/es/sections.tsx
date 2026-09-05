@@ -132,7 +132,9 @@ function Start() {
           trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden: cada uno necesita
           el anterior cerrado. Cada uno lleva debajo una palabra diciendo dónde estás:{" "}
           <em>{t("nav.state.done")}</em>, <em>{t("nav.state.now").toLowerCase()}</em> o{" "}
-          <em>{t("nav.state.later").toLowerCase()}</em>.
+          <em>{t("nav.state.later").toLowerCase()}</em>. Cuando los cuatro están hechos, la
+          fase se pliega en una sola píldora que dice «{t("nav.build.folded")}»: pulsarla
+          vuelve a mostrar los pasos, y el navegador lo recuerda.
         </Paragraph>
         <Paragraph>
           La <strong>{t("nav.phase.test").toLowerCase()}</strong> son dos cosas que puedes

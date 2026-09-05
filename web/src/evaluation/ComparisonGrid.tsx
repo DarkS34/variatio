@@ -1,4 +1,4 @@
-import { CircleSlash, Maximize2 } from "lucide-react";
+import { ChevronDown, CircleSlash, Maximize2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,11 @@ import { useT } from "@/lib/i18n";
  * the one thing the blinding exists to keep it from being — and «respondida» is already
  * said twice over, by the card's own border and by the option that is pressed.
  */
+// How much of a proposal a card shows before the fade. Measured against the reference
+// exercises: a statement plus the head of its solution, which is what tells three
+// proposals apart at a glance; the whole thing is one press away.
+const CLIP = "max-h-[22rem]";
+
 function ProposalCard({
   position,
   profile,
@@ -71,8 +76,9 @@ function ProposalCard({
         {/* Which card still owes an answer is said at the card's own edge, not by an alert
             elsewhere on the screen. */}
         {hasItem && !answered ? (
-          <span className="ml-auto shrink-0 text-micro font-condensed text-attention uppercase">
+          <span className="ml-auto flex shrink-0 items-center gap-1 text-micro font-condensed text-attention uppercase">
             {t("grid.missing")}
+            <ChevronDown className="size-3.5" strokeWidth={2.5} aria-hidden />
           </span>
         ) : null}
         {hasItem ? (
@@ -89,11 +95,27 @@ function ProposalCard({
         ) : null}
       </header>
 
-      <div className="flex-1 space-y-3 p-4">
+      {/* THE BODY IS CLIPPED AT `CLIP`, NOT SCROLLED (2026-09-05, explicit user request:
+          «haz los items más cortos; hay un botón para hacerlos más grandes»). Three whole
+          exercises side by side ran to several screens, and the choice bar sat under the
+          longest of them. What a card shows is enough to tell the three apart; what it
+          hides is read through «Leer en grande», which is one press away in the header,
+          and the fade says there is more rather than pretending the statement ends where
+          the box does. The three still share one height, so a longer proposal cannot read
+          as «more complete» before it is read. */}
+      <div className={cn("relative flex-1 overflow-hidden", hasItem && CLIP)}>
         {hasItem ? (
-          <ItemFields item={position.item!} spec={itemTypeOf(profile, { item_type: itemType })} />
+          <>
+            <div className="space-y-3 p-4">
+              <ItemFields item={position.item!} spec={itemTypeOf(profile, { item_type: itemType })} />
+            </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent"
+            />
+          </>
         ) : (
-          <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
+          <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 p-4 text-center">
             <CircleSlash className="size-5 text-muted-foreground/60" />
             <p className="max-w-56 text-body text-muted-foreground">{t("grid.noValidItem")}</p>
           </div>

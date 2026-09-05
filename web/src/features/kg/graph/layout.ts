@@ -27,8 +27,10 @@ export const PADDING = 52;
 // edges) rather than guessed. Unbounded, the relaxation spread to ~5000 units and the
 // camera had to zoom out to 0.2 to show it. Bounding it to the canvas and tuning these
 // two makes the layout fill the frame with a single node touching the border:
-// REPULSION sets the edge length (~78 px), GRAVITY keeps the periphery off the boundary.
-const REPULSION = 0.45;
+// REPULSION sets the edge length (~104 px; it was 0.45 and ~78 until 2026-09-05, when
+// the nodes shrank and the user asked for more room between them), GRAVITY keeps the
+// periphery off the boundary.
+const REPULSION = 0.6;
 const GRAVITY = 0.5;
 
 // Each node is also pulled toward the centre of its own domain. Without it, a graph this

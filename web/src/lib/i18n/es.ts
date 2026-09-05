@@ -342,6 +342,12 @@ export const es = {
   // acciones sin orden entre sí. Numerarlas 2 y 3 decía «después de», que era falso.
   "nav.phase.build": "Fase de construcción",
   "nav.phase.test": "Fase de pruebas",
+  // LA CONSTRUCCIÓN SE PLIEGA CUANDO ESTÁ HECHA (2026-09-05, petición explícita): los cuatro
+  // pasos se reducen a una píldora con su marca y esta frase, y la palabra de debajo es la
+  // forma de volver a desplegarlos. Se recuerda en el navegador.
+  "nav.build.folded": "Asignatura preparada",
+  "nav.build.unfold": "Ver los pasos",
+  "nav.build.fold": "Ocultar los pasos",
   "nav.stepNumber": "Fase de construcción · Paso {n} de 4",
   // THE TUTORIAL IS THE MANUAL, not a greeting. Whoever has just redeemed an invitation
   // has never seen this and does not even know what the thing is called, so the first
@@ -655,7 +661,6 @@ export const es = {
   "concept.prerequisiteLevels": "Niveles de prerrequisito",
   "tray.chosenOf": { one: "de {n} concepto elegido", other: "de {n} conceptos elegidos" },
   "tray.hiddenNoExemplars": { one: "{n} oculto sin ejemplos", other: "{n} ocultos sin ejemplos" },
-  "tray.showAll": "Mostrar todos",
   "concept.scope.label": "Qué conceptos se muestran",
   "concept.scope.exemplars": "Solo conceptos con ejemplos",
   "concept.scope.exemplarsHint": "Solo los conceptos con algún ejercicio tuyo que imitar. Los prerrequisitos sin ejemplo tampoco se muestran.",
@@ -1568,7 +1573,7 @@ export const es = {
   "reveal.unavailable": "no disponible",
   "reveal.noValidItem": "sin ejercicio válido",
   "reveal.examplesFromBank": { one: "1 fragmento recuperado", other: "{n} fragmentos recuperados" },
-  "grid.missing": "te falta",
+  "grid.missing": "te falta por evaluar",
   "queue.alreadyJudged": "Ya juzgadas · {n}",
   "reveal.choseNone": "No elegiste ninguna.",
   "reveal.tagging.none": "no se le ha detectado ninguno",
@@ -1862,7 +1867,6 @@ export const es = {
   "form.curriculum.workspace": "Currículo de la asignatura",
   "form.curriculum.workspaceN": "Currículo de la asignatura ({n} conceptos)",
   "form.curriculum.ofN": "Hasta {n} conceptos dados",
-  "form.curriculum.noneChosen": "Sin marcar todavía lo que se ha dado",
   "form.summary.noConcepts": "sin conceptos",
   "form.summary.withInstructions": "con instrucciones",
   "form.summary.noReasoning": "sin razonamiento previo",
@@ -1885,13 +1889,14 @@ export const es = {
   "form.type.hint": "El tipo decide qué partes lleva el ejercicio, sus reglas de redacción y de cuáles de tus ejercicios se toman los ejemplos: solo entran los de este mismo tipo.",
   "form.type.none": "Ningún tipo elegido todavía",
   "form.taught.title": "¿Hasta dónde ha llegado la clase?",
-  "form.taught.hint": "Si no lo tocas, el ejercicio puede apoyarse en cualquier concepto del temario; solo se le exige que practique lo que elijas y no algo posterior. Actívalo si la clase va por la mitad: entonces solo se da por sabido lo que marques, y lo de más adelante queda prohibido. Marcar un concepto marca también lo que va antes de él.",
+  "form.taught.hint": "Sin marcar nada, el ejercicio puede apoyarse en cualquier concepto del temario; solo se le exige que practique lo que elijas y no algo posterior. Si la clase va por la mitad, marca hasta dónde ha llegado: entonces solo se da por sabido lo que marques, y lo de más adelante queda prohibido. Marcar un concepto marca también lo que va antes de él.",
+  // El nombre de la caja, en versalitas sobre su título (2026-09-05, petición explícita).
+  "form.taught.name": "Currículo",
   // DOS CONTROLES EN EL MISMO PASO NO PUEDEN LLAMARSE CASI IGUAL (2026-09-02, petición
   // explícita). «Elegir los conceptos cubiertos» estaba a un centímetro de «Elegir
   // conceptos» y hacían cosas distintas: uno acota el terreno, el otro elige el objetivo
   // dentro de él. El primero se nombra ahora por lo que significa —lo que ya se ha dado
   // en clase— y ni siquiera empieza por el mismo verbo.
-  "form.taught.restrict": "Solo sobre lo que ya he dado en clase",
   "form.taught.pick": "Marcar hasta dónde ha llegado la clase ({n})",
   "form.practise.title": "¿Qué hay que practicar?",
   "form.practise.hint": "Lo que el ejercicio debe hacer practicar, no lo que menciona. Sale del temario, y los ejemplos que se imitan se eligen entre tus ejercicios etiquetados con estos conceptos.",

@@ -1,7 +1,7 @@
-import { ChevronRight, Search, X } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { ConceptChip } from "@/components/ui/concept-chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { hasExemplars } from "@/lib/concepts";
@@ -126,39 +126,27 @@ export function ConceptPicker({
           <span className="text-body text-muted-foreground">{emptyText}</span>
         ) : (
           visible.map((name) => (
-            <Badge
+            <ConceptChip
               key={name}
-              variant={primary === name ? "default" : "secondary"}
-              className="pr-1"
+              tone={primary === name ? "primary" : "default"}
+              colour={colours.get(domainOf.get(name) ?? "")}
               title={primary === name ? t("concept.isPrimary") : undefined}
+              onRemove={disabled ? undefined : () => toggle(name)}
+              removeLabel={t("concept.remove", { name })}
             >
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ background: colours.get(domainOf.get(name) ?? "") }}
-              />
               {onPrimaryChange && !disabled ? (
                 <button
                   type="button"
                   onClick={() => onPrimaryChange(name)}
-                  className="max-w-56 truncate"
+                  className="text-left"
                   title={t("concept.markPrimary")}
                 >
                   {name}
                 </button>
               ) : (
-                <span className="max-w-56 truncate">{name}</span>
+                name
               )}
-              {disabled ? null : (
-                <button
-                  type="button"
-                  onClick={() => toggle(name)}
-                  aria-label={t("concept.remove", { name })}
-                  className="rounded-full p-0.5 hover:bg-background/60"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </Badge>
+            </ConceptChip>
           ))
         )}
         {selected.length > MAX_VISIBLE_CHIPS ? (

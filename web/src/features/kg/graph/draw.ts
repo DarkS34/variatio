@@ -87,8 +87,20 @@ const DIM = 0.12;
 const FONT_SANS = '"IBM Plex Sans Variable", ui-sans-serif, system-ui';
 const FONT_DISPLAY = '"Archivo Variable", "Archivo", ui-sans-serif, system-ui';
 
-export function radiusOf(degree: number) {
-  return 4 + Math.min(9, Math.sqrt(degree) * 2.2);
+/**
+ * A node's radius in WORLD units, for the zoom it is drawn at.
+ *
+ * Divided by the square root of the scale (2026-09-05, explicit user request: «más
+ * pequeños relativamente a cuánto zoom se está haciendo»): drawn under `context.scale`,
+ * a fixed world radius grows on screen exactly as fast as the zoom, so at 3× a hub was a
+ * coin covering its own neighbours' labels. On screen it now grows with √scale — at 1× it
+ * is what it was, at 4× twice as big instead of four times — and zoomed OUT it shrinks
+ * more slowly than the drawing, which is what keeps a node legible at 0.5×. The floor on
+ * the scale is what stops a very zoomed-out view from drawing a node bigger than its
+ * edges.
+ */
+export function radiusOf(degree: number, scale = 1) {
+  return (3 + Math.min(7, Math.sqrt(degree) * 1.9)) / Math.sqrt(Math.max(0.3, scale));
 }
 
 export function readPalette(): Palette {
@@ -168,7 +180,7 @@ export function draw(context: CanvasRenderingContext2D, scene: Scene) {
     const body = bodies[index];
     if (!body) continue;
     const [name, group, nonTaggable] = graph.nodes[index];
-    const radius = radiusOf(model.degrees[index] ?? 0);
+    const radius = radiusOf(model.degrees[index] ?? 0, scale);
     const isFocus = index === focus;
     const isNear = near?.has(index) ?? false;
     const isMarked = scene.highlight ? scene.highlight.has(name) : true;
@@ -387,7 +399,7 @@ function arrowhead(
   const a = scene.bodies[source];
   const b = scene.bodies[target];
   if (!a || !b) return;
-  const radius = radiusOf(scene.model.degrees[target] ?? 0);
+  const radius = radiusOf(scene.model.degrees[target] ?? 0, scene.view.scale);
   const c = control(a.x, a.y, b.x, b.y);
 
   const distance = Math.hypot(b.x - a.x, b.y - a.y);
