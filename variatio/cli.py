@@ -31,6 +31,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    transcribe = subparsers.add_parser(
+        "transcribe",
+        parents=[common],
+        help="read the raw documents into markdown pages, ahead of the builds that need them",
+    )
+    transcribe.add_argument(
+        "--slot",
+        choices=(*stages.SLOTS, "all"),
+        default="all",
+        help="which raw origin to read (default: both)",
+    )
+
     subparsers.add_parser(
         "build", parents=[common], help="build the missing instance artifacts from the workspace's raw/"
     )
@@ -96,6 +108,26 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _transcribe_and_report(args: argparse.Namespace, ws) -> None:
+    """Read one raw origin or both, and say what is left for a person to correct.
+
+    Reading ahead is an accelerator and never a gate: every builder keeps its own conversion
+    phase, which finds this cache done or does the work itself, so nothing chains off this
+    subcommand and no build refuses to run for want of it.
+    """
+    slots = stages.SLOTS if args.slot == "all" else (args.slot,)
+    failed = 0
+    for slot in slots:
+        # The stage logs each slot's totals as it closes it; the one thing it does not say is
+        # what a person still has to do, which is this layer's job.
+        failed += stages.transcribe_slot(ws, slot)["failed_pages"]
+    if failed:
+        logger.warning(
+            f"{failed} page(s) could not be read: each is marked inside its document and can "
+            f"be corrected by hand from the raw documents screen"
+        )
+
+
 def _parse_fixed(pairs: list[str]) -> dict[str, object]:
     """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
 
@@ -149,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
             inference.require_engine()
         
         match args.command:
+            case "transcribe":
+                _transcribe_and_report(args, ws)
             case "build":
                 built = stages.build_missing(ws)
                 if built:
