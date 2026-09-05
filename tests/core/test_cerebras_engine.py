@@ -518,3 +518,43 @@ def test_a_streamed_call_asks_for_its_usage():
     # call of the pipeline that streams — would be charged zero tokens.
     assert seen["stream_options"] == {"include_usage": True}
     assert cerebras_budget.shared().snapshot()["models"][0]["phases"][0]["tokens"] == 100
+
+
+def test_the_output_cap_travels_as_max_completion_tokens():
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
+        )
+
+    engine = _engine_with(handler)
+    answer = engine.generate("gemma-4-31b", "hola", max_output_tokens=4096)
+    assert seen["max_completion_tokens"] == 4096
+    assert answer.truncated is False
+
+
+def test_no_cap_sends_no_max_completion_tokens():
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _engine_with(handler).generate("gemma-4-31b", "hola")
+    assert "max_completion_tokens" not in seen
+
+
+def test_a_cut_answer_is_reported_as_truncated():
+    # `finish_reason: "length"` is the API saying the cap was hit — the engine's own reading,
+    # not a heuristic over the text, which is what lets a caller refuse the answer.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "\\_" * 50}, "finish_reason": "length"}]},
+        )
+
+    answer = _engine_with(handler).generate("gemma-4-31b", "hola", max_output_tokens=50)
+    assert answer.truncated is True
+    assert answer.response == "\\_" * 50

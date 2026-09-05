@@ -56,11 +56,11 @@ class _Model:
         self.failing = failing
         self.calls = 0
 
-    def generate(self, model, prompt, think=None, system=None, images=None, temperature=None, format=None):
+    def generate(self, model, prompt, **kwargs):
         self.calls += 1
         if self.failing:
             raise inference.InferenceError("sin motor")
-        return SimpleNamespace(response=self.answer, thinking="")
+        return inference.GenerationResponse(response=self.answer, thinking="")
 
 
 @pytest.fixture

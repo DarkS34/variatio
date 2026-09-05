@@ -37,10 +37,17 @@ class InferenceError(Exception):
 
 @dataclass
 class GenerationResponse:
-    """One answer, with the model's deliberation kept out of it."""
+    """One answer, with the model's deliberation kept out of it.
+
+    `truncated` says the engine stopped for want of output budget rather than because the
+    model finished — Ollama's `done_reason == "length"`, Cerebras' `finish_reason ==
+    "length"`. It is the engine's own reading and not a heuristic, which is what lets a
+    caller treat a cut answer as a failure instead of as a short one.
+    """
 
     response: str
     thinking: str | None = None
+    truncated: bool = False
 
 
 class ThinkingSplitter:
@@ -117,7 +124,9 @@ def _partial_tag_length(buffer: str) -> int:
     return 0
 
 
-def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResponse:
+def split_thinking(
+    text: str, sdk_thinking: str | None = None, truncated: bool = False
+) -> GenerationResponse:
     """Same split as the streaming path, for a response that arrived in one piece."""
     splitter = ThinkingSplitter()
     answer: list[str] = []
@@ -127,10 +136,11 @@ def split_thinking(text: str, sdk_thinking: str | None = None) -> GenerationResp
     return GenerationResponse(
         response="".join(answer).strip(),
         thinking="\n\n".join(p.strip() for p in thinking if p.strip()) or None,
+        truncated=truncated,
     )
 
 
-def _drain(stream) -> tuple[str, str]:
+def _drain(stream) -> tuple[str, str, bool]:
     """Read a streamed answer whole, checking between chunks whether to stop.
 
     The counterpart of `progress.checkpoint()` inside every per-item loop: without it the
@@ -138,21 +148,28 @@ def _drain(stream) -> tuple[str, str]:
     closed on the way out so the engine learns its client has gone — that is what turns a
     cancellation into a GPU that is free rather than one still writing an answer nobody
     asked for any more.
+
+    The third value is whether the final chunk says the answer was cut by `num_predict`:
+    only that chunk carries a `done_reason`, and «length» there is the engine reporting
+    a truncation that the text alone cannot show.
     """
     answer: list[str] = []
     thinking: list[str] = []
+    truncated = False
     try:
         for chunk in stream:
             thought = getattr(chunk, "thinking", None)
             if thought:
                 thinking.append(thought)
             answer.append(chunk.response or "")
+            if getattr(chunk, "done_reason", None) == "length":
+                truncated = True
             progress.checkpoint()
     finally:
         close = getattr(stream, "close", None)
         if close is not None:
             close()
-    return "".join(answer), "".join(thinking)
+    return "".join(answer), "".join(thinking), truncated
 
 
 def _upstream_error(action: str, e: Exception) -> str:
@@ -231,8 +248,10 @@ class OllamaEngine:
         return {} if format is None else {"format": format}
 
     @staticmethod
-    def _context_option(model: str, temperature: float | None = None) -> dict:
-        """Build the per-call options: the KV cache cap and the sampler's temperature.
+    def _context_option(
+        model: str, temperature: float | None = None, max_output_tokens: int | None = None
+    ) -> dict:
+        """Build the per-call options: the KV cache cap, the temperature and the output cap.
 
         Left to itself Ollama sizes the KV cache from the model's declared context, which
         is where most of this box's VRAM was going; `config.LLM_CONTEXT` decides it in one
@@ -248,6 +267,8 @@ class OllamaEngine:
             options["num_ctx"] = num_ctx
         if temperature is not None:
             options["temperature"] = temperature
+        if max_output_tokens is not None:
+            options["num_predict"] = max_output_tokens
         return {"options": options} if options else {}
 
     @staticmethod
@@ -267,6 +288,7 @@ class OllamaEngine:
         images: list[str] | None = None,
         temperature: float | None = None,
         format: dict | str | None = None,
+        max_output_tokens: int | None = None,
     ) -> GenerationResponse:
         """Ask `model` for one answer, with the reasoning split out of it.
 
@@ -306,12 +328,14 @@ class OllamaEngine:
                 **image_option,
                 **self._think_option(model, think),
                 **self._format_option(format),
-                **self._context_option(model, self._temperature(temperature)),
+                **self._context_option(
+                    model, self._temperature(temperature), max_output_tokens
+                ),
             )
-            answer, thinking = _drain(stream)
+            answer, thinking, truncated = _drain(stream)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
-        return split_thinking(answer, thinking or None)
+        return split_thinking(answer, thinking or None, truncated)
 
     def generate_stream(
         self,
@@ -604,8 +628,14 @@ def generate(
     images: list[str] | None = None,
     temperature: float | None = None,
     format: dict | str | None = None,
+    max_output_tokens: int | None = None,
 ) -> GenerationResponse:
-    """Ask the configured engine for one answer."""
+    """Ask the configured engine for one answer.
+
+    `max_output_tokens` caps what the model may write and is the caller's to set — a
+    transcription has a measured ceiling, a curation call does not — and the answer says
+    through `truncated` whether the cap was hit.
+    """
     return engine().generate(
         model=model,
         prompt=prompt,
@@ -614,6 +644,7 @@ def generate(
         images=images,
         temperature=temperature,
         format=format,
+        max_output_tokens=max_output_tokens,
     )
 
 

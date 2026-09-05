@@ -1,10 +1,10 @@
 import json
-from types import SimpleNamespace
 
 import pytest
 
 from variatio.builders._source_docs import pages
 from variatio.builders.knowledge_graph_builder import extraction
+from variatio.core.inference import GenerationResponse
 from variatio.core.workspace import Workspace
 
 from ..conftest import ES
@@ -35,11 +35,12 @@ def transcribes(monkeypatch, texts: list[str], seam: str = "space"):
     seen: list[str] = []
 
     def fake_generate(**kwargs):
+        # The real shape, `truncated` included: a page call reads it.
         if kwargs.get("images") is not None:
             seen.append("página")
-            return SimpleNamespace(response=texts[len(seen) - 1])
+            return GenerationResponse(response=texts[len(seen) - 1])
         seen.append("costura")
-        return SimpleNamespace(
+        return GenerationResponse(
             response=json.dumps(
                 {"continues": True, "separator": seam, "drop_head_lines": 0}
             )

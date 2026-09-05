@@ -300,17 +300,27 @@ class CerebrasEngine:
         images: list[str] | None = None,
         temperature: float | None = None,
         format: dict | str | None = None,
+        max_output_tokens: int | None = None,
     ) -> GenerationResponse:
-        """Ask `model` for one answer, unwrapping it when the schema had to be wrapped."""
-        body = self._body(model, prompt, think, system, images, temperature, format)
+        """Ask `model` for one answer, unwrapping it when the schema had to be wrapped.
+
+        `finish_reason == "length"` is the API saying the answer hit `max_completion_tokens`;
+        it travels as `truncated` so the caller can refuse a cut answer instead of keeping
+        it as a short one.
+        """
+        body = self._body(
+            model, prompt, think, system, images, temperature, format,
+            max_output_tokens=max_output_tokens,
+        )
         data = self._post(model, body).json()
-        message = (data.get("choices") or [{}])[0].get("message") or {}
+        choice = (data.get("choices") or [{}])[0]
+        message = choice.get("message") or {}
         reasoning = message.get("reasoning") or message.get("reasoning_content")
         content = message.get("content") or ""
         shaped = body.get("response_format") or {}
         if (shaped.get("json_schema") or {}).get("name") == _WRAPPER_NAME:
             content = _unwrap(content)
-        return split_thinking(content, reasoning)
+        return split_thinking(content, reasoning, choice.get("finish_reason") == "length")
 
     def generate_stream(
         self,
@@ -386,6 +396,7 @@ class CerebrasEngine:
         images: list[str] | None,
         temperature: float | None,
         format: dict | str | None,
+        max_output_tokens: int | None = None,
     ) -> dict:
         """Assemble the chat-completions request for one call.
 
@@ -419,6 +430,8 @@ class CerebrasEngine:
         body: dict = {"model": model, "messages": messages}
         if temperature is not None:
             body["temperature"] = temperature
+        if max_output_tokens is not None:
+            body["max_completion_tokens"] = max_output_tokens
         effort = reasoning_effort(think)
         if effort is not None:
             body["reasoning_effort"] = effort

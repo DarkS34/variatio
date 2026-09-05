@@ -55,6 +55,35 @@ un marcador de fallo, no un hueco: una página perdida son ejercicios perdidos, 
 lo que tropezar es mejor que una página que parece vacía.""",
     ),
     Setting(
+        key="builders.transcribe_max_output_tokens",
+        name="TRANSCRIBE_MAX_OUTPUT_TOKENS",
+        kind="int",
+        default=4096,
+        group="Constructores",
+        impact=Impact.NONE,
+        minimum=256,
+        doc="""Techo de tokens de SALIDA de la llamada que transcribe una página o una imagen. Sin él
+el modelo dispone de todo su presupuesto, y lo gasta: el 2026-09-05, en `compiladores`,
+nueve páginas de dos exámenes salieron con exactamente 40.960 tokens cada una — el tope
+del motor — porque la línea de puntos donde el alumno escribe su nombre («Nombre: ____»)
+se transcribió como una racha de `\\_` que el modelo no supo dónde parar. Cada una costó
+0,063 $ y ~65 s en vez de 0,003 $ y ~1 s, y los 738.832 caracteres de basura resultantes
+pasaron enteros al perfil y al banco, que gastaron el 80 % de sus llamadas en leerlos:
+~1,9 $ de los 5,48 $ de esa construcción, y un examen que aportó 0 ítems.
+
+El valor sale de la medición y no del gusto: de las 537 páginas PDF legítimas de las tres
+asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y en
+`compiladores` el p99 son 739 y la mayor sana 1.397 — entre 1.397 y 40.960 no hay ni una.
+4.096 deja 2,1× de margen sobre la peor página real y corta la desbocada al 10 % de su
+coste. Una respuesta que llega al techo se marca como PÁGINA FALLIDA (`FAILED_PAGE_PREFIX`),
+no se guarda truncada: una página cortada en silencio es la pérdida que este proyecto no
+acepta, y una marcada sale en rojo en «Apuntes y ejercicios», donde se corrige a mano o se
+sube este valor si de verdad era una página larguísima. No se reintenta, porque a
+temperatura 0 la misma imagen produce la misma racha.
+
+No forma parte de la huella de la caché: subirlo o bajarlo no vuelve a transcribir nada.""",
+    ),
+    Setting(
         key="builders.transcribe_seam_chars",
         name="TRANSCRIBE_SEAM_CHARS",
         kind="int",

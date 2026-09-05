@@ -21,9 +21,12 @@ from variatio.core.inference import OllamaEngine
 class _Chunk:
     """One streamed piece, shaped like the SDK's."""
 
-    def __init__(self, response: str = "", thinking: str | None = None):
+    def __init__(
+        self, response: str = "", thinking: str | None = None, done_reason: str | None = None
+    ):
         self.response = response
         self.thinking = thinking
+        self.done_reason = done_reason
 
 
 class _Stream:
@@ -154,4 +157,43 @@ def test_a_failure_mid_stream_still_closes_it(engine):
 
 def test_the_drain_survives_a_stream_that_cannot_be_closed():
     """A fake, a replay or a plain list has no `close`; that is not an error."""
-    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "")
+    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False)
+
+
+# THE OUTPUT CAP ----------------------------------------------------------------------------------
+#
+# Measured on 2026-09-05: nine transcribed pages of two exam papers each came back with
+# exactly 40 960 tokens — the engine's whole budget — of one repeated `\_`, the fill-in
+# line of the header. Nothing in the text says «this was cut»; the final chunk's
+# `done_reason` does, and that is what the flag carries.
+
+
+def test_the_output_cap_travels_as_num_predict_beside_the_context(engine, monkeypatch):
+    monkeypatch.setattr(config, "LLM_CONTEXT", {"m": 8192})
+    engine._client = _Client(_Stream([_Chunk("ok", done_reason="stop")]))
+    engine.generate(model="m", prompt="p", temperature=0.0, max_output_tokens=4096)
+    assert engine._client.kwargs["options"] == {
+        "num_ctx": 8192,
+        "temperature": 0.0,
+        "num_predict": 4096,
+    }
+
+
+def test_no_cap_sends_no_num_predict(engine):
+    engine._client = _Client(_Stream([_Chunk("ok")]))
+    engine.generate(model="m", prompt="p")
+    assert "num_predict" not in engine._client.kwargs.get("options", {})
+
+
+def test_a_cut_answer_is_reported_as_truncated(engine):
+    engine._client = _Client(
+        _Stream([_Chunk("\\_\\_"), _Chunk("\\_\\_"), _Chunk("", done_reason="length")])
+    )
+    answer = engine.generate(model="m", prompt="p", max_output_tokens=4)
+    assert answer.truncated is True
+    assert answer.response == "\\_\\_\\_\\_", "lo leído se devuelve igualmente"
+
+
+def test_a_finished_answer_is_not(engine):
+    engine._client = _Client(_Stream([_Chunk("hola"), _Chunk("", done_reason="stop")]))
+    assert engine.generate(model="m", prompt="p", max_output_tokens=4096).truncated is False

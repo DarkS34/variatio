@@ -136,5 +136,8 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 150 on 2026-09-04, when `evaluation.local_model` joined the study's settings: the
     # writer of a comparison's two local proposals is the installation's, unnamed like the
     # study's other eight, so `BY_NAME` does not move.
-    assert len(REGISTRY) == 150
-    assert len(BY_NAME) == 118
+    # 151 and 119 on 2026-09-05, when `builders.transcribe_max_output_tokens` arrived: nine
+    # pages of two exam papers had each spent the engine's whole 40 960-token budget on one
+    # repeated `\_`, and the cut answer is a FAILED page rather than a short one.
+    assert len(REGISTRY) == 151
+    assert len(BY_NAME) == 119

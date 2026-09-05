@@ -448,19 +448,29 @@ def _unwrap_markdown_fence(text: str) -> str:
 def _transcribe_page(
     image: str, index: int, count: int, model: str, tag: str, prompts
 ) -> str:
-    """Transcribe one page image, retrying, and marking the page when it cannot be read."""
+    """Transcribe one page image, retrying, and marking the page when it cannot be read.
+
+    An answer cut by `TRANSCRIBE_MAX_OUTPUT_TOKENS` is a failed page and never a short one:
+    measured, every page that reached the engine's ceiling was one repeated token — a
+    fill-in line the model could not stop copying — and kept as text it went on to cost
+    the profile and the bank more than the page itself. It is not retried either, since at
+    temperature 0 the same image yields the same run.
+    """
     prompt = prompts.transcribe_page_prompt(index, count)
     last_error: Exception | None = None
     for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
         try:
-            response = inference.generate(
+            answer = inference.generate(
                 model=model,
                 prompt=prompt,
                 think=config.THINK_TRANSCRIBE,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
-            ).response
-            page = _unwrap_markdown_fence(response)
+                max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
+            )
+            if answer.truncated:
+                return _runaway_page(index, count, tag, len(answer.response))
+            page = _unwrap_markdown_fence(answer.response)
             stripped = page.strip()
             # Tolerant on purpose: models wrap the sentinel in backticks, or add a full
             # stop. Anything that is only the sentinel plus punctuation is an empty page.
@@ -476,6 +486,21 @@ def _transcribe_page(
     # A lost page is lost exercises. Leave a marker a human will trip over in the cached
     # file rather than a silent gap that looks like a page with nothing on it.
     return f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: {last_error}]"
+
+
+def _runaway_page(index: int, count: int, tag: str, chars: int) -> str:
+    """The failure marker for a page whose answer hit the output cap."""
+    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
+    logger.error(
+        f"{tag}page {index}/{count}: answer cut at the {cap}-token cap after {chars} "
+        "characters, most likely a repetition loop; marked as failed and not retried"
+    )
+    return (
+        f"> [TRANSCRIPCIÓN FALLIDA — página {index} de {count}: la respuesta superó el techo "
+        f"de {cap} tokens de salida; el modelo se quedó repitiendo algo de la página "
+        "(una línea de puntos, un borde) en vez de terminar. Corrígela a mano o sube "
+        "TRANSCRIBE_MAX_OUTPUT_TOKENS en «Configuración» si de verdad era una página tan larga]"
+    )
 
 
 def transcribe_pdf(
@@ -835,14 +860,23 @@ def _transcribe_image(
     last_error: Exception | None = None
     for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
         try:
-            response = inference.generate(
+            answer = inference.generate(
                 model=model,
                 prompt=prompt,
                 think=config.THINK_TRANSCRIBE_IMAGE,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
-            ).response
-            reading = _unwrap_markdown_fence(response)
+                max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
+            )
+            if answer.truncated:
+                # Same failure as a runaway page, same verdict: unreadable, not retried
+                # (temperature 0), and not cached, so a raised cap gets another chance.
+                logger.error(
+                    f"{tag}picture {index}/{count}: answer cut at the "
+                    f"{config.TRANSCRIBE_MAX_OUTPUT_TOKENS}-token cap; marked unreadable"
+                )
+                return None
+            reading = _unwrap_markdown_fence(answer.response)
             stripped = reading.strip()
             if not stripped or (
                 EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
