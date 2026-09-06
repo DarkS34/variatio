@@ -66,7 +66,7 @@ interface Slide {
 /**
  * A point, and the one that is MARKED.
  *
- * The deck is ink on paper throughout, and exactly ONE sentence is marked: "con un par de
+ * The deck is ink on paper throughout, and exactly ONE sentence is marked: "a couple of
  * temas basta" is the line a reader who skims will get wrong, at the cost of an afternoon
  * of transcription. A second mark would undo the point of the first.
  *

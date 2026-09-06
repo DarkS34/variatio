@@ -478,7 +478,7 @@ export function GenerationModelsField({
  * from what is saved: unchecking a model above and locking it below in one visit has to
  * work, and the save bar sends both keys in one request.
  *
- * The switch is phrased positively — "se puede ajustar" — while the setting stores the
+ * The switch is phrased positively — "can be adjusted" — while the setting stores the
  * negative. Not a mismatch to tidy: locking is the exception, so the setting's default is
  * the empty list, and what a person reads is the question they are answering.
  *

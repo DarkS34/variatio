@@ -177,7 +177,7 @@ function WorkspaceStep({
   //
   // An instance whose chain is not approved is drawn, and drawn UNSELECTABLE with the
   // stages it is waiting on underneath. Hiding it would be the worse of the three options
-  // on offer: "no aparece" is indistinguishable from "no tiene acceso", and the thing to
+  // on offer: "it does not appear" is indistinguishable from "they have no access", and the
   // do about it — approve the profile, the graph, the bank — is exactly what the row would
   // have said. It carries no colour: `--attention` is the screen's scarcest ink and means
   // "act here", which an option that cannot be chosen is not.

@@ -4,7 +4,7 @@ import type { Key, Translate } from "@/lib/i18n";
 /**
  * Who is waiting for what, derived once from the payload and nowhere else.
  *
- * With one lane per inference backend, "hay algo en marcha" and "lo tuyo va a esperar" are
+ * With one lane per inference backend, "something is running" and "yours will wait" are
  * different sentences: the GPU being busy says nothing about a job that only calls the
  * hosted API. A button that announces a wait which will not happen is what this answers.
  *

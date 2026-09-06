@@ -19,7 +19,7 @@ import { CancelButton } from "@/components/CancelButton";
  * What a RETRY is doing is not behind the disclosure. A rejected exercise is generated
  * again, up to `CHECK_MAX_RETRIES` times, and each of those is a whole call — so the bar
  * sits still for minutes, and saying why is the difference between "se ha quedado colgado"
- * and "lo está rehaciendo porque menciona algo no impartido". Drawn in `--attention`, the
+ * and "it is being redone because it mentions something not taught". Drawn in `--attention`,
  * one thing on the strip that is not merely a measurement, and it goes when the item lands.
  *
  * What IS behind the disclosure is duplicated nowhere — the reasoning, the token stream,

@@ -70,7 +70,7 @@ export function GuideScreen({ slug }: { slug: string }) {
 
       {/* The index is a column beside the text on a laptop and a folded list on a phone.
           Folded rather than merely stacked: fourteen rows of navigation above the first
-          paragraph turns "leer la guía" into "pasar la guía", and the section you are on
+          paragraph turns reading the guide into paging through it, and the section you are on
           is already named on the button that opens it. */}
       <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
         <Button

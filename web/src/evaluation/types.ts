@@ -460,7 +460,7 @@ export interface StageAnswers {
   /** `overall` is set, which is the last question: the person reached the end. */
   answered: boolean;
   /** Whether this person corrected the artifact before judging it — the evaluation's own
-   *  contrast, "cómo lo valoran los que curaron y cómo los que no". `null` is "nadie lo
+   *  contrast, how the people who corrected rate it against those who did not. `null` is
    *  dijo", which every row written before the question existed carries. */
   curated: boolean | null;
   instrument: string;

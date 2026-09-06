@@ -694,7 +694,7 @@ export function GenerateForm({
 
         {/* The chosen topics against what the bank can illustrate. It survives the filter
             becoming fixed because a commission can still be RESTORED with topics that have
-            no exemplar left — "Generar más como esta" over a bank that has changed since —
+            no exemplar left — "generate more like this one" over a bank that has changed —
             and nothing else on the screen says the batch will be written with no example
             to imitate. */}
         {wholeBatchZeroShot ? (

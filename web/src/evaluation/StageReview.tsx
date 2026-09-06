@@ -96,7 +96,7 @@ export function StageReview({
   }
 
   // A panel that cannot load its data says so; it never renders null. An API older than
-  // the bundle does not serve this route, and a blank column reads as "esto no existe".
+  // the bundle does not serve this route, and a blank column reads as "this does not exist".
   if (review.isError || !instrument) return null;
 
   if (!review.data?.built) {

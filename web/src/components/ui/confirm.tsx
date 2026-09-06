@@ -5,8 +5,8 @@ import { ConfirmDialog } from "./prompt";
 /**
  * `window.confirm`, replaced everywhere at once.
  *
- * There were eighteen of them across the app, guarding everything from "borrar una página
- * transcrita" to "eliminar la unidad y sus 28 conceptos" — while deleting a workspace
+ * There were eighteen of them across the app, guarding everything from "delete a transcribed
+ * page" to "delete the unit and its 28 concepts" — while deleting a workspace
  * opened a considered dialog that asks you to type the slug. Two visual languages for one
  * act, and the cheaper one happened to guard some of the more destructive operations.
  *

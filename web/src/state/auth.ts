@@ -66,8 +66,8 @@ const isSessionKey = (key: readonly unknown[]) =>
  * *destroys* it and drops it from the cache. The gate's observer stays bound to the
  * destroyed object, so the fresh query `setQueryData` builds underneath it never notifies
  * anybody: the login form keeps rendering against a session that has already arrived, and
- * only a reload — which builds a new observer — makes it go away. That was the "entro y la
- * página no cambia hasta que la refresco" bug. Writing into the live query instead keeps
+ * only a reload — which builds a new observer — makes it go away. That is the "I log in and
+ * the page does not change until I refresh it" bug. Writing into the live query instead keeps
  * the observer and the data on the same object, which is the whole contract.
  */
 function useAdopt() {

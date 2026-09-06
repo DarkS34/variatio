@@ -163,17 +163,18 @@ for (const full of walk(SRC)) {
   if (exempt(path)) continue;
 
   const text = readFileSync(full, "utf8");
-  // A block scan reads a comment as prose, and this repository's comments are long. The
-  // per-line pass already skips them; blanking them here keeps the line numbers exact.
   const code = text
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/^(\s*)\/\/.*$/gm, (m) => m.replace(/[^\n]/g, " "));
   // A line marked `i18n-exempt` carries a protocol token, not copy: a string the server
   // also knows, matched against rather than read. Translating one breaks the match.
 
-  text.split("\n").forEach((line, index) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) return;
+  // EVERY pass reads `code` and never `text`: a comment quoting a label is not a label, and
+  // the only reliable way to tell them apart is to blank the comments first. Skipping a line
+  // that STARTS with a comment marker is not enough — the body of a `{/* … */}` block does
+  // not, so a quoted sentence inside one was read as an untranslated string. The blanking
+  // replaces every character but the newline, so the line numbers stay exact.
+  code.split("\n").forEach((line, index) => {
     if (line.includes("i18n-exempt")) return;
 
     const candidates = [];

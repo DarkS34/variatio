@@ -38,7 +38,7 @@ export interface FormState {
   /**
    * Which offered model writes it.
    *
-   * Null is "el de por defecto", the first of `generation.models`. The server resolves it,
+   * Null is "the default one", the first of `generation.models`. The server resolves it,
    * never the form: what a run RECORDS is the model that actually wrote it and not one a
    * browser guessed. Only the "generate" variant sets it — a comparison's two local
    * proposals are written by the installation's own `evaluation.local_model`, and

@@ -350,8 +350,8 @@ export const es = {
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
     "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar material sobre tu asignatura: apuntes y ejercicios que ya tengas en PDF, en Word o en PowerPoint, tal y como estén.",
-  // "Sube solo un par de temas" and "esto tarda" belong here, right before somebody goes
-  // looking for the files, which is where they are worth anything.
+  // "Upload just a couple of units" and "this takes a while" belong here, right before
+  // somebody goes looking for the files, which is where they are worth anything.
   "tutorial.s2.b1":
     "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para probarlo: recuerda que estamos simplemente probándolo.",
   "tutorial.s2.b2":
@@ -369,8 +369,8 @@ export const es = {
   "tutorial.s3.step4":
     "Con lo que sale de los dos pasos anteriores, se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
 
-  // The hinge is the FIRST SENTENCE of the testing phase and not a slide of its own: "con
-  // esto ya está preparado" followed by "pedir ejercicios" is one turn told twice. The
+  // The hinge is the FIRST SENTENCE of the testing phase and not a slide of its own: "with
+  // this it is ready" followed by "ask for exercises" is one turn told twice. The
   // commission's three questions are drawn by the figure, so they are not listed here.
   "tutorial.s4.title": "Fase de pruebas: generar ejercicios",
   "tutorial.s4.body":

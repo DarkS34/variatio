@@ -107,7 +107,7 @@ export function buildModel(graph: GraphView): GraphModel {
 /**
  * How deep each concept sits in the prerequisite chain.
  *
- * `A tiene como prerrequisito B` points at what must come FIRST, so a concept's depth
+ * `A has B as a prerequisite` points at what must come FIRST, so a concept's depth
  * is one more than the deepest thing it depends on. Depth 0 is therefore the entry
  * point of the syllabus — including every concept the relation never mentions, which
  * is the honest answer: the graph claims nothing has to precede it.

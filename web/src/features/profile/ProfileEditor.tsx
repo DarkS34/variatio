@@ -317,7 +317,7 @@ export function ProfileEditor() {
   // "Continuar", which saves first and closes the stage after. What is offered upwards is
   // the draft, so those buttons know there is something pending and why it may not be
   // written — the sentence is the pipeline validator's own, because refusing without saying
-  // why is what this screen exists to avoid. `discard` is what "Dejar de corregir" does once
+  // why is what this screen exists to avoid. `discard` is what leaving the correction does
   // it has asked. `draft` is null only before the first read, where `dirty` is false and
   // `save` unreachable.
   useRegisterPendingEdit({
@@ -331,7 +331,7 @@ export function ProfileEditor() {
 
   if (query.isLoading) return <Skeleton className="h-96" />;
 
-  // "No hay perfil todavía" and "no se pudo leer" look the same from here and are not the
+  // "There is no profile yet" and "it could not be read" look the same from here and are not
   // same thing: the first is the state a new workspace starts in and its screen is the build
   // button above; the second used to render nothing at all.
   if (query.isError)

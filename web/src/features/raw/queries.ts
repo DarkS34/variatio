@@ -101,7 +101,7 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     stocked: stockedAll && known,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
     // Both origins hold something, every document is read and nothing is running: what the
-    // next step actually wants, and not merely "no queda nada pendiente".
+    // next step actually wants, and not merely "nothing is outstanding".
     done: stockedAll && known && !running && stale + pending === 0,
   };
 }

@@ -37,7 +37,7 @@ export interface ConceptSelectorProps {
   /**
    * Offer the exemplar SCOPE, and open in it. The selector then owns a two-way switch in
    * its header — "Con ejemplos", the default, keeps to the concepts the bank can
-   * illustrate, prerequisites included; "Todos los conceptos" lifts it — and goes back to
+   * illustrate, prerequisites included; the "all concepts" side lifts it — and goes back to
    * the default every time it opens.
    */
   onlyWithExemplars?: boolean;

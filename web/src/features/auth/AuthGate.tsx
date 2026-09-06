@@ -30,7 +30,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   // Read ONCE, into state. The two screens behind this strip the token out of the address
   // bar as soon as they have it — a secret does not belong in the history, the referrer or
   // a shared screenshot — and re-reading `location.search` on every render would find it
-  // gone and greet the person with "falta el código" halfway through their own form.
+  // gone and greet the person with "the code is missing" halfway through their own form.
   const [token] = useState(() => new URLSearchParams(window.location.search).get("token") ?? "");
 
   if (path === "/invite") {

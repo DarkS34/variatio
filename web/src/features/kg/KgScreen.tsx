@@ -450,7 +450,7 @@ function GraphExplorer() {
   const [addingIn, setAddingIn] = useState<string | null>(null);
   // The three unit operations, as dialogs of this application rather than the browser's.
   // `window.prompt` cannot validate — it does not know which names are taken — and
-  // `window.confirm` guarded "eliminar la unidad y sus 28 conceptos" with one click while
+  // `window.confirm` guarded "delete the unit and its 28 concepts" with one click while
   // deleting an empty workspace asks you to type its slug.
   const [newUnit, setNewUnit] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -478,7 +478,7 @@ function GraphExplorer() {
   // place the three sets are visible.
 
   // Built from the whole graph, never from the filtered list: what a unit contains does not
-  // change because a search is narrowing what is drawn, and "eliminar la unidad y sus N"
+  // change because a search is narrowing what is drawn, and "delete the unit and its N"
   // has to name the number that will actually be deleted.
   const unitStats = useMemo(() => {
     const stats = new Map<string, { total: number }>();

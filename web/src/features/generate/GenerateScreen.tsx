@@ -54,7 +54,7 @@ export function GenerateScreen() {
   const kgGraph = useKgGraph();
   const submit = useSubmitJob();
   const offline = useEngineOffline();
-  // ITS OWN run, by kind, and not "lo que la máquina esté haciendo": two lanes mean a build
+  // ITS OWN run, by kind, and never "whatever the machine is doing": two lanes mean a build
   // can be running beside this generation, and the screen used to take whichever job the
   // stream had heard from last and then find no items in it.
   //
@@ -80,7 +80,7 @@ export function GenerateScreen() {
   const split = useSplitEngine();
   const client = useQueryClient();
 
-  // A draft left by "Generar más como esta" in "Mis variantes" is the form's starting point;
+  // A draft left by "generate more like this one" in the saved list is the form's start;
   // it is read once and consumed, so a reload starts clean. It also opens the form: a run
   // from before is still in the store, and its collapsed bar would hide the very commission
   // one came here to launch.

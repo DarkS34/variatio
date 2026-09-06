@@ -127,7 +127,7 @@ export interface PendingEdit {
   blocked: string | null;
   /** Write it. `approve` awaits this and never approves if it rejects. */
   save: () => Promise<unknown>;
-  /** Drop it, back to what the file holds — what "Dejar de corregir" does once it has asked. */
+  /** Drop it, back to what the file holds — what leaving the correction does once it asks. */
   discard: () => void;
 }
 
@@ -218,7 +218,7 @@ export function StageGate({
   const confirm = useConfirm();
   const { navigate } = useRouter();
   // The questionnaire starts shut. Its button is at the FOOT of the artifact, which is the
-  // only place "lo que acabas de revisar" is true.
+  // only place "what you have just reviewed" is true.
   const [reviewOpen, setReviewOpen] = useState(false);
   // Correcting is an act and not the default state. It belongs to the visit and not to the
   // artifact: "estoy corrigiendo ahora" is nothing anything on disk records.
@@ -357,7 +357,7 @@ export function StageGate({
               would throw the corrections away. */}
         </header>
 
-        {/* `attention` and not `danger`: stale is "lo de arriba cambió, vuelve a cerrarlo",
+        {/* `attention` and not `danger`: stale is "the step above changed, close this one",
             a move to make — the same tone the badge, the status mark and a re-read document
             on `/raw` already give it. Red here said information had been lost. */}
         {stage.stale_because.length > 0 ? (
@@ -425,7 +425,7 @@ export function StageGate({
                 untouched; a job that patches in place — tagging — rewrites the items one by
                 one and saves after each, so "si cancelas, vuelve tal cual" was flatly false
                 for it: what it had already decided stays decided. And a FIRST build has
-                nothing behind it at all, so promising that "el que hay ahora sigue guardado"
+                nothing behind it at all, so promising that "the one there now is still kept"
                 was false on the one screen where it is read most: an empty stage. */}
             {waitingJob ? (
               <Alert tone="info" title={t("stage.queued")}>
@@ -463,7 +463,7 @@ export function StageGate({
         )}
 
         {/* The button that opens the questionnaire, at the FOOT and never on entering:
-            "preguntas sobre lo que acabas de revisar" over something nobody has looked at
+            "questions about what you have just reviewed" over something nobody has looked at
             yet is a promise the screen cannot keep.
 
             This is where `--evaluation` is spent — the same token the navbar's "Comparar"

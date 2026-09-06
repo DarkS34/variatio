@@ -211,7 +211,7 @@ function GenerationCard({
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           {/* The modality first, then the concepts: the row answers "¿qué clase de
-              ejercicio es, y sobre qué?", which is the order those two are asked in — and
+              exercise is it, and about what?", which is the order those two are asked in — and
               the modality is one word from a closed list, so a badge after a list of names
               lands at whatever width they happen to end at. Whether the model reasoned,
               which one wrote it and when are in the expanded commission, where somebody

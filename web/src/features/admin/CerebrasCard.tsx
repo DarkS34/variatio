@@ -18,7 +18,7 @@ import { useT } from "@/lib/i18n";
  *
  * WHAT THE METERS ARE FOR is one question: am I about to be held back, and by which
  * window. So the four run first and the per-phase breakdown sits under them as support —
- * it answers what comes next ("qué fase se lo está comiendo") and leaves in a spreadsheet.
+ * it answers what comes next ("which phase is eating it") and leaves in a spreadsheet.
  *
  * Colour follows the palette's own rule rather than a severity scale: a meter is ink while
  * it is merely a quantity, --attention on the ONE window currently holding a call back

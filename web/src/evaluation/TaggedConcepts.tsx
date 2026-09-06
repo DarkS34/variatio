@@ -23,7 +23,7 @@ import type { ProposalTagging } from "./types";
  * It carries no chrome of its own — the card wraps it in its own foot and the reading
  * dialog drops it into a stack — and it is deliberately NOT drawn beside the rubric: the
  * `prerequisites` scale asks the evaluator almost exactly what `off_limits` answers
- * ("¿se resuelve con lo que va antes en el temario?"), and putting the machine's answer
+ * ("can it be solved with what comes before it in the syllabus?"), and putting the machine's
  * against the scale would stop the two from being independent readings of one exercise.
  */
 export function TaggedConcepts({ tagging }: { tagging: ProposalTagging }) {
